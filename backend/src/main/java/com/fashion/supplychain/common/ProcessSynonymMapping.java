@@ -41,7 +41,7 @@ public class ProcessSynonymMapping {
 
         // 车缝/生产环节同义词（核心映射）
         map.put(PROCESS_SEWING, Set.of(
-                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产", "整件"));
+                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产"));
 
         // 大烫环节同义词
         map.put(PROCESS_IRONING, Set.of(
@@ -81,7 +81,7 @@ public class ProcessSynonymMapping {
         // 模糊匹配：检查是否包含某个同义词
         for (Map.Entry<String, Set<String>> entry : SYNONYM_MAP.entrySet()) {
             for (String synonym : entry.getValue()) {
-                if (name.contains(synonym) || synonym.contains(name)) {
+                if (name.contains(synonym)) {
                     return entry.getKey();
                 }
             }

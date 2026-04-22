@@ -108,6 +108,7 @@ public class TrackingPriceSyncHelper {
         }
 
         Map<String, BigDecimal> priceMap = resolvePriceMap(order);
+        Map<String, String> codeMap = resolveCodeMap(order);
         if (priceMap.isEmpty()) {
             log.warn("订单 {} 无可用的工序价格数据", order.getOrderNo());
             return 0;
@@ -119,8 +120,8 @@ public class TrackingPriceSyncHelper {
             return 0;
         }
 
-        int updatedCount = syncTrackingPrices(trackingRecords, priceMap, productionOrderId, order.getOrderNo());
-        int scanUpdated = syncScanRecordPrices(priceMap, productionOrderId);
+        int updatedCount = syncTrackingPrices(trackingRecords, priceMap, codeMap, productionOrderId, order.getOrderNo());
+        int scanUpdated = syncScanRecordPrices(priceMap, codeMap, productionOrderId);
 
         log.info("订单 {} 单价同步完成：跟踪记录更新 {} 条，扫码记录更新 {} 条",
                 order.getOrderNo(), updatedCount, scanUpdated);
@@ -209,12 +210,13 @@ public class TrackingPriceSyncHelper {
                 }
 
                 Map<String, BigDecimal> priceMap = buildPriceMapFromTemplate(templateNodes);
+                Map<String, String> codeMap = buildCodeMapFromTemplate(templateNodes);
                 if (priceMap.isEmpty()) {
                     skipCount++;
                     continue;
                 }
 
-                boolean changed = updateWorkflowJsonPrices(order, priceMap);
+                boolean changed = updateWorkflowJsonPrices(order, priceMap, codeMap);
                 if (changed) {
                     updatedCount++;
                     Map<String, Object> detail = new HashMap<>();
@@ -422,8 +424,31 @@ public class TrackingPriceSyncHelper {
         return priceMap;
     }
 
+    private Map<String, String> resolveCodeMap(ProductionOrder order) {
+        Map<String, String> codeMap = new HashMap<>();
+        String styleNo = order.getStyleNo();
+        if (StringUtils.hasText(styleNo)) {
+            try {
+                List<Map<String, Object>> templateNodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo.trim());
+                if (templateNodes != null) {
+                    for (Map<String, Object> tn : templateNodes) {
+                        String name = initHelper.getStringValue(tn, "name", "").trim();
+                        String id = initHelper.getStringValue(tn, "id", "").trim();
+                        if (!name.isEmpty() && !id.isEmpty()) {
+                            codeMap.put(name, id);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("从模板库获取工序编号失败 styleNo={}: {}", styleNo, e.getMessage());
+            }
+        }
+        return codeMap;
+    }
+
     private int syncTrackingPrices(List<ProductionProcessTracking> trackingRecords,
-                                   Map<String, BigDecimal> priceMap, String productionOrderId, String orderNo) {
+                                   Map<String, BigDecimal> priceMap, Map<String, String> codeMap,
+                                   String productionOrderId, String orderNo) {
         int updatedCount = 0;
         for (ProductionProcessTracking tracking : trackingRecords) {
             BigDecimal newPrice = priceMap.get(tracking.getProcessName());
@@ -431,27 +456,39 @@ public class TrackingPriceSyncHelper {
             if (newPrice == null) continue;
 
             BigDecimal oldPrice = tracking.getUnitPrice();
-            if (oldPrice != null && oldPrice.compareTo(newPrice) == 0) continue;
+            boolean priceChanged = oldPrice == null || oldPrice.compareTo(newPrice) != 0;
 
-            tracking.setUnitPrice(newPrice);
-            if ("scanned".equals(tracking.getScanStatus()) && tracking.getQuantity() != null) {
-                if (Boolean.TRUE.equals(tracking.getIsSettled())) {
-                    log.warn("跳过已结算记录的结算金额更新: trackingId={}, orderId={}, processCode={}, settledBatchNo={}",
-                            tracking.getId(), productionOrderId, tracking.getProcessCode(), tracking.getSettledBatchNo());
-                } else {
-                    tracking.setSettlementAmount(newPrice.multiply(new BigDecimal(tracking.getQuantity())));
+            if (priceChanged) {
+                tracking.setUnitPrice(newPrice);
+                if ("scanned".equals(tracking.getScanStatus()) && tracking.getQuantity() != null) {
+                    if (Boolean.TRUE.equals(tracking.getIsSettled())) {
+                        log.warn("跳过已结算记录的结算金额更新: trackingId={}, orderId={}, processCode={}, settledBatchNo={}",
+                                tracking.getId(), productionOrderId, tracking.getProcessCode(), tracking.getSettledBatchNo());
+                    } else {
+                        tracking.setSettlementAmount(newPrice.multiply(new BigDecimal(tracking.getQuantity())));
+                    }
                 }
             }
-            tracking.setUpdater(UserContext.username() != null ? UserContext.username() : "system");
-            trackingService.updateById(tracking);
-            updatedCount++;
+
+            String newCode = codeMap.get(tracking.getProcessName());
+            boolean codeChanged = false;
+            if (StringUtils.hasText(newCode) && !newCode.equals(tracking.getProcessCode())) {
+                tracking.setProcessCode(newCode);
+                codeChanged = true;
+            }
+
+            if (priceChanged || codeChanged) {
+                tracking.setUpdater(UserContext.username() != null ? UserContext.username() : "system");
+                trackingService.updateById(tracking);
+                updatedCount++;
+            }
         }
-        log.info("订单 {} 跟踪记录单价同步完成：共 {} 条，更新 {} 条",
+        log.info("订单 {} 跟踪记录同步完成：共 {} 条，更新 {} 条",
                 orderNo, trackingRecords.size(), updatedCount);
         return updatedCount;
     }
 
-    private int syncScanRecordPrices(Map<String, BigDecimal> priceMap, String productionOrderId) {
+    private int syncScanRecordPrices(Map<String, BigDecimal> priceMap, Map<String, String> codeMap, String productionOrderId) {
         int scanUpdated = 0;
         for (Map.Entry<String, BigDecimal> entry : priceMap.entrySet()) {
             String pName = entry.getKey();
@@ -469,19 +506,27 @@ public class TrackingPriceSyncHelper {
                             .or().ne(ScanRecord::getSettlementStatus, "payroll_settled"))
                     .list();
 
+            String newCode = codeMap.get(pName);
             for (ScanRecord sr : scanRecords) {
                 if (sr.getQuantity() == null || sr.getQuantity() <= 0) continue;
-                if (newPrice.compareTo(sr.getProcessUnitPrice() != null ? sr.getProcessUnitPrice()
-                        : (sr.getUnitPrice() != null ? sr.getUnitPrice() : BigDecimal.ZERO)) == 0) {
-                    continue;
-                }
-                BigDecimal cost = newPrice.multiply(new BigDecimal(sr.getQuantity()));
+                boolean priceChanged = newPrice.compareTo(sr.getProcessUnitPrice() != null ? sr.getProcessUnitPrice()
+                        : (sr.getUnitPrice() != null ? sr.getUnitPrice() : BigDecimal.ZERO)) != 0;
+                boolean codeChanged = StringUtils.hasText(newCode) && !newCode.equals(sr.getProcessCode());
+
+                if (!priceChanged && !codeChanged) continue;
+
                 ScanRecord patch = new ScanRecord();
                 patch.setId(sr.getId());
-                patch.setUnitPrice(newPrice);
-                patch.setProcessUnitPrice(newPrice);
-                patch.setScanCost(cost);
-                patch.setTotalAmount(cost);
+                if (priceChanged) {
+                    BigDecimal cost = newPrice.multiply(new BigDecimal(sr.getQuantity()));
+                    patch.setUnitPrice(newPrice);
+                    patch.setProcessUnitPrice(newPrice);
+                    patch.setScanCost(cost);
+                    patch.setTotalAmount(cost);
+                }
+                if (codeChanged) {
+                    patch.setProcessCode(newCode);
+                }
                 scanRecordService.updateById(patch);
                 scanUpdated++;
             }
@@ -504,8 +549,21 @@ public class TrackingPriceSyncHelper {
         return priceMap;
     }
 
+    private Map<String, String> buildCodeMapFromTemplate(List<Map<String, Object>> templateNodes) {
+        Map<String, String> codeMap = new HashMap<>();
+        for (Map<String, Object> tn : templateNodes) {
+            String name = String.valueOf(tn.getOrDefault("name", "")).trim();
+            String id = String.valueOf(tn.getOrDefault("id", "")).trim();
+            if (StringUtils.hasText(name) && StringUtils.hasText(id)) {
+                codeMap.put(name, id);
+            }
+        }
+        return codeMap;
+    }
+
     @SuppressWarnings("unchecked")
-    private boolean updateWorkflowJsonPrices(ProductionOrder order, Map<String, BigDecimal> priceMap) throws Exception {
+    private boolean updateWorkflowJsonPrices(ProductionOrder order, Map<String, BigDecimal> priceMap,
+                                              Map<String, String> codeMap) throws Exception {
         String json = order.getProgressWorkflowJson();
         Map<String, Object> workflow = OBJECT_MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
         List<Map<String, Object>> nodes = (List<Map<String, Object>>) workflow.get("nodes");
@@ -521,6 +579,15 @@ public class TrackingPriceSyncHelper {
                 if (current instanceof Number) currentPrice = BigDecimal.valueOf(((Number) current).doubleValue());
                 if (templatePrice.compareTo(currentPrice) != 0) {
                     node.put("unitPrice", templatePrice);
+                    changed = true;
+                }
+            }
+            String templateCode = codeMap.get(nodeName);
+            if (StringUtils.hasText(templateCode)) {
+                Object currentId = node.get("id");
+                String currentIdStr = currentId == null ? "" : String.valueOf(currentId).trim();
+                if (!templateCode.equals(currentIdStr)) {
+                    node.put("id", templateCode);
                     changed = true;
                 }
             }

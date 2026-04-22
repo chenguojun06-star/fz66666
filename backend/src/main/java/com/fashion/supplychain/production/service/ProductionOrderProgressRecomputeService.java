@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -40,6 +41,9 @@ public class ProductionOrderProgressRecomputeService {
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private ProcessParentMappingService processParentMappingService;
 
     @Async
     public void recomputeProgressAsync(String orderId) {
@@ -594,31 +598,31 @@ public class ProductionOrderProgressRecomputeService {
         }
         String pn = processName.trim();
         for (String core : CORE_PRODUCTION_STAGES) {
-            if (templateLibraryService.progressStageNameMatches(core, pn)) {
+            if (core.equals(pn)) {
                 return core;
             }
         }
-        if (pn.contains("车缝") || pn.contains("缝制") || pn.contains("缝纫") || pn.contains("车工")
-                || pn.contains("上领") || pn.contains("上袖") || pn.contains("埋夹") || pn.contains("做领")
-                || pn.contains("拼缝") || pn.contains("合缝") || pn.contains("缝合") || pn.contains("整件")) {
-            return "车缝";
+        if (ProcessSynonymMapping.isEquivalent("采购", pn)) {
+            return "采购";
         }
-        if (pn.contains("大烫") || pn.contains("整烫") || pn.contains("剪线") || pn.contains("蒸烫")
-                || pn.contains("尾工") || pn.contains("包装") || pn.contains("打包") || pn.contains("后整")) {
-            return "尾部";
-        }
-        if (pn.contains("绣花") || pn.contains("印花") || pn.contains("水洗") || pn.contains("压花")
-                || pn.contains("二次") || pn.contains("特殊工艺")) {
-            return "二次工艺";
-        }
-        if (pn.contains("裁剪") || pn.contains("裁床") || pn.contains("剪裁") || pn.contains("开裁")) {
+        if (ProcessSynonymMapping.isEquivalent("裁剪", pn)) {
             return "裁剪";
         }
-        if (pn.contains("入库") || pn.contains("入仓") || pn.contains("进仓")) {
+        if (ProcessSynonymMapping.isEquivalent("二次工艺", pn)) {
+            return "二次工艺";
+        }
+        if (ProcessSynonymMapping.isEquivalent("车缝", pn)) {
+            return "车缝";
+        }
+        if (ProcessSynonymMapping.isEquivalent("尾部", pn)) {
+            return "尾部";
+        }
+        if (ProcessSynonymMapping.isEquivalent("入库", pn)) {
             return "入库";
         }
-        if (pn.contains("质检") || pn.contains("品检") || pn.contains("验货") || pn.contains("检验")) {
-            return "尾部";
+        String mapped = processParentMappingService.resolveParentNode(pn);
+        if (StringUtils.hasText(mapped)) {
+            return mapped;
         }
         return null;
     }

@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -51,6 +52,9 @@ public class OrderFlowStageFillHelper {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.ProcessParentMappingService processParentMappingService;
 
     private boolean isBaseStageName(String processName) {
         String pn = StringUtils.hasText(processName) ? processName.trim() : null;
@@ -195,6 +199,7 @@ public class OrderFlowStageFillHelper {
                         procurementRateFromPurchases = 0;
                     }
                 } else if (flow != null) {
+                    procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanStartTime"));
                     procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanEndTime"));
                     procurementOperator = ParamUtils
                             .toTrimmedString(ParamUtils.getIgnoreCase(flow, "procurementScanOperatorName"));
@@ -259,10 +264,11 @@ public class OrderFlowStageFillHelper {
                 // 用 process_tracking 实际扫码量覆盖（取两者最大值，避免视图条件遗漏）
                 Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, new HashMap<>());
                 if (!trackingByProcess.isEmpty()) {
-                    carSewingQty = resolveTrackingQty(trackingByProcess, carSewingQty, "车缝", "carsewing", "car_sewing", "carSewing");
-                    ironingQty = resolveTrackingQty(trackingByProcess, ironingQty, "尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process");
-                    secondaryProcessQty = resolveTrackingQty(trackingByProcess, secondaryProcessQty, "二次工艺", "secondary", "secondaryprocess", "secondary_process", "绣花", "印花", "水洗", "压花");
-                    packagingQty = resolveTrackingQty(trackingByProcess, packagingQty, "包装", "packaging");
+                    Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
+                    carSewingQty = Math.max(carSewingQty, parentQtyMap.getOrDefault("车缝", 0));
+                    ironingQty = Math.max(ironingQty, parentQtyMap.getOrDefault("尾部", 0));
+                    secondaryProcessQty = Math.max(secondaryProcessQty, parentQtyMap.getOrDefault("二次工艺", 0));
+                    packagingQty = Math.max(packagingQty, parentQtyMap.getOrDefault("包装", 0));
                 }
 
                 LocalDateTime qualityStart = flow == null ? null
@@ -274,7 +280,8 @@ public class OrderFlowStageFillHelper {
                 int qualityQty = flow == null ? 0
                         : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "qualityQuantity"));
                 if (!trackingByProcess.isEmpty()) {
-                    qualityQty = resolveTrackingQty(trackingByProcess, qualityQty, "质检", "检验", "品检", "验货", "quality");
+                    Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
+                    qualityQty = Math.max(qualityQty, parentQtyMap.getOrDefault("质检", 0));
                 }
 
                 LocalDateTime wareStart = flow == null ? null
@@ -382,7 +389,7 @@ public class OrderFlowStageFillHelper {
                             ScanRecord::getScanTime, ScanRecord::getOperatorName, ScanRecord::getCreateTime)
                     .in(ScanRecord::getOrderId, orderIds)
                     .in(ScanRecord::getScanType,
-                            java.util.Arrays.asList("production", "cutting", "quality", "warehouse"))
+                            java.util.Arrays.asList("production", "cutting", "quality", "warehouse", "orchestration"))
                     .eq(ScanRecord::getScanResult, "success")
                     .orderByAsc(ScanRecord::getScanTime)
                     .orderByAsc(ScanRecord::getCreateTime));
@@ -482,7 +489,7 @@ public class OrderFlowStageFillHelper {
                 LocalDateTime t = r.getScanTime();
                 String op = r.getOperatorName();
 
-                if ("production".equals(st)
+                if (("production".equals(st) || "orchestration".equals(st))
                         && templateLibraryService.progressStageNameMatches(
                                 ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED,
                                 pn)) {
@@ -490,10 +497,13 @@ public class OrderFlowStageFillHelper {
                     orderEnd = t;
                     orderOperator = op;
                     orderRate = 100;
-                } else if ("production".equals(st)
+                } else if (("production".equals(st) || "orchestration".equals(st))
                         && templateLibraryService.progressStageNameMatches(
                                 ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT,
                                 pn)) {
+                    if (procurementStart == null) {
+                        procurementStart = t;
+                    }
                     procurementEnd = t;
                     procurementOperator = op;
                     procurementStageQty = Math.max(procurementStageQty, Math.max(0, q));
@@ -513,7 +523,9 @@ public class OrderFlowStageFillHelper {
                     wareEnd = t;
                     wareOperator = op;
                     wareQty += Math.max(0, q);
-                } else if ("cutting".equals(st)) {
+                } else if ("cutting".equals(st)
+                        || (("production".equals(st) || "orchestration".equals(st))
+                            && isParentNodeMatch(pn, "裁剪"))) {
                     if (cuttingStart == null) {
                         cuttingStart = t;
                     }
@@ -521,8 +533,7 @@ public class OrderFlowStageFillHelper {
                     cuttingOperator = op;
                     cuttingQty += Math.max(0, q);
                 } else if ("production".equals(st)
-                        && ("carSewing".equals(pn) || "car_sewing".equals(pn) || "车缝".equals(pn))) {
-                    // ★ 父进度节点「车缝」：包含所有 progressStage=车缝 的子工序（上领/埋夹/做领等）
+                        && isParentNodeMatch(pn, "车缝")) {
                     if (carSewingStart == null) {
                         carSewingStart = t;
                     }
@@ -530,12 +541,7 @@ public class OrderFlowStageFillHelper {
                     carSewingOperator = op;
                     carSewingQty += Math.max(0, q);
                 } else if ("production".equals(st)
-                        && ("尾部".equals(pn) || "tailProcess".equals(pn) || "tail_process".equals(pn)
-                            || "packaging".equals(pn) || "ironing".equals(pn)
-                            || pn.contains("尾部") || pn.contains("尾工")
-                            || pn.contains("包装") || pn.contains("大烫")
-                            || pn.contains("整烫") || pn.contains("剪线"))) {
-                    // ★ 父进度节点「尾部」：包含所有 progressStage=尾部 的子工序（大烫/整烫/质检/剪线/包装等）
+                        && isParentNodeMatch(pn, "尾部")) {
                     if (tailStart == null) {
                         tailStart = t;
                     }
@@ -543,12 +549,7 @@ public class OrderFlowStageFillHelper {
                     tailOperator = op;
                     tailQty += Math.max(0, q);
                 } else if ("production".equals(st)
-                        && ("secondaryProcess".equals(pn) || "secondary_process".equals(pn)
-                            || "二次工艺".equals(pn) || pn.contains("二次")
-                            || pn.contains("绣花") || pn.contains("印花")
-                            || pn.contains("水洗") || pn.contains("压花"))) {
-                    // ★ 父进度节点「二次工艺」：包含所有 progressStage=二次工艺 的子工序（绣花/印花/水洗/压花等）
-                    // 防御：即使 resolveParentProgressStage 未成功归并，子工序名仍能正确归入二次工艺
+                        && isParentNodeMatch(pn, "二次工艺")) {
                     if (secondaryProcessStart == null) {
                         secondaryProcessStart = t;
                     }
@@ -559,12 +560,7 @@ public class OrderFlowStageFillHelper {
                         && !isBaseStageName(pn)
                         && !"quality_warehousing".equals(pc)
                         && !templateLibraryService.isProgressQualityStageName(pn)
-                        && !"车缝".equals(pn) && !"carSewing".equals(pn) && !"car_sewing".equals(pn)
-                        && !"二次工艺".equals(pn) && !"secondaryProcess".equals(pn) && !"secondary_process".equals(pn)
-                        && !pn.contains("绣花") && !pn.contains("印花") && !pn.contains("水洗") && !pn.contains("压花")
-                        && !"尾部".equals(pn) && !"tailProcess".equals(pn) && !"tail_process".equals(pn)
-                        && !"packaging".equals(pn) && !"ironing".equals(pn)) {
-                    // 兜底：未归类的生产扫码记录（sewing fallback）
+                        && !isAnyRecognizedParentNode(pn)) {
                     if (sewingStart == null) {
                         sewingStart = t;
                     }
@@ -734,22 +730,18 @@ public class OrderFlowStageFillHelper {
 
         if (!directCuttingOrder && procurementRate != null && procurementRate > 0) {
             o.setProcurementStartTime(procurementStart);
-            boolean showCompleted = false;
-            if (procurementRate >= 50 && isManuallyConfirmed) {
-                showCompleted = true;
+            if (isManuallyConfirmed) {
                 if (o.getProcurementConfirmedAt() != null) {
                     procurementEnd = o.getProcurementConfirmedAt();
                 }
                 if (o.getProcurementConfirmedByName() != null) {
                     procurementOperator = o.getProcurementConfirmedByName();
                 }
-            }
-            if (showCompleted) {
                 o.setProcurementEndTime(procurementEnd);
                 o.setProcurementOperatorName(procurementOperator);
             } else {
-                o.setProcurementEndTime(null);
-                o.setProcurementOperatorName(null);
+                o.setProcurementEndTime(procurementEnd);
+                o.setProcurementOperatorName(procurementOperator);
             }
         } else {
             o.setProcurementStartTime(null);
@@ -934,11 +926,12 @@ public class OrderFlowStageFillHelper {
             int completedRate = computeRate(completedQty, sewBase);
 
             Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, java.util.Collections.emptyMap());
+            Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
 
-            int carSewingQty = resolveTrackingQty(trackingByProcess, 0, "车缝", "缝制", "缝纫", "上领", "上袖", "埋夹", "做领", "拼缝", "合缝", "缝合", "整件", "车工");
-            int secondaryProcessQty = resolveTrackingQty(trackingByProcess, 0, "绣花", "印花", "水洗", "压花", "二次", "特殊工艺");
-            int tailQty = resolveTrackingQty(trackingByProcess, 0, "大烫", "整烫", "剪线", "蒸烫", "尾工", "包装", "打包", "后整", "质检", "品检", "验货", "检验");
-            int qualityQty = resolveTrackingQty(trackingByProcess, 0, "质检", "品检", "验货", "检验");
+            int carSewingQty = parentQtyMap.getOrDefault("车缝", 0);
+            int secondaryProcessQty = parentQtyMap.getOrDefault("二次工艺", 0);
+            int tailQty = parentQtyMap.getOrDefault("尾部", 0);
+            int qualityQty = parentQtyMap.getOrDefault("质检", 0);
 
             int carSewingRate = carSewingQty > 0 ? computeRate(carSewingQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
             int secondaryProcessRate = secondaryProcessQty > 0 ? computeRate(secondaryProcessQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
@@ -961,6 +954,61 @@ public class OrderFlowStageFillHelper {
      * 从 process_tracking 按工序名关键字汇总已扫数量，取视图量和 tracking 量的最大值。
      * 保证列表进度数量不低于弹窗中显示的实际值。
      */
+    private Map<String, Integer> buildParentNodeQtyMap(Map<String, Integer> trackingByProcess) {
+        Map<String, Integer> result = new HashMap<>();
+        if (trackingByProcess == null || trackingByProcess.isEmpty()) {
+            return result;
+        }
+        for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {
+            String pname = entry.getKey() == null ? "" : entry.getKey().trim();
+            if (pname.isEmpty() || entry.getValue() == null || entry.getValue() <= 0) {
+                continue;
+            }
+            String parentNode = resolveParentForAggregation(pname);
+            if (parentNode != null) {
+                result.merge(parentNode, entry.getValue(), Integer::sum);
+            }
+        }
+        return result;
+    }
+
+    private String resolveParentForAggregation(String processName) {
+        if (!StringUtils.hasText(processName)) return null;
+        String pn = processName.trim();
+        if ("采购".equals(pn) || ProcessSynonymMapping.isEquivalent("采购", pn)) return "采购";
+        if ("裁剪".equals(pn) || ProcessSynonymMapping.isEquivalent("裁剪", pn)) return "裁剪";
+        if ("车缝".equals(pn) || ProcessSynonymMapping.isEquivalent("车缝", pn)) return "车缝";
+        if ("二次工艺".equals(pn) || ProcessSynonymMapping.isEquivalent("二次工艺", pn)) return "二次工艺";
+        if ("尾部".equals(pn) || ProcessSynonymMapping.isEquivalent("尾部", pn)) return "尾部";
+        if ("入库".equals(pn) || ProcessSynonymMapping.isEquivalent("入库", pn)) return "入库";
+        if ("质检".equals(pn) || ProcessSynonymMapping.isEquivalent("质检", pn)) return "质检";
+        if ("包装".equals(pn) || ProcessSynonymMapping.isEquivalent("包装", pn)) return "包装";
+        String mapped = processParentMappingService.resolveParentNode(pn);
+        if (StringUtils.hasText(mapped)) return mapped;
+        return null;
+    }
+
+    private boolean isParentNodeMatch(String processName, String targetParent) {
+        if (!StringUtils.hasText(processName)) return false;
+        String pn = processName.trim();
+        if (targetParent.equals(pn)) return true;
+        if (ProcessSynonymMapping.isEquivalent(targetParent, pn)) return true;
+        String mapped = processParentMappingService.resolveParentNode(pn);
+        return targetParent.equals(mapped);
+    }
+
+    private boolean isAnyRecognizedParentNode(String processName) {
+        if (!StringUtils.hasText(processName)) return false;
+        String pn = processName.trim();
+        if (isParentNodeMatch(pn, "采购")) return true;
+        if (isParentNodeMatch(pn, "裁剪")) return true;
+        if (isParentNodeMatch(pn, "车缝")) return true;
+        if (isParentNodeMatch(pn, "二次工艺")) return true;
+        if (isParentNodeMatch(pn, "尾部")) return true;
+        if (isParentNodeMatch(pn, "入库")) return true;
+        return false;
+    }
+
     private int resolveTrackingQty(Map<String, Integer> trackingByProcess, int viewQty, String... keywords) {
         int trackingTotal = 0;
         for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {

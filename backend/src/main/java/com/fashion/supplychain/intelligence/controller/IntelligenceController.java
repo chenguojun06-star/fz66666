@@ -300,7 +300,7 @@ public class IntelligenceController {
      * <p>重新计算当前租户的工序统计，并自动删除平匠名字层
      * （如 "质检领取" 等被错存为父阶段的子工序脱形行）。
      */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/learning/trigger")
     public Result<?> triggerLearning() {
         Long tenantId = UserContext.tenantId();
@@ -334,7 +334,7 @@ public class IntelligenceController {
         return Result.success(profitEstimationOrchestrator.estimate(request));
     }
 
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/factory-leaderboard")
     public Result<FactoryLeaderboardResponse> factoryLeaderboard() {
         return Result.success(factoryLeaderboardOrchestrator.rank());
@@ -537,7 +537,7 @@ public class IntelligenceController {
         String userId = UserContext.userId();
         if (!RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:sse:" + userId, 30, 1)) {
             SseEmitter emitter = new SseEmitter(3000L);
-            try { emitter.send(SseEmitter.event().name("error").data("AI对话请求过于频繁")); emitter.complete(); } catch (Exception ignored) {}
+            try { emitter.send(SseEmitter.event().name("error").data("AI对话请求过于频繁")); emitter.complete(); } catch (Exception e) { log.warn("[AI对话] SSE限流提示发送失败: userId={}", userId); }
             return emitter;
         }
         SseEmitter emitter = new SseEmitter(sseTimeout);
@@ -607,7 +607,7 @@ public class IntelligenceController {
             return Result.fail("commandId 不能为空");
         }
         int score = 0;
-        try { score = Integer.parseInt(String.valueOf(body.getOrDefault("score", 0))); } catch (Exception ignore) {}
+        try { score = Integer.parseInt(String.valueOf(body.getOrDefault("score", 0))); } catch (Exception e) { log.warn("[AI反馈] score解析失败: {}", e.getMessage()); }
         String comment = body.get("comment") == null ? null : body.get("comment").toString();
         com.fashion.supplychain.intelligence.entity.IntelligenceMetrics m =
                 new com.fashion.supplychain.intelligence.entity.IntelligenceMetrics();
@@ -672,7 +672,7 @@ public class IntelligenceController {
     }
 
     /** 供应商智能评分卡 — 近3个月工厂履约/质量综合评级 */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/supplier-scorecard")
     public Result<SupplierScorecardResponse> supplierScorecard() {
         return Result.success(supplierScorecardOrchestrator.scorecard());
@@ -735,7 +735,7 @@ public class IntelligenceController {
     }
 
     /** 触发学习闭环（分析近7天反馈，提炼规律沉淀到记忆库） */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/learning/loop")
     public Result<LearningLoopResponse> runLearningLoop() {
         return Result.success(learningLoopOrchestrator.runLoop());
@@ -809,7 +809,7 @@ public class IntelligenceController {
     }
 
     /** B6 - 审批建议：对所有PENDING变更申请给出 APPROVE/REJECT/ESCALATE 建议 */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/approval/ai-advice")
     public Result<ApprovalAdvisorResponse> approvalAiAdvice() {
         return Result.success(approvalAdvisorOrchestrator.advise());
@@ -823,7 +823,7 @@ public class IntelligenceController {
 
     /** 月度经营汇总：生产完成/次品返修率/各工厂产量/面辅料/成品进出/人工成本/利润
      * 访问规则：平台超管 | 租户主账号(isTenantOwner) | 被显授 INTELLIGENCE_MONTHLY_VIEW 权限的角色 */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner', 'INTELLIGENCE_MONTHLY_VIEW')")
     @GetMapping("/monthly-biz-summary")
     public Result<Map<String, Object>> monthlyBizSummary(
             @RequestParam(defaultValue = "0") int year,
@@ -840,7 +840,7 @@ public class IntelligenceController {
      * 手动触发 AI 巡检（逾期/停滞/结算超时），与定时任务逻辑相同。
      * 返回本次推送通知条数。
      */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/ai-patrol/run")
     public Result<Integer> runAiPatrol() {
         int count = aiPatrolOrchestrator.patrolTenant(
@@ -856,7 +856,7 @@ public class IntelligenceController {
     private final VoiceCommandOrchestrator voiceCommandOrchestrator;
 
     /** Stage5 — 成本/需求/用量预测（POST body: forecastType/subjectId/horizon） */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/forecast")
     @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "预测由AI模型生成")
     public Result<ForecastEngineResponse> forecast(@RequestBody ForecastEngineRequest req) {
@@ -864,7 +864,7 @@ public class IntelligenceController {
     }
 
     /** Stage6 — What-If 推演沙盘（多场景对比） */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/whatif/simulate")
     @DataTruth(source = DataTruth.Source.SIMULATED, description = "What-If推演为模拟数据")
     public Result<WhatIfResponse> whatIfSimulate(@RequestBody WhatIfRequest req) {
@@ -1015,7 +1015,7 @@ public class IntelligenceController {
     }
 
     /** 排产优化求解 — LLM提取约束 + 启发式求解 */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/optimization/scheduling")
     @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "排产优化由LLM+启发式求解生成")
     public Result<com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator.SchedulingSolution> optimizeScheduling(
@@ -1029,7 +1029,7 @@ public class IntelligenceController {
     }
 
     /** 采购优化求解 — LLM提取约束 + 启发式求解 */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/optimization/procurement")
     @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "采购优化由LLM+启发式求解生成")
     public Result<com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator.ProcurementSolution> optimizeProcurement(

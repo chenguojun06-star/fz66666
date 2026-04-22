@@ -122,6 +122,7 @@ public class TemplatePriceSyncHelper {
         }
 
         Map<String, BigDecimal> priceMap = new HashMap<>();
+        Map<String, String> codeMap = new HashMap<>();
         for (Map<String, Object> templateNode : templateNodes) {
             String name = String.valueOf(templateNode.getOrDefault("name", "")).trim();
             if (!StringUtils.hasText(name)) {
@@ -129,8 +130,12 @@ public class TemplatePriceSyncHelper {
             }
             BigDecimal price = TemplateParseUtils.toBigDecimal(templateNode.get("unitPrice"));
             priceMap.put(name, price == null ? BigDecimal.ZERO : price);
+            String id = String.valueOf(templateNode.getOrDefault("id", "")).trim();
+            if (StringUtils.hasText(id)) {
+                codeMap.put(name, id);
+            }
         }
-        if (priceMap.isEmpty()) {
+        if (priceMap.isEmpty() && codeMap.isEmpty()) {
             return 0;
         }
 
@@ -143,14 +148,25 @@ public class TemplatePriceSyncHelper {
         int changedCount = 0;
         for (Map<String, Object> node : nodes) {
             String nodeName = String.valueOf(node.getOrDefault("name", "")).trim();
-            if (!StringUtils.hasText(nodeName) || !priceMap.containsKey(nodeName)) {
+            if (!StringUtils.hasText(nodeName)) {
                 continue;
             }
-            BigDecimal nextPrice = priceMap.get(nodeName);
-            BigDecimal currentPrice = TemplateParseUtils.toBigDecimal(node.get("unitPrice"));
-            if (currentPrice == null || currentPrice.compareTo(nextPrice) != 0) {
-                node.put("unitPrice", nextPrice);
-                changedCount++;
+            if (priceMap.containsKey(nodeName)) {
+                BigDecimal nextPrice = priceMap.get(nodeName);
+                BigDecimal currentPrice = TemplateParseUtils.toBigDecimal(node.get("unitPrice"));
+                if (currentPrice == null || currentPrice.compareTo(nextPrice) != 0) {
+                    node.put("unitPrice", nextPrice);
+                    changedCount++;
+                }
+            }
+            String templateCode = codeMap.get(nodeName);
+            if (StringUtils.hasText(templateCode)) {
+                Object currentId = node.get("id");
+                String currentIdStr = currentId == null ? "" : String.valueOf(currentId).trim();
+                if (!templateCode.equals(currentIdStr)) {
+                    node.put("id", templateCode);
+                    changedCount++;
+                }
             }
         }
         if (changedCount <= 0) {

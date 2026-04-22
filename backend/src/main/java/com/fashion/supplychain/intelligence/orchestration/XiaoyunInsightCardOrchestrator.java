@@ -116,7 +116,7 @@ public class XiaoyunInsightCardOrchestrator {
                     int progress = o.path("productionProgress").asInt(0);
                     if (ped.isBefore(now)) overdueCount++;
                     else if (ped.minusDays(7).isBefore(now) && progress < 50) highRiskCount++;
-                } catch (Exception ignored) {}
+                } catch (Exception e) { log.warn("[洞察卡片] 日期解析失败: {}", e.getMessage()); }
             }
         }
 

@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useAuthStore } from './authStore';
+
+const SUPPLIER_TOKEN_KEY = 'supplier_token';
 
 const useSupplierStore = create(
   persist(
@@ -13,7 +16,8 @@ const useSupplierStore = create(
 
       setAuth: (data) => {
         if (data.token) {
-          localStorage.setItem('fashion_token', data.token);
+          localStorage.setItem(SUPPLIER_TOKEN_KEY, data.token);
+          useAuthStore.getState().setAuth(data.token, { id: data.user?.id, username: data.user?.username, role: 'supplier' }, { id: data.tenantId });
         }
         set({
           token: data.token,
@@ -26,9 +30,8 @@ const useSupplierStore = create(
       },
 
       logout: () => {
-        localStorage.removeItem('fashion_token');
-        localStorage.removeItem('fashion_user_info');
-        localStorage.removeItem('fashion_tenant_info');
+        localStorage.removeItem(SUPPLIER_TOKEN_KEY);
+        useAuthStore.getState().clearAuth();
         set({
           token: null, supplierId: null, tenantId: null,
           supplier: null, user: null, isAuthenticated: false,

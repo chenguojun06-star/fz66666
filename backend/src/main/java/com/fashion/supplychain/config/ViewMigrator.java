@@ -109,15 +109,16 @@ public class ViewMigrator {
                 SELECT
                   sr.order_id AS order_id,
                   sr.tenant_id AS tenant_id,
-                  MIN(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN sr.scan_time END) AS order_start_time,
-                  MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN sr.scan_time END) AS order_end_time,
+                  MIN(CASE WHEN sr.scan_type = 'orchestration' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN sr.scan_time END) AS order_start_time,
+                  MAX(CASE WHEN sr.scan_type = 'orchestration' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN sr.scan_time END) AS order_end_time,
                   SUBSTRING_INDEX(
-                    MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN CAST(CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '') ) AS BINARY) END),
+                    MAX(CASE WHEN sr.scan_type = 'orchestration' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN CAST(CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '') ) AS BINARY) END),
                     '|', -1
                   ) AS order_operator_name,
-                  MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '采购' THEN sr.scan_time END) AS procurement_scan_end_time,
+                  MIN(CASE WHEN sr.scan_type = 'orchestration' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '采购' THEN sr.scan_time END) AS procurement_scan_start_time,
+                  MAX(CASE WHEN sr.scan_type = 'orchestration' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '采购' THEN sr.scan_time END) AS procurement_scan_end_time,
                   SUBSTRING_INDEX(
-                    MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '采购' THEN CAST(CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '') ) AS BINARY) END),
+                    MAX(CASE WHEN sr.scan_type = 'orchestration' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '采购' THEN CAST(CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '') ) AS BINARY) END),
                     '|', -1
                   ) AS procurement_scan_operator_name,
                   MIN(CASE WHEN sr.scan_type = 'cutting' THEN sr.scan_time END) AS cutting_start_time,
@@ -341,7 +342,7 @@ public class ViewMigrator {
                   FROM t_scan_record sr
                   WHERE sr.scan_result = 'success'
                     AND sr.quantity > 0
-                    AND sr.scan_type IN ('production', 'cutting')
+                    AND sr.scan_type IN ('production', 'cutting', 'orchestration')
                 ) t
                 WHERE t.stage_name IS NOT NULL AND t.stage_name <> ''
                 GROUP BY t.order_id, t.tenant_id, t.stage_name;

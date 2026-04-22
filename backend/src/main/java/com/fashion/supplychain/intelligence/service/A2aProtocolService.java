@@ -214,7 +214,7 @@ public class A2aProtocolService {
         String argsJson = "{}";
         try {
             argsJson = rawArgs != null ? objectMapper.writeValueAsString(rawArgs) : "{}";
-        } catch (Exception ignore) {}
+        } catch (Exception e) { log.warn("[A2a] 参数序列化失败: {}", e.getMessage()); argsJson = "{}"; }
 
         // 查找工具
         final String finalToolName = toolName;

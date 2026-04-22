@@ -246,8 +246,8 @@ public class FactoryOrchestrator {
             user.setUpdateTime(LocalDateTime.now());
             supplierUserService.save(user);
 
-            log.info("[供应商账号] 自动创建: username={}, supplierId={}, supplierName={}, initialPassword={}",
-                    username, factory.getId(), factory.getFactoryName(), initialPassword);
+            log.info("[供应商账号] 自动创建: username={}, supplierId={}, supplierName={}",
+                    username, factory.getId(), factory.getFactoryName());
         } catch (Exception e) {
             log.warn("[供应商账号] 自动创建失败(不影响供应商创建): supplierId={}, error={}", factory.getId(), e.getMessage());
         }

@@ -257,6 +257,11 @@ public class ScanRecordOrchestrator {
             throw new IllegalArgumentException("不支持的扫码类型: " + scanType);
         }
 
+        Integer qtyParam = NumberUtils.toInt(safeParams.get("quantity"));
+        if (qtyParam != null && qtyParam <= 0) {
+            throw new IllegalArgumentException("扫码数量必须大于0");
+        }
+
         // 质检扫码路由
         if ("quality".equals(scanType)) {
             Map<String, Object> r = executeQualityScan(safeParams, requestId, operatorId, operatorName, ctx);
@@ -346,7 +351,7 @@ public class ScanRecordOrchestrator {
             Long tenantId = UserContext.tenantId();
             target = scanRecordService.lambdaQuery()
                     .eq(ScanRecord::getId, recordId)
-                    .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
+                    .eq(ScanRecord::getTenantId, tenantId)
                     .one();
         }
         if (target == null && hasText(requestId)) {
@@ -573,7 +578,7 @@ public class ScanRecordOrchestrator {
         Long tenantId = UserContext.tenantId();
         ScanRecord preCheck = scanRecordService.lambdaQuery()
                 .eq(ScanRecord::getId, recordId)
-                .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
+                .eq(ScanRecord::getTenantId, tenantId)
                 .one();
         if (preCheck == null) {
             throw new IllegalStateException("未找到扫码记录");

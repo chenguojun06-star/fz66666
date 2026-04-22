@@ -171,6 +171,18 @@ public class TemplateMutationHelper {
             throw new IllegalStateException("保存工序单价模板失败");
         }
 
+        try {
+            eventPublisher.publishEvent(new TemplatePriceChangedEvent(
+                this,
+                normalizedStyleNo,
+                "process",
+                UserContext.username()
+            ));
+            log.info("[价格变更事件] 已发布工序单价模板更新事件 - styleNo: {}", normalizedStyleNo);
+        } catch (Exception e) {
+            log.warn("[价格变更事件] 发布失败 - styleNo: {}", normalizedStyleNo, e);
+        }
+
         return templateQueryHelper.getProcessPriceTemplate(normalizedStyleNo);
     }
 

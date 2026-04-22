@@ -646,7 +646,7 @@ public class SystemOperationLogAspect {
                             ? materialPickingService.lambdaQuery().eq(com.fashion.supplychain.production.entity.MaterialPicking::getPickingNo, pickingNo).last("LIMIT 1").one()
                             : (id == null ? null : materialPickingService.getById(id));
                     if (pk != null) {
-                        try { return String.valueOf(pk.getClass().getMethod("getPickingNo").invoke(pk)); } catch (Exception ignr) {}
+                        try { return String.valueOf(pk.getClass().getMethod("getPickingNo").invoke(pk)); } catch (Exception ignr) { log.debug("[操作日志] 提取领料单号失败"); }
                     }
                 }
             }
@@ -657,7 +657,7 @@ public class SystemOperationLogAspect {
                     if (id != null) {
                         var b = cuttingBundleService.getById(id);
                         if (b != null) {
-                            try { return String.valueOf(b.getClass().getMethod("getBundleNo").invoke(b)); } catch (Exception ignr) {}
+                            try { return String.valueOf(b.getClass().getMethod("getBundleNo").invoke(b)); } catch (Exception ignr) { log.debug("[操作日志] 提取菲号失败"); }
                         }
                     }
                 }
@@ -667,12 +667,12 @@ public class SystemOperationLogAspect {
                 if (cuttingTaskService != null) {
                     var ct = cuttingTaskService.getById(entityId);
                     if (ct != null) {
-                        try { return String.valueOf(ct.getClass().getMethod("getOrderNo").invoke(ct)); } catch (Exception ignr) {}
+                        try { return String.valueOf(ct.getClass().getMethod("getOrderNo").invoke(ct)); } catch (Exception ignr) { log.debug("[操作日志] 提取裁剪任务单号失败"); }
                     }
                 }
             }
-        } catch (Exception ignored) {
-            // 查询失败不影响主流程
+        } catch (Exception e) {
+            log.debug("[操作日志] 业务编号提取失败: {}", e.getMessage());
         }
         return null;
     }
@@ -686,7 +686,7 @@ public class SystemOperationLogAspect {
                 if (v != null) { String s = String.valueOf(v).trim(); if (!s.isEmpty() && !"null".equals(s)) return s; }
             } else if (a != null && !(a instanceof String) && !(a instanceof Number)) {
                 String getter = "get" + fieldName.substring(0,1).toUpperCase() + fieldName.substring(1);
-                try { Object v = a.getClass().getMethod(getter).invoke(a); if (v != null) { String s = String.valueOf(v).trim(); if (!s.isEmpty() && !"null".equals(s)) return s; } } catch (Exception ig) {}
+                try { Object v = a.getClass().getMethod(getter).invoke(a); if (v != null) { String s = String.valueOf(v).trim(); if (!s.isEmpty() && !"null".equals(s)) return s; } } catch (Exception ig) { log.debug("[操作日志] 提取字段{}失败", fieldName); }
             }
         }
         return null;

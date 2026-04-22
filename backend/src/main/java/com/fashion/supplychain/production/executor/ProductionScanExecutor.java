@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.BusinessException;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.*;
@@ -150,6 +151,10 @@ public class ProductionScanExecutor {
             throw new IllegalStateException("进度节点已完成，该订单已结束生产");
         }
 
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("扫码数量必须大于0");
+        }
+
         String progressStage;
         if (autoProcess) {
             progressStage = processStageDetector.resolveAutoProcessName(order);
@@ -166,11 +171,12 @@ public class ProductionScanExecutor {
             }
         }
 
-        progressStage = normalizeFixedProductionNodeName(progressStage);
-
         // ★ ORDER 模式守卫：无菲号时只允许采购/裁剪阶段，防止 ORDER 码绕过前端进入生产工序
         if (bundle == null) {
-            if (!"采购".equals(progressStage) && !"裁剪".equals(progressStage)) {
+            boolean isProcurementOrCutting = "采购".equals(progressStage) || "裁剪".equals(progressStage)
+                    || ProcessSynonymMapping.isEquivalent("采购", progressStage)
+                    || ProcessSynonymMapping.isEquivalent("裁剪", progressStage);
+            if (!isProcurementOrCutting) {
                 throw new IllegalStateException(
                     "订单码只能用于采购和裁剪阶段，当前工序[" + progressStage + "]请扫描菲号二维码");
             }
@@ -437,10 +443,12 @@ public class ProductionScanExecutor {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         String bundleNoStr = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-        String stageLabel = progressStage != null ? progressStage : "";
-        result.put("message", "扫码成功" + (stageLabel.isEmpty() ? "" : " · " + stageLabel) + (bundleNoStr.isEmpty() ? "" : " · 菲号" + bundleNoStr));
+        String displayProcessName = processCode != null ? processCode : (progressStage != null ? progressStage : "");
+        result.put("message", "扫码成功" + (displayProcessName.isEmpty() ? "" : " · " + displayProcessName) + (bundleNoStr.isEmpty() ? "" : " · 菲号" + bundleNoStr));
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
+        result.put("childProcessName", childProcessName);
+        result.put("parentProgressStage", progressStage);
 
         String nextStage;
         switch (sr.getScanType() != null ? sr.getScanType().trim().toLowerCase() : "") {
@@ -746,18 +754,17 @@ public class ProductionScanExecutor {
                 return null;
             }
 
-            // 精确匹配
-            String normalized = normalizeFixedProductionNodeName(pn);
-            if (hasText(normalized)) {
-                BigDecimal exact = prices.get(normalized);
-                if (exact != null && exact.compareTo(BigDecimal.ZERO) > 0) {
-                    return exact;
-                }
-            }
-
             BigDecimal exact = prices.get(pn);
             if (exact != null && exact.compareTo(BigDecimal.ZERO) > 0) {
                 return exact;
+            }
+
+            String normalized = normalizeFixedProductionNodeName(pn);
+            if (hasText(normalized) && !normalized.equals(pn)) {
+                BigDecimal normPrice = prices.get(normalized);
+                if (normPrice != null && normPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    return normPrice;
+                }
             }
 
             // 固定节点模糊匹配
@@ -972,10 +979,14 @@ public class ProductionScanExecutor {
             }
 
             try {
-                java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes =
-                        secondaryProcessService.listByStyleId(Long.valueOf(order.getStyleId()));
-                if (processes != null && !processes.isEmpty()) {
-                    info.put("secondaryProcesses", processes);
+                Long styleIdLong = null;
+                try { styleIdLong = Long.valueOf(order.getStyleId()); } catch (NumberFormatException ignore) {}
+                if (styleIdLong != null) {
+                    java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes =
+                            secondaryProcessService.listByStyleId(styleIdLong);
+                    if (processes != null && !processes.isEmpty()) {
+                        info.put("secondaryProcesses", processes);
+                    }
                 }
             } catch (Exception e) {
                 log.warn("buildOrderInfo查询二次工艺失败: styleId={}", order.getStyleId(), e);

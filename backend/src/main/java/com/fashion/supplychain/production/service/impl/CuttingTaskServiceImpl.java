@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -893,7 +894,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             // 模糊匹配裁剪相关
             for (Map.Entry<String, BigDecimal> entry : prices.entrySet()) {
                 String key = entry.getKey();
-                if (key != null && (key.contains("裁剪") || key.contains("裁床") || key.contains("开裁"))) {
+                if (key != null && ProcessSynonymMapping.isEquivalent("裁剪", key)) {
                     BigDecimal v = entry.getValue();
                     if (v != null && v.compareTo(BigDecimal.ZERO) > 0) {
                         return v;

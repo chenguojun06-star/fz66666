@@ -3,6 +3,7 @@ package com.fashion.supplychain.stock.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.entity.SampleStock;
@@ -71,7 +72,7 @@ public class SampleStockController {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         LambdaQueryWrapper<SampleLoan> wrapper = new LambdaQueryWrapper<SampleLoan>()
             .eq(SampleLoan::getSampleStockId, sampleStockId)
-            .eq(tenantId != null, SampleLoan::getTenantId, tenantId)
+            .eq(SampleLoan::getTenantId, tenantId)
             .orderByDesc(SampleLoan::getCreateTime);
         return Result.success(sampleLoanMapper.selectList(wrapper));
     }

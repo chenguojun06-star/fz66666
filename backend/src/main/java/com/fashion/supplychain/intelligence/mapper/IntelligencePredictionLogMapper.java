@@ -77,4 +77,29 @@ public interface IntelligencePredictionLogMapper extends BaseMapper<Intelligence
             @Param("tenantId")     Long tenantId,
             @Param("factoryName")  String factoryName,
             @Param("minSamples")   int minSamples);
+
+    // ── 准确率量化：以下三个方法供 AiAccuracyOrchestrator 使用 ──
+
+    /** 已有实际完成时间的预测总数（可被评估的样本量） */
+    @Select("SELECT COUNT(*) FROM t_intelligence_prediction_log "
+            + "WHERE tenant_id = #{tenantId} "
+            + "  AND actual_finish_time IS NOT NULL "
+            + "  AND delete_flag = 0")
+    int countEvaluated(@Param("tenantId") Long tenantId);
+
+    /** 在 toleranceMinutes 容差范围内命中的预测数（|偏差| ≤ tolerance） */
+    @Select("SELECT COUNT(*) FROM t_intelligence_prediction_log "
+            + "WHERE tenant_id = #{tenantId} "
+            + "  AND actual_finish_time IS NOT NULL "
+            + "  AND ABS(deviation_minutes) <= #{toleranceMinutes} "
+            + "  AND delete_flag = 0")
+    int countHits(@Param("tenantId") Long tenantId, @Param("toleranceMinutes") long toleranceMinutes);
+
+    /** 所有已评估记录的平均绝对偏差（天），无记录返回 NULL */
+    @Select("SELECT AVG(ABS(deviation_minutes)) / 1440.0 "
+            + "FROM t_intelligence_prediction_log "
+            + "WHERE tenant_id = #{tenantId} "
+            + "  AND deviation_minutes IS NOT NULL "
+            + "  AND delete_flag = 0")
+    Double getAvgAbsBiasDays(@Param("tenantId") Long tenantId);
 }

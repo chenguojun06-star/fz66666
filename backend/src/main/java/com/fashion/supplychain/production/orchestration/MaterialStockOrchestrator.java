@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
 import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
@@ -68,7 +69,7 @@ public class MaterialStockOrchestrator {
         Long tenantId = UserContext.tenantId();
         List<MaterialStock> stocks = materialStockService.list(new LambdaQueryWrapper<MaterialStock>()
                 .eq(MaterialStock::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialStock::getTenantId, tenantId)); // 🔒 租户隔离
+                .eq(MaterialStock::getTenantId, tenantId)); // 🔒 租户隔离
 
         if (stocks == null || stocks.isEmpty()) {
             return new ArrayList<>();

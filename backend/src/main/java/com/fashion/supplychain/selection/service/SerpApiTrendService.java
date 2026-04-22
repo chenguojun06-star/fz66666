@@ -571,8 +571,8 @@ public class SerpApiTrendService {
                         }
                         return null;
                     }
-                } catch (Exception ignored) {
-                    // JSON 解析失败则继续正常返回 body
+                } catch (Exception e) {
+                    log.warn("[趋势] JSON解析失败: {}", e.getMessage());
                 }
             }
             return body;

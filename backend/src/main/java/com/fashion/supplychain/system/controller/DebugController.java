@@ -12,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/debug")
-@PreAuthorize("hasAnyAuthority('ROLE_1', 'ROLE_ADMIN')")
+@PreAuthorize("isAuthenticated()")
 @Profile("dev")
 public class DebugController {
     @GetMapping("/context")

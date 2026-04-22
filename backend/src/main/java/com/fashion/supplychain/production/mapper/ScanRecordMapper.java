@@ -22,6 +22,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  v.order_start_time AS orderStartTime,",
                         "  v.order_end_time AS orderEndTime,",
                         "  v.order_operator_name AS orderOperatorName,",
+                        "  v.procurement_scan_start_time AS procurementScanStartTime,",
                         "  v.procurement_scan_end_time AS procurementScanEndTime,",
                         "  v.procurement_scan_operator_name AS procurementScanOperatorName,",
                         "  v.cutting_start_time AS cuttingStartTime,",

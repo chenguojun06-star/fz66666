@@ -402,7 +402,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                                 .eq(SampleLoan::getSampleStockId, stock.getId())
                                 .eq(SampleLoan::getStatus, "borrowed")
                                 .eq(SampleLoan::getDeleteFlag, 0)
-                                .eq(tenantId != null, SampleLoan::getTenantId, tenantId));
+                                .eq(SampleLoan::getTenantId, tenantId));
                 result.put("activeLoans", activeLoans);
             }
         }

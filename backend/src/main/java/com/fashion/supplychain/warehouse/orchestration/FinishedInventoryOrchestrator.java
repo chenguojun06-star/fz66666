@@ -82,8 +82,7 @@ public class FinishedInventoryOrchestrator {
         Page<ProductSku> skuPage = new Page<>(page, pageSize);
         LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
         wrapper.gt(ProductSku::getStockQuantity, 0);
-        if (tid != null) wrapper.eq(ProductSku::getTenantId, tid);
-        if (tid == null) log.warn("[租户隔离] 成品库存查询租户上下文为空");
+        wrapper.eq(ProductSku::getTenantId, tid);
 
         // 工厂账号隔离：仅展示本工厂订单关联的款号库存
         String ctxFactoryId = UserContext.factoryId();

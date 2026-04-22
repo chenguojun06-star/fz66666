@@ -34,4 +34,18 @@ public interface IntelligenceMetricsMapper extends BaseMapper<IntelligenceMetric
             "ORDER BY create_time DESC LIMIT #{limit}")
     List<Map<String, Object>> listRecentInvocations(@Param("tenantId") Long tenantId,
                                                     @Param("limit") int limit);
+
+    /**
+     * 采纳率统计（供 AiAccuracyOrchestrator 使用）
+     * 返回 map 含 adopted（采纳次数）、total（有明确反馈的总次数）
+     */
+    @Select("SELECT "
+            + "  SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS adopted, "
+            + "  COUNT(*) AS total "
+            + "FROM t_intelligence_metrics "
+            + "WHERE tenant_id = #{tenantId} "
+            + "  AND accepted IS NOT NULL "
+            + "  AND delete_flag = 0 "
+            + "  AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)")
+    Map<String, Object> getAdoptionStats(@Param("tenantId") Long tenantId, @Param("days") int days);
 }

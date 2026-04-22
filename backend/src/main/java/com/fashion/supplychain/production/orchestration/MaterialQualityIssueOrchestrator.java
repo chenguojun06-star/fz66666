@@ -39,11 +39,10 @@ public class MaterialQualityIssueOrchestrator {
     private final com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
 
     public List<MaterialQualityIssue> listByPurchaseId(String purchaseId) {
-        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         return materialQualityIssueService.list(new LambdaQueryWrapper<MaterialQualityIssue>()
                 .eq(MaterialQualityIssue::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialQualityIssue::getTenantId, tenantId)
+                .eq(MaterialQualityIssue::getTenantId, tenantId)
                 .eq(MaterialQualityIssue::getPurchaseId, purchaseId)
                 .orderByDesc(MaterialQualityIssue::getCreateTime));
     }
@@ -53,12 +52,11 @@ public class MaterialQualityIssueOrchestrator {
             return false;
         }
         try {
-            TenantAssert.assertTenantContext();
             Long tenantId = UserContext.tenantId();
             return materialQualityIssueService.lambdaQuery()
                     .eq(MaterialQualityIssue::getPurchaseId, purchaseId.trim())
                     .eq(MaterialQualityIssue::getDeleteFlag, 0)
-                    .eq(tenantId != null, MaterialQualityIssue::getTenantId, tenantId)
+                    .eq(MaterialQualityIssue::getTenantId, tenantId)
                     .eq(MaterialQualityIssue::getStatus, "OPEN")
                     .count() > 0;
         } catch (Exception e) {

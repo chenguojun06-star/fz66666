@@ -75,6 +75,9 @@ public class SecondaryProcessController {
     @PutMapping("/{id}")
     public Result<SecondaryProcess> update(@PathVariable Long id, @RequestBody SecondaryProcess process) {
         SecondaryProcess existing = secondaryProcessService.getById(id);
+        if (existing != null) {
+            TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "二次工艺");
+        }
         process.setId(id);
         normalizeProcess(process, existing);
         secondaryProcessService.updateById(process);
@@ -97,6 +100,9 @@ public class SecondaryProcessController {
     public Result<Void> delete(@PathVariable Long id) {
         // 先获取 styleId 再删除，以便重算报价
         SecondaryProcess existing = secondaryProcessService.getById(id);
+        if (existing != null) {
+            TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "二次工艺");
+        }
         Long styleId = existing != null ? existing.getStyleId() : null;
 
         secondaryProcessService.removeById(id);

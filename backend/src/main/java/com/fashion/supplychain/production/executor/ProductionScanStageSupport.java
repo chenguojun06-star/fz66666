@@ -248,17 +248,17 @@ public class ProductionScanStageSupport {
                 return null;
             }
 
-            String normalized = normalizeFixedProductionNodeName(pn);
-            if (StringUtils.hasText(normalized)) {
-                BigDecimal exact = prices.get(normalized);
-                if (exact != null && exact.compareTo(BigDecimal.ZERO) > 0) {
-                    return exact;
-                }
-            }
-
             BigDecimal exact = prices.get(pn);
             if (exact != null && exact.compareTo(BigDecimal.ZERO) > 0) {
                 return exact;
+            }
+
+            String normalized = normalizeFixedProductionNodeName(pn);
+            if (StringUtils.hasText(normalized) && !normalized.equals(pn)) {
+                BigDecimal normPrice = prices.get(normalized);
+                if (normPrice != null && normPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    return normPrice;
+                }
             }
 
             for (String n : FIXED_PRODUCTION_NODES) {
@@ -330,6 +330,9 @@ public class ProductionScanStageSupport {
                         String processName = node.get("name") == null ? "" : String.valueOf(node.get("name")).trim();
                         String parent = node.get("progressStage") == null ? "" : String.valueOf(node.get("progressStage")).trim();
                         String normalizedParent = normalizeFixedProductionNodeName(parent);
+                        if (normalizedParent == null && StringUtils.hasText(parent) && !parent.equals(processName)) {
+                            normalizedParent = processParentMappingService.resolveParentNode(parent);
+                        }
                         if (!StringUtils.hasText(processName) || !isFixedNode(normalizedParent)) {
                             continue;
                         }

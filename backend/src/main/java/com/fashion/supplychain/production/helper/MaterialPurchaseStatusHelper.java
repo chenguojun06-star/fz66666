@@ -610,8 +610,11 @@ public class MaterialPurchaseStatusHelper {
         }
 
         String currentStatus = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
-        if (!MaterialConstants.STATUS_AWAITING_CONFIRM.equals(currentStatus)) {
-            throw new IllegalStateException("该采购单当前状态为「" + currentStatus + "」，仅待确认完成状态可执行此操作");
+        if (MaterialConstants.STATUS_COMPLETED.equals(currentStatus)) {
+            throw new IllegalStateException("该采购单已完成，无需重复确认");
+        }
+        if (MaterialConstants.STATUS_CANCELLED.equals(currentStatus)) {
+            throw new IllegalStateException("该采购单已取消，无法确认完成");
         }
 
         String operator = UserContext.username();
@@ -625,18 +628,15 @@ public class MaterialPurchaseStatusHelper {
         MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
         if (updated != null) {
             syncAfterPurchaseChanged(updated);
+            tryMarkOrderProcurementComplete(updated);
         }
-
-        // 采购完成后：若该订单所有采购单均已 completed/cancelled，则自动标记订单采购手工确认
-        // 这样 OrderFlowStageFillHelper.fillProcurementDisplay() 才能将 procurementEndTime 回写到订单响应
-        tryMarkOrderProcurementComplete(purchase);
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("purchaseId", purchaseId);
         result.put("purchaseNo", purchase.getPurchaseNo());
         result.put("materialName", purchase.getMaterialName());
         result.put("status", MaterialConstants.STATUS_COMPLETED);
-        log.info("✅ 采购已确认完成: purchaseId={}, purchaseNo={}, operator={}",
+        log.info("采购已确认完成: purchaseId={}, purchaseNo={}, operator={}",
                 purchaseId, purchase.getPurchaseNo(), operator);
         return result;
     }
@@ -714,6 +714,7 @@ public class MaterialPurchaseStatusHelper {
                         .eq(MaterialPurchase::getId, purchaseId));
         if (updated != null) {
             syncAfterPurchaseChanged(updated);
+            tryMarkOrderProcurementComplete(updated);
         }
         return true;
     }

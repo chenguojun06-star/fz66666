@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -91,11 +92,29 @@ public class ProcessStageDetector {
             if (!hasText(n)) {
                 continue;
             }
-            if (n.equals(v) || templateLibraryService.progressStageNameMatches(n, v)) {
+            if (n.equals(v)) {
                 return n;
             }
         }
-        return v;
+        if (ProcessSynonymMapping.isEquivalent("采购", v)) {
+            return "采购";
+        }
+        if (ProcessSynonymMapping.isEquivalent("裁剪", v)) {
+            return "裁剪";
+        }
+        if (ProcessSynonymMapping.isEquivalent("二次工艺", v)) {
+            return "二次工艺";
+        }
+        if (ProcessSynonymMapping.isEquivalent("车缝", v)) {
+            return "车缝";
+        }
+        if (ProcessSynonymMapping.isEquivalent("尾部", v)) {
+            return "尾部";
+        }
+        if (ProcessSynonymMapping.isEquivalent("入库", v)) {
+            return "入库";
+        }
+        return null;
     }
 
     /**
@@ -144,6 +163,9 @@ public class ProcessStageDetector {
                 continue;
             }
             String pn = normalizeFixedProductionNodeName(pnRaw);
+            if (pn == null) {
+                pn = pnRaw;
+            }
             if (!hasText(pn)) {
                 continue;
             }
@@ -194,6 +216,9 @@ public class ProcessStageDetector {
                 continue;
             }
             String pn = normalizeFixedProductionNodeName(pnRaw);
+            if (pn == null) {
+                pn = pnRaw;
+            }
             if (!hasText(pn)) {
                 continue;
             }

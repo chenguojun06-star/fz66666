@@ -139,10 +139,11 @@ public class ShipmentReconciliationOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         ShipmentReconciliation r = shipmentReconciliationService.lambdaQuery()
                 .eq(ShipmentReconciliation::getId, key)
-                .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
                 .one();
         if (r == null) {
             throw new NoSuchElementException("对账单不存在");

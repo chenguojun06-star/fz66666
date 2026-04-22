@@ -279,7 +279,7 @@ public class PatternProductionController {
             java.math.BigDecimal unitPrice = null;
             Object unitPriceObj = request.get("unitPrice");
             if (unitPriceObj != null) {
-                try { unitPrice = new java.math.BigDecimal(String.valueOf(unitPriceObj)); } catch (Exception ignored) {}
+                try { unitPrice = new java.math.BigDecimal(String.valueOf(unitPriceObj)); } catch (Exception e) { log.warn("[样衣扫码] 单价解析失败: unitPriceObj={}", unitPriceObj, e.getMessage()); }
             }
 
             Map<String, Object> result = patternProductionOrchestrator.submitScan(

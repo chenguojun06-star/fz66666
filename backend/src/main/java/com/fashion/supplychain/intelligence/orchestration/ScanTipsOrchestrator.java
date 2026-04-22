@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.intelligence.dto.AiScanTipResponse;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
@@ -139,13 +140,13 @@ public class ScanTipsOrchestrator {
 
     private String resolveStage(String processName) {
         if (!StringUtils.hasText(processName)) return "";
-        String p = processName.toLowerCase();
-        if (p.contains("采购") || p.contains("面料") || p.contains("辅料") || p.contains("配料")) return "采购";
-        if (p.contains("裁") || p.contains("cutting") || p.contains("裁床")) return "裁剪";
-        if (p.contains("车缝") || p.contains("缝") || p.contains("sewing") || p.contains("车位")) return "车缝";
-        if (p.contains("尾") || p.contains("整烫") || p.contains("包装") || p.contains("剪线")) return "尾部";
-        if (p.contains("质检") || p.contains("验收") || p.contains("quality") || p.contains("检验")) return "质检";
-        if (p.contains("入库") || p.contains("仓") || p.contains("warehouse")) return "入库";
+        if (ProcessSynonymMapping.isEquivalent("采购", processName)) return "采购";
+        if (ProcessSynonymMapping.isEquivalent("裁剪", processName)) return "裁剪";
+        if (ProcessSynonymMapping.isEquivalent("二次工艺", processName)) return "二次工艺";
+        if (ProcessSynonymMapping.isEquivalent("车缝", processName)) return "车缝";
+        if (ProcessSynonymMapping.isEquivalent("尾部", processName)) return "尾部";
+        if (ProcessSynonymMapping.isEquivalent("入库", processName)) return "入库";
+        if (processName.contains("质检") || processName.contains("验收") || processName.contains("检验")) return "质检";
         return "";
     }
 
