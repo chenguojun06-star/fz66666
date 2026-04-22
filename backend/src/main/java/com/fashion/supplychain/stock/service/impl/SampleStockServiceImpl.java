@@ -73,9 +73,10 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         String recordStatus = String.valueOf(params.getOrDefault("recordStatus", "active")).trim().toLowerCase();
 
         Long tid = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tid == null) log.warn("[租户隔离] 样衣库存查询租户上下文为空");
         LambdaQueryWrapper<SampleStock> wrapper = new LambdaQueryWrapper<SampleStock>()
                 .eq(!"all".equals(recordStatus), SampleStock::getDeleteFlag, "destroyed".equals(recordStatus) ? 1 : 0)
-                .eq(tid != null, SampleStock::getTenantId, tid)
+                .eq(SampleStock::getTenantId, tid)
                 .like(StringUtils.hasText(styleNo), SampleStock::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(sampleType), SampleStock::getSampleType, sampleType)
                 .orderByDesc(SampleStock::getCreateTime);
@@ -111,7 +112,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .eq(SampleStock::getColor, stock.getColor())
                 .eq(SampleStock::getSize, stock.getSize())
                 .eq(SampleStock::getSampleType, stock.getSampleType())
-                .eq(currentTenantId != null, SampleStock::getTenantId, currentTenantId);
+                .eq(SampleStock::getTenantId, currentTenantId);
 
         SampleStock exist = this.getOne(query);
         if (exist != null) {
@@ -178,7 +179,10 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     public void loan(SampleLoan loan) {
         Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
 
-        SampleStock stock = this.getById(loan.getSampleStockId());
+        SampleStock stock = this.lambdaQuery()
+                .eq(SampleStock::getId, loan.getSampleStockId())
+                .eq(currentTenantId != null, SampleStock::getTenantId, currentTenantId)
+                .one();
         if (stock == null) {
             throw new IllegalArgumentException("样衣库存不存在");
         }
@@ -236,7 +240,10 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void returnSample(String loanId, Integer returnQuantity, String remark) {
-        SampleLoan loan = sampleLoanMapper.selectById(loanId);
+        Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        SampleLoan loan = sampleLoanMapper.selectOne(new LambdaQueryWrapper<SampleLoan>()
+                .eq(SampleLoan::getId, loanId)
+                .eq(currentTenantId != null, SampleLoan::getTenantId, currentTenantId));
         if (loan == null) {
             throw new IllegalArgumentException("借出记录不存在");
         }
@@ -268,7 +275,10 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
 
         baseMapper.updateLoanedQuantity(loan.getSampleStockId(), -qty, com.fashion.supplychain.common.UserContext.tenantId());
 
-        SampleStock returnStock = this.getById(loan.getSampleStockId());
+        SampleStock returnStock = this.lambdaQuery()
+                .eq(SampleStock::getId, loan.getSampleStockId())
+                .eq(currentTenantId != null, SampleStock::getTenantId, currentTenantId)
+                .one();
         if (returnStock != null) {
             PatternProduction returnPattern = findPatternForStock(returnStock);
             if (returnPattern != null) {
@@ -311,7 +321,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         SampleStock stock = this.lambdaQuery()
                 .eq(SampleStock::getId, stockId)
                 .eq(SampleStock::getDeleteFlag, 0)
-                .eq(tid != null, SampleStock::getTenantId, tid)
+                .eq(SampleStock::getTenantId, tid)
                 .one();
         if (stock == null) {
             throw new IllegalArgumentException("样衣库存不存在");
@@ -363,7 +373,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .eq(SampleStock::getColor, color)
                 .eq(SampleStock::getSize, size)
                 .eq(SampleStock::getDeleteFlag, 0)
-                .eq(tenantId != null, SampleStock::getTenantId, tenantId)
+                .eq(SampleStock::getTenantId, tenantId)
                 .one();
 
         Map<String, Object> result = new HashMap<>();
@@ -391,7 +401,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                         new LambdaQueryWrapper<SampleLoan>()
                                 .eq(SampleLoan::getSampleStockId, stock.getId())
                                 .eq(SampleLoan::getStatus, "borrowed")
-                                .eq(SampleLoan::getDeleteFlag, 0));
+                                .eq(SampleLoan::getDeleteFlag, 0)
+                                .eq(tenantId != null, SampleLoan::getTenantId, tenantId));
                 result.put("activeLoans", activeLoans);
             }
         }
@@ -515,7 +526,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         LambdaQueryWrapper<StyleInfo> query = new LambdaQueryWrapper<StyleInfo>()
                 .eq(StringUtils.hasText(stock.getStyleId()), StyleInfo::getId, stock.getStyleId())
                 .eq(!StringUtils.hasText(stock.getStyleId()) && StringUtils.hasText(stock.getStyleNo()), StyleInfo::getStyleNo, stock.getStyleNo())
-                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .eq(StyleInfo::getTenantId, tenantId)
                 .last("LIMIT 1");
         StyleInfo style = styleInfoMapper.selectOne(query);
         if (style == null) {
@@ -571,7 +582,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         List<SampleStock> existingStocks = this.lambdaQuery()
                 .eq(SampleStock::getDeleteFlag, 0)
                 .eq(SampleStock::getSampleType, stock.getSampleType())
-                .eq(tenantId != null, SampleStock::getTenantId, tenantId)
+                .eq(SampleStock::getTenantId, tenantId)
                 .eq(StringUtils.hasText(stock.getStyleId()), SampleStock::getStyleId, stock.getStyleId())
                 .eq(StringUtils.hasText(stock.getColor()), SampleStock::getColor, stock.getColor().trim())
                 .eq(StringUtils.hasText(stock.getSize()), SampleStock::getSize, stock.getSize().trim())

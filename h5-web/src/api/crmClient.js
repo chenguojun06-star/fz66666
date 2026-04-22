@@ -3,21 +3,21 @@ import { http } from '@/services/http';
 const crmClient = {
   login: (data) => http.post('/api/crm-client/login', data),
 
-  getDashboard: (customerId) => http.get(`/api/crm-client/dashboard/${encodeURIComponent(customerId)}`),
+  getDashboard: () => http.get('/api/crm-client/dashboard'),
 
-  getOrders: (customerId, params) => http.get(`/api/crm-client/orders/${encodeURIComponent(customerId)}`, { params }),
+  getOrders: (params) => http.get('/api/crm-client/orders', { params }),
 
-  getOrderDetail: (customerId, orderId) => http.get(`/api/crm-client/orders/${encodeURIComponent(customerId)}/${encodeURIComponent(orderId)}`),
+  getOrderDetail: (orderId) => http.get(`/api/crm-client/orders/${encodeURIComponent(orderId)}`),
 
-  getPurchases: (customerId, params) => http.get(`/api/crm-client/purchases/${encodeURIComponent(customerId)}`, { params }),
+  getPurchases: (params) => http.get('/api/crm-client/purchases', { params }),
 
-  getPurchaseDetail: (customerId, purchaseId) => http.get(`/api/crm-client/purchases/${encodeURIComponent(customerId)}/${encodeURIComponent(purchaseId)}`),
+  getPurchaseDetail: (purchaseId) => http.get(`/api/crm-client/purchases/${encodeURIComponent(purchaseId)}`),
 
-  getReceivables: (customerId, params) => http.get(`/api/crm-client/receivables/${encodeURIComponent(customerId)}`, { params }),
+  getReceivables: (params) => http.get('/api/crm-client/receivables', { params }),
 
-  getReceivableDetail: (customerId, receivableId) => http.get(`/api/crm-client/receivables/${encodeURIComponent(customerId)}/${encodeURIComponent(receivableId)}`),
+  getReceivableDetail: (receivableId) => http.get(`/api/crm-client/receivables/${encodeURIComponent(receivableId)}`),
 
-  getProfile: (customerId) => http.get(`/api/crm-client/profile/${encodeURIComponent(customerId)}`),
+  getProfile: () => http.get('/api/crm-client/profile'),
 };
 
 export default crmClient;

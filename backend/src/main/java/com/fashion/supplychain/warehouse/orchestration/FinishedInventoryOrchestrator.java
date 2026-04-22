@@ -83,6 +83,7 @@ public class FinishedInventoryOrchestrator {
         LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
         wrapper.gt(ProductSku::getStockQuantity, 0);
         if (tid != null) wrapper.eq(ProductSku::getTenantId, tid);
+        if (tid == null) log.warn("[租户隔离] 成品库存查询租户上下文为空");
 
         // 工厂账号隔离：仅展示本工厂订单关联的款号库存
         String ctxFactoryId = UserContext.factoryId();
@@ -164,7 +165,9 @@ public class FinishedInventoryOrchestrator {
                             try {
                                 Long sid = Long.valueOf(a.getStyleId());
                                 attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
-                            } catch (NumberFormatException ignored) {}
+                            } catch (NumberFormatException e) {
+                                log.debug("styleId解析失败: {}", a.getStyleId());
+                            }
                         }
                     }
                 } catch (Exception e) {
@@ -692,9 +695,10 @@ public class FinishedInventoryOrchestrator {
         int page = Integer.parseInt(params.getOrDefault("page", "1").toString());
         int pageSize = Integer.parseInt(params.getOrDefault("pageSize", "20").toString());
         Long tenantId = UserContext.tenantId();
+        if (tenantId == null) log.warn("[租户隔离] 出库记录查询租户上下文为空");
 
         LambdaQueryWrapper<ProductOutstock> wrapper = new LambdaQueryWrapper<ProductOutstock>()
-                .eq(tenantId != null, ProductOutstock::getTenantId, tenantId)
+                .eq(ProductOutstock::getTenantId, tenantId)
                 .eq(ProductOutstock::getDeleteFlag, 0);
 
         String keyword = trimToNull(params.get("keyword"));
@@ -746,6 +750,10 @@ public class FinishedInventoryOrchestrator {
         if (outstock == null) {
             throw new IllegalArgumentException("出库记录不存在");
         }
+        Long tenantId = UserContext.tenantId();
+        if (!tenantId.equals(outstock.getTenantId())) {
+            throw new SecurityException("无权操作该出库记录");
+        }
 
         BigDecimal currentPaid = outstock.getPaidAmount() != null ? outstock.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal newPaid = currentPaid.add(paidAmount);
@@ -771,7 +779,7 @@ public class FinishedInventoryOrchestrator {
         BillAggregation bill = billAggregationService.lambdaQuery()
                 .eq(BillAggregation::getSourceType, "PRODUCT_OUTSTOCK")
                 .eq(BillAggregation::getSourceId, outstock.getId())
-                .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getTenantId, tenantId)
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .last("LIMIT 1")
                 .one();
@@ -805,6 +813,10 @@ public class FinishedInventoryOrchestrator {
         ProductOutstock outstock = productOutstockService.getById(id);
         if (outstock == null) {
             throw new IllegalArgumentException("出库记录不存在");
+        }
+        Long tenantId = UserContext.tenantId();
+        if (!tenantId.equals(outstock.getTenantId())) {
+            throw new SecurityException("无权审批该出库记录");
         }
         if ("approved".equals(outstock.getApprovalStatus())) {
             throw new IllegalArgumentException("该记录已审批，不可重复操作");

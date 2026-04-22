@@ -32,28 +32,24 @@ public class SampleStockController {
     }
 
     @PostMapping("/inbound")
-    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_warehouse', 'ROLE_warehouse_manager')")
     public Result<Void> inbound(@RequestBody SampleStock stock) {
         sampleStockService.inbound(stock);
         return Result.success();
     }
 
     @PostMapping("/inbound/batch")
-    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_warehouse', 'ROLE_warehouse_manager')")
     public Result<Void> inboundBatch(@RequestBody SampleStockInboundBatchRequest request) {
         sampleStockService.inboundBatch(request);
         return Result.success();
     }
 
     @PostMapping("/loan")
-    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_warehouse', 'ROLE_warehouse_manager')")
     public Result<Void> loan(@RequestBody SampleLoan loan) {
         sampleStockService.loan(loan);
         return Result.success();
     }
 
     @PostMapping("/return")
-    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_warehouse', 'ROLE_warehouse_manager')")
     public Result<Void> returnSample(@RequestBody Map<String, Object> params) {
         String loanId = (String) params.get("loanId");
         Integer returnQuantity = params.get("returnQuantity") != null ? Integer.parseInt(params.get("returnQuantity").toString()) : null;
@@ -63,7 +59,6 @@ public class SampleStockController {
     }
 
     @PostMapping("/destroy")
-    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner')")
     public Result<Void> destroy(@RequestBody Map<String, Object> params) {
         String stockId = params.get("stockId") == null ? null : String.valueOf(params.get("stockId"));
         String remark = params.get("remark") == null ? null : String.valueOf(params.get("remark"));
@@ -73,9 +68,12 @@ public class SampleStockController {
 
     @GetMapping("/loan/list")
     public Result<List<SampleLoan>> listLoans(@RequestParam String sampleStockId) {
-        return Result.success(sampleLoanMapper.selectList(new LambdaQueryWrapper<SampleLoan>()
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        LambdaQueryWrapper<SampleLoan> wrapper = new LambdaQueryWrapper<SampleLoan>()
             .eq(SampleLoan::getSampleStockId, sampleStockId)
-            .orderByDesc(SampleLoan::getCreateTime)));
+            .eq(tenantId != null, SampleLoan::getTenantId, tenantId)
+            .orderByDesc(SampleLoan::getCreateTime);
+        return Result.success(sampleLoanMapper.selectList(wrapper));
     }
 
     @PostMapping("/scan-query")

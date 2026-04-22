@@ -1,170 +1,85 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
-import useCrmClientStore from '@/stores/crmClientStore';
-import Icon from '@/components/Icon';
-import './CrmReceivableDetail.css';
 
-export default function CrmReceivableDetail() {
-  const navigate = useNavigate();
-  const { customerId } = useCrmClientStore();
+const CrmReceivableDetail = () => {
   const { receivableId } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (customerId && receivableId) {
-      loadDetail();
-    }
-  }, [customerId, receivableId]);
+  useEffect(() => { loadDetail(); }, [receivableId]);
 
   const loadDetail = async () => {
     try {
       setLoading(true);
-      const res = await crmClient.getReceivableDetail(customerId, receivableId);
-      if (res.code === 200 && res.data) {
-        setData(res.data);
-      }
-    } catch (error) {
-      console.error('加载账款详情失败:', error);
+      const res = await crmClient.getReceivableDetail(receivableId);
+      setData(res);
+    } catch (err) {
+      console.error('加载应收详情失败:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusText = (status) => {
-    const statusMap = {
-      'PENDING': '待付款',
-      'PARTIAL': '部分付款',
-      'PAID': '已付清',
-      'OVERDUE': '已逾期',
-    };
-    return statusMap[status] || status || '未知';
-  };
+  if (loading) return <div style={s.loading}>加载中...</div>;
+  if (!data?.receivable) return <div style={s.empty}>账款不存在</div>;
 
-  const getStatusColor = (status) => {
-    const colorMap = {
-      'PENDING': '#ff9800',
-      'PARTIAL': '#2196f3',
-      'PAID': '#4caf50',
-      'OVERDUE': '#f44336',
-    };
-    return colorMap[status] || '#757575';
-  };
-
-  if (loading) {
-    return (
-      <div className="crm-receivable-detail">
-        <div className="crm-page-header">
-          <button className="crm-back-btn" onClick={() => navigate('/crm-client/receivables')}>
-            <Icon name="arrowLeft" size={20} />
-          </button>
-          <div className="crm-page-title">账款详情</div>
-          <div style={{ width: 40 }}></div>
-        </div>
-        <div className="crm-loading">
-          <div className="crm-loading-spinner"></div>
-          <div>加载中...</div>
-        </div>
-      </div>
-    );
-  }
-
-  const receivable = data?.receivable;
-  const receiptLogs = data?.receiptLogs || [];
+  const r = data.receivable;
 
   return (
-    <div className="crm-receivable-detail">
-      <div className="crm-page-header">
-        <button className="crm-back-btn" onClick={() => navigate('/crm-client/receivables')}>
-          <Icon name="arrowLeft" size={20} />
-        </button>
-        <div className="crm-page-title">账款详情</div>
-        <div style={{ width: 40 }}></div>
+    <div style={s.page}>
+      <div style={s.header}>
+        <button onClick={() => navigate(-1)} style={s.backBtn}>← 返回</button>
+        <h1 style={s.title}>{r.receivableNo}</h1>
       </div>
 
-      <div className="crm-detail-content">
-        <div className="crm-detail-card">
-          <div className="crm-detail-row">
-            <div className="crm-detail-label">账款编号</div>
-            <div className="crm-detail-value">{receivable?.receivableNo}</div>
-          </div>
-          <div className="crm-detail-row">
-            <div className="crm-detail-label">状态</div>
-            <div className="crm-detail-value">
-              <span className="crm-receivable-status" style={{ background: getStatusColor(receivable?.status) }}>
-                {getStatusText(receivable?.status)}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div style={s.card}>
+        <h2 style={s.cardTitle}>账款信息</h2>
+        <div style={s.row}><span style={s.label}>应收金额</span><span style={s.val}>¥{r.amount?.toLocaleString() || 0}</span></div>
+        <div style={s.row}><span style={s.label}>已收金额</span><span style={{ ...s.val, color: '#27ae60' }}>¥{r.receivedAmount?.toLocaleString() || 0}</span></div>
+        <div style={s.row}><span style={s.label}>未收金额</span><span style={{ ...s.val, color: '#e74c3c' }}>¥{r.outstandingAmount?.toLocaleString() || 0}</span></div>
+        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{r.status}</span></div>
+        <div style={s.row}><span style={s.label}>到期日</span><span style={s.val}>{r.dueDate || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>关联订单</span><span style={s.val}>{r.orderNo || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>描述</span><span style={s.val}>{r.description || '-'}</span></div>
+      </div>
 
-        <div className="crm-detail-card">
-          <div className="crm-detail-title">
-            <Icon name="dollarSign" size={18} color={var(--color-primary)} />
-            <span>金额信息</span>
-          </div>
-          <div className="crm-detail-row">
-            <div className="crm-detail-label">总金额</div>
-            <div className="crm-detail-value crm-amount">¥{receivable?.amount?.toLocaleString()}</div>
-          </div>
-          <div className="crm-detail-row">
-            <div className="crm-detail-label">已付款</div>
-            <div className="crm-detail-value crm-amount">¥{receivable?.receivedAmount?.toLocaleString()}</div>
-          </div>
-          <div className="crm-detail-row">
-            <div className="crm-detail-label">待付款</div>
-            <div className="crm-detail-value crm-amount crm-amount-warning">
-              ¥{((receivable?.amount || 0) - (receivable?.receivedAmount || 0)).toLocaleString()}
-            </div>
-          </div>
-        </div>
-
-        <div className="crm-detail-card">
-          <div className="crm-detail-title">
-            <Icon name="folder" size={18} color={var(--color-primary)} />
-            <span>关联信息</span>
-          </div>
-          {receivable?.orderNo && (
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">订单号</div>
-              <div className="crm-detail-value">{receivable.orderNo}</div>
-            </div>
-          )}
-          {receivable?.dueDate && (
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">到期日</div>
-              <div className="crm-detail-value">{new Date(receivable.dueDate).toLocaleDateString()}</div>
-            </div>
-          )}
-          {receivable?.description && (
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">备注</div>
-              <div className="crm-detail-value">{receivable.description}</div>
-            </div>
-          )}
-        </div>
-
-        {receiptLogs.length > 0 && (
-          <div className="crm-detail-card">
-            <div className="crm-detail-title">
-              <Icon name="checkmark" size={18} color={var(--color-primary)} />
-              <span>付款记录</span>
-            </div>
-            {receiptLogs.map((log) => (
-              <div key={log.id} className="crm-receipt-item">
-                <div className="crm-receipt-info">
-                  <div className="crm-receipt-amount">¥{log.receivedAmount?.toLocaleString()}</div>
-                  <div className="crm-receipt-time">{log.receivedTime ? new Date(log.receivedTime).toLocaleString() : ''}</div>
-                </div>
-                {log.remark && (
-                  <div className="crm-receipt-remark">{log.remark}</div>
-                )}
+      {data.receiptLogs && data.receiptLogs.length > 0 && (
+        <div style={s.card}>
+          <h2 style={s.cardTitle}>收款记录</h2>
+          {data.receiptLogs.map((log) => (
+            <div key={log.id} style={s.logItem}>
+              <div style={s.logHeader}>
+                <span style={s.logAmount}>¥{log.receivedAmount?.toLocaleString() || 0}</span>
+                <span style={s.logTime}>{log.receivedTime || '-'}</span>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              {log.remark && <div style={s.logRemark}>{log.remark}</div>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
-}
+};
+
+const s = {
+  page: { padding: '16px', maxWidth: '600px', margin: '0 auto' },
+  loading: { textAlign: 'center', padding: '60px', color: '#888' },
+  empty: { textAlign: 'center', padding: '60px', color: '#aaa' },
+  header: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' },
+  backBtn: { background: 'none', border: 'none', fontSize: '16px', color: '#667eea', cursor: 'pointer', padding: 0 },
+  title: { fontSize: '20px', fontWeight: '700', color: '#1a1a2e', margin: 0 },
+  card: { background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+  cardTitle: { fontSize: '16px', fontWeight: '600', color: '#1a1a2e', margin: '0 0 12px' },
+  row: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f5f5f5', fontSize: '14px' },
+  label: { color: '#888' },
+  val: { color: '#333', fontWeight: '500' },
+  logItem: { padding: '10px 0', borderBottom: '1px solid #f5f5f5' },
+  logHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '4px' },
+  logAmount: { fontSize: '15px', fontWeight: '600', color: '#27ae60' },
+  logTime: { fontSize: '12px', color: '#888' },
+  logRemark: { fontSize: '12px', color: '#666' },
+};
+
+export default CrmReceivableDetail;

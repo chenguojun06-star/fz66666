@@ -758,6 +758,8 @@ public class ScanRecordOrchestrator {
         String scanMode = TextUtils.safeText(params.get("scanMode"));
         if ("ucode".equals(scanMode)) {
             ProductionOrder order = resolveOrder(orderId, orderNo);
+            UserContext ctx = UserContext.get();
+            validateOrderBelonging(order, ctx);
             return warehouseScanExecutor.executeUCode(params, requestId, operatorId, operatorName, order);
         }
 
@@ -771,6 +773,9 @@ public class ScanRecordOrchestrator {
             order = resolveOrder(null, scanCode);
         }
         final ProductionOrder finalOrder = order;
+
+        UserContext ctx = UserContext.get();
+        validateOrderBelonging(finalOrder, ctx);
 
         // 委托给Executor执行
         return warehouseScanExecutor.execute(

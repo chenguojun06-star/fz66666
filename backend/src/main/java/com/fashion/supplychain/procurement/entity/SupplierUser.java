@@ -1,20 +1,18 @@
-package com.fashion.supplychain.crm.entity;
+package com.fashion.supplychain.procurement.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-@TableName("t_customer_client_user")
-public class CustomerClientUser {
+@TableName("t_supplier_user")
+public class SupplierUser {
 
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
 
-    private String customerId;
+    private String supplierId;
 
     private Long tenantId;
 
@@ -32,8 +30,10 @@ public class CustomerClientUser {
 
     private LocalDateTime lastLoginTime;
 
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     private Integer deleteFlag;

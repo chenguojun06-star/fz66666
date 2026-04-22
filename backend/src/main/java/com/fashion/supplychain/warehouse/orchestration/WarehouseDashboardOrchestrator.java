@@ -56,11 +56,11 @@ public class WarehouseDashboardOrchestrator {
      */
     public WarehouseStatsDTO getWarehouseStats() {
         Long tid = UserContext.tenantId();
+        if (tid == null) log.warn("[租户隔离] 仓库仪表板查询租户上下文为空");
         WarehouseStatsDTO stats = new WarehouseStatsDTO();
 
-        // 1. 物料种类数（从物料数据库统计）
         Long materialCount = materialDatabaseMapper.selectCount(
-            new QueryWrapper<MaterialDatabase>().eq(tid != null, "tenant_id", tid));
+            new QueryWrapper<MaterialDatabase>().eq("tenant_id", tid));
         stats.setMaterialCount(materialCount.intValue());
 
         // 2. 成品总数（从质检入库统计）
@@ -73,7 +73,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<MaterialStock>()
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
                     .apply("quantity < COALESCE(safety_stock, 100)")
-                    .eq(tid != null, "tenant_id", tid)
+                    .eq("tenant_id", tid)
             );
             stats.setLowStockCount(lowStockCount != null ? lowStockCount.intValue() : 0);
         } catch (Exception e) {
@@ -87,7 +87,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<MaterialStock>()
                     .select("COALESCE(SUM(total_value), 0) as sumValue")
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
-                    .eq(tid != null, "tenant_id", tid)
+                    .eq("tenant_id", tid)
             );
             if (totalValueRows != null && !totalValueRows.isEmpty()) {
                 Object sv = totalValueRows.get(0).get("sumValue");
@@ -114,7 +114,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<ProductOutstock>()
                     .apply("DATE(create_time) = {0}", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
-                    .eq(tid != null, "tenant_id", tid)
+                    .eq("tenant_id", tid)
             );
             todayOutboundTotal += (outstockCount != null ? outstockCount.intValue() : 0);
         } catch (Exception e) {
@@ -143,7 +143,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<MaterialStock>()
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
                     .apply("quantity < COALESCE(safety_stock, 100)")
-                    .eq(tid != null, "tenant_id", tid)
+                    .eq("tenant_id", tid)
                     .orderByAsc("quantity")
                     .last("LIMIT 20")
             );
@@ -225,7 +225,7 @@ public class WarehouseDashboardOrchestrator {
                 new QueryWrapper<ProductOutstock>()
                     .apply("DATE(create_time) = {0}", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
-                    .eq(tid != null, "tenant_id", tid)
+                    .eq("tenant_id", tid)
                     .orderByDesc("create_time")
                     .last("LIMIT 20")
             );
@@ -312,7 +312,7 @@ public class WarehouseDashboardOrchestrator {
                         .select("HOUR(create_time) as hour, COUNT(*) as count")
                         .apply("DATE(create_time) = {0}", today)
                         .apply("(delete_flag IS NULL OR delete_flag = 0)")
-                        .eq(tid != null, "tenant_id", tid)
+                        .eq("tenant_id", tid)
                         .groupBy("HOUR(create_time)")
                 );
                 for (Map<String, Object> row : outboundList) {
@@ -390,7 +390,7 @@ public class WarehouseDashboardOrchestrator {
                         .select("DATE(create_time) as date, COUNT(*) as count")
                         .apply("DATE(create_time) BETWEEN {0} AND {1}", startDate, today)
                         .apply("(delete_flag IS NULL OR delete_flag = 0)")
-                        .eq(tid != null, "tenant_id", tid)
+                        .eq("tenant_id", tid)
                         .groupBy("DATE(create_time)")
                 );
                 for (Map<String, Object> row : outboundList) {
@@ -470,7 +470,7 @@ public class WarehouseDashboardOrchestrator {
                         .select("DAY(create_time) as day, COUNT(*) as count")
                         .apply("DATE(create_time) BETWEEN {0} AND {1}", startDate, today)
                         .apply("(delete_flag IS NULL OR delete_flag = 0)")
-                        .eq(tid != null, "tenant_id", tid)
+                        .eq("tenant_id", tid)
                         .groupBy("DAY(create_time)")
                 );
                 for (Map<String, Object> row : outboundList) {
@@ -546,7 +546,7 @@ public class WarehouseDashboardOrchestrator {
                         .select("MONTH(create_time) as month, COUNT(*) as count")
                         .apply("YEAR(create_time) = {0}", currentYear)
                         .apply("(delete_flag IS NULL OR delete_flag = 0)")
-                        .eq(tid != null, "tenant_id", tid)
+                        .eq("tenant_id", tid)
                         .groupBy("MONTH(create_time)")
                 );
                 for (Map<String, Object> row : outboundList) {

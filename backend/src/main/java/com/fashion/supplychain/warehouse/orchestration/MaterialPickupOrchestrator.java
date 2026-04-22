@@ -63,7 +63,7 @@ public class MaterialPickupOrchestrator {
 
         LambdaQueryWrapper<MaterialPickupRecord> wrapper = new LambdaQueryWrapper<MaterialPickupRecord>()
                 .eq(MaterialPickupRecord::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
+                .eq(MaterialPickupRecord::getTenantId, String.valueOf(tenantId))
                 .eq(StringUtils.hasText(sourceRecordId), MaterialPickupRecord::getSourceRecordId, sourceRecordId)
                 .eq(StringUtils.hasText(pickupType),    MaterialPickupRecord::getPickupType,    pickupType)
                 .eq(StringUtils.hasText(movementType),  MaterialPickupRecord::getMovementType,  movementType)
@@ -311,11 +311,11 @@ public class MaterialPickupOrchestrator {
     }
 
     private MaterialPickupRecord getByIdAndTenant(String id) {
+        Long tenantId = currentTenantId();
         MaterialPickupRecord record = pickupMapper.selectById(id);
         if (record == null || record.getDeleteFlag() != null && record.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("记录不存在");
         }
-        Long tenantId = currentTenantId();
         if (tenantId != null && !String.valueOf(tenantId).equals(record.getTenantId())) {
             throw new SecurityException("无权操作该记录");
         }
@@ -334,11 +334,11 @@ public class MaterialPickupOrchestrator {
     }
 
     private Long currentTenantId() {
-        try {
-            return UserContext.tenantId();
-        } catch (Exception e) {
-            return null;
+        Long tid = UserContext.tenantId();
+        if (tid == null) {
+            log.warn("[租户隔离] 租户上下文为空，可能存在数据泄露风险");
         }
+        return tid;
     }
 
     private String strOf(Object o) {

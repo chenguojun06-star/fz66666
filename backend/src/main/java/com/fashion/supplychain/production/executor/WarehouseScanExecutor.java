@@ -150,7 +150,7 @@ public class WarehouseScanExecutor {
             try {
                 productionOrderService.recomputeProgressFromRecords(order.getId());
             } catch (Exception e) {
-                log.debug("返修申报后进度重算失败(不阻断): orderNo={}", order.getOrderNo(), e);
+                log.warn("返修申报后进度重算失败(不阻断): orderNo={}", order.getOrderNo(), e);
             }
             Map<String, Object> repairResult = new HashMap<>();
             repairResult.put("success", true);
@@ -206,6 +206,7 @@ public class WarehouseScanExecutor {
             w.setReceiverName(operatorName);
             w.setQualityOperatorName(operatorName);
         }
+        w.setTenantId(order.getTenantId());
 
         try {
             boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
@@ -265,6 +266,7 @@ public class WarehouseScanExecutor {
                 String skuCode = order.getStyleNo() + "-" + bundle.getColor() + "-" + bundle.getSize();
                 ProductSku sku = productSkuService.lambdaQuery()
                         .eq(ProductSku::getSkuCode, skuCode)
+                        .eq(ProductSku::getTenantId, order.getTenantId())
                         .last("limit 1")
                         .one();
                 if (sku == null) {
@@ -423,8 +425,12 @@ public class WarehouseScanExecutor {
 
         ScanRecord sr = new ScanRecord();
         sr.setRequestId("OQ_" + requestId);
+        sr.setScanCode(TextUtils.safeText(params.get("scanCode")));
         sr.setOrderId(order.getId());
         sr.setOrderNo(order.getOrderNo());
+        sr.setStyleId(order.getStyleId());
+        sr.setStyleNo(order.getStyleNo());
+        sr.setTenantId(order.getTenantId());
         sr.setQuantity(qty);
         sr.setProcessCode("warehouse");
         sr.setProgressStage("入库");
@@ -434,6 +440,10 @@ public class WarehouseScanExecutor {
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
         sr.setCuttingBundleId(bundle != null ? bundle.getId() : null);
+        sr.setCuttingBundleNo(bundle != null ? bundle.getBundleNo() : null);
+        sr.setCuttingBundleQrCode(bundle != null ? bundle.getQrCode() : null);
+        sr.setFactoryId(com.fashion.supplychain.common.UserContext.factoryId());
+        sr.setScanMode("scan");
         sr.setRemark("[超额待审批] " + qr.getMessage());
         sr.setScanTime(java.time.LocalDateTime.now());
         sr.setCreateTime(java.time.LocalDateTime.now());
@@ -513,6 +523,9 @@ public class WarehouseScanExecutor {
         sr.setCuttingBundleId(bundle.getId());
         sr.setCuttingBundleNo(bundle.getBundleNo());
         sr.setCuttingBundleQrCode(bundle.getQrCode());
+        sr.setFactoryId(com.fashion.supplychain.common.UserContext.factoryId());
+        sr.setScanMode("scan");
+        sr.setReceiveTime(LocalDateTime.now());
 
         if (skuService != null) {
             skuService.attachProcessUnitPrice(sr);
@@ -560,7 +573,8 @@ public class WarehouseScanExecutor {
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("检查入库前置条件失败: orderId={}, bundleId={}", order.getId(), bundle.getId(), e);
+            log.error("检查入库前置条件失败，为防止数据异常阻止入库: orderId={}, bundleId={}", order.getId(), bundle.getId(), e);
+            throw new IllegalStateException("检查入库前置条件失败，请重试或联系管理员");
         }
     }
 
@@ -590,7 +604,8 @@ public class WarehouseScanExecutor {
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("检查质检前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+            log.error("检查质检前置条件失败，为防止数据异常阻止入库: orderId={}, bundleId={}", orderId, bundleId, e);
+            throw new IllegalStateException("检查质检前置条件失败，请重试或联系管理员");
         }
     }
 
@@ -688,32 +703,48 @@ public class WarehouseScanExecutor {
         String warehouse = TextUtils.safeText(params.get("warehouse"));
 
         if (quantity <= 0) {
-            return Map.of("success", false, "message", "入库数量必须大于0");
+            Map<String, Object> r = new HashMap<>();
+            r.put("success", false);
+            r.put("message", "入库数量必须大于0");
+            return r;
         }
         if (!hasText(scanCode)) {
-            return Map.of("success", false, "message", "扫码内容不能为空");
+            Map<String, Object> r = new HashMap<>();
+            r.put("success", false);
+            r.put("message", "扫码内容不能为空");
+            return r;
         }
 
         // 解析U编码：款号-颜色-尺码
         String[] segments = scanCode.split("-");
         if (segments.length < 3) {
-            return Map.of("success", false, "message", "U编码格式不正确，应为: 款号-颜色-尺码");
+            Map<String, Object> r = new HashMap<>();
+            r.put("success", false);
+            r.put("message", "U编码格式不正确，应为: 款号-颜色-尺码");
+            return r;
         }
         String styleNo = segments[0];
         String color = segments[1];
         String size = segments[2];
 
         if (order == null) {
-            return Map.of("success", false, "message", "未找到关联订单，请指定订单号");
+            Map<String, Object> r = new HashMap<>();
+            r.put("success", false);
+            r.put("message", "未找到关联订单，请指定订单号");
+            return r;
         }
         if (order.getStatus() != null && TERMINAL_STATUSES.contains(order.getStatus().trim().toLowerCase())) {
-            return Map.of("success", false, "message", "订单已终态，无法继续入库");
+            Map<String, Object> r = new HashMap<>();
+            r.put("success", false);
+            r.put("message", "订单已终态，无法继续入库");
+            return r;
         }
 
         // SKU 查找或自动创建
         String skuCode = scanCode;
         ProductSku sku = productSkuService.lambdaQuery()
                 .eq(ProductSku::getSkuCode, skuCode)
+                .eq(ProductSku::getTenantId, order.getTenantId())
                 .last("limit 1")
                 .one();
         if (sku == null) {
@@ -739,17 +770,24 @@ public class WarehouseScanExecutor {
             try {
                 int alreadyWarehoused = productWarehousingService.countUCodeWarehousedQuantity(order.getId(), scanCode);
                 if (alreadyWarehoused >= orderQty) {
-                    return Map.of("success", false, "message",
-                            String.format("该U编码已全部入库！订单数量=%d，已入库=%d，无需重复入库", orderQty, alreadyWarehoused));
+                    Map<String, Object> r = new HashMap<>();
+                    r.put("success", false);
+                    r.put("message", String.format("该U编码已全部入库！订单数量=%d，已入库=%d，无需重复入库", orderQty, alreadyWarehoused));
+                    return r;
                 }
                 if (alreadyWarehoused + quantity > orderQty) {
-                    return Map.of("success", false, "message",
-                            String.format("U编码入库数量超出限制！订单数量=%d，已入库=%d，本次=%d，超出%d件",
-                                    orderQty, alreadyWarehoused, quantity, alreadyWarehoused + quantity - orderQty));
+                    Map<String, Object> r = new HashMap<>();
+                    r.put("success", false);
+                    r.put("message", String.format("U编码入库数量超出限制！订单数量=%d，已入库=%d，本次=%d，超出%d件",
+                            orderQty, alreadyWarehoused, quantity, alreadyWarehoused + quantity - orderQty));
+                    return r;
                 }
             } catch (Exception e) {
                 log.warn("[U编码入库] 查询已入库数量失败，为防止重复入库，拒绝本次操作: orderId={}, scanCode={}", order.getId(), scanCode, e);
-                return Map.of("success", false, "message", "查询已入库数量失败，请重试或联系管理员");
+                Map<String, Object> r = new HashMap<>();
+                r.put("success", false);
+                r.put("message", "查询已入库数量失败，请重试或联系管理员");
+                return r;
             }
         }
 
@@ -782,11 +820,17 @@ public class WarehouseScanExecutor {
         try {
             boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(pw);
             if (!ok) {
-                return Map.of("success", false, "message", "入库记录保存失败");
+                Map<String, Object> r = new HashMap<>();
+                r.put("success", false);
+                r.put("message", "入库记录保存失败");
+                return r;
             }
         } catch (DataAccessException dae) {
             log.error("[U编码入库] 保存入库记录失败: {}", dae.getMessage());
-            return Map.of("success", false, "message", "入库记录保存失败");
+            Map<String, Object> r = new HashMap<>();
+            r.put("success", false);
+            r.put("message", "入库记录保存失败");
+            return r;
         }
 
         // 重新计算进度
@@ -823,6 +867,9 @@ public class WarehouseScanExecutor {
         sr.setCuttingBundleId(null);
         sr.setCuttingBundleNo(null);
         sr.setCuttingBundleQrCode(scanCode);
+        sr.setFactoryId(com.fashion.supplychain.common.UserContext.factoryId());
+        sr.setScanMode("ucode");
+        sr.setReceiveTime(LocalDateTime.now());
         skuService.attachProcessUnitPrice(sr);
 
         try {

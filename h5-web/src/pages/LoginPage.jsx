@@ -276,6 +276,7 @@ export default function LoginPage() {
 
             <div className="login-register-section">
               <span className="login-register-link" onClick={() => navigate('/register')}>没有账号？立即注册</span>
+              <span className="login-register-link" onClick={() => navigate('/supplier-portal/login')} style={{ marginLeft: '16px' }}>🏭 供应商登录</span>
             </div>
           </div>
         </div>

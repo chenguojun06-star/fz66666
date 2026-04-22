@@ -50,8 +50,10 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
         String warehouse = (String) params.getOrDefault("warehouse", "");
         String outstockType = (String) params.getOrDefault("outstockType", "");
 
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         LambdaQueryWrapper<ProductOutstock> wrapper = new LambdaQueryWrapper<ProductOutstock>()
                 .eq(ProductOutstock::getDeleteFlag, 0)
+                .eq(ProductOutstock::getTenantId, tenantId)
                 .like(StringUtils.hasText(outstockNo), ProductOutstock::getOutstockNo, outstockNo)
                 .like(StringUtils.hasText(orderNo), ProductOutstock::getOrderNo, orderNo)
                 .like(StringUtils.hasText(styleNo), ProductOutstock::getStyleNo, styleNo)
@@ -69,8 +71,10 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
             return 0;
         }
         try {
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
             java.util.List<ProductOutstock> list = this.list(new LambdaQueryWrapper<ProductOutstock>()
                     .eq(ProductOutstock::getOrderId, oid)
+                    .eq(ProductOutstock::getTenantId, tenantId)
                     .eq(ProductOutstock::getDeleteFlag, 0));
             long sum = 0;
             if (list != null) {
@@ -86,6 +90,7 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
             }
             return (int) Math.min(Integer.MAX_VALUE, Math.max(0, sum));
         } catch (Exception e) {
+            log.warn("[出库统计] 查询出库数量失败: orderId={}", oid, e);
             return 0;
         }
     }

@@ -50,7 +50,11 @@ public class ProductOutstockOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        ProductOutstock outstock = productOutstockService.getById(key);
+        Long tenantId = UserContext.tenantId();
+        ProductOutstock outstock = productOutstockService.lambdaQuery()
+                .eq(ProductOutstock::getId, key)
+                .eq(ProductOutstock::getTenantId, tenantId)
+                .one();
         if (outstock == null || (outstock.getDeleteFlag() != null && outstock.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("出库单不存在");
         }
@@ -164,7 +168,11 @@ public class ProductOutstockOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        ProductOutstock outstock = productOutstockService.getById(key);
+        Long tenantId = UserContext.tenantId();
+        ProductOutstock outstock = productOutstockService.lambdaQuery()
+                .eq(ProductOutstock::getId, key)
+                .eq(ProductOutstock::getTenantId, tenantId)
+                .one();
         if (outstock == null || (outstock.getDeleteFlag() != null && outstock.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("出库单不存在");
         }
@@ -194,7 +202,11 @@ public class ProductOutstockOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        ProductOutstock current = productOutstockService.getById(key);
+        Long tenantId = UserContext.tenantId();
+        ProductOutstock current = productOutstockService.lambdaQuery()
+                .eq(ProductOutstock::getId, key)
+                .eq(ProductOutstock::getTenantId, tenantId)
+                .one();
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("出库单不存在");
         }

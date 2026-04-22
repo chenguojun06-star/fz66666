@@ -152,6 +152,10 @@ public class InventoryCheckOrchestrator {
         if (check == null) {
             throw new IllegalArgumentException("盘点单不存在");
         }
+        Long tenantId = UserContext.tenantId();
+        if (!tenantId.equals(check.getTenantId())) {
+            throw new SecurityException("无权操作该盘点单");
+        }
         if ("confirmed".equals(check.getStatus()) || "cancelled".equals(check.getStatus())) {
             throw new IllegalArgumentException("盘点单已确认/已取消，不可修改");
         }
@@ -223,6 +227,10 @@ public class InventoryCheckOrchestrator {
         if (check == null) {
             throw new IllegalArgumentException("盘点单不存在");
         }
+        Long tenantId = UserContext.tenantId();
+        if (!tenantId.equals(check.getTenantId())) {
+            throw new SecurityException("无权操作该盘点单");
+        }
         if (!"draft".equals(check.getStatus())) {
             throw new IllegalArgumentException("只有草稿状态可确认");
         }
@@ -274,6 +282,10 @@ public class InventoryCheckOrchestrator {
     public void cancelCheck(String checkId) {
         InventoryCheck check = checkService.getById(checkId);
         if (check == null) throw new IllegalArgumentException("盘点单不存在");
+        Long tenantId = UserContext.tenantId();
+        if (!tenantId.equals(check.getTenantId())) {
+            throw new SecurityException("无权操作该盘点单");
+        }
         if ("confirmed".equals(check.getStatus())) throw new IllegalArgumentException("已确认的盘点单不可取消");
         check.setStatus("cancelled");
         check.setUpdateTime(LocalDateTime.now());
@@ -302,6 +314,10 @@ public class InventoryCheckOrchestrator {
     public InventoryCheck getDetail(String checkId) {
         InventoryCheck check = checkService.getById(checkId);
         if (check != null) {
+            Long tenantId = UserContext.tenantId();
+            if (!tenantId.equals(check.getTenantId())) {
+                throw new SecurityException("无权查看该盘点单");
+            }
             List<InventoryCheckItem> items = itemService.list(
                     new LambdaQueryWrapper<InventoryCheckItem>()
                             .eq(InventoryCheckItem::getCheckId, checkId)

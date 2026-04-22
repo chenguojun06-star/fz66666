@@ -770,7 +770,11 @@ public class ProductWarehousingQueryHelper {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        ProductWarehousing warehousing = productWarehousingService.getById(key);
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        ProductWarehousing warehousing = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getId, key)
+                .eq(ProductWarehousing::getTenantId, tenantId)
+                .one();
         if (warehousing == null || (warehousing.getDeleteFlag() != null && warehousing.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("入库记录不存在");
         }

@@ -42,8 +42,11 @@ export default function CameraScanner({ active, onScan, onError }) {
 
     const startCamera = async () => {
       // 1. 非安全上下文（HTTP）时 getUserMedia 直接被浏览器拒绝，无法弹出权限对话框
+      //    自动跳转到 HTTPS 版本（腾讯云托管已开启 HTTPS，无需提示用户手动改地址）
       if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-        if (mountedRef.current) onError('camera_https_required');
+        window.location.replace(
+          'https://' + window.location.host + window.location.pathname + window.location.search + window.location.hash
+        );
         return;
       }
 

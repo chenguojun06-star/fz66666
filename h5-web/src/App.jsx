@@ -41,6 +41,9 @@ const IntelligencePage = lazy(() => import('@/pages/IntelligencePage'));
 const CrmLogin = lazy(() => import('@/pages/crm-client/CrmLogin'));
 const CrmClientApp = lazy(() => import('@/pages/crm-client/CrmClientApp'));
 
+// Supplier Portal
+const SupplierPortal = lazy(() => import('@/pages/supplier-portal/SupplierPortal'));
+
 const Loading = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--color-text-secondary)' }}>
     加载中...
@@ -87,6 +90,9 @@ export default function App() {
           {/* CRM Client Routes */}
           <Route path="/crm-client/login" element={<CrmLogin />} />
           <Route path="/crm-client/*" element={<CrmClientApp />} />
+          
+          {/* Supplier Portal Routes */}
+          <Route path="/supplier-portal/*" element={<SupplierPortal />} />
           
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="*" element={

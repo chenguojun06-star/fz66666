@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
 import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,6 +25,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class MaterialPickupReceivableOrchestrator {
 
@@ -85,7 +87,7 @@ public class MaterialPickupReceivableOrchestrator {
 
         LambdaQueryWrapper<MaterialPickupRecord> wrapper = new LambdaQueryWrapper<MaterialPickupRecord>()
                 .eq(MaterialPickupRecord::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
+                .eq(MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
                 .and(w -> w.isNull(MaterialPickupRecord::getMovementType)
                         .or()
                         .eq(MaterialPickupRecord::getMovementType, "OUTBOUND"))
@@ -261,11 +263,11 @@ public class MaterialPickupReceivableOrchestrator {
     }
 
     private MaterialPickupRecord getByIdAndTenant(String id) {
+        Long tenantId = currentTenantId();
         MaterialPickupRecord record = pickupMapper.selectById(id);
         if (record == null || record.getDeleteFlag() != null && record.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("记录不存在");
         }
-        Long tenantId = currentTenantId();
         if (tenantId != null && !String.valueOf(tenantId).equals(record.getTenantId())) {
             throw new SecurityException("无权操作该记录");
         }
@@ -273,11 +275,11 @@ public class MaterialPickupReceivableOrchestrator {
     }
 
     private Long currentTenantId() {
-        try {
-            return UserContext.tenantId();
-        } catch (Exception e) {
-            return null;
+        Long tid = UserContext.tenantId();
+        if (tid == null) {
+            log.warn("[租户隔离] 租户上下文为空，可能存在数据泄露风险");
         }
+        return tid;
     }
 
     private String strOf(Object o) {

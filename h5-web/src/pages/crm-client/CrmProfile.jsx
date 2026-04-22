@@ -1,167 +1,89 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import crmClient from '@/api/crmClient';
 import useCrmClientStore from '@/stores/crmClientStore';
-import Icon from '@/components/Icon';
-import './CrmProfile.css';
+import crmClient from '@/api/crmClient';
 
-export default function CrmProfile() {
+const CrmProfile = () => {
   const navigate = useNavigate();
-  const { customerId, customer, setCustomer, logout } = useCrmClientStore();
-  const [loading, setLoading] = useState(true);
+  const logout = useCrmClientStore((s) => s.logout);
+  const customer = useCrmClientStore((s) => s.customer);
+  const user = useCrmClientStore((s) => s.user);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    if (customerId) {
-      loadProfile();
-    }
-  }, [customerId]);
+    loadProfile();
+  }, []);
 
   const loadProfile = async () => {
     try {
-      setLoading(true);
-      const res = await crmClient.getProfile(customerId);
-      if (res.code === 200 && res.data) {
-        setCustomer(res.data);
-      }
-    } catch (error) {
-      console.error('加载客户信息失败:', error);
-    } finally {
-      setLoading(false);
+      const res = await crmClient.getProfile();
+      if (res) setProfile(res);
+    } catch (err) {
+      console.error('加载资料失败:', err);
     }
   };
 
   const handleLogout = () => {
     logout();
-    navigate('/crm-client/login');
+    navigate('/crm-client/login', { replace: true });
   };
 
-  if (loading) {
-    return (
-      <div className="crm-profile">
-        <div className="crm-page-header">
-          <button className="crm-back-btn" onClick={() => navigate('/crm-client/dashboard')}>
-            <Icon name="arrowLeft" size={20} />
-          </button>
-          <div className="crm-page-title">个人中心</div>
-          <div style={{ width: 40 }}></div>
-        </div>
-        <div className="crm-loading">
-          <div className="crm-loading-spinner"></div>
-          <div>加载中...</div>
-        </div>
-      </div>
-    );
-  }
+  const displayData = profile || customer;
 
   return (
-    <div className="crm-profile">
-      <div className="crm-page-header">
-        <button className="crm-back-btn" onClick={() => navigate('/crm-client/dashboard')}>
-          <Icon name="arrowLeft" size={20} />
-        </button>
-        <div className="crm-page-title">个人中心</div>
-        <div style={{ width: 40 }}></div>
+    <div style={s.page}>
+      <h1 style={s.title}>我的资料</h1>
+
+      <div style={s.avatarArea}>
+        <div style={s.avatar}>{displayData?.companyName?.charAt(0) || '?'}</div>
+        <div style={s.name}>{displayData?.companyName || '-'}</div>
+        <div style={s.level}>{displayData?.customerLevel === 'VIP' ? '⭐ VIP客户' : '普通客户'}</div>
       </div>
 
-      <div className="crm-profile-content">
-        <div className="crm-profile-header">
-          <div className="crm-profile-avatar">
-            {customer?.companyName?.charAt(0) || '客'}
-          </div>
-          <div className="crm-profile-info">
-            <div className="crm-profile-name">{customer?.companyName || '客户'}</div>
-            <div className="crm-profile-code">{customer?.customerNo}</div>
-          </div>
-        </div>
-
-        <div className="crm-detail-card">
-          <div className="crm-detail-title">
-            <Icon name="user" size={18} color={var(--color-primary)} />
-            <span>联系信息</span>
-          </div>
-          {customer?.contactPerson && (
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">联系人</div>
-              <div className="crm-detail-value">{customer.contactPerson}</div>
-            </div>
-          )}
-          {customer?.contactPhone && (
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">联系电话</div>
-              <div className="crm-detail-value">{customer.contactPhone}</div>
-            </div>
-          )}
-          {customer?.contactEmail && (
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">邮箱</div>
-              <div className="crm-detail-value">{customer.contactEmail}</div>
-            </div>
-          )}
-          {customer?.address && (
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">地址</div>
-              <div className="crm-detail-value">{customer.address}</div>
-            </div>
-          )}
-        </div>
-
-        {customer?.customerLevel && (
-          <div className="crm-detail-card">
-            <div className="crm-detail-row">
-              <div className="crm-detail-label">客户等级</div>
-              <div className="crm-detail-value">
-                <span className="crm-level-badge" style={{
-                  background: customer.customerLevel === 'VIP' ? '#ff9800' : '#9e9e9e'
-                }}>
-                  {customer.customerLevel}
-                </span>
-              </div>
-            </div>
-            {customer?.industry && (
-              <div className="crm-detail-row">
-                <div className="crm-detail-label">行业</div>
-                <div className="crm-detail-value">{customer.industry}</div>
-              </div>
-            )}
-            {customer?.source && (
-              <div className="crm-detail-row">
-                <div className="crm-detail-label">来源</div>
-                <div className="crm-detail-value">{customer.source}</div>
-              </div>
-            )}
-            {customer?.remark && (
-              <div className="crm-detail-row">
-                <div className="crm-detail-label">备注</div>
-                <div className="crm-detail-value">{customer.remark}</div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="crm-menu-list">
-          <div className="crm-menu-item" onClick={() => navigate('/crm-client/orders')}>
-            <div className="crm-menu-icon" style={{ background: 'rgba(33, 150, 243, 0.1)' }}>
-              <Icon name="factory" size={20} color="#2196f3" />
-            </div>
-            <span className="crm-menu-text">我的订单</span>
-            <Icon name="arrowRight" size={16} color="#9e9e9e" />
-          </div>
-          <div className="crm-menu-item" onClick={() => navigate('/crm-client/receivables')}>
-            <div className="crm-menu-icon" style={{ background: 'rgba(76, 175, 80, 0.1)' }}>
-              <Icon name="dollarSign" size={20} color="#4caf50" />
-            </div>
-            <span className="crm-menu-text">我的账款</span>
-            <Icon name="arrowRight" size={16} color="#9e9e9e" />
-          </div>
-        </div>
-
-        <div className="crm-logout-section">
-          <button className="crm-logout-btn" onClick={handleLogout}>
-            <Icon name="logOut" size={20} color="#f44336" />
-            <span>退出登录</span>
-          </button>
-        </div>
+      <div style={s.card}>
+        <h2 style={s.cardTitle}>公司信息</h2>
+        <div style={s.row}><span style={s.label}>公司名称</span><span style={s.val}>{displayData?.companyName || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>客户编号</span><span style={s.val}>{displayData?.customerNo || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>联系人</span><span style={s.val}>{displayData?.contactPerson || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>联系电话</span><span style={s.val}>{displayData?.contactPhone || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>邮箱</span><span style={s.val}>{displayData?.contactEmail || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>地址</span><span style={s.val}>{displayData?.address || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>行业</span><span style={s.val}>{displayData?.industry || '-'}</span></div>
       </div>
+
+      {user && (
+        <div style={s.card}>
+          <h2 style={s.cardTitle}>账号信息</h2>
+          <div style={s.row}><span style={s.label}>用户名</span><span style={s.val}>{user.username || '-'}</span></div>
+          <div style={s.row}><span style={s.label}>上次登录</span><span style={s.val}>{user.lastLoginTime || '-'}</span></div>
+        </div>
+      )}
+
+      <button onClick={handleLogout} style={s.logoutBtn}>退出登录</button>
     </div>
   );
-}
+};
+
+const s = {
+  page: { padding: '16px', maxWidth: '600px', margin: '0 auto' },
+  title: { fontSize: '20px', fontWeight: '700', color: '#1a1a2e', margin: '0 0 16px' },
+  avatarArea: { textAlign: 'center', marginBottom: '24px' },
+  avatar: {
+    width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, #667eea, #764ba2)',
+    color: '#fff', fontSize: '28px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    margin: '0 auto 12px',
+  },
+  name: { fontSize: '18px', fontWeight: '600', color: '#1a1a2e', marginBottom: '4px' },
+  level: { fontSize: '13px', color: '#888' },
+  card: { background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+  cardTitle: { fontSize: '16px', fontWeight: '600', color: '#1a1a2e', margin: '0 0 12px' },
+  row: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f5f5f5', fontSize: '14px' },
+  label: { color: '#888' },
+  val: { color: '#333', fontWeight: '500', textAlign: 'right', maxWidth: '60%' },
+  logoutBtn: {
+    width: '100%', padding: '14px', background: '#fff', color: '#e74c3c', border: '1px solid #e74c3c',
+    borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginTop: '16px',
+  },
+};
+
+export default CrmProfile;
