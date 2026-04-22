@@ -92,6 +92,7 @@ export const paths = {
   cockpitTrace: '/cockpit/agent-traces',
   intelligenceCenter: '/intelligence/center',
   aiAgentTraceCenter: '/intelligence/agent-traces',
+  platformDashboard: '/intelligence/platform-dashboard',
   crm: '/crm',
   crmReceivables: '/crm/receivables',
   selectionBatch: '/selection',

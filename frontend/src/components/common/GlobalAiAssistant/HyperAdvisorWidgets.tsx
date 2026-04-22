@@ -74,7 +74,8 @@ export const FeedbackWidget: React.FC<{
   onFeedback: (msg: Message, score: number) => void;
 }> = ({ msg, onFeedback }) => {
   const [sent, setSent] = useState(false);
-  if (!msg.traceId || sent) return null;
+  // P0: 同时支持 HyperAdvisor traceId 消息 和 AI Agent agentCommandId 消息
+  if ((!msg.traceId && !msg.agentCommandId) || sent) return null;
   const handleClick = (score: number) => { setSent(true); onFeedback(msg, score); };
   return (
     <div className={styles.feedbackRow}>

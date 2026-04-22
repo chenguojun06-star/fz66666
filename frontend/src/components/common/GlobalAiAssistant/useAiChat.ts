@@ -54,7 +54,21 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   }, [advisorSessionId]);
 
   const handleAdvisorFeedback = useCallback((msg: Message, score: number) => {
+    // P0: 双路径反馈 —— HyperAdvisor (traceId) 走旧路径；AI Agent (agentCommandId) 走新 PRM 路径
+    if (msg.agentCommandId) {
+      // AI Agent 消息: 提交到 PRM 表，score 5=👍→+2，1=👎→-2
+      const prmScore = score >= 4 ? 1 : -1; // API 接受 1/-1，后端转 +2/-2
+      intelligenceApi.submitAiMessageFeedback({
+        sessionId: advisorSessionId,
+        commandId: msg.agentCommandId,
+        score: prmScore,
+        userQuery: msg.userQuery || '',
+        aiContent: msg.text?.substring(0, 200),
+      }).catch((e) => { console.warn('[AiChat] PRM反馈提交失败:', e); });
+      return;
+    }
     if (!msg.traceId) return;
+    // HyperAdvisor 消息: 走旧路径
     intelligenceApi.hyperAdvisorFeedback({
       sessionId: msg.advisorSessionId || advisorSessionId,
       traceId: msg.traceId,

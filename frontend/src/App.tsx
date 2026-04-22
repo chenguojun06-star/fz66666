@@ -22,7 +22,7 @@ import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
-import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter } from './modules/intelligence';
+import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
 
 const NotFound = React.lazy(() => import('./pages/NotFound'));
@@ -266,6 +266,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.cockpitTrace} element={<RouteErrorBoundary pageName="执行轨迹"><Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.intelligenceCenter} element={<RouteErrorBoundary pageName="智能中心"><Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.aiAgentTraceCenter} element={<Navigate to={paths.cockpitTrace} replace />} />
+          <Route path={paths.platformDashboard} element={<RouteErrorBoundary pageName="平台AI面板"><Suspense fallback={routeFallback}><PlatformDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.orderManagementList} element={<RouteErrorBoundary pageName="订单管理"><Suspense fallback={routeFallback}><OrderManagement /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dataCenter} element={<RouteErrorBoundary pageName="数据中心"><Suspense fallback={routeFallback}><DataCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.templateCenter} element={<RouteErrorBoundary pageName="模板中心"><Suspense fallback={routeFallback}><TemplateCenter /></Suspense></RouteErrorBoundary>} />

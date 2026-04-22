@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.job;
 
 import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import java.math.BigDecimal;
@@ -37,6 +38,8 @@ public class AiPatrolJob {
     private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired
     private PatrolClosedLoopOrchestrator patrolOrchestrator;
+    @Autowired
+    private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
 
     /**
      * 每日 02:00 执行全量巡检
@@ -112,6 +115,59 @@ public class AiPatrolJob {
         }
 
         log.info("[AiPatrolJob] ===== 巡检完成，发现 {} 个问题 =====", issuesFound);
+
+        // ── 3. REFLECTIVE 记忆生成：将高/低采纳率场景写入长期记忆 ──
+        generateReflectiveMemories(since);
+    }
+
+    /**
+     * P1: REFLECTIVE 记忆生成。
+     * <ul>
+     *   <li>高采纳率场景 (&gt;80%) → 写正向 REFLECTIVE 记忆，强化该场景的决策能力</li>
+     *   <li>低采纳率场景 (&lt;20%) → 写负向 REFLECTIVE 记忆，提醒 AI 对该场景更谨慎</li>
+     * </ul>
+     * 写入 ai_long_memory.layer = 'REFLECTIVE'，subject_type = 'platform_scene'
+     */
+    private void generateReflectiveMemories(LocalDateTime since) {
+        int written = 0;
+        try {
+            List<Map<String, Object>> adoptionStats = decisionCardOrchestrator.aggregateAdoption(since);
+            for (Map<String, Object> row : adoptionStats) {
+                String scene = getString(row, "scene");
+                Number totalNum = (Number) row.getOrDefault("total", 0);
+                Number adoptedNum = (Number) row.getOrDefault("adopted_count", 0);
+                if (totalNum == null || totalNum.intValue() < 5) continue; // 样本不足5条跳过
+                double rate = adoptedNum.doubleValue() / totalNum.doubleValue();
+                String content;
+                double confidence;
+                if (rate > 0.8) {
+                    content = String.format(
+                        "场景「%s」的决策建议采纳率高达 %.0f%%（样本%d条），说明当前推荐策略非常有效，应持续强化类似的表达和依据。",
+                        scene, rate * 100, totalNum.intValue());
+                    confidence = rate;
+                } else if (rate < 0.2) {
+                    content = String.format(
+                        "场景「%s」的决策建议采纳率仅 %.0f%%（样本%d条），说明当前推荐策略效果较差，需要重新审视该场景下的建议生成逻辑和措辞。",
+                        scene, rate * 100, totalNum.intValue());
+                    confidence = 1.0 - rate;
+                } else {
+                    continue; // 中间区间不写记忆
+                }
+                longTermMemoryOrchestrator.writePlatformMemory(
+                    "REFLECTIVE",
+                    "platform_scene",
+                    content,
+                    null,
+                    BigDecimal.valueOf(confidence)
+                );
+                written++;
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob] REFLECTIVE 记忆生成异常: {}", e.getMessage());
+        }
+        if (written > 0) {
+            log.info("[AiPatrolJob] REFLECTIVE 记忆生成完成，新增 {} 条", written);
+        }
     }
 
     private static String getString(Map<String, Object> map, String key) {

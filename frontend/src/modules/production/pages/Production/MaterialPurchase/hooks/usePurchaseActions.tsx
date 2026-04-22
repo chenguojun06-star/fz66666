@@ -438,6 +438,9 @@ export function usePurchaseActions({
     if (!targets.length) { message.info('没有待确认完成的采购任务'); return; }
     const orderKey = String(targets[0]?.orderId || targets[0]?.orderNo || '').trim();
     if (orderKey) { const ok = await ensureOrderUnlocked(orderKey); if (!ok) return; }
+    // 提前取出 orderNo/styleNo，finally 块也需要用到
+    const orderNo = String(targets[0]?.orderNo || '').trim();
+    const styleNo = String(targets[0]?.styleNo || '').trim();
     try {
       setConfirmCompleteSubmitting(true);
       for (const t of targets) {
@@ -445,13 +448,14 @@ export function usePurchaseActions({
       }
       message.success('确认完成成功');
       await fetchMaterialPurchaseList();
-      const orderNo = String(targets[0]?.orderNo || '').trim();
-      const styleNo = String(targets[0]?.styleNo || '').trim();
-      if (orderNo && orderNo !== '-') { await loadDetailByOrderNo(orderNo); }
-      else if (styleNo) { await loadDetailByStyleNo(styleNo); }
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '确认完成失败');
     } finally {
+      // 无论成功或失败都刷新详情，确保按钮状态反映服务器真实状态，
+      // 防止 stale detailPurchases 导致按钮在状态已 completed 时仍可点击重复提交。
+      // 先刷新再解除 loading，避免数据未更新时按钮闪现可点状态。
+      if (orderNo && orderNo !== '-') { await loadDetailByOrderNo(orderNo); }
+      else if (styleNo) { await loadDetailByStyleNo(styleNo); }
       setConfirmCompleteSubmitting(false);
     }
   };

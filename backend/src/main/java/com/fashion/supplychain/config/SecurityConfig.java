@@ -188,6 +188,13 @@ public class SecurityConfig implements WebMvcConfigurer {
                         // 订单备注：所有登录用户可读写自己租户的订单备注（Orchestrator 层按 tenantId 隔离）
                         .requestMatchers("/api/system/order-remark/**").authenticated()
 
+                        // 供应商用户管理：仅管理员可操作（创建/重置密码/禁用/删除）
+                        .requestMatchers("/api/supplier-user/**").hasAnyAuthority(
+                                "ROLE_admin",
+                                "ROLE_ADMIN",
+                                "ROLE_1",
+                                "ROLE_tenant_owner")
+
                         // ── 管理员兜底：/api/system/tenant/** 和 /api/system/** 其余端点仅管理员可访问 ──
                         .requestMatchers("/api/system/tenant/**").hasAnyAuthority(
                                 "ROLE_admin",

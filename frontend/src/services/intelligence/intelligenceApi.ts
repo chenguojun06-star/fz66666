@@ -586,6 +586,13 @@ export const intelligenceApi = {
     await api.post('/hyper-advisor/feedback', params);
   },
 
+  /** P0: AI Agent 对话消息显式反馈（👍/👎），写入 PRM 表用于自适应工具权重 */
+  submitAiMessageFeedback: async (params: {
+    sessionId: string; commandId?: string; score: number; userQuery?: string; aiContent?: string;
+  }): Promise<void> => {
+    await api.post('/intelligence/feedback-reason/ai-message-feedback', params);
+  },
+
   /** 超级顾问：加载历史聊天记录（按 createTime 升序） */
   hyperAdvisorHistory: async (sessionId: string): Promise<ChatHistoryMessage[]> => {
     const resp = await api.get<ApiResult<ChatHistoryMessage[]>>(`/hyper-advisor/history/${sessionId}`);
@@ -610,5 +617,26 @@ export const intelligenceApi = {
 
   deleteOrphanData: (tableName: string, ids: string[]) =>
     api.post<{ code: number; data: number }>('/intelligence/orphan-data/delete', { tableName, ids }),
+
+  // ── 平台超管 AI 数据面板（仅 ROLE_SUPER_ADMIN 可访问） ──
+  /** 综合面板：工具表现 + 采纳率 + MTTR */
+  platformSuperDashboard: (days = 30): Promise<Record<string, unknown>> =>
+    api.get('/intelligence/platform/super-dashboard', { params: { days } }).then((r: any) => r?.data ?? {}),
+
+  /** 工具表现明细列表 */
+  platformToolPerformance: (days = 30): Promise<Record<string, unknown>[]> =>
+    api.get('/intelligence/platform/tool-performance', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+
+  /** 决策采纳率明细 */
+  platformDecisionAdoption: (days = 30): Promise<Record<string, unknown>[]> =>
+    api.get('/intelligence/platform/decision-adoption', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+
+  /** 巡检 MTTR 明细 */
+  platformPatrolMttr: (days = 30): Promise<Record<string, unknown>[]> =>
+    api.get('/intelligence/platform/patrol-mttr', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+
+  /** 近期聚合指标列表 */
+  platformAggregateRecent: (metricKey?: string, limit = 100): Promise<Record<string, unknown>[]> =>
+    api.get('/intelligence/platform/aggregate-recent', { params: { metricKey, limit } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
 };
 

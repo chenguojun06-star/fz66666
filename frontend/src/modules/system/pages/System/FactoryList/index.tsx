@@ -23,6 +23,7 @@ import { paths } from '@/routeConfig';
 import { organizationApi } from '@/services/system/organizationApi';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize } from '@/utils/pageSizeStore';
 import CustomerManagementTab from './CustomerManagementTab';
+import SupplierUserManager from './SupplierUserManager';
 import { usePersistentState } from '@/hooks/usePersistentState';
 
 type DialogMode = 'create' | 'view' | 'edit';
@@ -90,6 +91,10 @@ const FactoryList: React.FC = () => {
   // 收款账户管理
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountFactory, setAccountFactory] = useState<{ id: string; name: string }>({ id: '', name: '' });
+
+  // 供应商账号管理
+  const [supplierUserModalOpen, setSupplierUserModalOpen] = useState(false);
+  const [supplierUserFactory, setSupplierUserFactory] = useState<{ id: string; name: string }>({ id: '', name: '' });
 
   // 工厂评分卡（悬停懒加载，按工厂名索引）
   const [scorecardMap, setScorecardMap] = useState<Record<string, SupplierScore>>({});
@@ -499,6 +504,17 @@ const FactoryList: React.FC = () => {
                   },
                 }]
               : []),
+            ...(factory.supplierType === 'MATERIAL'
+              ? [{
+                  key: 'supplierUser',
+                  label: '账号管理',
+                  title: '供应商登录账号管理',
+                  onClick: () => {
+                    setSupplierUserFactory({ id: String(factory.id || ''), name: factory.factoryName || '' });
+                    setSupplierUserModalOpen(true);
+                  },
+                }]
+              : []),
             {
               key: 'account',
               label: '收款账户',
@@ -870,6 +886,15 @@ const FactoryList: React.FC = () => {
         ownerName={accountFactory.name}
         onClose={() => setAccountModalOpen(false)}
       />
+
+      {/* 供应商账号管理弹窗 */}
+      <SupplierUserManager
+        open={supplierUserModalOpen}
+        supplierId={supplierUserFactory.id}
+        supplierName={supplierUserFactory.name}
+        onClose={() => setSupplierUserModalOpen(false)}
+      />
+
       <RejectReasonModal
         open={remarkModalState?.open === true}
         title={remarkModalState?.title ?? ''}

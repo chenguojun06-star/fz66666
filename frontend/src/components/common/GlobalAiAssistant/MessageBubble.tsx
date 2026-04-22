@@ -260,7 +260,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       {msg.role === 'ai' && msg.needsClarification && <ClarificationCard missingInfo={msg.clarificationHints} onAsk={(q) => onSend(q)} />}
       {msg.role === 'ai' && !!msg.riskIndicators?.length && <RiskIndicatorWidget items={msg.riskIndicators} />}
       {msg.role === 'ai' && msg.simulation && <SimulationWidget data={msg.simulation} />}
-      {msg.role === 'ai' && msg.traceId && <FeedbackWidget msg={msg} onFeedback={onFeedback} />}
+      {/* P0: 显示反馈按钮 — traceId (HyperAdvisor) 或 agentCommandId (AI Agent) 均可触发 */}
+      {msg.role === 'ai' && (msg.traceId || msg.agentCommandId) && <FeedbackWidget msg={msg} onFeedback={onFeedback} />}
     </div>
 
     {msg.role === 'ai' && (

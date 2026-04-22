@@ -5,10 +5,13 @@ import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.dto.WorkerProfileRequest;
 import com.fashion.supplychain.intelligence.dto.WorkerProfileResponse;
+import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ManagementInsightOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
+import java.util.ArrayList;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +51,8 @@ public class AiAgentPromptHelper {
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
     @Autowired private WorkerProfileOrchestrator workerProfileOrchestrator;
     @Autowired private ManagementInsightOrchestrator managementInsightOrchestrator;
+    /** P0：长期记忆三层架构（FACT/EPISODIC/REFLECTIVE），只写不读等于白搭 — 这里读出来注入提示词 */
+    @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
 
     private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
             4, 8, 60L, TimeUnit.SECONDS,
@@ -161,6 +166,39 @@ public class AiAgentPromptHelper {
             }), promptBuildExecutor);
         }
 
+        // ── P0: 长期记忆检索（EPISODIC+REFLECTIVE+FACT 三层）── 写了必须读，否则自学习形同虚设
+        final String finalUserId = userId;
+        CompletableFuture<String> longTermMemFuture = CompletableFuture.supplyAsync(
+                UserContext.wrapSupplier(() -> {
+            try {
+                List<AiLongMemory> mems = longTermMemoryOrchestrator.retrieve("user", finalUserId, 6);
+                if (mems == null || mems.isEmpty()) return "";
+                StringBuilder sb = new StringBuilder("【我对你的了解（历史学习记忆）】\n");
+                List<Long> hitIds = new ArrayList<>();
+                for (AiLongMemory m : mems) {
+                    String layer = m.getLayer() == null ? "记录" : m.getLayer();
+                    String layerLabel = "REFLECTIVE".equals(layer) ? "经验总结" :
+                                        "FACT".equals(layer) ? "个人事实" : "历史经历";
+                    sb.append("- [").append(layerLabel).append("] ").append(m.getContent());
+                    if (m.getConfidence() != null && m.getConfidence().intValue() < 8) {
+                        sb.append("（参考）");
+                    }
+                    sb.append("\n");
+                    if (m.getId() != null) hitIds.add(m.getId());
+                }
+                sb.append("（以上为系统从历史对话中提炼的记忆，请结合工具查询数据综合判断，不要只依赖记忆）\n\n");
+                // 异步更新命中计数（不阻塞主流程）
+                hitIds.forEach(id -> {
+                    try { longTermMemoryOrchestrator.incrementHit(id); } catch (Exception ignored) { }
+                });
+                log.debug("[AiAgent-LTM] 已注入 {} 条长期记忆到提示词", mems.size());
+                return sb.toString();
+            } catch (Exception e) {
+                log.debug("[AiAgent-LTM] 长期记忆注入跳过: {}", e.getMessage());
+                return "";
+            }
+        }), promptBuildExecutor);
+
         CompletableFuture<String> memoryContextFuture = CompletableFuture.supplyAsync(
                 UserContext.wrapSupplier(() -> {
             try {
@@ -213,6 +251,7 @@ public class AiAgentPromptHelper {
         String intelligenceContext = intelligenceContextFuture.join();
         String workerProfileBlock = workerProfileFuture.join();
         String mgmtInsightBlock = mgmtInsightFuture.join();
+        String longTermMemBlock = longTermMemFuture.join();
         String memoryContext = memoryContextFuture.join();
         String ragContext = ragContextFuture.join();
 
@@ -308,6 +347,7 @@ public class AiAgentPromptHelper {
                 pageCtxBlock +
                 workerRestriction +
                 intelligenceContext + "\n" +
+                longTermMemBlock +
                 memoryContext +
                 ragContext +
                 toolGuide +

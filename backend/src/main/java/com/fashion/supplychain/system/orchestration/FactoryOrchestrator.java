@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.procurement.entity.SupplierUser;
+import com.fashion.supplychain.procurement.service.SupplierUserService;
 import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
@@ -17,6 +19,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +41,12 @@ public class FactoryOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private SupplierUserService supplierUserService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status,
             String supplierType, String factoryType, String parentOrgUnitId) {
@@ -111,6 +120,11 @@ public class FactoryOrchestrator {
         FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.syncFactoryNode(factory);
         persistSnapshot(factory.getId(), snapshot);
         saveOperationLog("factory", factory.getId(), factory.getFactoryName(), "CREATE", null);
+
+        if ("MATERIAL".equals(factory.getSupplierType())) {
+            autoCreateSupplierUser(factory);
+        }
+
         return true;
     }
 
@@ -203,6 +217,40 @@ public class FactoryOrchestrator {
         factory.setParentOrgUnitName(snapshot.getParentOrgUnitName());
         factory.setOrgPath(snapshot.getOrgPath());
         factory.setFactoryType(snapshot.getFactoryType());
+    }
+
+    private void autoCreateSupplierUser(Factory factory) {
+        try {
+            String baseUsername = "supplier_" + factory.getFactoryCode();
+            String username = baseUsername;
+            int suffix = 1;
+            while (supplierUserService.count(new LambdaQueryWrapper<SupplierUser>()
+                    .eq(SupplierUser::getUsername, username)
+                    .eq(SupplierUser::getDeleteFlag, 0)) > 0) {
+                suffix++;
+                username = baseUsername + "_" + suffix;
+            }
+
+            String initialPassword = "123456";
+
+            SupplierUser user = new SupplierUser();
+            user.setSupplierId(factory.getId());
+            user.setTenantId(factory.getTenantId());
+            user.setUsername(username);
+            user.setPasswordHash(passwordEncoder.encode(initialPassword));
+            user.setContactPerson(factory.getContactPerson());
+            user.setContactPhone(factory.getContactPhone());
+            user.setStatus("ACTIVE");
+            user.setDeleteFlag(0);
+            user.setCreateTime(LocalDateTime.now());
+            user.setUpdateTime(LocalDateTime.now());
+            supplierUserService.save(user);
+
+            log.info("[供应商账号] 自动创建: username={}, supplierId={}, supplierName={}, initialPassword={}",
+                    username, factory.getId(), factory.getFactoryName(), initialPassword);
+        } catch (Exception e) {
+            log.warn("[供应商账号] 自动创建失败(不影响供应商创建): supplierId={}, error={}", factory.getId(), e.getMessage());
+        }
     }
 
     // 使用TextUtils.safeText()替代
