@@ -209,7 +209,7 @@ public class AiAgentPromptHelper {
                 sb.append("（以上为系统从历史对话中提炼的记忆，请结合工具查询数据综合判断，不要只依赖记忆）\n\n");
                 // 异步更新命中计数（不阻塞主流程）
                 hitIds.forEach(id -> {
-                    try { longTermMemoryOrchestrator.incrementHit(id); } catch (Exception ignored) { }
+                    try { longTermMemoryOrchestrator.incrementHit(id); } catch (Exception e) { log.warn("[AiAgent-LTM] 命中计数更新失败: id={}", id); }
                 });
                 log.debug("[AiAgent-LTM] 已注入 {} 条长期记忆到提示词", mems.size());
                 return sb.toString();
@@ -514,6 +514,7 @@ public class AiAgentPromptHelper {
             case "tool_factory_list":       return "工厂查询";
             case "tool_finance_list":       return "财务查询";
             case "tool_management_dashboard": return "经营面板";
+            case "tool_ai_accuracy_query":     return "AI准确率";
             case "tool_knowledge_search":   return "知识查询";
             case "tool_bom_cost_calc":      return "BOM成本计算";
             case "tool_quick_build_order":  return "快速建单";

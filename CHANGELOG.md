@@ -1,5 +1,42 @@
 # 2026-04-23（当前批次）
 
+## 📊 AI 准确率量化 AgentTool — 交期命中率 / 采纳率 / 偏差天数（小云直出）
+
+### feat(intelligence): AiAccuracyQueryTool + AiAccuracyOrchestrator + AiAccuracyController
+
+#### 背景
+AI 推荐（交期预测、采购建议等）缺乏可量化的准确率反馈，用户无法知道"AI有多准"。
+本次将准确率计算能力直接挂载到小云对话，无需额外前端页面，用户问即可答。
+
+#### 新增文件
+- `intelligence/orchestration/AiAccuracyOrchestrator.java` — 核心计算编排器
+  - 交期命中率：`t_intelligence_prediction_log` 预测 vs 实际完成日期，容差 `toleranceDays`（默认2天）
+  - 建议采纳率：`t_intelligence_metrics` 记录 `SUGGESTION_ADOPTED`/`SUGGESTION_REJECTED` 事件
+  - 平均偏差天数：命中订单的预测偏差均值（正=提前，负=延迟）
+  - 支持按场景细分（`scene_type`：交期/建议/质量预测等）
+- `intelligence/dto/AiAccuracyDashboardResponse.java` — 响应 DTO（交期命中率/采纳率/偏差天数/场景细分）
+- `intelligence/agent/tool/AiAccuracyQueryTool.java` — AgentTool（`tool_ai_accuracy_query`）
+  - 参数：`toleranceDays`（默认2天容差）、`recentDays`（默认90天统计周期）
+  - 返回带 🟢/🟡/🔴 色码的中文报告，直接在小云弹窗展示
+- `intelligence/controller/AiAccuracyController.java` — REST 端点（超管/统计分析备用）
+  - `GET /api/intelligence/accuracy/dashboard`
+
+#### Tool 注册（3处单行插入）
+- `AiAgentToolAccessService`：注册到 `ToolDomain.ANALYSIS` 域
+- `AiAgentPromptHelper`：友好名 `"AI准确率"`
+- `AiAgentToolAdvisor`：新增 `analysis_ai_accuracy` 意图，关键词：准确率/命中率/采纳率/AI效果/几成准/交期命中
+
+#### 触发方式
+用户在小云问：`"AI准确率怎么样"` / `"交期命中率多少"` / `"AI有几成准"` 等 → 自动路由到此工具
+
+#### 对系统的帮助
+- ✅ AI 效果首次可量化可问询，而非黑盒
+- ✅ 无新增前端页面，通过小云对话直接输出，符合"不加页面"约束
+- ✅ 独立编排器 + 独立 DTO，不污染现有文件行数
+- ✅ 编译验证通过：`mvn clean compile -q` → BUILD SUCCESS
+
+---
+
 ## 🤖 AI 智能体四大核心升级（A2A协议 + MCP增强 + 技能树 + mem0多信号检索）
 
 ### feat(intelligence): A2A协议接入 + MCP协议增强 + 技能树自生长 + mem0多信号记忆融合

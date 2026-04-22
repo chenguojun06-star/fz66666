@@ -1,9 +1,9 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
-> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（157个编排器）| **规模**：257k行代码
+> **系统评分**：98/100 | **代码质量**：优秀 | **架构**：非标准分层设计（158个编排器）| **规模**：257k行代码
 > **测试覆盖率**：ScanRecordOrchestrator 100%（29单元测试）| 其他编排器集成测试覆盖
-> **最后更新**：2026-03-22 | **AI指令版本**：v3.25（核心缺列预检与启动自愈补强）
+> **最后更新**：2026-04-23 | **AI指令版本**：v3.26（AI准确率AgentTool + 编排器数量更新）
 
 ***
 
@@ -413,7 +413,8 @@ backend/src/main/java/com/fashion/supplychain/
 >   - `BomCostCalculator`：AI计算任意款式BOM成本（物料+工序+汇率）
 >   - `QuickOrderBuilder`：AI智能建单（一句话建订单 → 提取款号、颜色、尺码、数量）
 >   - **`CohereRerankService`**（2026-04-30 新增）：`backend/.../intelligence/service/` 独立精排服务，调用 `POST https://api.cohere.com/v2/rerank`，8秒超时，Cohere 不可用时自动降级透明回退。配置：`AI_COHERE_RERANK_ENABLED=true` + `COHERE_API_KEY`
-> - **编排器总数升级**：134 → 152 个（+18新增编排器分布在intelligence/production/system模块）
+> - **AI准确率量化（2026-04-23 新增）**：`AiAccuracyOrchestrator` + `AiAccuracyQueryTool`（`tool_ai_accuracy_query`）。小云对话直出交期命中率/建议采纳率/平均偏差天数，无前端页面，用户问"准确率怎么样"即触发。编排器层统计 `t_intelligence_prediction_log` + `t_intelligence_metrics`。
+> - **编排器总数升级**：134 → 152 → **158** 个
 > - **腾讯云 COS 文件存储**：`common/CosService.java` — 统一处理文件上传/下载，替代本地文件系统。调用 `cosService.uploadFile(file)` 返回访问 URL
 > - **Excel 批量导入**：`ExcelImportOrchestrator` + `ExcelImportController` — 支持生产订单、工序等数据的 Excel 批量导入，前端对应 `modules/basic/pages/DataImport/`
 > - **问题反馈**：`UserFeedbackController` / `UserFeedbackService` — 用户在系统内提交问题反馈，存储到 `t_user_feedback` 表
@@ -2885,11 +2886,11 @@ Flyway 会把 '' 当字符串边界，截断 SQL 导致列永远不被添加
 
 ---
 
-### 编排器分布统计（2026-05-03 更新）
+### 编排器分布统计（2026-04-23 更新）
 
 | 模块 | 编排器数 | 代表成员 |
 |------|---------|---------|
-| intelligence（智能驾驶舱） | 63 | NlQueryOrchestrator、ExecutionEngineOrchestrator、AiAgentOrchestrator、MonthlyBizSummaryOrchestrator、LiteLLMAdminOrchestrator、QdrantAdminOrchestrator、LangfuseTraceOrchestrator等 |
+| intelligence（智能驾驶舱） | 64 | NlQueryOrchestrator、ExecutionEngineOrchestrator、AiAgentOrchestrator、MonthlyBizSummaryOrchestrator、LiteLLMAdminOrchestrator、QdrantAdminOrchestrator、LangfuseTraceOrchestrator、**AiAccuracyOrchestrator**等 |
 | production（生产管理） | 24 | ProductionOrderOrchestrator、ScanRecordOrchestrator、PayrollSettlementOrchestrator、**MaterialPurchaseDocOrchestrator**等 |
 | system（系统配置） | 15 | UserOrchestrator、PermissionOrchestrator、SysNoticeOrchestrator等 |
 | finance（财务结算） | 18 | FinancialSettlementOrchestrator、ReconciliationOrchestrator、**ExpenseDocOrchestrator**等 |
@@ -2899,7 +2900,7 @@ Flyway 会把 '' 当字符串边界，截断 SQL 导致列永远不被添加
 | crm（客户管理） | 3 | CustomerOrchestrator、FollowupTaskOrchestrator等 |
 | procurement（采购管理） | 2 | ProcurementOrchestrator、SupplierOrchestrator |
 | 其他模块 | 22 | integration、wechat、search、datacenter、template等 |
-| **总计** | **157** | — |
+| **总计** | **158** | — |
 
 ---
 
