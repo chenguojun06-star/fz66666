@@ -12,8 +12,10 @@ import com.fashion.supplychain.production.helper.lookup.BundleLookupContext;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
+import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.style.service.SecondaryProcessService;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
-import java.util.Objects;
 import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -75,15 +77,15 @@ public class ProductionScanExecutor {
 
     private final StyleAttachmentService styleAttachmentService;
 
-    private final com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+    private final StyleInfoService styleInfoService;
 
-    private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+    private final SecondaryProcessService secondaryProcessService;
 
     private final ProcessParentMappingService processParentMappingService;
 
-    private final com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+    private final ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
-    private final com.fashion.supplychain.production.service.ProductionProcessTrackingService trackingService;
+    private final ProductionProcessTrackingService trackingService;
 
     private final WebSocketService webSocketService;
 
@@ -205,7 +207,7 @@ public class ProductionScanExecutor {
 
         // 判断是否裁剪
         boolean isCutting = "cutting".equalsIgnoreCase(scanType) ||
-                            (progressStage != null && "裁剪".equals(progressStage.trim()));
+                            "裁剪".equals(progressStage.trim());
 
         // 裁剪前检查版型文件
         if (isCutting) {
@@ -214,7 +216,7 @@ public class ProductionScanExecutor {
 
         // 解析单价（优先用子工序名精确匹配，匹配不上再用父节点名模糊匹配）
         BigDecimal unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), childProcessName);
-        if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !Objects.equals(childProcessName, progressStage)) {
+        if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !childProcessName.equals(progressStage)) {
             unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), progressStage);
         }
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
@@ -281,7 +283,7 @@ public class ProductionScanExecutor {
 
         if (updateResult != null) {
             // 附加面料清单（采购阶段）
-            if ("采购".equals(progressStage != null ? progressStage.trim() : "")) {
+            if ("采购".equals(progressStage.trim())) {
                 attachMaterialPurchaseList(updateResult, order);
             }
             // 附加裁剪菲号信息
@@ -410,7 +412,7 @@ public class ProductionScanExecutor {
                     quantity, unitPrice, operatorId, operatorName, color, size,
                     TextUtils.safeText(params.get("remark")), isCutting);
             if (updateResult != null) {
-                if ("采购".equals(progressStage != null ? progressStage.trim() : "")) {
+                if ("采购".equals(progressStage.trim())) {
                     attachMaterialPurchaseList(updateResult, order);
                 }
                 if (isCutting) {
@@ -457,7 +459,7 @@ public class ProductionScanExecutor {
         }
 
         // 附加面料清单（采购阶段）
-        if ("采购".equals(progressStage != null ? progressStage.trim() : "")) {
+        if ("采购".equals(progressStage.trim())) {
             attachMaterialPurchaseList(result, order);
         }
 

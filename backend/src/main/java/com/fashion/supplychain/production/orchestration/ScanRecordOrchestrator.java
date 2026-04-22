@@ -23,14 +23,8 @@ import com.fashion.supplychain.production.service.ProductionProcessTrackingServi
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import org.springframework.util.StringUtils;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +34,17 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import com.fashion.supplychain.production.executor.QualityScanExecutor;
+import com.fashion.supplychain.production.executor.WarehouseScanExecutor;
+import com.fashion.supplychain.production.executor.ProductionScanExecutor;
+import com.fashion.supplychain.production.helper.ScanRecordQueryHelper;
+import com.fashion.supplychain.production.helper.ScanRecordEnrichHelper;
+import com.fashion.supplychain.production.helper.UnitPriceResolver;
+import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
+import com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrchestrator;
+import com.fashion.supplychain.common.lock.DistributedLockService;
+import com.fashion.supplychain.websocket.service.WebSocketService;
 
 /**
  * 扫码记录编排器
@@ -87,40 +92,40 @@ public class ScanRecordOrchestrator {
     private ScanRecordPermissionHelper scanRecordPermissionHelper;
 
     @Autowired
-    private com.fashion.supplychain.production.helper.ScanRecordQueryHelper scanRecordQueryHelper;
+    private ScanRecordQueryHelper scanRecordQueryHelper;
 
     @Autowired
-    private com.fashion.supplychain.production.helper.UnitPriceResolver unitPriceResolver;
+    private UnitPriceResolver unitPriceResolver;
 
     @Autowired
-    private com.fashion.supplychain.production.executor.QualityScanExecutor qualityScanExecutor;
+    private QualityScanExecutor qualityScanExecutor;
 
     @Autowired
-    private com.fashion.supplychain.production.executor.WarehouseScanExecutor warehouseScanExecutor;
+    private WarehouseScanExecutor warehouseScanExecutor;
 
     @Autowired
-    private com.fashion.supplychain.production.executor.ProductionScanExecutor productionScanExecutor;
+    private ProductionScanExecutor productionScanExecutor;
 
     @Autowired
     private QrCodeSigner qrCodeSigner;
 
     @Autowired
-    private com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrchestrator smartNotificationOrchestrator;
+    private SmartNotificationOrchestrator smartNotificationOrchestrator;
 
     @Autowired
-    private com.fashion.supplychain.production.helper.ScanRecordEnrichHelper scanRecordEnrichHelper;
+    private ScanRecordEnrichHelper scanRecordEnrichHelper;
 
     @Autowired
-    private com.fashion.supplychain.common.lock.DistributedLockService distributedLockService;
+    private DistributedLockService distributedLockService;
 
     @Autowired
-    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+    private TransactionTemplate transactionTemplate;
 
     @Autowired
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+    private WebSocketService webSocketService;
 
     @Autowired
-    private com.fashion.supplychain.production.service.impl.ProductWarehousingHelper warehousingHelper;
+    private ProductWarehousingHelper warehousingHelper;
 
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -989,30 +994,6 @@ public class ScanRecordOrchestrator {
         }
         log.warn("[Cleanup] deleteFullLink 功能已禁用");
         return Collections.emptyMap();
-    }
-
-    private LocalDateTime parseCutoffOrDefault(String from) {
-        if (!hasText(from)) {
-            return LocalDate.now().atTime(LocalTime.of(18, 0));
-        }
-        String v = from.trim();
-        List<DateTimeFormatter> fmts = List.of(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
-                DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        for (DateTimeFormatter f : fmts) {
-            try {
-                return LocalDateTime.parse(v, f);
-            } catch (DateTimeParseException e) {
-                log.warn("Failed to parse cutoff datetime with formatter: from={}, formatter={}", v, f, e);
-            }
-        }
-        try {
-            return LocalDateTime.parse(v);
-        } catch (DateTimeParseException e) {
-            log.warn("Failed to parse cutoff datetime: from={}", v, e);
-        }
-        return LocalDate.now().atTime(LocalTime.of(18, 0));
     }
 
     private boolean hasText(String value) {
