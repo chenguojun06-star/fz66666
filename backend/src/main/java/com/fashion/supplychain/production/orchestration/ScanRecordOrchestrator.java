@@ -246,7 +246,8 @@ public class ScanRecordOrchestrator {
             autoProcess = true;
         }
 
-        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse", "pattern");
+        // procurement 必须在允许集合内（ORDER 码采购扫码经此路由后走 productionScanExecutor，progressStage='采购'）
+        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse", "pattern", "procurement");
         if (!ALLOWED_SCAN_TYPES.contains(scanType)) {
             throw new IllegalArgumentException("不支持的扫码类型: " + scanType);
         }

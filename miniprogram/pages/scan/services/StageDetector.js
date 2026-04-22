@@ -225,16 +225,8 @@ class StageDetector {
     );
 
     if (currentIndex < 0) {
-      console.warn(
-        `[StageDetector] 当前工序[${currentProgress}]不在订单[${orderNo}]的配置中`
-      );
-      return {
-        processName: currentProgress,
-        progressStage: currentProgress,
-        scanType: this._inferScanType(currentProgress),
-        hint: `当前工序: ${currentProgress}`,
-        isCompleted: false,
-      };
+      // 历史 bug：此处曾软兼容返回推断工序，导致当工序名与配置不匹配时误展示错误工序页面。
+      throw new Error(`当前工序「${currentProgress}」不在订单[${orderNo}]的工序配置中，请在PC端检查工序模板配置`);
     }
 
     // ✅ 修复：后端 currentProcessName 语义 = "第一个尚未完成的工序"

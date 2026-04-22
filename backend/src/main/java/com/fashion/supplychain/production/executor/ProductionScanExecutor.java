@@ -165,6 +165,14 @@ public class ProductionScanExecutor {
 
         progressStage = normalizeFixedProductionNodeName(progressStage);
 
+        // ★ ORDER 模式守卫：无菲号时只允许采购/裁剪阶段，防止 ORDER 码绕过前端进入生产工序
+        if (bundle == null) {
+            if (!"采购".equals(progressStage) && !"裁剪".equals(progressStage)) {
+                throw new IllegalStateException(
+                    "订单码只能用于采购和裁剪阶段，当前工序[" + progressStage + "]请扫描菲号二维码");
+            }
+        }
+
         // ★ 子工序→父进度节点映射（关键：确保子工序数据聚合到正确的父节点）
         // 例如："上领"→"车缝", "上袖"→"车缝", "绣花"→"二次工艺"
         String childProcessName = progressStage; // 保留原始子工序名

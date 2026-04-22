@@ -177,22 +177,12 @@ public class ProcessStageDetector {
             return pn;
         }
 
-        // 订单数量校验
+        // 订单数量校验：订单数量异常为 0 时不应进行扫码
         int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
         if (orderQty <= 0) {
-            for (String n : nodes) {
-                String pnRaw = n == null ? "" : n.trim();
-                if (!hasText(pnRaw)) {
-                    continue;
-                }
-                String pn = normalizeFixedProductionNodeName(pnRaw);
-                if (hasText(pn)
-                        && !isAutoSkippableStageName(order, pn)
-                        && !templateLibraryService.isProgressQualityStageName(pnRaw)
-                        && !templateLibraryService.isProgressQualityStageName(pn)) {
-                    return pn;
-                }
-            }
+            // 历史 bug：此处曾返回第一个可用节点（如裁剪/车缝），导致 autoProcess 识别错误。
+            // 订单数量=0 是数据异常，应直接中断让业务人员修正数据。
+            log.warn("订单[{}]的订单数量异常为 {}，无法自动识别工序", order.getOrderNo(), orderQty);
             return null;
         }
 
