@@ -69,6 +69,7 @@ public class AiAgentToolAccessService {
         // ── ANALYSIS 补充 ──
         register("tool_management_dashboard", "管理层经营仪表盘：实时KPI快照、风险等级、利润排名", false, ToolDomain.ANALYSIS);
         register("tool_ai_accuracy_query", "AI准确率查询：交期命中率、建议采纳率、平均居移Tianzhu", false, ToolDomain.ANALYSIS);
+        register("tool_ai_self_optimize_report", "AI自优化报告：查询AI近期自我改进洞察、工具成功率趋势与交期预测准确率变化。用户问「你进步了多少」「学到什么了」「准确率提升了吗」时调用", false, ToolDomain.ANALYSIS);
         register("tool_root_cause_analysis", "根因分析：深入分析问题根因，适合\u201c为什么\u201d\u201c根因是什么\u201d", false, ToolDomain.ANALYSIS);
         register("tool_pattern_discovery", "模式发现：识别数据规律与异常模式", false, ToolDomain.ANALYSIS);
         register("tool_goal_decompose", "目标分解：将经营目标拆解为可执行子任务", false, ToolDomain.ANALYSIS);

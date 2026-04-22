@@ -1,4 +1,60 @@
-# 2026-04-23（当前批次）
+# 2026-05-03（当前批次）
+
+## 🔄 AI自我进化闭环 — 自动CriticEvolution定时任务 + 自优化报告工具
+
+### feat(intelligence): AiSelfEvolutionJob（每日03:30）+ AiSelfOptimizeReportTool
+
+#### 背景
+系统中最强大的自我改进机制 `CriticEvolutionTool` 从未被任何定时任务调用，只有用户手动问才会触发。
+大量已建好的 AI 基础设施（PRM评分、模式挖掘、订单学习）在每晚运行，但"Critic提炼改进洞察"这一步缺失，
+导致 AI 永远无法真正实现自我升级。本次补齐这个核心缺口，让 AI 真正做到每天自我进化。
+
+#### 新增文件
+
+**`intelligence/job/AiSelfEvolutionJob.java`** — AI自进化定时任务
+- 每日 03:30 执行（在所有学习任务之后：AutonomousAgentJob→03:00、OrderLearning→03:10）
+- 多租户循环：`ProcessStatsEngine.findActiveTenantIds()` 获取活跃租户列表
+- 分布式锁：`DistributedLockService.tryLock("job:ai-self-evolution", 30min)` 防止集群重复执行
+- 核心调用：`CriticEvolutionTool.execute("{\"days\":7}")` 触发 LLM Critic 分析 + Qdrant 向量记忆写入
+- 记录进化结果：`EVOLVED`（成功生成洞察）/ `SKIPPED`（无低反馈样本）
+- 修复了什么：以前 CriticEvolution 只在用户主动问时触发（一周不一定触发一次），现在每晚自动运行
+
+**`intelligence/agent/tool/AiSelfOptimizeReportTool.java`** — AI自优化报告工具（`tool_ai_self_optimize_report`）
+- 参数：`days`（int，默认14天）
+- 查询 `t_agent_evolution_log` 获取进化次数 + 最近 2 条优化洞察摘要
+- 调用 `AiProcessRewardMapper.aggregateForCurrentTenant()` 获取工具成功率趋势
+- 调用 `AiAccuracyOrchestrator.computeDashboard()` 获取交期预测命中率
+- 返回带数据的中文自优化报告，含：进化次数、洞察内容、工具表现、预测准确率
+- 触发方式：用户问"你最近进步了多少"/"学到什么了"/"AI变得更准了吗"/"自我优化情况"
+
+#### AiAgentToolAccessService 注册（1行）
+```
+register("tool_ai_self_optimize_report", "AI自优化报告：查询AI近期自我改进洞察、工具成功率趋势与交期预测准确率变化...", false, ToolDomain.ANALYSIS);
+```
+
+#### 每日定时任务完整时间线（更新后）
+| 时间 | Job | 作用 |
+|------|-----|------|
+| 每30min | IntelligenceSignalCollectionJob | 风险信号采集 |
+| 每4h | AiPatrolJob (biz) | 逾期/停滞预警 |
+| 02:00 | AiPatrolJob (quality) | 工具失效率+采纳率巡逻 |
+| 02:30 | IntelligenceLearningJob | 重算工序时间统计 |
+| 03:00 | AutonomousAgentJob | 模式发现 |
+| 03:10 | OrderLearningRefreshJob | 订单学习刷新 |
+| **03:30** | **AiSelfEvolutionJob** ✨新增 | **Critic自进化 + Qdrant记忆写入** |
+| 06:30 | XiaoyunDailyInsightJob | 早报摘要 |
+
+#### 对系统的帮助
+- ✅ AI 首次实现真正的每日自动自我进化闭环，不再依赖用户手动触发
+- ✅ 用户可通过小云对话查询 AI 的进步情况，AI 不再是"黑盒改进"
+- ✅ 之前所有 AI 投入（PRM评分、模式挖掘、Qdrant向量记忆）现在全部被串联起来发挥实际作用
+- ✅ 编译验证通过：`mvn compile -q` → BUILD SUCCESS（0 errors）
+
+---
+
+# 2026-04-23
+
+## 📊 AI 准确率量化 AgentTool — 交期命中率 / 采纳率 / 偏差天数（小云直出）
 
 ## 📊 AI 准确率量化 AgentTool — 交期命中率 / 采纳率 / 偏差天数（小云直出）
 
