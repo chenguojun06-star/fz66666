@@ -460,6 +460,7 @@ public class TrackingPriceSyncHelper {
 
             List<ScanRecord> scanRecords = scanRecordService.lambdaQuery()
                     .eq(ScanRecord::getOrderId, productionOrderId)
+                    .ne(ScanRecord::getScanType, "orchestration")
                     .eq(ScanRecord::getScanResult, "success")
                     .and(w -> w.eq(ScanRecord::getProcessName, pName))
                     .and(w -> w.isNull(ScanRecord::getPayrollSettlementId)

@@ -186,6 +186,7 @@ public class BillAggregationOrchestrator {
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(billType), BillAggregation::getBillType, billType)
                 .select(BillAggregation::getStatus, BillAggregation::getAmount, BillAggregation::getSettledAmount)
+                .last("LIMIT 5000")
                 .list();
 
         BigDecimal pendingAmount = BigDecimal.ZERO;

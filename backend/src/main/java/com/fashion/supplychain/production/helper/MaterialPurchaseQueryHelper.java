@@ -271,6 +271,7 @@ public class MaterialPurchaseQueryHelper {
                     effectiveFactoryType.toUpperCase());
         }
 
+        wrapper.last("LIMIT 5000");
         List<MaterialPurchase> all = materialPurchaseService.list(wrapper);
 
         int totalCount = all.size();

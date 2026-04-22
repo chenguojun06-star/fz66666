@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Form, Input, Select, Row, Col, Image, Tag, Alert } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
 import api, { type ApiResult, isApiSuccess } from '@/utils/api';
@@ -483,8 +484,23 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
 
         <Row gutter={16}>
           <Col span={8}>
-            <Form.Item name="location" label="存放位置">
-              <Input placeholder="例如: A-01-02" />
+            <Form.Item label="仓库">
+              <Select
+                placeholder="请选择仓库"
+                defaultValue="样衣库"
+                style={{ width: '100%' }}
+              >
+                <Option value="样衣库">样衣库</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="location" label="库位">
+              <DictAutoComplete
+                dictType="sample_warehouse_location"
+                placeholder="请选择或输入库位（如：A-001）"
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col span={16}>

@@ -481,6 +481,7 @@ public class MaterialPurchaseOrchestratorHelper {
         }
 
         wrapper.orderByAsc(MaterialPurchase::getCreateTime);
+        wrapper.last("LIMIT 5000");
         List<MaterialPurchase> all = materialPurchaseService.list(wrapper);
         if (all == null || all.isEmpty()) return List.of();
 

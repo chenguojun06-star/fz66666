@@ -124,7 +124,8 @@ public class PatternProductionController {
         wrapper.eq(PatternScanRecord::getPatternProductionId, id)
                 .eq(PatternScanRecord::getDeleteFlag, 0)
                 .orderByAsc(PatternScanRecord::getScanTime)
-                .orderByAsc(PatternScanRecord::getCreateTime);
+                .orderByAsc(PatternScanRecord::getCreateTime)
+                .last("LIMIT 5000");
 
         List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -160,7 +161,7 @@ public class PatternProductionController {
                     return Result.success(receiveMsg);
                 case "complete":
                     Map<String, Object> completeResult = patternProductionOrchestrator.submitScan(
-                        id, "COMPLETE", "PLATE_WORKER", null, null, null);
+                        id, "COMPLETE", "PLATE_WORKER", null, null, null, null);
                     return Result.success(completeResult);
                 case "warehouse-in":
                     String remark = request != null ? (String) request.get("remark") : null;
@@ -275,9 +276,14 @@ public class PatternProductionController {
             if (quantityObj != null) {
                 quantity = Integer.parseInt(String.valueOf(quantityObj));
             }
+            java.math.BigDecimal unitPrice = null;
+            Object unitPriceObj = request.get("unitPrice");
+            if (unitPriceObj != null) {
+                try { unitPrice = new java.math.BigDecimal(String.valueOf(unitPriceObj)); } catch (Exception ignored) {}
+            }
 
             Map<String, Object> result = patternProductionOrchestrator.submitScan(
-                    patternId, operationType, operatorRole, remark, quantity, warehouseCode);
+                    patternId, operationType, operatorRole, remark, quantity, warehouseCode, unitPrice);
             return Result.success(result);
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());
@@ -314,7 +320,7 @@ public class PatternProductionController {
                 wrapper.le(PatternScanRecord::getScanTime, LocalDateTime.parse(endTime, fmt));
             }
             wrapper.orderByDesc(PatternScanRecord::getScanTime);
-
+            wrapper.last("LIMIT 5000");
             List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
 
             java.util.Set<String> patternProductionIds = records.stream()

@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.helper.ProcessStageDetector;
+import com.fashion.supplychain.production.helper.lookup.BundleLookupContext;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
@@ -55,7 +56,7 @@ public class ProductionScanExecutor {
 
     private final ScanRecordService scanRecordService;
 
-    private final CuttingBundleService cuttingBundleService;
+    private final CuttingBundleLookupService bundleLookupService;
 
     private final ProductionOrderService productionOrderService;
 
@@ -98,56 +99,9 @@ public class ProductionScanExecutor {
         String paramColor = TextUtils.safeText(params.get("color"));
         String paramSize = TextUtils.safeText(params.get("size"));
 
-        CuttingBundle bundle = null;
+        BundleLookupContext lookupContext = BundleLookupContext.from(params);
+        CuttingBundle bundle = bundleLookupService.lookup(lookupContext);
         ProductionOrder order = null;
-
-        // 优先通过 scanCode（二维码内容）查找菲号
-        if (hasText(scanCode)) {
-            bundle = cuttingBundleService.getByQrCode(scanCode);
-            if (bundle != null && hasText(bundle.getId())) {
-                log.info("[BundleLookup] getByQrCode命中: scanCode={}, bundleId={}", scanCode, bundle.getId());
-            } else {
-                log.info("[BundleLookup] getByQrCode未命中: scanCode长度={}", scanCode.length());
-            }
-        }
-
-        // 如果 scanCode 未匹配到菲号，尝试通过 orderNo + color + size 查找
-        if ((bundle == null || !hasText(bundle.getId())) && hasText(orderNo) && hasText(paramColor) && hasText(paramSize)) {
-            order = resolveOrder(null, orderNo);
-            if (order != null) {
-                try {
-                    bundle = cuttingBundleService.getOne(new LambdaQueryWrapper<CuttingBundle>()
-                            .eq(CuttingBundle::getProductionOrderId, order.getId())
-                            .eq(CuttingBundle::getColor, paramColor)
-                            .eq(CuttingBundle::getSize, paramSize)
-                            .last("limit 1"));
-                } catch (Exception e) {
-                    log.warn("通过orderNo+color+size查找菲号失败: orderNo={}, color={}, size={}", orderNo, paramColor, paramSize, e);
-                }
-            }
-        }
-
-        // ★ 第三回退：通过 orderNo + bundleNo（整数序号）查找
-        // 解决 QR码中文字段编码不一致导致 getByQrCode / color+size 均失败的问题
-        // bundleNo 和 orderNo 均为 ASCII/整数，完全不依赖中文字段编码
-        if ((bundle == null || !hasText(bundle.getId())) && hasText(orderNo)) {
-            String bundleNoStr = TextUtils.safeText(params.get("bundleNo"));
-            if (hasText(bundleNoStr)) {
-                int bundleNoInt = ParamUtils.toIntSafe(bundleNoStr);
-                if (bundleNoInt > 0) {
-                    try {
-                        CuttingBundle foundByNo = cuttingBundleService.getByBundleNo(orderNo, bundleNoInt);
-                        if (foundByNo != null && hasText(foundByNo.getId())) {
-                            bundle = foundByNo;
-                            log.info("第三回退（orderNo+bundleNo）找到菲号: orderNo={}, bundleNo={}, bundleId={}",
-                                    orderNo, bundleNoInt, bundle.getId());
-                        }
-                    } catch (Exception e) {
-                        log.warn("通过orderNo+bundleNo查找菲号失败: orderNo={}, bundleNo={}", orderNo, bundleNoStr, e);
-                    }
-                }
-            }
-        }
 
 
         // 无菲号时：允许 ORDER 模式扫码（SKU 批量提交路径，不要求 CuttingBundle）

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/system/role")
 @PreAuthorize("isAuthenticated()")
+@Slf4j
 public class RoleController {
 
     @Autowired
@@ -94,6 +96,7 @@ public class RoleController {
             try {
                 result.add(Long.valueOf(String.valueOf(item)));
             } catch (Exception e) {
+                log.warn("[RoleController] 角色ID解析失败: {}", item);
             }
         }
         return result;

@@ -11,6 +11,8 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
+import com.fashion.supplychain.production.helper.lookup.BundleLookupContext;
+import com.fashion.supplychain.production.service.CuttingBundleLookupService;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.SKUService;
@@ -50,6 +52,9 @@ public class QualityScanExecutor {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private CuttingBundleLookupService bundleLookupService;
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
@@ -105,25 +110,7 @@ public class QualityScanExecutor {
             throw new IllegalStateException("操作过快，请稍后再试（防重复扫码保护）");
         }
 
-        CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
-        // ★ 回退：通过 orderNo + bundleNo（整数序号）查找，对中文编码完全免疫
-        // 根因：QR码含中文时 getByQrCode 可能因编码不一致匹配失败，导致 cutting_bundle_no=NULL
-        if (bundle == null || !hasText(bundle.getId())) {
-            String fallbackOrderNo = TextUtils.safeText(params.get("orderNo"));
-            Integer bundleNoInt = NumberUtils.toInt(params.get("bundleNo"));
-            if (hasText(fallbackOrderNo) && bundleNoInt != null && bundleNoInt > 0) {
-                try {
-                    CuttingBundle foundByNo = cuttingBundleService.getByBundleNo(fallbackOrderNo, bundleNoInt);
-                    if (foundByNo != null && hasText(foundByNo.getId())) {
-                        bundle = foundByNo;
-                        log.info("质检回退（orderNo+bundleNo）找到菲号: orderNo={}, bundleNo={}, bundleId={}",
-                                fallbackOrderNo, bundleNoInt, bundle.getId());
-                    }
-                } catch (Exception e) {
-                    log.warn("质检通过orderNo+bundleNo查找菲号失败: orderNo={}, bundleNo={}", fallbackOrderNo, bundleNoInt, e);
-                }
-            }
-        }
+        CuttingBundle bundle = bundleLookupService.lookup(BundleLookupContext.from(params));
         if (bundle == null || !hasText(bundle.getId())) {
             throw new IllegalStateException("未匹配到菲号");
         }

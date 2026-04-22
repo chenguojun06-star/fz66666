@@ -188,6 +188,7 @@ public class EcSalesRevenueOrchestrator {
         if (StringUtils.hasText(status)) wrapper.eq(EcSalesRevenue::getStatus, status);
         else wrapper.in(EcSalesRevenue::getStatus, "confirmed", "reconciled");
 
+        wrapper.last("LIMIT 5000");
         java.util.List<EcSalesRevenue> all = ecSalesRevenueService.list(wrapper);
 
         BigDecimal totalPayAmount = all.stream()

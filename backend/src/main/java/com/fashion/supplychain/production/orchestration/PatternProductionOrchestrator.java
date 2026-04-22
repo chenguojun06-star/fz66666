@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -172,7 +173,7 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> submitScan(String patternId, String operationType, String operatorRole, String remark,
-                                          Integer quantity, String warehouseCode) {
+                                          Integer quantity, String warehouseCode, BigDecimal unitPrice) {
         if (!StringUtils.hasText(patternId)) {
             throw new IllegalArgumentException("样板生产ID不能为空");
         }
@@ -229,9 +230,14 @@ public class PatternProductionOrchestrator {
             sr.setColor(pattern.getColor());
             String processLabel = patternOperationLabel(operationType);
             sr.setProcessName(processLabel);
+            sr.setProcessCode(processLabel);
             sr.setProgressStage(processLabel);
             int qty = (quantity != null && quantity > 0) ? quantity : 1;
             sr.setQuantity(qty);
+            if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                sr.setProcessUnitPrice(unitPrice);
+                sr.setScanCost(unitPrice.multiply(BigDecimal.valueOf(qty)));
+            }
             sr.setTenantId(UserContext.tenantId());
             sr.setFactoryId(null);
             sr.setCuttingBundleNo(null);
@@ -287,7 +293,7 @@ public class PatternProductionOrchestrator {
             throw new IllegalStateException("样衣审核未通过，无法入库");
         }
 
-        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, null, warehouseCode);
+        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, null, warehouseCode, null);
         result.put("message", "样衣入库成功");
         return result;
     }

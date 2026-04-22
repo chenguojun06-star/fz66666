@@ -440,6 +440,7 @@ public class WagePaymentOrchestrator {
             }
         }
 
+        wrapper.last("LIMIT 5000");
         return wagePaymentService.list(wrapper);
     }
 

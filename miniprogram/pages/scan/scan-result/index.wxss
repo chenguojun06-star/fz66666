@@ -246,3 +246,27 @@
 .warehouse-chip-hover {
   opacity: 0.7;
 }
+
+.warehouse-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.warehouse-name {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.warehouse-name-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-right: 8rpx;
+}
+
+.warehouse-name-value {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}

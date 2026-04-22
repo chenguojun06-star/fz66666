@@ -13,6 +13,7 @@ import {
   Col,
   InputNumber,
 } from 'antd';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import {
   ScanOutlined,
   ExportOutlined,
@@ -365,18 +366,27 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
               </Form.Item>
             </Col>
             <Col span={7}>
-              <Form.Item
-                label="仓库库位"
-                name="warehouseLocation"
-                rules={[{ required: true, message: '请选择仓库库位' }]}
-              >
-                <Select placeholder="选择库位">
-                  <Option value="A-01-01">A-01-01</Option>
-                  <Option value="A-01-02">A-01-02</Option>
-                  <Option value="A-02-01">A-02-01</Option>
-                  <Option value="B-01-01">B-01-01</Option>
-                  <Option value="B-02-01">B-02-01</Option>
+              <Form.Item label="仓库">
+                <Select
+                  placeholder="请选择仓库"
+                  defaultValue="物料仓库"
+                  style={{ width: '100%' }}
+                >
+                  <Option value="物料仓库">物料仓库</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+            <Col span={7}>
+              <Form.Item
+                label="库位"
+                name="warehouseLocation"
+                rules={[{ required: true, message: '请选择库位' }]}
+              >
+                <DictAutoComplete
+                  dictType="material_warehouse_location"
+                  placeholder="请选择或输入库位（如：A-001）"
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
             </Col>
           </Row>

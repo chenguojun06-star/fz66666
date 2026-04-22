@@ -423,7 +423,8 @@ public class PatternStatusHelper {
         // 查询该样衣所有扫码记录
         LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PatternScanRecord::getPatternProductionId, patternId)
-                .eq(PatternScanRecord::getDeleteFlag, 0);
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .last("LIMIT 5000");
         List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
         Set<String> scanned = records.stream()
                 .map(PatternScanRecord::getOperationType)

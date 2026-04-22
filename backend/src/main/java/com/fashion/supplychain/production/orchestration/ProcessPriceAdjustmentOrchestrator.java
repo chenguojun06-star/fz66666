@@ -169,6 +169,7 @@ public class ProcessPriceAdjustmentOrchestrator {
                 .eq(ScanRecord::getOrderId, order.getId())
                 .eq(ScanRecord::getProcessName, processName)
                 .eq(ScanRecord::getTenantId, tenantId)
+                .ne(ScanRecord::getScanType, "orchestration")
                 .and(w -> w.isNull(ScanRecord::getSettlementStatus)
                         .or().ne(ScanRecord::getSettlementStatus, "settled"))
                 .list();

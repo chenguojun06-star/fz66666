@@ -19,6 +19,7 @@ Page({
     selectedCount: 0,
     selectedAmount: 0,
     quantity: 1,
+    warehouseName: '成品库',
     warehouseCode: '',
     warehouseOptions: [],
     showWarehouse: false,
@@ -289,8 +290,8 @@ Page({
 
   async _loadWarehouseOptions() {
     try {
-      // getDictList 使用 ok() 帮助函数，已自动解包 resp.data，res 直接是数组
-      var res = await api.system.getDictList('warehouse_location');
+      // 加载成品仓库库位（默认）
+      var res = await api.system.getDictList('finished_warehouse_location');
       var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res && res.data ? res.data : []));
       if (records.length > 0) {
         var options = records

@@ -61,6 +61,7 @@ public class ShipmentReconciliationOrchestrator {
             List<ScanRecord> records = scanRecordMapper.selectList(
                 new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, orderId)
+                    .ne(ScanRecord::getScanType, "orchestration")
                     .isNotNull(ScanRecord::getScanCost)
             );
             return records.stream()

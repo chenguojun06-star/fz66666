@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.InventoryValidator;
+import com.fashion.supplychain.production.helper.lookup.BundleLookupContext;
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.*;
@@ -50,6 +51,9 @@ public class WarehouseScanExecutor {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private CuttingBundleLookupService bundleLookupService;
 
     @Autowired
     private CuttingBundleService cuttingBundleService;

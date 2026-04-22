@@ -76,11 +76,23 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
               <Input value={quantity?.toString() || '-'} disabled />
             </Form.Item>
           </Col>
-          <Col span={24}>
+          <Col span={12}>
             <Form.Item label="仓库" required>
+              <Select
+                placeholder="请选择仓库"
+                value="成品库"
+                onChange={() => {}}
+                style={{ width: '100%' }}
+              >
+                <Option value="成品库">成品库</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="库位" required>
               <DictAutoComplete
-                dictType="warehouse_location"
-                placeholder="请选择或输入仓库"
+                dictType="finished_warehouse_location"
+                placeholder="请选择或输入库位（如：A-001）"
                 value={warehouse || undefined}
                 onChange={(v) => setWarehouse(String(v || '').trim())}
                 style={{ width: '100%' }}
