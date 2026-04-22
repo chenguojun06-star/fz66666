@@ -96,7 +96,7 @@ export const PlatformDashboard: React.FC = () => {
   };
 
   // 未加载时显示 CTA
-  React.useEffect(() => { load(days); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => { load(days); }, []);
 
   if (!user?.isSuperAdmin) {
     return <Alert type="error" message="无权限" description="仅平台超级管理员可访问本页面" showIcon />;
