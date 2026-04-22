@@ -78,8 +78,13 @@ public class SupplierPortalController {
         }
 
         Factory supplier = factoryService.getById(user.getSupplierId());
-        if (supplier == null || !"MATERIAL".equals(supplier.getSupplierType())) {
+        if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)
+                || !"MATERIAL".equals(supplier.getSupplierType())) {
             return Result.fail("供应商信息不存在");
+        }
+
+        if (user.getTenantId() == null) {
+            return Result.fail("用户租户信息缺失，请联系管理员");
         }
 
         user.setLastLoginTime(LocalDateTime.now());
@@ -89,7 +94,7 @@ public class SupplierPortalController {
         subject.setUserId(user.getId());
         subject.setUsername(user.getUsername());
         subject.setRoleName(SUPPLIER_ROLE);
-        subject.setTenantId(user.getTenantId() != null ? user.getTenantId() : 0L);
+        subject.setTenantId(user.getTenantId());
         subject.setTenantOwner(false);
         subject.setSuperAdmin(false);
         subject.setPermissionRange("own");
@@ -119,14 +124,15 @@ public class SupplierPortalController {
         }
 
         Factory supplier = factoryService.getById(supplierId);
-        if (supplier == null) {
+        if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)) {
             return Result.fail("供应商不存在");
         }
 
         LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
         purchaseWrapper.eq(MaterialPurchase::getSupplierId, supplierId)
                 .eq(MaterialPurchase::getTenantId, tenantId)
-                .eq(MaterialPurchase::getDeleteFlag, 0);
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .last("LIMIT 200");
         List<MaterialPurchase> purchases = materialPurchaseService.list(purchaseWrapper);
 
         long pendingCount = purchases.stream().filter(p -> "pending".equals(p.getStatus())).count();
@@ -136,7 +142,8 @@ public class SupplierPortalController {
         LambdaQueryWrapper<Payable> payableWrapper = new LambdaQueryWrapper<>();
         payableWrapper.eq(Payable::getSupplierId, supplierId)
                 .eq(Payable::getTenantId, tenantId)
-                .eq(Payable::getDeleteFlag, 0);
+                .eq(Payable::getDeleteFlag, 0)
+                .last("LIMIT 200");
         List<Payable> payables = payableService.list(payableWrapper);
 
         BigDecimal totalPayable = payables.stream().map(Payable::getAmount).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -254,9 +261,19 @@ public class SupplierPortalController {
             purchase.setArrivedQuantity(currentArrived + shipQuantity);
         }
 
-        if (StringUtils.hasText(remark)) {
+        // 将快递公司、运单号、备注一起写入 remark 字段
+        boolean hasDeliveryInfo = StringUtils.hasText(trackingNo)
+                || StringUtils.hasText(expressCompany)
+                || StringUtils.hasText(remark);
+        if (hasDeliveryInfo) {
+            StringBuilder deliveryInfo = new StringBuilder("[供应商发货]");
+            if (StringUtils.hasText(expressCompany)) deliveryInfo.append(" 快递:").append(expressCompany);
+            if (StringUtils.hasText(trackingNo)) deliveryInfo.append(" 单号:").append(trackingNo);
+            if (StringUtils.hasText(remark)) deliveryInfo.append(" ").append(remark);
             String existingRemark = purchase.getRemark() != null ? purchase.getRemark() : "";
-            purchase.setRemark(existingRemark + "\n[供应商发货] " + remark);
+            purchase.setRemark(existingRemark.isEmpty()
+                    ? deliveryInfo.toString()
+                    : existingRemark + "\n" + deliveryInfo);
         }
 
         materialPurchaseService.updateById(purchase);
@@ -359,7 +376,7 @@ public class SupplierPortalController {
         }
 
         Factory supplier = factoryService.getById(supplierId);
-        if (supplier == null) {
+        if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)) {
             return Result.fail("供应商不存在");
         }
         return Result.success(buildSupplierView(supplier));

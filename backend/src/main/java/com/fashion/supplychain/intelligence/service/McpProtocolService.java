@@ -67,11 +67,8 @@ public class McpProtocolService {
         private List<Map<String, Object>> content;
         private Object data;
         private String error;
-        // @JsonProperty("isError") 确保 JSON 序列化为 "isError" 而非 "error"（MCP协议要求）
-        // 字段用 error 而非 isError 是为了规避 Lombok @Data 对 boolean is前缀字段的 setter 生成异常
-        @com.fasterxml.jackson.annotation.JsonProperty("isError")
-        private boolean e 序列化为 "isError"（MCP 协议要求），用 errorFlag 名字规避 Lombok
-        // 对 boolean is前缀字段 setter 生成 setError() 与 String error 字段冲突的问题
+        // errorFlag 在 JSON 序列化为 "isError"（MCP 协议要求）
+        // 用 errorFlag 名字规避 Lombok 对 boolean is前缀字段的 setter 命名冲突
         @com.fasterxml.jackson.annotation.JsonProperty("isError")
         private boolean errorFlag;
     }
@@ -154,20 +151,20 @@ public class McpProtocolService {
                     .filter(t -> t.getName().equals(request.getName()))
                     .findFirst().orElse(null);
             if (tool == null) {
-                result.setccess(false);
+                result.setSuccess(false);
                 result.setError("工具不存在：" + request.getName());
                 result.setErrorFlag(true);
                 return result;
             }
             String toolResult = tool.execute(request.getArguments() != null
-                    ? jectMapper.writeValueAsString(request.getArguments()) : "{}");
+                    ? objectMapper.writeValueAsString(request.getArguments()) : "{}");
             result.setSuccess(true);
             result.setErrorFlag(false);
             // MCP 标准 content 数组
             result.setContent(List.of(Map.of("type", "text", "text", toolResult)));
             result.setData(toolResult);
-        } catch (ExcepError(true);
-            result.setErrorMessagess(false);
+        } catch (Exception e) {
+            result.setSuccess(false);
             result.setErrorFlag(true);
             result.setError(e.getMessage());
             log.warn("[McpProtocol] callTool {} failed: {}", request.getName(), e.getMessage());
