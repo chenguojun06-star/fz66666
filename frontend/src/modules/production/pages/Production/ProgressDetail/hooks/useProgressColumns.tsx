@@ -544,7 +544,16 @@ export const useProgressColumns = ({
                   ? Math.min(100, Math.round((completedQty / totalQty) * 100))
                   : 0;
               const remaining = totalQty - completedQty;
-              const completionTime = nodeTimeMap?.[nodeName] || '';
+              // 采购节点优先显示「确认完成时间」（procurement_confirmed_at → procurement_end_time），
+              // 回退到到货时间（nodeTimeMap，来自 useBoardStats.ts 读取 actualArrivalDate/receivedTime）。
+              // 这样 confirmComplete() 后端标记 procurement_manually_completed=1 时，
+              // OrderFlowStageFillHelper 回写的 procurementEndTime 就能直接显示在进度球下方。
+              const completionTime = isProcureNode
+                ? ((record as any).procurementConfirmedAt
+                   || (record as any).procurementEndTime
+                   || nodeTimeMap?.[nodeName]
+                   || '')
+                : (nodeTimeMap?.[nodeName] || '');
               const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
               const segmentProgress = Math.min(1, percent / 100);
               const nodePrimaryColor = isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate);

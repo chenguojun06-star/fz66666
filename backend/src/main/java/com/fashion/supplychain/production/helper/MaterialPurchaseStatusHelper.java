@@ -627,6 +627,10 @@ public class MaterialPurchaseStatusHelper {
             syncAfterPurchaseChanged(updated);
         }
 
+        // 采购完成后：若该订单所有采购单均已 completed/cancelled，则自动标记订单采购手工确认
+        // 这样 OrderFlowStageFillHelper.fillProcurementDisplay() 才能将 procurementEndTime 回写到订单响应
+        tryMarkOrderProcurementComplete(purchase);
+
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("purchaseId", purchaseId);
         result.put("purchaseNo", purchase.getPurchaseNo());
@@ -635,6 +639,50 @@ public class MaterialPurchaseStatusHelper {
         log.info("✅ 采购已确认完成: purchaseId={}, purchaseNo={}, operator={}",
                 purchaseId, purchase.getPurchaseNo(), operator);
         return result;
+    }
+
+    /**
+     * 确认完成后，检查该订单是否所有采购单均已 completed 或 cancelled。
+     * 若是，则将生产订单的 procurement_manually_completed 置为 1，同时记录确认人与时间。
+     * 这使得 OrderFlowStageFillHelper.fillProcurementDisplay() 能在订单列表响应中写入
+     * procurementEndTime，前端进度球下方才能显示采购完成时间。
+     * 此方法设计为不抛出异常，失败只记录 warn 日志，不影响主流程。
+     */
+    private void tryMarkOrderProcurementComplete(MaterialPurchase purchase) {
+        if (!org.springframework.util.StringUtils.hasText(purchase.getOrderId())) return;
+        String oid = purchase.getOrderId().trim();
+        try {
+            // 统计仍在进行中（非 completed、非 cancelled）的采购数
+            long inProgressCount = materialPurchaseService.count(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase>()
+                            .eq(MaterialPurchase::getOrderId, oid)
+                            .ne(MaterialPurchase::getDeleteFlag, 1)
+                            .notIn(MaterialPurchase::getStatus,
+                                    MaterialConstants.STATUS_COMPLETED,
+                                    MaterialConstants.STATUS_CANCELLED));
+            if (inProgressCount > 0) return;
+
+            // 所有采购均已 completed/cancelled → 确认订单尚未手工标记时再写入
+            ProductionOrder existOrder = productionOrderService.getOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId, ProductionOrder::getProcurementManuallyCompleted)
+                            .eq(ProductionOrder::getId, oid),
+                    false);
+            if (existOrder == null) return;
+            if (existOrder.getProcurementManuallyCompleted() != null
+                    && existOrder.getProcurementManuallyCompleted() == 1) return;
+
+            LambdaUpdateWrapper<ProductionOrder> ouw = new LambdaUpdateWrapper<>();
+            ouw.eq(ProductionOrder::getId, oid)
+               .set(ProductionOrder::getProcurementManuallyCompleted, 1)
+               .set(ProductionOrder::getProcurementConfirmedAt, LocalDateTime.now())
+               .set(ProductionOrder::getProcurementConfirmedBy, UserContext.userId())
+               .set(ProductionOrder::getProcurementConfirmedByName, UserContext.username());
+            productionOrderService.update(ouw);
+            log.info("✅ 所有采购单已完成，订单采购自动标记手工确认: orderId={}", oid);
+        } catch (Exception e) {
+            log.warn("[confirmComplete] 自动标记采购手工完成失败（不影响主流程）: orderId={}, error={}", oid, e.getMessage());
+        }
     }
 
     public boolean receiveAndSync(String purchaseId, String receiverId, String receiverName) {
