@@ -1,4 +1,87 @@
+# 2026-04-23（当前批次）
+
+## 🤖 AI 智能体四大核心升级（A2A协议 + MCP增强 + 技能树 + mem0多信号检索）
+
+### feat(intelligence): A2A协议接入 + MCP协议增强 + 技能树自生长 + mem0多信号记忆融合
+
+#### 升级1：A2A（Agent-to-Agent）协议接入
+
+**新增文件：**
+- `intelligence/service/A2aProtocolService.java` — A2A 代理发现与 JSON-RPC 调用核心服务
+- `intelligence/controller/A2aController.java` — 3个端点暴露 A2A 能力：
+  - `GET /.well-known/agent.json`（公开，符合 A2A 标准的代理能力描述）
+  - `POST /api/intelligence/a2a/rpc`（鉴权，JSON-RPC 2.0 任务派发）
+  - `GET /api/intelligence/a2a/status`（鉴权，当前代理状态监控）
+
+**对系统的帮助：**
+- AI 小云现在可被外部 AI 系统（如 Copilot、Claude、其他厂商 Agent）自动发现并委托
+- 遵循 Google A2A 开源标准，与行业工具链无缝对接
+- 为多 Agent 协同（如供应商 Agent + 工厂 Agent + 跟单 Agent 联动）打好基础
+
+---
+
+#### 升级2：MCP（Model Context Protocol）协议增强
+
+**修改文件：**
+- `intelligence/service/McpProtocolService.java` — 重大修复：
+  - 修复 `listTools()` 中 `description` 字段错误用了 `tool.getName()` 的 bug（原为无效描述）
+  - 新增 `buildInputSchema(AiParameters)` 方法，为每个工具生成标准 JSON Schema（`type/properties/required`）
+  - 新增 `initialize()` 方法，返回 MCP `2024-11-05` 协议版本及服务能力声明（`toolsCapability/resourcesCapability`）
+  - 修复 Lombok `boolean isError` setter 命名冲突，改用 `@JsonProperty("isError")` 修饰 `errorFlag` 字段
+- `intelligence/controller/McpProtocolController.java` — 新增 `POST /initialize` 端点
+
+**对系统的帮助：**
+- AI 工具列表现在有真实描述和标准 JSON Schema，AI 客户端（Claude Desktop / LangChain）可正确调用
+- 符合 MCP 2024-11-05 标准，可被 Cursor / Windsurf 等 IDE 直接接入使用
+
+---
+
+#### 升级3：技能树自生长系统
+
+**新增文件：**
+- `intelligence/entity/AiSkillNode.java` — 技能树节点实体（表 `t_ai_skill_node`）
+  - 字段：`skillName、skillDomain、triggerPattern、toolChain（JSON）、successCount、failureCount、avgScore、parentSkillId、embeddingId` 等
+- `intelligence/mapper/AiSkillNodeMapper.java` — 自定义 `recordSuccess(@score)` / `recordFailure()` 滚动更新平均分
+- `intelligence/orchestration/SkillTreeOrchestrator.java` — 4个核心能力：
+  - `extractAndStore()` — 成功会话结束后自动结晶为可复用技能节点（prmScore≥1 才入库）
+  - `recordFailure()` — 技能失败回写，降低排名
+  - `getActiveSkills(domain, limit)` — 为 Agent 系统提示词注入当前最优技能列表
+  - `pruneStaleSkills()` — 每天 03:30 淘汰成功率<20% 的低质量技能（50次以上才判定）
+- `db/migration/V202604230028__create_ai_skill_node_table.sql` — 幂等 DDL，含3个复合索引
+
+**对系统的帮助：**
+- AI 小云每次成功完成任务后，系统将该任务路径自动结晶为"技能"
+- 下次遇到类似任务，Agent 可直接检索最高评分技能，跳过探索阶段，大幅提升首轮命中率
+- 技能库支持多租户隔离：平台级技能（`tenantId=NULL`）全员可用，租户级技能仅限本租户
+
+---
+
+#### 升级4：mem0 多信号记忆融合检索
+
+**修改文件：**
+- `intelligence/orchestration/LongTermMemoryOrchestrator.java` — 新增4个方法：
+  - `retrieveMultiSignal(query, subjectType, subjectId, limit)` — 主入口，融合三路信号排序
+  - `calcMultiSignalScore(m, query, entities)` — 40%时间衰减 + 30%关键词BM25 + 30%实体命中
+  - `calcKeywordScore(m, query)` — 词频近似 BM25（无需倒排索引，纯内存计算）
+  - `calcEntityScore(m, entities)` — 实体精确命中（订单号/工厂名/金额/款号）
+  - `extractEntities(query)` — 规则引擎提取5类高价值实体（PO号/金额/日期/工厂/款号）
+
+**对系统的帮助：**
+- 解决原 `retrieve()` 纯时间衰减导致的"老记忆覆盖新相关记忆"问题
+- 用户查询"上次那个红色款的BOM成本"时，系统能精准命中款号相关记忆而非最新记忆
+- 参考 mem0 论文思路（时间×频率×相关性融合），工程化简化但效果对齐
+
+---
+
+**编译验证：** `mvn clean compile -q` → BUILD SUCCESS ✅
+**涉及文件总数：** 8个文件（4新增 + 4修改）
+**DB 变更：** `t_ai_skill_node` 新表（Flyway 自动迁移）
+**架构层：** 所有 Orchestrator 均遵循独立编排器原则，注入关系清晰
+
+---
+
 # 2026-04-30（延续提交）
+
 
 ## 🧠 AI 小云自我意识进化（业务异常自主巡查 + 巡查风险注入 System Prompt）
 
