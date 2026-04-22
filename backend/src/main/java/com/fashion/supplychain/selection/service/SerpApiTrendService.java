@@ -527,11 +527,13 @@ public class SerpApiTrendService {
     }
 
     private String doGet(String url) {
+        // SerpAPI 要求 api_key 作为 URL 查询参数，不支持 Authorization header
+        // 修复：统一在 doGet 层拼接 api_key，调用方无需关心
+        String fullUrl = url + "&api_key=" + URLEncoder.encode(apiKey, StandardCharsets.UTF_8);
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
+                    .uri(URI.create(fullUrl))
                     .header("Accept", "application/json")
-                    .header("Authorization", "Bearer " + apiKey)
                     .timeout(Duration.ofSeconds(15))
                     .GET()
                     .build();
@@ -552,10 +554,31 @@ public class SerpApiTrendService {
                         resp.body().substring(0, Math.min(200, resp.body().length())));
                 return null;
             }
-            return resp.body();
+            // SerpAPI 在 key 无效/未配置时返回 200 + {"error": "Invalid API key..."}
+            // 必须在此处检测并熔断，否则 DailyHotJob 会对每个关键词都打出一次请求日志风暴
+            String body = resp.body();
+            if (body != null && body.contains("\"error\"")) {
+                try {
+                    JsonNode errNode = objectMapper.readTree(body).path("error");
+                    if (!errNode.isMissingNode()) {
+                        String errMsg = errNode.asText();
+                        if (errMsg.contains("Invalid API key") || errMsg.contains("api key")) {
+                            // Key 无效：直接禁用服务，避免重复调用刷屏
+                            enabled = false;
+                            log.error("[SerpApi] API Key 无效（{}），已自动禁用服务。请在环境变量中配置正确的 SERPAPI_KEY。", errMsg);
+                        } else {
+                            log.warn("[SerpApi] SerpAPI 返回错误: {}", errMsg);
+                        }
+                        return null;
+                    }
+                } catch (Exception ignored) {
+                    // JSON 解析失败则继续正常返回 body
+                }
+            }
+            return body;
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("[SerpApi] HTTP GET 失败 url={}", url.replaceAll("api_key=[^&]+", "api_key=***"), e);
+            log.error("[SerpApi] HTTP GET 失败 url={}", fullUrl.replaceAll("api_key=[^&]+", "api_key=***"), e);
             return null;
         }
     }
