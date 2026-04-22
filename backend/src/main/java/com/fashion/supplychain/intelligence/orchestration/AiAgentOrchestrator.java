@@ -55,6 +55,10 @@ public class AiAgentOrchestrator {
     @Autowired private FollowUpSuggestionEngine followUpSuggestionEngine;
     @Autowired private AgentStateStore agentStateStore;
     @Autowired private DataTruthGuard dataTruthGuard;
+    // ── 平台级闭环学习三件套（埋点：PRM / 决策卡 / 长期记忆）──
+    @Autowired private ProcessRewardOrchestrator processRewardOrchestrator;
+    @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
+    @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
 
     private static final int STUCK_MAX_REPEAT = 3;
     private static final int CRICIC_SKIP_MAX_ITERATIONS = 2;
@@ -199,6 +203,17 @@ public class AiAgentOrchestrator {
                     messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                 }
                 allExecRecords.addAll(execRecords);
+                // ── 埋点1：PRM 过程奖励——每步工具执行结果自动评分 ──
+                try {
+                    for (int ri = 0; ri < execRecords.size(); ri++) {
+                        AiAgentToolExecHelper.ToolExecRecord rec = execRecords.get(ri);
+                        boolean ok = rec.rawResult != null && !rec.rawResult.startsWith("{\"error\"");
+                        processRewardOrchestrator.record(commandId, null, currentIter * 10 + ri,
+                            rec.toolName, "", rec.evidence == null ? "" : rec.evidence.length() > 500 ? rec.evidence.substring(0, 500) : rec.evidence,
+                            ok ? 1 : -1, null, "AUTO", ok ? "success" : "error",
+                            null, null, "agent_loop");
+                    }
+                } catch (Exception _prm) { log.debug("[AiAgent] PRM埋点跳过: {}", _prm.getMessage()); }
                 if (stateSessionId != null) { try { agentStateStore.saveCheckpoint(stateSessionId, currentIter, messages, execRecords, (int) totalTokens); } catch (Exception e) { log.debug("[AiAgent] 检查点保存跳过: {}", e.getMessage()); } }
             } else {
                 // Done!
@@ -235,6 +250,24 @@ public class AiAgentOrchestrator {
                 aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
                 // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
                 memoryHelper.enhanceMemoryAsync(userId, tenantId, userMessage, revisedContent);
+                // ── 埋点2：决策卡 + 长期记忆（有工具调用时才沉淀，轻量异步不阻塞） ──
+                if (!allExecRecords.isEmpty()) {
+                    try {
+                        String evidenceSummary = allExecRecords.stream()
+                            .map(r -> r.toolName + ": " + (r.evidence != null && r.evidence.length() > 200 ? r.evidence.substring(0, 200) : r.evidence))
+                            .reduce("", (a, b) -> a + "\n" + b);
+                        decisionCardOrchestrator.create(commandId, null, "agent_answer",
+                            userMessage.length() > 500 ? userMessage.substring(0, 500) : userMessage,
+                            revisedContent.length() > 1000 ? revisedContent.substring(0, 1000) : revisedContent,
+                            evidenceSummary, null, null, null, null, commandId);
+                    } catch (Exception _dc) { log.debug("[AiAgent] 决策卡埋点跳过: {}", _dc.getMessage()); }
+                    try {
+                        String memContent = "Q: " + (userMessage.length() > 200 ? userMessage.substring(0, 200) : userMessage)
+                            + "\nA: " + (revisedContent.length() > 500 ? revisedContent.substring(0, 500) : revisedContent);
+                        longTermMemoryOrchestrator.writeTenantMemory("EPISODIC", "user", userId,
+                            null, memContent, null, null, commandId);
+                    } catch (Exception _ltm) { log.debug("[AiAgent] 长期记忆埋点跳过: {}", _ltm.getMessage()); }
+                }
                 lastToolRecordsHolder.set(allExecRecords);
                 if (stateSessionId != null) { try { agentStateStore.completeSession(stateSessionId, revisedContent, (int) totalTokens, currentIter); } catch (Exception e) { log.debug("[AiAgent] 状态完成跳过: {}", e.getMessage()); } }
                 return Result.success(revisedContent);
@@ -391,6 +424,18 @@ public class AiAgentOrchestrator {
                         messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                     }
                     allExecRecords.addAll(execRecords);
+                    // ── 埋点1（流式）：PRM 过程奖励 ──
+                    try {
+                        final int streamIter = i;
+                        for (int ri = 0; ri < execRecords.size(); ri++) {
+                            AiAgentToolExecHelper.ToolExecRecord rec = execRecords.get(ri);
+                            boolean ok = rec.rawResult != null && !rec.rawResult.startsWith("{\"error\"");
+                            processRewardOrchestrator.record(commandId, null, streamIter * 10 + ri,
+                                rec.toolName, "", rec.evidence == null ? "" : rec.evidence.length() > 500 ? rec.evidence.substring(0, 500) : rec.evidence,
+                                ok ? 1 : -1, null, "AUTO", ok ? "success" : "error",
+                                null, null, "agent_stream");
+                        }
+                    } catch (Exception _prm) { log.debug("[AiAgent-Stream] PRM埋点跳过: {}", _prm.getMessage()); }
                     if (stateSessionId != null) { try { agentStateStore.saveCheckpoint(stateSessionId, i, messages, execRecords, (int) totalTokens); } catch (Exception e) { log.debug("[AiAgent-Stream] 检查点保存跳过: {}", e.getMessage()); } }
                 } else {
                     // == 自反思审查 ==
@@ -428,6 +473,24 @@ public class AiAgentOrchestrator {
                     aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
                     // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
                     memoryHelper.enhanceMemoryAsync(userId, tenantId, userMessage, revisedContent);
+                    // ── 埋点2（流式）：决策卡 + 长期记忆 ──
+                    if (!allExecRecords.isEmpty()) {
+                        try {
+                            String evidenceSummary = allExecRecords.stream()
+                                .map(r -> r.toolName + ": " + (r.evidence != null && r.evidence.length() > 200 ? r.evidence.substring(0, 200) : r.evidence))
+                                .reduce("", (a, b) -> a + "\n" + b);
+                            decisionCardOrchestrator.create(commandId, null, "agent_answer",
+                                userMessage.length() > 500 ? userMessage.substring(0, 500) : userMessage,
+                                revisedContent.length() > 1000 ? revisedContent.substring(0, 1000) : revisedContent,
+                                evidenceSummary, null, null, null, null, commandId);
+                        } catch (Exception _dc) { log.debug("[AiAgent-Stream] 决策卡埋点跳过: {}", _dc.getMessage()); }
+                        try {
+                            String memContent = "Q: " + (userMessage.length() > 200 ? userMessage.substring(0, 200) : userMessage)
+                                + "\nA: " + (revisedContent.length() > 500 ? revisedContent.substring(0, 500) : revisedContent);
+                            longTermMemoryOrchestrator.writeTenantMemory("EPISODIC", "user", userId,
+                                null, memContent, null, null, commandId);
+                        } catch (Exception _ltm) { log.debug("[AiAgent-Stream] 长期记忆埋点跳过: {}", _ltm.getMessage()); }
+                    }
                     if (stateSessionId != null) { try { agentStateStore.completeSession(stateSessionId, revisedContent, (int) totalTokens, i); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态完成跳过: {}", e.getMessage()); } }
                     String dedupedContent = deduplicateAnswer(revisedContent);
                     if (allExecRecords.size() <= 2) {
