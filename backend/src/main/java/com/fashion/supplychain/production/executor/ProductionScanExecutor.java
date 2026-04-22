@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import java.util.Objects;
 import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -204,7 +205,7 @@ public class ProductionScanExecutor {
 
         // 判断是否裁剪
         boolean isCutting = "cutting".equalsIgnoreCase(scanType) ||
-                            "裁剪".equals(progressStage.trim());
+                            (progressStage != null && "裁剪".equals(progressStage.trim()));
 
         // 裁剪前检查版型文件
         if (isCutting) {
@@ -213,7 +214,7 @@ public class ProductionScanExecutor {
 
         // 解析单价（优先用子工序名精确匹配，匹配不上再用父节点名模糊匹配）
         BigDecimal unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), childProcessName);
-        if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !childProcessName.equals(progressStage)) {
+        if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !Objects.equals(childProcessName, progressStage)) {
             unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), progressStage);
         }
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {

@@ -64,7 +64,7 @@ public class ReceivableOrchestrator {
 
         LambdaQueryWrapper<Receivable> qw = new LambdaQueryWrapper<Receivable>()
                 .eq(Receivable::getDeleteFlag, 0)
-                .eq(tenantId != null, Receivable::getTenantId, tenantId)
+                .eq(Receivable::getTenantId, tenantId)
                 .eq(StringUtils.hasText(customerId), Receivable::getCustomerId, customerId)
                 .eq(StringUtils.hasText(status), Receivable::getStatus, status)
                 .eq(StringUtils.hasText(sourceBizType), Receivable::getSourceBizType, sourceBizType)
@@ -80,7 +80,11 @@ public class ReceivableOrchestrator {
     }
 
     public Receivable getById(String id) {
-        return receivableService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        return receivableService.lambdaQuery()
+                .eq(Receivable::getId, id)
+                .eq(Receivable::getTenantId, tenantId)
+                .one();
     }
 
     public Receivable findByBillAggregationId(String billAggregationId) {
@@ -91,7 +95,7 @@ public class ReceivableOrchestrator {
         return receivableService.lambdaQuery()
                 .eq(Receivable::getBillAggregationId, billAggregationId)
                 .eq(Receivable::getDeleteFlag, 0)
-                .eq(tenantId != null, Receivable::getTenantId, tenantId)
+                .eq(Receivable::getTenantId, tenantId)
                 .last("LIMIT 1")
                 .one();
     }
@@ -116,7 +120,7 @@ public class ReceivableOrchestrator {
         List<Receivable> all = receivableService.list(
                 new LambdaQueryWrapper<Receivable>()
                         .eq(Receivable::getDeleteFlag, 0)
-                        .eq(tenantId != null, Receivable::getTenantId, tenantId));
+                        .eq(Receivable::getTenantId, tenantId));
 
         BigDecimal totalPending = BigDecimal.ZERO;
         BigDecimal totalOverdue = BigDecimal.ZERO;
@@ -162,7 +166,7 @@ public class ReceivableOrchestrator {
                     .eq(Receivable::getSourceBizType, receivable.getSourceBizType())
                     .eq(Receivable::getSourceBizId, receivable.getSourceBizId())
                     .eq(Receivable::getDeleteFlag, 0)
-                    .eq(tenantId != null, Receivable::getTenantId, tenantId)
+                    .eq(Receivable::getTenantId, tenantId)
                     .last("LIMIT 1")
                     .one();
             if (existing != null) {

@@ -221,7 +221,7 @@ public class InvoiceOrchestrator {
                         .eq(TaxConfig::getStatus, "ACTIVE")
                         .eq(TaxConfig::getTaxCode, "VAT")
                         .eq(TaxConfig::getIsDefault, 1)
-                        .eq(tenantId != null, TaxConfig::getTenantId, tenantId)
+                        .eq(TaxConfig::getTenantId, tenantId)
                         .last("LIMIT 1"));
         return cfg != null ? cfg.getTaxRate() : new BigDecimal("0.13");
     }

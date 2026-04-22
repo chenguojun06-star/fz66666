@@ -70,7 +70,7 @@ public class ProductionScanStageSupport {
 
     public void validateParentStagePrerequisite(ProductionOrder order, CuttingBundle bundle,
                                                 String progressStage, String childProcessName) {
-        if (order == null || bundle == null || !StringUtils.hasText(bundle.getId())) {
+        if (order == null) {
             return;
         }
 
@@ -104,12 +104,15 @@ public class ProductionScanStageSupport {
         }
 
         List<String> missing = new ArrayList<>();
+        String bundleId = (bundle != null && StringUtils.hasText(bundle.getId())) ? bundle.getId() : null;
         QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
                 .select("DISTINCT process_code")
-                .eq("order_id", order.getId())
-                .and(bw -> bw.isNull("cutting_bundle_id")
-                        .or().eq("cutting_bundle_id", bundle.getId()))
-                .in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq("order_id", order.getId());
+        if (bundleId != null) {
+            qw.and(bw -> bw.isNull("cutting_bundle_id")
+                    .or().eq("cutting_bundle_id", bundleId));
+        }
+        qw.in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
                 .eq("scan_result", "success")
                 .isNotNull("process_code");
         List<Map<String, Object>> codeResult = scanRecordService.listMaps(qw);
@@ -122,10 +125,12 @@ public class ProductionScanStageSupport {
         }
         QueryWrapper<ScanRecord> qw2 = new QueryWrapper<ScanRecord>()
                 .select("DISTINCT process_name")
-                .eq("order_id", order.getId())
-                .and(bw -> bw.isNull("cutting_bundle_id")
-                        .or().eq("cutting_bundle_id", bundle.getId()))
-                .in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq("order_id", order.getId());
+        if (bundleId != null) {
+            qw2.and(bw -> bw.isNull("cutting_bundle_id")
+                    .or().eq("cutting_bundle_id", bundleId));
+        }
+        qw2.in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
                 .eq("scan_result", "success")
                 .isNotNull("process_name");
         List<Map<String, Object>> nameResult = scanRecordService.listMaps(qw2);
@@ -150,7 +155,7 @@ public class ProductionScanStageSupport {
             ));
         }
         log.debug("父节点顺序校验通过: orderNo={}, bundleNo={}, targetParent={}, prevParent={}, process={}",
-                order.getOrderNo(), bundle.getBundleNo(), targetParent, prevParent, childProcessName);
+                order.getOrderNo(), bundle != null ? bundle.getBundleNo() : "无菲号", targetParent, prevParent, childProcessName);
     }
 
     public String resolveParentProgressStage(String styleNo, String processName) {

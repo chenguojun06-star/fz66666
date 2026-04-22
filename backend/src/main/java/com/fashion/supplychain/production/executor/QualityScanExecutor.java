@@ -867,20 +867,28 @@ public class QualityScanExecutor {
 
             if (repairPool > 0) {
                 if (!"unqualified".equals(currentStatus)) {
-                    cuttingBundleService.lambdaUpdate()
-                            .eq(CuttingBundle::getId, bundle.getId())
-                            .set(CuttingBundle::getStatus, "unqualified")
-                            .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
-                            .update();
+                    try {
+                        cuttingBundleService.lambdaUpdate()
+                                .eq(CuttingBundle::getId, bundle.getId())
+                                .set(CuttingBundle::getStatus, "unqualified")
+                                .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
+                                .update();
+                    } catch (Exception e) {
+                        log.warn("[QualityScan] 更新菲号状态失败: bundleId={}", bundle.getId(), e);
+                    }
                     log.info("[QualityScan] 有返修池，菲号状态→unqualified: bundleId={}", bundle.getId());
                 }
             } else {
                 if (!"qualified".equals(currentStatus)) {
-                    cuttingBundleService.lambdaUpdate()
-                            .eq(CuttingBundle::getId, bundle.getId())
-                            .set(CuttingBundle::getStatus, "qualified")
-                            .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
-                            .update();
+                    try {
+                        cuttingBundleService.lambdaUpdate()
+                                .eq(CuttingBundle::getId, bundle.getId())
+                                .set(CuttingBundle::getStatus, "qualified")
+                                .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
+                                .update();
+                    } catch (Exception e) {
+                        log.warn("[QualityScan] 更新菲号状态失败: bundleId={}", bundle.getId(), e);
+                    }
                     log.info("[QualityScan] 无返修池，菲号状态→qualified: bundleId={}", bundle.getId());
                 }
             }

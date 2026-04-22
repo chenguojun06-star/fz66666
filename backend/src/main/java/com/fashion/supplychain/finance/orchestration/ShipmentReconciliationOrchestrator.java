@@ -130,7 +130,8 @@ public class ShipmentReconciliationOrchestrator {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         return shipmentReconciliationService.list(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ShipmentReconciliation>()
-                        .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId));
+                        .eq(ShipmentReconciliation::getTenantId, tenantId)
+                        .last("LIMIT 5000"));
     }
 
     public ShipmentReconciliation getById(String id) {
@@ -138,7 +139,11 @@ public class ShipmentReconciliationOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        ShipmentReconciliation r = shipmentReconciliationService.getById(key);
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        ShipmentReconciliation r = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getId, key)
+                .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
+                .one();
         if (r == null) {
             throw new NoSuchElementException("对账单不存在");
         }

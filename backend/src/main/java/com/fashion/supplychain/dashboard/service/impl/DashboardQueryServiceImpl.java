@@ -227,7 +227,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 1. 订单超期：已超过计划结束日期但未完成的订单
         long delayedOrders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                 .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "closed", "archived")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
@@ -237,7 +237,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 2. 面料采购待处理：状态为pending的采购单
         long pendingPurchases = materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId)                                                         // 🔒 租户隔离
+                .eq(MaterialPurchase::getTenantId, tenantId)                                                         // 🔒 租户隔离
                 .eq(MaterialPurchase::getStatus, "pending")
                 .count();
 
@@ -344,7 +344,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         LocalDateTime now = LocalDateTime.now();
         long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)                                                          // 🔒 租户隔离
+                .eq(ProductionOrder::getTenantId, tenantId)                                                          // 🔒 租户隔离
                 .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)                // 🔒 工厂隔离
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped", "pending")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
@@ -382,7 +382,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                     ProductionOrder::getProductionProgress
                 )
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)  // 🔒 租户隔离
+                .eq(ProductionOrder::getTenantId, tenantId)  // 🔒 租户隔离
                 .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)  // 🔒 工厂隔离
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped", "pending")
                 .isNotNull(ProductionOrder::getPlannedEndDate)

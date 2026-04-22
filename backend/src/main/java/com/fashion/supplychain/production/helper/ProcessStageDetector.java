@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,9 @@ public class ProcessStageDetector {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
+
+    @Autowired
+    private ProcessParentMappingService processParentMappingService;
 
     /**
      * 判断工序是否可自动跳过
@@ -126,6 +130,7 @@ public class ProcessStageDetector {
         if (idx >= nodes.size()) idx = nodes.size() - 1;
 
         // 向后查找第一个未跳过的工序
+        String autoResult = null;
         for (int i = idx; i < nodes.size(); i++) {
             String pnRaw = nodes.get(i) == null ? "" : nodes.get(i).trim();
             if (!hasText(pnRaw)) {
@@ -142,7 +147,30 @@ public class ProcessStageDetector {
             if (isAutoSkippableStageName(order, pn)) {
                 continue;
             }
-            return pn;
+            autoResult = pn;
+            break;
+        }
+
+        // 关键校验：自动识别结果不能跳过未完成的前置父节点
+        // 例如：裁剪还没有任何扫码记录，不应直接识别到二次工艺/车缝
+        if (autoResult != null) {
+            String resolvedParent = resolveParentForAutoCheck(autoResult);
+            int resultIdx = indexOfFixedNode(resolvedParent);
+            if (resultIdx > 1) {
+                boolean hasCuttingRecord = hasAnyScanRecordForParent(order, "裁剪");
+                if (!hasCuttingRecord) {
+                    log.warn("自动识别跳过裁剪: orderNo={}, autoResult={}, 回退到裁剪", order.getOrderNo(), autoResult);
+                    String cuttingProcess = findFirstProcessUnderParent(nodes, order, "裁剪");
+                    if (hasText(cuttingProcess)) {
+                        return cuttingProcess;
+                    }
+                    return "裁剪";
+                }
+            }
+        }
+
+        if (autoResult != null) {
+            return autoResult;
         }
 
         // 向前查找未完成的工序
@@ -277,5 +305,70 @@ public class ProcessStageDetector {
 
     private boolean hasText(String str) {
         return StringUtils.hasText(str);
+    }
+
+    private String resolveParentForAutoCheck(String processName) {
+        String normalized = normalizeFixedProductionNodeName(processName);
+        if (hasText(normalized)) {
+            for (String n : FIXED_PRODUCTION_NODES) {
+                if (n.equals(normalized)) return n;
+            }
+        }
+        String mapped = processParentMappingService.resolveParentNode(processName);
+        if (hasText(mapped)) {
+            String normalizedMapped = normalizeFixedProductionNodeName(mapped);
+            if (hasText(normalizedMapped)) return normalizedMapped;
+            return mapped;
+        }
+        return processName;
+    }
+
+    private int indexOfFixedNode(String name) {
+        if (!hasText(name)) return -1;
+        for (int i = 0; i < FIXED_PRODUCTION_NODES.size(); i++) {
+            if (FIXED_PRODUCTION_NODES.get(i).equals(name)) return i;
+        }
+        return -1;
+    }
+
+    private boolean hasAnyScanRecordForParent(ProductionOrder order, String parentName) {
+        if (order == null || !hasText(order.getId())) return false;
+        try {
+            long count = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, order.getId().trim())
+                    .in(ScanRecord::getScanType, Arrays.asList("production", "cutting"))
+                    .eq(ScanRecord::getScanResult, "success")
+                    .and(w -> w.eq(ScanRecord::getProgressStage, parentName)
+                            .or(o -> o.isNull(ScanRecord::getProgressStage)
+                                    .eq(ScanRecord::getProcessName, parentName)))
+                    .gt(ScanRecord::getQuantity, 0));
+            return count > 0;
+        } catch (Exception e) {
+            log.warn("检查父节点扫码记录失败: orderNo={}, parent={}", order.getOrderNo(), parentName, e);
+            return false;
+        }
+    }
+
+    private String findFirstProcessUnderParent(List<String> nodes, ProductionOrder order, String parentName) {
+        try {
+            List<Map<String, Object>> templateNodes = templateLibraryService.resolveProgressNodeUnitPrices(order.getStyleNo());
+            if (templateNodes != null) {
+                for (Map<String, Object> node : templateNodes) {
+                    String pStage = node.get("progressStage") == null ? "" : String.valueOf(node.get("progressStage")).trim();
+                    String pName = node.get("name") == null ? "" : String.valueOf(node.get("name")).trim();
+                    String normalized = normalizeFixedProductionNodeName(pStage);
+                    if (parentName.equals(normalized) && hasText(pName)) {
+                        return pName;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("查找父节点子工序失败: parent={}", parentName, e);
+        }
+        for (String n : nodes) {
+            String normalized = normalizeFixedProductionNodeName(n);
+            if (parentName.equals(normalized)) return n;
+        }
+        return null;
     }
 }
