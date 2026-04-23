@@ -429,6 +429,7 @@ export interface FactoryShipment {
   expressCompany?: string;
   shipMethod?: string;
   receiveStatus: string;
+  receivedQuantity?: number;
   receiveTime?: string;
   receivedBy?: string;
   receivedByName?: string;

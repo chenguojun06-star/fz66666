@@ -29,6 +29,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @Slf4j
@@ -201,6 +203,9 @@ public class ShipmentReconciliationOrchestrator {
     public boolean save(ShipmentReconciliation shipmentReconciliation) {
         if (shipmentReconciliation == null) {
             throw new IllegalArgumentException("参数错误");
+        }
+        if (!StringUtils.hasText(shipmentReconciliation.getReconciliationNo())) {
+            shipmentReconciliation.setReconciliationNo(generateReconciliationNo());
         }
         fillProfitInfo(shipmentReconciliation);
         LocalDateTime now = LocalDateTime.now();
@@ -430,5 +435,30 @@ public class ShipmentReconciliationOrchestrator {
             patch.setFinalAmount(recalculatedFinal);
             shipmentReconciliationService.updateById(patch);
         }
+    }
+
+    private synchronized String generateReconciliationNo() {
+        String monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+        String prefix = "SR" + monthPrefix;
+
+        LambdaQueryWrapper<ShipmentReconciliation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.likeRight(ShipmentReconciliation::getReconciliationNo, prefix)
+               .orderByDesc(ShipmentReconciliation::getReconciliationNo)
+               .last("LIMIT 1");
+
+        ShipmentReconciliation last = shipmentReconciliationService.getOne(wrapper);
+
+        int sequence = 1;
+        if (last != null && last.getReconciliationNo() != null) {
+            String lastNo = last.getReconciliationNo();
+            String lastSequence = lastNo.substring(lastNo.length() - 4);
+            try {
+                sequence = Integer.parseInt(lastSequence) + 1;
+            } catch (NumberFormatException e) {
+                log.warn("解析出货对账单号序号失败: {}", lastNo, e);
+            }
+        }
+
+        return String.format("%s%04d", prefix, sequence);
     }
 }

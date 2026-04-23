@@ -999,6 +999,21 @@ body {
   background-color: var(--table-border-color) !important;
 }
 
+.ant-table-cell-scrollbar {
+  border-inline-end: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+}
+
+.ant-table-cell-scrollbar::before {
+  display: none !important;
+}
+
+.ant-table-thead > tr > th:has(+ .ant-table-cell-scrollbar) {
+  border-inline-end: none !important;
+}
+
 .ant-table-wrapper .ant-table-container table {
   width: 100%;
   table-layout: fixed;

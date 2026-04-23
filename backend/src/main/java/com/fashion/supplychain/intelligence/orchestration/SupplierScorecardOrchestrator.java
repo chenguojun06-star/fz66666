@@ -56,9 +56,9 @@ public class SupplierScorecardOrchestrator {
             String factoryId = UserContext.factoryId();
             LocalDateTime since = LocalDateTime.now().minusMonths(RECENT_MONTHS);
 
-            // 加载近3个月订单
+            TenantAssert.assertTenantContext();
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-            qw.eq(tenantId != null, "tenant_id", tenantId)
+            qw.eq("tenant_id", tenantId)
               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .eq("delete_flag", 0)
               .ge("create_time", since)
@@ -173,7 +173,7 @@ public class SupplierScorecardOrchestrator {
     private Map<String, long[]> buildScanStats(Long tenantId, String factoryId, Set<String> orderIds) {
         if (orderIds.isEmpty()) return Collections.emptyMap();
         QueryWrapper<ScanRecord> sq = new QueryWrapper<>();
-        sq.eq(tenantId != null, "tenant_id", tenantId)
+        sq.eq("tenant_id", tenantId)
           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .ne("scan_type", "orchestration")
           .in("order_id", orderIds);

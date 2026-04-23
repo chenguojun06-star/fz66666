@@ -644,3 +644,90 @@ export const formatProcessDisplayName = (processCode?: string, processName?: str
 4. 扫码结果页 - 工序信息栏
 5. 进度详情页 - 子工序列表
 6. 订单全流程页（OrderFlow）
+
+---
+
+# P0 - 扫码核心代码修改必看规则
+
+## 规则33：normalizeFixedProductionNodeName 返回 null 时禁止覆盖原始值
+
+### 根因
+`normalizeFixedProductionNodeName` 的职责是**只做6大父节点自身的归一化**（如 "sewing"→"车缝"），当传入子工序名（如 "上领"、"上袖"）时返回 null。如果直接用返回值覆盖原始变量，会导致后续所有逻辑丢失工序信息，触发 NPE。
+
+### 事故记录（2026-04-24）
+在 `ProductionScanExecutor.execute()` 中，有人加了 `progressStage = normalizeFixedProductionNodeName(progressStage);`，导致扫码全部500：
+```
+用户扫码传入 processName="上领"（子工序名）
+→ normalizeFixedProductionNodeName("上领") 返回 null
+→ progressStage = null
+→ childProcessName = null
+→ resolveParentProgressStage(styleNo, null) 返回 null
+→ "裁剪".equals(progressStage.trim()) → NPE！
+→ 扫码接口全部 500 Internal Server Error
+```
+
+### 规则（以后必须遵守）
+
+**1. `normalizeFixedProductionNodeName` 返回值必须做 null 判断，不能直接覆盖：**
+
+```java
+// ❌ 错误 - 子工序名会返回 null，覆盖原始值导致后续 NPE
+progressStage = normalizeFixedProductionNodeName(progressStage);
+
+// ✅ 正确 - null 时保留原始值
+String normalizedStage = normalizeFixedProductionNodeName(progressStage);
+if (normalizedStage != null) {
+    progressStage = normalizedStage;
+}
+```
+
+**2. `progressStage` 变量的 null 安全规则：**
+
+在 `ProductionScanExecutor.execute()` 中，`progressStage` 经过 `hasText` 校验后保证非空，但经过 `resolveParentProgressStage` 映射后可能变为父节点名。所有对 `progressStage` 的 `.trim()` 调用必须做 null 防护：
+
+```java
+// ❌ 错误 - progressStage 理论上非空但缺乏防御
+"裁剪".equals(progressStage.trim())
+"采购".equals(progressStage.trim())
+
+// ✅ 正确 - 防御性 null 检查
+"裁剪".equals(progressStage != null ? progressStage.trim() : null)
+"采购".equals(progressStage)  // 常量在左，null 在右时 equals 返回 false
+```
+
+**3. 禁止在扫码核心链路中随意添加归一化/映射调用：**
+
+扫码 execute 方法是核心业务入口，任何修改必须：
+- 理解 `progressStage` 和 `childProcessName` 的赋值链路
+- 理解 `normalizeFixedProductionNodeName` 对子工序名返回 null 的行为
+- 理解 `resolveParentProgressStage` 的5级映射优先级
+- 修改后必须测试：采购扫码、裁剪扫码、车缝子工序扫码、质检扫码、入库扫码
+
+### 涉及文件
+- `ProductionScanExecutor.java` — 扫码执行器（NPE 发生位置）
+- `ProcessStageDetector.java` — `normalizeFixedProductionNodeName` 实现（对子工序名返回 null）
+- `ProductionScanStageSupport.java` — 阶段门控（progressStage 为 null 时静默跳过校验）
+- `ScanRecordOrchestrator.java` — 扫码编排器
+
+## 规则34：扫码核心代码修改必须全链路测试
+
+### 规则
+修改 `ProductionScanExecutor`、`ScanRecordOrchestrator`、`ProcessStageDetector`、`ProductionScanStageSupport` 中的任何代码后，必须验证以下场景不报错：
+
+| 场景 | 扫码类型 | processName | 预期行为 |
+|------|---------|-------------|---------|
+| 采购扫码 | production | 采购 | 正常 |
+| 裁剪扫码 | cutting | 裁剪 | 正常 |
+| 车缝子工序扫码 | production | 上领/上袖/合缝等 | 映射到"车缝"父节点 |
+| 二次工艺扫码 | production | 绣花/印花等 | 映射到"二次工艺"父节点 |
+| 尾部扫码 | production | 剪线/整烫等 | 映射到"尾部"父节点 |
+| 质检扫码 | quality | - | 正常 |
+| 入库扫码 | warehouse | - | 正常 |
+| ORDER码采购 | production | 采购 | 正常（无菲号） |
+| ORDER码裁剪 | cutting | 裁剪 | 正常（无菲号） |
+
+### 禁止事项
+- 禁止在未测试子工序扫码的情况下上线任何扫码相关改动
+- 禁止删除 `childProcessName` 变量（它是子工序→父节点映射的关键中间变量）
+- 禁止删除 `ProcessSynonymMapping.isEquivalent` 同义词匹配（ORDER码守卫依赖它）
+- 禁止删除 `resolveProcessCodeFromTemplate` 方法（工序编号解析依赖它）

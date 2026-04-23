@@ -102,7 +102,7 @@ public class SampleWorkflowTool implements AgentTool {
         String styleNo = text(args.get("styleNo"));
         int limit = intOf(args.get("limit"), 10);
         List<StyleInfo> items = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
-                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .eq(StyleInfo::getTenantId, tenantId)
                 .like(StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
                 .and(StringUtils.hasText(keyword), q -> q.like(StyleInfo::getStyleNo, keyword).or().like(StyleInfo::getStyleName, keyword))
                 .orderByDesc(StyleInfo::getUpdateTime)
@@ -161,7 +161,7 @@ public class SampleWorkflowTool implements AgentTool {
         String styleNo = text(args.get("styleNo"));
         int limit = intOf(args.get("limit"), 10);
         List<PatternProduction> items = patternProductionService.list(new LambdaQueryWrapper<PatternProduction>()
-                .eq(tenantId != null, PatternProduction::getTenantId, tenantId)
+                .eq(PatternProduction::getTenantId, tenantId)
                 .eq(PatternProduction::getDeleteFlag, 0)
                 .like(StringUtils.hasText(styleNo), PatternProduction::getStyleNo, styleNo)
                 .orderByDesc(PatternProduction::getUpdateTime)
@@ -204,7 +204,7 @@ public class SampleWorkflowTool implements AgentTool {
         if (StringUtils.hasText(styleNo)) {
             StyleInfo style = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
                     .eq(StyleInfo::getStyleNo, styleNo)
-                    .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                    .eq(StyleInfo::getTenantId, tenantId)
                     .last("LIMIT 1"), false);
             if (style != null) {
                 return style;

@@ -6,7 +6,7 @@ import RowActions from '@/components/common/RowActions';
 import StandardPagination from '@/components/common/StandardPagination';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
-import { DEFAULT_PAGE_SIZE, readPageSize } from '@/utils/pageSizeStore';
+import { DEFAULT_PAGE_SIZE, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import { customerApi, type Customer, type CustomerListParams } from '@/services/crm/customerApi';
 
 type DialogMode = 'create' | 'edit' | 'view';
@@ -309,7 +309,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
         pageSize={queryParams.pageSize}
         total={total}
         wrapperStyle={{ paddingTop: 12 }}
-        onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
+        onChange={(page, pageSize) => { if (pageSize !== queryParams.pageSize) savePageSize(pageSize); setQueryParams((prev) => ({ ...prev, page, pageSize })); }}
       />
 
       <ResizableModal

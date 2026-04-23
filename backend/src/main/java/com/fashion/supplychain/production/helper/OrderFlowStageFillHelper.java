@@ -389,7 +389,7 @@ public class OrderFlowStageFillHelper {
                             ScanRecord::getScanTime, ScanRecord::getOperatorName, ScanRecord::getCreateTime)
                     .in(ScanRecord::getOrderId, orderIds)
                     .in(ScanRecord::getScanType,
-                            java.util.Arrays.asList("production", "cutting", "quality", "warehouse", "orchestration"))
+                            java.util.Arrays.asList("production", "cutting", "quality", "warehouse"))
                     .eq(ScanRecord::getScanResult, "success")
                     .orderByAsc(ScanRecord::getScanTime)
                     .orderByAsc(ScanRecord::getCreateTime));
@@ -723,12 +723,17 @@ public class OrderFlowStageFillHelper {
         } else {
             procurementRate = 0;
         }
-        o.setProcurementCompletionRate(procurementRate);
 
         Integer manuallyCompleted = o.getProcurementManuallyCompleted();
         boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
 
-        if (!directCuttingOrder && procurementRate != null && procurementRate > 0) {
+        if (isManuallyConfirmed && !directCuttingOrder) {
+            procurementRate = 100;
+        }
+
+        o.setProcurementCompletionRate(procurementRate);
+
+        if (!directCuttingOrder && (isManuallyConfirmed || (procurementRate != null && procurementRate > 0))) {
             o.setProcurementStartTime(procurementStart);
             if (isManuallyConfirmed) {
                 if (o.getProcurementConfirmedAt() != null) {
@@ -933,10 +938,10 @@ public class OrderFlowStageFillHelper {
             int tailQty = parentQtyMap.getOrDefault("尾部", 0);
             int qualityQty = parentQtyMap.getOrDefault("质检", 0);
 
-            int carSewingRate = carSewingQty > 0 ? computeRate(carSewingQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
-            int secondaryProcessRate = secondaryProcessQty > 0 ? computeRate(secondaryProcessQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
-            int tailRate = tailQty > 0 ? computeRate(tailQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
-            int qualityRate = qualityQty > 0 ? computeRate(qualityQty, sewBase) : wareRate;
+            int carSewingRate = computeRate(carSewingQty, sewBase);
+            int secondaryProcessRate = computeRate(secondaryProcessQty, sewBase);
+            int tailRate = computeRate(tailQty, sewBase);
+            int qualityRate = computeRate(qualityQty, sewBase);
 
             o.setSewingCompletionRate(carSewingRate);
             o.setCarSewingCompletionRate(carSewingRate);

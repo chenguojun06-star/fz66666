@@ -327,7 +327,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         if (!StringUtils.hasText(qrCode)) {
             return null;
         }
-        return this.getOne(
+        CuttingBundle bundle = this.getOne(
                 new LambdaQueryWrapper<CuttingBundle>()
                         .select(
                                 CuttingBundle::getId, CuttingBundle::getProductionOrderId,
@@ -340,6 +340,27 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                                 CuttingBundle::getCreateTime)
                         .eq(CuttingBundle::getQrCode, qrCode)
                         .last("limit 1"));
+        if (bundle != null) {
+            return bundle;
+        }
+        int sigIndex = qrCode.lastIndexOf("|SIG-");
+        if (sigIndex > 0) {
+            String withoutSig = qrCode.substring(0, sigIndex);
+            return this.getOne(
+                    new LambdaQueryWrapper<CuttingBundle>()
+                            .select(
+                                    CuttingBundle::getId, CuttingBundle::getProductionOrderId,
+                                    CuttingBundle::getProductionOrderNo, CuttingBundle::getStyleNo,
+                                    CuttingBundle::getColor, CuttingBundle::getSize,
+                                    CuttingBundle::getBundleNo, CuttingBundle::getBundleLabel,
+                                    CuttingBundle::getQuantity, CuttingBundle::getBedNo,
+                                    CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
+                                    CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                                    CuttingBundle::getCreateTime)
+                            .eq(CuttingBundle::getQrCode, withoutSig)
+                            .last("limit 1"));
+        }
+        return null;
     }
 
     @Override

@@ -82,6 +82,21 @@ public class ProductWarehousingRollbackHelper {
                 }
             } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
+        // QrCode 兜底：bundleId 加载失败（为空或查不到）时，尝试通过 QrCode 加载菲号
+        // 场景：删除入库记录时 bundle 可能只有 QrCode，或 bundleId 已失效
+        if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
+            if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
+                try {
+                    CuttingBundle b = cuttingBundleService.getByQrCode(w.getCuttingBundleQrCode().trim());
+                    if (b != null) {
+                        color = b.getColor();
+                        size = b.getSize();
+                    }
+                } catch (Exception e) {
+                    log.debug("[SKUStock] getByQrCode fallback failed: bundleQrCode={}", w.getCuttingBundleQrCode());
+                }
+            }
+        }
         // ⚠️ 不再使用 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
         // 用于多码情景会写入错误的 SKU 条目
 

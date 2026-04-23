@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.service.MaterialInboundService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -131,9 +132,9 @@ public class MaterialInboundOrchestrator {
 
         // 根据到货情况更新状态
         if (purchase.getPurchaseQuantity() == null || totalArrived >= purchase.getPurchaseQuantity().intValue()) {
-            purchase.setStatus("completed"); // 全部到货
+            purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
         } else {
-            purchase.setStatus("partial_arrival"); // 部分到货
+            purchase.setStatus("partial_arrival");
         }
 
         materialPurchaseService.updateById(purchase);
@@ -153,7 +154,7 @@ public class MaterialInboundOrchestrator {
         // 自动写入系统备注：采购入库节点
         try {
             if (StringUtils.hasText(purchase.getOrderNo())) {
-                String statusText = "completed".equals(purchase.getStatus()) ? "采购完成" : "部分到货";
+                String statusText = MaterialConstants.STATUS_AWAITING_CONFIRM.equals(purchase.getStatus()) ? "待确认完成" : "部分到货";
                 OrderRemark sysRemark = new OrderRemark();
                 sysRemark.setTargetType("order");
                 sysRemark.setTargetNo(purchase.getOrderNo());

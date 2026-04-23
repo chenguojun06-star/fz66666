@@ -13,8 +13,6 @@ import com.fashion.supplychain.integration.record.entity.IntegrationChannelConfi
 import com.fashion.supplychain.integration.record.entity.LogisticsRecord;
 import com.fashion.supplychain.integration.record.entity.PaymentRecord;
 import com.fashion.supplychain.integration.record.mapper.IntegrationChannelConfigMapper;
-import com.fashion.supplychain.integration.logistics.LogisticsManager;
-import com.fashion.supplychain.integration.logistics.ShippingRequest;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +45,6 @@ public class IntegrationDashboardController {
     private final STOProperties stoProps;
     private final IntegrationRecordService recordService;
     private final IntegrationChannelConfigMapper channelConfigMapper;
-    private final LogisticsManager logisticsManager;
 
     /** 渠道元数据定义 */
     private static final List<Map<String, String>> CHANNEL_META = List.of(
@@ -289,64 +286,6 @@ public class IntegrationDashboardController {
     @PostMapping("/callback-logs/list")
     public Result<IPage<IntegrationCallbackLog>> callbackLogList(@RequestBody Map<String, Object> params) {
         return Result.success(recordService.getCallbackLogsPage(params));
-    }
-
-    // =============================================
-    // 物流运费比价
-    // =============================================
-
-    @PostMapping("/logistics/compare-fees")
-    public Result<Map<String, Object>> compareLogisticsFees(@RequestBody Map<String, Object> params) {
-        ShippingRequest request = buildShippingRequest(params);
-        Map<String, Long> fees = logisticsManager.compareShippingFees(request);
-        List<String> companies = logisticsManager.getAvailableCompanies();
-        Map<String, Object> result = new HashMap<>();
-        result.put("fees", fees);
-        result.put("availableCompanies", companies);
-        return Result.success(result);
-    }
-
-    @GetMapping("/logistics/available-companies")
-    public Result<List<String>> availableLogisticsCompanies() {
-        return Result.success(logisticsManager.getAvailableCompanies());
-    }
-
-    private ShippingRequest buildShippingRequest(Map<String, Object> params) {
-        ShippingRequest.ShippingRequestBuilder builder = ShippingRequest.builder();
-        if (params.get("orderId") != null) builder.orderId(String.valueOf(params.get("orderId")));
-        Map<String, Object> senderMap = (Map<String, Object>) params.get("sender");
-        if (senderMap != null) {
-            builder.sender(ShippingRequest.ContactInfo.builder()
-                    .name(String.valueOf(senderMap.getOrDefault("name", "")))
-                    .mobile(String.valueOf(senderMap.getOrDefault("mobile", "")))
-                    .province(String.valueOf(senderMap.getOrDefault("province", "")))
-                    .city(String.valueOf(senderMap.getOrDefault("city", "")))
-                    .district(String.valueOf(senderMap.getOrDefault("district", "")))
-                    .address(String.valueOf(senderMap.getOrDefault("address", "")))
-                    .build());
-        }
-        Map<String, Object> recipientMap = (Map<String, Object>) params.get("recipient");
-        if (recipientMap != null) {
-            builder.recipient(ShippingRequest.ContactInfo.builder()
-                    .name(String.valueOf(recipientMap.getOrDefault("name", "")))
-                    .mobile(String.valueOf(recipientMap.getOrDefault("mobile", "")))
-                    .province(String.valueOf(recipientMap.getOrDefault("province", "")))
-                    .city(String.valueOf(recipientMap.getOrDefault("city", "")))
-                    .district(String.valueOf(recipientMap.getOrDefault("district", "")))
-                    .address(String.valueOf(recipientMap.getOrDefault("address", "")))
-                    .build());
-        }
-        Map<String, Object> cargoMap = (Map<String, Object>) params.get("cargo");
-        if (cargoMap != null) {
-            builder.cargo(ShippingRequest.CargoInfo.builder()
-                    .name(String.valueOf(cargoMap.getOrDefault("name", "")))
-                    .quantity(cargoMap.get("quantity") != null ? ((Number) cargoMap.get("quantity")).intValue() : 1)
-                    .weight(cargoMap.get("weight") != null ? java.math.BigDecimal.valueOf(((Number) cargoMap.get("weight")).doubleValue()) : null)
-                    .volume(cargoMap.get("volume") != null ? java.math.BigDecimal.valueOf(((Number) cargoMap.get("volume")).doubleValue()) : null)
-                    .type(String.valueOf(cargoMap.getOrDefault("type", "服装")))
-                    .build());
-        }
-        return builder.build();
     }
 
     // =============================================

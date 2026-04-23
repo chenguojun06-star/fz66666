@@ -32,13 +32,11 @@ public class OrgDiagController {
         result.put("context", ctx);
 
         Long tenantId = UserContext.tenantId();
-        String sql = "SELECT id, node_name, tenant_id, parent_id, node_type, delete_flag, create_time FROM t_organization_unit";
-        List<Map<String, Object>> orgs;
-        if (tenantId != null) {
-            orgs = jdbcTemplate.queryForList(sql + " WHERE tenant_id = ? ORDER BY create_time DESC LIMIT 20", tenantId);
-        } else {
-            orgs = jdbcTemplate.queryForList(sql + " ORDER BY create_time DESC LIMIT 20");
+        if (tenantId == null) {
+            return Result.fail("租户上下文缺失");
         }
+        String sql = "SELECT id, node_name, tenant_id, parent_id, node_type, delete_flag, create_time FROM t_organization_unit WHERE tenant_id = ? ORDER BY create_time DESC LIMIT 20";
+        List<Map<String, Object>> orgs = jdbcTemplate.queryForList(sql, tenantId);
         result.put("orgUnits", orgs);
         
         if (UserContext.username() != null) {

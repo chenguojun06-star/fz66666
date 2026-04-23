@@ -10,6 +10,7 @@ import {
   getProcessesByNodeFromOrder,
   canonicalStageKey,
   stageNameMatches,
+  getOrderStageCompletionTimeFallback,
 } from '../../ProgressDetail/utils';
 import type { ProgressNode } from '../../ProgressDetail/types';
 import { formatCompletionTime } from '../utils';
@@ -133,6 +134,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     const orderId = String(record.id || '');
     const timeMap = boardTimesByOrder[orderId] || {};
     const keyword = String(stageKeyword || '').trim();
+    const fieldFallback = getOrderStageCompletionTimeFallback(record, keyword);
     if (!keyword) return '';
 
     const pickLatestTime = (times: string[]): string => {
@@ -196,12 +198,12 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
         }
 
         const latestTime = pickLatestTime(childTimes);
-        const parentTime = findLatestTimeByStage(matchKey) || findLatestTimeByStage(keyword);
+        const parentTime = findLatestTimeByStage(matchKey) || findLatestTimeByStage(keyword) || fieldFallback;
 
         // 所有子工序都完成 → 返回最晚时间 = 父完成时间
         if (allHaveTime && latestTime) return latestTime;
         // 阶段已经 100% 完成时，允许用已有子工序的最晚时间或父节点时间兜底，避免时间闪烁消失
-        if (rate >= 100) return latestTime || parentTime;
+        if (rate >= 100) return latestTime || parentTime || fieldFallback;
         // 还有子工序没完成 → 父未完成
         return '';
       }
@@ -232,7 +234,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     if (latestTime) return latestTime;
 
     if (rate >= 100) {
-      return findLatestTimeByStage(keyword);
+      return findLatestTimeByStage(keyword) || fieldFallback;
     }
 
     return '';

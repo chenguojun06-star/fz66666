@@ -98,7 +98,7 @@ public class FactoryShipmentOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Result<FactoryShipment> receive(String shipmentId) {
+    public Result<FactoryShipment> receive(String shipmentId, Integer receivedQuantity) {
         if (!StringUtils.hasText(shipmentId)) {
             return Result.fail("缺少发货单 ID");
         }
@@ -114,14 +114,21 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("无权操作其他工厂的发货单");
         }
 
+        int actualQty = (receivedQuantity != null && receivedQuantity > 0)
+                ? receivedQuantity : fs.getShipQuantity();
+        if (actualQty > fs.getShipQuantity()) {
+            return Result.fail("实际到货数量不能超过发货数量(" + fs.getShipQuantity() + ")");
+        }
+
         fs.setReceiveStatus("received");
+        fs.setReceivedQuantity(actualQty);
         fs.setReceiveTime(LocalDateTime.now());
         fs.setReceivedBy(UserContext.userId());
         fs.setReceivedByName(UserContext.username());
         factoryShipmentService.updateById(fs);
 
-        log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} qty={}",
-                shipmentId, fs.getOrderId(), fs.getShipQuantity());
+        log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} shipQty={} receivedQty={}",
+                shipmentId, fs.getOrderId(), fs.getShipQuantity(), actualQty);
         return Result.success(fs);
     }
 

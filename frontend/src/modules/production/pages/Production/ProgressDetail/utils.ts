@@ -317,6 +317,84 @@ export const stageNameMatches = (a: any, b: any) => {
 };
 
 /**
+ * 从订单列表接口已返回的阶段时间字段中推导节点完成时间。
+ *
+ * 背景：订单管理 / 工序跟进页的节点完成率来自后端 `*CompletionRate`，
+ * 但节点时间主要依赖前端 `boardTimesByOrder` 通过扫码记录二次推导。
+ * 当缓存尚未刷新、或扫码时间桶 key 与节点名暂时未命中时，
+ * 会出现“节点已100%，但完成时间仍显示 --”的假空白。
+ *
+ * 因此这里补一层“已完成节点优先使用接口现成时间字段”的兜底：
+ * - 尾部 → packagingEndTime / ironingEndTime
+ * - 车缝 → carSewingEndTime / sewingEndTime
+ * - 二次工艺 → secondaryProcessEndTime
+ * - 入库 → warehousingEndTime
+ * - 裁剪 → cuttingEndTime
+ * - 采购 → procurementConfirmedAt / procurementEndTime
+ */
+export const getOrderStageCompletionTimeFallback = (
+  order: ProductionOrder | null,
+  stageName?: string,
+  parentStage?: string,
+): string => {
+  if (!order) return '';
+
+  const candidates = [stageName, parentStage]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+
+  if (candidates.length === 0) return '';
+
+  const pickField = (...keys: string[]): string => {
+    for (const key of keys) {
+      const value = String((order as Record<string, unknown>)?.[key] || '').trim();
+      if (value) return value;
+    }
+    return '';
+  };
+
+  const matchAny = (matcher: (value: string) => boolean) => candidates.some(matcher);
+
+  if (matchAny((value) => /采购|物料|备料|辅料|面料/.test(value))) {
+    return pickField('procurementConfirmedAt', 'procurementEndTime');
+  }
+
+  if (matchAny(isCuttingStageKey)) {
+    return pickField('cuttingEndTime');
+  }
+
+  if (matchAny(isSecondaryProcessStageKey)) {
+    return pickField('secondaryProcessEndTime');
+  }
+
+  if (matchAny(isSewingStageKey)) {
+    return pickField('carSewingEndTime', 'sewingEndTime');
+  }
+
+  if (matchAny(isTailStageKey)) {
+    return pickField('packagingEndTime', 'ironingEndTime');
+  }
+
+  if (matchAny(isPackagingStageKey)) {
+    return pickField('packagingEndTime', 'ironingEndTime');
+  }
+
+  if (matchAny(isIroningStageKey)) {
+    return pickField('ironingEndTime', 'packagingEndTime');
+  }
+
+  if (matchAny(isQualityStageKey)) {
+    return pickField('qualityEndTime');
+  }
+
+  if (matchAny(isWarehouseStageKey)) {
+    return pickField('warehousingEndTime');
+  }
+
+  return '';
+};
+
+/**
  * 为指定阶段查找对应的计价工序
  * @param list 工序列表
  * @param stageName 阶段名称

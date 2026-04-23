@@ -94,6 +94,9 @@ public class ProductionOrderFinanceOrchestrationService {
     @Autowired(required = false)
     private IntelligencePredictionLogMapper intelligencePredictionLogMapper;
 
+    @Autowired
+    private DeliverySlaOrchestrator deliverySlaOrchestrator;
+
     /**
      * ★ 自注入：解决同类内部方法调用不经过 AOP 代理的问题
      * 使用 @Lazy 避免循环依赖
@@ -373,6 +376,14 @@ public class ProductionOrderFinanceOrchestrationService {
             } catch (Exception ex) {
                 log.warn("[智能回填] 回填失败，不影响关单流程: orderId={}", oid, ex);
             }
+        }
+
+        // 【交付SLA】关单时计算并持久化SLA达标状态
+        try {
+            ProductionOrder refreshed = productionOrderService.getById(oid);
+            deliverySlaOrchestrator.computeAndPersistSla(refreshed);
+        } catch (Exception ex) {
+            log.warn("[交付SLA] 计算失败，不影响关单流程: orderId={}", oid, ex);
         }
 
         triggerPayrollSettlementGeneration(oid);

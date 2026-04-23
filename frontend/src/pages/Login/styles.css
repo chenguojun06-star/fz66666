@@ -1,5 +1,6 @@
 /* ==========================================
    White Tech-Style Login Page (Split Layout)
+   Fully Responsive - All sizes scale with viewport
    ========================================== */
 .login-page {
   min-height: 100vh;
@@ -16,21 +17,21 @@
 }
 
 .login-left-pane {
-  flex: 1.5;
+  flex: 1.4;
   position: relative;
   overflow: hidden;
-  padding: 64px 60px 72px 220px;
+  padding: clamp(24px, 4vh, 64px) clamp(24px, 3vw, 60px) clamp(28px, 4.5vh, 72px) clamp(40px, 11vw, 220px);
   display: flex;
   align-items: center;
 }
 
 .login-right-pane {
-  flex: 0 0 clamp(860px, 60vw, 1080px);
+  flex: 0 0 clamp(320px, 40vw, 1080px);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 64px 56px;
+  padding: clamp(20px, 3vh, 48px) clamp(24px, 4vw, 64px) clamp(24px, 3.5vh, 56px);
   background:
     linear-gradient(180deg, rgba(249, 251, 255, 0.54), rgba(243, 246, 251, 0.18)),
     linear-gradient(180deg, rgba(229, 235, 244, 0.96), rgba(223, 230, 240, 0.84));
@@ -50,7 +51,7 @@
   background-image:
     linear-gradient(rgba(143, 167, 212, 0.16) 1px, transparent 1px),
     linear-gradient(90deg, rgba(143, 167, 212, 0.16) 1px, transparent 1px);
-  background-size: 54px 54px;
+  background-size: clamp(30px, 3.5vw, 54px) clamp(30px, 3.5vw, 54px);
   mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.85), transparent 76%);
   animation: gridFloat 22s linear infinite, gridBreath 6s ease-in-out infinite;
 }
@@ -71,23 +72,23 @@
 .tech-glow-right {
   position: absolute;
   border-radius: 50%;
-  filter: blur(48px);
+  filter: blur(clamp(24px, 3vw, 48px));
 }
 
 .tech-glow-left {
-  width: 540px;
-  height: 540px;
-  top: -120px;
-  left: -140px;
+  width: clamp(260px, 35vw, 540px);
+  height: clamp(260px, 35vw, 540px);
+  top: -8%;
+  left: -10%;
   background: radial-gradient(circle, rgba(31, 117, 234, 0.14), transparent 66%);
   animation: glowBreath 8s ease-in-out infinite;
 }
 
 .tech-glow-right {
-  width: 560px;
-  height: 560px;
-  right: -180px;
-  bottom: -180px;
+  width: clamp(280px, 36vw, 560px);
+  height: clamp(280px, 36vw, 560px);
+  right: -12%;
+  bottom: -12%;
   background: radial-gradient(circle, rgba(76, 142, 241, 0.12), transparent 68%);
   animation: glowBreath 10s ease-in-out infinite reverse;
 }
@@ -129,11 +130,11 @@
 
 .tech-node {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: clamp(6px, 0.6vw, 10px);
+  height: clamp(6px, 0.6vw, 10px);
   border-radius: 50%;
   background: #3d82ef;
-  box-shadow: 0 0 0 8px rgba(61, 130, 239, 0.18), 0 0 22px rgba(31, 117, 234, 0.3);
+  box-shadow: 0 0 0 clamp(4px, 0.5vw, 8px) rgba(61, 130, 239, 0.18), 0 0 clamp(12px, 1.4vw, 22px) rgba(31, 117, 234, 0.3);
   animation: nodePulse 4.8s ease-in-out infinite, nodeFloat 8s ease-in-out infinite;
 }
 
@@ -145,49 +146,45 @@
 .tech-node-6 { right: 10%; top: 56%; animation-delay: 1.1s; }
 
 .login-showcase {
-  position: absolute;
+  position: relative;
   z-index: 1;
-  width: 884px;
+  width: 100%;
   max-width: 884px;
-  padding-top: 18px;
-  left: auto;
-  right: 348px;
-  top: 50%;
-  transform: translateY(calc(-50% + 78px));
+  padding-top: clamp(8px, 1.2vh, 18px);
+  margin: 0 auto;
 }
 
 .login-showcase-shell {
   display: grid;
-  grid-template-columns: 540px 320px;
+  grid-template-columns: 1fr clamp(180px, 20vw, 320px);
   align-items: center;
-  gap: 24px;
+  gap: clamp(12px, 1.5vw, 24px);
 }
 
 .login-showcase-copy {
-  max-width: 540px;
-  padding-top: 74px;
-  transform: translate(-100px, 78px);
+  max-width: 100%;
+  padding-top: clamp(20px, 5vh, 74px);
 }
 
 .login-kicker {
   display: inline-flex;
   align-items: center;
-  padding: 7px 14px;
+  padding: clamp(4px, 0.5vh, 7px) clamp(8px, 0.9vw, 14px);
   border-radius: 999px;
   color: #1f75ea;
   background: rgba(255, 255, 255, 0.52);
   border: 1px solid rgba(31, 117, 234, 0.24);
   box-shadow: 0 12px 30px rgba(150, 188, 214, 0.14);
   backdrop-filter: blur(10px);
-  font-size: 11px;
+  font-size: clamp(9px, 0.7vw, 11px);
   font-weight: 700;
   letter-spacing: 1px;
 }
 
 .login-showcase-title {
-  margin: 52px 0 0 !important;
+  margin: clamp(20px, 3.5vh, 52px) 0 0 !important;
   color: #26384b !important;
-  font-size: 30px !important;
+  font-size: clamp(20px, 2vw, 30px) !important;
   line-height: 1.2 !important;
   font-weight: 700 !important;
   letter-spacing: 0;
@@ -195,27 +192,25 @@
 }
 
 .login-showcase-desc {
-  margin-top: 14px;
+  margin-top: clamp(8px, 1vh, 14px);
   color: #6a7486;
-  font-size: 15px;
+  font-size: clamp(12px, 1vw, 15px);
   line-height: 1.8;
-  max-width: 520px;
+  max-width: 100%;
 }
 
 .login-showcase-visual {
   display: flex;
   justify-content: center;
-  transform: translateY(-12px);
 }
 
 .tech-core-container {
   position: relative;
-  width: 320px;
-  height: 320px;
+  width: clamp(180px, 20vw, 320px);
+  height: clamp(180px, 20vw, 320px);
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translate(-300px, -24px);
 }
 
 .tech-ring,
@@ -233,30 +228,30 @@
 }
 
 .orbit-a {
-  width: 284px;
-  height: 284px;
+  width: clamp(160px, 17.8vw, 284px);
+  height: clamp(160px, 17.8vw, 284px);
   border-style: dashed;
   animation: rotateClockwise 14s linear infinite;
 }
 
 .orbit-b {
-  width: 344px;
-  height: 344px;
+  width: clamp(194px, 21.5vw, 344px);
+  height: clamp(194px, 21.5vw, 344px);
   border-color: rgba(31, 117, 234, 0.2);
   animation: rotateReverse 24s linear infinite;
 }
 
 .orbit-c {
-  width: 396px;
-  height: 396px;
+  width: clamp(224px, 24.8vw, 396px);
+  height: clamp(224px, 24.8vw, 396px);
   border-style: dotted;
   border-color: rgba(31, 117, 234, 0.18);
   animation: rotateClockwise 32s linear infinite;
 }
 
 .ring-1 {
-  width: 228px;
-  height: 228px;
+  width: clamp(128px, 14.3vw, 228px);
+  height: clamp(128px, 14.3vw, 228px);
   border-top: 3px solid rgba(31, 117, 234, 0.84);
   border-right: 2px solid rgba(31, 117, 234, 0.26);
   border-left: 2px solid rgba(31, 117, 234, 0.32);
@@ -264,16 +259,16 @@
 }
 
 .ring-2 {
-  width: 180px;
-  height: 180px;
+  width: clamp(100px, 11.3vw, 180px);
+  height: clamp(100px, 11.3vw, 180px);
   border-bottom: 3px solid rgba(79, 143, 255, 0.84);
   border-top: 2px dashed rgba(79, 143, 255, 0.32);
   animation: rotateReverse 7s linear infinite;
 }
 
 .ring-3 {
-  width: 126px;
-  height: 126px;
+  width: clamp(70px, 7.9vw, 126px);
+  height: clamp(70px, 7.9vw, 126px);
   border: 1px solid rgba(31, 117, 234, 0.22);
   border-right: 3px solid rgba(31, 117, 234, 0.68);
   animation: rotateClockwise 5s ease-in-out infinite;
@@ -281,8 +276,8 @@
 
 .tech-halo {
   position: absolute;
-  width: 184px;
-  height: 184px;
+  width: clamp(104px, 11.5vw, 184px);
+  height: clamp(104px, 11.5vw, 184px);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(31, 117, 234, 0.16), rgba(31, 117, 234, 0.04) 62%, transparent 78%);
   filter: blur(6px);
@@ -295,41 +290,41 @@
 }
 
 .tech-axis-x {
-  width: 404px;
+  width: clamp(228px, 25.3vw, 404px);
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(31, 117, 234, 0.52), transparent);
 }
 
 .tech-axis-y {
   width: 1px;
-  height: 404px;
+  height: clamp(228px, 25.3vw, 404px);
   background: linear-gradient(180deg, transparent, rgba(31, 117, 234, 0.52), transparent);
 }
 
 .signal-node {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: clamp(6px, 0.6vw, 10px);
+  height: clamp(6px, 0.6vw, 10px);
   border-radius: 50%;
   background: #1f75ea;
-  box-shadow: 0 0 0 8px rgba(31, 117, 234, 0.14), 0 0 20px rgba(31, 117, 234, 0.28);
+  box-shadow: 0 0 0 clamp(4px, 0.5vw, 8px) rgba(31, 117, 234, 0.14), 0 0 clamp(12px, 1.3vw, 20px) rgba(31, 117, 234, 0.28);
 }
 
-.signal-node-1 { left: 48px; top: 54px; animation: nodePulse 4.2s ease-in-out infinite; }
-.signal-node-2 { right: 26px; top: 144px; animation: nodePulse 4.2s ease-in-out infinite 0.8s; }
-.signal-node-3 { left: 76px; bottom: 26px; animation: nodePulse 4.2s ease-in-out infinite 1.6s; }
-.signal-node-4 { right: 84px; bottom: 48px; animation: nodePulse 4.2s ease-in-out infinite 2.2s; }
+.signal-node-1 { left: 15%; top: 17%; animation: nodePulse 4.2s ease-in-out infinite; }
+.signal-node-2 { right: 8%; top: 45%; animation: nodePulse 4.2s ease-in-out infinite 0.8s; }
+.signal-node-3 { left: 24%; bottom: 8%; animation: nodePulse 4.2s ease-in-out infinite 1.6s; }
+.signal-node-4 { right: 26%; bottom: 15%; animation: nodePulse 4.2s ease-in-out infinite 2.2s; }
 
 .tech-core {
   position: relative;
-  width: 148px;
-  height: 118px;
+  width: clamp(82px, 9.3vw, 148px);
+  height: clamp(66px, 7.4vw, 118px);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 0;
   color: #1f75ea;
-  font-size: 46px;
+  font-size: clamp(26px, 2.9vw, 46px);
   background: transparent;
   border: none;
   box-shadow: none;
@@ -353,8 +348,8 @@
 
 .tech-cloud {
   position: relative;
-  width: 114px;
-  height: 82px;
+  width: clamp(64px, 7.1vw, 114px);
+  height: clamp(46px, 5.1vw, 82px);
   animation: floatSoft 4.8s ease-in-out infinite;
 }
 
@@ -370,39 +365,39 @@
 }
 
 .tech-cloud__part--left {
-  width: 38px;
-  height: 38px;
-  left: 10px;
-  top: 24px;
+  width: clamp(22px, 2.4vw, 38px);
+  height: clamp(22px, 2.4vw, 38px);
+  left: 9%;
+  top: 29%;
 }
 
 .tech-cloud__part--center {
-  width: 48px;
-  height: 48px;
-  left: 33px;
-  top: 10px;
+  width: clamp(27px, 3vw, 48px);
+  height: clamp(27px, 3vw, 48px);
+  left: 29%;
+  top: 12%;
 }
 
 .tech-cloud__part--right {
-  width: 34px;
-  height: 34px;
-  right: 12px;
-  top: 28px;
+  width: clamp(19px, 2.1vw, 34px);
+  height: clamp(19px, 2.1vw, 34px);
+  right: 11%;
+  top: 34%;
 }
 
 .tech-cloud__base {
-  left: 14px;
-  right: 14px;
-  bottom: 12px;
-  height: 30px;
+  left: 12%;
+  right: 12%;
+  bottom: 15%;
+  height: clamp(17px, 1.9vw, 30px);
   border-radius: 999px;
 }
 
 .tech-cloud__eye {
   position: absolute;
-  top: 36px;
-  width: 14px;
-  height: 18px;
+  top: 44%;
+  width: clamp(8px, 0.9vw, 14px);
+  height: clamp(10px, 1.1vw, 18px);
   border-radius: 999px;
   background: #3a5ea7;
   z-index: 2;
@@ -411,17 +406,17 @@
 }
 
 .tech-cloud__eye--left {
-  left: 31px;
+  left: 27%;
 }
 
 .tech-cloud__eye--right {
-  right: 31px;
+  right: 27%;
 }
 
 .tech-cloud__eye-highlight {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: clamp(3px, 0.4vw, 6px);
+  height: clamp(3px, 0.4vw, 6px);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.96);
   top: 2px;
@@ -432,10 +427,10 @@
 .tech-cloud__smile {
   position: absolute;
   left: 50%;
-  bottom: 15px;
-  width: 32px;
-  height: 16px;
-  border-bottom: 4px solid #3a5ea7;
+  bottom: 18%;
+  width: clamp(18px, 2vw, 32px);
+  height: clamp(9px, 1vw, 16px);
+  border-bottom: clamp(2px, 0.25vw, 4px) solid #3a5ea7;
   border-radius: 0 0 32px 32px;
   transform: translateX(-50%);
   z-index: 2;
@@ -444,33 +439,33 @@
 
 .tech-cloud__spark {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: clamp(6px, 0.6vw, 10px);
+  height: clamp(6px, 0.6vw, 10px);
   background: #ffd86a;
   clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
   animation: sparkleBlink 2s ease-in-out infinite;
 }
 
 .tech-cloud__spark--left {
-  left: 6px;
-  top: 12px;
+  left: 5%;
+  top: 15%;
 }
 
 .tech-cloud__spark--right {
-  right: 4px;
-  top: 8px;
+  right: 4%;
+  top: 10%;
   animation-delay: 0.6s;
 }
 
 .small-ai-badge {
   position: absolute;
-  top: 18px;
-  right: 6px;
-  padding: 6px 11px;
+  top: clamp(10px, 1.1vw, 18px);
+  right: clamp(4px, 0.4vw, 6px);
+  padding: clamp(3px, 0.4vw, 6px) clamp(6px, 0.7vw, 11px);
   border-radius: 999px;
   background: linear-gradient(135deg, #3a89f6, #1f75ea);
   color: #fff;
-  font-size: 13px;
+  font-size: clamp(9px, 0.8vw, 13px);
   font-weight: 800;
   letter-spacing: 1.2px;
   box-shadow: 0 10px 26px rgba(31, 117, 234, 0.2);
@@ -479,9 +474,9 @@
 
 .tech-float-card {
   position: absolute;
-  min-width: 120px;
-  padding: 12px 14px;
-  border-radius: 18px;
+  min-width: clamp(70px, 7.5vw, 120px);
+  padding: clamp(7px, 0.8vw, 12px) clamp(8px, 0.9vw, 14px);
+  border-radius: clamp(10px, 1.1vw, 18px);
   background: rgba(241, 246, 255, 0.56);
   border: 1px solid rgba(31, 117, 234, 0.14);
   box-shadow: 0 18px 34px rgba(31, 117, 234, 0.08);
@@ -489,45 +484,44 @@
 }
 
 .tech-float-card-top {
-  top: 2px;
+  top: 1%;
   left: 50%;
   transform: translateX(-50%);
   animation: floatPanelY 5.2s ease-in-out infinite;
 }
 
 .tech-float-card-left {
-  left: -32px;
-  bottom: 58px;
+  left: -10%;
+  bottom: 18%;
   animation: floatPanelY 6s ease-in-out infinite 0.5s;
 }
 
 .tech-float-card-right {
-  right: -40px;
-  top: 190px;
+  right: -12%;
+  top: 59%;
   animation: floatPanelY 6.6s ease-in-out infinite 1s;
 }
 
 .tech-float-label {
   display: block;
   color: #718198;
-  font-size: 12px;
+  font-size: clamp(9px, 0.75vw, 12px);
 }
 
 .tech-float-value {
   display: block;
-  margin-top: 6px;
+  margin-top: clamp(3px, 0.4vw, 6px);
   color: #334455;
-  font-size: 18px;
+  font-size: clamp(11px, 1.1vw, 18px);
   font-weight: 700;
 }
 
 .login-showcase-highlights {
-  margin-top: 70px;
+  margin-top: clamp(24px, 4.5vh, 70px);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  width: 700px;
-  transform: translate(-100px, 18px);
+  gap: clamp(8px, 0.9vw, 14px);
+  width: 100%;
 }
 
 .showcase-highlight-card,
@@ -541,23 +535,23 @@
 }
 
 .showcase-highlight-card {
-  padding: 16px 18px;
-  border-radius: 18px;
+  padding: clamp(10px, 1vw, 16px) clamp(10px, 1.1vw, 18px);
+  border-radius: clamp(10px, 1.1vw, 18px);
 }
 
 .highlight-label {
   display: block;
   color: #6d7e99;
-  font-size: 11px;
+  font-size: clamp(9px, 0.7vw, 11px);
   letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
 .highlight-value {
   display: block;
-  margin-top: 8px;
+  margin-top: clamp(4px, 0.5vw, 8px);
   color: #23384d;
-  font-size: 15px;
+  font-size: clamp(11px, 0.95vw, 15px);
   line-height: 1.5;
   font-weight: 600;
 }
@@ -565,9 +559,9 @@
 .login-bottom-strip {
   display: flex;
   align-items: stretch;
-  gap: 14px;
+  gap: clamp(8px, 0.9vw, 14px);
   width: min(100%, 760px);
-  margin-top: 86px;
+  margin-top: clamp(36px, 5.5vh, 86px);
 }
 
 .login-showcase-points {
@@ -576,9 +570,9 @@
   flex: 1;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  padding: 12px;
-  border-radius: 18px;
+  gap: clamp(6px, 0.6vw, 10px);
+  padding: clamp(8px, 0.8vw, 12px);
+  border-radius: clamp(10px, 1.1vw, 18px);
   overflow: hidden;
 }
 
@@ -617,9 +611,9 @@
 .login-showcase-point {
   position: relative;
   z-index: 1;
-  min-height: 78px;
-  padding: 10px 8px;
-  border-radius: 14px;
+  min-height: clamp(48px, 5vw, 78px);
+  padding: clamp(6px, 0.6vw, 10px) clamp(5px, 0.5vw, 8px);
+  border-radius: clamp(8px, 0.9vw, 14px);
   background: linear-gradient(180deg, rgba(241, 246, 255, 0.62), rgba(229, 237, 249, 0.5));
   border: 1px solid rgba(31, 117, 234, 0.12);
   display: flex;
@@ -636,21 +630,21 @@
 }
 
 .flow-icon {
-  width: 36px;
-  height: 36px;
-  margin-bottom: 8px;
-  border-radius: 12px;
+  width: clamp(22px, 2.3vw, 36px);
+  height: clamp(22px, 2.3vw, 36px);
+  margin-bottom: clamp(4px, 0.5vw, 8px);
+  border-radius: clamp(7px, 0.8vw, 12px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #1f75ea;
   background: linear-gradient(180deg, rgba(31, 117, 234, 0.14), rgba(31, 117, 234, 0.05));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
-  font-size: 16px;
+  font-size: clamp(10px, 1vw, 16px);
 }
 
 .flow-label {
-  font-size: 11px;
+  font-size: clamp(8px, 0.7vw, 11px);
   font-weight: 600;
   line-height: 1.35;
   text-align: center;
@@ -658,24 +652,24 @@
 
 .login-data-card {
   position: relative;
-  flex: 0 0 164px;
-  width: 164px;
-  padding: 14px 14px 12px;
-  border-radius: 18px;
+  flex: 0 0 clamp(100px, 10.3vw, 164px);
+  width: clamp(100px, 10.3vw, 164px);
+  padding: clamp(8px, 0.9vw, 14px);
+  border-radius: clamp(10px, 1.1vw, 18px);
 }
 
 .login-data-card__label {
   color: #657a8d;
-  font-size: 11px;
+  font-size: clamp(9px, 0.7vw, 11px);
   letter-spacing: 0.8px;
 }
 
 .login-data-card__bars {
-  margin-top: 12px;
+  margin-top: clamp(6px, 0.8vw, 12px);
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  height: 48px;
+  gap: clamp(3px, 0.4vw, 6px);
+  height: clamp(30px, 3vw, 48px);
 }
 
 .login-data-card__bars span {
@@ -696,8 +690,8 @@
 
 .login-panel-glow {
   position: absolute;
-  width: 440px;
-  height: 440px;
+  width: clamp(220px, 27.5vw, 440px);
+  height: clamp(220px, 27.5vw, 440px);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(138, 168, 255, 0.18), rgba(138, 168, 255, 0) 70%);
   filter: blur(24px);
@@ -707,15 +701,15 @@
 .login-form-wrapper {
   position: relative;
   width: 100%;
-  max-width: 500px;
+  max-width: clamp(300px, 28vw, 500px);
   z-index: 1;
-  transform: translateY(36px);
+  transform: translateY(clamp(12px, 2vh, 36px));
 }
 
 .login-form-card {
   position: relative;
-  padding: 32px 34px 24px;
-  border-radius: 24px;
+  padding: clamp(20px, 2vw, 32px) clamp(20px, 2.1vw, 34px) clamp(16px, 1.5vw, 24px);
+  border-radius: clamp(16px, 1.5vw, 24px);
   background: rgba(237, 242, 250, 0.74);
 }
 
@@ -727,35 +721,35 @@
 }
 
 .login-card-accent-top {
-  top: 16px;
-  left: 26px;
-  right: 26px;
+  top: clamp(8px, 1vw, 16px);
+  left: clamp(14px, 1.6vw, 26px);
+  right: clamp(14px, 1.6vw, 26px);
 }
 
 .login-card-accent-bottom {
-  bottom: 16px;
-  left: 54px;
-  right: 54px;
+  bottom: clamp(8px, 1vw, 16px);
+  left: clamp(28px, 3.4vw, 54px);
+  right: clamp(28px, 3.4vw, 54px);
   opacity: 0.6;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: clamp(14px, 1.5vw, 24px);
 }
 
 .login-title {
   margin: 0 !important;
   color: #2b3646 !important;
   font-weight: 700 !important;
-  font-size: 26px !important;
+  font-size: clamp(18px, 1.6vw, 26px) !important;
   letter-spacing: 0.4px;
 }
 
 .login-subtitle {
-  margin-top: 8px;
+  margin-top: clamp(4px, 0.5vw, 8px);
   color: #7a8595;
-  font-size: 12px;
+  font-size: clamp(10px, 0.75vw, 12px);
   line-height: 1.7;
 }
 
@@ -792,12 +786,12 @@
 }
 
 .login-form-wrapper .ant-form-item {
-  margin-bottom: 18px;
+  margin-bottom: clamp(10px, 1.1vw, 18px);
 }
 
 .login-form-wrapper .ant-form-item-label > label {
   color: #4e687a !important;
-  font-size: 13px;
+  font-size: clamp(11px, 0.8vw, 13px);
   font-weight: 600;
 }
 
@@ -822,7 +816,7 @@
 
 .modern-login-page .login-form-wrapper .ant-input-affix-wrapper,
 .modern-login-page .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper {
-  height: 42px !important;
+  height: clamp(36px, 2.6vw, 42px) !important;
   padding: 0 12px !important;
   align-items: center !important;
 }
@@ -847,14 +841,14 @@
 .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper input {
   color: #22384a !important;
   background: transparent !important;
-  font-size: 13px !important;
+  font-size: clamp(11px, 0.8vw, 13px) !important;
 }
 
 .modern-login-page .login-form-wrapper .ant-input-affix-wrapper > input.ant-input,
 .modern-login-page .login-form-wrapper .ant-input-password input,
 .modern-login-page .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper input {
-  height: 40px !important;
-  line-height: 40px !important;
+  height: clamp(34px, 2.5vw, 40px) !important;
+  line-height: clamp(34px, 2.5vw, 40px) !important;
   padding: 0 !important;
 }
 
@@ -873,7 +867,7 @@
 
 .site-form-item-icon {
   color: #9ba6b5 !important;
-  font-size: 14px;
+  font-size: clamp(11px, 0.9vw, 14px);
 }
 
 .modern-login-page .login-form-wrapper .ant-input-prefix,
@@ -889,24 +883,24 @@
 
 .login-button {
   width: 100%;
-  height: 42px;
-  margin-top: 8px;
+  height: clamp(36px, 2.6vw, 42px);
+  margin-top: clamp(4px, 0.5vw, 8px);
   border-radius: 6px;
   font-weight: 600;
-  font-size: 13px !important;
+  font-size: clamp(11px, 0.8vw, 13px) !important;
   letter-spacing: 0.4px;
 }
 
 .login-code-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 124px;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) clamp(90px, 7.8vw, 124px);
+  gap: clamp(6px, 0.6vw, 10px);
   align-items: center;
 }
 
 .login-code-button {
-  width: 124px;
-  height: 42px;
+  width: clamp(90px, 7.8vw, 124px);
+  height: clamp(36px, 2.6vw, 42px);
   border-radius: 8px;
   color: #1f5fcb !important;
   border-color: rgba(31, 117, 234, 0.22) !important;
@@ -936,7 +930,7 @@
   padding: 0;
   color: #6f84bf !important;
   font-weight: 500;
-  font-size: 12px;
+  font-size: clamp(10px, 0.75vw, 12px);
 }
 
 .login-register-button:hover {
@@ -944,14 +938,14 @@
 }
 
 .login-footer {
-  margin-top: 16px;
+  margin-top: clamp(8px, 1vw, 16px);
   text-align: center;
   color: #90a5b5;
-  font-size: 11px;
+  font-size: clamp(9px, 0.7vw, 11px);
 }
 
 .login-filing {
-  margin-top: 12px;
+  margin-top: clamp(6px, 0.8vw, 12px);
 }
 
 .login-filing-row {
@@ -959,7 +953,7 @@
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: clamp(8px, 1vw, 16px);
 }
 
 .login-filing-item {
@@ -968,9 +962,9 @@
 }
 
 .login-filing-icon {
-  width: 14px;
-  height: 14px;
-  margin-right: 6px;
+  width: clamp(10px, 0.9vw, 14px);
+  height: clamp(10px, 0.9vw, 14px);
+  margin-right: clamp(3px, 0.4vw, 6px);
   opacity: 0.6;
 }
 
@@ -1089,20 +1083,16 @@
 
 @media (max-width: 1520px) {
   .login-left-pane {
-    padding-left: 56px;
-    padding-right: 42px;
+    padding-left: clamp(24px, 3.5vw, 56px);
+    padding-right: clamp(20px, 2.6vw, 42px);
   }
 
   .login-showcase-shell {
-    grid-template-columns: minmax(0, 1fr) 300px;
-  }
-
-  .login-showcase-title {
-    font-size: 30px !important;
+    grid-template-columns: 1fr clamp(170px, 19vw, 300px);
   }
 
   .login-right-pane {
-    flex-basis: clamp(720px, 54vw, 960px);
+    flex-basis: clamp(320px, 38vw, 960px);
   }
 }
 
@@ -1113,23 +1103,22 @@
 
   .login-left-pane {
     min-height: 58vh;
-    padding: 48px 36px 56px;
+    padding: clamp(24px, 3vh, 48px) clamp(20px, 2.3vw, 36px) clamp(28px, 3.5vh, 56px);
   }
 
   .login-right-pane {
     flex: none;
     width: 100%;
-    padding: 0 24px 32px;
+    padding: 0 clamp(16px, 1.5vw, 24px) clamp(16px, 2vh, 32px);
     background: transparent;
   }
 
   .login-showcase-shell {
-    grid-template-columns: 540px 320px;
-    gap: 24px;
+    grid-template-columns: 1fr clamp(170px, 20vw, 320px);
+    gap: clamp(12px, 1.5vw, 24px);
   }
 
   .login-showcase {
-    width: 884px;
     max-width: 884px;
   }
 
@@ -1146,22 +1135,22 @@
   }
 
   .login-form-wrapper {
-    max-width: 620px;
+    max-width: clamp(300px, 50vw, 620px);
   }
 }
 
 @media (max-width: 960px) {
   .login-left-pane {
-    padding: 38px 22px 24px;
+    padding: clamp(20px, 2.4vh, 38px) clamp(14px, 1.4vw, 22px) clamp(16px, 1.5vh, 24px);
     min-height: auto;
   }
 
   .login-showcase-title {
-    font-size: 30px !important;
+    font-size: clamp(18px, 2vw, 30px) !important;
   }
 
   .login-showcase-desc {
-    font-size: 15px;
+    font-size: clamp(11px, 1vw, 15px);
     line-height: 1.8;
   }
 
@@ -1187,7 +1176,7 @@
   }
 
   .login-right-pane {
-    padding: 0 16px 24px;
+    padding: 0 clamp(12px, 1vw, 16px) clamp(16px, 1.5vh, 24px);
   }
 }
 
@@ -1207,11 +1196,11 @@
   }
 
   .login-form-card {
-    padding: 28px 22px 24px;
-    border-radius: 24px;
+    padding: clamp(18px, 1.7vw, 28px) clamp(14px, 1.4vw, 22px) clamp(16px, 1.5vw, 24px);
+    border-radius: clamp(16px, 1.5vw, 24px);
   }
 
   .login-title {
-    font-size: 26px !important;
+    font-size: clamp(18px, 1.6vw, 26px) !important;
   }
 }

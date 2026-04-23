@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.FactoryLeaderboardResponse;
 import com.fashion.supplychain.intelligence.dto.FactoryLeaderboardResponse.FactoryRank;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -47,8 +48,9 @@ public class FactoryLeaderboardOrchestrator {
         FactoryLeaderboardResponse resp = new FactoryLeaderboardResponse();
         try {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
 
-        List<Factory> factories = loadFactories(tenantId);
+        List<Factory> factories = loadFactories(tenantId, factoryId);
         if (factories.isEmpty()) {
             resp.setTotalFactories(0);
             resp.setRankings(Collections.emptyList());
@@ -56,8 +58,8 @@ public class FactoryLeaderboardOrchestrator {
         }
 
         LocalDateTime thirtyDaysAgo = LocalDate.now().minusDays(30).atStartOfDay();
-        List<ProductionOrder> orders = loadOrders(tenantId);
-        List<ScanRecord> scans = loadScans(tenantId, thirtyDaysAgo);
+        List<ProductionOrder> orders = loadOrders(tenantId, factoryId);
+        List<ScanRecord> scans = loadScans(tenantId, factoryId, thirtyDaysAgo);
 
         Map<String, List<ProductionOrder>> orderByFactory = orders.stream()
                 .filter(o -> o.getFactoryName() != null)
@@ -149,23 +151,36 @@ public class FactoryLeaderboardOrchestrator {
         return r;
     }
 
-    private List<Factory> loadFactories(Long tenantId) {
+    private List<Factory> loadFactories(Long tenantId, String factoryId) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<Factory> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId);
+        qw.eq("tenant_id", tenantId);
+        if (factoryId != null && !factoryId.isBlank()) {
+            qw.eq("id", factoryId);
+        }
         return factoryService.list(qw);
     }
 
-    private List<ProductionOrder> loadOrders(Long tenantId) {
+    private List<ProductionOrder> loadOrders(Long tenantId, String factoryId) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0);
+        if (factoryId != null && !factoryId.isBlank()) {
+            qw.eq("factory_id", factoryId);
+        }
         return productionOrderService.list(qw);
     }
 
-    private List<ScanRecord> loadScans(Long tenantId, LocalDateTime since) {
+    private List<ScanRecord> loadScans(Long tenantId, String factoryId, LocalDateTime since) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
+          .ne("scan_type", "orchestration")
           .ge("scan_time", since);
+        if (factoryId != null && !factoryId.isBlank()) {
+            qw.eq("factory_id", factoryId);
+        }
         return scanRecordService.list(qw);
     }
 }

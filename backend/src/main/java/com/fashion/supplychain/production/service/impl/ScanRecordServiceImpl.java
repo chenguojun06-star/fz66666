@@ -220,6 +220,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 Page<ScanRecord> pageInfo = new Page<>(page, pageSize);
                 LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
                                 .eq(ScanRecord::getOrderId, orderId)
+                                .ne(ScanRecord::getScanType, "orchestration")
                                 .orderByDesc(ScanRecord::getScanTime);
                 // 不在此处按 factory_id 过滤：小程序/历史扫码记录的 factory_id 字段可能为 null，
                 // 按 factory_id 过滤会导致外发工厂账号进度球查询返回 0 条。
@@ -234,6 +235,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 Page<ScanRecord> pageInfo = new Page<>(page, pageSize);
                 LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
                                 .eq(ScanRecord::getStyleNo, styleNo)
+                                .ne(ScanRecord::getScanType, "orchestration")
                                 .orderByDesc(ScanRecord::getScanTime);
                 // 同 queryByOrderId：不按 factory_id 过滤，历史记录该字段可能为 null。
                 applyDataPermissionFilter(wrapper);

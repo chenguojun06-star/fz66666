@@ -15,9 +15,7 @@ import type {
   ActionTaskFeedbackRequest,
   AgentMeetingRecord,
   AnomalyDetectionResponse,
-  ApprovalAdvisorResponse,
   BottleneckDetectionResponse,
-  CapacityGapResponse,
   ChatHistoryMessage,
   DefectHeatmapResponse,
   DefectTraceResponse,
@@ -43,14 +41,11 @@ import type {
   ProcessPriceHintResponse,
   ProcessTemplateResponse,
   ProfitEstimationResponse,
-  ReconciliationAnomalyResponse,
-  ReplenishmentAdvisorResponse,
   RhythmDnaResponse,
   SchedulingSuggestionResponse,
   SelfHealingResponse,
   SmartAssignmentResponse,
   SmartNotificationResponse,
-  StagnantAlertResponse,
   StyleIntelligenceProfileResponse,
   StyleQuoteSuggestionResponse,
   SupplierScorecardResponse,
@@ -478,19 +473,6 @@ export const intelligenceApi = {
       params: { styleNo },
     }),
 
-  /** 物流运费比价（批量查询所有可用物流公司运费） */
-  compareLogisticsFees: (params: {
-    orderId?: string;
-    sender?: { name?: string; mobile?: string; province?: string; city?: string; district?: string; address?: string };
-    recipient?: { name?: string; mobile?: string; province?: string; city?: string; district?: string; address?: string };
-    cargo?: { name?: string; quantity?: number; weight?: number; volume?: number; type?: string };
-  }) =>
-    api.post<{ code: number; data: import('./intelligenceTypes').LogisticsCompareFeesResponse }>('/integration/logistics/compare-fees', params),
-
-  /** 获取所有可用物流公司 */
-  getAvailableLogisticsCompanies: () =>
-    api.get<{ code: number; data: string[] }>('/integration/logistics/available-companies'),
-
   // ── 专业报告下载 ──
 
   /** 下载专业运营报告（Excel） */
@@ -504,28 +486,6 @@ export const intelligenceApi = {
     downloadFile(`/api/intelligence/professional-report/download?${params.toString()}`);
     await new Promise(r => setTimeout(r, 500));
   },
-
-  // ── 第八批：B阶段新增智能驾驶舱能力 ──
-
-  /** B2 - 产能缺口分析 */
-  getCapacityGap: () =>
-    api.get<{ code: number; data: CapacityGapResponse }>('/intelligence/capacity-gap'),
-
-  /** B3 - 停滞订单预警 */
-  getStagnantAlert: () =>
-    api.get<{ code: number; data: StagnantAlertResponse }>('/intelligence/stagnant-alert'),
-
-  /** B5 - 对账异常优先级 */
-  getReconciliationAnomalyPriority: () =>
-    api.get<{ code: number; data: ReconciliationAnomalyResponse }>('/intelligence/reconciliation/anomaly-priority'),
-
-  /** B6 - 审批 AI 建议 */
-  getApprovalAiAdvice: () =>
-    api.get<{ code: number; data: ApprovalAdvisorResponse }>('/intelligence/approval/ai-advice'),
-
-  /** B8 - 补料采购建议 */
-  getReplenishmentSuggestion: () =>
-    api.get<{ code: number; data: ReplenishmentAdvisorResponse }>('/intelligence/replenishment/suggest'),
 
   // ── 文件上传分析 ──
 
@@ -643,25 +603,17 @@ export const intelligenceApi = {
   deleteOrphanData: (tableName: string, ids: string[]) =>
     api.post<{ code: number; data: number }>('/intelligence/orphan-data/delete', { tableName, ids }),
 
-  // ── 平台超管 AI 数据面板（仅 ROLE_SUPER_ADMIN 可访问） ──
-  /** 综合面板：工具表现 + 采纳率 + MTTR */
   platformSuperDashboard: (days = 30): Promise<Record<string, unknown>> =>
     api.get('/intelligence/platform/super-dashboard', { params: { days } }).then((r: any) => r?.data ?? {}),
 
-  /** 工具表现明细列表 */
   platformToolPerformance: (days = 30): Promise<Record<string, unknown>[]> =>
     api.get('/intelligence/platform/tool-performance', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
 
-  /** 决策采纳率明细 */
   platformDecisionAdoption: (days = 30): Promise<Record<string, unknown>[]> =>
     api.get('/intelligence/platform/decision-adoption', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
 
-  /** 巡检 MTTR 明细 */
   platformPatrolMttr: (days = 30): Promise<Record<string, unknown>[]> =>
     api.get('/intelligence/platform/patrol-mttr', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
 
-  /** 近期聚合指标列表 */
-  platformAggregateRecent: (metricKey?: string, limit = 100): Promise<Record<string, unknown>[]> =>
-    api.get('/intelligence/platform/aggregate-recent', { params: { metricKey, limit } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
 };
 

@@ -31,7 +31,7 @@ import java.util.Map;
 public class UnitPriceResolver {
 
     private static final String[] FIXED_PRODUCTION_NODES = {
-            "采购", "裁剪", "车缝", "大烫", "质检", "二次工艺", "包装", "入库"
+            "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"
     };
 
     @Autowired

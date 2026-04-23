@@ -6,7 +6,7 @@
  *  - 未开始 → 按工序顺序前2条，带预测开始日期
  *  - 全无扫码 → 按工序顺序前2条，带预测日期
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
 
 import { SMART_CARD_CONTENT_WIDTH } from '@/components/common/DecisionInsightCard';
@@ -16,8 +16,6 @@ import { isDirectCuttingOrder, isOrderTerminal } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { LiveCostResponse } from '@/services/intelligence/intelligenceTypes';
 
 interface Props { order: ProductionOrder; }
 
@@ -298,16 +296,6 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     return analyzeProgress(order, snapshots, boardTimes, speed);
   }, [order, stages, boardTimes, speed, isCompleted]);
 
-  const [liveCost, setLiveCost] = useState<LiveCostResponse | null>(null);
-  const [liveCostLoaded, setLiveCostLoaded] = useState(false);
-  const loadLiveCost = () => {
-    if (liveCostLoaded || !order.id) return;
-    setLiveCostLoaded(true);
-    intelligenceApi.getLiveCostTracker(String(order.id))
-      .then((res: any) => setLiveCost(res?.data ?? res))
-      .catch(() => {});
-  };
-
   /* ─────── RENDER ─────── */
   // 已完成/已关单不显示悬浮卡
   if (isCompleted) return null;
@@ -401,6 +389,40 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         }}>
           <span></span>
           <span>次品 {order.unqualifiedQuantity} 件，请核查质检记录</span>
+        </div>
+      )}
+
+      {/* 交付SLA + SPC质检统计 */}
+      {(order.deliverySlaStatus || (order as any).cpk) && (
+        <div style={{
+          padding: '4px 10px', background: '#f0f5ff', borderRadius: 6,
+          marginBottom: 8, fontSize: 11, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
+        }}>
+          {order.deliverySlaStatus && (
+            <span style={{
+              padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600,
+              background: order.deliverySlaStatus === 'completed' ? '#f6ffed' :
+                         order.deliverySlaStatus === 'on_track' ? '#e6f4ff' :
+                         order.deliverySlaStatus === 'at_risk' ? '#fff7e6' : '#fff2f0',
+              color: order.deliverySlaStatus === 'completed' ? '#389e0d' :
+                     order.deliverySlaStatus === 'on_track' ? '#1677ff' :
+                     order.deliverySlaStatus === 'at_risk' ? '#fa8c16' : '#ff4d4f',
+            }}>
+              SLA: {order.deliverySlaStatus === 'completed' ? '达标' :
+                    order.deliverySlaStatus === 'on_track' ? '正常' :
+                    order.deliverySlaStatus === 'at_risk' ? '预警' : '超期'}
+              {order.actualDeliveryDays != null && ` ${order.actualDeliveryDays}天`}
+            </span>
+          )}
+          {(order as any).cpk != null && (
+            <span style={{
+              padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600,
+              background: (order as any).cpk >= 1.33 ? '#f6ffed' : (order as any).cpk >= 1.0 ? '#fff7e6' : '#fff2f0',
+              color: (order as any).cpk >= 1.33 ? '#389e0d' : (order as any).cpk >= 1.0 ? '#fa8c16' : '#ff4d4f',
+            }}>
+              Cpk {(order as any).cpk}{(order as any).ppk != null && ` / Ppk ${(order as any).ppk}`}
+            </span>
+          )}
         </div>
       )}
 
@@ -553,43 +575,6 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
 
       {/*  智能进度分析 */}
       {progressInsight && renderProgressInsight(progressInsight)}
-
-      {/* 成本追踪（懒加载，点击展开） */}
-      {!isCompleted && order.id && (
-        <div
-          style={{ marginTop: 6, fontSize: 11 }}
-          onClick={loadLiveCost}
-          onMouseEnter={loadLiveCost}
-        >
-          {liveCost ? (
-            <div style={{
-              padding: '4px 8px', background: '#f6ffed', borderRadius: 5,
-              border: '1px solid #b7eb8f',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ color: '#389e0d', fontWeight: 600 }}>成本追踪</span>
-                <span style={{
-                  fontSize: 10, padding: '0 5px', borderRadius: 8,
-                  background: liveCost.costStatus === 'OVER_BUDGET' ? '#fff2f0' : liveCost.costStatus === 'UNDER_BUDGET' ? '#f6ffed' : '#e6f4ff',
-                  color: liveCost.costStatus === 'OVER_BUDGET' ? '#ff4d4f' : liveCost.costStatus === 'UNDER_BUDGET' ? '#389e0d' : '#1677ff',
-                  fontWeight: 600,
-                }}>
-                  {liveCost.costStatus === 'OVER_BUDGET' ? '超预算' : liveCost.costStatus === 'UNDER_BUDGET' ? '节余' : '正常'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 8, color: '#555' }}>
-                <span>人工 ¥{liveCost.actualLaborCost?.toFixed(0) ?? 0}</span>
-                <span>利润率 {liveCost.profitMargin?.toFixed(1) ?? 0}%</span>
-              </div>
-              {liveCost.suggestion && (
-                <div style={{ color: '#8c8c8c', marginTop: 2, fontSize: 10 }}>{liveCost.suggestion}</div>
-              )}
-            </div>
-          ) : !liveCostLoaded ? (
-            <span style={{ color: '#bbb', cursor: 'pointer' }}>查看成本追踪…</span>
-          ) : null}
-        </div>
-      )}
 
       {/* 跟单 + 备注 */}
       {(order.merchandiser || (order as any).operationRemark) && (

@@ -142,22 +142,39 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
     }
   }, [shipForm, message, fetchShipments, shipDetails]);
 
-  // 收货
-  const handleReceive = useCallback(async (record: FactoryShipment) => {
-    modal.confirm({
-      title: '确认收货',
-      content: `确认收货发货单 ${record.shipmentNo}？数量：${record.shipQuantity} 件`,
-      onOk: async () => {
-        try {
-          await factoryShipmentApi.receive(record.id!);
-          message.success('收货成功');
-          fetchShipments();
-        } catch (err: unknown) {
-          message.error(err instanceof Error ? err.message : '收货失败');
-        }
-      },
-    });
-  }, [modal, message, fetchShipments]);
+  const [receiveModalOpen, setReceiveModalOpen] = useState(false);
+  const [receiveRecord, setReceiveRecord] = useState<FactoryShipment | null>(null);
+  const [receiveQty, setReceiveQty] = useState<number>(0);
+  const [receiveLoading, setReceiveLoading] = useState(false);
+
+  const handleReceiveClick = useCallback((record: FactoryShipment) => {
+    setReceiveRecord(record);
+    setReceiveQty(record.shipQuantity);
+    setReceiveModalOpen(true);
+  }, []);
+
+  const handleReceiveConfirm = useCallback(async () => {
+    if (!receiveRecord) return;
+    if (receiveQty <= 0) {
+      message.warning('实际到货数量必须大于0');
+      return;
+    }
+    if (receiveQty > receiveRecord.shipQuantity) {
+      message.warning('实际到货数量不能超过发货数量');
+      return;
+    }
+    setReceiveLoading(true);
+    try {
+      await factoryShipmentApi.receive(receiveRecord.id!, receiveQty === receiveRecord.shipQuantity ? undefined : receiveQty);
+      message.success('收货成功');
+      setReceiveModalOpen(false);
+      fetchShipments();
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : '收货失败');
+    } finally {
+      setReceiveLoading(false);
+    }
+  }, [receiveRecord, receiveQty, message, fetchShipments]);
 
   // 删除
   const handleDelete = useCallback(async (record: FactoryShipment) => {
@@ -201,6 +218,17 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       key: 'shipQuantity',
       width: 100,
       align: 'right',
+    },
+    {
+      title: '实际到货',
+      dataIndex: 'receivedQuantity',
+      key: 'receivedQuantity',
+      width: 100,
+      align: 'right',
+      render: (val: number | undefined, record: FactoryShipment) => {
+        if (record.receiveStatus !== 'received') return '-';
+        return val != null ? val : record.shipQuantity;
+      },
     },
     {
       title: '发货时间',
@@ -252,7 +280,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
             key: 'receive',
             label: '收货',
             primary: true,
-            onClick: () => handleReceive(record),
+            onClick: () => handleReceiveClick(record),
           }] : []),
           ...(isPending ? [{
             key: 'delete',
@@ -441,6 +469,42 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
             <Input.TextArea rows={2} placeholder="备注（选填）" />
           </Form.Item>
         </Form>
+      </ResizableModal>
+
+      {/* 收货确认弹窗 */}
+      <ResizableModal
+        title="确认收货"
+        open={receiveModalOpen}
+        onCancel={() => setReceiveModalOpen(false)}
+        onOk={handleReceiveConfirm}
+        confirmLoading={receiveLoading}
+        width={420}
+      >
+        {receiveRecord && (
+          <div style={{ padding: '8px 0' }}>
+            <Descriptions size="small" column={1} bordered>
+              <Descriptions.Item label="发货单号">{receiveRecord.shipmentNo}</Descriptions.Item>
+              <Descriptions.Item label="订单号">{receiveRecord.orderNo}</Descriptions.Item>
+              <Descriptions.Item label="款号">{receiveRecord.styleNo}</Descriptions.Item>
+              <Descriptions.Item label="工厂">{receiveRecord.factoryName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="发货数量">{receiveRecord.shipQuantity} 件</Descriptions.Item>
+            </Descriptions>
+            <div style={{ marginTop: 16 }}>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>实际到货数量（点货数量）</div>
+              <InputNumber
+                value={receiveQty}
+                min={1}
+                max={receiveRecord.shipQuantity}
+                onChange={val => setReceiveQty(Number(val) || 0)}
+                style={{ width: '100%' }}
+                addonAfter="件"
+              />
+              <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>
+                默认等于发货数量，如实际到货数量不同请修改
+              </div>
+            </div>
+          </div>
+        )}
       </ResizableModal>
     </div>
   );

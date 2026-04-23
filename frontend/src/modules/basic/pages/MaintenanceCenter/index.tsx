@@ -14,7 +14,7 @@ import StyleProcessKnowledgeTab from '../TemplateCenter/components/StyleProcessK
 import api from '@/utils/api';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
-import { readPageSize } from '@/utils/pageSizeStore';
+import { readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import type { StyleInfo, TemplateLibrary } from '@/types/style';
 import './index.css';
 
@@ -45,7 +45,7 @@ const MaintenanceCenter: React.FC = () => {
   const [priceMap, setPriceMap] = useState<Record<string, TemplateLibrary[]>>({});
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSizeRef = useRef(readPageSize(10));
+  const pageSizeRef = useRef(readPageSize(20));
   const [pageSize, setPageSize] = useState(pageSizeRef.current);
   const [total, setTotal] = useState(0);
 
@@ -308,7 +308,7 @@ const MaintenanceCenter: React.FC = () => {
                   {total > 0 && (
                     <div className="maintenance-center__pagination">
                       <StandardPagination current={page} pageSize={pageSize} total={total}
-                        onChange={(p: number, ps: number) => { pageSizeRef.current = ps; setPageSize(ps); fetchStyles(p); }} />
+                        onChange={(p: number, ps: number) => { pageSizeRef.current = ps; setPageSize(ps); savePageSize(ps); fetchStyles(p); }} />
                     </div>
                   )}
                 </>

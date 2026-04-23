@@ -46,6 +46,7 @@ import {
   getOrderShipTime,
   resolveNodesForListOrder,
   getProcessesByNodeFromOrder,
+  getOrderStageCompletionTimeFallback,
   defaultNodes,
 } from '../utils';
 
@@ -553,7 +554,11 @@ export const useProgressColumns = ({
                    || (record as any).procurementEndTime
                    || nodeTimeMap?.[nodeName]
                    || '')
-                : (nodeTimeMap?.[nodeName] || '');
+                 : (nodeTimeMap?.[nodeName]
+                   || (percent >= 100
+                    ? getOrderStageCompletionTimeFallback(record, nodeName, String(node.progressStage || '').trim())
+                    : '')
+                  );
               const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
               const segmentProgress = Math.min(1, percent / 100);
               const nodePrimaryColor = isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate);

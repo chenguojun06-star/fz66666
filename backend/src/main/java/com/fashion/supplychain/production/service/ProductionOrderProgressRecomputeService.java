@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -44,6 +45,9 @@ public class ProductionOrderProgressRecomputeService {
 
     @Autowired
     private ProcessParentMappingService processParentMappingService;
+
+    @Autowired
+    private ProductWarehousingService productWarehousingService;
 
     @Async
     public void recomputeProgressAsync(String orderId) {
@@ -471,6 +475,22 @@ public class ProductionOrderProgressRecomputeService {
         }
 
         int lastDoneQty = packagingDone;
+        if (lastDoneQty <= 0) {
+            int currentCompletedQty = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity();
+            if (currentCompletedQty > 0) {
+                lastDoneQty = currentCompletedQty;
+            }
+        }
+        if (lastDoneQty <= 0) {
+            try {
+                int warehousingQualified = productWarehousingService.sumQualifiedByOrderId(oid);
+                if (warehousingQualified > 0) {
+                    lastDoneQty = warehousingQualified;
+                }
+            } catch (Exception e) {
+                log.warn("[ProgressRecompute] 获取入库合格数量失败: orderId={}", oid, e);
+            }
+        }
         if (lastDoneQty < 0) {
             lastDoneQty = 0;
         }

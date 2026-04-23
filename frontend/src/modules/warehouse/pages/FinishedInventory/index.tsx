@@ -40,6 +40,8 @@ const _FinishedInventory: React.FC = () => {
 
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
+  const [inboundPage, setInboundPage] = useState(1);
+  const [inboundPageSize, setInboundPageSize] = useState(20);
   const [outstockTotal, setOutstockTotal] = useState(0);
   // 出库发货信息（用于关联电商订单自动回写状态）
   const [outboundProductionOrderNo, setOutboundProductionOrderNo] = useState('');
@@ -154,6 +156,19 @@ const _FinishedInventory: React.FC = () => {
   }, [rawDataSource, searchText, selectedFactoryType, statusValue]);
 
   const totalRecords = dataSource.length;
+
+  // 过滤条件变化时重置到第1页，防止当前页超出范围后表格空白
+  useEffect(() => {
+    pagination.gotoPage(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText, statusValue, selectedFactoryType]);
+
+  // 根据当前页/每页条数对 dataSource 做切片，真正实现分页显示
+  const { current: paginationCurrent, pageSize: paginationPageSize } = pagination.pagination;
+  const pagedDataSource = useMemo(() => {
+    const start = (paginationCurrent - 1) * paginationPageSize;
+    return dataSource.slice(start, start + paginationPageSize);
+  }, [dataSource, paginationCurrent, paginationPageSize]);
 
   // 打开出库模态框，从数据中筛选该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
@@ -276,7 +291,7 @@ const _FinishedInventory: React.FC = () => {
       if (record.styleNo) params.append('styleNo', record.styleNo);
       // 不过滤 orderNo：一款多个订单的入库记录全部展示
       params.append('page', '1');
-      params.append('size', '500'); // 多取原始行，分组后数量会大幅减少
+      params.append('pageSize', '500'); // 多取原始行，分组后数量会大幅减少（注意：参数名是 pageSize 非 size）
       const res = await api.get(`/production/warehousing/list?${params.toString()}`);
       if (res.code === 200 && res.data?.records?.length > 0) {
         const fallbackOperator = record.lastInboundBy || '-';
@@ -289,6 +304,9 @@ const _FinishedInventory: React.FC = () => {
           orderNo: string;
           inboundDate: string;
           qualityInspectionNo: string;
+          cuttingBundleNo: string;
+          color: string;
+          size: string;
           quantity: number;
           operator: string;
           warehouseLocation: string;
@@ -299,6 +317,9 @@ const _FinishedInventory: React.FC = () => {
           orderNo: String(item.orderNo || '-'),
           inboundDate: String(item.warehousingEndTime || item.createTime || '-'),
           qualityInspectionNo: String(item.warehousingNo || '-'),
+          cuttingBundleNo: String(item.cuttingBundleNo || '-'),
+          color: String(item.color || '-'),
+          size: String(item.size || '-'),
           quantity: Number((item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0),
           operator: String(item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator),
           warehouseLocation: String(item.warehouse || item.warehouseLocation || fallbackWarehouse),
@@ -450,7 +471,7 @@ const _FinishedInventory: React.FC = () => {
           <ResizableTable
             storageKey="finished-inventory-main"
             columns={columns}
-            dataSource={dataSource}
+            dataSource={pagedDataSource}
             loading={loading}
             rowKey="id"
             stickyHeader
@@ -665,7 +686,7 @@ const _FinishedInventory: React.FC = () => {
             </Space>
           }
           open={inboundHistoryModal.visible}
-          onCancel={inboundHistoryModal.close}
+          onCancel={() => { inboundHistoryModal.close(); setInboundPage(1); }}
           width="60vw"
           initialHeight={Math.round(window.innerHeight * 0.82)}
           footer={[
@@ -710,13 +731,13 @@ const _FinishedInventory: React.FC = () => {
                   {
                     title: '款号',
                     dataIndex: 'styleNo',
-                    width: 120,
+                    width: 100,
                     render: (text: string) => <strong style={{ fontFamily: 'monospace' }}>{text}</strong>,
                   },
                   {
                     title: '订单号',
                     dataIndex: 'orderNo',
-                    width: 140,
+                    width: 130,
                     render: (text) => <span style={{ color: 'var(--primary-color)', fontFamily: 'monospace' }}>{text}</span>,
                   },
                   {
@@ -726,27 +747,53 @@ const _FinishedInventory: React.FC = () => {
                     render: (text) => <span style={{ color: 'var(--primary-color)' }}>{text}</span>,
                   },
                   {
+                    title: '菲号',
+                    dataIndex: 'cuttingBundleNo',
+                    width: 100,
+                    render: (text) => <span style={{ fontFamily: 'monospace' }}>{text || '-'}</span>,
+                  },
+                  {
+                    title: '颜色',
+                    dataIndex: 'color',
+                    width: 80,
+                  },
+                  {
+                    title: '尺码',
+                    dataIndex: 'size',
+                    width: 70,
+                  },
+                  {
                     title: '入库数量',
                     dataIndex: 'quantity',
-                    width: 100,
+                    width: 90,
                     align: 'center',
                     render: (text) => <strong style={{ color: 'var(--color-success)' }}>{text} 件</strong>,
                   },
                   {
                     title: '库位',
                     dataIndex: 'warehouseLocation',
-                    width: 100,
+                    width: 80,
                   },
                   {
                     title: '操作人',
                     dataIndex: 'operator',
-                    width: 100,
+                    width: 80,
                   },
 
                 ]}
                 dataSource={inboundHistory}
                 rowKey="id"
-                pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['20', '50', '100'], showTotal: (total) => `共 ${total} 条` }}
+                pagination={{
+                  current: inboundPage,
+                  pageSize: inboundPageSize,
+                  showSizeChanger: true,
+                  pageSizeOptions: ['20', '50', '100'],
+                  showTotal: (total) => `共 ${total} 条`,
+                  onChange: (page, size) => {
+                    setInboundPage(page);
+                    setInboundPageSize(size);
+                  },
+                }}
                 size="small"
                 bordered
               />

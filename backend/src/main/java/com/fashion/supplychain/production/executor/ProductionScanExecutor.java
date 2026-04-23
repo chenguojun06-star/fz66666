@@ -172,6 +172,8 @@ public class ProductionScanExecutor {
         }
 
         // ★ ORDER 模式守卫：无菲号时只允许采购/裁剪阶段，防止 ORDER 码绕过前端进入生产工序
+        // 注意：此处 progressStage 保证非空（上方 hasText 校验），不要在此处之前加 normalizeFixedProductionNodeName
+        // 因为该方法对子工序名返回 null 会覆盖原始值导致后续 NPE
         if (bundle == null) {
             boolean isProcurementOrCutting = "采购".equals(progressStage) || "裁剪".equals(progressStage)
                     || ProcessSynonymMapping.isEquivalent("采购", progressStage)
@@ -184,7 +186,7 @@ public class ProductionScanExecutor {
 
         // ★ 子工序→父进度节点映射（关键：确保子工序数据聚合到正确的父节点）
         // 例如："上领"→"车缝", "上袖"→"车缝", "绣花"→"二次工艺"
-        String childProcessName = progressStage; // 保留原始子工序名
+        String childProcessName = progressStage; // 保留原始子工序名（保证非空）
         String parentStage = resolveParentProgressStage(order.getStyleNo(), childProcessName);
         if (parentStage != null) {
             log.info("子工序 '{}' 映射到父进度节点 '{}' (styleNo={})", childProcessName, parentStage, order.getStyleNo());
@@ -213,7 +215,7 @@ public class ProductionScanExecutor {
 
         // 判断是否裁剪
         boolean isCutting = "cutting".equalsIgnoreCase(scanType) ||
-                            "裁剪".equals(progressStage.trim());
+                            "裁剪".equals(progressStage != null ? progressStage.trim() : null);
 
         // 裁剪前检查版型文件
         if (isCutting) {
@@ -222,7 +224,7 @@ public class ProductionScanExecutor {
 
         // 解析单价（优先用子工序名精确匹配，匹配不上再用父节点名模糊匹配）
         BigDecimal unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), childProcessName);
-        if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !childProcessName.equals(progressStage)) {
+        if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !java.util.Objects.equals(childProcessName, progressStage)) {
             unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), progressStage);
         }
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
@@ -290,8 +292,7 @@ public class ProductionScanExecutor {
                 TextUtils.safeText(params.get("remark")), isCutting);
 
         if (updateResult != null) {
-            // 附加面料清单（采购阶段）
-            if ("采购".equals(progressStage.trim())) {
+            if ("采购".equals(progressStage)) {
                 attachMaterialPurchaseList(updateResult, order);
             }
             // 附加裁剪菲号信息
@@ -420,7 +421,7 @@ public class ProductionScanExecutor {
                     quantity, unitPrice, operatorId, operatorName, color, size,
                     TextUtils.safeText(params.get("remark")), isCutting);
             if (updateResult != null) {
-                if ("采购".equals(progressStage.trim())) {
+                if ("采购".equals(progressStage)) {
                     attachMaterialPurchaseList(updateResult, order);
                 }
                 if (isCutting) {
@@ -468,8 +469,7 @@ public class ProductionScanExecutor {
             result.put("unitPriceHint", "该工序未设置单价，扫码后工资为0，请联系管理员设置单价");
         }
 
-        // 附加面料清单（采购阶段）
-        if ("采购".equals(progressStage.trim())) {
+        if ("采购".equals(progressStage)) {
             attachMaterialPurchaseList(result, order);
         }
 

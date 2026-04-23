@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.RhythmDnaResponse;
 import com.fashion.supplychain.intelligence.dto.RhythmDnaResponse.OrderRhythm;
 import com.fashion.supplychain.intelligence.dto.RhythmDnaResponse.RhythmSegment;
@@ -46,12 +47,12 @@ public class RhythmDnaOrchestrator {
         RhythmDnaResponse resp = new RhythmDnaResponse();
         resp.setOrders(Collections.emptyList());
         try {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
 
-        // 取最近的已完成/进行中订单（最多20个）
         var qw = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.ProductionOrder>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .eq("delete_flag", 0)
           .in("status", "completed", "production", "delayed")

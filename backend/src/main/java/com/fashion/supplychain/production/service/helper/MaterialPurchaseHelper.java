@@ -202,6 +202,12 @@ public class MaterialPurchaseHelper {
 
     public static String resolveStatusByArrived(String previousStatus, int arrivedQty, int purchaseQty) {
         String prev = previousStatus == null ? "" : previousStatus.trim();
+        if (MaterialConstants.STATUS_COMPLETED.equals(prev)) {
+            return MaterialConstants.STATUS_COMPLETED;
+        }
+        if (MaterialConstants.STATUS_CANCELLED.equals(prev)) {
+            return MaterialConstants.STATUS_CANCELLED;
+        }
         if (arrivedQty <= 0) {
             return MaterialConstants.STATUS_RECEIVED.equals(prev) ? MaterialConstants.STATUS_RECEIVED
                     : MaterialConstants.STATUS_PENDING;

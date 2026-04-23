@@ -188,7 +188,7 @@ public class IntelligenceExecutionController {
 
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
             qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL")
-              .eq(tenantId != null, "tenant_id", tenantId);
+              .eq("tenant_id", tenantId);
             IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
             if (pendingLog == null) {
                 return Result.fail("待审批命令不存在或已处理: " + commandId);
@@ -246,7 +246,7 @@ public class IntelligenceExecutionController {
 
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
             qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL")
-              .eq(tenantId != null, "tenant_id", tenantId);
+              .eq("tenant_id", tenantId);
             IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
             if (pendingLog == null) {
                 return Result.fail("待审批命令不存在或已处理: " + commandId);
@@ -302,7 +302,7 @@ public class IntelligenceExecutionController {
 
             // 从 DB 查询当前租户的待审批命令
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
-            qw.eq(tenantId != null, "tenant_id", tenantId)
+            qw.eq("tenant_id", tenantId)
               .eq("status", "PENDING_APPROVAL")
               .orderByDesc("created_at");
             List<IntelligenceAuditLog> logs = auditLogMapper.selectList(qw);
@@ -440,7 +440,7 @@ public class IntelligenceExecutionController {
 
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
             qw.eq("command_id", commandId)
-              .eq(tenantId != null, "tenant_id", tenantId)
+              .eq("tenant_id", tenantId)
               .orderByDesc("created_at").last("LIMIT 1");
             IntelligenceAuditLog auditLog = auditLogMapper.selectOne(qw);
             if (auditLog == null) {

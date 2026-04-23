@@ -19,6 +19,7 @@ public class FactoryShipment {
     private String factoryId;
     private String factoryName;
     private Integer shipQuantity;
+    private Integer receivedQuantity;
     private LocalDateTime shipTime;
     private String shippedBy;
     private String shippedByName;

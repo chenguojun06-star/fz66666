@@ -29,10 +29,12 @@ public class SalesForecastOrchestrator {
         LocalDateTime start = LocalDateTime.now().minusMonths(6);
         List<ProductWarehousing> records = warehousingMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductWarehousing>()
+                        .select("create_time", "qualified_quantity")
                         .eq("tenant_id", tenantId)
                         .eq("delete_flag", 0)
                         .eq("style_no", styleNo)
-                        .ge("create_time", start));
+                        .ge("create_time", start)
+                        .last("LIMIT 5000"));
 
         Map<String, Integer> monthlyQty = new LinkedHashMap<>();
         for (ProductWarehousing w : records) {
@@ -78,10 +80,12 @@ public class SalesForecastOrchestrator {
         LocalDateTime start = LocalDateTime.now().minusMonths(3);
         List<ProductWarehousing> records = warehousingMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductWarehousing>()
+                        .select("size", "qualified_quantity")
                         .eq("tenant_id", tenantId)
                         .eq("delete_flag", 0)
                         .eq("style_no", styleNo)
-                        .ge("create_time", start));
+                        .ge("create_time", start)
+                        .last("LIMIT 5000"));
 
         Map<String, Integer> sizeQty = new LinkedHashMap<>();
         int total = 0;

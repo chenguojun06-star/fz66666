@@ -88,13 +88,12 @@ public class ProductionProcessTrackingOrchestrator {
         ProductionProcessTracking tracking = trackingService.getByBundleAndProcess(cuttingBundleId, processCode);
 
         if (tracking == null) {
-            // 回退：用processCode作为processName查询（兼容旧数据中processCode≠processName的情况）
             tracking = trackingService.getByBundleAndProcessName(cuttingBundleId, processCode);
             if (tracking != null) {
                 log.info("通过processName回退匹配成功：菲号ID={}, processCode={} → processName={}",
                         cuttingBundleId, processCode, tracking.getProcessName());
-                // 同步修正processCode为processName，避免下次再回退
-                tracking.setProcessCode(processCode);
+                // ★ 不覆盖 processCode：tracking 表初始化时 processCode 存的是模板编号（如 "02"），
+                // 扫码端传入的 processCode 是子工序名（如 "打揽"），覆盖会导致编号丢失
             }
         }
 

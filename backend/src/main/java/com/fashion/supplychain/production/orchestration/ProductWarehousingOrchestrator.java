@@ -18,6 +18,7 @@ import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.production.util.SpcCalculator;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -263,6 +264,12 @@ public class ProductWarehousingOrchestrator {
             } catch (Exception ex) {
                 log.warn("save: recomputeProgress失败（不阻断入库）: orderId={}, error={}", orderId, ex.getMessage());
             }
+
+            try {
+                computeAndPersistSpcForOrder(orderId);
+            } catch (Exception ex) {
+                log.warn("[SPC] 入库后Cpk计算失败（不阻断入库）: orderId={}, error={}", orderId, ex.getMessage());
+            }
         }
 
         try {
@@ -495,6 +502,20 @@ public class ProductWarehousingOrchestrator {
                 log.warn("ProductWarehousingOrchestrator.updateSkuStock 加载菲号异常: bundleId={}", w.getCuttingBundleId(), e);
             }
         }
+        // QrCode 兜底：bundleId 加载失败（为空或查不到）时，尝试通过 QrCode 加载菲号
+        if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
+            if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
+                try {
+                    CuttingBundle b = cuttingBundleService.getByQrCode(w.getCuttingBundleQrCode().trim());
+                    if (b != null) {
+                        color = b.getColor();
+                        size = b.getSize();
+                    }
+                } catch (Exception e) {
+                    log.debug("[SKUStock] Orchestrator.updateSkuStock QrCode fallback failed: bundleQrCode={}", w.getCuttingBundleQrCode());
+                }
+            }
+        }
         // ⚠️ 不再使用 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
         // 用于多码情景会写入错误的 SKU 条目
 
@@ -528,6 +549,7 @@ public class ProductWarehousingOrchestrator {
         // Decrement Stock
         if (current.getQualifiedQuantity() != null && current.getQualifiedQuantity() > 0) {
             // 必须加载菲号才能知道 color/size，否则无法回滚正确的 SKU 库存
+            // 先尝试 bundleId，再尝试 bundleQrCode（双重兜底）
             CuttingBundle bundleForDelete = null;
             if (StringUtils.hasText(current.getCuttingBundleId())) {
                 try {
@@ -536,11 +558,19 @@ public class ProductWarehousingOrchestrator {
                     log.warn("ProductWarehousingOrchestrator.delete 加载菲号异常: bundleId={}", current.getCuttingBundleId(), e);
                 }
             }
+            // QrCode 兜底：bundleId 找不到时，尝试 bundleQrCode
+            if (bundleForDelete == null && StringUtils.hasText(current.getCuttingBundleQrCode())) {
+                try {
+                    bundleForDelete = cuttingBundleService.getByQrCode(current.getCuttingBundleQrCode().trim());
+                } catch (Exception e) {
+                    log.debug("[SKUStock删除] QrCode fallback failed: bundleQrCode={}", current.getCuttingBundleQrCode());
+                }
+            }
             if (bundleForDelete != null) {
                 updateSkuStock(current, null, bundleForDelete, -current.getQualifiedQuantity());
             } else {
-                log.warn("[SKUStock删除] 无法加载菲号，SKU库存不还原: warehousingId={}, bundleId={}",
-                        key, current.getCuttingBundleId());
+                log.warn("[SKUStock删除] 无法加载菲号（bundleId+bundleQrCode 均为空或查不到），SKU库存不还原: warehousingId={}, bundleId={}, bundleQrCode={}",
+                        key, current.getCuttingBundleId(), current.getCuttingBundleQrCode());
             }
         }
 
@@ -707,5 +737,39 @@ public class ProductWarehousingOrchestrator {
             w.setReceiverId(userId);
             w.setReceiverName(username);
         }
+    }
+
+    private void computeAndPersistSpcForOrder(String orderId) {
+        List<ProductWarehousing> records = productWarehousingService.lambdaQuery()
+                .select(ProductWarehousing::getId, ProductWarehousing::getQualifiedQuantity,
+                        ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getAqlLevel)
+                .eq(ProductWarehousing::getOrderId, orderId)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .last("LIMIT 200")
+                .list();
+        if (records == null || records.size() < 2) return;
+
+        List<Double> defectRates = new ArrayList<>();
+        for (ProductWarehousing w : records) {
+            int total = (w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
+                      + (w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0);
+            if (total > 0) {
+                int defective = w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0;
+                defectRates.add((double) defective / total * 100);
+            }
+        }
+        if (defectRates.size() < 2) return;
+
+        java.math.BigDecimal cpk = SpcCalculator.calcCpk(defectRates, 5.0, 0.0);
+        java.math.BigDecimal ppk = SpcCalculator.calcPpk(defectRates, 5.0, 0.0);
+
+        productWarehousingService.lambdaUpdate()
+                .eq(ProductWarehousing::getOrderId, orderId)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .set(ProductWarehousing::getCpk, cpk)
+                .set(ProductWarehousing::getPpk, ppk)
+                .update();
+
+        log.info("[SPC] orderId={}, records={}, cpk={}, ppk={}", orderId, records.size(), cpk, ppk);
     }
 }

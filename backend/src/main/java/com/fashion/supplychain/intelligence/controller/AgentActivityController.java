@@ -152,7 +152,7 @@ public class AgentActivityController {
         List<Map<String, Object>> trajectory = new ArrayList<>();
         try {
             QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
-            query.eq(tenantId != null, "tenant_id", tenantId)
+            query.eq("tenant_id", tenantId)
                  .ge("created_at", startTime)
                  .le("created_at", endTime)
                  .orderByAsc("created_at")
@@ -235,7 +235,7 @@ public class AgentActivityController {
 
         try {
             QueryWrapper<IntelligenceSignal> query = new QueryWrapper<>();
-            query.eq(tenantId != null, "tenant_id", tenantId)
+            query.eq("tenant_id", tenantId)
                  .eq("status", "open")
                  .orderByDesc("priority_score")
                  .last("LIMIT 20");
@@ -264,7 +264,7 @@ public class AgentActivityController {
         Map<String, AgentActivityStats> result = new LinkedHashMap<>();
         try {
             QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
-            query.eq(tenantId != null, "tenant_id", tenantId)
+            query.eq("tenant_id", tenantId)
                  .ge("created_at", since)
                  .orderByDesc("created_at")
                  .last("LIMIT 500");

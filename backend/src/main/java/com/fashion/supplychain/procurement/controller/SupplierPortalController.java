@@ -5,6 +5,7 @@ import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
@@ -251,7 +252,7 @@ public class SupplierPortalController {
             if ("partial_arrival".equals(newStatus) || "shipped".equals(newStatus)) {
                 purchase.setStatus("partial_arrival");
             } else if ("completed".equals(newStatus)) {
-                purchase.setStatus("completed");
+                purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
                 purchase.setActualArrivalDate(LocalDateTime.now());
             }
         }

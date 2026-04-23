@@ -32,8 +32,10 @@ export const factoryShipmentApi = {
   ship: (params: ShipParams) =>
     api.post<{ code: number; data: FactoryShipment }>('/production/factory-shipment/ship', params),
 
-  receive: (id: string) =>
-    api.post<{ code: number; data: FactoryShipment }>(`/production/factory-shipment/${encodeURIComponent(id)}/receive`),
+  receive: (id: string, receivedQuantity?: number) => {
+    const params = receivedQuantity != null ? { receivedQuantity } : undefined;
+    return api.post<{ code: number; data: FactoryShipment }>(`/production/factory-shipment/${encodeURIComponent(id)}/receive`, null, { params });
+  },
 
   list: (params: Record<string, unknown>) =>
     api.post<{ code: number; data: { records: FactoryShipment[]; total: number } }>('/production/factory-shipment/list', params),

@@ -114,7 +114,8 @@ export const ensureBoardStatsForOrder = async ({
     const records: ScanRecord[] = await loadAllOrderScans(oid);
     const valid = records
       .filter((r) => String((r as any)?.scanResult || '').trim() === 'success')
-      .filter((r) => (Number((r as any)?.quantity) || 0) > 0);
+      .filter((r) => (Number((r as any)?.quantity) || 0) > 0)
+      .filter((r) => String((r as any)?.scanType || '').trim() !== 'orchestration');
     // 匹配扫码记录到节点：同时检查 progressStage（父节点）和 processName（子工序名）
     const recordMatchesNode = (node: ProgressNode, r: Record<string, unknown>) => {
       const nName = String((node as any)?.name || '').trim();

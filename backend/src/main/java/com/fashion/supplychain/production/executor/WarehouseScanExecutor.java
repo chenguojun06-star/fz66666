@@ -156,6 +156,8 @@ public class WarehouseScanExecutor {
             repairResult.put("success", true);
             repairResult.put("message", "返修完成申报成功，请通知质检员进行重新验收");
             repairResult.put("bundleStatus", "repaired_waiting_qc");
+            repairResult.put("nextScanType", "quality");
+            repairResult.put("nextStageHint", "下一环节: quality");
             return repairResult;
         } else {
             // 正常入库：检查是否有次品待返修阻止
@@ -260,32 +262,8 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("入库扫码记录保存失败，请重试: " + dbEx.getMessage());
         }
 
-        // ★ SKU库存同步：菲号模式入库后更新SKU库存
-        try {
-            if (productSkuService != null && order != null && bundle != null) {
-                String skuCode = order.getStyleNo() + "-" + bundle.getColor() + "-" + bundle.getSize();
-                ProductSku sku = productSkuService.lambdaQuery()
-                        .eq(ProductSku::getSkuCode, skuCode)
-                        .eq(ProductSku::getTenantId, order.getTenantId())
-                        .last("limit 1")
-                        .one();
-                if (sku == null) {
-                    sku = new ProductSku();
-                    sku.setSkuCode(skuCode);
-                    sku.setStyleNo(order.getStyleNo());
-                    sku.setColor(bundle.getColor());
-                    sku.setSize(bundle.getSize());
-                    sku.setStockQuantity(0);
-                    sku.setTenantId(order.getTenantId());
-                    productSkuService.save(sku);
-                }
-                productSkuService.updateStock(skuCode, qty);
-                log.info("[WarehouseScan] SKU库存已更新: skuCode={}, qty={}", skuCode, qty);
-            }
-        } catch (Exception e) {
-            log.warn("[WarehouseScan] SKU库存同步失败（不阻断入库）: styleNo={}, error={}",
-                    order.getStyleNo(), e.getMessage(), e);
-        }
+        // ★ SKU库存已由 saveWarehousingAndUpdateOrder 内部 helper.updateSkuStock() 更新，此处不再重复调用
+        // 之前重复调用 productSkuService.updateStock() 导致库存双倍增加，已修复
 
         // 更新工序跟踪记录（工序跟踪表以节点名"入库"作为 processCode 初始化）
         if (bundle != null && hasText(bundle.getId())) {

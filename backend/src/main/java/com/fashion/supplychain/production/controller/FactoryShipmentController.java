@@ -36,8 +36,9 @@ public class FactoryShipmentController {
     }
 
     @PostMapping("/{id}/receive")
-    public Result<FactoryShipment> receive(@PathVariable("id") String id) {
-        return factoryShipmentOrchestrator.receive(id);
+    public Result<FactoryShipment> receive(@PathVariable("id") String id,
+                                           @RequestParam(value = "receivedQuantity", required = false) Integer receivedQuantity) {
+        return factoryShipmentOrchestrator.receive(id, receivedQuantity);
     }
 
     @PostMapping("/list")

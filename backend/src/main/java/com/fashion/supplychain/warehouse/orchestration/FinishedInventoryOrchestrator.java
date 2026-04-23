@@ -111,16 +111,6 @@ public class FinishedInventoryOrchestrator {
         wrapper.orderByDesc(ProductSku::getUpdateTime);
         IPage<ProductSku> skuPageResult = productSkuService.page(skuPage, wrapper);
 
-        // 统计每个 styleId 的当前库存总量（用于与入库汇总口径对齐）
-        Map<String, Integer> stockQtyByStyleId = new HashMap<>();
-        for (ProductSku sku : skuPageResult.getRecords()) {
-            if (sku == null || sku.getStyleId() == null) {
-                continue;
-            }
-            int qty = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
-            stockQtyByStyleId.merge(String.valueOf(sku.getStyleId()), qty, Integer::sum);
-        }
-
         // 收集 styleId 列表
         List<Long> styleIds = skuPageResult.getRecords().stream()
                 .map(ProductSku::getStyleId)
@@ -427,11 +417,10 @@ public class FinishedInventoryOrchestrator {
                         : latestOutstock.getCreatorName());
             }
 
-            // 入库总量
+            // 入库总量：以 t_product_warehousing 实际记录之和为准（入库记录是源头数据，SKU 库存是派生台账）
             Integer totalInbound = totalInboundQtyMap.get(styleIdStr);
             int inboundQty = totalInbound != null ? totalInbound : 0;
-            int stockQty = stockQtyByStyleId.getOrDefault(styleIdStr, 0);
-            dto.setTotalInboundQty(Math.max(inboundQty, stockQty));
+            dto.setTotalInboundQty(inboundQty);
 
             // 获取该款式的所有颜色和尺码
             List<ProductSku> styleSKUs = styleSkuMap.get(sku.getStyleNo());

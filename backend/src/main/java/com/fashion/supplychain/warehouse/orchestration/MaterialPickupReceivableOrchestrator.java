@@ -87,7 +87,7 @@ public class MaterialPickupReceivableOrchestrator {
 
         LambdaQueryWrapper<MaterialPickupRecord> wrapper = new LambdaQueryWrapper<MaterialPickupRecord>()
                 .eq(MaterialPickupRecord::getDeleteFlag, 0)
-                .eq(MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
+                .eq(MaterialPickupRecord::getTenantId, String.valueOf(tenantId))
                 .and(w -> w.isNull(MaterialPickupRecord::getMovementType)
                         .or()
                         .eq(MaterialPickupRecord::getMovementType, "OUTBOUND"))

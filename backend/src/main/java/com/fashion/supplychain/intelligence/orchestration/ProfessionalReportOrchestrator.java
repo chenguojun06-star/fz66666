@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -44,6 +45,7 @@ public class ProfessionalReportOrchestrator {
      */
     public byte[] generateReport(String reportType, LocalDate baseDate) {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
         if (baseDate == null) baseDate = LocalDate.now();
 
         // 权限范围：管理层看全局，普通跟单员只看自己的订单
@@ -65,23 +67,23 @@ public class ProfessionalReportOrchestrator {
             TimeRange probe = calcTimeRange(reportType, baseDate);
             String probeUser = isManager ? null : currentUserId;
             // 检查当前区间是否有扫码记录或订单
-            long todayScans = countScans(tenantId, probe.start(), probe.end(), probeUser);
-            long todayOrders = countNewOrders(tenantId, probe.start(), probe.end(), probeUser, scopeUsername);
+            long todayScans = countScans(tenantId, probe.start(), probe.end(), probeUser, factoryId);
+            long todayOrders = countNewOrders(tenantId, probe.start(), probe.end(), probeUser, scopeUsername, factoryId);
 
             if (todayScans == 0 && todayOrders == 0) {
-                // 查找最近一次有扫码或建单的日期
                 LocalDate fallbackDate = null;
 
                 QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> sq = new QueryWrapper<>();
-                if (tenantId != null) sq.eq("tenant_id", tenantId);
+                sq.eq("tenant_id", tenantId);
                 if (probeUser != null) sq.eq("operator_id", probeUser);
+                if (factoryId != null && !factoryId.isBlank()) sq.eq("factory_id", factoryId);
                 sq.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
                 com.fashion.supplychain.production.entity.ScanRecord latestScan = scanRecordService.getOne(sq);
                 if (latestScan != null && latestScan.getScanTime() != null) {
                     fallbackDate = latestScan.getScanTime().toLocalDate();
                 }
 
-                QueryWrapper<ProductionOrder> oq = baseOrderQuery(tenantId, probeUser, scopeUsername);
+                QueryWrapper<ProductionOrder> oq = baseOrderQuery(tenantId, probeUser, scopeUsername, factoryId);
                 oq.orderByDesc("create_time").last("LIMIT 1").select("create_time");
                 ProductionOrder latestOrder = productionOrderService.getOne(oq);
                 if (latestOrder != null && latestOrder.getCreateTime() != null) {
@@ -106,10 +108,10 @@ public class ProfessionalReportOrchestrator {
             StyleKit kit = new StyleKit(wb);
 
             buildCoverSheet(wb, kit, reportType, range, scopeLabel);
-            buildKpiSheet(wb, kit, tenantId, range, scopeUserId, scopeUsername);
-            buildFactorySheet(wb, kit, tenantId, range, scopeUserId, scopeUsername);
-            buildRiskSheet(wb, kit, tenantId, scopeUserId, scopeUsername);
-            buildCostSheet(wb, kit, tenantId, range, scopeUserId);
+            buildKpiSheet(wb, kit, tenantId, range, scopeUserId, scopeUsername, factoryId);
+            buildFactorySheet(wb, kit, tenantId, range, scopeUserId, scopeUsername, factoryId);
+            buildRiskSheet(wb, kit, tenantId, scopeUserId, scopeUsername, factoryId);
+            buildCostSheet(wb, kit, tenantId, range, scopeUserId, factoryId);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             wb.write(out);
@@ -164,7 +166,7 @@ public class ProfessionalReportOrchestrator {
     //  Sheet 2: 核心 KPI 概览
     // ═══════════════════════════════════════════════════════════
     private void buildKpiSheet(XSSFWorkbook wb, StyleKit kit, Long tenantId, TimeRange range,
-                               String scopeUserId, String scopeUsername) {
+                               String scopeUserId, String scopeUsername, String factoryId) {
         Sheet sheet = wb.createSheet("核心KPI");
         sheet.setColumnWidth(0, 8000);
         sheet.setColumnWidth(1, 5000);
@@ -192,13 +194,13 @@ public class ProfessionalReportOrchestrator {
         }
 
         // 数据（按权限范围过滤）
-        long curScanCount = countScans(tenantId, range.start, range.end, scopeUserId);
-        long prevScanCount = countScans(tenantId, range.prevStart, range.prevEnd, scopeUserId);
-        long curScanQty = sumScanQty(tenantId, range.start, range.end, scopeUserId);
-        long prevScanQty = sumScanQty(tenantId, range.prevStart, range.prevEnd, scopeUserId);
-        long curNewOrders = countNewOrders(tenantId, range.start, range.end, scopeUserId, scopeUsername);
-        long prevNewOrders = countNewOrders(tenantId, range.prevStart, range.prevEnd, scopeUserId, scopeUsername);
-        long curCompleted = countCompletedOrders(tenantId, range.start, range.end, scopeUserId, scopeUsername);
+        long curScanCount = countScans(tenantId, range.start, range.end, scopeUserId, factoryId);
+        long prevScanCount = countScans(tenantId, range.prevStart, range.prevEnd, scopeUserId, factoryId);
+        long curScanQty = sumScanQty(tenantId, range.start, range.end, scopeUserId, factoryId);
+        long prevScanQty = sumScanQty(tenantId, range.prevStart, range.prevEnd, scopeUserId, factoryId);
+        long curNewOrders = countNewOrders(tenantId, range.start, range.end, scopeUserId, scopeUsername, factoryId);
+        long prevNewOrders = countNewOrders(tenantId, range.prevStart, range.prevEnd, scopeUserId, scopeUsername, factoryId);
+        long curCompleted = countCompletedOrders(tenantId, range.start, range.end, scopeUserId, scopeUsername, factoryId);
 
         String[][] kpiData = {
                 {"扫码次数", String.valueOf(curScanCount), String.valueOf(prevScanCount), changeStr(curScanCount, prevScanCount)},
@@ -235,7 +237,7 @@ public class ProfessionalReportOrchestrator {
 
         Map<String, Long> byType = new LinkedHashMap<>();
         for (String type : new String[]{"production", "quality", "warehouse"}) {
-            byType.put(type, countScansByType(tenantId, range.start, range.end, type, scopeUserId));
+            byType.put(type, countScansByType(tenantId, range.start, range.end, type, scopeUserId, factoryId));
         }
         long totalByType = byType.values().stream().mapToLong(Long::longValue).sum();
         Map<String, String> typeLabels = Map.of("production", "生产扫码", "quality", "质检扫码", "warehouse", "入库扫码");
@@ -277,7 +279,7 @@ public class ProfessionalReportOrchestrator {
             r = sheet.createRow(rowIdx++);
             r.createCell(0).setCellValue(entry.getValue());
             r.getCell(0).setCellStyle(kit.labelStyle);
-            long cnt = countOrdersByStatus(tenantId, entry.getKey(), scopeUserId, scopeUsername);
+            long cnt = countOrdersByStatus(tenantId, entry.getKey(), scopeUserId, scopeUsername, factoryId);
             c = r.createCell(1);
             c.setCellValue(cnt);
             c.setCellStyle(kit.dataStyle);
@@ -288,7 +290,7 @@ public class ProfessionalReportOrchestrator {
     //  Sheet 3: 工厂效率排名
     // ═══════════════════════════════════════════════════════════
     private void buildFactorySheet(XSSFWorkbook wb, StyleKit kit, Long tenantId, TimeRange range,
-                                   String scopeUserId, String scopeUsername) {
+                                   String scopeUserId, String scopeUsername, String factoryId) {
         Sheet sheet = wb.createSheet("工厂效率排名");
         sheet.setColumnWidth(0, 3000);
         sheet.setColumnWidth(1, 8000);
@@ -312,7 +314,7 @@ public class ProfessionalReportOrchestrator {
             c.setCellStyle(kit.headerStyle);
         }
 
-        List<FactoryRank> rankings = buildFactoryRankings(tenantId, range.start, range.end, scopeUserId, scopeUsername);
+        List<FactoryRank> rankings = buildFactoryRankings(tenantId, range.start, range.end, scopeUserId, scopeUsername, factoryId);
         int rank = 1;
         for (FactoryRank fr : rankings) {
             r = sheet.createRow(rowIdx++);
@@ -338,7 +340,7 @@ public class ProfessionalReportOrchestrator {
     //  Sheet 4: 风险清单
     // ═══════════════════════════════════════════════════════════
     private void buildRiskSheet(XSSFWorkbook wb, StyleKit kit, Long tenantId,
-                                String scopeUserId, String scopeUsername) {
+                                String scopeUserId, String scopeUsername, String factoryId) {
         Sheet sheet = wb.createSheet("风险预警");
         sheet.setColumnWidth(0, 5000);
         sheet.setColumnWidth(1, 5000);
@@ -356,9 +358,9 @@ public class ProfessionalReportOrchestrator {
         rowIdx += 2;
 
         // 逾期订单
-        List<ProductionOrder> overdue = getOverdueOrders(tenantId, scopeUserId, scopeUsername);
-        List<ProductionOrder> highRisk = getHighRiskOrders(tenantId, scopeUserId, scopeUsername);
-        long stagnant = countStagnantOrders(tenantId, scopeUserId, scopeUsername);
+        List<ProductionOrder> overdue = getOverdueOrders(tenantId, scopeUserId, scopeUsername, factoryId);
+        List<ProductionOrder> highRisk = getHighRiskOrders(tenantId, scopeUserId, scopeUsername, factoryId);
+        long stagnant = countStagnantOrders(tenantId, scopeUserId, scopeUsername, factoryId);
 
         Row r = sheet.createRow(rowIdx++);
         r.createCell(0).setCellValue("指标");
@@ -436,7 +438,7 @@ public class ProfessionalReportOrchestrator {
     //  Sheet 5: 成本分析
     // ═══════════════════════════════════════════════════════════
     private void buildCostSheet(XSSFWorkbook wb, StyleKit kit, Long tenantId, TimeRange range,
-                                String scopeUserId) {
+                                String scopeUserId, String factoryId) {
         Sheet sheet = wb.createSheet("成本分析");
         sheet.setColumnWidth(0, 8000);
         sheet.setColumnWidth(1, 6000);
@@ -452,7 +454,7 @@ public class ProfessionalReportOrchestrator {
 
         // 汇总
         rowIdx++;
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId);
+        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
         q.ge("scan_time", range.start).le("scan_time", range.end);
         List<ScanRecord> scans = scanRecordService.list(q);
 
@@ -512,54 +514,54 @@ public class ProfessionalReportOrchestrator {
     //  数据查询辅助方法
     // ═══════════════════════════════════════════════════════════
 
-    private long countScans(Long tenantId, LocalDateTime start, LocalDateTime end, String scopeUserId) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId);
+    private long countScans(Long tenantId, LocalDateTime start, LocalDateTime end, String scopeUserId, String factoryId) {
+        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
         q.ge("scan_time", start).le("scan_time", end);
         return scanRecordService.count(q);
     }
 
-    private long sumScanQty(Long tenantId, LocalDateTime start, LocalDateTime end, String scopeUserId) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId);
+    private long sumScanQty(Long tenantId, LocalDateTime start, LocalDateTime end, String scopeUserId, String factoryId) {
+        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
         q.ge("scan_time", start).le("scan_time", end);
         return scanRecordService.list(q).stream()
                 .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0).sum();
     }
 
-    private long countScansByType(Long tenantId, LocalDateTime start, LocalDateTime end, String type, String scopeUserId) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId);
+    private long countScansByType(Long tenantId, LocalDateTime start, LocalDateTime end, String type, String scopeUserId, String factoryId) {
+        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
         q.eq("scan_type", type).ge("scan_time", start).le("scan_time", end);
         return scanRecordService.count(q);
     }
 
     private long countNewOrders(Long tenantId, LocalDateTime start, LocalDateTime end,
-                                String scopeUserId, String scopeUsername) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
+                                String scopeUserId, String scopeUsername, String factoryId) {
+        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
         q.ge("create_time", start).le("create_time", end);
         return productionOrderService.count(q);
     }
 
     private long countCompletedOrders(Long tenantId, LocalDateTime start, LocalDateTime end,
-                                      String scopeUserId, String scopeUsername) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
+                                      String scopeUserId, String scopeUsername, String factoryId) {
+        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
         q.eq("status", "completed").ge("update_time", start).le("update_time", end);
         return productionOrderService.count(q);
     }
 
-    private long countOrdersByStatus(Long tenantId, String status, String scopeUserId, String scopeUsername) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
+    private long countOrdersByStatus(Long tenantId, String status, String scopeUserId, String scopeUsername, String factoryId) {
+        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
         q.eq("status", status);
         return productionOrderService.count(q);
     }
 
-    private List<ProductionOrder> getOverdueOrders(Long tenantId, String scopeUserId, String scopeUsername) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
+    private List<ProductionOrder> getOverdueOrders(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
+        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
         q.notIn("status", "completed", "cancelled", "scrapped", "closed", "archived")
                 .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
         return productionOrderService.list(q);
     }
 
-    private List<ProductionOrder> getHighRiskOrders(Long tenantId, String scopeUserId, String scopeUsername) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
+    private List<ProductionOrder> getHighRiskOrders(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
+        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
         q.eq("status", "production").isNotNull("planned_end_date")
                 .le("planned_end_date", LocalDateTime.now().plusDays(7))
                 .ge("planned_end_date", LocalDateTime.now());
@@ -568,16 +570,16 @@ public class ProfessionalReportOrchestrator {
                 .toList();
     }
 
-    private long countStagnantOrders(Long tenantId, String scopeUserId, String scopeUsername) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
+    private long countStagnantOrders(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
+        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
         q.eq("status", "production")
                 .and(w -> w.isNull("production_progress").or().eq("production_progress", 0));
         return productionOrderService.count(q);
     }
 
     private List<FactoryRank> buildFactoryRankings(Long tenantId, LocalDateTime start, LocalDateTime end,
-                                                   String scopeUserId, String scopeUsername) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId);
+                                                   String scopeUserId, String scopeUsername, String factoryId) {
+        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
         q.ge("scan_time", start).le("scan_time", end);
         List<ScanRecord> scans = scanRecordService.list(q);
 
@@ -592,10 +594,9 @@ public class ProfessionalReportOrchestrator {
             factoryMap.get(fid)[1] += scan.getQuantity() != null ? scan.getQuantity() : 0;
         }
 
-        // 获取工厂名称（工厂排名无需限定到个人）
         Map<String, String> factoryNames = new HashMap<>();
         if (!factoryMap.isEmpty()) {
-            QueryWrapper<ProductionOrder> fq = baseOrderQuery(tenantId, null, null);
+            QueryWrapper<ProductionOrder> fq = baseOrderQuery(tenantId, null, null, factoryId);
             fq.in("factory_id", factoryMap.keySet()).select("factory_id", "factory_name").groupBy("factory_id", "factory_name");
             for (ProductionOrder fo : productionOrderService.list(fq)) {
                 if (fo.getFactoryId() != null && fo.getFactoryName() != null) {
@@ -613,26 +614,23 @@ public class ProfessionalReportOrchestrator {
                 .toList();
     }
 
-    /**
-     * 基础扫码查询：成功扫码 + 租户隔离 + 权限范围（非管理层限定操作人）
-     */
-    private QueryWrapper<ScanRecord> baseScanQuery(Long tenantId, String scopeUserId) {
+    private QueryWrapper<ScanRecord> baseScanQuery(Long tenantId, String scopeUserId, String factoryId) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<ScanRecord> q = new QueryWrapper<>();
         q.eq("scan_result", "success");
-        if (tenantId != null) q.eq("tenant_id", tenantId);
-        // 非管理层：只看自己操作的扫码记录
+        q.eq("tenant_id", tenantId);
+        q.ne("scan_type", "orchestration");
         if (scopeUserId != null) q.eq("operator_id", scopeUserId);
+        if (factoryId != null && !factoryId.isBlank()) q.eq("factory_id", factoryId);
         return q;
     }
 
-    /**
-     * 基础订单查询：有效订单 + 租户隔离 + 权限范围（非管理层限定跟单员或创建人）
-     */
-    private QueryWrapper<ProductionOrder> baseOrderQuery(Long tenantId, String scopeUserId, String scopeUsername) {
+    private QueryWrapper<ProductionOrder> baseOrderQuery(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("delete_flag", 0);
-        if (tenantId != null) q.eq("tenant_id", tenantId);
-        // 非管理层：自己是跟单员 OR 自己创建的订单
+        q.eq("tenant_id", tenantId);
+        if (factoryId != null && !factoryId.isBlank()) q.eq("factory_id", factoryId);
         if (scopeUserId != null || scopeUsername != null) {
             q.and(w -> {
                 if (scopeUsername != null) w.eq("merchandiser", scopeUsername);

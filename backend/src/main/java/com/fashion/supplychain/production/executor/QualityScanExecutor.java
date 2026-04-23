@@ -228,6 +228,8 @@ public class QualityScanExecutor {
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
+        result.put("nextScanType", "warehouse");
+        result.put("nextStageHint", "下一环节: warehouse");
 
         broadcastProcessStage("receive".equals(qualityStage) ? "质检领取" : "质检验收",
                 order, bundle, operatorId, operatorName, qty, false);
@@ -339,6 +341,8 @@ public class QualityScanExecutor {
         result.put("scanRecord", existed);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
+        result.put("nextScanType", "warehouse");
+        result.put("nextStageHint", "下一环节: warehouse");
 
         broadcastProcessStage(isUnqualified ? "质检不合格" : "质检合格",
                 order, bundle, operatorId, operatorName, qty, true);

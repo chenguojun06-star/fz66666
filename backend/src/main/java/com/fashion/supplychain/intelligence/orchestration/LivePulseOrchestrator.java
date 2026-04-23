@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.LivePulseResponse;
 import com.fashion.supplychain.intelligence.dto.LivePulseResponse.PulsePoint;
 import com.fashion.supplychain.intelligence.dto.LivePulseResponse.StagnantFactory;
@@ -44,15 +45,15 @@ public class LivePulseOrchestrator {
         LivePulseResponse resp = new LivePulseResponse();
         try {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime windowStart = now.minusMinutes(PULSE_WINDOW_MINUTES);
         LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
 
-        List<ScanRecord> windowScans = queryScans(tenantId, windowStart, now);
-        List<ScanRecord> todayScans = queryScans(tenantId, todayStart, now);
+        List<ScanRecord> windowScans = queryScans(tenantId, factoryId, windowStart, now);
+        List<ScanRecord> todayScans = queryScans(tenantId, factoryId, todayStart, now);
 
-        // orderId → factoryName 映射
-        Map<String, String> orderFactoryMap = buildOrderFactoryMap(tenantId);
+        Map<String, String> orderFactoryMap = buildOrderFactoryMap(tenantId, factoryId);
 
         resp.setTodayScanQty(todayScans.stream()
                 .mapToLong(r -> r.getQuantity() != null ? r.getQuantity() : 0).sum());
@@ -106,7 +107,7 @@ public class LivePulseOrchestrator {
         }
 
         // 收集所有有在制订单的工厂（排除 COMPLETED/CANCELLED/DRAFT）
-        Set<String> activeOrderFactories = getActiveOrderFactories(UserContext.tenantId());
+        Set<String> activeOrderFactories = getActiveOrderFactories(UserContext.tenantId(), UserContext.factoryId());
 
         List<StagnantFactory> result = new ArrayList<>();
 
@@ -148,14 +149,18 @@ public class LivePulseOrchestrator {
     /**
      * 查找所有有在制订单的工厂名称（排除已完成/已取消/草稿状态）
      */
-    private Set<String> getActiveOrderFactories(Long tenantId) {
+    private Set<String> getActiveOrderFactories(Long tenantId, String factoryId) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .isNotNull("factory_name")
           .ne("factory_name", "")
           .notIn("status", "COMPLETED", "CANCELLED", "DRAFT")
           .select("factory_name");
+        if (factoryId != null && !factoryId.isBlank()) {
+            qw.eq("factory_id", factoryId);
+        }
         return productionOrderService.list(qw).stream()
                 .map(ProductionOrder::getFactoryName)
                 .filter(Objects::nonNull)
@@ -190,24 +195,32 @@ public class LivePulseOrchestrator {
         return result;
     }
 
-    private Map<String, String> buildOrderFactoryMap(Long tenantId) {
+    private Map<String, String> buildOrderFactoryMap(Long tenantId, String factoryId) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .isNotNull("factory_name")
           .select("id", "factory_name");
+        if (factoryId != null && !factoryId.isBlank()) {
+            qw.eq("factory_id", factoryId);
+        }
         return productionOrderService.list(qw).stream()
                 .filter(o -> o.getFactoryName() != null)
                 .collect(Collectors.toMap(o -> String.valueOf(o.getId()),
                         ProductionOrder::getFactoryName, (a, b) -> a));
     }
 
-    private List<ScanRecord> queryScans(Long tenantId, LocalDateTime start, LocalDateTime end) {
+    private List<ScanRecord> queryScans(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
+        TenantAssert.assertTenantContext();
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
                     .eq("scan_type", "production")
           .eq("scan_result", "success").gt("quantity", 0)
           .between("scan_time", start, end);
+        if (factoryId != null && !factoryId.isBlank()) {
+            qw.eq("factory_id", factoryId);
+        }
         return scanRecordService.list(qw);
     }
 }

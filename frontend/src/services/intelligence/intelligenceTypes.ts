@@ -843,106 +843,6 @@ export interface IntelligenceBrainSnapshotResponse {
 
 // ── B阶段新增：智能驾驶舱扩展接口 ──
 
-export interface FactoryCapacityGap {
-  factoryName: string;
-  pendingQuantity: number;
-  dailyCapacity: number;
-  estimatedDaysToComplete: number;
-  nearestDueDate: string;
-  daysToNearestDue: number;
-  gapDays: number;
-  gapLevel: 'safe' | 'tight' | 'gap' | 'critical';
-  advice: string;
-}
-export interface CapacityGapResponse {
-  totalFactories: number;
-  gapFactoryCount: number;
-  factories: FactoryCapacityGap[];
-}
-
-export interface StagnantOrderAlert {
-  orderId: string;
-  orderNo: string;
-  styleNo: string;
-  factoryName: string;
-  lastScanTime: string;
-  stagnantDays: number;
-  currentProgress: number;
-  plannedEndDate: string;
-  daysToDeadline: number;
-  severity: 'watch' | 'alert' | 'urgent';
-  actionAdvice: string;
-}
-export interface StagnantAlertResponse {
-  checkedOrders: number;
-  stagnantCount: number;
-  alerts: StagnantOrderAlert[];
-}
-
-export interface ReconciliationAnomalyItem {
-  reconciliationId: string;
-  reconciliationNo: string;
-  orderNo: string;
-  styleNo: string;
-  factoryName: string;
-  anomalyType: 'high_deduction' | 'low_profit' | 'overdue_pending';
-  anomalyDesc: string;
-  deductionAmount: number;
-  profitMarginPct: number;
-  status: string;
-  createTime: string;
-  pendingDays: number;
-  priorityScore: number;
-  advice: string;
-}
-export interface ReconciliationAnomalyResponse {
-  totalChecked: number;
-  anomalyCount: number;
-  items: ReconciliationAnomalyItem[];
-}
-
-export interface ApprovalAdvice {
-  approvalId: string;
-  operationType: string;
-  targetNo: string;
-  applicantName: string;
-  orgUnitName: string;
-  applyReason: string;
-  applyTime: string;
-  pendingHours: number;
-  verdict: 'APPROVE' | 'REJECT' | 'ESCALATE';
-  verdictReason: string;
-  riskLevel: 'low' | 'medium' | 'high';
-  priorityScore: number;
-}
-export interface ApprovalAdvisorResponse {
-  pendingCount: number;
-  highRiskCount: number;
-  items: ApprovalAdvice[];
-}
-
-export interface ReplenishmentItem {
-  materialCode: string;
-  materialName: string;
-  spec: string;
-  unit: string;
-  currentStock: number;
-  demandQuantity: number;
-  shortageQuantity: number;
-  urgencyLevel: 'urgent' | 'warning' | 'watch';
-  recommendedSupplier: string;
-  supplierContact: string;
-  supplierPhone: string;
-  affectedOrders: number;
-  advice: string;
-  urgencyScore: number;
-}
-export interface ReplenishmentAdvisorResponse {
-  shortageCount: number;
-  urgentCount: number;
-  items: ReplenishmentItem[];
-}
-
 /* ================================================================
 
 /* ── 超级顾问 TS 类型 ── */
@@ -1063,12 +963,4 @@ export interface SizeCurveResponse {
   sizeCurve: Record<string, number>;
   sampleCount: number;
   confidence: number;
-}
-
-/* ================================================================
-   物流运费比价
-================================================================ */
-export interface LogisticsCompareFeesResponse {
-  fees: Record<string, number>;
-  availableCompanies: string[];
 }

@@ -72,13 +72,12 @@ public class SkillTreeOrchestrator {
 
         // 查找已有技能（同租户 + 同工具名，不区分场景）
         AiSkillNode existing = skillNodeMapper.selectOne(new LambdaQueryWrapper<AiSkillNode>()
-                .eq(tenantId != null, AiSkillNode::getTenantId, tenantId)
+                .eq(AiSkillNode::getTenantId, tenantId)
                 .eq(AiSkillNode::getSkillName, skillName)
                 .eq(AiSkillNode::getDeleteFlag, 0)
                 .last("LIMIT 1"));
 
         if (existing != null) {
-            // 更新已有技能
             skillNodeMapper.recordSuccess(existing.getId(), prmScore * 50);
             log.debug("[SkillTree] 更新技能 id={} name={} prmScore={}", existing.getId(), skillName, prmScore);
         } else {
@@ -108,7 +107,7 @@ public class SkillTreeOrchestrator {
         Long tenantId = UserContext.tenantId();
         String skillName = buildSkillName(scene, toolName);
         AiSkillNode existing = skillNodeMapper.selectOne(new LambdaQueryWrapper<AiSkillNode>()
-                .eq(tenantId != null, AiSkillNode::getTenantId, tenantId)
+                .eq(AiSkillNode::getTenantId, tenantId)
                 .eq(AiSkillNode::getSkillName, skillName)
                 .eq(AiSkillNode::getDeleteFlag, 0)
                 .last("LIMIT 1"));

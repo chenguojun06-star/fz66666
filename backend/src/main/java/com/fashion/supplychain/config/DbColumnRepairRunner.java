@@ -178,15 +178,6 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_style_quotation", "audit_time", "DATETIME DEFAULT NULL");
         add("t_style_quotation", "audit_status", "INT NOT NULL DEFAULT 0");
         add("t_style_quotation", "audit_remark", "VARCHAR(500) DEFAULT NULL");
-        add("t_style_quotation", "standard_material_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '标准物料成本'");
-        add("t_style_quotation", "standard_process_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '标准工序成本'");
-        add("t_style_quotation", "standard_other_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '标准其他成本'");
-        add("t_style_quotation", "material_variance", "DECIMAL(12,2) DEFAULT NULL COMMENT '物料成本差异'");
-        add("t_style_quotation", "process_variance", "DECIMAL(12,2) DEFAULT NULL COMMENT '工序成本差异'");
-        add("t_style_quotation", "total_variance", "DECIMAL(12,2) DEFAULT NULL COMMENT '总成本差异'");
-        add("t_style_quotation", "variance_rate", "DECIMAL(5,2) DEFAULT NULL COMMENT '差异率'");
-        add("t_style_quotation", "overhead_allocation_rate", "DECIMAL(5,2) DEFAULT NULL COMMENT '间接费用分摊率'");
-        add("t_style_quotation", "allocated_overhead_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '分摊间接费用'");
 
         add("t_style_process", "difficulty", "VARCHAR(10) DEFAULT NULL");
         add("t_style_process", "rate_multiplier", "DECIMAL(5,2) DEFAULT NULL");
@@ -229,18 +220,6 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_product_warehousing", "quality_status", "VARCHAR(20) DEFAULT NULL COMMENT '质检状态'");
         add("t_product_warehousing", "inspection_status", "VARCHAR(20) DEFAULT NULL COMMENT '检验状态'");
         add("t_product_warehousing", "scan_mode", "VARCHAR(20) DEFAULT NULL COMMENT '扫码模式'");
-        add("t_product_warehousing", "inspection_type", "VARCHAR(32) DEFAULT 'FQC' COMMENT '检验类型'");
-        add("t_product_warehousing", "aql_level", "VARCHAR(16) DEFAULT NULL COMMENT 'AQL等级'");
-        add("t_product_warehousing", "sample_size", "INT DEFAULT NULL COMMENT '抽样数量'");
-        add("t_product_warehousing", "accept_number", "INT DEFAULT NULL COMMENT '接收数'");
-        add("t_product_warehousing", "reject_number", "INT DEFAULT NULL COMMENT '拒收数'");
-        add("t_product_warehousing", "cpk", "DECIMAL(5,2) DEFAULT NULL COMMENT 'Cpk'");
-        add("t_product_warehousing", "ppk", "DECIMAL(5,2) DEFAULT NULL COMMENT 'Ppk'");
-        add("t_product_warehousing", "control_chart_type", "VARCHAR(16) DEFAULT NULL COMMENT '控制图类型'");
-        add("t_product_warehousing", "control_chart_data", "TEXT DEFAULT NULL COMMENT '控制图数据'");
-        add("t_product_warehousing", "defect_code", "VARCHAR(64) DEFAULT NULL COMMENT '缺陷代码'");
-        add("t_product_warehousing", "defect_severity", "VARCHAR(16) DEFAULT NULL COMMENT '缺陷严重度'");
-        add("t_product_warehousing", "inspector_cert_no", "VARCHAR(64) DEFAULT NULL COMMENT '质检员证书编号'");
         add("t_product_warehousing", "quality_operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '质检操作员ID'");
         add("t_product_warehousing", "quality_operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '质检操作员姓名'");
         add("t_product_warehousing", "defect_category", "VARCHAR(50) DEFAULT NULL COMMENT '缺陷类别'");
@@ -376,10 +355,6 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_production_order", "procurement_manually_completed", "TINYINT(1) DEFAULT NULL COMMENT '采购是否手动标记完成'");
         add("t_production_order", "org_unit_id", "VARCHAR(64) DEFAULT NULL");
         add("t_production_order", "parent_org_unit_id", "VARCHAR(64) DEFAULT NULL");
-        add("t_production_order", "is_quick_response", "TINYINT(1) DEFAULT 0 COMMENT '是否快反订单'");
-        add("t_production_order", "standard_delivery_days", "INT DEFAULT NULL COMMENT '标准交付天数'");
-        add("t_production_order", "actual_delivery_days", "INT DEFAULT NULL COMMENT '实际交付天数'");
-        add("t_production_order", "delivery_sla_status", "VARCHAR(32) DEFAULT NULL COMMENT 'SLA状态'");
         add("t_production_order", "parent_org_unit_name", "VARCHAR(100) DEFAULT NULL");
         add("t_production_order", "org_path", "VARCHAR(500) DEFAULT NULL");
         add("t_production_order", "factory_contact_person", "VARCHAR(50) DEFAULT NULL");
@@ -535,29 +510,6 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
         add("t_factory_shipment", "ship_method", "VARCHAR(32) DEFAULT 'EXPRESS'");
         add("t_factory_shipment", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
-
-        add("t_factory", "supplier_category", "VARCHAR(64) DEFAULT NULL COMMENT '供应商分类'");
-        add("t_factory", "supplier_region", "VARCHAR(64) DEFAULT NULL COMMENT '供应商区域'");
-        add("t_factory", "supplier_tier", "VARCHAR(16) DEFAULT NULL COMMENT '供应商评级'");
-        add("t_factory", "supplier_tier_updated_at", "DATETIME DEFAULT NULL COMMENT '评级更新时间'");
-        add("t_factory", "admission_status", "VARCHAR(32) DEFAULT 'pending' COMMENT '准入状态'");
-        add("t_factory", "admission_date", "DATETIME DEFAULT NULL COMMENT '准入通过日期'");
-        add("t_factory", "qualification_cert", "TEXT DEFAULT NULL COMMENT '资质证书JSON'");
-        add("t_factory", "contract_no", "VARCHAR(64) DEFAULT NULL COMMENT '合同编号'");
-        add("t_factory", "contract_start_date", "DATETIME DEFAULT NULL COMMENT '合同开始日期'");
-        add("t_factory", "contract_end_date", "DATETIME DEFAULT NULL COMMENT '合同结束日期'");
-        add("t_factory", "contract_amount", "DECIMAL(15,2) DEFAULT NULL COMMENT '合同金额'");
-        add("t_factory", "contract_terms", "TEXT DEFAULT NULL COMMENT '合同条款'");
-        add("t_factory", "bank_name", "VARCHAR(128) DEFAULT NULL COMMENT '开户银行'");
-        add("t_factory", "bank_account", "VARCHAR(64) DEFAULT NULL COMMENT '银行账号'");
-        add("t_factory", "bank_branch", "VARCHAR(128) DEFAULT NULL COMMENT '开户支行'");
-        add("t_factory", "on_time_delivery_rate", "DECIMAL(5,2) DEFAULT NULL COMMENT '准时交货率'");
-        add("t_factory", "quality_score", "DECIMAL(5,2) DEFAULT NULL COMMENT '质量评分'");
-        add("t_factory", "completion_rate", "DECIMAL(5,2) DEFAULT NULL COMMENT '订单完成率'");
-        add("t_factory", "overall_score", "DECIMAL(5,2) DEFAULT NULL COMMENT '综合评分'");
-        add("t_factory", "total_orders", "INT DEFAULT 0 COMMENT '总订单数'");
-        add("t_factory", "completed_orders", "INT DEFAULT 0 COMMENT '已完成订单数'");
-        add("t_factory", "overdue_orders", "INT DEFAULT 0 COMMENT '延期订单数'");
 
         add("t_order_remark", "id", "BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键'");
 
@@ -1250,6 +1202,26 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             + "KEY `idx_ai_agg_metric_period` (`metric_key`,`period`,`period_start`),"
             + "KEY `idx_ai_agg_tenant` (`tenant_id`,`metric_key`)"
             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 平台级跨租户聚合（仅超管）'");
+
+        TABLE_FIXES.put("t_xiaoyun_daily_insight",
+            "CREATE TABLE IF NOT EXISTS `t_xiaoyun_daily_insight` ("
+            + "`id` VARCHAR(64) NOT NULL,"
+            + "`tenant_id` BIGINT NOT NULL,"
+            + "`insight_date` DATE NOT NULL,"
+            + "`scene` VARCHAR(50) NOT NULL,"
+            + "`severity` VARCHAR(20) DEFAULT 'info',"
+            + "`title` VARCHAR(200) NOT NULL,"
+            + "`content` TEXT DEFAULT NULL,"
+            + "`card_json` TEXT DEFAULT NULL,"
+            + "`action_url` VARCHAR(500) DEFAULT NULL,"
+            + "`auto_todo_id` VARCHAR(64) DEFAULT NULL,"
+            + "`read_flag` TINYINT NOT NULL DEFAULT 0,"
+            + "`dismissed` TINYINT NOT NULL DEFAULT 0,"
+            + "`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+            + "PRIMARY KEY (`id`),"
+            + "INDEX `idx_insight_tenant_date` (`tenant_id`, `insight_date`, `read_flag`),"
+            + "INDEX `idx_insight_created` (`created_at`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='小云每日洞察推送'");
     }
 
     private static void add(String table, String column, String definition) {
@@ -1292,6 +1264,56 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumnType(conn, schema, "t_production_process_tracking", "id",
                     "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
             repaired += ensureColumnIsNullable(conn, schema, "t_style_attachment", "style_no", "VARCHAR(64)");
+            repaired += ensureColumn(conn, schema, "t_tenant", "wechat_work_webhook_url",
+                    "VARCHAR(512) DEFAULT NULL");
+
+            // t_factory: 供应商管理增强字段
+            repaired += ensureColumn(conn, schema, "t_factory", "supplier_category", "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "supplier_region", "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "supplier_tier", "VARCHAR(16) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "supplier_tier_updated_at", "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "admission_status", "VARCHAR(32) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "admission_date", "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "qualification_cert", "VARCHAR(512) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "contract_no", "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "contract_start_date", "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "contract_end_date", "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "contract_amount", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "contract_terms", "TEXT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "bank_name", "VARCHAR(128) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "bank_account", "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "bank_branch", "VARCHAR(128) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "on_time_delivery_rate", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "quality_score", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "completion_rate", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "overall_score", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_factory", "total_orders", "INT DEFAULT 0");
+            repaired += ensureColumn(conn, schema, "t_factory", "completed_orders", "INT DEFAULT 0");
+            repaired += ensureColumn(conn, schema, "t_factory", "overdue_orders", "INT DEFAULT 0");
+
+            // t_production_order: 交付SLA字段
+            repaired += ensureColumn(conn, schema, "t_production_order", "is_quick_response", "TINYINT DEFAULT 0");
+            repaired += ensureColumn(conn, schema, "t_production_order", "quick_response_deadline", "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "standard_delivery_days", "INT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "actual_delivery_days", "INT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "delivery_sla_status", "VARCHAR(32) DEFAULT NULL");
+
+            // t_product_warehousing: 质检SPC字段
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "aql_level", "VARCHAR(16) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "cpk", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "ppk", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "defect_code", "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "defect_severity", "VARCHAR(16) DEFAULT NULL");
+
+            // t_style_quotation: 标准成本差异字段
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "standard_material_cost", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "standard_process_cost", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "material_variance", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "process_variance", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "total_variance", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "variance_rate", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "overhead_allocation_rate", "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "allocated_overhead_cost", "DECIMAL(15,2) DEFAULT NULL");
 
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列", repaired);
@@ -1493,6 +1515,21 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }
+        }
+    }
+
+    private int ensureColumn(Connection conn, String schema, String table, String column, String definition) {
+        try {
+            if (columnExists(conn, schema, table, column)) return 0;
+            String sql = "ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + definition;
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.executeUpdate();
+            }
+            log.warn("[DbRepair] 已补列: {}.{} {}", table, column, definition);
+            return 1;
+        } catch (Exception e) {
+            log.error("[DbRepair] 补列 {}.{} 失败: {}", table, column, e.getMessage());
+            return 0;
         }
     }
 

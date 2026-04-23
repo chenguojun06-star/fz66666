@@ -887,10 +887,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         BigDecimal unitPrice = existed.getUnitPrice() == null ? BigDecimal.ZERO : existed.getUnitPrice();
         patch.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(rq)));
 
-        // 回料确认后采购流程完结 → 直接设为 COMPLETED
-        // 旧逻辑 resolveStatusByArrived 返回 awaiting_confirm（语义矛盾：回料已确认却仍"等待确认"）
-        // 导致下游裁剪物料就绪检查失败，以及状态显示不正确
-        String newStatus = rq > 0 ? MaterialConstants.STATUS_COMPLETED : status;
+        String newStatus = rq > 0 ? MaterialConstants.STATUS_AWAITING_CONFIRM : status;
         patch.setStatus(newStatus);
 
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);
