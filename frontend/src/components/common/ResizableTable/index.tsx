@@ -329,9 +329,6 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     }
   });
 
-  const columnWidthsRef = React.useRef(columnWidths);
-  columnWidthsRef.current = columnWidths;
-
   React.useEffect(() => {
     if (!widthStorageKey) return;
     try {
