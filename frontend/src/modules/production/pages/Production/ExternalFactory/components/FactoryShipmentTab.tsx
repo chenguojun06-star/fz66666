@@ -21,7 +21,7 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
 };
 
 const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactoryId }) => {
-  const { message, modal } = App.useApp();
+  const { message, modal: _modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [shipments, setShipments] = useState<FactoryShipment[]>([]);
   const [total, setTotal] = useState(0);

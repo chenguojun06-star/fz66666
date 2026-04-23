@@ -7,7 +7,7 @@
   height: 100vh;
   background: #060c1a;
   color: #e0e6f5;
-  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: var(--font-family-base);
   overflow: hidden;
 }
 

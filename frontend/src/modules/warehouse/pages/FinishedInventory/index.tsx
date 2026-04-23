@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Button, Space, Tag, Row, Col, Input, Select, App, Tabs } from 'antd';
+import { Card, Button, Space, Row, Col, Input, Select, App, Tabs } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined, ScanOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
@@ -160,7 +160,6 @@ const _FinishedInventory: React.FC = () => {
   // 过滤条件变化时重置到第1页，防止当前页超出范围后表格空白
   useEffect(() => {
     pagination.gotoPage(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText, statusValue, selectedFactoryType]);
 
   // 根据当前页/每页条数对 dataSource 做切片，真正实现分页显示

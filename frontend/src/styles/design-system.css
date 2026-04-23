@@ -72,13 +72,22 @@
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
 
-  /* 字体大小系统（2026-02-03 补充） */
-  --font-size-xs: 12px;      /* 辅助文字 */
-  --font-size-sm: 13px;      /* 次要文字 */
-  --font-size-base: 14px;    /* 正文（基准） */
-  --font-size-lg: 16px;      /* 二级标题 */
-  --font-size-xl: 18px;      /* 一级标题 */
-  --font-size-xxl: 20px;     /* 数值强调 */
+  /* 字体大小系统 - 三级布局规范 */
+  /* 上级（标题/重点） */
+  --font-size-title: 18px;
+  --font-size-subtitle: 16px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  /* 中级（正文/内容） */
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  /* 下级（辅助/备注） */
+  --font-size-sm: 13px;
+  --font-size-xs: 12px;
+  --font-size-xxs: 11px;
+  /* 特殊 */
+  --font-size-xxl: 20px;
+  --font-size-display: 24px;
 }
 
 /* ========== 深色模式 Dark Mode ========== */
