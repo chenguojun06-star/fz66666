@@ -43,16 +43,37 @@ ALTER TABLE t_xxx ADD COLUMN yyy VARCHAR(64) COMMENT '备注';
 ### 原因
 Flyway 迁移可能因各种原因（语法bug、执行顺序、数据库权限）静默失败。`DbColumnRepairRunner` 是最后一道防线，应用启动时自动检测并补列。
 
+### 事故记录（2026-04-24）
+线上 `StyleQuotationMapper` 和 `ProductWarehousingMapper` 持续报 `setting parameters` 错误，根因是实体新增了22+个字段但 DbColumnRepairRunner 没有同步，导致数据库缺列，MyBatis-Plus SELECT * 映射失败。**用户看到的功能全部报错。**
+
 ### 操作流程
 1. 新增实体字段时，先写 Flyway 迁移脚本
-2. **同时**在 `DbColumnRepairRunner.java` 中添加对应的 `ensureColumn` 调用
-3. 确保 `ensureColumn` 的列定义与 Flyway 脚本一致
+2. **同时**在 `DbColumnRepairRunner.java` 中添加对应的 `add()` 调用
+3. 确保 `add()` 的列定义与 Flyway 脚本一致
+4. **上线前必须验证**：对比实体字段和 DbColumnRepairRunner 的覆盖范围
 
 ```java
-// ✅ 必须添加
-repaired += ensureColumn(conn, schema, "t_production_order", "new_field",
-        "VARCHAR(64) DEFAULT NULL");
+// ✅ 必须添加（在 COLUMN_FIXES static 块中）
+add("t_production_order", "new_field", "VARCHAR(64) DEFAULT NULL");
 ```
+
+### 验证方法（上线前必做）
+对比实体 private 字段与 DbColumnRepairRunner 的 add/ensureColumn 调用，确保没有遗漏：
+```bash
+# 提取实体字段名（转snake_case）
+grep "private" Entity.java | grep -v "TableField(exist=false)" | ...
+
+# 提取 DbColumnRepairRunner 中已覆盖的列名
+grep "add(\"t_xxx\"" DbColumnRepairRunner.java | ...
+
+# 对比差异
+diff <(实体字段) <(已覆盖列)
+```
+
+### 2026-04-24 已补全的缺失列
+- t_product_warehousing: +22列（warehousing_no, factory_name, factory_type, order_biz_type, org_unit_id, parent_org_unit_id, parent_org_unit_name, org_path, scan_code, cutting_quantity, repair_remark, inspection_type, sample_size, accept_number, reject_number, control_chart_type, control_chart_data, inspector_cert_no, warehousing_start_time, warehousing_end_time, warehousing_operator_id, warehousing_operator_name）
+- t_style_quotation: +4列（currency, version, is_locked, standard_other_cost）
+- t_factory_shipment: +1列（received_quantity）
 
 ## 规则3：实体有 deleteFlag 字段的，所有查询必须加过滤
 
