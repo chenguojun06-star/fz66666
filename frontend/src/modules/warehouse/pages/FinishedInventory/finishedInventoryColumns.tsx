@@ -80,10 +80,7 @@ export function getMainColumns(handlers: {
       align: 'left' as const,
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, lineHeight: 1.5, textAlign: 'left' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <strong style={{ fontSize: 14, fontWeight: 700 }}>{record.styleNo}</strong>
-            <Tag color="blue" style={{ fontSize: 11, margin: 0 }}>{record.orderNo}</Tag>
-          </div>
+          <strong style={{ fontSize: 14, fontWeight: 700 }}>{record.styleNo}</strong>
           <div style={{ fontSize: 13, color: 'var(--neutral-text)', fontWeight: 500 }}>{record.styleName || '-'}</div>
           <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
             工厂: {record.factoryName || '-'}

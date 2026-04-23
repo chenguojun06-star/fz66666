@@ -687,12 +687,6 @@ const _FinishedInventory: React.FC = () => {
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>颜色:</span>
                     <Tag color="blue">{inboundHistoryModal.data.color}</Tag>
                   </div>
-                  <div>
-                    <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>当前库存:</span>
-                    <strong style={{ color: 'var(--color-success)', fontSize: "var(--font-size-lg)" }}>
-                      {inboundHistoryModal.data.availableQty} 件
-                    </strong>
-                  </div>
                 </Space>
               </Card>
 
@@ -742,7 +736,7 @@ const _FinishedInventory: React.FC = () => {
                 ]}
                 dataSource={inboundHistory}
                 rowKey="id"
-                pagination={false}
+                pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['20', '50', '100'], showTotal: (total) => `共 ${total} 条` }}
                 size="small"
                 bordered
               />
