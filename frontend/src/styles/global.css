@@ -1034,13 +1034,32 @@ body {
   z-index: 0 !important;
 }
 
-.antd-resizable-header__handler__line {
-  background: var(--resizable-line-background, rgba(0, 0, 0, 0.06));
+.resizable-table .resizable-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 2;
 }
 
-.antd-resizable-header__handler:hover .antd-resizable-header__handler__line,
-.antd-resizable-header__handler:active .antd-resizable-header__handler__line {
-  background: var(--resizable-line-background, rgba(45, 127, 249, 0.4));
+.resizable-table .resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.12);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.resizable-table .resizable-handle:hover::after,
+.resizable-table .resizable-handle:active::after {
+  background: rgba(45, 127, 249, 0.6);
+  width: 2px;
+  right: 2px;
 }
 
 .ant-table-wrapper .ant-table-tbody > tr:nth-child(even) > td {

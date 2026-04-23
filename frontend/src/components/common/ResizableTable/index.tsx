@@ -2,6 +2,22 @@ import React from 'react';
 import { Table, ConfigProvider } from 'antd';
 import type { TableProps } from 'antd';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   DEFAULT_PAGE_SIZE,
   buildPageSizeStorageKey,
   normalizePageSize,
@@ -18,13 +34,10 @@ import {
   parseWidthPx,
   isLeafColumn,
   getColumnId,
-  readStorage,
-  writeStorage,
   readArrayStorage,
   writeArrayStorage,
   uniqueStrings,
 } from './utils';
-import ResizableHeaderCell from './ResizableHeaderCell';
 
 type ResizableTableProps<T extends object> = TableProps<T> & {
   storageKey?: string;
@@ -40,6 +53,153 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   autoScrollY?: boolean;
 };
 
+const SortableHeaderCell: React.FC<any> = (props) => {
+  const {
+    width: colWidth,
+    onResize,
+    resizable: canResize,
+    'data-col-id': colId,
+    children,
+    className,
+    style,
+    ...restProps
+  } = props;
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: colId || '' });
+
+  const resizeRef = React.useRef<{
+    active: boolean;
+    startX: number;
+    startWidth: number;
+  }>({ active: false, startX: 0, startWidth: 0 });
+
+  const handleResizePointerDown = React.useCallback((e: React.PointerEvent) => {
+    if (!canResize || typeof colWidth !== 'number') return;
+    e.preventDefault();
+    e.stopPropagation();
+    resizeRef.current = { active: true, startX: e.clientX, startWidth: colWidth };
+    try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+  }, [canResize, colWidth]);
+
+  const handleResizePointerMove = React.useCallback((e: React.PointerEvent) => {
+    if (!resizeRef.current.active) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.clientX - resizeRef.current.startX;
+    const newWidth = Math.max(60, Math.min(800, resizeRef.current.startWidth + delta));
+    onResize?.(newWidth);
+  }, [onResize]);
+
+  const handleResizePointerUp = React.useCallback((e: React.PointerEvent) => {
+    if (!resizeRef.current.active) return;
+    e.preventDefault();
+    e.stopPropagation();
+    resizeRef.current.active = false;
+    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+  }, []);
+
+  const transformStyle: React.CSSProperties = transform
+    ? {
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        position: 'relative',
+        zIndex: isDragging ? 100 : undefined,
+      }
+    : {};
+
+  return (
+    <th
+      ref={setNodeRef}
+      className={className}
+      style={{ ...style, ...transformStyle, position: 'relative' }}
+      {...attributes}
+      {...listeners}
+      {...restProps}
+    >
+      {children}
+      {canResize && typeof colWidth === 'number' && (
+        <div
+          className="resizable-handle"
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={handleResizePointerUp}
+          onPointerCancel={handleResizePointerUp}
+        />
+      )}
+    </th>
+  );
+};
+
+const ResizableHeaderCell: React.FC<any> = (props) => {
+  const {
+    width: colWidth,
+    onResize,
+    resizable: canResize,
+    children,
+    className,
+    style,
+    ...restProps
+  } = props;
+
+  const resizeRef = React.useRef<{
+    active: boolean;
+    startX: number;
+    startWidth: number;
+  }>({ active: false, startX: 0, startWidth: 0 });
+
+  const handleResizePointerDown = React.useCallback((e: React.PointerEvent) => {
+    if (!canResize || typeof colWidth !== 'number') return;
+    e.preventDefault();
+    e.stopPropagation();
+    resizeRef.current = { active: true, startX: e.clientX, startWidth: colWidth };
+    try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+  }, [canResize, colWidth]);
+
+  const handleResizePointerMove = React.useCallback((e: React.PointerEvent) => {
+    if (!resizeRef.current.active) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.clientX - resizeRef.current.startX;
+    const newWidth = Math.max(60, Math.min(800, resizeRef.current.startWidth + delta));
+    onResize?.(newWidth);
+  }, [onResize]);
+
+  const handleResizePointerUp = React.useCallback((e: React.PointerEvent) => {
+    if (!resizeRef.current.active) return;
+    e.preventDefault();
+    e.stopPropagation();
+    resizeRef.current.active = false;
+    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+  }, []);
+
+  return (
+    <th
+      className={className}
+      style={{ ...style, position: 'relative' }}
+      {...restProps}
+    >
+      {children}
+      {canResize && typeof colWidth === 'number' && (
+        <div
+          className="resizable-handle"
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={handleResizePointerUp}
+          onPointerCancel={handleResizePointerUp}
+        />
+      )}
+    </th>
+  );
+};
+
 const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   const {
     columns,
@@ -49,7 +209,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     pagination: paginationProp,
     storageKey: storageKeyProp,
     resizableColumns = true,
-    autoFixedColumns = true,
+    autoFixedColumns: _autoFixedColumns = true,
     allowFixedColumns = true,
     reorderableColumns = true,
     stickyFooter: stickyFooterProp,
@@ -74,7 +234,6 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     return `resizableTable:${pathname}:${rowKeyText}:${colsSig}`;
   }, [columns, rowKey, storageKeyProp]);
 
-  // 是否启用粘性页脚
   const stickyFooter = stickyFooterProp ?? false;
   const pageSizeStorageKey = React.useMemo(() => (
     resolvedStorageKey ? buildPageSizeStorageKey(resolvedStorageKey) : undefined
@@ -98,7 +257,6 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       ? persistedPageSize
       : explicitDefaultPageSize;
 
-    // 拦截 onChange：当用户切换每页条数时，自动持久化到 localStorage
     const originalOnChange = base?.onChange;
     const trackedPageSize = normalizedPageSize ?? normalizedDefaultPageSize;
     const interceptedOnChange = (page: number, pageSize: number) => {
@@ -125,26 +283,16 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     } as any;
   }, [pageSizeStorageKey, paginationProp]);
 
-  // 合并类名
   const mergedClassName = React.useMemo(() => {
     const next = [className, resizableColumns ? 'resizable-table' : ''].filter(Boolean).join(' ');
     return next || undefined;
   }, [className, resizableColumns]);
 
-  // 列宽状态
-  const [widths, setWidths] = React.useState<Record<string, number>>(() => {
-    if (typeof window === 'undefined') return {};
-    if (!resolvedStorageKey) return {};
-    return readStorage(resolvedStorageKey) || {};
-  });
-
-  // 列顺序存储键名
   const orderStorageKey = React.useMemo(() => {
     if (!resolvedStorageKey) return null;
     return `${resolvedStorageKey}:order`;
   }, [resolvedStorageKey]);
 
-  // 列顺序状态
   const [columnOrder, setColumnOrder] = React.useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
     if (!orderStorageKey) return [];
@@ -153,23 +301,219 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!resolvedStorageKey) {
-      setWidths({});
+    if (!orderStorageKey) {
       setColumnOrder([]);
       return;
     }
-    setWidths(readStorage(resolvedStorageKey) || {});
-    const nextOrder = readArrayStorage(`${resolvedStorageKey}:order`) || [];
+    const nextOrder = readArrayStorage(`${orderStorageKey}`) || [];
     setColumnOrder(nextOrder);
+  }, [orderStorageKey]);
+
+  React.useEffect(() => {
+    if (!orderStorageKey) return;
+    writeArrayStorage(orderStorageKey, uniqueStrings(columnOrder));
+  }, [columnOrder, orderStorageKey]);
+
+  const widthStorageKey = React.useMemo(() => {
+    if (!resolvedStorageKey) return null;
+    return `${resolvedStorageKey}:widths`;
   }, [resolvedStorageKey]);
 
-  // 当前正在拖拽的列 ID
-  const draggingIdRef = React.useRef<string | null>(null);
+  const [columnWidths, setColumnWidths] = React.useState<Record<string, number>>(() => {
+    if (typeof window === 'undefined' || !widthStorageKey) return {};
+    try {
+      const raw = localStorage.getItem(widthStorageKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
 
-  // getPopupContainer：表格在 Modal 内时锚定到 .ant-modal-body（避免弹层被遮挡），
-  // 否则回退到 document.body。
-  //  禁止将 popup 容器设为表格 wrapper div：该 div 无 position:relative，
-  //    absolute 弹层初始定位到错误祖先再修正，会导致视觉"抖动"（闪烁）。
+  const columnWidthsRef = React.useRef(columnWidths);
+  columnWidthsRef.current = columnWidths;
+
+  React.useEffect(() => {
+    if (!widthStorageKey) return;
+    try {
+      localStorage.setItem(widthStorageKey, JSON.stringify(columnWidths));
+    } catch {}
+  }, [columnWidths, widthStorageKey]);
+
+  const handleColumnResize = React.useCallback((colId: string, newWidth: number) => {
+    const clamped = Math.max(minColumnWidth, Math.min(maxColumnWidth, Math.round(newWidth)));
+    setColumnWidths(prev => {
+      if (prev[colId] === clamped) return prev;
+      return { ...prev, [colId]: clamped };
+    });
+  }, [minColumnWidth, maxColumnWidth]);
+
+  const preparedColumns = React.useMemo(() => {
+    if (!columns) return columns;
+    const rawCols = (Array.isArray(columns) ? columns : []) as any[];
+
+    const getSmartDefaultWidth = (colRecord: any) => {
+      const titleText = typeof colRecord.title === 'string' ? colRecord.title : '';
+      const keyText = colRecord.key == null ? '' : String(colRecord.key);
+      const dataIndexText = Array.isArray(colRecord.dataIndex)
+        ? colRecord.dataIndex.join('.')
+        : colRecord.dataIndex == null ? '' : String(colRecord.dataIndex);
+
+      const title = titleText.trim().toLowerCase();
+      const key = keyText.toLowerCase();
+      const dataIdx = dataIndexText.toLowerCase();
+
+      const narrowKeywords = ['数量', '件数', '码数', '尺码', '码', 'size', 'qty', 'quantity', 'num', 'count', '序号', 'no', 'id'];
+      if (narrowKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+        return 40;
+      }
+      const mediumKeywords = ['颜色', '状态', '类型', '仓库', '单位', 'color', 'status', 'type', 'warehouse', 'unit', 'tag'];
+      if (mediumKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+        return 60;
+      }
+      const wideKeywords = ['订单', '款号', '款名', '名称', '编号', 'order', 'style', 'name', 'code', 'no', 'qr', '菲号'];
+      if (wideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+        return 100;
+      }
+      const extraWideKeywords = ['备注', '描述', '说明', 'remark', 'desc', 'description', 'note'];
+      if (extraWideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+        return 150;
+      }
+      return defaultColumnWidth;
+    };
+
+    const mapColumns = (cols: any[]): any[] => {
+      return cols.map((col) => {
+        const colRecord = col as any;
+        const isLeaf = isLeafColumn(col);
+
+        if (!isLeaf) {
+          const children = Array.isArray(colRecord.children) ? colRecord.children : [];
+          return { ...colRecord, children: mapColumns(children) };
+        }
+
+        const colId = getColumnId(colRecord, [rawCols.indexOf(colRecord)]);
+
+        const titleText = typeof colRecord.title === 'string' ? colRecord.title : '';
+        const keyText = colRecord.key == null ? '' : String(colRecord.key);
+        const dataIndexText = Array.isArray(colRecord.dataIndex)
+          ? colRecord.dataIndex.join('.')
+          : colRecord.dataIndex == null ? '' : String(colRecord.dataIndex);
+
+        const maybeAction =
+          ['action', 'actions', 'operation', 'operate', 'op'].includes(keyText.toLowerCase()) ||
+          ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
+          ['操作', '操作列', '操作区', '操作按钮'].includes(titleText.trim());
+
+        const explicitWidth = parseWidthPx(colRecord.width);
+        const persistedWidth = columnWidths[colId];
+        const smartDefaultWidth = getSmartDefaultWidth(colRecord);
+        const baseWidth = persistedWidth
+          ?? explicitWidth
+          ?? (maybeAction ? actionColumnWidth : smartDefaultWidth);
+        const clampedWidth = typeof baseWidth === 'number'
+          ? clamp(baseWidth, minColumnWidth, maxColumnWidth)
+          : clamp(smartDefaultWidth, minColumnWidth, maxColumnWidth);
+
+        const fixed = allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined;
+
+        const { resizable: _stripResizable, ...safeColRecord } = colRecord;
+
+        return {
+          ...safeColRecord,
+          width: clampedWidth,
+          colId,
+          _resizable: resizableColumns && !maybeAction,
+          fixed,
+        };
+      });
+    };
+
+    return mapColumns(rawCols);
+  }, [columns, resizableColumns, allowFixedColumns, minColumnWidth, maxColumnWidth, defaultColumnWidth, columnWidths]);
+
+  const orderedColumns = React.useMemo(() => {
+    if (!preparedColumns || columnOrder.length === 0) return preparedColumns;
+    const rawCols = preparedColumns as any[];
+    const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
+    if (!topLevelLeaf) return preparedColumns;
+
+    const topLevelIds = rawCols.map((col, idx) => getColumnId(col, [idx]));
+    const map = new Map<string, any>();
+    for (let i = 0; i < rawCols.length; i++) {
+      map.set(topLevelIds[i], rawCols[i]);
+    }
+
+    const ordered: any[] = [];
+    for (const id of columnOrder) {
+      const hit = map.get(id);
+      if (!hit) continue;
+      ordered.push(hit);
+      map.delete(id);
+    }
+    for (let i = 0; i < rawCols.length; i++) {
+      const id = topLevelIds[i];
+      const hit = map.get(id);
+      if (!hit) continue;
+      ordered.push(hit);
+      map.delete(id);
+    }
+
+    return ordered;
+  }, [preparedColumns, columnOrder]);
+
+  const finalColumns = React.useMemo(() => {
+    if (!orderedColumns) return orderedColumns;
+    return (orderedColumns as any[]).map((col: any) => {
+      const { colId, _resizable, ...cleanCol } = col;
+      const originalOnHeaderCell = cleanCol.onHeaderCell;
+      return {
+        ...cleanCol,
+        onHeaderCell: (column: any) => {
+          const originalProps = typeof originalOnHeaderCell === 'function'
+            ? originalOnHeaderCell(column)
+            : {};
+          return {
+            ...originalProps,
+            width: column.width,
+            resizable: _resizable,
+            'data-col-id': colId,
+            onResize: _resizable
+              ? (newWidth: number) => handleColumnResize(colId, newWidth)
+              : undefined,
+          };
+        },
+      };
+    });
+  }, [orderedColumns, handleColumnResize]);
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
+  const sortableColumnIds = React.useMemo(() => {
+    if (!finalColumns || !reorderableColumns) return [];
+    return (finalColumns as any[]).map((col, idx) => {
+      const colId = (orderedColumns as any[])?.[idx]?.colId || getColumnId(col, [idx]);
+      return colId;
+    });
+  }, [finalColumns, reorderableColumns, orderedColumns]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const currentIds = (orderedColumns as any[]).map((col: any) => col.colId);
+    const oldIndex = currentIds.indexOf(String(active.id));
+    const newIndex = currentIds.indexOf(String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const nextOrder = arrayMove(currentIds, oldIndex, newIndex);
+    setColumnOrder(uniqueStrings(nextOrder));
+  };
+
   const getTablePopupContainer = React.useCallback((triggerNode?: HTMLElement) => {
     if (triggerNode) {
       const modal = triggerNode.closest?.('.ant-modal-body') as HTMLElement | null;
@@ -178,19 +522,6 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     return document.body;
   }, []);
 
-  // 保存列宽到本地存储
-  React.useEffect(() => {
-    if (!resolvedStorageKey) return;
-    writeStorage(resolvedStorageKey, widths);
-  }, [resolvedStorageKey, widths]);
-
-  // 保存列顺序到本地存储
-  React.useEffect(() => {
-    if (!orderStorageKey) return;
-    writeArrayStorage(orderStorageKey, uniqueStrings(columnOrder));
-  }, [columnOrder, orderStorageKey]);
-
-  // 合并滚动配置
   const mergedScroll = React.useMemo(() => {
     const baseScroll = typeof scroll === 'object' && scroll !== null ? (scroll as any) : {};
     const defaultY = 'max(300px, calc(100vh - 330px))';
@@ -204,275 +535,29 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       return nextScroll;
     }
 
-    if (!resizableColumns) {
-      if (!scroll) return { y: defaultY };
-      return { ...baseScroll, y: baseScroll.y ?? defaultY };
-    }
-
     if (!scroll) return { x: 'max-content' as const, y: defaultY };
     return {
       ...baseScroll,
       x: baseScroll.x ?? 'max-content',
-      y: baseScroll.y ?? defaultY
+      y: baseScroll.y ?? defaultY,
     };
-  }, [autoScrollY, resizableColumns, scroll]);
+  }, [autoScrollY, scroll]);
 
-  // 合并组件配置
   const mergedComponents = React.useMemo(() => {
-    if (!resizableColumns) return components;
     const baseComponents = typeof components === 'object' && components !== null ? (components as any) : {};
-    const header = typeof baseComponents.header === 'object' && baseComponents.header !== null
-      ? (baseComponents.header as any)
-      : {};
+    const cellComponent = reorderableColumns ? SortableHeaderCell : ResizableHeaderCell;
+
     return {
       ...baseComponents,
       header: {
-        ...header,
-        cell: (cellProps: any) => (
-          <ResizableHeaderCell
-            {...cellProps}
-            resizableColumns={resizableColumns}
-            minColumnWidth={minColumnWidth}
-            maxColumnWidth={maxColumnWidth}
-          />
-        ),
+        ...(typeof baseComponents.header === 'object' && baseComponents.header !== null
+          ? baseComponents.header
+          : {}),
+        cell: cellComponent,
       },
     } as any;
-  }, [components, maxColumnWidth, minColumnWidth, resizableColumns]);
+  }, [components, reorderableColumns]);
 
-  // 处理列配置
-  const mergedColumns = React.useMemo(() => {
-    if (!columns) return columns;
-    // 不启用列宽调整时，直接透传原始列配置（避免注入 fixed/onHeaderCell/宽度等副作用）
-    // 但需要确保每列都有宽度，否则 table-layout: fixed 会出问题
-    if (!resizableColumns) {
-      return (Array.isArray(columns) ? columns : []).map((col) => {
-        if (col.width) return col;
-        const colKey = (col as any).key || (col as any).dataIndex;
-        const keyText = typeof colKey === 'string' ? colKey.toLowerCase() : '';
-        const titleText = typeof col.title === 'string' ? col.title.toLowerCase() : '';
-
-        // 智能默认宽度
-        let defaultWidth = 100;
-        const narrowKeywords = ['数量', '件数', '码数', '尺码', '码', 'size', 'qty', 'quantity', 'num', 'count', '序号', 'no', 'id'];
-        if (narrowKeywords.some(k => titleText.includes(k) || keyText.includes(k))) {
-          defaultWidth = 40;
-        }
-        const mediumKeywords = ['颜色', '状态', '类型', '仓库', '单位', 'color', 'status', 'type', 'warehouse', 'unit'];
-        if (mediumKeywords.some(k => titleText.includes(k) || keyText.includes(k))) {
-          defaultWidth = 60;
-        }
-        const wideKeywords = ['订单', '款号', '款名', '名称', '编号', 'order', 'style', 'name', 'code', 'qr', '菲号'];
-        if (wideKeywords.some(k => titleText.includes(k) || keyText.includes(k))) {
-          defaultWidth = 100;
-        }
-
-        return { ...col, width: defaultWidth };
-      });
-    }
-
-    const rawCols = (Array.isArray(columns) ? columns : []) as any[];
-    const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
-    const topLevelIds = rawCols.map((col, idx) => getColumnId(col, [idx]));
-
-    // 应用列顺序
-    const applyOrder = (cols: Record<string, unknown>[]) => {
-      if (!reorderableColumns) return cols;
-      if (!topLevelLeaf) return cols;
-      const map = new Map<string, Record<string, unknown>>();
-      for (let i = 0; i < cols.length; i += 1) {
-        map.set(topLevelIds[i], cols[i]);
-      }
-
-      const ordered: Record<string, unknown>[] = [];
-      for (const id of columnOrder) {
-        const hit = map.get(id);
-        if (!hit) continue;
-        ordered.push(hit);
-        map.delete(id);
-      }
-
-      for (let i = 0; i < cols.length; i += 1) {
-        const id = topLevelIds[i];
-        const hit = map.get(id);
-        if (!hit) continue;
-        ordered.push(hit);
-        map.delete(id);
-      }
-
-      return ordered;
-    };
-
-    const orderedTopLevel = applyOrder(rawCols);
-
-    // 递归处理列配置
-    const mapColumns = (cols: Record<string, unknown>[], parentPath: number[] = []): Record<string, unknown>[] => {
-      return cols.map((col, idx) => {
-        const indexPath = [...parentPath, idx];
-        const id = getColumnId(col, indexPath);
-        const isLeaf = isLeafColumn(col);
-        const colRecord = col as any;
-
-        // 如果不是叶子列，递归处理子列
-        if (!isLeaf) {
-          const children = Array.isArray(colRecord.children) ? (colRecord.children as any[]) : [];
-          return {
-            ...colRecord,
-            children: mapColumns(children, indexPath),
-          };
-        }
-
-        // 提取列标题文本
-        const titleText = typeof colRecord.title === 'string' ? colRecord.title : '';
-        const keyText = colRecord.key == null ? '' : String(colRecord.key);
-        const dataIndexText = Array.isArray(colRecord.dataIndex)
-          ? colRecord.dataIndex.join('.')
-          : colRecord.dataIndex == null
-            ? ''
-            : String(colRecord.dataIndex);
-
-        // 判断是否为操作列
-        const maybeAction =
-          ['action', 'actions', 'operation', 'operate', 'op'].includes(keyText.toLowerCase()) ||
-          ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
-          ['操作', '操作列', '操作区', '操作按钮'].includes(titleText.trim());
-
-        // 根据列标题智能判断默认宽度
-        const getSmartDefaultWidth = () => {
-          const title = titleText.trim().toLowerCase();
-          const key = keyText.toLowerCase();
-          const dataIdx = dataIndexText.toLowerCase();
-
-          // 窄列：数量、码数、尺码等（内容短）
-          const narrowKeywords = ['数量', '件数', '码数', '尺码', '码', 'size', 'qty', 'quantity', 'num', 'count', '序号', 'no', 'id'];
-          if (narrowKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-            return 40;
-          }
-
-          // 中等列：颜色、状态、类型等
-          const mediumKeywords = ['颜色', '状态', '类型', '仓库', '单位', 'color', 'status', 'type', 'warehouse', 'unit', 'tag'];
-          if (mediumKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-            return 60;
-          }
-
-          // 宽列：订单号、款号、名称等
-          const wideKeywords = ['订单', '款号', '款名', '名称', '编号', 'order', 'style', 'name', 'code', 'no', 'qr', '菲号'];
-          if (wideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-            return 100;
-          }
-
-          // 超宽列：备注、描述等
-          const extraWideKeywords = ['备注', '描述', '说明', 'remark', 'desc', 'description', 'note'];
-          if (extraWideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-            return 150;
-          }
-
-          return defaultColumnWidth;
-        };
-
-        const explicitWidth = parseWidthPx(colRecord.width);
-        const storedWidth = widths[id];
-        const smartDefaultWidth = getSmartDefaultWidth();
-        const nextWidth = maybeAction
-          ? (explicitWidth ?? actionColumnWidth)
-          : (storedWidth ?? explicitWidth ?? smartDefaultWidth);
-        const baseWidth = typeof nextWidth === 'number'
-          ? clamp(nextWidth, minColumnWidth, maxColumnWidth)
-          : clamp(smartDefaultWidth, minColumnWidth, maxColumnWidth);
-
-        // 判断是否可调整列宽
-        const resizable = colRecord.resizable === true
-          ? true
-          : colRecord.resizable !== false && !maybeAction;
-
-        // 设置固定列
-        const fixed = allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined;
-
-        // 判断是否可拖拽排序
-        const draggable = reorderableColumns && !maybeAction && topLevelLeaf && parentPath.length === 0;
-
-        // Strip `resizable` from column props to prevent it leaking as a DOM attribute
-        const { resizable: _stripResizable, ...safeColRecord } = colRecord;
-
-        return {
-          ...safeColRecord,
-          ...(typeof baseWidth === 'number' ? { width: baseWidth } : {}),
-          fixed,
-          onHeaderCell: () => ({
-            width: baseWidth,
-            resizable,
-            onResize: (nextWidth: number) => {
-              setWidths((prev) => ({
-                ...prev,
-                [id]: clamp(nextWidth, minColumnWidth, maxColumnWidth),
-              }));
-            },
-            draggable,
-            onDragStart: (e: React.DragEvent<HTMLElement>) => {
-              if (!draggable) return;
-              draggingIdRef.current = id;
-              try {
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', id);
-              } catch {
-                // Intentionally empty
-                // 忽略错误
-              }
-            },
-            onDragEnd: () => {
-              draggingIdRef.current = null;
-            },
-            onDragOver: (e: React.DragEvent<HTMLElement>) => {
-              if (!draggable) return;
-              if (!draggingIdRef.current) return;
-              e.preventDefault();
-              try {
-                e.dataTransfer.dropEffect = 'move';
-              } catch {
-                // Intentionally empty
-                // 忽略错误
-              }
-            },
-            onDrop: (e: React.DragEvent<HTMLElement>) => {
-              if (!draggable) return;
-              e.preventDefault();
-              const fromId = draggingIdRef.current || (() => {
-                try {
-                  return e.dataTransfer.getData('text/plain') || null;
-                } catch {
-                  // Intentionally empty
-                  // 忽略错误
-                  return null;
-                }
-              })();
-              const toId = id;
-              if (!fromId) return;
-              if (fromId === toId) return;
-
-              const current = orderedTopLevel.map((c, i) => getColumnId(c, [i]));
-              const next = current.filter((x) => x !== fromId);
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const insertAfter = e.clientX > rect.left + rect.width / 2;
-              const toIndex = next.indexOf(toId);
-              const insertIndex = toIndex < 0 ? next.length : (insertAfter ? toIndex + 1 : toIndex);
-              next.splice(Math.max(0, insertIndex), 0, fromId);
-              setColumnOrder(uniqueStrings(next));
-              draggingIdRef.current = null;
-            },
-          }),
-        };
-      });
-    };
-
-    return mapColumns(orderedTopLevel);
-  }, [allowFixedColumns, autoFixedColumns, columnOrder, columns, maxColumnWidth, minColumnWidth, reorderableColumns, widths]);
-
-  const resolvedTableLayout = React.useMemo(() => {
-    if (tableLayout) return tableLayout;
-    return 'fixed' as const;
-  }, [tableLayout]);
-
-  // 包装器类名
   const wrapperClassName = React.useMemo(() => {
     const next = ['resizable-table-shell', className, stickyFooter ? 'resizable-table-shell-sticky-footer' : '']
       .filter(Boolean)
@@ -480,26 +565,41 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     return next;
   }, [className, stickyFooter]);
 
-  return (
+  const tableContent = (
     <div className={wrapperClassName}>
       <ConfigProvider getPopupContainer={getTablePopupContainer}>
         <Table
           {...rest}
           rowKey={rowKey}
           className={mergedClassName}
-          columns={mergedColumns as TableProps<T>['columns']}
+          columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={resolvedTableLayout}
+          tableLayout={tableLayout || undefined}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />
       </ConfigProvider>
     </div>
   );
+
+  if (reorderableColumns && sortableColumnIds.length > 0) {
+    return (
+      <DndContext
+        sensors={dndSensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={sortableColumnIds} strategy={horizontalListSortingStrategy}>
+          {tableContent}
+        </SortableContext>
+      </DndContext>
+    );
+  }
+
+  return tableContent;
 };
 
-// 挂载 Summary 静态子组件，使用方可直接用 ResizableTable.Summary.*，无需额外引入 antd Table
 const ResizableTableWithSummary = Object.assign(ResizableTable, {
   Summary: Table.Summary,
 });

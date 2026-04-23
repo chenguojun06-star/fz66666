@@ -731,3 +731,51 @@ if (normalizedStage != null) {
 - 禁止删除 `childProcessName` 变量（它是子工序→父节点映射的关键中间变量）
 - 禁止删除 `ProcessSynonymMapping.isEquivalent` 同义词匹配（ORDER码守卫依赖它）
 - 禁止删除 `resolveProcessCodeFromTemplate` 方法（工序编号解析依赖它）
+
+## 规则35：tracking 表 processCode 禁止被扫码端覆盖
+
+### 根因
+`ProductionProcessTrackingOrchestrator.updateScanRecord()` 在回退匹配成功后，用扫码端传入的 `processCode`（子工序名，如 "打揽"）覆盖了 tracking 表初始化时的 `processCode`（模板编号，如 "02"），导致前端显示 `打揽 打揽` 而不是 `02 打揽`。
+
+### 事故记录（2026-04-24）
+```
+1. TrackingRecordInitHelper 初始化 tracking:
+   processCode = "02" (模板id), processName = "打揽" (模板name)
+   → 前端显示 "02 打揽" ✅
+
+2. 扫码时 updateScanRecord(bundleId, "打揽", ...):
+   - 按 processCode="打揽" 精确匹配 → 找不到（tracking 中是 "02"）
+   - 按 processName="打揽" 回退匹配 → 找到了！
+   - tracking.setProcessCode("打揽") → 把 "02" 覆盖成 "打揽" ❌
+
+3. 前端显示: processCode="打揽" + processName="打揽" → "打揽 打揽" ❌
+```
+
+### 规则（以后必须遵守）
+
+**1. tracking 表的 processCode 一旦初始化就不允许被覆盖：**
+
+```java
+// ❌ 错误 - 扫码端传入的 processCode 是子工序名，覆盖会导致编号丢失
+tracking.setProcessCode(processCode);
+
+// ✅ 正确 - 回退匹配成功时不覆盖 processCode，保留初始化时的模板编号
+if (tracking == null) {
+    tracking = trackingService.getByBundleAndProcessName(cuttingBundleId, processCode);
+    // 匹配成功但不覆盖 processCode
+}
+```
+
+**2. tracking 表和 scan_record 表的 processCode 含义不同：**
+
+| 表 | processCode 含义 | 来源 | 示例 |
+|----|-----------------|------|------|
+| t_production_process_tracking | 模板工序编号 | TrackingRecordInitHelper 初始化 | "02" |
+| t_scan_record | 子工序名或编号 | 前端传入或 resolveProcessCodeFromTemplate | "02" 或 "打揽" |
+
+**3. 前端显示格式为 `{processCode} {processName}`（规则32），两个表的 processCode 必须各自正确。**
+
+### 涉及文件
+- `ProductionProcessTrackingOrchestrator.java` — updateScanRecord 方法
+- `TrackingRecordInitHelper.java` — tracking 表初始化
+- `ProductionScanExecutor.java` — 扫码端 processCode 赋值
