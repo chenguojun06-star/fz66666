@@ -144,8 +144,9 @@ public class SysNoticeOrchestrator {
         log.info("[SmartNotify] 自动通知已发送 orderNo={} to={} type={}",
                 order.getOrderNo(), merchandiser, noticeType);
 
-        // 同步推送到企业微信群（已配置时）
-        wechatWorkNotifyService.sendOrderAlert(
+        // 同步推送到企业微信群（优先使用租户自己的 Webhook，无则回退全局配置）
+        wechatWorkNotifyService.sendOrderAlertForTenant(
+                tenantId,
                 order.getOrderNo(),
                 order.getStyleNo(),
                 noticeType,
@@ -340,9 +341,9 @@ public class SysNoticeOrchestrator {
         sysNoticeService.saveBatch(notices);
         log.info("[SysNotice] 异常检测通知已发送 title={} toCount={}", title, notices.size());
 
-        // 同步推送到企业微信群（已配置时）
+        // 同步推送到企业微信群（优先使用租户自己的 Webhook，无则回退全局配置）
         String wechatContent = String.format("**%s — %s**\n>%s", title, orderNo != null ? orderNo : "", content);
-        wechatWorkNotifyService.sendMarkdown(wechatContent);
+        wechatWorkNotifyService.sendMarkdownForTenant(tenantId, wechatContent);
     }
 
     // ──────────────────────────────────────────────────────────────────────

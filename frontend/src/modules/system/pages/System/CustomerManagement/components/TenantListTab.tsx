@@ -42,6 +42,9 @@ const TenantListTab: React.FC = () => {
   const moduleModal = useModal<TenantInfo>();
   const [editingEnabledModules, setEditingEnabledModules] = useState<string[] | null>(null);
   const [savingModules, setSavingModules] = useState(false);
+  const webhookModal = useModal<TenantInfo>();
+  const [webhookForm] = Form.useForm();
+  const [savingWebhook, setSavingWebhook] = useState(false);
 
   const MODULE_OPTIONS = [
     { value: 'CRM_MODULE', label: 'CRM 客户管理' },
@@ -543,6 +546,13 @@ const TenantListTab: React.FC = () => {
             onClick: () => { resetPwdForm.resetFields(); resetPwdModal.open(record); },
           },
           {
+            key: 'webhook', label: '企微Webhook',
+            onClick: () => {
+              webhookForm.setFieldsValue({ wechatWorkWebhookUrl: record.wechatWorkWebhookUrl || '' });
+              webhookModal.open(record);
+            },
+          },
+          {
             key: 'toggle', label: record.status === 'active' ? '停用' : '启用',
             danger: record.status === 'active',
             onClick: () => handleToggleStatus(record),
@@ -818,6 +828,51 @@ const TenantListTab: React.FC = () => {
           </div>
         )}
       </ResizableModal>
+
+      {/* 企业微信 Webhook 弹窗（超管为租户设置） */}
+      <SmallModal
+        open={webhookModal.visible}
+        title={`企业微信 Webhook - ${webhookModal.data?.tenantName || ''}`}
+        onCancel={() => { webhookModal.close(); webhookForm.resetFields(); }}
+        footer={
+          <Space>
+            <Button onClick={() => { webhookModal.close(); webhookForm.resetFields(); }}>取消</Button>
+            <Button type="primary" loading={savingWebhook} onClick={async () => {
+              const record = webhookModal.data;
+              if (!record) return;
+              try {
+                setSavingWebhook(true);
+                const values = webhookForm.getFieldsValue();
+                const res: any = await tenantService.updateTenant(record.id, {
+                  wechatWorkWebhookUrl: String(values.wechatWorkWebhookUrl || '').trim(),
+                });
+                if (res?.code === 200 || res?.data) {
+                  message.success('Webhook 已保存');
+                  webhookModal.close();
+                  webhookForm.resetFields();
+                } else {
+                  message.error(res?.message || '保存失败');
+                }
+              } catch (e: unknown) {
+                message.error(e instanceof Error ? e.message : '保存失败');
+              } finally { setSavingWebhook(false); }
+            }}>保存</Button>
+          </Space>
+        }
+      >
+        <Form form={webhookForm} layout="vertical">
+          <Form.Item
+            label="企业微信群机器人 Webhook URL"
+            name="wechatWorkWebhookUrl"
+            extra="留空则使用平台全局 Webhook"
+          >
+            <Input
+              placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+              allowClear autoComplete="url"
+            />
+          </Form.Item>
+        </Form>
+      </SmallModal>
 
       {/* 重置主账号密码弹窗 */}
       <SmallModal

@@ -19,6 +19,7 @@ import {
     type SmartFeatureKey,
 } from '@/smart/core/featureFlags';
 import feedbackService from '@/services/feedbackService';
+import tenantService from '@/services/tenantService';
 import type { UserFeedback } from '@/services/feedbackService';
 import ProfileSmartSettingsPanel, { SMART_FEATURE_KEYS } from './ProfileSmartSettingsPanel';
 import ProfileTenantEngagementPanel from './ProfileTenantEngagementPanel';
@@ -43,8 +44,9 @@ const ProfileInfoTab: React.FC = () => {
     const [pwdForm] = Form.useForm();
     const [savingPwd, setSavingPwd] = useState(false);
     const avatarUrl = Form.useWatch('avatarUrl', form);
-    const [tenantInfo, setTenantInfo] = useState<{ tenantCode?: string; tenantName?: string; contactName?: string; contactPhone?: string } | null>(null);
+    const [tenantInfo, setTenantInfo] = useState<{ tenantCode?: string; tenantName?: string; contactName?: string; contactPhone?: string; wechatWorkWebhookUrl?: string } | null>(null);
     const [tenantForm] = Form.useForm();
+    const [savingWebhook, setSavingWebhook] = useState(false);
 
     // 问题反馈
     const [feedbackVisible, setFeedbackVisible] = useState(false);
@@ -173,12 +175,14 @@ const ProfileInfoTab: React.FC = () => {
                             tenantName: String(d.tenantName || ''),
                             contactName: String(d.contactName || ''),
                             contactPhone: String(d.contactPhone || ''),
+                            wechatWorkWebhookUrl: String(d.wechatWorkWebhookUrl || ''),
                         };
                         setTenantInfo(info);
                         tenantForm.setFieldsValue({
                             tenantName: info.tenantName,
                             contactName: info.contactName,
                             contactPhone: info.contactPhone,
+                            wechatWorkWebhookUrl: info.wechatWorkWebhookUrl,
                         });
                     }
                 }).catch(() => {});
@@ -332,6 +336,25 @@ const ProfileInfoTab: React.FC = () => {
     };
 
     const enabledCount = SMART_FEATURE_KEYS.filter((key) => smartFlags[key]).length;
+
+    const saveWebhookUrl = async () => {
+        try {
+            setSavingWebhook(true);
+            const values = tenantForm.getFieldsValue();
+            const res: any = await tenantService.updateMyTenantInfo({
+                wechatWorkWebhookUrl: String(values.wechatWorkWebhookUrl || '').trim(),
+            });
+            if (res?.code === 200) {
+                message.success('企业微信 Webhook 已保存');
+                return;
+            }
+            message.error(res?.message || '保存失败');
+        } catch (e: unknown) {
+            message.error(e instanceof Error ? e.message : '保存失败');
+        } finally {
+            setSavingWebhook(false);
+        }
+    };
 
     const saveSmartProfile = async () => {
         if (!canManageSmartFlags) {
@@ -506,6 +529,25 @@ const ProfileInfoTab: React.FC = () => {
                                     <Form.Item label="工厂名称" name="tenantName"><Input disabled autoComplete="organization" /></Form.Item>
                                     <Form.Item label="联系人" name="contactName"><Input disabled autoComplete="name" /></Form.Item>
                                     <Form.Item label="联系电话" name="contactPhone"><Input disabled autoComplete="tel" /></Form.Item>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                                    <Form.Item
+                                        label="企业微信群机器人 Webhook"
+                                        name="wechatWorkWebhookUrl"
+                                        style={{ flex: 1, marginBottom: 0 }}
+                                        tooltip="广播订单风险预警和透单通知到工厂微信群；空时不发送"
+                                    >
+                                        <Input
+                                            placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+                                            allowClear
+                                            autoComplete="url"
+                                        />
+                                    </Form.Item>
+                                    <Form.Item style={{ marginBottom: 0 }}>
+                                        <Button type="primary" onClick={saveWebhookUrl} loading={savingWebhook}>
+                                            保存
+                                        </Button>
+                                    </Form.Item>
                                 </div>
                             </Form>
                             <Typography.Text type="secondary" style={{ fontSize: 12 }}>

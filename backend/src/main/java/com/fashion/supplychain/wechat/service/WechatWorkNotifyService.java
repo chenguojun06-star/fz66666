@@ -1,6 +1,9 @@
 package com.fashion.supplychain.wechat.service;
 
+import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -47,6 +50,10 @@ public class WechatWorkNotifyService {
     private boolean enabled;
 
     private final RestTemplate restTemplate;
+
+    /** 租户 Service，用于查询租户独立 Webhook 配置（Spring 延迟注入，避免循环依赖） */
+    @Autowired(required = false)
+    private TenantService tenantService;
 
     public WechatWorkNotifyService() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -120,6 +127,71 @@ public class WechatWorkNotifyService {
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // 租户级接口（优先使用租户独立 Webhook，无则回退全局配置）
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * 向指定租户的企业微信群发送订单预警（使用该租户自己配置的 Webhook）
+     *
+     * <p>若租户未配置独立 Webhook，则回退到全局 {@code wechat.work.webhook-url} 配置。
+     * 若全局也未配置，静默跳过，不影响主业务。
+     */
+    public void sendOrderAlertForTenant(Long tenantId, String orderNo, String styleNo,
+                                         String alertType, String detail) {
+        String url = resolveWebhookUrl(tenantId);
+        if (url == null || url.isBlank()) return;
+
+        String emoji = alertEmojiFor(alertType);
+        String label = alertLabelFor(alertType);
+        String styleInfo = (styleNo != null && !styleNo.isBlank()) ? "，款号：" + styleNo : "";
+        String content = String.format("%s **%s — 订单 %s%s**\n>%s",
+                emoji, label, orderNo, styleInfo, detail);
+
+        doPostToUrl(url, buildMarkdownBody(content), "markdown");
+    }
+
+    /**
+     * 向指定租户的企业微信群发送 Markdown 消息
+     *
+     * <p>若租户未配置独立 Webhook，则回退到全局配置；均为空时静默跳过。
+     */
+    public void sendMarkdownForTenant(Long tenantId, String content) {
+        String url = resolveWebhookUrl(tenantId);
+        if (url == null || url.isBlank()) return;
+        doPostToUrl(url, buildMarkdownBody(content), "markdown");
+    }
+
+    /**
+     * 解析租户 Webhook URL：优先取租户独立配置，无则回退全局配置
+     */
+    private String resolveWebhookUrl(Long tenantId) {
+        if (!enabled) return null;
+        if (tenantId != null && tenantService != null) {
+            try {
+                Tenant tenant = tenantService.getById(tenantId);
+                if (tenant != null && tenant.getWechatWorkWebhookUrl() != null
+                        && !tenant.getWechatWorkWebhookUrl().isBlank()) {
+                    return tenant.getWechatWorkWebhookUrl();
+                }
+            } catch (Exception e) {
+                log.warn("[WechatWork] 查询租户 Webhook 失败，降级使用全局配置 tenantId={} error={}",
+                        tenantId, e.getMessage());
+            }
+        }
+        // 回退到全局配置
+        return (webhookUrl != null && !webhookUrl.isBlank()) ? webhookUrl : null;
+    }
+
+    private Map<String, Object> buildMarkdownBody(String content) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("msgtype", "markdown");
+        Map<String, String> md = new HashMap<>();
+        md.put("content", content);
+        body.put("markdown", md);
+        return body;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // 内部实现
     // ──────────────────────────────────────────────────────────────────────
 
@@ -131,16 +203,23 @@ public class WechatWorkNotifyService {
     }
 
     /**
-     * 执行 HTTP POST 推送，所有异常静默捕获，不阻断主业务流程
+     * 执行 HTTP POST 推送（使用全局 webhookUrl），所有异常静默捕获，不阻断主业务流程
      */
     private void doPost(Map<String, Object> body, String msgType) {
+        doPostToUrl(webhookUrl, body, msgType);
+    }
+
+    /**
+     * 执行 HTTP POST 推送到指定 URL，所有异常静默捕获，不阻断主业务流程
+     */
+    private void doPostToUrl(String url, Map<String, Object> body, String msgType) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    webhookUrl, HttpMethod.POST, request,
+                    url, HttpMethod.POST, request,
                     new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
 
             if (response.getStatusCode().is2xxSuccessful()) {

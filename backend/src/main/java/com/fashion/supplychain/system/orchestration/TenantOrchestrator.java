@@ -894,10 +894,11 @@ public class TenantOrchestrator {
     }
 
     /**
-     * 租户主账号更新自己的工厂信息（工厂名称、联系人、联系电话）
+     * 租户主账号更新自己的工厂信息（工厂名称、联系人、联系电话、企业微信 Webhook）
      */
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateMyTenantInfo(String tenantName, String contactName, String contactPhone) {
+    public boolean updateMyTenantInfo(String tenantName, String contactName, String contactPhone,
+                                      String wechatWorkWebhookUrl) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             throw new AccessDeniedException("超级管理员无需设置工厂信息");
@@ -918,6 +919,10 @@ public class TenantOrchestrator {
         }
         if (contactPhone != null) {
             tenant.setContactPhone(contactPhone.trim());
+        }
+        // 企业微信 Webhook URL（空字符串表示清除，null 表示不修改）
+        if (wechatWorkWebhookUrl != null) {
+            tenant.setWechatWorkWebhookUrl(wechatWorkWebhookUrl.trim());
         }
         tenant.setUpdateTime(LocalDateTime.now());
         return tenantService.updateById(tenant);

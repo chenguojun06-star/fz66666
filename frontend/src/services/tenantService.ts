@@ -35,6 +35,8 @@ export interface TenantInfo {
   remark?: string;
   /** 租户类型: SELF_FACTORY=自建工厂 HYBRID=混合型 BRAND=纯品牌/贸易 */
   tenantType?: 'SELF_FACTORY' | 'HYBRID' | 'BRAND';
+  /** 企业微信群机器人 Webhook 地址（每租户独立配置） */
+  wechatWorkWebhookUrl?: string;
   createTime: string;
 }
 
@@ -136,7 +138,7 @@ const tenantService = {
 
   // ========== 当前租户 ==========
   myTenant: () => api.get(`${BASE}/my`),
-  updateMyTenantInfo: (data: { tenantName?: string; contactName?: string; contactPhone?: string }) =>
+  updateMyTenantInfo: (data: { tenantName?: string; contactName?: string; contactPhone?: string; wechatWorkWebhookUrl?: string }) =>
     api.put(`${BASE}/my/info`, data),
 
   // ========== 角色模板 ==========

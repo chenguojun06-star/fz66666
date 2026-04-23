@@ -166,14 +166,16 @@ public class TenantController {
     }
 
     /**
-     * 租户主账号修改自己的工厂名称/联系信息（非超管专用，租户自主管理）
+     * 租户主账号修改自己的工厂名称/联系信息/企业微信 Webhook（非超管专用，租户自主管理）
      */
     @PutMapping("/my/info")
     public Result<Boolean> updateMyTenantInfo(@RequestBody Map<String, String> params) {
         String tenantName = params.get("tenantName");
         String contactName = params.get("contactName");
         String contactPhone = params.get("contactPhone");
-        return Result.success(tenantOrchestrator.updateMyTenantInfo(tenantName, contactName, contactPhone));
+        String wechatWorkWebhookUrl = params.get("wechatWorkWebhookUrl");
+        return Result.success(tenantOrchestrator.updateMyTenantInfo(
+                tenantName, contactName, contactPhone, wechatWorkWebhookUrl));
     }
 
     // ========== 租户自助账单与发票 ==========

@@ -110,6 +110,10 @@ public class Tenant {
      */
     private String tenantType = "HYBRID";
 
+    /** 企业微信群机器人 Webhook 地址（每租户独立配置，为空时回退全局配置） */
+    @TableField("wechat_work_webhook_url")
+    private String wechatWorkWebhookUrl;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
