@@ -11,6 +11,7 @@ import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
+import com.fashion.supplychain.wechat.service.WechatWorkNotifyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,9 @@ public class SysNoticeOrchestrator {
 
     @Autowired
     private TenantService tenantService;
+
+    @Autowired
+    private WechatWorkNotifyService wechatWorkNotifyService;
 
     // ──────────────────────────────────────────────────────────────────────
     // 发送通知
@@ -139,6 +143,13 @@ public class SysNoticeOrchestrator {
         sysNoticeService.save(notice);
         log.info("[SmartNotify] 自动通知已发送 orderNo={} to={} type={}",
                 order.getOrderNo(), merchandiser, noticeType);
+
+        // 同步推送到企业微信群（已配置时）
+        wechatWorkNotifyService.sendOrderAlert(
+                order.getOrderNo(),
+                order.getStyleNo(),
+                noticeType,
+                notice.getContent());
     }
 
     /**
@@ -328,6 +339,10 @@ public class SysNoticeOrchestrator {
         }
         sysNoticeService.saveBatch(notices);
         log.info("[SysNotice] 异常检测通知已发送 title={} toCount={}", title, notices.size());
+
+        // 同步推送到企业微信群（已配置时）
+        String wechatContent = String.format("**%s — %s**\n>%s", title, orderNo != null ? orderNo : "", content);
+        wechatWorkNotifyService.sendMarkdown(wechatContent);
     }
 
     // ──────────────────────────────────────────────────────────────────────

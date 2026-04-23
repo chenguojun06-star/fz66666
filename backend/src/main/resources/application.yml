@@ -219,6 +219,12 @@ wechat:
     mock-enabled: ${WECHAT_MINI_PROGRAM_MOCK_ENABLED:false}
     trust-all-certs: ${WECHAT_TRUST_ALL_CERTS:false}
     alert-template-id: ${WECHAT_MP_ALERT_TEMPLATE_ID:}  # 微信订阅消息模板ID（thing1标题/thing2订单号/thing3内容）
+  # 企业微信群机器人 Webhook 推送（可选，用于将逾期/停滞/AI异常实时推送到工作群）
+  # 获取方式：企业微信群 → 群设置 → 群机器人 → 添加机器人 → 复制 Webhook URL
+  # 安全要求：webhook-url 含鉴权 key，仅通过环境变量 WECHAT_WORK_WEBHOOK_URL 注入，禁止硬编码
+  work:
+    enabled: ${WECHAT_WORK_NOTIFY_ENABLED:false}
+    webhook-url: ${WECHAT_WORK_WEBHOOK_URL:}
 
 # 微信通知（Server酱，免费，直接推到个人微信"服务通知"）
 # 获取 SendKey：微信扫码登录 https://sct.ftqq.com/ → 复制 SendKey
