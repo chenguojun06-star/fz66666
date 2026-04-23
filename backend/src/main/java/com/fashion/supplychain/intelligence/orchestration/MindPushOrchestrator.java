@@ -390,6 +390,7 @@ public class MindPushOrchestrator {
         com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
         notice.setTenantId(tenantId);
         notice.setFromName("AI小云");
+        notice.setToName(""); // to_name NOT NULL，AI推送无固定接收人，置为空串
         notice.setOrderNo(dedupKey);
         notice.setTitle(title);
         notice.setContent(content);

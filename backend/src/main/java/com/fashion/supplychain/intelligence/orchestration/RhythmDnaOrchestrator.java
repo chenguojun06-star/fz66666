@@ -68,7 +68,15 @@ public class RhythmDnaOrchestrator {
                 .map(com.fashion.supplychain.production.entity.ProductionOrder::getId)
                 .collect(Collectors.toList());
 
-        List<Map<String, Object>> snapshots = scanRecordMapper.selectFlowStageSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+        // Bug#1修复：定时任务/异步上下文中 tenantId 可能为 null，直接调用会导致
+        // "The error occurred while setting parameters" SQL错误，此时跳过 snapshot 查询
+        Long ctxTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (ctxTenantId == null) {
+            log.warn("[节奏DNA] tenantId 为空（定时任务上下文），跳过 flow-stage-snapshot 查询");
+            resp.setOrders(Collections.emptyList());
+            return resp;
+        }
+        List<Map<String, Object>> snapshots = scanRecordMapper.selectFlowStageSnapshot(orderIds, ctxTenantId);
         Map<String, Map<String, Object>> snapshotMap = snapshots.stream()
                 .collect(Collectors.toMap(
                         m -> String.valueOf(m.get("orderId")), m -> m, (a, b) -> a));
