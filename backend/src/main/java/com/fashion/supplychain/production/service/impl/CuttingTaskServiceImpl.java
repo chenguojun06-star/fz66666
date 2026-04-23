@@ -302,6 +302,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         if (!orderIdsFiltered.isEmpty() || !orderNos.isEmpty()) {
             List<ProductionOrder> orders = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getDeleteFlag, 0)
                             .and(w -> {
                                 if (!orderIdsFiltered.isEmpty()) {
                                     w.in(ProductionOrder::getId, orderIdsFiltered);

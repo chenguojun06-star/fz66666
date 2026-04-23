@@ -113,6 +113,18 @@ public class FactoryOrchestrator {
         if (factory.getDeleteFlag() == null) {
             factory.setDeleteFlag(0);
         }
+        if (!StringUtils.hasText(factory.getAdmissionStatus())) {
+            factory.setAdmissionStatus("MATERIAL".equals(factory.getSupplierType()) ? "pending" : "approved");
+        }
+        if (factory.getTotalOrders() == null) {
+            factory.setTotalOrders(0);
+        }
+        if (factory.getCompletedOrders() == null) {
+            factory.setCompletedOrders(0);
+        }
+        if (factory.getOverdueOrders() == null) {
+            factory.setOverdueOrders(0);
+        }
         boolean ok = factoryService.save(factory);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -251,6 +263,61 @@ public class FactoryOrchestrator {
         } catch (Exception e) {
             log.warn("[供应商账号] 自动创建失败(不影响供应商创建): supplierId={}, error={}", factory.getId(), e.getMessage());
         }
+    }
+
+    public boolean approveAdmission(String id, String action, String reason) {
+        if (!UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        Factory f = factoryService.getById(id);
+        if (f == null) throw new NoSuchElementException("供应商不存在");
+
+        String newStatus;
+        switch (action) {
+            case "approve": newStatus = "approved"; break;
+            case "probation": newStatus = "probation"; break;
+            case "reject": newStatus = "rejected"; break;
+            case "suspend": newStatus = "suspended"; break;
+            default: throw new IllegalArgumentException("无效操作: " + action);
+        }
+
+        Factory patch = new Factory();
+        patch.setId(id);
+        patch.setAdmissionStatus(newStatus);
+        patch.setUpdateTime(LocalDateTime.now());
+        if ("approved".equals(newStatus) && f.getAdmissionDate() == null) {
+            patch.setAdmissionDate(LocalDateTime.now());
+        }
+        boolean ok = factoryService.updateById(patch);
+        if (ok) {
+            saveOperationLog("factory", id, f.getFactoryName(), "ADMISSION_" + action.toUpperCase(), reason);
+        }
+        return ok;
+    }
+
+    public boolean updateContract(String id, Factory contractFields) {
+        if (!UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        Factory f = factoryService.getById(id);
+        if (f == null) throw new NoSuchElementException("供应商不存在");
+
+        Factory patch = new Factory();
+        patch.setId(id);
+        patch.setContractNo(contractFields.getContractNo());
+        patch.setContractStartDate(contractFields.getContractStartDate());
+        patch.setContractEndDate(contractFields.getContractEndDate());
+        patch.setContractAmount(contractFields.getContractAmount());
+        patch.setContractTerms(contractFields.getContractTerms());
+        patch.setBankName(contractFields.getBankName());
+        patch.setBankAccount(contractFields.getBankAccount());
+        patch.setBankBranch(contractFields.getBankBranch());
+        patch.setUpdateTime(LocalDateTime.now());
+        boolean ok = factoryService.updateById(patch);
+        if (ok) {
+            saveOperationLog("factory", id, f.getFactoryName(), "CONTRACT_UPDATE", null);
+        }
+        return ok;
     }
 
     // 使用TextUtils.safeText()替代

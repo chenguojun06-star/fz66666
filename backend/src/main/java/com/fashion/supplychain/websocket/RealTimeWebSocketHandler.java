@@ -37,8 +37,16 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     // 心跳超时时间（毫秒） — 如需启用心跳超时检测可恢复
     // private static final long HEARTBEAT_TIMEOUT = 60000;
 
+    private static final int MAX_CONNECTIONS = 10000;
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        if (sessionManager.getSessionCount() >= MAX_CONNECTIONS) {
+            log.warn("[WebSocket] 连接数已达上限 {}, 拒绝新连接: sessionId={}", MAX_CONNECTIONS, session.getId());
+            session.close(new CloseStatus(1013, "Too many connections"));
+            return;
+        }
+
         String query = session.getUri().getQuery();
         String token = extractParam(query, "token");
         String userId = extractParam(query, "userId");

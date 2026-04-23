@@ -50,4 +50,17 @@ public class FactoryController {
             @RequestParam(required = false) String remark) {
         return Result.success(factoryOrchestrator.delete(id, remark));
     }
+
+    @PutMapping("/{id}/admission")
+    public Result<Boolean> approveAdmission(@PathVariable String id,
+            @RequestParam String action,
+            @RequestParam(required = false) String reason) {
+        return Result.success(factoryOrchestrator.approveAdmission(id, action, reason));
+    }
+
+    @PutMapping("/{id}/contract")
+    public Result<Boolean> updateContract(@PathVariable String id,
+            @RequestBody Factory contractFields) {
+        return Result.success(factoryOrchestrator.updateContract(id, contractFields));
+    }
 }

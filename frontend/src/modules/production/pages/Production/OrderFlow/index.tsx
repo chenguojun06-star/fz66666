@@ -103,7 +103,7 @@ const OrderFlow: React.FC = () => {
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>已完成</span>
                   <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.completedQuantity)}</span>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>生产进度</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, lineHeight: '22px' }}>{`${calcOrderProgress(order as any)}%`}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, lineHeight: '22px' }}>{`${calcOrderProgress(order ?? undefined)}%`}</span>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>扎数</span>
                   <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.cuttingBundleCount)}</span>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>入库数</span>

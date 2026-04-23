@@ -280,6 +280,7 @@ public class ProductWarehousingQueryHelper {
         LambdaQueryWrapper<ScanRecord> q = new LambdaQueryWrapper<ScanRecord>()
                 .isNotNull(ScanRecord::getCuttingBundleId)
                 .ne(ScanRecord::getCuttingBundleId, "")
+                .ne(ScanRecord::getScanType, "orchestration")
                 .eq(ScanRecord::getScanResult, "success");
         if (tenantId != null) {
             q.eq(ScanRecord::getTenantId, tenantId);
@@ -483,6 +484,8 @@ public class ProductWarehousingQueryHelper {
                             .eq(ScanRecord::getOrderId, oid)
                             .isNotNull(ScanRecord::getCuttingBundleId)
                             .ne(ScanRecord::getCuttingBundleId, "")
+                            .ne(ScanRecord::getScanType, "orchestration")
+                            .eq(ScanRecord::getScanResult, "success")
             );
 
         Map<String, Set<String>> bundleScanTypes = new HashMap<>();

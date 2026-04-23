@@ -82,6 +82,24 @@ public class StyleQuotation {
      */
     private Integer isLocked;
 
+    private BigDecimal standardMaterialCost;
+
+    private BigDecimal standardProcessCost;
+
+    private BigDecimal standardOtherCost;
+
+    private BigDecimal materialVariance;
+
+    private BigDecimal processVariance;
+
+    private BigDecimal totalVariance;
+
+    private BigDecimal varianceRate;
+
+    private BigDecimal overheadAllocationRate;
+
+    private BigDecimal allocatedOverheadCost;
+
     // ==================== 操作人字段（自动填充）====================
 
     @TableField(fill = FieldFill.INSERT)

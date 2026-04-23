@@ -39,6 +39,7 @@ spring:
       minimum-idle: ${HIKARI_MIN_IDLE:10} # 保持10个活跃连接，减少高峰期连接创建延迟
       idle-timeout: 300000 # 优化：空闲5分钟释放（原10分钟）
       max-lifetime: 1800000
+      keepalive-time: 120000
       connection-test-query: SELECT 1
       pool-name: FashionHikariPool
       leak-detection-threshold: 30000 # 30秒未归还连接视为泄漏（5秒太激进，订单导出/Excel导入等慢操作会产生大量误报）

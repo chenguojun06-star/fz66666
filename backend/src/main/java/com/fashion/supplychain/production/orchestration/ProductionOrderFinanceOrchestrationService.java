@@ -887,6 +887,8 @@ public class ProductionOrderFinanceOrchestrationService {
             List<ScanRecord> scans = scanRecordService.list(
                 new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, orderId)
+                    .ne(ScanRecord::getScanType, "orchestration")
+                    .eq(ScanRecord::getScanResult, "success")
             );
             return scans.stream()
                 .map(s -> s.getScanCost() != null ? s.getScanCost() : BigDecimal.ZERO)

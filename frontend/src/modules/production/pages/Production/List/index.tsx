@@ -711,6 +711,8 @@ const ProductionList: React.FC = () => {
                     key: 'remainingDays',
                     render: (val: unknown, record: Record<string, unknown>) => {
                       const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
+                      // 已完成/已报废/已关单 的状态已由进度条展示，此处不重复显示
+                      if (text === '已完成' || text === '已报废' || text === '已关单') return <span style={{ color: '#999', fontSize: '10px' }}>-</span>;
                       return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>;
                     }
                   }

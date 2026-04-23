@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.DefectTraceResponse;
 import com.fashion.supplychain.intelligence.dto.DefectTraceResponse.DayTrend;
 import com.fashion.supplychain.intelligence.dto.DefectTraceResponse.ProcessDefect;
@@ -48,10 +49,11 @@ public class DefectTraceOrchestrator {
         }
 
         try {
+            TenantAssert.assertTenantContext();
             Long tenantId = UserContext.tenantId();
             // 查询该订单所有质检入库记录（包括未发现次品的记录，用于计算总检验件数）
             QueryWrapper<ProductWarehousing> qw = new QueryWrapper<>();
-            qw.eq(tenantId != null, "tenant_id", tenantId)
+            qw.eq("tenant_id", tenantId)
               .eq("order_id", orderId.trim())
               .eq("delete_flag", 0);
             List<ProductWarehousing> allRecords = productWarehousingService.list(qw);

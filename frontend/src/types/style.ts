@@ -186,6 +186,15 @@ export interface StyleQuotation extends Record<string, unknown> {
   totalPrice: number;
   currency?: string;
   version?: string;
+  standardMaterialCost?: number;
+  standardProcessCost?: number;
+  standardOtherCost?: number;
+  materialVariance?: number;
+  processVariance?: number;
+  totalVariance?: number;
+  varianceRate?: number;
+  overheadAllocationRate?: number;
+  allocatedOverheadCost?: number;
 }
 
 export interface StyleAttachment extends Record<string, unknown> {

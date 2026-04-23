@@ -850,6 +850,7 @@ public class IntelligenceController {
 
     // ── 第八批：10阶段AI路线图新能力 ──
     private final ForecastEngineOrchestrator forecastEngineOrchestrator;
+    private final SalesForecastOrchestrator salesForecastOrchestrator;
     private final WhatIfSimulationOrchestrator whatIfSimulationOrchestrator;
     private final VisualAIOrchestrator visualAIOrchestrator;
     private final CrossTenantBenchmarkOrchestrator crossTenantBenchmarkOrchestrator;
@@ -861,6 +862,21 @@ public class IntelligenceController {
     @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "预测由AI模型生成")
     public Result<ForecastEngineResponse> forecast(@RequestBody ForecastEngineRequest req) {
         return Result.success(forecastEngineOrchestrator.forecast(req));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/sales-forecast")
+    public Result<SalesForecastOrchestrator.SalesForecastResponse> salesForecast(
+            @RequestParam String styleNo,
+            @RequestParam(defaultValue = "1") int horizonMonths) {
+        return Result.success(salesForecastOrchestrator.forecastSales(styleNo, horizonMonths));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/size-curve")
+    public Result<SalesForecastOrchestrator.SizeCurveResponse> sizeCurve(
+            @RequestParam String styleNo) {
+        return Result.success(salesForecastOrchestrator.forecastSizeCurve(styleNo));
     }
 
     /** Stage6 — What-If 推演沙盘（多场景对比） */

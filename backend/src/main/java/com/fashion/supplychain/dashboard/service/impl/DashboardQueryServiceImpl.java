@@ -479,6 +479,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .le(end != null, CuttingTask::getBundledTime, end)
                 .isNotNull(CuttingTask::getBundledTime)
                 .isNotNull(CuttingTask::getOrderQuantity)
+                .last("LIMIT 5000")
                 .list();
 
         long total = tasks.stream()
@@ -666,6 +667,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .orderByAsc(ProductionOrder::getPlannedEndDate)
+                .last("LIMIT 5000")
                 .list();
     }
 

@@ -233,10 +233,12 @@ public class ProductionScanExecutor {
         // 单价为0时在响应中添加警告提示
         boolean unitPriceZero = unitPrice.compareTo(BigDecimal.ZERO) <= 0;
 
-        // processCode 使用子工序名（用于去重和工序跟踪）
         String processCode = hasText(TextUtils.safeText(params.get("processCode")))
                              ? TextUtils.safeText(params.get("processCode"))
-                             : childProcessName;
+                             : resolveProcessCodeFromTemplate(order.getStyleNo(), childProcessName);
+        if (!hasText(processCode)) {
+            processCode = childProcessName;
+        }
 
         String duplicateCheckScanCode = scanCode;
         if (!hasText(duplicateCheckScanCode) && bundle != null) {
@@ -283,7 +285,7 @@ public class ProductionScanExecutor {
 
         // 尝试更新已有记录
         Map<String, Object> updateResult = tryUpdateExistingBundleScanRecord(
-                requestId, scanCode, bundle, order, scanType, progressStage, processCode,
+                requestId, scanCode, bundle, order, scanType, progressStage, processCode, childProcessName,
                 quantity, unitPrice, operatorId, operatorName, color, size,
                 TextUtils.safeText(params.get("remark")), isCutting);
 
@@ -312,7 +314,7 @@ public class ProductionScanExecutor {
 
         // 创建新扫码记录
         ScanRecord sr = buildProductionRecord(requestId, scanCode, bundle, order, scanType, progressStage,
-                                             processCode, quantity, unitPrice, operatorId, operatorName,
+                                             processCode, childProcessName, quantity, unitPrice, operatorId, operatorName,
                                              color, size, TextUtils.safeText(params.get("remark")), clientScanTime);
 
         // AI 财务风控拦截：检查是否存在恶意的刷单/异常高产（根据工价和金额等判断）
@@ -378,12 +380,12 @@ public class ProductionScanExecutor {
                 try {
                     boolean trackingUpdated = processTrackingOrchestrator.updateScanRecord(
                         bundle.getId(),
-                        processCode,    // 第1次尝试：子工序名（如"剪线"）
+                        childProcessName,    // 第1次尝试：子工序名（如"剪线"）
                         operatorId,
                         operatorName,
                         sr.getId()
                     );
-                    if (!trackingUpdated && hasText(progressStage) && !processCode.equals(progressStage)) {
+                    if (!trackingUpdated && hasText(progressStage) && !childProcessName.equals(progressStage)) {
                         // 第2次尝试：父节点名（如"尾部"）—— tracking 表按 progressStage 初始化时用此路径
                         trackingUpdated = processTrackingOrchestrator.updateScanRecord(
                             bundle.getId(),
@@ -414,7 +416,7 @@ public class ProductionScanExecutor {
             log.info("生产扫码记录重复: requestId={}, scanCode={}", requestId, scanCode, dke);
             // 重试更新
             updateResult = tryUpdateExistingBundleScanRecord(
-                    requestId, scanCode, bundle, order, scanType, progressStage, processCode,
+                    requestId, scanCode, bundle, order, scanType, progressStage, processCode, childProcessName,
                     quantity, unitPrice, operatorId, operatorName, color, size,
                     TextUtils.safeText(params.get("remark")), isCutting);
             if (updateResult != null) {
@@ -484,7 +486,7 @@ public class ProductionScanExecutor {
      */
     private Map<String, Object> tryUpdateExistingBundleScanRecord(
             String requestId, String scanCode, CuttingBundle bundle, ProductionOrder order,
-            String scanType, String progressStage, String processCode, int quantity,
+            String scanType, String progressStage, String processCode, String childProcessName, int quantity,
             BigDecimal unitPrice, String operatorId, String operatorName, String color, String size,
             String remark, boolean includeBundle) {
 
@@ -547,7 +549,7 @@ public class ProductionScanExecutor {
             patch.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
             patch.setProcessCode(processCode);
             patch.setProgressStage(progressStage);   // 父节点
-            patch.setProcessName(processCode);        // 子工序名
+            patch.setProcessName(childProcessName);  // 子工序名
             patch.setOperatorId(operatorId);
             patch.setOperatorName(operatorName);
             patch.setScanTime(LocalDateTime.now());
@@ -587,7 +589,7 @@ public class ProductionScanExecutor {
             returned.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
             returned.setProcessCode(processCode);
             returned.setProgressStage(progressStage);   // 父节点
-            returned.setProcessName(processCode);        // 子工序名
+            returned.setProcessName(childProcessName);   // 子工序名
             returned.setOperatorId(operatorId);
             returned.setOperatorName(operatorName);
             returned.setScanTime(LocalDateTime.now());
@@ -698,6 +700,30 @@ public class ProductionScanExecutor {
         if (dynamicParent != null) {
             log.info("工序 '{}' 通过动态映射表 → 父节点 '{}' (styleNo={})", processName, dynamicParent, styleNo);
             return dynamicParent;
+        }
+        return null;
+    }
+
+    private String resolveProcessCodeFromTemplate(String styleNo, String processName) {
+        String sn = hasText(styleNo) ? styleNo.trim() : null;
+        String pn = hasText(processName) ? processName.trim() : null;
+        if (!hasText(sn) || !hasText(pn)) {
+            return null;
+        }
+        try {
+            List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(sn);
+            if (nodes == null || nodes.isEmpty()) {
+                return null;
+            }
+            for (Map<String, Object> node : nodes) {
+                String name = String.valueOf(node.getOrDefault("name", "")).trim();
+                if (pn.equals(name)) {
+                    String id = String.valueOf(node.getOrDefault("id", "")).trim();
+                    return hasText(id) ? id : null;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析工序编号失败: styleNo={}, processName={}", sn, pn, e);
         }
         return null;
     }
@@ -830,7 +856,7 @@ public class ProductionScanExecutor {
      */
     private ScanRecord buildProductionRecord(String requestId, String scanCode, CuttingBundle bundle,
                                             ProductionOrder order, String scanType, String progressStage,
-                                            String processCode, int quantity, BigDecimal unitPrice,
+                                            String processCode, String processName, int quantity, BigDecimal unitPrice,
                                             String operatorId, String operatorName, String color, String size,
                                             String remark, LocalDateTime clientScanTime) {
         ScanRecord sr = new ScanRecord();
@@ -848,7 +874,7 @@ public class ProductionScanExecutor {
         sr.setTotalAmount(computeTotalAmount(unitPrice, quantity));
         sr.setProcessCode(processCode);
         sr.setProgressStage(progressStage);    // 父进度节点（如"车缝"），用于进度聚合
-        sr.setProcessName(processCode);           // 子工序名（如"上领"），用于显示和识别
+        sr.setProcessName(processName);        // 子工序名（如"上领"），用于显示和识别
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
         // 记录扫码时归属的外发工厂（普通租户账号此值为null）

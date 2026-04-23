@@ -644,7 +644,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     [
       { label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
       { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
-      { label: '剩', key: 'remainingDays', render: (_val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } },
+      { label: '剩', key: 'remainingDays', render: (_val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string); if (text === '已完成' || text === '已报废' || text === '已关单') return <span style={{ color: '#999', fontSize: '10px' }}>-</span>; return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } },
     ],
   ], []);
   const productionCardProgressConfig = useMemo(() => ({

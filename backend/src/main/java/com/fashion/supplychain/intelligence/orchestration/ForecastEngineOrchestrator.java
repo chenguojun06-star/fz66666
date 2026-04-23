@@ -86,6 +86,7 @@ public class ForecastEngineOrchestrator {
                         .eq("tenant_id", tenantId)
                         .eq("style_no", req.getSubjectId())
                         .eq("status", "COMPLETED")
+                        .eq("delete_flag", 0)
                         .isNotNull("factory_unit_price")
                         .gt("create_time", LocalDateTime.now().minusDays(90))
                         .orderByDesc("create_time")
@@ -135,6 +136,7 @@ public class ForecastEngineOrchestrator {
         List<ProductionOrder> recent = productionOrderService.list(
                 new QueryWrapper<ProductionOrder>()
                         .eq("tenant_id", tenantId)
+                        .eq("delete_flag", 0)
                         .gt("create_time", LocalDateTime.now().minusDays(180))
                         .orderByAsc("create_time")
         );
@@ -195,6 +197,7 @@ public class ForecastEngineOrchestrator {
                         .eq("tenant_id", tenantId)
                         .eq("style_no", req.getSubjectId())
                         .eq("status", "COMPLETED")
+                        .eq("delete_flag", 0)
                         .isNotNull("cutting_quantity")
                         .isNotNull("order_quantity")
                         .gt("create_time", LocalDateTime.now().minusDays(180))

@@ -241,6 +241,7 @@ public class DeliveryPredictionOrchestrator {
             QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
             qw.eq("order_id", orderId)
               .eq("scan_result", "success")
+              .ne("scan_type", "orchestration")
               .gt("quantity", 0)
               .between("scan_time", dayStart, dayEnd);
             long dayQty = scanRecordService.list(qw).stream()

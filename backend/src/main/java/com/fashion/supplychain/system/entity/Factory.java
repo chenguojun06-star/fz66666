@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -70,6 +71,50 @@ public class Factory {
      * 默认 500，可在工厂管理页面修改
      */
     private Integer dailyCapacity;
+
+    private String supplierCategory;
+
+    private String supplierRegion;
+
+    private String supplierTier;
+
+    private LocalDateTime supplierTierUpdatedAt;
+
+    private String admissionStatus;
+
+    private LocalDateTime admissionDate;
+
+    private String qualificationCert;
+
+    private String contractNo;
+
+    private LocalDateTime contractStartDate;
+
+    private LocalDateTime contractEndDate;
+
+    private BigDecimal contractAmount;
+
+    private String contractTerms;
+
+    private String bankName;
+
+    private String bankAccount;
+
+    private String bankBranch;
+
+    private BigDecimal onTimeDeliveryRate;
+
+    private BigDecimal qualityScore;
+
+    private BigDecimal completionRate;
+
+    private BigDecimal overallScore;
+
+    private Integer totalOrders;
+
+    private Integer completedOrders;
+
+    private Integer overdueOrders;
 
     @TableField(exist = false)
     private String operationRemark;

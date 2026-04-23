@@ -251,8 +251,9 @@ public class ScanRecordOrchestrator {
             autoProcess = true;
         }
 
-        // procurement 必须在允许集合内（ORDER 码采购扫码经此路由后走 productionScanExecutor，progressStage='采购'）
-        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse", "pattern", "procurement");
+        // procurement: ORDER码采购扫码经此路由后走 productionScanExecutor，progressStage='采购'
+        // pattern: 样衣扫码应走专门的 PatternProductionOrchestrator，禁止通过此入口
+        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse", "procurement");
         if (!ALLOWED_SCAN_TYPES.contains(scanType)) {
             throw new IllegalArgumentException("不支持的扫码类型: " + scanType);
         }
@@ -321,6 +322,7 @@ public class ScanRecordOrchestrator {
                         webSocketService.notifyOrderProgressChanged(undoOperatorId, on, 0, "撤销");
                     }
                 } catch (Exception e) {
+                    log.warn("[ScanRecordOrchestrator] 进度查询失败，降级通知: orderNo={}", on, e);
                     webSocketService.notifyOrderProgressChanged(undoOperatorId, on, 0, "撤销");
                 }
             }
@@ -386,6 +388,7 @@ public class ScanRecordOrchestrator {
             try {
                 target = scanRecordService.getOne(qw);
             } catch (Exception e) {
+                log.warn("[ScanRecordOrchestrator] 查询扫码记录失败: recordId={}", recordId, e);
                 target = null;
             }
         }

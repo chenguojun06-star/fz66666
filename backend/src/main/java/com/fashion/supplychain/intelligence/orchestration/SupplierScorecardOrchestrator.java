@@ -2,12 +2,17 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.SupplierScorecardResponse;
 import com.fashion.supplychain.intelligence.dto.SupplierScorecardResponse.SupplierScore;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.mapper.FactoryMapper;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -40,9 +45,13 @@ public class SupplierScorecardOrchestrator {
     @Autowired
     private ScanRecordMapper scanRecordMapper;
 
+    @Autowired
+    private FactoryMapper factoryMapper;
+
     public SupplierScorecardResponse scorecard() {
         SupplierScorecardResponse resp = new SupplierScorecardResponse();
         try {
+            TenantAssert.assertTenantContext();
             Long tenantId = UserContext.tenantId();
             String factoryId = UserContext.factoryId();
             LocalDateTime since = LocalDateTime.now().minusMonths(RECENT_MONTHS);
@@ -91,6 +100,8 @@ public class SupplierScorecardOrchestrator {
             resp.setTopCount((int) topCount);
             resp.setSummary(String.format("共评估 %d 家工厂（近%d个月 %d 单），S+A级 %d 家",
                     scores.size(), RECENT_MONTHS, orders.size(), topCount));
+
+            persistScoresToFactory(scores, orders);
         } catch (Exception e) {
             log.error("[供应商评分卡] 异常: {}", e.getMessage(), e);
             resp.setScores(Collections.emptyList());
@@ -164,6 +175,7 @@ public class SupplierScorecardOrchestrator {
         QueryWrapper<ScanRecord> sq = new QueryWrapper<>();
         sq.eq(tenantId != null, "tenant_id", tenantId)
           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+          .ne("scan_type", "orchestration")
           .in("order_id", orderIds);
         List<ScanRecord> records = scanRecordMapper.selectList(sq);
         Map<String, long[]> result = new HashMap<>();
@@ -174,5 +186,32 @@ public class SupplierScorecardOrchestrator {
             if ("success".equalsIgnoreCase(r.getScanResult())) result.get(key)[1]++;
         }
         return result;
+    }
+
+    private void persistScoresToFactory(List<SupplierScore> scores, List<ProductionOrder> orders) {
+        Map<String, String> factoryNameToId = orders.stream()
+                .filter(o -> StringUtils.hasText(o.getFactoryId()) && StringUtils.hasText(o.getFactoryName()))
+                .collect(Collectors.toMap(ProductionOrder::getFactoryName, ProductionOrder::getFactoryId, (a, b) -> a));
+
+        for (SupplierScore s : scores) {
+            String fid = factoryNameToId.get(s.getFactoryName());
+            if (fid == null) continue;
+            try {
+                Factory f = factoryMapper.selectById(fid);
+                if (f == null) continue;
+                f.setSupplierTier(s.getTier());
+                f.setSupplierTierUpdatedAt(LocalDateTime.now());
+                f.setOnTimeDeliveryRate(BigDecimal.valueOf(s.getOnTimeRate()).setScale(2, RoundingMode.HALF_UP));
+                f.setQualityScore(BigDecimal.valueOf(s.getQualityScore()).setScale(2, RoundingMode.HALF_UP));
+                f.setCompletionRate(BigDecimal.valueOf(s.getOverallScore() > 0 ? s.getOverallScore() * 100 / s.getOnTimeRate() : 0).setScale(2, RoundingMode.HALF_UP));
+                f.setOverallScore(BigDecimal.valueOf(s.getOverallScore()).setScale(2, RoundingMode.HALF_UP));
+                f.setTotalOrders(s.getTotalOrders());
+                f.setCompletedOrders(s.getCompletedOrders());
+                f.setOverdueOrders(s.getOverdueOrders());
+                factoryMapper.updateById(f);
+            } catch (Exception e) {
+                log.warn("[供应商评分持久化] 工厂{}写入失败: {}", s.getFactoryName(), e.getMessage());
+            }
+        }
     }
 }

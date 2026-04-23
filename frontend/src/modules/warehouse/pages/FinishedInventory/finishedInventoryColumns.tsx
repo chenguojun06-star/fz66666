@@ -42,6 +42,7 @@ export interface FinishedInventory {
   lastInboundDate: string;
   qualityInspectionNo?: string;
   lastInboundBy?: string;
+  lastInboundQty?: number;
   lastOutboundDate?: string;
   lastOutstockNo?: string;
   lastOutboundBy?: string;
@@ -161,7 +162,7 @@ export function getMainColumns(handlers: {
       render: (_, record) => (
         <div style={{ fontSize: 13, lineHeight: 2, color: 'var(--neutral-text)' }}>
           <div>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</div>
-          <div>数量: <strong style={{ color: 'var(--color-success)' }}>{record.totalInboundQty ?? record.availableQty ?? '-'}</strong> 件</div>
+          <div>数量: <strong style={{ color: 'var(--color-success)' }}>{record.lastInboundQty ?? '-'}</strong> 件</div>
           <div>操作人: <strong>{record.lastInboundBy || '-'}</strong></div>
           <div style={{ color: 'var(--neutral-text-secondary)' }}>库位: {record.warehouseLocation || '-'}</div>
         </div>

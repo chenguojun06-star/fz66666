@@ -140,6 +140,7 @@ public class MaterialPickupReceivableOrchestrator {
         }
         List<ProductionOrder> orders = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getDeleteFlag, 0)
                         .in(ProductionOrder::getOrderNo, orderNos)
                         .select(ProductionOrder::getOrderNo,
                                 ProductionOrder::getFactoryName,

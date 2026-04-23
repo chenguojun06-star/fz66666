@@ -4,19 +4,13 @@
 spring:
   datasource:
     hikari:
-      maximum-pool-size: 50
-      # 云托管容器会休眠，minimum-idle=0 避免保留空闲连接被 MySQL 断掉后唤醒失败
-      minimum-idle: 0
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:100}
+      minimum-idle: ${HIKARI_MIN_IDLE:20}
       connection-timeout: 30000
-      # idle-timeout: 容器休眠时空闲连接会被杀掉，设短一点让 HikariCP 主动回收
       idle-timeout: 180000
-      # max-lifetime: 必须小于 MySQL wait_timeout(默认28800s=480min)，留出余量
       max-lifetime: 1200000
-      # keepalive-time: 每隔2分钟发一次心跳，防止云网络层把空闲TCP连接踢掉
       keepalive-time: 120000
-      # 连接验证查询
       connection-test-query: SELECT 1
-      # TCP 超时兜底：防止云网络 drop 死连接后 JDBC 读写无限等待
       data-source-properties:
         socketTimeout: 30000
         connectTimeout: 10000
@@ -32,9 +26,10 @@ spring:
       lettuce:
         shutdown-timeout: ${SPRING_REDIS_SHUTDOWN_TIMEOUT_MS:200}ms
         pool:
-          max-active: ${SPRING_REDIS_POOL_MAX_ACTIVE:32}
-          max-idle: ${SPRING_REDIS_POOL_MAX_IDLE:16}
-          min-idle: ${SPRING_REDIS_POOL_MIN_IDLE:2}
+          max-active: ${SPRING_REDIS_POOL_MAX_ACTIVE:64}
+          max-idle: ${SPRING_REDIS_POOL_MAX_IDLE:32}
+          min-idle: ${SPRING_REDIS_POOL_MIN_IDLE:8}
+          max-wait: ${SPRING_REDIS_POOL_MAX_WAIT:3000}ms
 
   # 生产环境启用 Flyway 进行数据库迁移管理
   flyway:

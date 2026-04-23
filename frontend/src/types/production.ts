@@ -41,8 +41,11 @@ export interface ProductionOrder extends Record<string, unknown> {
   status: 'pending' | 'production' | 'completed' | 'delayed' | 'scrapped' | 'cancelled' | 'closed' | 'archived' | 'paused' | 'returned';
   /** 紧急程度: urgent=急单, normal=普通，默认普通 */
   urgencyLevel?: 'urgent' | 'normal';
-  /** 订单类型: FIRST=首单, REORDER=翻单 */
   plateType?: 'FIRST' | 'REORDER';
+  isQuickResponse?: boolean;
+  standardDeliveryDays?: number;
+  actualDeliveryDays?: number;
+  deliverySlaStatus?: 'on_track' | 'at_risk' | 'breached' | 'completed';
   plannedStartDate: string;
   plannedEndDate: string;
   actualStartDate?: string;
@@ -375,6 +378,17 @@ export interface ProductWarehousing extends Record<string, unknown> {
   receiverId?: string;
   /** 扫码模式: bundle(菲号) / ucode(U编码) */
   scanMode?: string;
+  inspectionType?: 'IQC' | 'IPQC' | 'FQC' | 'OQC';
+  aqlLevel?: string;
+  sampleSize?: number;
+  acceptNumber?: number;
+  rejectNumber?: number;
+  cpk?: number;
+  ppk?: number;
+  controlChartType?: string;
+  defectCode?: string;
+  defectSeverity?: 'critical' | 'major' | 'minor';
+  inspectorCertNo?: string;
 }
 
 export interface ProductOutstock {

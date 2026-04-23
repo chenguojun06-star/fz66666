@@ -332,7 +332,7 @@ public class ReceivableOrchestrator {
 
     private int parseInt(Object val, int def) {
         if (val == null) return def;
-        try { return Integer.parseInt(val.toString()); } catch (Exception e) { return def; }
+        try { return Integer.parseInt(val.toString()); } catch (Exception e) { log.debug("[ReceivableOrchestrator] parseInt降级: val={}", val); return def; }
     }
 
     private String strOf(Object val) {

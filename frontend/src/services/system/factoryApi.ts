@@ -16,6 +16,29 @@ export interface Factory extends Record<string, unknown> {
   parentOrgUnitId?: string;
   parentOrgUnitName?: string;
   orgPath?: string;
+  dailyCapacity?: number;
+  supplierCategory?: string;
+  supplierRegion?: string;
+  supplierTier?: 'S' | 'A' | 'B' | 'C';
+  supplierTierUpdatedAt?: string;
+  admissionStatus?: 'pending' | 'approved' | 'probation' | 'rejected' | 'suspended';
+  admissionDate?: string;
+  qualificationCert?: string;
+  contractNo?: string;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  contractAmount?: number;
+  contractTerms?: string;
+  bankName?: string;
+  bankAccount?: string;
+  bankBranch?: string;
+  onTimeDeliveryRate?: number;
+  qualityScore?: number;
+  completionRate?: number;
+  overallScore?: number;
+  totalOrders?: number;
+  completedOrders?: number;
+  overdueOrders?: number;
   createTime: string;
   updateTime: string;
 }
@@ -68,6 +91,12 @@ export const factoryApi = {
    */
   delete: (id: string) =>
     api.delete<{ code: number; message: string }>(`/system/factory/${id}`),
+
+  approveAdmission: (id: string, action: string, reason?: string) =>
+    api.put<{ code: number; data: boolean }>(`/system/factory/${id}/admission`, null, { params: { action, reason } }),
+
+  updateContract: (id: string, data: Partial<Factory>) =>
+    api.put<{ code: number; data: boolean }>(`/system/factory/${id}/contract`, data),
 };
 
 export default factoryApi;

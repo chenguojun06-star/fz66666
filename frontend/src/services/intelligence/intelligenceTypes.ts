@@ -1044,3 +1044,31 @@ export interface OrphanDataScanResultDTO {
   categoryStats: Record<string, OrphanDataCategoryStat>;
   scanTime: string;
 }
+
+/* ================================================================
+   销量预测 & 尺码曲线
+================================================================ */
+export interface SalesForecastResponse {
+  styleNo: string;
+  horizonMonths: number;
+  predictedQty: number;
+  optimistic: number;
+  pessimistic: number;
+  confidence: number;
+  monthlyHistory: Record<string, number>;
+}
+
+export interface SizeCurveResponse {
+  styleNo: string;
+  sizeCurve: Record<string, number>;
+  sampleCount: number;
+  confidence: number;
+}
+
+/* ================================================================
+   物流运费比价
+================================================================ */
+export interface LogisticsCompareFeesResponse {
+  fees: Record<string, number>;
+  availableCompanies: string[];
+}

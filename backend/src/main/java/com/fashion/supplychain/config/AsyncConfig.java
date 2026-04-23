@@ -29,9 +29,9 @@ public class AsyncConfig implements AsyncConfigurer {
     @Bean("taskExecutor")
     public Executor getAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(500);
+        executor.setCorePoolSize(20);
+        executor.setMaxPoolSize(50);
+        executor.setQueueCapacity(2000);
         executor.setKeepAliveSeconds(60);
         executor.setThreadNamePrefix("fashion-async-");
         executor.setTaskDecorator(contextCopyingDecorator());
@@ -41,7 +41,7 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         log.info("Async thread pool initialized: core={}, max={}, queue={}",
-                executor.getCorePoolSize(), executor.getMaxPoolSize(), 500);
+                executor.getCorePoolSize(), executor.getMaxPoolSize(), 2000);
         return executor;
     }
 

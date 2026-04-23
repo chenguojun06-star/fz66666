@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -171,6 +172,30 @@ public class ProductWarehousing {
      * 扫码模式: bundle(菲号) / ucode(U编码)
      */
     private String scanMode;
+
+    private String inspectionType;
+
+    private String aqlLevel;
+
+    private Integer sampleSize;
+
+    private Integer acceptNumber;
+
+    private Integer rejectNumber;
+
+    private BigDecimal cpk;
+
+    private BigDecimal ppk;
+
+    private String controlChartType;
+
+    private String controlChartData;
+
+    private String defectCode;
+
+    private String defectSeverity;
+
+    private String inspectorCertNo;
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;

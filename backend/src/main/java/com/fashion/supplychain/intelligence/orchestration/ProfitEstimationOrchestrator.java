@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,6 +41,9 @@ public class ProfitEstimationOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     @Autowired
     private OrderPriceFillHelper orderPriceFillHelper;
@@ -85,27 +89,20 @@ public class ProfitEstimationOrchestrator {
         BigDecimal quotationTotal = lockedUnitPrice.multiply(BigDecimal.valueOf(qty));
         resp.setQuotationTotal(quotationTotal);
 
-        BigDecimal factoryUnit = lockedUnitPrice;
-        BigDecimal factoryCost = factoryUnit.multiply(BigDecimal.valueOf(qty));
-        resp.setFactoryCost(factoryCost);
-
-        // 面辅料成本（简化估算）
-        BigDecimal materialCost = factoryCost.multiply(MATERIAL_RATIO)
-                .setScale(2, RoundingMode.HALF_UP);
-        resp.setMaterialCost(materialCost);
-
-        // 已发工资（累计 scan record totalAmount）
         BigDecimal wageCost = computeWageCost(order.getId());
         resp.setWageCost(wageCost);
 
-        // 其他费用（简化为0）
+        BigDecimal materialCost = computeMaterialCost(order);
+        resp.setMaterialCost(materialCost);
+
         resp.setOtherCost(BigDecimal.ZERO);
 
-        // 总成本
-        BigDecimal totalCost = factoryCost.add(materialCost).add(wageCost);
+        BigDecimal factoryCost = wageCost;
+        resp.setFactoryCost(factoryCost);
+
+        BigDecimal totalCost = materialCost.add(wageCost);
         resp.setTotalCost(totalCost);
 
-        // 利润
         BigDecimal profit = quotationTotal.subtract(totalCost);
         resp.setEstimatedProfit(profit);
 
@@ -136,7 +133,8 @@ public class ProfitEstimationOrchestrator {
     private BigDecimal computeWageCost(String orderId) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("order_id", orderId)
-          .eq("scan_result", "success");
+          .eq("scan_result", "success")
+          .ne("scan_type", "orchestration");
         return scanRecordService.list(qw).stream()
                 .map(r -> {
                     if (r.getTotalAmount() != null && r.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
@@ -148,5 +146,26 @@ public class ProfitEstimationOrchestrator {
                     return BigDecimal.ZERO;
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal computeMaterialCost(ProductionOrder order) {
+        try {
+            QueryWrapper<com.fashion.supplychain.production.entity.MaterialPurchase> qw = new QueryWrapper<>();
+            qw.eq("order_no", order.getOrderNo())
+              .eq("delete_flag", 0)
+              .in("status", "RECEIVED", "COMPLETED");
+            var purchases = materialPurchaseService.list(qw);
+            return purchases.stream()
+                    .map(p -> p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
+        } catch (Exception e) {
+            log.warn("[利润预估] 物料成本查询失败，使用15%估算: {}", e.getMessage());
+            BigDecimal lockedUnitPrice = OrderPricingSnapshotUtils.resolveLockedOrderUnitPrice(
+                    order.getFactoryUnitPrice(), order.getOrderDetails());
+            return lockedUnitPrice.multiply(BigDecimal.valueOf(
+                    order.getOrderQuantity() != null ? order.getOrderQuantity() : 0))
+                    .multiply(MATERIAL_RATIO).setScale(2, RoundingMode.HALF_UP);
+        }
     }
 }

@@ -109,6 +109,12 @@ public class FinishedInventoryDTO {
     private String lastInboundBy;
 
     /**
+     * 最后一次入库的数量（来自最新 t_product_warehousing 记录的 qualified_quantity）
+     * 注意：区别于 totalInboundQty（历史累计入库总量）
+     */
+    private Integer lastInboundQty;
+
+    /**
      * 最后出库日期
      */
     private LocalDateTime lastOutboundDate;

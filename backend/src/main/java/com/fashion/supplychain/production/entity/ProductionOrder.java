@@ -227,6 +227,14 @@ public class ProductionOrder {
     @TableField("plate_type")
     private String plateType;
 
+    private Boolean isQuickResponse;
+
+    private Integer standardDeliveryDays;
+
+    private Integer actualDeliveryDays;
+
+    private String deliverySlaStatus;
+
     /**
      * 计划开始日期
      */

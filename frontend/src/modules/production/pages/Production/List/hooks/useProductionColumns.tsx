@@ -591,10 +591,19 @@ export function useProductionColumns({
         const dateStr = value ? formatDateTime(value as string) : '-';
         const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
+        const slaMap: Record<string, { color: string; text: string }> = {
+          on_track: { color: '#52c41a', text: '正常' },
+          at_risk: { color: '#faad14', text: '预警' },
+          breached: { color: '#ff4d4f', text: '超期' },
+          completed: { color: '#1890ff', text: '达标' },
+        };
+        const sla = slaMap[record.deliverySlaStatus || ''] || null;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
+            {record.isQuickResponse && <Tag color="volcano" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>快反</Tag>}
+            {sla && <span style={{ fontSize: 10, fontWeight: 600, color: sla.color }}>SLA: {sla.text}{record.actualDeliveryDays != null ? ` ${record.actualDeliveryDays}天` : ''}</span>}
             {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
               <span style={{
                 fontSize: 10, fontWeight: 500,

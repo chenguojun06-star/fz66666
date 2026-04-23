@@ -60,9 +60,10 @@ const RATE_FIELD_MAP: { label: string; field: string }[] = [
  * @returns 0-100 的整数百分比
  */
 export function calcOrderProgress(
-  record: ProductionOrder,
+  record: ProductionOrder | null | undefined,
   boardStatsMap?: Record<string, number> | null,
 ): number {
+  if (!record) return 0;
   const dbProgress = clampProgress(Number(record.productionProgress) || 0);
 
   // 终态判断

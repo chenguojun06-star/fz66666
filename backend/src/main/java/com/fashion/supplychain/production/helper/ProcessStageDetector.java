@@ -272,6 +272,7 @@ public class ProcessStageDetector {
                     .eq(ScanRecord::getScanResult, "success")
                     .gt(ScanRecord::getQuantity, 0));
         } catch (Exception e) {
+            log.warn("[ProcessStageDetector] 查询扫码记录失败: orderId={}", order.getId(), e);
             return null;
         }
 

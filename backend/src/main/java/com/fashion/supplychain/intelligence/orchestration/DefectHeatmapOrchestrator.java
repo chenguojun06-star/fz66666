@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.DefectHeatmapResponse;
 import com.fashion.supplychain.intelligence.dto.DefectHeatmapResponse.HeatCell;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -71,15 +72,17 @@ public class DefectHeatmapOrchestrator {
     public DefectHeatmapResponse analyze() {
         DefectHeatmapResponse resp = new DefectHeatmapResponse();
         try {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime start = LocalDateTime.now().minusDays(30);
 
         // 获取最近30天扫码记录
         // 过滤：progress_stage 不为空（父工序必须存在）
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .ge("scan_time", start)
-          .isNotNull("progress_stage");
+          .isNotNull("progress_stage")
+          .ne("scan_type", "orchestration");
         List<ScanRecord> scans = scanRecordService.list(qw);
 
         if (scans.isEmpty()) {

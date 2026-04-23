@@ -445,6 +445,41 @@ const FactoryList: React.FC = () => {
         return <Tag>未分类</Tag>;
       },
     },
+    {
+      title: '评级',
+      dataIndex: 'supplierTier',
+      key: 'supplierTier',
+      width: 70,
+      render: (v: string) => {
+        if (!v) return '-';
+        const colorMap: Record<string, string> = { S: 'gold', A: 'green', B: 'blue', C: 'red' };
+        return <Tag color={colorMap[v] || 'default'} style={{ fontWeight: 700 }}>{v}</Tag>;
+      },
+    },
+    {
+      title: '准入',
+      dataIndex: 'admissionStatus',
+      key: 'admissionStatus',
+      width: 90,
+      render: (v: string) => {
+        const map: Record<string, { color: string; text: string }> = {
+          approved: { color: 'green', text: '已通过' },
+          pending: { color: 'orange', text: '待审核' },
+          probation: { color: 'blue', text: '试用中' },
+          rejected: { color: 'red', text: '已拒绝' },
+          suspended: { color: 'default', text: '已暂停' },
+        };
+        const item = map[v] || { color: 'default', text: v || '-' };
+        return <Tag color={item.color}>{item.text}</Tag>;
+      },
+    },
+    {
+      title: '综合分',
+      dataIndex: 'overallScore',
+      key: 'overallScore',
+      width: 80,
+      render: (v: number) => v != null ? <span style={{ fontWeight: 600, color: v >= 90 ? '#52c41a' : v >= 75 ? '#1890ff' : v >= 60 ? '#faad14' : '#ff4d4f' }}>{v.toFixed(1)}</span> : '-',
+    },
     { title: '联系人', dataIndex: 'contactPerson', key: 'contactPerson', width: 120 },
     { title: '联系电话', dataIndex: 'contactPhone', key: 'contactPhone', width: 140 },
     { title: '地址', dataIndex: 'address', key: 'address', ellipsis: true },

@@ -386,6 +386,8 @@ public class FinishedInventoryOrchestrator {
                         ? warehousing.getWarehousingOperatorName()
                         : warehousing.getQualityOperatorName();
                 dto.setLastInboundBy(latestInboundBy);
+                // 本次入库件数（最新入库记录的 qualified_quantity，非历史累计）
+                dto.setLastInboundQty(warehousing.getQualifiedQuantity());
             }
 
             ProductionOrder relatedOrder = StringUtils.hasText(dto.getOrderId())

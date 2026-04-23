@@ -466,6 +466,31 @@ export const intelligenceApi = {
   getLiveCostTracker: (orderId: string) =>
     api.get<{ code: number; data: LiveCostResponse }>('/intelligence/live-cost', { params: { orderId } }),
 
+  /** 销量预测（基于历史入库数据的WMA预测） */
+  getSalesForecast: (styleNo: string, horizonMonths = 1) =>
+    api.get<{ code: number; data: import('./intelligenceTypes').SalesForecastResponse }>('/intelligence/sales-forecast', {
+      params: { styleNo, horizonMonths },
+    }),
+
+  /** 尺码曲线预测（基于历史入库数据的尺码分布） */
+  getSizeCurve: (styleNo: string) =>
+    api.get<{ code: number; data: import('./intelligenceTypes').SizeCurveResponse }>('/intelligence/size-curve', {
+      params: { styleNo },
+    }),
+
+  /** 物流运费比价（批量查询所有可用物流公司运费） */
+  compareLogisticsFees: (params: {
+    orderId?: string;
+    sender?: { name?: string; mobile?: string; province?: string; city?: string; district?: string; address?: string };
+    recipient?: { name?: string; mobile?: string; province?: string; city?: string; district?: string; address?: string };
+    cargo?: { name?: string; quantity?: number; weight?: number; volume?: number; type?: string };
+  }) =>
+    api.post<{ code: number; data: import('./intelligenceTypes').LogisticsCompareFeesResponse }>('/integration/logistics/compare-fees', params),
+
+  /** 获取所有可用物流公司 */
+  getAvailableLogisticsCompanies: () =>
+    api.get<{ code: number; data: string[] }>('/integration/logistics/available-companies'),
+
   // ── 专业报告下载 ──
 
   /** 下载专业运营报告（Excel） */

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.LiveCostResponse;
 import com.fashion.supplychain.intelligence.dto.LiveCostResponse.ProcessCostItem;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -44,11 +45,12 @@ public class LiveCostTrackerOrchestrator {
     public LiveCostResponse track(String orderId) {
         LiveCostResponse resp = new LiveCostResponse();
         try {
+            TenantAssert.assertTenantContext();
             Long tenantId = UserContext.tenantId();
 
             // 1. 加载订单
             ProductionOrder order = productionOrderMapper.selectById(orderId);
-            if (order == null || (tenantId != null && !tenantId.equals(order.getTenantId()))) {
+            if (order == null || !tenantId.equals(order.getTenantId())) {
                 resp.setSuggestion("订单不存在或无权访问");
                 return resp;
             }
@@ -65,7 +67,8 @@ public class LiveCostTrackerOrchestrator {
             // 3. 加载扫码记录，按工序统计成功件数
             QueryWrapper<ScanRecord> sq = new QueryWrapper<>();
             sq.eq("order_id", String.valueOf(order.getId()))
-              .eq("scan_result", "success");
+              .eq("scan_result", "success")
+              .ne("scan_type", "orchestration");
             List<ScanRecord> records = scanRecordMapper.selectList(sq);
 
             Map<String, Integer> processQtyMap = new LinkedHashMap<>();

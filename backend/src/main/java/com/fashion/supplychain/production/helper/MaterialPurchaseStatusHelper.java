@@ -672,16 +672,47 @@ public class MaterialPurchaseStatusHelper {
             if (existOrder.getProcurementManuallyCompleted() != null
                     && existOrder.getProcurementManuallyCompleted() == 1) return;
 
+            // 用该订单所有已完成/已取消采购单中最晚的 update_time 作为采购实际完成时间，
+            // 避免因批量触发、代码新部署等原因把实际较早完成的订单时间错误地写为当前系统时间
+            LocalDateTime actualLastCompletedAt = queryMaxPurchaseUpdateTime(oid);
+            LocalDateTime confirmedAt = (actualLastCompletedAt != null) ? actualLastCompletedAt : LocalDateTime.now();
+
             LambdaUpdateWrapper<ProductionOrder> ouw = new LambdaUpdateWrapper<>();
             ouw.eq(ProductionOrder::getId, oid)
                .set(ProductionOrder::getProcurementManuallyCompleted, 1)
-               .set(ProductionOrder::getProcurementConfirmedAt, LocalDateTime.now())
+               .set(ProductionOrder::getProcurementConfirmedAt, confirmedAt)
                .set(ProductionOrder::getProcurementConfirmedBy, UserContext.userId())
                .set(ProductionOrder::getProcurementConfirmedByName, UserContext.username());
             productionOrderService.update(ouw);
-            log.info("✅ 所有采购单已完成，订单采购自动标记手工确认: orderId={}", oid);
+            log.info("✅ 所有采购单已完成，订单采购自动标记手工确认: orderId={}, confirmedAt={}", oid, confirmedAt);
         } catch (Exception e) {
             log.warn("[confirmComplete] 自动标记采购手工完成失败（不影响主流程）: orderId={}, error={}", oid, e.getMessage());
+        }
+    }
+
+    /**
+     * 查询该订单所有已完成/已取消采购单中最晚的 update_time。
+     * 用于 tryMarkOrderProcurementComplete 中确定实际采购完成时间，
+     * 避免用 LocalDateTime.now() 导致批量触发时所有订单都显示当天日期。
+     */
+    private LocalDateTime queryMaxPurchaseUpdateTime(String orderId) {
+        try {
+            List<MaterialPurchase> purchases = materialPurchaseService.list(
+                    new LambdaQueryWrapper<MaterialPurchase>()
+                            .select(MaterialPurchase::getUpdateTime)
+                            .eq(MaterialPurchase::getOrderId, orderId)
+                            .ne(MaterialPurchase::getDeleteFlag, 1)
+                            .in(MaterialPurchase::getStatus,
+                                    MaterialConstants.STATUS_COMPLETED,
+                                    MaterialConstants.STATUS_CANCELLED));
+            return purchases.stream()
+                    .map(MaterialPurchase::getUpdateTime)
+                    .filter(t -> t != null)
+                    .max(java.util.Comparator.naturalOrder())
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("queryMaxPurchaseUpdateTime failed for orderId={}: {}", orderId, e.getMessage());
+            return null;
         }
     }
 

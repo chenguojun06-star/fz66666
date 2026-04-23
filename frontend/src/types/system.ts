@@ -80,12 +80,32 @@ export interface Factory extends Record<string, unknown> {
   orgUnitId?: string;
   parentOrgUnitId?: string;
   parentOrgUnitName?: string;
-  /** 负责人ID (关联系统用户，仅内部工厂有效) */
   managerId?: string;
-  /** 日产能（件/天），用于排产建议评分 */
   dailyCapacity?: number;
   orgPath?: string;
   operationRemark?: string;
+  supplierCategory?: string;
+  supplierRegion?: string;
+  supplierTier?: 'S' | 'A' | 'B' | 'C';
+  supplierTierUpdatedAt?: string;
+  admissionStatus?: 'pending' | 'approved' | 'probation' | 'rejected' | 'suspended';
+  admissionDate?: string;
+  qualificationCert?: string;
+  contractNo?: string;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  contractAmount?: number;
+  contractTerms?: string;
+  bankName?: string;
+  bankAccount?: string;
+  bankBranch?: string;
+  onTimeDeliveryRate?: number;
+  qualityScore?: number;
+  completionRate?: number;
+  overallScore?: number;
+  totalOrders?: number;
+  completedOrders?: number;
+  overdueOrders?: number;
   createTime?: string;
   updateTime?: string;
 }
