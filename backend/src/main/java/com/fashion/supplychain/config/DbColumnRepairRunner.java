@@ -178,6 +178,10 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_style_quotation", "audit_time", "DATETIME DEFAULT NULL");
         add("t_style_quotation", "audit_status", "INT NOT NULL DEFAULT 0");
         add("t_style_quotation", "audit_remark", "VARCHAR(500) DEFAULT NULL");
+        add("t_style_quotation", "currency", "VARCHAR(10) DEFAULT NULL COMMENT '币种'");
+        add("t_style_quotation", "version", "VARCHAR(20) DEFAULT NULL COMMENT '版本号'");
+        add("t_style_quotation", "is_locked", "INT DEFAULT 0 COMMENT '是否锁定'");
+        add("t_style_quotation", "standard_other_cost", "DECIMAL(15,2) DEFAULT NULL COMMENT '标准其他成本'");
 
         add("t_style_process", "difficulty", "VARCHAR(10) DEFAULT NULL");
         add("t_style_process", "rate_multiplier", "DECIMAL(5,2) DEFAULT NULL");
@@ -229,6 +233,28 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_product_warehousing", "receiver_name", "VARCHAR(100) DEFAULT NULL COMMENT '收货人姓名'");
         add("t_product_warehousing", "received_time", "DATETIME DEFAULT NULL COMMENT '收货时间'");
         add("t_product_warehousing", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_product_warehousing", "warehousing_no", "VARCHAR(64) DEFAULT NULL COMMENT '入库单号'");
+        add("t_product_warehousing", "factory_name", "VARCHAR(100) DEFAULT NULL COMMENT '工厂名称'");
+        add("t_product_warehousing", "factory_type", "VARCHAR(20) DEFAULT NULL COMMENT '工厂类型'");
+        add("t_product_warehousing", "order_biz_type", "VARCHAR(20) DEFAULT NULL COMMENT '订单业务类型'");
+        add("t_product_warehousing", "org_unit_id", "VARCHAR(64) DEFAULT NULL COMMENT '组织单元ID'");
+        add("t_product_warehousing", "parent_org_unit_id", "VARCHAR(64) DEFAULT NULL COMMENT '上级组织ID'");
+        add("t_product_warehousing", "parent_org_unit_name", "VARCHAR(100) DEFAULT NULL COMMENT '上级组织名称'");
+        add("t_product_warehousing", "org_path", "VARCHAR(500) DEFAULT NULL COMMENT '组织路径'");
+        add("t_product_warehousing", "scan_code", "VARCHAR(500) DEFAULT NULL COMMENT '扫码内容'");
+        add("t_product_warehousing", "cutting_quantity", "INT DEFAULT NULL COMMENT '裁剪数量'");
+        add("t_product_warehousing", "repair_remark", "VARCHAR(500) DEFAULT NULL COMMENT '返修备注'");
+        add("t_product_warehousing", "inspection_type", "VARCHAR(20) DEFAULT NULL COMMENT '检验类型'");
+        add("t_product_warehousing", "sample_size", "INT DEFAULT NULL COMMENT '抽样数量'");
+        add("t_product_warehousing", "accept_number", "INT DEFAULT NULL COMMENT '接收数'");
+        add("t_product_warehousing", "reject_number", "INT DEFAULT NULL COMMENT '拒收数'");
+        add("t_product_warehousing", "control_chart_type", "VARCHAR(20) DEFAULT NULL COMMENT '控制图类型'");
+        add("t_product_warehousing", "control_chart_data", "TEXT DEFAULT NULL COMMENT '控制图数据'");
+        add("t_product_warehousing", "inspector_cert_no", "VARCHAR(64) DEFAULT NULL COMMENT '检验员证书号'");
+        add("t_product_warehousing", "warehousing_start_time", "DATETIME DEFAULT NULL COMMENT '入库开始时间'");
+        add("t_product_warehousing", "warehousing_end_time", "DATETIME DEFAULT NULL COMMENT '入库完成时间'");
+        add("t_product_warehousing", "warehousing_operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '入库人员ID'");
+        add("t_product_warehousing", "warehousing_operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '入库人员姓名'");
 
         add("t_product_outstock", "approval_status", "VARCHAR(20) DEFAULT NULL COMMENT '审批状态'");
         add("t_product_outstock", "approve_by", "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
@@ -510,6 +536,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
         add("t_factory_shipment", "ship_method", "VARCHAR(32) DEFAULT 'EXPRESS'");
         add("t_factory_shipment", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_factory_shipment", "received_quantity", "INT DEFAULT NULL COMMENT '收货数量'");
 
         add("t_order_remark", "id", "BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键'");
 
