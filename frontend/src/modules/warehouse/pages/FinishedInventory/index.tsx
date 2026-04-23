@@ -282,9 +282,10 @@ const _FinishedInventory: React.FC = () => {
         const fallbackOperator = record.lastInboundBy || '-';
         const fallbackWarehouse = record.warehouseLocation || '-';
 
-        // 按入库单号(warehousingNo)分组合并，避免同一批次多SKU行重复显示
+        // 每条记录独立显示（用户要求：所有入库记录全部可见，不做合并）
         type GroupedItem = {
           id: string;
+          orderNo: string;
           inboundDate: string;
           qualityInspectionNo: string;
           quantity: number;
@@ -292,27 +293,17 @@ const _FinishedInventory: React.FC = () => {
           warehouseLocation: string;
           remark: string;
         };
-        const groupedMap = new Map<string, GroupedItem>();
-        for (const item of (res.data.records as Record<string, unknown>[])) {
-          const wno = String(item.warehousingNo || '');
-          // 无入库单号的记录按 id 独立显示，不做合并
-          const key = wno || `_nk_${String(item.id)}`;
-          const qty = Number((item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0);
-          if (groupedMap.has(key)) {
-            groupedMap.get(key)!.quantity += qty;
-          } else {
-            groupedMap.set(key, {
-              id: String(item.id),
-              inboundDate: String(item.warehousingEndTime || item.createTime || '-'),
-              qualityInspectionNo: wno || '-',
-              quantity: qty,
-              operator: String(item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator),
-              warehouseLocation: String(item.warehouse || item.warehouseLocation || fallbackWarehouse),
-              remark: String(item.remark || ''),
-            });
-          }
-        }
-        setInboundHistory(Array.from(groupedMap.values()));
+        const rows: GroupedItem[] = (res.data.records as Record<string, unknown>[]).map(item => ({
+          id: String(item.id),
+          orderNo: String(item.orderNo || '-'),
+          inboundDate: String(item.warehousingEndTime || item.createTime || '-'),
+          qualityInspectionNo: String(item.warehousingNo || '-'),
+          quantity: Number((item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0),
+          operator: String(item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator),
+          warehouseLocation: String(item.warehouse || item.warehouseLocation || fallbackWarehouse),
+          remark: String(item.remark || ''),
+        }));
+        setInboundHistory(rows);
       } else {
         setInboundHistory([]);
       }
@@ -715,6 +706,12 @@ const _FinishedInventory: React.FC = () => {
                     width: 160,
                   },
                   {
+                    title: '订单号',
+                    dataIndex: 'orderNo',
+                    width: 140,
+                    render: (text) => <span style={{ color: 'var(--primary-color)', fontFamily: 'monospace' }}>{text}</span>,
+                  },
+                  {
                     title: '质检入库号',
                     dataIndex: 'qualityInspectionNo',
                     width: 150,
@@ -745,7 +742,7 @@ const _FinishedInventory: React.FC = () => {
                 ]}
                 dataSource={inboundHistory}
                 rowKey="id"
-                pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+                pagination={false}
                 size="small"
                 bordered
               />
