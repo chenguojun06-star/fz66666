@@ -40,6 +40,7 @@ const _FinishedInventory: React.FC = () => {
 
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
+  const [outstockTotal, setOutstockTotal] = useState(0);
   // 出库发货信息（用于关联电商订单自动回写状态）
   const [outboundProductionOrderNo, setOutboundProductionOrderNo] = useState('');
   const [outboundTrackingNo, setOutboundTrackingNo] = useState('');
@@ -267,27 +268,51 @@ const _FinishedInventory: React.FC = () => {
   };
 
   // 查看入库记录 - 从后端获取真实数据
+  // 注意：t_product_warehousing 按 SKU（颜色+尺码）存储，同一批次入库操作会产生多条相同 warehousingNo 的记录。
+  // 必须按 warehousingNo 分组合并，否则同一批次会显示为多行重复记录，数量也会被翻倍。
   const handleViewInboundHistory = async (record: FinishedInventory) => {
     try {
       const params = new URLSearchParams();
       if (record.styleNo) params.append('styleNo', record.styleNo);
-      // 不过滤 orderNo：当前库存 (availableQty) 聚合了该款式所有订单的入库，
-      // 历史记录也必须跨订单展示，否则多订单分批入库时记录会缺失
+      // 不过滤 orderNo：一款多个订单的入库记录全部展示
       params.append('page', '1');
-      params.append('size', '100');
+      params.append('size', '500'); // 多取原始行，分组后数量会大幅减少
       const res = await api.get(`/production/warehousing/list?${params.toString()}`);
       if (res.code === 200 && res.data?.records?.length > 0) {
         const fallbackOperator = record.lastInboundBy || '-';
         const fallbackWarehouse = record.warehouseLocation || '-';
-        setInboundHistory(res.data.records.map((item: Record<string, unknown>, idx: number) => ({
-          id: String(item.id || idx),
-          inboundDate: item.warehousingEndTime || item.createTime || '-',
-          qualityInspectionNo: item.warehousingNo || '-',
-          quantity: (item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0,
-          operator: item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator,
-          warehouseLocation: item.warehouse || item.warehouseLocation || fallbackWarehouse,
-          remark: item.remark || '',
-        })));
+
+        // 按入库单号(warehousingNo)分组合并，避免同一批次多SKU行重复显示
+        type GroupedItem = {
+          id: string;
+          inboundDate: string;
+          qualityInspectionNo: string;
+          quantity: number;
+          operator: string;
+          warehouseLocation: string;
+          remark: string;
+        };
+        const groupedMap = new Map<string, GroupedItem>();
+        for (const item of (res.data.records as Record<string, unknown>[])) {
+          const wno = String(item.warehousingNo || '');
+          // 无入库单号的记录按 id 独立显示，不做合并
+          const key = wno || `_nk_${String(item.id)}`;
+          const qty = Number((item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0);
+          if (groupedMap.has(key)) {
+            groupedMap.get(key)!.quantity += qty;
+          } else {
+            groupedMap.set(key, {
+              id: String(item.id),
+              inboundDate: String(item.warehousingEndTime || item.createTime || '-'),
+              qualityInspectionNo: wno || '-',
+              quantity: qty,
+              operator: String(item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator),
+              warehouseLocation: String(item.warehouse || item.warehouseLocation || fallbackWarehouse),
+              remark: String(item.remark || ''),
+            });
+          }
+        }
+        setInboundHistory(Array.from(groupedMap.values()));
       } else {
         setInboundHistory([]);
       }
@@ -295,6 +320,25 @@ const _FinishedInventory: React.FC = () => {
       message.error('加载入库记录失败');
       setInboundHistory([]);
     }
+
+    // 同步拉取出库总量，用于对账公式展示
+    try {
+      const outstockRes = await api.post('/warehouse/finished-inventory/outstock-records', {
+        page: 1,
+        pageSize: 500,
+        keyword: record.styleNo || undefined,
+      });
+      const outstockData = outstockRes.data || outstockRes;
+      const rows: Array<{ outstockQuantity?: number; styleNo?: string }> = outstockData.records || [];
+      // 精确匹配 styleNo（keyword 是模糊搜索，需在前端二次过滤）
+      const total = rows
+        .filter(r => !record.styleNo || r.styleNo === record.styleNo)
+        .reduce((s, r) => s + (r.outstockQuantity || 0), 0);
+      setOutstockTotal(total);
+    } catch {
+      setOutstockTotal(0);
+    }
+
     inboundHistoryModal.open(record);
   };
 
@@ -649,10 +693,6 @@ const _FinishedInventory: React.FC = () => {
                     <strong style={{ fontSize: "var(--font-size-lg)" }}>{inboundHistoryModal.data.styleNo}</strong>
                   </div>
                   <div>
-                    <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>订单号:</span>
-                    <strong>{inboundHistoryModal.data.orderNo}</strong>
-                  </div>
-                  <div>
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>颜色:</span>
                     <Tag color="blue">{inboundHistoryModal.data.color}</Tag>
                   </div>
@@ -710,9 +750,9 @@ const _FinishedInventory: React.FC = () => {
                 bordered
               />
 
-              {/* 汇总信息 */}
+              {/* 汇总信息 + 对账公式 */}
               <Card size="small" style={{ background: '#e6f7ff', borderColor: '#91d5ff' }}>
-                <Space size={40}>
+                <Space size={32} wrap>
                   <div>
                     <span style={{ color: 'var(--primary-color)' }}>总入库次数:</span>
                     <strong style={{ marginLeft: 8, fontSize: "var(--font-size-lg)", color: 'var(--primary-color)' }}>
@@ -720,10 +760,35 @@ const _FinishedInventory: React.FC = () => {
                     </strong>
                   </div>
                   <div>
-                    <span style={{ color: 'var(--primary-color)' }}>累计入库数量:</span>
+                    <span style={{ color: 'var(--primary-color)' }}>累计入库:</span>
                     <strong style={{ marginLeft: 8, fontSize: "var(--font-size-lg)", color: 'var(--color-success)' }}>
                       {inboundHistory.reduce((sum, item) => sum + item.quantity, 0)} 件
                     </strong>
+                  </div>
+                  {outstockTotal > 0 && (
+                    <div>
+                      <span style={{ color: '#cf1322' }}>累计出库:</span>
+                      <strong style={{ marginLeft: 8, fontSize: "var(--font-size-lg)", color: '#cf1322' }}>
+                        {outstockTotal} 件
+                      </strong>
+                    </div>
+                  )}
+                  <div style={{
+                    background: 'var(--color-success)',
+                    color: '#fff',
+                    padding: '2px 12px',
+                    borderRadius: 6,
+                    fontSize: "var(--font-size-base)",
+                  }}>
+                    当前库存 ={' '}
+                    <strong style={{ fontSize: "var(--font-size-lg)" }}>
+                      {inboundHistory.reduce((sum, item) => sum + item.quantity, 0) - outstockTotal} 件
+                    </strong>
+                    {outstockTotal > 0 && (
+                      <span style={{ fontSize: 11, opacity: 0.85 }}>
+                        （{inboundHistory.reduce((sum, item) => sum + item.quantity, 0)} 入 - {outstockTotal} 出）
+                      </span>
+                    )}
                   </div>
                 </Space>
               </Card>
