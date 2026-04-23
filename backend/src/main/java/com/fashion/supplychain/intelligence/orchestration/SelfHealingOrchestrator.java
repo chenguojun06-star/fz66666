@@ -92,7 +92,7 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .eq("status", "production");
+          .in("status", "production", "IN_PROGRESS", "CREATED");
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int inconsistent = 0;
@@ -278,7 +278,7 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .eq("status", "production");
+          .in("status", "production", "IN_PROGRESS", "CREATED");
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int fixed = 0;
@@ -289,10 +289,10 @@ public class SelfHealingOrchestrator {
             if (total > 0) {
                 int expected = Math.min(100, (int) ((completed * 100.0) / total));
                 if (Math.abs(expected - currentProgress) > 10) {
+                    log.info("[自愈修复] 订单 {} 进度 {}% -> {}%（修复前记录）", o.getOrderNo(), currentProgress, expected);
                     o.setProductionProgress(expected);
                     productionOrderService.updateById(o);
                     fixed++;
-                    log.info("[自愈修复] 订单 {} 进度 {}% → {}%", o.getOrderNo(), currentProgress, expected);
                 }
             }
         }

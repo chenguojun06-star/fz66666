@@ -211,6 +211,7 @@ public class AiChatContextOrchestrator {
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId);
             if (rows.isEmpty()) {
+                sb.append(title).append("（暂无数据，请勿编造此维度信息）\n\n");
                 return;
             }
             sb.append(title).append("\n");
@@ -220,6 +221,7 @@ public class AiChatContextOrchestrator {
             sb.append("\n");
         } catch (Exception e) {
             log.warn("[AiChatContext] {} 构建失败: {}", title, e.getMessage());
+            sb.append(title).append("（数据暂时不可用，请勿编造此维度信息）\n\n");
         }
     }
 

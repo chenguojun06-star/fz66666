@@ -24,9 +24,17 @@ public class ReflectionEngineOrchestrator {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final String SYS_PROMPT =
-        "你是服装供应链AI反思专家。请对以下决策进行严格的批判性分析，找出潜在风险和优化空间。" +
+        "你是服装供应链AI反思专家。请对以下决策进行严格的批判性分析。\n" +
+        "要求：\n" +
+        "1. 多假设验证：生成至少2个替代方案，与当前方案比较优劣\n" +
+        "2. 反事实推理：如果采取替代方案，结果可能怎样\n" +
+        "3. 历史类比：过去有没有类似的决策？结果如何\n" +
+        "4. 二阶效应：当前方案的直接后果是什么？间接后果呢\n" +
+        "5. 最坏情况：如果一切出错，最坏的结果是什么\n" +
         "必须用JSON格式输出，包含字段：" +
-        "issues（问题点，字符串）、suggestion（优化建议，字符串）、confidence（置信分0-100，整数）。";
+        "issues（问题点，字符串数组）、suggestion（优化建议，字符串）、" +
+        "alternatives（替代方案数组，每个含plan/pros/cons/worstCase）、" +
+        "confidence（置信分0-100，整数）。";
 
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
@@ -43,7 +51,6 @@ public class ReflectionEngineOrchestrator {
     public AgentState critiqueAndReflect(AgentState state) {
         long start = System.currentTimeMillis();
         try {
-            // 原有反思
             var result = inferenceOrchestrator.chat(
                 "graph-reflection", SYS_PROMPT, buildUserMessage(state));
 
@@ -52,11 +59,17 @@ public class ReflectionEngineOrchestrator {
             state.setConfidenceScore(parseConfidence(critique, state));
             state.setOptimizationSuggestion(parseSuggestion(critique));
 
-            // ★ 新增：横向比对同租户历史决策教训
             String crossRef = crossReferenceHistory(state);
             if (crossRef != null && !crossRef.isBlank()) {
                 state.setOptimizationSuggestion(
                     state.getOptimizationSuggestion() + "\n[历史比对] " + crossRef);
+            }
+
+            if (state.getConfidenceScore() < 80) {
+                critique = iterativeReflect(state, critique);
+                state.setReflection(critique);
+                state.setConfidenceScore(parseConfidence(critique, state));
+                state.setOptimizationSuggestion(parseSuggestion(critique));
             }
 
             persistMemory(state);
@@ -70,6 +83,25 @@ public class ReflectionEngineOrchestrator {
             state.getTenantId(), state.getScene(),
             state.getConfidenceScore(), System.currentTimeMillis() - start);
         return state;
+    }
+
+    private String iterativeReflect(AgentState state, String firstCritique) {
+        try {
+            String refinePrompt = "基于第一轮反思结果，请进一步深入分析：\n" +
+                "1. 第一轮发现的问题中，哪些是最关键的？\n" +
+                "2. 替代方案中哪个最优？为什么？\n" +
+                "3. 如果置信分仍低于80，说明什么？还需要什么信息？\n" +
+                "4. 给出最终推荐方案和执行步骤。\n\n" +
+                "第一轮反思：" + (firstCritique.length() > 500 ? firstCritique.substring(0, 500) : firstCritique);
+            var result = inferenceOrchestrator.chat("graph-reflection-iter2", SYS_PROMPT, refinePrompt);
+            if (result.isSuccess() && result.getContent() != null && !result.getContent().isBlank()) {
+                log.info("[ReflectionEngine] 第二轮迭代反思完成，置信分从{}提升", state.getConfidenceScore());
+                return result.getContent();
+            }
+        } catch (Exception e) {
+            log.warn("[ReflectionEngine] 迭代反思失败，使用第一轮结果: {}", e.getMessage());
+        }
+        return firstCritique;
     }
 
     // ── private helpers ────────────────────────────────────────────────────

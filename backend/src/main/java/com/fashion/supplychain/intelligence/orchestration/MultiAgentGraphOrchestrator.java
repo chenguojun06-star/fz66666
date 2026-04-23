@@ -41,6 +41,7 @@ public class MultiAgentGraphOrchestrator {
     @Autowired private DecisionChainOrchestrator decisionChain;
     @Autowired private AgentExecutionLogMapper logMapper;
     @Autowired private List<SpecialistAgent> specialistAgents;
+    @Autowired private com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper promptHelper;
 
     /**
      * 同步执行：Plan→DigitalTwin→Supervisor→Specialist(并行)→Reflect→[重路由]→Result
@@ -103,6 +104,15 @@ public class MultiAgentGraphOrchestrator {
 
             long latency = System.currentTimeMillis() - start;
             persistLog(state, "SUCCESS", latency);
+            try {
+                String summary = String.format("场景=%s 路由=%s 置信=%d 建议=%s",
+                    state.getScene(), state.getRoute(), state.getConfidenceScore(),
+                    state.getOptimizationSuggestion() != null
+                        ? (state.getOptimizationSuggestion().length() > 200
+                            ? state.getOptimizationSuggestion().substring(0, 200) : state.getOptimizationSuggestion())
+                        : "无");
+                promptHelper.updateMasAnalysisCache(summary);
+            } catch (Exception ignored) {}
             emitSse(emitter, "graph_done", buildSuccessMap(state, latency));
             emitter.complete();
         } catch (Exception e) {

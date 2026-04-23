@@ -615,5 +615,26 @@ export const intelligenceApi = {
   platformPatrolMttr: (days = 30): Promise<Record<string, unknown>[]> =>
     api.get('/intelligence/platform/patrol-mttr', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
 
+  evolutionPending: (): Promise<Record<string, unknown>[]> =>
+    api.get('/intelligence/evolution/pending').then((r: any) => Array.isArray(r?.data) ? r.data : []),
+
+  evolutionHistory: (days = 30): Promise<Record<string, unknown>[]> =>
+    api.get('/intelligence/evolution/history', { params: { days } }).then((r: any) => Array.isArray(r?.data) ? r.data : []),
+
+  evolutionActiveOverrides: (): Promise<Record<string, string>> =>
+    api.get('/intelligence/evolution/active-overrides').then((r: any) => r?.data ?? {}),
+
+  evolutionApprove: (proposalId: string): Promise<boolean> =>
+    api.post(`/intelligence/evolution/approve/${proposalId}`).then((r: any) => r?.data === true),
+
+  evolutionRollback: (proposalId: string): Promise<boolean> =>
+    api.post(`/intelligence/evolution/rollback/${proposalId}`).then((r: any) => r?.data === true),
+
+  evolutionTest: (proposalId: string): Promise<Record<string, unknown>> =>
+    api.post(`/intelligence/evolution/test/${proposalId}`).then((r: any) => r?.data ?? {}),
+
+  evolutionDeploy: (proposalId: string): Promise<boolean> =>
+    api.post(`/intelligence/evolution/deploy/${proposalId}`).then((r: any) => r?.data === true),
+
 };
 

@@ -16,7 +16,10 @@ public class DataTruthGuard {
     private static final Set<String> FABRICATED_INDICATORS = Set.of(
             "大约", "约", "估计", "估算", "可能", "推测", "假设", "假设性",
             "模拟", "虚拟", "演示", "示例", "参考值", "默认值",
-            "大概", "差不多", "左右", "近似", "像"
+            "大概", "差不多", "左右", "近似", "像",
+            "看似", "应该是", "据我了解", "据我所知", "通常来说",
+            "一般来说", "据推测", "猜测", "也许是", "或许是",
+            "估计是", "应该是约", "大概在", "应该在"
     );
 
     public static class TruthCheckResult {
@@ -64,14 +67,18 @@ public class DataTruthGuard {
         boolean hasToolEvidence = toolEvidence != null && !toolEvidence.isBlank()
                 && !toolEvidence.contains("\"error\"") && !toolEvidence.contains("未找到");
 
-        if (!hasToolEvidence) {
-            long fabricatedCount = FABRICATED_INDICATORS.stream()
-                    .filter(indicator -> aiContent.contains(indicator))
-                    .count();
-            if (fabricatedCount >= 2) {
-                return new TruthCheckResult(false,
-                        "AI输出含多个虚构指示词且无工具数据支撑", "ai_unverified");
-            }
+        long fabricatedCount = FABRICATED_INDICATORS.stream()
+                .filter(indicator -> aiContent.contains(indicator))
+                .count();
+
+        if (!hasToolEvidence && fabricatedCount >= 1) {
+            return new TruthCheckResult(false,
+                    "AI输出含虚构指示词且无工具数据支撑", "ai_unverified");
+        }
+
+        if (hasToolEvidence && fabricatedCount >= 2) {
+            return new TruthCheckResult(false,
+                    "AI输出含多个虚构指示词，即使有部分工具数据也需审查", "ai_partial_unverified");
         }
 
         String dataSource = hasToolEvidence ? "ai_with_evidence" : "ai_no_evidence";
@@ -101,11 +108,8 @@ public class DataTruthGuard {
                     break;
                 }
             }
-            if (!found && aiNum > 10) {
-                boolean isPercentage = aiContent.contains(aiNum.intValue() + "%");
-                if (!isPercentage) {
-                    mismatches.add("AI输出数字 " + aiNum + " 在工具数据中无匹配");
-                }
+            if (!found) {
+                mismatches.add("AI输出数字 " + aiNum + " 在工具数据中无匹配");
             }
         }
 

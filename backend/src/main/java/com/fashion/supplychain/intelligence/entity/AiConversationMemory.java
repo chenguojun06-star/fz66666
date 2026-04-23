@@ -44,4 +44,12 @@ public class AiConversationMemory {
     private LocalDateTime expireTime;
 
     private Integer deleteFlag;
+
+    private String userMessage;
+
+    private String aiResponse;
+
+    private Integer feedbackScore;
+
+    private String feedbackReason;
 }

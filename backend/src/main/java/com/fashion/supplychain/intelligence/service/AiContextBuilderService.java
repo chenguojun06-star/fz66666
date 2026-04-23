@@ -144,6 +144,7 @@ public class AiContextBuilderService {
             sb.append("\n");
         } catch (Exception e) {
             log.warn("[AiContext] 获取健康指数失败: {}", e.getMessage());
+            sb.append("【供应链健康指数】（数据暂时不可用，请勿编造健康指数数据，如需查询请调用工具）\n\n");
         }
 
         // ── 面料缺口预警 ──
@@ -171,6 +172,7 @@ public class AiContextBuilderService {
             }
         } catch (Exception e) {
             log.warn("[AiContext] 获取面料缺口失败: {}", e.getMessage());
+            sb.append("【面料缺口预警】（数据暂时不可用，请勿编造面料缺口数据，如需查询请调用工具）\n\n");
         }
 
         // ── 租户智能沉淀上下文（仅供 AI 聊天使用） ──
@@ -181,6 +183,7 @@ public class AiContextBuilderService {
             }
         } catch (Exception e) {
             log.warn("[AiContext] 获取租户智能沉淀上下文失败: {}", e.getMessage());
+            sb.append("【租户经营洞察】（数据暂时不可用，请勿编造经营目标/痛点/方案库数据）\n\n");
         }
 
         sb.append("【回答要求】\n");

@@ -800,3 +800,89 @@ if (tracking == null) {
 - `ProductionProcessTrackingOrchestrator.java` — updateScanRecord 方法
 - `TrackingRecordInitHelper.java` — tracking 表初始化
 - `ProductionScanExecutor.java` — 扫码端 processCode 赋值
+
+---
+
+# P0 - 代码厚度控制规则
+
+## 规则36：新增代码必须保持方法/类"薄"，禁止堆代码后期再拆
+
+### 核心原则
+**写代码时就拆好，不要先堆后拆。** 每次加功能时，直接把逻辑拆到独立方法/类里，而不是往已有方法里追加代码块。
+
+### 事故教训
+`ProductionScanExecutor.execute()` 方法已膨胀到 385 行，远超 checkstyle 的 80 行限制。每次加功能都往 execute() 里塞 if-else，导致：
+- 方法越长越难理解，改一处牵动全局
+- NPE 频发（变量赋值链路太长，中间任何一环 null 都炸）
+- 不敢重构（怕改错），越堆越厚，恶性循环
+
+### 规则（以后必须遵守）
+
+**1. 单个方法不超过 80 行（含空行和注释）：**
+
+```java
+// ❌ 错误 - 往已有方法里继续堆代码
+public Result execute(Map<String, Object> params) {
+    // 原有100行...
+    // 新加的20行校验逻辑
+    // 新加的30行业务逻辑
+    // 新加的15行数据库操作
+    // 方法变成165行，后期又要拆
+}
+
+// ✅ 正确 - 新逻辑直接写成独立方法，原方法只做调用
+public Result execute(Map<String, Object> params) {
+    // 原有逻辑...
+    validateScanParams(params);           // 新校验 → 独立方法
+    ScanContext ctx = resolveScanContext(params);  // 新解析 → 独立方法
+    return processScan(ctx);              // 新业务 → 独立方法
+}
+```
+
+**2. 新增功能优先创建新方法/新类，而不是往旧方法里追加：**
+
+| 场景 | ❌ 错误做法 | ✅ 正确做法 |
+|------|-----------|-----------|
+| 加校验 | 在方法中间加 if-else 块 | 抽成 `validateXxx()` 方法 |
+| 加业务分支 | 在 switch/if 里加 case | 抽成 `handleXxxCase()` 方法 |
+| 加数据组装 | 在 return 前加 20 行 put | 抽成 `buildXxxResult()` 方法 |
+| 加异步操作 | 在方法末尾加 CompletableFuture | 抽成 `asyncXxx()` 方法 |
+| 加新业务流程 | 在已有 Orchestrator 里加方法 | 创建新 Orchestrator 类 |
+
+**3. 判断标准：一个方法做了超过2件事就该拆：**
+
+```java
+// ❌ 一个方法做了4件事：校验、查询、计算、写库
+public void processOrder(Order order) {
+    if (order.getStatus() == null) throw ...;  // 1. 校验
+    Order db = orderDao.selectById(order.getId());  // 2. 查询
+    db.setTotal(db.getPrice() * db.getQty());  // 3. 计算
+    orderDao.updateById(db);  // 4. 写库
+}
+
+// ✅ 拆成4个方法，每个只做1件事
+public void processOrder(Order order) {
+    validateOrder(order);
+    Order db = queryOrder(order.getId());
+    calculateTotal(db);
+    persistOrder(db);
+}
+```
+
+**4. 类也一样，超过300行就该考虑拆分：**
+- Controller 只做参数接收和结果返回，业务逻辑放 Service/Orchestrator
+- Orchestrator 只做流程编排，具体操作放 Helper/Executor
+- Service 只做数据操作，复杂计算放 Calculator/Resolver
+
+### 已知超厚方法（需逐步瘦身，禁止继续加厚）
+
+| 文件 | 方法 | 当前行数 | 目标 |
+|------|------|---------|------|
+| ProductionScanExecutor.java | execute() | ~385行 | ≤80行 |
+| ScanRecordOrchestrator.java | 多个方法 | 偏厚 | 逐步拆分 |
+
+### 检查清单（每次加代码前必须过一遍）
+1. 我要加的代码是往已有方法里塞，还是创建新方法？
+2. 如果往已有方法塞，该方法会超过80行吗？
+3. 如果超过，能不能把新逻辑抽成独立方法？
+4. 新逻辑和已有逻辑是同一层次吗？（校验和业务混在一起就是不同层次）

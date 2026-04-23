@@ -1249,6 +1249,54 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             + "INDEX `idx_insight_tenant_date` (`tenant_id`, `insight_date`, `read_flag`),"
             + "INDEX `idx_insight_created` (`created_at`)"
             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='小云每日洞察推送'");
+
+        TABLE_FIXES.put("t_xiaoyun_evolution_log",
+            "CREATE TABLE IF NOT EXISTS `t_xiaoyun_evolution_log` ("
+            + "`id` VARCHAR(64) NOT NULL PRIMARY KEY,"
+            + "`category` VARCHAR(32) NOT NULL,"
+            + "`description` TEXT DEFAULT NULL,"
+            + "`before_state` TEXT DEFAULT NULL,"
+            + "`after_state` TEXT DEFAULT NULL,"
+            + "`confidence` DECIMAL(5,2) DEFAULT 0,"
+            + "`source` VARCHAR(64) DEFAULT NULL,"
+            + "`status` VARCHAR(32) NOT NULL DEFAULT 'PROPOSED',"
+            + "`test_report` TEXT DEFAULT NULL,"
+            + "`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+            + "`updated_at` DATETIME DEFAULT NULL,"
+            + "INDEX `idx_evo_status` (`status`),"
+            + "INDEX `idx_evo_created` (`created_at`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='小云自进化日志表'");
+
+        TABLE_FIXES.put("t_xiaoyun_prompt_version",
+            "CREATE TABLE IF NOT EXISTS `t_xiaoyun_prompt_version` ("
+            + "`id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
+            + "`proposal_id` VARCHAR(64) NOT NULL,"
+            + "`category` VARCHAR(32) DEFAULT NULL,"
+            + "`before_prompt` TEXT DEFAULT NULL,"
+            + "`after_prompt` TEXT DEFAULT NULL,"
+            + "`status` VARCHAR(32) NOT NULL DEFAULT 'PENDING_REVIEW',"
+            + "`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+            + "INDEX `idx_prompt_proposal` (`proposal_id`),"
+            + "INDEX `idx_prompt_status` (`status`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='小云Prompt版本管理表'");
+
+        TABLE_FIXES.put("t_xiaoyun_param_version",
+            "CREATE TABLE IF NOT EXISTS `t_xiaoyun_param_version` ("
+            + "`id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
+            + "`proposal_id` VARCHAR(64) NOT NULL,"
+            + "`param_key` VARCHAR(128) DEFAULT NULL,"
+            + "`before_value` TEXT DEFAULT NULL,"
+            + "`after_value` TEXT DEFAULT NULL,"
+            + "`status` VARCHAR(32) NOT NULL DEFAULT 'PENDING_REVIEW',"
+            + "`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+            + "INDEX `idx_param_proposal` (`proposal_id`),"
+            + "INDEX `idx_param_status` (`status`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='小云参数版本管理表'");
+
+        add("t_ai_conversation_memory", "user_message", "TEXT DEFAULT NULL");
+        add("t_ai_conversation_memory", "ai_response", "TEXT DEFAULT NULL");
+        add("t_ai_conversation_memory", "feedback_score", "TINYINT DEFAULT NULL");
+        add("t_ai_conversation_memory", "feedback_reason", "VARCHAR(500) DEFAULT NULL");
     }
 
     private static void add(String table, String column, String definition) {

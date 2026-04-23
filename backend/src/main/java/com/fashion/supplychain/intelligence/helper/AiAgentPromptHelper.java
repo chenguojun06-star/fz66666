@@ -14,8 +14,6 @@ import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrches
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
 import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
-import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
-import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import java.util.ArrayList;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
@@ -49,6 +47,10 @@ public class AiAgentPromptHelper {
 
     @Value("${xiaoyun.agent.rag.similarity-threshold:0.45}")
     private float ragSimilarityThreshold;
+
+    private volatile String masAnalysisCache = "";
+    private volatile long masAnalysisCacheTime = 0;
+    private static final long MAS_CACHE_TTL_MS = 4 * 60 * 60 * 1000L;
 
     @Autowired private AiContextBuilderService aiContextBuilderService;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
@@ -105,6 +107,11 @@ public class AiAgentPromptHelper {
     }
 
 
+    public void updateMasAnalysisCache(String analysisSummary) {
+        this.masAnalysisCache = analysisSummary;
+        this.masAnalysisCacheTime = System.currentTimeMillis();
+    }
+
     public String buildSystemPrompt(String userMessage, String pageContext, List<AgentTool> visibleTools) {
         String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String currentDate = LocalDate.now().toString();
@@ -155,7 +162,7 @@ public class AiAgentPromptHelper {
                 } catch (Exception e) {
                     log.debug("[AiAgent] 工人画像注入跳过: {}", e.getMessage());
                 }
-                return "";
+                return "【工人画像】（数据暂时不可用，请勿编造工人效率数据）\n";
             }), promptBuildExecutor);
         }
 
@@ -182,7 +189,7 @@ public class AiAgentPromptHelper {
                 } catch (Exception e) {
                     log.debug("[AiAgent] 管理层经营快照注入跳过: {}", e.getMessage());
                 }
-                return "";
+                return "【实时经营快照】（数据暂时不可用，请勿编造经营数据，如需查询请调用工具）\n";
             }), promptBuildExecutor);
         }
 
@@ -215,7 +222,7 @@ public class AiAgentPromptHelper {
                 return sb.toString();
             } catch (Exception e) {
                 log.debug("[AiAgent-LTM] 长期记忆注入跳过: {}", e.getMessage());
-                return "";
+                return "【历史学习记忆】（加载失败，请勿编造历史对话内容）\n";
             }
         }), promptBuildExecutor);
 
@@ -225,7 +232,7 @@ public class AiAgentPromptHelper {
                 return aiMemoryOrchestrator.getMemoryContext(tenantId, userId);
             } catch (Exception e) {
                 log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
-                return "";
+                return "【历史对话】（加载失败，请勿编造之前的对话内容）\n";
             }
         }), promptBuildExecutor);
 
@@ -265,7 +272,7 @@ public class AiAgentPromptHelper {
             } catch (Exception e) {
                 log.debug("[AiAgent-RAG] 混合检索跳过（Qdrant 未启用或记忆链失败）: {}", e.getMessage());
             }
-            return "";
+            return "【知识库检索】（检索失败，请勿编造知识库内容，如需查询请调用工具）\n";
         }), promptBuildExecutor);
 
         // ── P2: 用户行为画像 — 近期高频工具注入提示词 ──
@@ -339,6 +346,17 @@ public class AiAgentPromptHelper {
             activePatrolBlock = activePatrolFuture.get(800, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             log.debug("[AiAgent-Patrol] 巡查风险注入超时跳过");
+        }
+
+        String masInsightBlock = "";
+        try {
+            String cached = masAnalysisCache;
+            if (cached != null && !cached.isBlank()
+                    && (System.currentTimeMillis() - masAnalysisCacheTime) < MAS_CACHE_TTL_MS) {
+                masInsightBlock = "\n【近期战略分析摘要（由多Agent分析系统生成）】\n" + cached + "\n";
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent-MAS] 战略分析注入跳过: {}", e.getMessage());
         }
 
         String contextBlock = "【当前环境】\n" +
@@ -426,13 +444,23 @@ public class AiAgentPromptHelper {
             log.debug("[AiAgent] 领域提示加载跳过: {}", e.getMessage());
         }
 
-        String prompt = "你是小云——服装供应链智能运营助理，由云裳智链Trivia团队开发。" +
-                "当用户问你是谁、谁开发的你等身份问题时，只回答：我是小云，由云裳智链Trivia团队开发的服装供应链智能助理。不要编造任何公司名称。\n" +
+        String prompt = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。" +
+                "当用户问你是谁、谁开发的你等身份问题时，只回答：我是小云，由云裳智链Trivia团队开发的服装供应链智能顾问。不要编造任何公司名称。\n" +
                 "第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
+                "【你的核心原则 — 必须内化到每次回答】\n" +
+                "1. 不只回答问题，要预判问题。用户问A时，主动提醒B和C。比如用户问某订单进度，你要主动说该工厂最近有无异常、该订单有无逾期风险。\n" +
+                "2. 敢说不。如果用户的决策有风险，明确指出，不要一味附和。比如用户要给已逾期3次的工厂加单，你要说不建议，该工厂逾期率75%。\n" +
+                "3. 用数据说话，不用模糊词。不说可能有问题，说按当前进度3天后逾期概率78%。不说建议关注，说今天下午3点前联系张厂长确认裁剪排期。\n" +
+                "4. 给行动方案，不给废话。每个建议必须包含：谁做、做什么、什么时候、预期结果。缺任何一项都不算完整建议。\n" +
+                "5. 记住历史。如果上周同样的问题出现过，指出这已经是第3次了，根因可能是。如果某个工厂反复逾期，直接点名。\n" +
+                "6. 主动追问。如果信息不足以给出可靠建议，先问清楚再回答，不要猜。宁可多问一句，不要给一个不靠谱的答案。\n" +
+                "7. 当你不确定时：明确说我需要更多信息，列出需要什么；给出2-3种可能性和各自的概率，不要只给一个答案；标注你的置信度（高/中/低）。\n" +
+                "8. 绝对禁止：编造任何没有数据支撑的数字；用建议关注、请注意等空话代替具体行动；只说风险不给方案；忽略用户没问但你应该看到的问题。\n\n" +
                 contextBlock + "\n" +
                 pageCtxBlock +
                 workerRestriction +
                 activePatrolBlock +
+                masInsightBlock +
                 intelligenceContext + "\n" +
                 longTermMemBlock +
                 memoryContext +

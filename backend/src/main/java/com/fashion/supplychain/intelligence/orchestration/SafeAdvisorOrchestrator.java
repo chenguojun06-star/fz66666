@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.tool.KnowledgeSearchTool;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
+import com.fashion.supplychain.intelligence.service.CragEvaluator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,9 @@ public class SafeAdvisorOrchestrator {
     @Autowired
     private AiAdvisorService aiAdvisorService;
 
+    @Autowired
+    private CragEvaluator cragEvaluator;
+
     /**
      * RAG 增强分析：先检索知识库，再调用 LLM Agent 输出回答。
      *
@@ -60,6 +64,10 @@ public class SafeAdvisorOrchestrator {
             log.warn("[SafeAdvisor] 知识库检索失败，回退到无 RAG 模式: {}", e.getMessage());
         }
 
+        CragEvaluator.CragResult cragResult = cragEvaluator.evaluate(knowledgeContext);
+        log.info("[SafeAdvisor] CRAG评估: level={}, topScore={}", cragResult.level(), String.format("%.2f", cragResult.topScore()));
+        knowledgeContext = cragResult.filteredContext();
+
         // ③ 构建增强提示词
         String enrichedQuestion = buildEnrichedPrompt(question, knowledgeContext);
 
@@ -79,7 +87,8 @@ public class SafeAdvisorOrchestrator {
         if (knowledgeJson == null || knowledgeJson.isBlank()
                 || "[]".equals(knowledgeJson.trim())
                 || "null".equalsIgnoreCase(knowledgeJson.trim())) {
-            return question;
+            return question + "\n\n【重要提示】知识库检索未返回相关结果，请仅基于工具查询的真实数据回答，"
+                    + "不要编造任何知识库内容。如果工具也未返回数据，请明确告知用户系统暂无该数据。";
         }
         return "【知识库参考资料】\n"
                 + knowledgeJson
@@ -87,6 +96,7 @@ public class SafeAdvisorOrchestrator {
                 + question
                 + "\n\n请结合以上知识库内容给出准确、专业的回答。"
                 + "若知识库内容与问题高度相关，请优先引用并简要说明出处；"
-                + "若无相关内容，则直接根据系统数据和业务经验作答，不要捏造知识库原文。";
+                + "若无相关内容，则直接根据系统数据和业务经验作答，不要捏造知识库原文。"
+                + "回答中的每个数字和事实必须来自工具查询结果或知识库，禁止编造。";
     }
 }

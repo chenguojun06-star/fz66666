@@ -75,6 +75,9 @@ public class CriticEvolutionTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (!UserContext.isSuperAdmin()) {
+            return JSON.writeValueAsString(Map.of("success", false, "error", "自进化功能仅平台超级管理员可用"));
+        }
         Long ctxTenantId = UserContext.tenantId();
         if (ctxTenantId == null) {
             return JSON.writeValueAsString(Map.of("success", false, "error", "租户上下文丢失，请重新登录"));

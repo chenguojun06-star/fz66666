@@ -19,6 +19,8 @@ import com.fashion.supplychain.intelligence.routing.AiAgentToolAdvisor;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
+import com.fashion.supplychain.intelligence.service.EntityFactChecker;
+import com.fashion.supplychain.intelligence.service.GroundedGenerationGuard;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +57,8 @@ public class AiAgentOrchestrator {
     @Autowired private FollowUpSuggestionEngine followUpSuggestionEngine;
     @Autowired private AgentStateStore agentStateStore;
     @Autowired private DataTruthGuard dataTruthGuard;
+    @Autowired private EntityFactChecker entityFactChecker;
+    @Autowired private GroundedGenerationGuard groundedGenerationGuard;
     // ── 平台级闭环学习三件套（埋点：PRM / 决策卡 / 长期记忆）──
     @Autowired private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
@@ -79,14 +83,8 @@ public class AiAgentOrchestrator {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private boolean shouldSkipCritic(String userMessage, int currentIteration, int totalToolCalls) {
-        if (currentIteration <= CRICIC_SKIP_MAX_ITERATIONS && totalToolCalls <= CRITIC_SKIP_MAX_TOOLS) {
-            return true;
-        }
-        if (userMessage != null && userMessage.length() < 25
-                && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|怎么样|辛苦了|好的|收到|明白|知道了|了解).*")) {
-            return true;
-        }
-        if (totalToolCalls == 0 && currentIteration <= 3) {
+        if (userMessage != null && userMessage.length() < 15
+                && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|在吗|辛苦了|好的|收到|明白|知道了|了解).*")) {
             return true;
         }
         return false;
@@ -223,7 +221,7 @@ public class AiAgentOrchestrator {
                     log.info("[AiAgent] 简单场景跳过Critic审查 (iter={}, tools={})", currentIter, allExecRecords.size());
                     revisedContent = result.getContent();
                 } else {
-                    revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                    revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent(), allExecRecords);
                 }
                 revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                 revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
@@ -244,6 +242,18 @@ public class AiAgentOrchestrator {
                     revisedContent = "⚠️ 部分数据与查询结果不一致，请以工具返回数据为准\n\n" + revisedContent;
                 }
                 revisedContent = dataTruthGuard.tagDataSource(revisedContent, truthCheck.getDataSource());
+
+                EntityFactChecker.FactCheckResult factCheck = entityFactChecker.verifyEntities(revisedContent);
+                if (!factCheck.allVerified()) {
+                    log.warn("[AiAgent] 实体事实校验发现不存在的实体: {}", factCheck.phantomEntities());
+                    revisedContent = "⚠️ " + factCheck.toWarningText() + "\n\n" + revisedContent;
+                }
+
+                GroundedGenerationGuard.GroundingResult grounding = groundedGenerationGuard.verify(revisedContent, allExecRecords);
+                if (!grounding.passed()) {
+                    log.warn("[AiAgent] 接地率检查未通过: rate={}", grounding.groundingRate());
+                    revisedContent = grounding.toWarningText() + "\n\n" + revisedContent;
+                }
 
                 log.info("[AiAgent] 返回最终结果给用户");
                 memoryHelper.saveConversationTurn(userId, tenantId, userMessage, revisedContent);
@@ -446,7 +456,7 @@ public class AiAgentOrchestrator {
                         revisedContent = result.getContent();
                     } else {
                         emitSse(emitter, "thinking", Map.of("message", "小云正在进行最终思考核对与完善..."));
-                        revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                        revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent(), allExecRecords);
                     }
                     revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                     revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
@@ -467,6 +477,15 @@ public class AiAgentOrchestrator {
                         revisedContent = "⚠️ 部分数据与查询结果不一致，请以工具返回数据为准\n\n" + revisedContent;
                     }
                     revisedContent = dataTruthGuard.tagDataSource(revisedContent, streamTruthCheck.getDataSource());
+
+                    EntityFactChecker.FactCheckResult streamFactCheck = entityFactChecker.verifyEntities(revisedContent);
+                    if (!streamFactCheck.allVerified()) {
+                        revisedContent = "⚠️ " + streamFactCheck.toWarningText() + "\n\n" + revisedContent;
+                    }
+                    GroundedGenerationGuard.GroundingResult streamGrounding = groundedGenerationGuard.verify(revisedContent, allExecRecords);
+                    if (!streamGrounding.passed()) {
+                        revisedContent = streamGrounding.toWarningText() + "\n\n" + revisedContent;
+                    }
 
                     // 最终回答
                     memoryHelper.saveConversationTurn(userId, tenantId, userMessage, revisedContent);

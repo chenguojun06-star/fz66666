@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.job;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrchestrator;
@@ -208,6 +209,136 @@ public class AiPatrolJob {
         }
 
         log.info("[AiPatrolJob-Biz] ===== 业务异常巡查完成，发现 {} 个风险 =====", found);
+
+        if (found > 0) {
+            performCorrelationAnalysis();
+        }
+    }
+
+    private void performCorrelationAnalysis() {
+        try {
+            List<AiPatrolAction> recentActions = patrolOrchestrator.recentActions(24);
+            if (recentActions == null || recentActions.size() < 2) return;
+
+            Map<Long, List<AiPatrolAction>> byTenant = recentActions.stream()
+                .filter(a -> a.getTenantId() != null)
+                .collect(Collectors.groupingBy(AiPatrolAction::getTenantId));
+
+            for (Map.Entry<Long, List<AiPatrolAction>> entry : byTenant.entrySet()) {
+                List<AiPatrolAction> actions = entry.getValue();
+                boolean hasDeadlineRisk = actions.stream().anyMatch(a -> "DEADLINE_RISK".equals(a.getIssueType()));
+                boolean hasFactorySilence = actions.stream().anyMatch(a -> "FACTORY_SILENCE".equals(a.getIssueType()));
+                boolean hasQualitySpike = actions.stream().anyMatch(a -> "QUALITY_SPIKE".equals(a.getIssueType()));
+
+                int coOccurrence = (hasDeadlineRisk ? 1 : 0) + (hasFactorySilence ? 1 : 0) + (hasQualitySpike ? 1 : 0);
+                if (coOccurrence >= 2) {
+                    String correlation = String.format(
+                        "租户[%d] 同时出现多种风险信号（%s%s%s），极可能存在系统性交付风险，建议立即排查",
+                        entry.getKey(),
+                        hasDeadlineRisk ? "高危截止" : "",
+                        hasFactorySilence ? "+工厂沉默" : "",
+                        hasQualitySpike ? "+质量异常" : "");
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", correlation, "CORRELATED_RISK",
+                        "HIGH", "tenant", String.valueOf(entry.getKey()),
+                        "{\"action\":\"escalate_correlated_risk\"}",
+                        BigDecimal.valueOf(0.95), "NEED_APPROVAL"
+                    );
+                    log.warn("[AiPatrolJob-Biz] 关联风险升级: {}", correlation);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Biz] 关联分析异常: {}", e.getMessage());
+        }
+    }
+
+    @Scheduled(cron = "0 30 */4 * * ?")
+    public void scanExtendedAnomalies() {
+        if (productionOrderService == null || scanRecordService == null) {
+            return;
+        }
+        log.info("[AiPatrolJob-Ext] ===== 开始扩展业务异常巡查 =====");
+        int found = 0;
+
+        try {
+            LocalDateTime since = LocalDateTime.now().minusHours(24);
+            QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
+            qw.select("tenant_id, process_name, COUNT(*) as total",
+                      "SUM(CASE WHEN scan_result='fail' THEN 1 ELSE 0 END) as fail_count")
+              .ne("scan_type", "orchestration")
+              .ge("scan_time", since)
+              .groupBy("tenant_id, process_name");
+            List<Map<String, Object>> qualityStats = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(qw);
+
+            for (Map<String, Object> row : qualityStats) {
+                Number total = (Number) row.getOrDefault("total", 0);
+                Number failCount = (Number) row.getOrDefault("fail_count", 0);
+                if (total == null || total.intValue() < 5) continue;
+                double failRate = failCount.doubleValue() / total.doubleValue();
+                if (failRate > 0.15) {
+                    String tenantId = String.valueOf(row.getOrDefault("tenant_id", ""));
+                    String processName = String.valueOf(row.getOrDefault("process_name", "未知工序"));
+                    String issue = String.format(
+                        "工序[%s] 近24h次品率%.0f%%（共%d次扫码，失败%d次），超出15%阈值",
+                        processName, failRate * 100, total.intValue(), failCount.intValue());
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", issue, "QUALITY_SPIKE",
+                        failRate > 0.3 ? "HIGH" : "MEDIUM",
+                        "process", processName,
+                        "{\"action\":\"investigate_quality\",\"processName\":\"" + processName + "\"}",
+                        BigDecimal.valueOf(1.0 - failRate), "NEED_APPROVAL"
+                    );
+                    found++;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Ext] 质量异常检测失败: {}", e.getMessage());
+        }
+
+        try {
+            LocalDateTime since = LocalDateTime.now().minusHours(48);
+            LambdaQueryWrapper<ProductionOrder> cuttingDone = new LambdaQueryWrapper<>();
+            cuttingDone.eq(ProductionOrder::getDeleteFlag, 0)
+                       .eq(ProductionOrder::getStatus, "IN_PROGRESS")
+                       .isNotNull(ProductionOrder::getFactoryName)
+                       .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
+                               ProductionOrder::getFactoryName, ProductionOrder::getTenantId);
+            List<ProductionOrder> inProgress = productionOrderService.list(cuttingDone);
+
+            for (ProductionOrder order : inProgress) {
+                QueryWrapper<ScanRecord> sewQ = new QueryWrapper<>();
+                sewQ.eq("order_no", order.getOrderNo())
+                    .eq("scan_type", "production")
+                    .ne("scan_type", "orchestration")
+                    .ge("scan_time", since)
+                    .last("LIMIT 1");
+                List<Map<String, Object>> sewScans = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(sewQ);
+
+                QueryWrapper<ScanRecord> cutQ = new QueryWrapper<>();
+                cutQ.eq("order_no", order.getOrderNo())
+                    .eq("scan_type", "cutting")
+                    .lt("scan_time", since)
+                    .last("LIMIT 1");
+                List<Map<String, Object>> cutScans = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(cutQ);
+
+                if (!cutScans.isEmpty() && sewScans.isEmpty()) {
+                    String issue = String.format(
+                        "订单[%s] 裁剪完成已超48h但车缝未开始，工厂：%s",
+                        order.getOrderNo(), Objects.toString(order.getFactoryName(), "未指定"));
+                    patrolOrchestrator.createAction(
+                        "BIZ_PATROL_JOB", issue, "CUTTING_BACKLOG",
+                        "MEDIUM", "order", order.getOrderNo(),
+                        "{\"action\":\"check_sewing_start\",\"orderNo\":\"" + order.getOrderNo() + "\"}",
+                        BigDecimal.valueOf(0.7), "NEED_APPROVAL"
+                    );
+                    found++;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Ext] 裁剪积压检测失败: {}", e.getMessage());
+        }
+
+        log.info("[AiPatrolJob-Ext] ===== 扩展巡查完成，发现 {} 个风险 =====", found);
     }
 
     // ══════════════════════════════════════════════════════════════════

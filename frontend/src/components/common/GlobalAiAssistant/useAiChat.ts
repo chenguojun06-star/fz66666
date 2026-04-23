@@ -16,6 +16,7 @@ import { speakText } from './speechUtils';
 
 export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useApp>['message']) {
   const { user } = useAuth();
+  const isSuperAdmin = (user as any)?.isSuperAdmin === true;
   const location = useLocation();
 
   const [messages, setMessages] = useState<Message[]>([INITIAL_MSG]);
@@ -145,12 +146,12 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
               return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
             });
           } else if (event.type === 'tool_call') {
-            toolStatus = `小云正在处理：${describeToolName(String(event.data.tool || ''))}…`;
+            toolStatus = `小云正在处理：${describeToolName(String(event.data.tool || ''), isSuperAdmin)}…`;
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
           } else if (event.type === 'tool_result') {
             toolStatus = event.data.success
-              ? `${describeToolName(String(event.data.tool || ''))} 已处理完成，小云继续整理结果…`
-              : `${describeToolName(String(event.data.tool || ''))} 这一步没处理成功，小云正在重新组织答案…`;
+              ? `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 已处理完成，小云继续整理结果…`
+              : `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 这一步没处理成功，小云正在重新组织答案…`;
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');

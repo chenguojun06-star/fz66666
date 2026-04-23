@@ -166,14 +166,25 @@ public class AiAgentToolAccessService {
                 || role.contains("老板");
     }
 
+    private static final List<String> SUPER_ADMIN_ONLY_TOOLS = List.of(
+            "tool_critic_evolution",
+            "tool_ai_self_optimize_report"
+    );
+
     public List<AgentTool> resolveVisibleTools(List<AgentTool> registeredTools) {
         if (registeredTools == null || registeredTools.isEmpty()) {
             return List.of();
         }
 
         boolean managerAccess = hasManagerAccess();
+        boolean superAdmin = UserContext.isSuperAdmin();
         return registeredTools.stream()
-                .filter(tool -> managerAccess || isWorkerVisible(tool.getName()))
+                .filter(tool -> {
+                    if (SUPER_ADMIN_ONLY_TOOLS.contains(tool.getName())) {
+                        return superAdmin;
+                    }
+                    return managerAccess || isWorkerVisible(tool.getName());
+                })
                 .sorted(Comparator
                         .comparingInt((AgentTool tool) -> TOOL_ORDER.getOrDefault(tool.getName(), Integer.MAX_VALUE))
                         .thenComparing(AgentTool::getName))
@@ -190,6 +201,9 @@ public class AiAgentToolAccessService {
     }
 
     public boolean canUseTool(String toolName) {
+        if (SUPER_ADMIN_ONLY_TOOLS.contains(toolName)) {
+            return UserContext.isSuperAdmin();
+        }
         return hasManagerAccess() || isWorkerVisible(toolName);
     }
 

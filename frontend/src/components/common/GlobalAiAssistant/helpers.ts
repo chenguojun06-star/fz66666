@@ -1,6 +1,12 @@
-export const describeToolName = (toolName?: string) => {
+export const SUPER_ADMIN_ONLY_TOOLS = new Set([
+  'tool_critic_evolution',
+  'tool_ai_self_optimize_report',
+]);
+
+export const describeToolName = (toolName?: string, isSuperAdmin?: boolean) => {
   const raw = String(toolName || '').trim();
   if (!raw) return '处理步骤';
+  if (SUPER_ADMIN_ONLY_TOOLS.has(raw) && !isSuperAdmin) return '系统优化';
   const mapped: Record<string, string> = {
     tool_system_overview: '系统总览',
     tool_smart_report: '智能报告',

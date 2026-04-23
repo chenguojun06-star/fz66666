@@ -74,6 +74,9 @@ public class AiSelfOptimizeReportTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (!UserContext.isSuperAdmin()) {
+            return JSON.writeValueAsString(Map.of("success", false, "error", "自优化报告仅平台超级管理员可查看"));
+        }
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return JSON.writeValueAsString(Map.of("success", false, "error", "租户上下文丢失"));

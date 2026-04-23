@@ -110,6 +110,14 @@ public class PatrolClosedLoopOrchestrator {
         return actionMapper.selectList(w);
     }
 
+    public List<AiPatrolAction> recentActions(int hours) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        w.ge(AiPatrolAction::getCreateTime, LocalDateTime.now().minusHours(hours))
+         .orderByDesc(AiPatrolAction::getId)
+         .last("LIMIT 500");
+        return actionMapper.selectList(w);
+    }
+
     /**
      * 平台超管：MTTR 聚合
      */
