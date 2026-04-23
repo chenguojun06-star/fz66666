@@ -188,12 +188,28 @@ export function useOrderFlowData() {
         const firstPurchase = sortedPurchases[0] as any;
         const lastPurchase = sortedPurchases[sortedPurchases.length - 1] as any;
 
+        // 过滤系统自动填充的操作人名（MyBatisPlusMetaObjectHandler 在无 HTTP 用户上下文时默认填"系统管理员"）
+        // 采购操作人语义：receiverName = 实际收料/领料人（明确的业务行为），优先于 creatorName（DB 记录创建人，系统自动行为）
+        const getDisplayOperator = (...names: (string | undefined | null)[]): string => {
+          for (const n of names) {
+            if (n && n !== '系统管理员') return n;
+          }
+          return '未记录';
+        };
+
         purchaseStage.startTime = firstPurchase?.createTime;
-        purchaseStage.startOperatorName = firstPurchase?.creatorName || firstPurchase?.receiverName || '未记录';
+        purchaseStage.startOperatorName = getDisplayOperator(
+          firstPurchase?.receiverName,
+          firstPurchase?.creatorName,
+        );
 
         if (purchaseStage.status === 'completed') {
           purchaseStage.completeTime = lastPurchase?.updateTime || lastPurchase?.createTime;
-          purchaseStage.completeOperatorName = lastPurchase?.updaterName || lastPurchase?.receiverName || '未记录';
+          purchaseStage.completeOperatorName = getDisplayOperator(
+            lastPurchase?.receiverName,
+            lastPurchase?.auditOperatorName,
+            lastPurchase?.updaterName,
+          );
         }
 
         purchaseStage.totalQuantity = materialPurchases.length;
