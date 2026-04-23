@@ -285,23 +285,23 @@ const _FinishedInventory: React.FC = () => {
         // 每条记录独立显示（用户要求：所有入库记录全部可见，不做合并）
         type GroupedItem = {
           id: string;
+          styleNo: string;
           orderNo: string;
           inboundDate: string;
           qualityInspectionNo: string;
           quantity: number;
           operator: string;
           warehouseLocation: string;
-          remark: string;
         };
         const rows: GroupedItem[] = (res.data.records as Record<string, unknown>[]).map(item => ({
           id: String(item.id),
+          styleNo: String((item.styleNo as string) || record.styleNo || '-'),
           orderNo: String(item.orderNo || '-'),
           inboundDate: String(item.warehousingEndTime || item.createTime || '-'),
           qualityInspectionNo: String(item.warehousingNo || '-'),
           quantity: Number((item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0),
           operator: String(item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator),
           warehouseLocation: String(item.warehouse || item.warehouseLocation || fallbackWarehouse),
-          remark: String(item.remark || ''),
         }));
         setInboundHistory(rows);
       } else {
@@ -700,6 +700,12 @@ const _FinishedInventory: React.FC = () => {
                     width: 160,
                   },
                   {
+                    title: '款号',
+                    dataIndex: 'styleNo',
+                    width: 120,
+                    render: (text: string) => <strong style={{ fontFamily: 'monospace' }}>{text}</strong>,
+                  },
+                  {
                     title: '订单号',
                     dataIndex: 'orderNo',
                     width: 140,
@@ -728,11 +734,7 @@ const _FinishedInventory: React.FC = () => {
                     dataIndex: 'operator',
                     width: 100,
                   },
-                  {
-                    title: '备注',
-                    dataIndex: 'remark',
-                    ellipsis: true,
-                  },
+
                 ]}
                 dataSource={inboundHistory}
                 rowKey="id"
