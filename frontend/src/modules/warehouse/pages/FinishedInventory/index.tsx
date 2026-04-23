@@ -678,14 +678,22 @@ const _FinishedInventory: React.FC = () => {
             <Space orientation="vertical" size="large" style={{ width: '100%' }}>
               {/* 基础信息卡片 */}
               <Card size="small" style={{ background: '#f8f9fa' }}>
-                <Space size={40}>
+                <Space size={40} wrap>
                   <div>
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>款号:</span>
                     <strong style={{ fontSize: "var(--font-size-lg)" }}>{inboundHistoryModal.data.styleNo}</strong>
                   </div>
+                  {inboundHistoryModal.data.orderNo && (
+                    <div>
+                      <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>订单号:</span>
+                      <span style={{ fontFamily: 'monospace' }}>{inboundHistoryModal.data.orderNo}</span>
+                    </div>
+                  )}
                   <div>
-                    <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>颜色:</span>
-                    <Tag color="blue">{inboundHistoryModal.data.color}</Tag>
+                    <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>当前可用库存:</span>
+                    <strong style={{ fontSize: "var(--font-size-lg)", color: 'var(--color-success)' }}>
+                      {inboundHistoryModal.data.availableQty ?? 0} 件
+                    </strong>
                   </div>
                 </Space>
               </Card>
@@ -773,15 +781,10 @@ const _FinishedInventory: React.FC = () => {
                     borderRadius: 6,
                     fontSize: "var(--font-size-base)",
                   }}>
-                    当前库存 ={' '}
+                    当前可用库存 ={' '}
                     <strong style={{ fontSize: "var(--font-size-lg)" }}>
-                      {inboundHistory.reduce((sum, item) => sum + item.quantity, 0) - outstockTotal} 件
+                      {inboundHistoryModal.data?.availableQty ?? 0} 件
                     </strong>
-                    {outstockTotal > 0 && (
-                      <span style={{ fontSize: 11, opacity: 0.85 }}>
-                        （{inboundHistory.reduce((sum, item) => sum + item.quantity, 0)} 入 - {outstockTotal} 出）
-                      </span>
-                    )}
                   </div>
                 </Space>
               </Card>
