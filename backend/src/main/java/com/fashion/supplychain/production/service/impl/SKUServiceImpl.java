@@ -566,7 +566,7 @@ public class SKUServiceImpl implements SKUService {
                         Object sortOrderObj = node.get("sortOrder");
                         if (sortOrderObj != null) {
                             try { priceInfo.put("sortOrder", Integer.parseInt(sortOrderObj.toString())); }
-                            catch (NumberFormatException ignored) {}
+                            catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
                         }
                         // ★ 添加 scanType（StageDetector._inferScanType 优先使用后端配置的值）
                         Object scanTypeObj = node.get("scanType");

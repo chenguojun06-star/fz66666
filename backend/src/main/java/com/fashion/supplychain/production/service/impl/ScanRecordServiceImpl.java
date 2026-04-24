@@ -71,6 +71,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
 
                 // 构建Lambda查询包装器
                 LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                                .ne(ScanRecord::getScanType, "orchestration")
                                 .eq(StringUtils.hasText(orderNo), ScanRecord::getOrderNo, orderNo)
                                 .like(StringUtils.hasText(styleNo), ScanRecord::getStyleNo, styleNo)
                                 .eq(StringUtils.hasText(scanType), ScanRecord::getScanType, scanType)
@@ -280,6 +281,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                 .select("color", "size", "count(*) as count")
                                 .eq("order_no", orderNo.trim())
                                 .eq("scan_result", "success")
+                                .ne("scan_type", "orchestration")
                                 .groupBy("color", "size");
                 // 工厂隔离
                 String ctxFactoryId = UserContext.factoryId();
@@ -292,6 +294,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
         @Override
         public List<ScanRecord> listByCondition(String orderId, String cuttingBundleId, String scanType, String scanResult, String excludeProcessCode) {
                 LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                        .ne(ScanRecord::getScanType, "orchestration")
                         .eq(StringUtils.hasText(orderId), ScanRecord::getOrderId, orderId)
                         .eq(StringUtils.hasText(cuttingBundleId), ScanRecord::getCuttingBundleId, cuttingBundleId)
                         .eq(StringUtils.hasText(scanType), ScanRecord::getScanType, scanType)

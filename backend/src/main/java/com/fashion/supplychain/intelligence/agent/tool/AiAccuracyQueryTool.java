@@ -74,10 +74,10 @@ public class AiAccuracyQueryTool extends AbstractAgentTool {
         Object t = args.get("toleranceDays");
         Object r = args.get("recentDays");
         if (t != null && !t.toString().isBlank()) {
-            try { toleranceDays = Integer.parseInt(t.toString().trim()); } catch (NumberFormatException ignored) {}
+            try { toleranceDays = Integer.parseInt(t.toString().trim()); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
         }
         if (r != null && !r.toString().isBlank()) {
-            try { recentDays = Integer.parseInt(r.toString().trim()); } catch (NumberFormatException ignored) {}
+            try { recentDays = Integer.parseInt(r.toString().trim()); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
         }
 
         AiAccuracyDashboardResponse data =

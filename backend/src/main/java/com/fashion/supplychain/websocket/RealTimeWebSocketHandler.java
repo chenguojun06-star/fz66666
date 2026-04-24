@@ -70,7 +70,7 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
 
         Long tenantId = null;
         if (tenantIdStr != null && !tenantIdStr.isBlank()) {
-            try { tenantId = Long.parseLong(tenantIdStr); } catch (NumberFormatException ignored) {}
+            try { tenantId = Long.parseLong(tenantIdStr); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
         }
 
         if (userId == null || clientType == null) {

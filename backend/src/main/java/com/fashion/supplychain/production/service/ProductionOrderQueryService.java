@@ -321,7 +321,7 @@ public class ProductionOrderQueryService {
                     try {
                         Long sid = Long.valueOf(a.getStyleId());
                         attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
                 }
             }
 

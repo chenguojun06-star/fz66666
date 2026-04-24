@@ -112,14 +112,16 @@ public class MultiAgentGraphOrchestrator {
                             ? state.getOptimizationSuggestion().substring(0, 200) : state.getOptimizationSuggestion())
                         : "无");
                 promptHelper.updateMasAnalysisCache(summary);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.debug("[MultiAgentGraph] 更新MAS分析缓存失败: {}", e.getMessage());
+            }
             emitSse(emitter, "graph_done", buildSuccessMap(state, latency));
             emitter.complete();
         } catch (Exception e) {
             long latency = System.currentTimeMillis() - start;
             persistLog(state, "FAILED", latency);
             try { emitSse(emitter, "graph_error", Map.of("error", e.getMessage() != null ? e.getMessage() : "未知错误")); emitter.complete(); }
-            catch (Exception ignored) { emitter.completeWithError(e); }
+            catch (Exception e2) { log.debug("[MultiAgentGraph] SSE错误发送失败: {}", e2.getMessage()); emitter.completeWithError(e); }
         }
     }
 

@@ -104,7 +104,8 @@ public class FinancialReportOrchestrator {
                 new LambdaQueryWrapper<Payable>()
                         .eq(Payable::getDeleteFlag, 0)
                         .in(Payable::getStatus, "PENDING", "PARTIAL", "OVERDUE")
-                        .eq(Payable::getTenantId, tenantId));
+                        .eq(Payable::getTenantId, tenantId)
+                        .last("LIMIT 5000"));
         for (Payable p : payables) {
             BigDecimal paid = p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO;
             payableBalance = payableBalance.add(p.getAmount().subtract(paid));
@@ -116,7 +117,8 @@ public class FinancialReportOrchestrator {
                 new LambdaQueryWrapper<Invoice>()
                         .eq(Invoice::getDeleteFlag, 0)
                         .eq(Invoice::getStatus, "ISSUED")
-                        .eq(Invoice::getTenantId, tenantId));
+                        .eq(Invoice::getTenantId, tenantId)
+                        .last("LIMIT 5000"));
         for (Invoice inv : invoices) {
             invoiceBalance = invoiceBalance.add(inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO);
         }
@@ -151,7 +153,8 @@ public class FinancialReportOrchestrator {
                         .eq(Payable::getStatus, "PAID")
                         .eq(Payable::getTenantId, tenantId)
                         .ge(Payable::getUpdateTime, startDt)
-                        .le(Payable::getUpdateTime, endDt));
+                        .le(Payable::getUpdateTime, endDt)
+                        .last("LIMIT 5000"));
         for (Payable p : paidPayables) {
             payablePaid = payablePaid.add(p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO);
         }

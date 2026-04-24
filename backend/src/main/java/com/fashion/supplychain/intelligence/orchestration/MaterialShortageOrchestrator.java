@@ -118,7 +118,7 @@ public class MaterialShortageOrchestrator {
                 Long sid = Long.parseLong(order.getStyleId());
                 int qty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
                 qtyByStyle.merge(sid, qty, Integer::sum);
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
         }
 
         // 3. 计算各物料总需求量 key = materialCode + "|" + color

@@ -170,6 +170,7 @@ public class AiPatrolJob {
                         new QueryWrapper<ScanRecord>()
                             .select("tenant_id, factory_name, MAX(scan_time) as last_scan")
                             .eq("scan_result", "success")
+                            .ne("scan_type", "orchestration")
                             .ge("scan_time", silenceThreshold)
                             .isNotNull("factory_name")
                             .groupBy("tenant_id, factory_name")

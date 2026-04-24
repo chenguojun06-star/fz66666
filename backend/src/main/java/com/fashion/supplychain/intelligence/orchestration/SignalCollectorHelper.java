@@ -171,7 +171,7 @@ public class SignalCollectorHelper {
                     s.setStatus("open");
                     items.add(s);
                 }
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
         }
         return items;
     }

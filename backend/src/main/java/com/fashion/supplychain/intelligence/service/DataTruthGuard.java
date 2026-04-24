@@ -123,7 +123,7 @@ public class DataTruthGuard {
         while (m.find()) {
             try {
                 numbers.add(Double.parseDouble(m.group(1)));
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
         }
         return numbers;
     }

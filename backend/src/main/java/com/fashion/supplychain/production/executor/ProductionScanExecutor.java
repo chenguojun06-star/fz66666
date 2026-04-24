@@ -1006,7 +1006,7 @@ public class ProductionScanExecutor {
 
             try {
                 Long styleIdLong = null;
-                try { styleIdLong = Long.valueOf(order.getStyleId()); } catch (NumberFormatException ignore) {}
+                try { styleIdLong = Long.valueOf(order.getStyleId()); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
                 if (styleIdLong != null) {
                     java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes =
                             secondaryProcessService.listByStyleId(styleIdLong);

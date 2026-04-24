@@ -358,7 +358,7 @@ public class OpenApiOrderHelper {
         if (lastOrder != null && StringUtils.hasText(lastOrder.getOrderNo())) {
             String lastNo = lastOrder.getOrderNo();
             if (lastNo.length() >= prefix.length() + 4) {
-                try { seq = Integer.parseInt(lastNo.substring(prefix.length())) + 1; } catch (NumberFormatException ignored) {}
+                try { seq = Integer.parseInt(lastNo.substring(prefix.length())) + 1; } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
             }
         }
         return prefix + String.format("%04d", seq);

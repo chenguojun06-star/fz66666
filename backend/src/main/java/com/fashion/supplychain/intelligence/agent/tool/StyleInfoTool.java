@@ -128,7 +128,7 @@ public class StyleInfoTool extends AbstractAgentTool {
             if (cat != null) info.setCategory(cat);
             String priceStr = optionalString(args, "price");
             if (priceStr != null) {
-                try { info.setPrice(new BigDecimal(priceStr)); } catch (NumberFormatException ignored) {}
+                try { info.setPrice(new BigDecimal(priceStr)); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
             }
 
             boolean ok = styleInfoOrchestrator.save(info);
@@ -160,7 +160,7 @@ public class StyleInfoTool extends AbstractAgentTool {
             if (styleName != null) info.setStyleName(styleName);
             if (cat != null) info.setCategory(cat);
             if (priceStr != null) {
-                try { info.setPrice(new BigDecimal(priceStr)); } catch (NumberFormatException ignored) {}
+                try { info.setPrice(new BigDecimal(priceStr)); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
             }
 
             boolean ok = styleInfoOrchestrator.update(info);

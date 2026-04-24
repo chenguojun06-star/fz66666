@@ -116,7 +116,9 @@ public class EvolutionSafetyGuard {
                 Object val = rows.get(0).get("Value");
                 if (val != null) return Long.parseLong(val.toString());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[EvolutionSafetyGuard] 获取查询计数失败: {}", e.getMessage());
+        }
         return 0;
     }
 

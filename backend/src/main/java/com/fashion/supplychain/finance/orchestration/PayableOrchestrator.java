@@ -72,6 +72,7 @@ public class PayableOrchestrator {
         return payableService.lambdaQuery()
                 .eq(Payable::getId, id)
                 .eq(Payable::getTenantId, tenantId)
+                .eq(Payable::getDeleteFlag, 0)
                 .one();
     }
 

@@ -178,7 +178,7 @@ public class ProductionOrderFlowOrchestrationService {
             List<Long> ids = new ArrayList<>();
             for (String uid : userIds) {
                 if (!StringUtils.hasText(uid)) continue;
-                try { ids.add(Long.parseLong(uid.trim())); } catch (NumberFormatException ignored) {}
+                try { ids.add(Long.parseLong(uid.trim())); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
             }
             if (ids.isEmpty()) return result;
             String placeholders = ids.stream().map(x -> "?").collect(java.util.stream.Collectors.joining(","));

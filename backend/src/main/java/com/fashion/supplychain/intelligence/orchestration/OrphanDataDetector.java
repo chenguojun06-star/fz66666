@@ -297,6 +297,7 @@ public class OrphanDataDetector {
     private long countScanRecords(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return scanRecordService.lambdaQuery().in(ScanRecord::getOrderId, deadIds)
+                .ne(ScanRecord::getScanType, "orchestration")
                 .eq(tenantId != null, ScanRecord::getTenantId, tenantId).count();
     }
     private long countMaterialPurchases(Set<String> deadIds, Long tenantId) {
@@ -379,6 +380,7 @@ public class OrphanDataDetector {
 
     private List<OrphanDataItemDTO> listScanRecords(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return scanRecordService.lambdaQuery().in(ScanRecord::getOrderId, deadIds)
+                .ne(ScanRecord::getScanType, "orchestration")
                 .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(r -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();

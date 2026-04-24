@@ -581,7 +581,7 @@ public class SystemOperationLogAspect {
                 var m = c.getMethod(k);
                 Object v = m.invoke(obj);
                 if (v != null) return v;
-            } catch (NoSuchMethodException ignore) {}
+            } catch (NoSuchMethodException e) { log.debug("方法不存在: {}", e.getMessage()); }
         }
         return null;
     }

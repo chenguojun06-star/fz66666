@@ -159,6 +159,7 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ScanRecord> sqw = new QueryWrapper<>();
         sqw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("scan_result", "success")
+          .ne("scan_type", "orchestration")
           .ge("scan_time", LocalDateTime.now().minusDays(7));
         List<ScanRecord> recentScans = scanRecordService.list(sqw);
 
