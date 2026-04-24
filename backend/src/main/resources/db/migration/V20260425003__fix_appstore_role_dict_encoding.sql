@@ -1,11 +1,11 @@
 -- ============================================================
 -- V20260425003__fix_appstore_role_dict_encoding.sql
--- 修复 t_app_store / t_role / t_dict 表中因字符集连接错误导致的双重编码乱码
+-- 修复 t_app_store / t_role / t_dict / t_template_library 表中因字符集连接错误导致的双重编码乱码
 -- 根因: 建表初始数据通过 latin1/cp1252 连接写入 utf8mb4 列，
 --       UTF-8 多字节被当作 Latin-1 字符存储并再次 UTF-8 编码，
 --       导致 "一键导出金蝶KIS" 等中文显示为 "ä¸€é"®å¯¼å‡ºé‡'èš¶KIS"
--- 修复范围: t_app_store 16条(含category统一) + t_role 4条 + t_dict 7条
--- 幂等性: 使用 app_code / role_code / dict_code 作为 WHERE 条件，重复执行安全
+-- 修复范围: t_app_store 16条(含category统一) + t_role 4条 + t_dict 7条 + t_template_library 10条
+-- 幂等性: 使用 app_code / role_code / dict_code / template_key 作为 WHERE 条件，重复执行安全
 -- ============================================================
 
 -- --------------------------------------------------------
@@ -53,3 +53,19 @@ UPDATE t_dict SET dict_label = '春季' WHERE dict_code = 'SPRING' AND dict_type
 UPDATE t_dict SET dict_label = '夏季' WHERE dict_code = 'SUMMER' AND dict_type = 'season';
 UPDATE t_dict SET dict_label = '秋季' WHERE dict_code = 'AUTUMN' AND dict_type = 'season';
 UPDATE t_dict SET dict_label = '冬季' WHERE dict_code = 'WINTER' AND dict_type = 'season';
+
+-- --------------------------------------------------------
+-- 4. 修复 t_template_library 表（10个模板的 template_name）
+--    template_content 中的 JSON 中文由 TemplateStyleOrchestrator.fixMojibake() 运行时修复
+--    此处只修 template_name，因为它是短文本且是用户直接可见的
+-- --------------------------------------------------------
+UPDATE t_template_library SET template_name = '基础工序' WHERE template_type = 'process' AND template_key = 'basic';
+UPDATE t_template_library SET template_name = '针织上衣(常用)' WHERE template_type = 'process' AND template_key = 'knit-top';
+UPDATE t_template_library SET template_name = '梭织衬衫(常用)' WHERE template_type = 'process' AND template_key = 'woven-shirt';
+UPDATE t_template_library SET template_name = '上衣常规(国际参考)' WHERE template_type = 'size' AND template_key = 'top-basic';
+UPDATE t_template_library SET template_name = '裤装常规(国际参考)' WHERE template_type = 'size' AND template_key = 'pants-basic';
+UPDATE t_template_library SET template_name = '童装常规(国际参考)' WHERE template_type = 'size' AND template_key = 'kids-basic';
+UPDATE t_template_library SET template_name = '通用面辅料模板(市面常用)' WHERE template_type = 'bom' AND template_key = 'market-basic';
+UPDATE t_template_library SET template_name = '通用面辅料模板(针织/卫衣)' WHERE template_type = 'bom' AND template_key = 'market-knit';
+UPDATE t_template_library SET template_name = '通用面辅料模板(外套/夹克)' WHERE template_type = 'bom' AND template_key = 'market-jacket';
+UPDATE t_template_library SET template_name = '默认生产进度' WHERE template_type = 'progress' AND template_key = 'default';

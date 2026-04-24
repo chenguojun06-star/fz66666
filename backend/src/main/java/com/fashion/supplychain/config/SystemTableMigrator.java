@@ -567,6 +567,7 @@ public class SystemTableMigrator {
         fixRoleEncoding(jdbc);
         fixDictEncoding(jdbc);
         fixPermissionEncoding(jdbc);
+        fixTemplateLibraryEncoding(jdbc);
     }
 
     private void fixAppStoreEncoding(JdbcTemplate jdbc) {
@@ -687,6 +688,34 @@ public class SystemTableMigrator {
             log.info("[EncodingFix] Permission encoding fixed successfully.");
         } catch (Exception e) {
             log.warn("[EncodingFix] Failed to fix permission encoding: {}", e.getMessage());
+        }
+    }
+
+    private void fixTemplateLibraryEncoding(JdbcTemplate jdbc) {
+        if (!dbHelper.tableExists("t_template_library")) {
+            return;
+        }
+        try {
+            Integer tplGarbled = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM t_template_library WHERE template_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                Integer.class);
+            if (tplGarbled == null || tplGarbled == 0) {
+                return;
+            }
+            log.info("[EncodingFix] Detected {} garbled template_library records, fixing...", tplGarbled);
+            jdbc.update("UPDATE t_template_library SET template_name='基础工序' WHERE template_type='process' AND template_key='basic'");
+            jdbc.update("UPDATE t_template_library SET template_name='针织上衣(常用)' WHERE template_type='process' AND template_key='knit-top'");
+            jdbc.update("UPDATE t_template_library SET template_name='梭织衬衫(常用)' WHERE template_type='process' AND template_key='woven-shirt'");
+            jdbc.update("UPDATE t_template_library SET template_name='上衣常规(国际参考)' WHERE template_type='size' AND template_key='top-basic'");
+            jdbc.update("UPDATE t_template_library SET template_name='裤装常规(国际参考)' WHERE template_type='size' AND template_key='pants-basic'");
+            jdbc.update("UPDATE t_template_library SET template_name='童装常规(国际参考)' WHERE template_type='size' AND template_key='kids-basic'");
+            jdbc.update("UPDATE t_template_library SET template_name='通用面辅料模板(市面常用)' WHERE template_type='bom' AND template_key='market-basic'");
+            jdbc.update("UPDATE t_template_library SET template_name='通用面辅料模板(针织/卫衣)' WHERE template_type='bom' AND template_key='market-knit'");
+            jdbc.update("UPDATE t_template_library SET template_name='通用面辅料模板(外套/夹克)' WHERE template_type='bom' AND template_key='market-jacket'");
+            jdbc.update("UPDATE t_template_library SET template_name='默认生产进度' WHERE template_type='progress' AND template_key='default'");
+            log.info("[EncodingFix] Template library encoding fixed successfully.");
+        } catch (Exception e) {
+            log.warn("[EncodingFix] Failed to fix template library encoding: {}", e.getMessage());
         }
     }
 
