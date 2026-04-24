@@ -96,6 +96,7 @@ const AppStore: React.FC = () => {
   const [detailVisible, setDetailVisible] = useState(false);
   const [orderVisible, setOrderVisible] = useState(false);
   const [trialLoading, setTrialLoading] = useState(false);
+  const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [form] = Form.useForm<OrderForm>();
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -239,7 +240,8 @@ const AppStore: React.FC = () => {
   const handleOrderSubmit = async () => {
     try {
       const values = await form.validateFields();
-      if (!selectedApp) return;
+      if (!selectedApp || orderSubmitting) return;
+      setOrderSubmitting(true);
       await appStoreService.createOrder({ appId: selectedApp.id, appCode: selectedApp.appCode, appName: selectedApp.appName, ...values });
       setOrderVisible(false);
       Modal.success({
@@ -255,6 +257,7 @@ const AppStore: React.FC = () => {
         ),
       });
     } catch (error: unknown) { if (error && typeof error === 'object' && 'errorFields' in error) return; message.error('提交失败'); }
+    finally { setOrderSubmitting(false); }
   };
 
   const isAppActivated = (appCode: string) => myApps.some(a => a.appCode === appCode && !a.isExpired);
@@ -659,7 +662,7 @@ const AppStore: React.FC = () => {
       {/* 购买意向弹窗 */}
       <ResizableModal
         title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>{selectedApp?.appIcon}</span><span>购买意向 - {selectedApp?.appName}</span></div>}
-        open={orderVisible} onCancel={() => setOrderVisible(false)} onOk={handleOrderSubmit} width="40vw" okText="提交意向" cancelText="取消"
+        open={orderVisible} onCancel={() => setOrderVisible(false)} onOk={handleOrderSubmit} width="40vw" okText="提交意向" cancelText="取消" confirmLoading={orderSubmitting}
       >
         <div style={{ padding: '8px 0' }}>
           <Alert type="info" showIcon style={{ marginBottom: 12, fontSize: 12 }} title="提交后，商务团队将在1-3个工作日内联系您确认并完成开通。" />

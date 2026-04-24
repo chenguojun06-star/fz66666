@@ -142,6 +142,18 @@ public class AppStoreOrchestrator {
                                 int userCount, String contactName, String contactPhone,
                                 String contactEmail, String companyName,
                                 Boolean invoiceRequired, String invoiceTitle, String invoiceTaxNo) {
+        Long tid = tenantId != null ? tenantId : 0L;
+
+        QueryWrapper<AppOrder> dupWrapper = new QueryWrapper<>();
+        dupWrapper.eq("tenant_id", tid);
+        dupWrapper.eq("app_id", app.getId());
+        dupWrapper.eq("subscription_type", subscriptionType);
+        dupWrapper.eq("status", "PENDING");
+        long pendingCount = appOrderService.count(dupWrapper);
+        if (pendingCount > 0) {
+            throw new RuntimeException("您已有一个待处理的相同订单，请等待商务团队联系或联系客服取消后重新提交");
+        }
+
         BigDecimal unitPrice = calculatePrice(app, subscriptionType);
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(userCount));
         BigDecimal discountAmount = BigDecimal.ZERO;
