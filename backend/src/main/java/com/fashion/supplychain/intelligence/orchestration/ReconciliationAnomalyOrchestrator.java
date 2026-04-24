@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.mapper.ShipmentReconciliationMapper;
 import com.fashion.supplychain.intelligence.dto.ReconciliationAnomalyResponse;
@@ -37,6 +38,7 @@ public class ReconciliationAnomalyOrchestrator {
     private ShipmentReconciliationMapper shipmentReconciliationMapper;
 
     public ReconciliationAnomalyResponse analyze() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime now = LocalDateTime.now();
 

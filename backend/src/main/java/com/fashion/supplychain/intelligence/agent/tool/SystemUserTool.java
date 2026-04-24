@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.UserService;
@@ -85,7 +86,8 @@ public class SystemUserTool implements AgentTool {
             if (roleName != null && !roleName.isBlank()) {
                 query.like("role_name", roleName);
             }
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             if (tenantId != null) {
                 query.eq("tenant_id", tenantId);
             }

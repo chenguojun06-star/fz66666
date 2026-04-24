@@ -2,7 +2,9 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ActionCenterResponse;
 import com.fashion.supplychain.intelligence.dto.ActionTaskFeedbackItem;
 import com.fashion.supplychain.intelligence.dto.ActionTaskFeedbackRequest;
@@ -28,6 +30,7 @@ public class ActionTaskFeedbackOrchestrator {
     private IntelligenceActionTaskFeedbackService feedbackService;
 
     public Result<ActionTaskFeedbackItem> submitFeedback(ActionTaskFeedbackRequest request) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return Result.fail("无法获取租户信息");
@@ -61,6 +64,7 @@ public class ActionTaskFeedbackOrchestrator {
     }
 
     public List<ActionTaskFeedbackItem> listRecent(Integer limit) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return List.of();
@@ -86,6 +90,7 @@ public class ActionTaskFeedbackOrchestrator {
         if (tasks == null || tasks.isEmpty()) {
             return;
         }
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return;

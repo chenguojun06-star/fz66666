@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
@@ -113,6 +114,7 @@ public class ActionExecutorTool implements AgentTool {
             return "{\"success\":false,\"error\":\"缺少 action 参数\"}";
         }
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (!aiAgentToolAccessService.hasManagerAccess()) {
             return "{\"success\":false,\"error\":\"当前角色无权执行该操作\"}";

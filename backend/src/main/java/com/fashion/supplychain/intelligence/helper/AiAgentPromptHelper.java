@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.dto.WorkerProfileRequest;
@@ -120,6 +121,7 @@ public class AiAgentPromptHelper {
         boolean isSuperAdmin = UserContext.isSuperAdmin();
         boolean isTenantOwner = UserContext.isTenantOwner();
         boolean isManager = aiAgentToolAccessService.hasManagerAccess();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
 

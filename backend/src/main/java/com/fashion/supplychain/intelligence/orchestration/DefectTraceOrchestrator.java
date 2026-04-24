@@ -50,7 +50,8 @@ public class DefectTraceOrchestrator {
 
         try {
             TenantAssert.assertTenantContext();
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             // 查询该订单所有质检入库记录（包括未发现次品的记录，用于计算总检验件数）
             QueryWrapper<ProductWarehousing> qw = new QueryWrapper<>();
             qw.eq("tenant_id", tenantId)

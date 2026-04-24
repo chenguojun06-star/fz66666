@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.AiPlan;
 import com.fashion.supplychain.intelligence.mapper.AiPlanMapper;
 import java.time.LocalDateTime;
@@ -91,6 +92,7 @@ public class AiPlanExecuteOrchestrator {
      * 列租户内计划。仅当前租户可见。
      */
     public java.util.List<AiPlan> listForCurrentTenant(int limit) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<AiPlan> w = new LambdaQueryWrapper<>();
         if (tenantId != null) {

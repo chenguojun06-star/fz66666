@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchResponse;
 import com.fashion.supplychain.service.RedisService;
@@ -182,6 +183,7 @@ public class CollaborationTaskLifecycleOrchestrator {
     }
 
     private String resolveKey(String orderNo, String targetRole) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String normalizedOrder = StringUtils.hasText(orderNo) ? orderNo.trim() : "general";
         String normalizedRole = StringUtils.hasText(targetRole) ? targetRole.trim() : "general";

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.TenantPreferenceProfile;
 import com.fashion.supplychain.intelligence.service.TenantIntelligencePreferenceService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -36,6 +37,7 @@ public class TenantIntelligenceProfileViewOrchestrator {
     private TenantIntelligencePreferenceService tenantIntelligencePreferenceService;
 
     public TenantIntelligenceProfileResponse getCurrentTenantProfileView() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         TenantPreferenceProfile learnedProfile = learnCurrentTenantProfile(tenantId);
         TenantIntelligenceProfile savedProfile = loadCurrentTenantConfig(tenantId);
@@ -64,11 +66,11 @@ public class TenantIntelligenceProfileViewOrchestrator {
 
     private TenantPreferenceProfile learnCurrentTenantProfile(Long tenantId) {
         List<ProductionOrder> orders = productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .and(wrapper -> wrapper.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
                 .last("LIMIT 500"));
         List<ScanRecord> scanRecords = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
-                .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
+                .eq(ScanRecord::getTenantId, tenantId)
                 .orderByDesc(ScanRecord::getScanTime)
                 .last("LIMIT 1000"));
         return tenantIntelligencePreferenceService.learnProfile(orders, scanRecords);

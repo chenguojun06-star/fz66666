@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.LearningLoopResponse;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
@@ -62,6 +63,7 @@ public class LearningLoopOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public LearningLoopResponse runLoop() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LearningLoopResponse response = new LearningLoopResponse();
         response.setRunAt(LocalDateTime.now());

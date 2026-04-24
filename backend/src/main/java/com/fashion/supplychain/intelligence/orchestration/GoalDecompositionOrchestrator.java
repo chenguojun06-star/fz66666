@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.GoalDecomposition;
 import com.fashion.supplychain.intelligence.mapper.GoalDecompositionMapper;
 import java.math.BigDecimal;
@@ -33,6 +34,7 @@ public class GoalDecompositionOrchestrator {
     public GoalDecomposition createAndDecompose(String goalType, String title, String description,
                                                  String metricName, BigDecimal metricTarget, String metricUnit,
                                                  LocalDateTime deadline) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 1. 创建顶层目标
@@ -76,6 +78,7 @@ public class GoalDecompositionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void updateProgress(Long goalId, int progress, BigDecimal metricCurrent) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         GoalDecomposition goal = goalMapper.selectOne(
                 new QueryWrapper<GoalDecomposition>()

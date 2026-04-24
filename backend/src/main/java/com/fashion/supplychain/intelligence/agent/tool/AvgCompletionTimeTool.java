@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,7 @@ public class AvgCompletionTimeTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return "{\"error\":\"租户上下文丢失\"}";

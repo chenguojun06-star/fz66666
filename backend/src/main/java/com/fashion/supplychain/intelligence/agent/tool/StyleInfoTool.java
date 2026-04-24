@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -72,7 +73,8 @@ public class StyleInfoTool extends AbstractAgentTool {
     private String queryStyle(Map<String, Object> args) {
         try {
             String styleNo = requireString(args, "styleNo");
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             QueryWrapper<StyleInfo> qw = new QueryWrapper<>();
             qw.eq("style_no", styleNo);
             if (tenantId != null) qw.eq("tenant_id", tenantId);

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.WorkerEfficiencyResponse;
 import com.fashion.supplychain.intelligence.dto.WorkerEfficiencyResponse.WorkerEfficiency;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -38,6 +39,7 @@ public class WorkerEfficiencyOrchestrator {
     public WorkerEfficiencyResponse evaluate() {
         WorkerEfficiencyResponse resp = new WorkerEfficiencyResponse();
         try {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDate.now().minusDays(EVAL_DAYS).atStartOfDay();
 
@@ -184,10 +186,17 @@ public class WorkerEfficiencyOrchestrator {
     }
 
     private List<ScanRecord> queryRecords(Long tenantId, LocalDateTime since) {
+        TenantAssert.assertTenantContext();
+        String factoryId = UserContext.factoryId();
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
-          .ge("scan_time", since)
-          .isNull("factory_id");  // 只统计内部员工，排除外发工厂人员
+        qw.eq("tenant_id", tenantId)
+          .ne("scan_type", "orchestration")
+          .ge("scan_time", since);
+        if (factoryId != null && !factoryId.isBlank()) {
+            qw.eq("factory_id", factoryId);
+        } else {
+            qw.isNull("factory_id");
+        }
         return scanRecordService.list(qw);
     }
 }

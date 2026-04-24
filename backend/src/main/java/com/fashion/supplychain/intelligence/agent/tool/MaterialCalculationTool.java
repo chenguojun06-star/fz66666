@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -95,7 +96,8 @@ public class MaterialCalculationTool implements AgentTool {
                 try { return OBJECT_MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供款号和生产数量", true, List.of("styleNo", "orderQuantity"), "请补充款号和生产数量", wizard)); } catch (Exception e) { return "{\"error\": \"请提供款号和生产数量\"}"; }
             }
 
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             // 工厂账号：只能查看分配给本工厂的款式BOM
             String userFactoryId = UserContext.factoryId();
@@ -103,7 +105,7 @@ public class MaterialCalculationTool implements AgentTool {
                 long orderCount = productionOrderService.count(
                         new QueryWrapper<ProductionOrder>()
                                 .eq("factory_id", userFactoryId)
-                                .eq(tenantId != null, "tenant_id", tenantId)
+                                .eq("tenant_id", tenantId)
                                 .eq("style_no", styleNo)
                                 .eq("delete_flag", 0));
                 if (orderCount == 0) {
@@ -114,7 +116,7 @@ public class MaterialCalculationTool implements AgentTool {
             // 查找款式
             QueryWrapper<StyleInfo> styleQw = new QueryWrapper<StyleInfo>()
                     .eq("style_no", styleNo)
-                    .eq(tenantId != null, "tenant_id", tenantId)
+                    .eq("tenant_id", tenantId)
                     .eq("delete_flag", 0)
                     .last("LIMIT 1");
             StyleInfo style = styleInfoService.getOne(styleQw, false);

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -86,6 +87,7 @@ public class SmartReportTool implements AgentTool {
         String reportType = (String) args.getOrDefault("reportType", "daily");
         String dateStr = (String) args.get("date");
         LocalDate baseDate = dateStr != null ? LocalDate.parse(dateStr) : LocalDate.now();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         Map<String, Object> report = new LinkedHashMap<>();

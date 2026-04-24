@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.RootCauseAnalysis;
 import com.fashion.supplychain.intelligence.mapper.RootCauseAnalysisMapper;
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class RootCauseAnalysisOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public RootCauseAnalysis analyze(String triggerType, String triggerDescription, String linkedOrderIds) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 1. 用 LLM 做 5-Why 递归
@@ -88,6 +90,7 @@ public class RootCauseAnalysisOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void resolve(Long rcaId, String resolutionNote) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         RootCauseAnalysis rca = rcaMapper.selectOne(
                 new QueryWrapper<RootCauseAnalysis>()

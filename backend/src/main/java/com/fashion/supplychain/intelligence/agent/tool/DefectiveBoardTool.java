@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -102,6 +103,7 @@ public class DefectiveBoardTool implements AgentTool {
     }
 
     private String executeList() throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<Map<String, Object>> tasks = productWarehousingOrchestrator.listPendingRepairTasks(tenantId);
 

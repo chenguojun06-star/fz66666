@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.orchestration.ReconciliationStatusOrchestrator;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
@@ -88,6 +89,7 @@ public class MaterialReconciliationTool implements AgentTool {
     }
 
     private String listReconciliations(Map<String, Object> args) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String keyword = text(args.get("keyword"));
         String orderNo = text(args.get("orderNo"));
@@ -95,7 +97,7 @@ public class MaterialReconciliationTool implements AgentTool {
         int limit = intOf(args.get("limit"), 10);
         List<MaterialReconciliation> items = materialReconciliationService.list(new LambdaQueryWrapper<MaterialReconciliation>()
                 .eq(MaterialReconciliation::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialReconciliation::getTenantId, tenantId)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
                 .eq(StringUtils.hasText(sourceType), MaterialReconciliation::getSourceType, sourceType)
                 .like(StringUtils.hasText(orderNo), MaterialReconciliation::getOrderNo, orderNo)
                 .and(StringUtils.hasText(keyword), q -> q.like(MaterialReconciliation::getReconciliationNo, keyword)

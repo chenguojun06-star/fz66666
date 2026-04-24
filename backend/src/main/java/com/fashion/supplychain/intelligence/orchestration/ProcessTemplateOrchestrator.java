@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ProcessTemplateResponse;
 import com.fashion.supplychain.intelligence.dto.ProcessTemplateResponse.ProcessTemplateItem;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -186,6 +187,7 @@ public class ProcessTemplateOrchestrator {
     }
 
     private ProcessTemplateResponse buildFromHistoricalData(String category, ProcessTemplateResponse resp) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // ── 1. 找匹配品类的 styleId 集合 ────────────────────────────────────
@@ -286,6 +288,7 @@ public class ProcessTemplateOrchestrator {
     }
 
     private int countRealSamplesForCategory(String category) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null || !StringUtils.hasText(category)) return 0;
         try {

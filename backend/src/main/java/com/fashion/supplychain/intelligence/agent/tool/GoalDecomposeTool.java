@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.GoalDecomposition;
 import com.fashion.supplychain.intelligence.orchestration.GoalDecompositionOrchestrator;
@@ -100,7 +101,8 @@ public class GoalDecomposeTool implements AgentTool {
                 result.put("subGoals", subGoals);
                 return OBJECT_MAPPER.writeValueAsString(result);
             } else {
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
                 List<GoalDecomposition> tree = goalOrchestrator.listGoalTree(tenantId);
                 List<Map<String, Object>> items = new ArrayList<>();
                 for (GoalDecomposition g : tree) {

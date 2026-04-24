@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import java.time.LocalDate;
@@ -23,10 +24,11 @@ public class SampleDelayAnalysisOrchestrator {
     private PatternProductionService patternProductionService;
 
     public Map<String, Object> analyze() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         LambdaQueryWrapper<PatternProduction> qw = new LambdaQueryWrapper<>();
-        qw.eq(tenantId != null, PatternProduction::getTenantId, tenantId)
+        qw.eq(PatternProduction::getTenantId, tenantId)
           .eq(PatternProduction::getDeleteFlag, 0)
           .isNotNull(PatternProduction::getDeliveryTime)
           .select(PatternProduction::getId, PatternProduction::getStyleNo,

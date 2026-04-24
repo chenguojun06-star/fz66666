@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
@@ -20,6 +21,8 @@ import com.fashion.supplychain.production.service.ProductionExceptionReportServi
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -70,6 +73,7 @@ public class PendingTaskOrchestrator {
     @Autowired private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
     @Autowired private MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
     @Autowired private ExpenseReimbursementService expenseReimbursementService;
+    @Autowired private UserService userService;
 
     public List<PendingTaskDTO> getMyPendingTasks() {
         List<PendingTaskDTO> all = new ArrayList<>();
@@ -83,6 +87,10 @@ public class PendingTaskOrchestrator {
         collectSafely("payroll", this::collectPayrollSettlementTasks, all);
         collectSafely("materialRecon", this::collectMaterialReconciliationTasks, all);
         collectSafely("expenseReimburse", this::collectExpenseReimbursementTasks, all);
+        collectSafely("completedStyle", this::collectCompletedStyleTasks, all);
+        collectSafely("completedFinance", this::collectCompletedFinanceTasks, all);
+        // 按责任人过滤：租户老板看全部，其他人只看自己负责的
+        all = filterByResponsiblePerson(all);
         // 全局去重：防止不同 collector 因条件交叉产生重复 id（保留首次出现的那条）
         Map<String, PendingTaskDTO> deduped = new LinkedHashMap<>();
         for (PendingTaskDTO task : all) {
@@ -155,6 +163,9 @@ public class PendingTaskOrchestrator {
                 dto.setEndTime(t.getExpectedShipDate().toString());
             }
             dto.setAssigneeName(t.getReceiverName());
+            dto.setAssigneeId(t.getReceiverId());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("裁剪员");
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
@@ -173,12 +184,17 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/production/warehousing");
             dto.setPriority("medium");
             dto.setCreatedAt(r.getScanTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeId(r.getOperatorId());
+            dto.setAssigneeName(r.getOperatorName());
+            dto.setAssigneeRole("质检员");
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
     }
 
     private List<PendingTaskDTO> collectRepairTasks() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<Map<String, Object>> repairs = warehousingOrchestrator.listPendingRepairTasks(tenantId);
         return repairs.stream().limit(MAX_PER_CATEGORY).map(m -> {
@@ -195,6 +211,24 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/production/warehousing");
             dto.setPriority("high");
             dto.setCreatedAt(null);
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("跟单员");
+            if (StringUtils.hasText(orderNo)) {
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getMerchandiser, ProductionOrder::getFactoryName)
+                        .eq(ProductionOrder::getOrderNo, orderNo)
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .last("LIMIT 1").one();
+                if (order != null) {
+                    if (StringUtils.hasText(order.getMerchandiser())) {
+                        dto.setAssigneeName(order.getMerchandiser());
+                    } else if (StringUtils.hasText(order.getFactoryName())) {
+                        dto.setAssigneeName(order.getFactoryName());
+                        dto.setAssigneeRole("工厂");
+                    }
+                }
+            }
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
@@ -215,20 +249,26 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/production/material");
             dto.setPriority("medium");
             dto.setCreatedAt(p.getCreateTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeId(p.getReceiverId());
+            dto.setAssigneeName(p.getReceiverName());
+            dto.setAssigneeRole("采购员");
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
     }
 
     private List<PendingTaskDTO> collectOverdueOrders() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
         LocalDate today = LocalDate.now();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
                         ProductionOrder::getStyleNo, ProductionOrder::getExpectedShipDate,
-                        ProductionOrder::getProductionProgress)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                        ProductionOrder::getProductionProgress, ProductionOrder::getMerchandiser,
+                        ProductionOrder::getFactoryId, ProductionOrder::getFactoryName)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                 .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
@@ -250,19 +290,23 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/production");
             dto.setPriority("high");
             dto.setCreatedAt(o.getExpectedShipDate() != null ? o.getExpectedShipDate().atStartOfDay() : null);
+            dto.setTaskStatus("pending");
+            dto.setAssigneeName(o.getMerchandiser());
+            dto.setAssigneeRole("跟单员");
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
     }
 
     private List<PendingTaskDTO> collectExceptionReports() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<ProductionExceptionReport> reports = exceptionReportService.lambdaQuery()
                 .select(ProductionExceptionReport::getId, ProductionExceptionReport::getOrderNo,
                         ProductionExceptionReport::getExceptionType,
                         ProductionExceptionReport::getDescription,
                         ProductionExceptionReport::getCreateTime)
-                .eq(tenantId != null, ProductionExceptionReport::getTenantId, tenantId)
+                .eq(ProductionExceptionReport::getTenantId, tenantId)
                 .eq(ProductionExceptionReport::getStatus, "PENDING")
                 .last("LIMIT " + MAX_PER_CATEGORY)
                 .list();
@@ -277,12 +321,26 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/production");
             dto.setPriority("high");
             dto.setCreatedAt(r.getCreateTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("跟单员");
+            if (StringUtils.hasText(r.getOrderNo())) {
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getMerchandiser)
+                        .eq(ProductionOrder::getOrderNo, r.getOrderNo())
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .last("LIMIT 1").one();
+                if (order != null && StringUtils.hasText(order.getMerchandiser())) {
+                    dto.setAssigneeName(order.getMerchandiser());
+                }
+            }
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
     }
 
     private List<PendingTaskDTO> collectStyleDevelopmentTasks() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         Map<String, Object> params = new HashMap<>();
         params.put("tenantId", tenantId);
@@ -324,6 +382,8 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/style-info");
             dto.setPriority("medium");
             dto.setCreatedAt(null);
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("样衣开发");
             // 数量：样板数
             dto.setQuantity(s.getSampleQuantity());
             // 交板日期作为截止时间
@@ -350,6 +410,7 @@ public class PendingTaskOrchestrator {
     }
 
     private List<PendingTaskDTO> collectPayrollSettlementTasks() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         Map<String, Object> params = new HashMap<>();
         params.put("tenantId", tenantId);
@@ -372,12 +433,15 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/finance/payroll-operator-summary");
             dto.setPriority("high");
             dto.setCreatedAt(ps.getCreateTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("财务人员");
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
     }
 
     private List<PendingTaskDTO> collectMaterialReconciliationTasks() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         Map<String, Object> params = new HashMap<>();
         params.put("tenantId", tenantId);
@@ -400,15 +464,18 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/finance/material-reconciliation");
             dto.setPriority("medium");
             dto.setCreatedAt(mr.getCreateTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("财务人员");
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
     }
 
     private List<PendingTaskDTO> collectExpenseReimbursementTasks() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<ExpenseReimbursement> expenses = expenseReimbursementService.lambdaQuery()
-                .eq(tenantId != null, ExpenseReimbursement::getTenantId, tenantId)
+                .eq(ExpenseReimbursement::getTenantId, tenantId)
                 .eq(ExpenseReimbursement::getStatus, "pending")
                 .eq(ExpenseReimbursement::getDeleteFlag, 0)
                 .last("LIMIT " + MAX_PER_CATEGORY)
@@ -429,6 +496,8 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/finance/expense-reimbursement");
             dto.setPriority("medium");
             dto.setCreatedAt(er.getCreateTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("财务人员");
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
@@ -470,6 +539,159 @@ public class PendingTaskOrchestrator {
     private int toInt(Object o) {
         if (o instanceof Number n) return n.intValue();
         return 0;
+    }
+
+    private List<PendingTaskDTO> filterByResponsiblePerson(List<PendingTaskDTO> tasks) {
+        if (UserContext.isTenantOwner() || UserContext.isTopAdmin()) {
+            return tasks;
+        }
+        String currentUserId = UserContext.userId();
+        String currentUserDisplayName = resolveCurrentUserDisplayName();
+        String currentUsername = UserContext.username();
+        boolean isFinance = isFinanceRole();
+        boolean isProductionOrMerchandiser = isProductionOrMerchandiserRole();
+        boolean isFactoryUser = UserContext.isFactoryUser();
+        return tasks.stream().filter(task -> {
+            if (StringUtils.hasText(task.getAssigneeId()) && currentUserId != null) {
+                return currentUserId.equals(task.getAssigneeId());
+            }
+            if (StringUtils.hasText(task.getAssigneeName())) {
+                if (task.getAssigneeName().equals(currentUserDisplayName)
+                        || task.getAssigneeName().equals(currentUsername)) {
+                    return true;
+                }
+            }
+            String taskType = task.getTaskType();
+            if ("PAYROLL_SETTLEMENT".equals(taskType)
+                    || "MATERIAL_RECON".equals(taskType)
+                    || "EXPENSE_REIMBURSE".equals(taskType)) {
+                return isFinance;
+            }
+            if ("OVERDUE_ORDER".equals(taskType)
+                    || "EXCEPTION_REPORT".equals(taskType)) {
+                return isProductionOrMerchandiser;
+            }
+            if ("REPAIR".equals(taskType)) {
+                return isProductionOrMerchandiser || isFactoryUser;
+            }
+            if ("STYLE_DEVELOPMENT".equals(taskType)) {
+                return isProductionOrMerchandiser || isFactoryUser;
+            }
+            return false;
+        }).collect(Collectors.toList());
+    }
+
+    private List<PendingTaskDTO> collectCompletedStyleTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        Map<String, Object> params = new HashMap<>();
+        params.put("tenantId", tenantId);
+        params.put("excludeScrapped", Boolean.TRUE);
+        params.put("progressNode", "样衣完成");
+        try {
+            IPage<StyleInfo> page = styleInfoService.queryPage(params);
+            if (page == null || page.getRecords() == null) return List.of();
+            LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+            return page.getRecords().stream()
+                    .filter(s -> s.getUpdateTime() != null && s.getUpdateTime().isAfter(sevenDaysAgo))
+                    .limit(MAX_PER_CATEGORY)
+                    .map(s -> {
+                        PendingTaskDTO dto = new PendingTaskDTO();
+                        dto.setId("STY_DONE_" + s.getId());
+                        dto.setTaskType("STYLE_DEVELOPMENT");
+                        dto.setModule("style");
+                        dto.setTitle("样衣已完成 " + safe(s.getStyleNo()));
+                        dto.setDescription(safe(s.getStyleName()) + " 样衣完成");
+                        dto.setOrderNo("");
+                        dto.setStyleNo(s.getStyleNo());
+                        dto.setDeepLinkPath("/style-info");
+                        dto.setPriority("low");
+                        dto.setCreatedAt(s.getUpdateTime());
+                        dto.setTaskStatus("completed");
+                        dto.setAssigneeName(s.getProductionAssignee());
+                        dto.setAssigneeRole("样衣开发");
+                        if (s.getDeliveryDate() != null) {
+                            dto.setEndTime(s.getDeliveryDate().toString());
+                        }
+                        fillCategoryMeta(dto);
+                        return dto;
+                    }).collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("[PendingTask] completedStyle 采集失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<PendingTaskDTO> collectCompletedFinanceTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<PendingTaskDTO> completed = new ArrayList<>();
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("tenantId", tenantId);
+            params.put("status", "approved");
+            IPage<PayrollSettlement> payrollPage = payrollSettlementOrchestrator.list(params);
+            if (payrollPage != null && payrollPage.getRecords() != null) {
+                LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+                payrollPage.getRecords().stream()
+                        .filter(ps -> ps.getUpdateTime() != null && ps.getUpdateTime().isAfter(sevenDaysAgo))
+                        .limit(5)
+                        .forEach(ps -> {
+                            PendingTaskDTO dto = new PendingTaskDTO();
+                            dto.setId("PAY_DONE_" + ps.getId());
+                            dto.setTaskType("PAYROLL_SETTLEMENT");
+                            dto.setModule("finance");
+                            dto.setTitle("工资结算已审批 " + safe(ps.getSettlementNo()));
+                            String desc = safe(ps.getOrderNo());
+                            if (ps.getTotalAmount() != null) {
+                                desc += " 金额" + ps.getTotalAmount().toPlainString();
+                            }
+                            dto.setDescription(desc);
+                            dto.setOrderNo(safe(ps.getOrderNo()));
+                            dto.setStyleNo(safe(ps.getStyleNo()));
+                            dto.setDeepLinkPath("/finance/payroll-operator-summary");
+                            dto.setPriority("low");
+                            dto.setCreatedAt(ps.getUpdateTime());
+                            dto.setTaskStatus("completed");
+                            dto.setAssigneeRole("财务人员");
+                            fillCategoryMeta(dto);
+                            completed.add(dto);
+                        });
+            }
+        } catch (Exception e) {
+            log.warn("[PendingTask] completedPayroll 采集失败: {}", e.getMessage());
+        }
+        return completed;
+    }
+
+    private boolean isFinanceRole() {
+        String role = UserContext.role();
+        return role != null && (role.contains("财务") || role.toLowerCase().contains("finance"));
+    }
+
+    private boolean isProductionOrMerchandiserRole() {
+        String role = UserContext.role();
+        if (role == null) return false;
+        String r = role.toLowerCase();
+        return r.contains("生产") || r.contains("跟单") || r.contains("管理")
+                || r.contains("admin") || r.contains("manager") || r.contains("supervisor")
+                || role.contains("主管") || role.contains("管理员");
+    }
+
+    private String resolveCurrentUserDisplayName() {
+        try {
+            String username = UserContext.username();
+            Long tenantId = UserContext.tenantId();
+            if (username == null || tenantId == null) return "";
+            User me = userService.lambdaQuery()
+                    .eq(User::getUsername, username)
+                    .eq(User::getTenantId, tenantId)
+                    .select(User::getName, User::getUsername)
+                    .last("LIMIT 1").one();
+            return (me != null && me.getName() != null) ? me.getName() : username;
+        } catch (Exception e) {
+            return UserContext.username() != null ? UserContext.username() : "";
+        }
     }
 
     private static class CategoryCountAccumulator {

@@ -19,7 +19,18 @@ public class FashionSupplychainApplication {
     private static final Logger log = LoggerFactory.getLogger(FashionSupplychainApplication.class);
 
     public static void main(final String[] args) {
+        ensureDatasourceCharset();
         SpringApplication.run(FashionSupplychainApplication.class, args);
+    }
+
+    private static void ensureDatasourceCharset() {
+        String url = System.getenv("SPRING_DATASOURCE_URL");
+        if (url != null && url.startsWith("jdbc:mysql:") && !url.contains("characterEncoding")) {
+            String separator = url.contains("?") ? "&" : "?";
+            String fixedUrl = url + separator + "useUnicode=true&characterEncoding=UTF-8";
+            System.setProperty("spring.datasource.url", fixedUrl);
+            log.warn("[Charset] SPRING_DATASOURCE_URL 缺少 characterEncoding，已自动追加: {}", fixedUrl);
+        }
     }
 
     /** 修复历史脏数据：other_cost 被老 bug 错误写入了二次工艺总价 */

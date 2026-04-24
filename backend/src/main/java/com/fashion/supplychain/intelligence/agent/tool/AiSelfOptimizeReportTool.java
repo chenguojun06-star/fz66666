@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.mapper.AiProcessRewardMapper;
 import com.fashion.supplychain.intelligence.orchestration.AiAccuracyOrchestrator;
@@ -77,6 +78,7 @@ public class AiSelfOptimizeReportTool implements AgentTool {
         if (!UserContext.isSuperAdmin()) {
             return JSON.writeValueAsString(Map.of("success", false, "error", "自优化报告仅平台超级管理员可查看"));
         }
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return JSON.writeValueAsString(Map.of("success", false, "error", "租户上下文丢失"));

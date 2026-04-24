@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.LearningReportResponse;
 import com.fashion.supplychain.intelligence.dto.LearningReportResponse.StageLearningStat;
 import com.fashion.supplychain.intelligence.entity.IntelligenceProcessStats;
@@ -34,12 +35,13 @@ public class LearningReportOrchestrator {
     private IntelligencePredictionLogMapper predictionLogMapper;
 
     public LearningReportResponse getReport() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LearningReportResponse response = new LearningReportResponse();
 
         // 读取所有工序统计
         LambdaQueryWrapper<IntelligenceProcessStats> qw = new LambdaQueryWrapper<>();
-        qw.eq(tenantId != null, IntelligenceProcessStats::getTenantId, tenantId)
+        qw.eq(IntelligenceProcessStats::getTenantId, tenantId)
           .orderByDesc(IntelligenceProcessStats::getSampleCount);
 
         List<IntelligenceProcessStats> statsList = statsMapper.selectList(qw);

@@ -1,7 +1,9 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.MindPushRuleDTO;
 import com.fashion.supplychain.intelligence.dto.MindPushStatusResponse;
 import com.fashion.supplychain.intelligence.orchestration.MindPushOrchestrator;
@@ -43,6 +45,7 @@ public class MindPushController {
      */
     @PostMapping("/check")
     public Result<Integer> runCheck() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int count = mindPushOrchestrator.runPushCheck(tenantId);
         return Result.success(count);

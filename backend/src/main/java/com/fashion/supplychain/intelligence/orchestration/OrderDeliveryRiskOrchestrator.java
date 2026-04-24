@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.DeliveryRiskRequest;
 import com.fashion.supplychain.intelligence.dto.DeliveryRiskResponse;
 import com.fashion.supplychain.intelligence.dto.DeliveryRiskResponse.DeliveryRiskItem;
@@ -56,6 +57,7 @@ public class OrderDeliveryRiskOrchestrator {
 
     public DeliveryRiskResponse assess(DeliveryRiskRequest request) {
         DeliveryRiskResponse response = new DeliveryRiskResponse();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
 
@@ -182,7 +184,7 @@ public class OrderDeliveryRiskOrchestrator {
 
     private List<ProductionOrder> loadOrders(Long tenantId, String factoryId, DeliveryRiskRequest request) {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .eq("delete_flag", 0)
           .in("status", "production", "cutting");

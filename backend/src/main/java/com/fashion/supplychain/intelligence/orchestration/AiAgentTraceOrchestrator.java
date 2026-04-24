@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
 import com.fashion.supplychain.intelligence.service.AsyncIntelligenceAuditService;
@@ -154,7 +155,8 @@ public class AiAgentTraceOrchestrator {
             String normalizedToolName = toolName == null ? "" : toolName.trim();
             String normalizedStatus = status == null ? "" : status.trim();
             String normalizedExecutorKeyword = executorKeyword == null ? "" : executorKeyword.trim();
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
             query.eq("action", "ai-agent:request");
             if (tenantId != null) {

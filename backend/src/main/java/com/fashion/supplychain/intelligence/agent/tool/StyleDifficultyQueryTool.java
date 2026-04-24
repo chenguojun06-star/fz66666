@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -82,6 +83,7 @@ public class StyleDifficultyQueryTool implements AgentTool {
         int limit       = Math.min(20, Math.max(1, args.path("limit").asInt(8)));
         boolean onlyAnalyzed = args.path("onlyAnalyzed").asBoolean(false);
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // ① 精确款号查询

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.aspect;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -47,6 +48,7 @@ public class JobRunObservabilityAspect {
         String methodName = pjp.getSignature().getName();
         LocalDateTime startTime = LocalDateTime.now();
         long startMs = System.currentTimeMillis();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         try {

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.entity.FinishedSettlementApprovalStatus;
@@ -113,20 +114,21 @@ public class FinanceWorkflowTool implements AgentTool {
     }
 
     private String listFinanceApprovals(Map<String, Object> args) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int limit = intOf(args.get("limit"), 10);
         List<ExpenseReimbursement> expensePending = expenseReimbursementService.list(new LambdaQueryWrapper<ExpenseReimbursement>()
-                .eq(tenantId != null, ExpenseReimbursement::getTenantId, tenantId)
+                .eq(ExpenseReimbursement::getTenantId, tenantId)
                 .eq(ExpenseReimbursement::getStatus, "pending")
                 .orderByDesc(ExpenseReimbursement::getCreateTime)
                 .last("LIMIT " + limit));
 
         List<FinishedSettlementApprovalStatus> approvedRows = finishedSettlementApprovalStatusService.list(new LambdaQueryWrapper<FinishedSettlementApprovalStatus>()
-                .eq(tenantId != null, FinishedSettlementApprovalStatus::getTenantId, tenantId)
+                .eq(FinishedSettlementApprovalStatus::getTenantId, tenantId)
                 .eq(FinishedSettlementApprovalStatus::getStatus, "approved"));
         java.util.Set<String> approvedIds = approvedRows.stream().map(FinishedSettlementApprovalStatus::getSettlementId).collect(java.util.stream.Collectors.toSet());
         List<FinishedProductSettlement> finishedPending = finishedProductSettlementService.list(new LambdaQueryWrapper<FinishedProductSettlement>()
-                .eq(tenantId != null, FinishedProductSettlement::getTenantId, tenantId)
+                .eq(FinishedProductSettlement::getTenantId, tenantId)
                 .notIn(FinishedProductSettlement::getStatus, "cancelled", "CANCELLED", "deleted", "DELETED", "scrapped")
                 .orderByDesc(FinishedProductSettlement::getCreateTime));
 

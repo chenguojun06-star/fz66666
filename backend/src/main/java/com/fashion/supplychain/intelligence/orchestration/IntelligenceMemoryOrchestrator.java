@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse.MemoryItem;
 import com.fashion.supplychain.intelligence.entity.IntelligenceMemory;
@@ -59,6 +60,7 @@ public class IntelligenceMemoryOrchestrator {
     public IntelligenceMemoryResponse saveCase(
             String memoryType, String businessDomain, String title, String content) {
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         IntelligenceMemoryResponse response = new IntelligenceMemoryResponse();
 

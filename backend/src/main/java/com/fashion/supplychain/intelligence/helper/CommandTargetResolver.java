@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
@@ -135,6 +136,7 @@ public class CommandTargetResolver {
     }
 
     private Long requireTenantId() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             throw new ExecutionEngineOrchestrator.BusinessException("租户上下文丢失，请重新登录");

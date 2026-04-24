@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -48,6 +49,7 @@ public class DataTruthGuard {
     }
 
     public TruthCheckResult checkTenantIntegrity() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null || tenantId <= 0) {
             return new TruthCheckResult(false, "租户ID缺失，数据无法归属", "unknown");

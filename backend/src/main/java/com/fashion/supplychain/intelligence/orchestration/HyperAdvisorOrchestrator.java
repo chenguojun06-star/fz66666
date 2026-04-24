@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.RiskIndicator;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.SimulationResult;
@@ -48,6 +49,7 @@ public class HyperAdvisorOrchestrator {
      * 主入口 — 处理一次用户提问
      */
     public HyperAdvisorResponse ask(String sessionId, String userMessage) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
         if (sessionId == null) sessionId = UUID.randomUUID().toString();

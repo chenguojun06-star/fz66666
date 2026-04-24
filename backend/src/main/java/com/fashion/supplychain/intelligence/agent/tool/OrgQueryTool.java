@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.system.entity.OrganizationUnit;
 import com.fashion.supplychain.system.entity.User;
@@ -47,7 +48,8 @@ public class OrgQueryTool extends AbstractAgentTool {
         return switch (action) {
             case "tree" -> {
                 List<OrganizationUnit> tree = orgOrchestrator.tree();
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
                 if (tenantId != null && !UserContext.isSuperAdmin()) {
                     tree = tree.stream().filter(u -> tenantId.equals(u.getTenantId())).toList();
                 }
@@ -55,7 +57,8 @@ public class OrgQueryTool extends AbstractAgentTool {
             }
             case "departments" -> {
                 List<OrganizationUnit> depts = orgOrchestrator.departmentOptions();
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
                 if (tenantId != null && !UserContext.isSuperAdmin()) {
                     depts = depts.stream().filter(u -> tenantId.equals(u.getTenantId())).toList();
                 }

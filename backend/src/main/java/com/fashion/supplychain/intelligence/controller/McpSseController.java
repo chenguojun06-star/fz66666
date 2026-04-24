@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.service.McpProtocolService;
 import com.fashion.supplychain.intelligence.service.McpSseSessionService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -77,6 +78,7 @@ public class McpSseController {
     @GetMapping(value = "/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @PreAuthorize("isAuthenticated()")
     public SseEmitter connectSse(HttpServletResponse response) throws IOException {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 禁止代理/浏览器缓存 SSE 流

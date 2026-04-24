@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotResponse.BrainAction;
 import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotResponse.BrainSignal;
@@ -65,6 +66,7 @@ public class TenantIntelligenceBrainOrchestrator {
      * 超时后优雅降级：直接返回已有的基础快照数据，不阻塞 HTTP 线程。
      */
     public IntelligenceBrainSnapshotResponse unifiedSnapshot() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 1. 基础快照（同步，必须完成，通常很快）

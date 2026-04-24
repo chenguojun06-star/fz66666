@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.dto.AiAccuracyDashboardResponse;
 import com.fashion.supplychain.intelligence.dto.AiAccuracyDashboardResponse.SceneAccuracyItem;
@@ -66,6 +67,7 @@ public class AiAccuracyQueryTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         Map<String, Object> args = parseArgs(argumentsJson);
 

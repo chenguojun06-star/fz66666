@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.DeliveryDateSuggestionResponse;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestrator;
@@ -101,7 +102,8 @@ public class DeliveryDateSuggestionOrchestrator {
         int recommended = 21; // 经验默认21天
 
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
                     .eq("tenant_id", tenantId)
                     .eq("status", "completed")

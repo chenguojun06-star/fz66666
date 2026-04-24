@@ -76,6 +76,7 @@ public class MindPushOrchestrator {
     // ─── 查询当前状态 ──────────────────────────────────────────────
 
     public MindPushStatusResponse getStatus() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<MindPushRule> dbRules;
         try {
@@ -142,6 +143,7 @@ public class MindPushOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void saveRule(MindPushRuleDTO dto) {
         TenantAssert.assertTenantContext();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         try {
             MindPushRule existing = mindPushRuleMapper.selectOne(
@@ -182,6 +184,7 @@ public class MindPushOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void savePushTimeWindow(String timeStart, String timeEnd) {
+        TenantAssert.assertTenantContext();
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<MindPushRule> rules = fetchRules(tenantId);

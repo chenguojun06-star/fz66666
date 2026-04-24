@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.entity.DecisionMemory;
 import com.fashion.supplychain.intelligence.mapper.DecisionMemoryMapper;
@@ -58,6 +59,7 @@ public class DecisionChainOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void recordOutcome(Long decisionId, String actualOutcome, int outcomeScore) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         DecisionMemory dm = decisionMemoryMapper.selectOne(
                 new QueryWrapper<DecisionMemory>()
@@ -81,6 +83,7 @@ public class DecisionChainOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public String extractLesson(Long decisionId) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         DecisionMemory dm = decisionMemoryMapper.selectOne(
                 new QueryWrapper<DecisionMemory>()

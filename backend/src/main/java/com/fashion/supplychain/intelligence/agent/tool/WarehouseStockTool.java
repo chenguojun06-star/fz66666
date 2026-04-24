@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.service.MaterialStockService;
@@ -97,7 +98,8 @@ public class WarehouseStockTool implements AgentTool {
             if (supplierName != null && !supplierName.isBlank()) {
                 query.like("supplier_name", supplierName);
             }
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             if (tenantId != null) {
                 query.eq("tenant_id", tenantId);
             }

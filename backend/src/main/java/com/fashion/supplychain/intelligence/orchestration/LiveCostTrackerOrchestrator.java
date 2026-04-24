@@ -46,7 +46,8 @@ public class LiveCostTrackerOrchestrator {
         LiveCostResponse resp = new LiveCostResponse();
         try {
             TenantAssert.assertTenantContext();
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             // 1. 加载订单
             ProductionOrder order = productionOrderMapper.selectById(orderId);

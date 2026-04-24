@@ -3,7 +3,9 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
@@ -112,6 +114,7 @@ public class AiAgentOrchestrator {
         try { // F31: finally 块强制清理 ThreadLocal，防止线程池复用泄漏
         long requestStartAt = System.currentTimeMillis();
         String userId = UserContext.userId();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         try { stateSessionId = agentStateStore.createSession(tenantId, userId, userMessage); } catch (Exception e) { log.debug("[AiAgent] 状态会话创建跳过: {}", e.getMessage()); }
         List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
@@ -332,7 +335,8 @@ public class AiAgentOrchestrator {
 
             commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
             String userId = UserContext.userId();
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             try { stateSessionId = agentStateStore.createSession(tenantId, userId, userMessage); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态会话创建跳过: {}", e.getMessage()); }
             List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
             // ── 领域路由裁剪：按用户意图缩减工具集，降低 token 消耗 ──
@@ -548,6 +552,7 @@ public class AiAgentOrchestrator {
 
     public void saveCurrentConversationToMemory() {
         String userId = UserContext.userId();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         memoryHelper.saveCurrentConversationToMemory(userId, tenantId);
     }

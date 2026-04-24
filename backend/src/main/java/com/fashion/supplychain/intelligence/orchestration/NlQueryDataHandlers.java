@@ -51,7 +51,7 @@ public class NlQueryDataHandlers {
         if (matcher.find()) {
             String orderNo = matcher.group();
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-            qw.eq(tenantId != null, "tenant_id", tenantId)
+            qw.eq("tenant_id", tenantId)
               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .eq("order_no", orderNo).eq("delete_flag", 0);
             ProductionOrder order = productionOrderService.getOne(qw, false);
@@ -89,7 +89,7 @@ public class NlQueryDataHandlers {
             }
         } else {
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-            qw.eq(tenantId != null, "tenant_id", tenantId)
+            qw.eq("tenant_id", tenantId)
               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES);
             long inProgress = productionOrderService.count(qw);
@@ -148,7 +148,7 @@ public class NlQueryDataHandlers {
                             .collect(Collectors.toSet());
                     if (!factoryIds.isEmpty()) {
                         QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
-                        aqw.eq(tenantId != null, "tenant_id", tenantId)
+                        aqw.eq("tenant_id", tenantId)
                            .in("factory_id", factoryIds)
                            .eq("scan_result", "success")
                            .ge("scan_time", now.minusDays(30))
@@ -275,7 +275,7 @@ public class NlQueryDataHandlers {
         long activeWorkers = 0;
         try {
             QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
-            aqw.eq(tenantId != null, "tenant_id", tenantId)
+            aqw.eq("tenant_id", tenantId)
                .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .eq("scan_result", "success")
                .ge("scan_time", thirtyMinAgo)
@@ -418,7 +418,7 @@ public class NlQueryDataHandlers {
         resp.setIntent("summary");
 
         QueryWrapper<ProductionOrder> ipQw = new QueryWrapper<>();
-        ipQw.eq(tenantId != null, "tenant_id", tenantId)
+        ipQw.eq("tenant_id", tenantId)
             .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
             .eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES);
         long inProgress = productionOrderService.count(ipQw);
@@ -443,7 +443,7 @@ public class NlQueryDataHandlers {
 
         try {
             QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
-            aqw.eq(tenantId != null, "tenant_id", tenantId)
+            aqw.eq("tenant_id", tenantId)
                .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .eq("scan_result", "success")
                .ge("scan_time", LocalDateTime.now().minusMinutes(60))

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
@@ -57,7 +58,8 @@ public class SecondaryProcessTool extends AbstractAgentTool {
         return switch (action) {
             case "list" -> {
                 String styleId = optionalString(args, "styleId");
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
                 LambdaQueryWrapper<SecondaryProcess> wrapper = new LambdaQueryWrapper<SecondaryProcess>()
                         .eq(SecondaryProcess::getTenantId, tenantId);
                 if (styleId != null) {

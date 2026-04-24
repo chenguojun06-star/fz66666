@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.PainPointResponse;
 import com.fashion.supplychain.intelligence.entity.IntelligencePainPoint;
 import com.fashion.supplychain.intelligence.service.IntelligencePainPointService;
@@ -16,10 +17,11 @@ public class PainPointViewOrchestrator {
     private IntelligencePainPointService intelligencePainPointService;
 
     public List<PainPointResponse> listCurrentTenantPainPoints(int limit) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int size = limit <= 0 ? 20 : Math.min(limit, 100);
         return intelligencePainPointService.list(new LambdaQueryWrapper<IntelligencePainPoint>()
-                        .eq(tenantId != null, IntelligencePainPoint::getTenantId, tenantId)
+                        .eq(IntelligencePainPoint::getTenantId, tenantId)
                         .orderByDesc(IntelligencePainPoint::getPainLevel)
                         .orderByDesc(IntelligencePainPoint::getTriggerCount)
                         .orderByDesc(IntelligencePainPoint::getLatestTriggerTime)

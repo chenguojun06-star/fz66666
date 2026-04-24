@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ForecastEngineRequest;
 import com.fashion.supplychain.intelligence.dto.ForecastEngineResponse;
 import com.fashion.supplychain.intelligence.entity.ForecastLog;
@@ -79,6 +80,7 @@ public class ForecastEngineOrchestrator {
     // ──────────────────────────────────────────────────────────────────
 
     private ForecastEngineResponse forecastCost(ForecastEngineRequest req) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         // 取近90天同款已完工订单（有单价数据）
         List<ProductionOrder> history = productionOrderService.list(
@@ -130,6 +132,7 @@ public class ForecastEngineOrchestrator {
     // ──────────────────────────────────────────────────────────────────
 
     private ForecastEngineResponse forecastDemand(ForecastEngineRequest req) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 取近6个月每月订单量（按创建时间聚合）
@@ -189,6 +192,7 @@ public class ForecastEngineOrchestrator {
     // ──────────────────────────────────────────────────────────────────
 
     private ForecastEngineResponse forecastMaterial(ForecastEngineRequest req) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 取该款式近5单已完工的裁剪数 vs 订单数

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -83,6 +84,7 @@ public class MaterialAuditTool implements AgentTool {
     }
 
     private String listMaterialAudits(Map<String, Object> args) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int limit = intOf(args.get("limit"), 10);
         String orderNo = stringOf(args.get("orderNo"));
@@ -91,7 +93,7 @@ public class MaterialAuditTool implements AgentTool {
         List<MaterialPurchase> purchasePending = materialPurchaseService.list(purchaseQuery(tenantId, orderNo, keyword, limit).eq(MaterialPurchase::getAuditStatus, "pending_audit"));
         List<MaterialPickupRecord> pickupPending = materialPickupRecordMapper.selectList(new LambdaQueryWrapper<MaterialPickupRecord>()
                 .eq(MaterialPickupRecord::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
+                .eq(MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
                 .eq(MaterialPickupRecord::getAuditStatus, "PENDING")
                 .like(StringUtils.hasText(orderNo), MaterialPickupRecord::getOrderNo, orderNo)
                 .and(StringUtils.hasText(keyword), q -> q.like(MaterialPickupRecord::getPickupNo, keyword).or().like(MaterialPickupRecord::getMaterialName, keyword).or().like(MaterialPickupRecord::getPickerName, keyword))
@@ -169,7 +171,7 @@ public class MaterialAuditTool implements AgentTool {
     private LambdaQueryWrapper<MaterialPurchase> purchaseQuery(Long tenantId, String orderNo, String keyword, int limit) {
         return new LambdaQueryWrapper<MaterialPurchase>()
                 .eq(MaterialPurchase::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId)
+                .eq(MaterialPurchase::getTenantId, tenantId)
                 .like(StringUtils.hasText(orderNo), MaterialPurchase::getOrderNo, orderNo)
                 .and(StringUtils.hasText(keyword), q -> q.like(MaterialPurchase::getPurchaseNo, keyword).or().like(MaterialPurchase::getMaterialName, keyword).or().like(MaterialPurchase::getSupplierName, keyword))
                 .orderByDesc(MaterialPurchase::getUpdateTime).last("LIMIT " + limit);

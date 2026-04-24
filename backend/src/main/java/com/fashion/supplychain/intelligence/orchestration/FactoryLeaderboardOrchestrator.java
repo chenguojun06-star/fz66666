@@ -47,6 +47,7 @@ public class FactoryLeaderboardOrchestrator {
     public FactoryLeaderboardResponse rank() {
         FactoryLeaderboardResponse resp = new FactoryLeaderboardResponse();
         try {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
 

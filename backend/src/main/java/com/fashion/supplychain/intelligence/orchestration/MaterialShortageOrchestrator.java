@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
 import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse.ShortageItem;
 import com.fashion.supplychain.production.entity.MaterialStock;
@@ -44,12 +45,13 @@ public class MaterialShortageOrchestrator {
     private MaterialStockMapper materialStockMapper;
 
     public MaterialShortageResponse predict() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         MaterialShortageResponse resp = new MaterialShortageResponse();
 
         // 1. 查询所有在产订单
         QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
-        orderQw.eq(tenantId != null, "tenant_id", tenantId)
+        orderQw.eq("tenant_id", tenantId)
                .eq("delete_flag", 0)
                .in("status", "production", "cutting", "draft");
         List<ProductionOrder> activeOrders = productionOrderMapper.selectList(orderQw);
@@ -101,7 +103,7 @@ public class MaterialShortageOrchestrator {
             "create_time",
             "update_time"
         );
-        bomQw.eq(tenantId != null, "tenant_id", tenantId)
+        bomQw.eq("tenant_id", tenantId)
              .in("style_id", styleIds);
         // 注意：t_style_bom 表无 delete_flag 列，不可加此条件
         List<StyleBom> bomList = styleBomMapper.selectList(bomQw);
@@ -155,7 +157,7 @@ public class MaterialShortageOrchestrator {
                 .collect(Collectors.toSet());
 
         QueryWrapper<MaterialStock> stockQw = new QueryWrapper<>();
-        stockQw.eq(tenantId != null, "tenant_id", tenantId)
+        stockQw.eq("tenant_id", tenantId)
                .in("material_code", materialCodes)
                .eq("delete_flag", 0);
         List<MaterialStock> stocks = materialStockMapper.selectList(stockQw);

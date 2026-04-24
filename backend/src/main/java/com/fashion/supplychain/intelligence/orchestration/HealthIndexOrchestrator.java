@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.HealthIndexResponse;
 import com.fashion.supplychain.intelligence.dto.HealthIndexResponse.DailyIndex;
 import com.fashion.supplychain.production.entity.MaterialStock;
@@ -53,6 +54,7 @@ public class HealthIndexOrchestrator {
     public HealthIndexResponse calculate() {
         HealthIndexResponse resp = new HealthIndexResponse();
         try {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
 
@@ -115,7 +117,7 @@ public class HealthIndexOrchestrator {
     // ── 生产执行分 (0~20) ──
     private int calcProductionScore(Long tenantId, String factoryId) {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .eq("delete_flag", 0).eq("status", "production");
         List<ProductionOrder> orders = productionOrderService.list(qw);
@@ -130,7 +132,7 @@ public class HealthIndexOrchestrator {
     // ── 交期达成分 (0~20) ──
     private int calcDeliveryScore(Long tenantId, String factoryId) {
         QueryWrapper<ProductionOrder> all = new QueryWrapper<>();
-        all.eq(tenantId != null, "tenant_id", tenantId)
+        all.eq("tenant_id", tenantId)
            .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
            .eq("delete_flag", 0)
            .in("status", Arrays.asList("production", "completed", "delayed"));
@@ -146,14 +148,14 @@ public class HealthIndexOrchestrator {
     private int calcQualityScore(Long tenantId, String factoryId) {
         LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
         QueryWrapper<ScanRecord> total = new QueryWrapper<>();
-        total.eq(tenantId != null, "tenant_id", tenantId)
+        total.eq("tenant_id", tenantId)
              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
              .ge("scan_time", weekAgo);
         long totalScans = scanRecordService.count(total);
         if (totalScans == 0) return 20;
 
         QueryWrapper<ScanRecord> success = new QueryWrapper<>();
-        success.eq(tenantId != null, "tenant_id", tenantId)
+        success.eq("tenant_id", tenantId)
                .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .ge("scan_time", weekAgo)
                .eq("scan_result", "success");
@@ -168,14 +170,14 @@ public class HealthIndexOrchestrator {
     // 无库存数据则给满分（未录入库存不扣分）
     private int calcInventoryScore(Long tenantId) {
         QueryWrapper<MaterialStock> all = new QueryWrapper<>();
-        all.eq(tenantId != null, "tenant_id", tenantId)
+        all.eq("tenant_id", tenantId)
            .eq("delete_flag", 0);
         long totalStocks = materialStockService.count(all);
         if (totalStocks == 0) return 20;
 
         // quantity >= COALESCE(safety_stock, 0) — 高于安全库存视为健康
         QueryWrapper<MaterialStock> sufficient = new QueryWrapper<>();
-        sufficient.eq(tenantId != null, "tenant_id", tenantId)
+        sufficient.eq("tenant_id", tenantId)
                   .eq("delete_flag", 0)
                   .apply("quantity >= COALESCE(safety_stock, 0)");
         long sufficientCount = materialStockService.count(sufficient);
@@ -188,7 +190,7 @@ public class HealthIndexOrchestrator {
     // 无订单则给满分，体现业务完工交付能力
     private int calcFinanceScore(Long tenantId, String factoryId) {
         QueryWrapper<ProductionOrder> total = new QueryWrapper<>();
-        total.eq(tenantId != null, "tenant_id", tenantId)
+        total.eq("tenant_id", tenantId)
              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
              .eq("delete_flag", 0)
              .notIn("status", TERMINAL_STATUSES);
@@ -196,7 +198,7 @@ public class HealthIndexOrchestrator {
         if (totalOrders == 0) return 20;
 
         QueryWrapper<ProductionOrder> completed = new QueryWrapper<>();
-        completed.eq(tenantId != null, "tenant_id", tenantId)
+        completed.eq("tenant_id", tenantId)
                  .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                  .eq("delete_flag", 0)
                  .eq("status", "completed");
@@ -215,13 +217,13 @@ public class HealthIndexOrchestrator {
 
             // 简化：用当天扫码成功率 × 100 作为当日指数估算
             QueryWrapper<ScanRecord> total = new QueryWrapper<>();
-            total.eq(tenantId != null, "tenant_id", tenantId)
+            total.eq("tenant_id", tenantId)
                  .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                  .between("scan_time", start, end);
             long dayTotal = scanRecordService.count(total);
 
             QueryWrapper<ScanRecord> ok = new QueryWrapper<>();
-            ok.eq(tenantId != null, "tenant_id", tenantId)
+            ok.eq("tenant_id", tenantId)
               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .between("scan_time", start, end)
               .eq("scan_result", "success");

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.AnomalyDetectionResponse;
 import com.fashion.supplychain.intelligence.dto.AnomalyDetectionResponse.AnomalyItem;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -37,6 +38,7 @@ public class AnomalyDetectionOrchestrator {
 
     public AnomalyDetectionResponse detect() {
         AnomalyDetectionResponse response = new AnomalyDetectionResponse();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDate today = LocalDate.now();
 
@@ -272,7 +274,7 @@ public class AnomalyDetectionOrchestrator {
     private List<ScanRecord> queryRecords(Long tenantId,
             LocalDateTime from, LocalDateTime to, String scanResult) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("scan_result", "success")
           .gt("quantity", 0)
           .ge("scan_time", from)
@@ -283,7 +285,7 @@ public class AnomalyDetectionOrchestrator {
     private List<ScanRecord> queryRecordsByResult(Long tenantId,
             LocalDateTime from, LocalDateTime to, String result) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .ge("scan_time", from)
           .lt("scan_time", to);
         if (result != null) qw.eq("scan_result", result);

@@ -9,6 +9,7 @@ import com.fashion.supplychain.finance.entity.PayrollSettlementItem;
 import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
@@ -101,7 +102,8 @@ public class FinancialPayrollTool implements AgentTool {
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             List<Map<String, Object>> resultList = new ArrayList<>();
 
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             String currentUserId = UserContext.userId();
 
             // ── 工人自助模式：只允许查本人数据，安全隔离 ──

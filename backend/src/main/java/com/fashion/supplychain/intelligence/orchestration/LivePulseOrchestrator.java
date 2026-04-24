@@ -44,6 +44,7 @@ public class LivePulseOrchestrator {
     public LivePulseResponse pulse() {
         LivePulseResponse resp = new LivePulseResponse();
         try {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
         LocalDateTime now = LocalDateTime.now();
@@ -215,7 +216,7 @@ public class LivePulseOrchestrator {
         TenantAssert.assertTenantContext();
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId)
-                    .eq("scan_type", "production")
+          .ne("scan_type", "orchestration")
           .eq("scan_result", "success").gt("quantity", 0)
           .between("scan_time", start, end);
         if (factoryId != null && !factoryId.isBlank()) {

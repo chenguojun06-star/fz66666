@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
@@ -83,6 +84,7 @@ public class OrderContactUrgeTool implements AgentTool {
         }
 
         String customMessage = (String) args.getOrDefault("message", "请跟进该订单进度，及时反馈。");
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 查询订单（含工厂隔离）

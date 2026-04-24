@@ -24,6 +24,7 @@ public class SalesForecastOrchestrator {
 
     public SalesForecastResponse forecastSales(String styleNo, int horizonMonths) {
         TenantAssert.assertTenantContext();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         LocalDateTime start = LocalDateTime.now().minusMonths(6);
@@ -74,6 +75,7 @@ public class SalesForecastOrchestrator {
     }
 
     public SizeCurveResponse forecastSizeCurve(String styleNo) {
+        TenantAssert.assertTenantContext();
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 

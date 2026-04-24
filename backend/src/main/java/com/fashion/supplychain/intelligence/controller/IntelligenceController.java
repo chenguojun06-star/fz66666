@@ -1,8 +1,11 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.util.RateLimitUtil;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -303,6 +306,7 @@ public class IntelligenceController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/learning/trigger")
     public Result<?> triggerLearning() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) return Result.fail("无法获取租户ID");
         int updated = processStatsEngine.recomputeForTenant(tenantId);

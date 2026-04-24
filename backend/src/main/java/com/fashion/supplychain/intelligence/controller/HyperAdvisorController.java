@@ -2,7 +2,9 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse;
 import com.fashion.supplychain.intelligence.entity.HyperAdvisorSession;
 import com.fashion.supplychain.intelligence.mapper.HyperAdvisorSessionMapper;
@@ -52,6 +54,7 @@ public class HyperAdvisorController {
      */
     @PostMapping("/feedback")
     public Result<Void> feedback(@RequestBody Map<String, Object> body) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
         String sessionId = (String) body.get("sessionId");
@@ -72,6 +75,7 @@ public class HyperAdvisorController {
      */
     @GetMapping("/history/{sessionId}")
     public Result<List<HyperAdvisorSession>> history(@PathVariable String sessionId) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<HyperAdvisorSession> messages = sessionMapper.selectList(
                 new LambdaQueryWrapper<HyperAdvisorSession>()

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionRequest;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse;
 import com.fashion.supplychain.intelligence.dto.SchedulingSuggestionResponse.GanttItem;
@@ -61,7 +62,8 @@ public class SchedulingSuggestionOrchestrator {
     public SchedulingSuggestionResponse suggest(SchedulingSuggestionRequest req) {
         SchedulingSuggestionResponse resp = new SchedulingSuggestionResponse();
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             if (tenantId == null) {
                 resp.setPlans(Collections.emptyList());
                 return resp;

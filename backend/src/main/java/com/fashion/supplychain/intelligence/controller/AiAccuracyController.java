@@ -1,7 +1,9 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.AiAccuracyDashboardResponse;
 import com.fashion.supplychain.intelligence.orchestration.AiAccuracyOrchestrator;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class AiAccuracyController {
             @RequestParam(defaultValue = "2")  int toleranceDays,
             @RequestParam(defaultValue = "90") int recentDays) {
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         AiAccuracyDashboardResponse resp =
                 aiAccuracyOrchestrator.computeDashboard(tenantId, toleranceDays, recentDays);

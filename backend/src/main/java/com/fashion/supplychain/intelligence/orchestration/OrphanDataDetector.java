@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.service.ReceivableService;
 import com.fashion.supplychain.finance.entity.BillAggregation;
@@ -96,6 +97,10 @@ public class OrphanDataDetector {
     public OrphanDataScanResultDTO scan() {
         Long tenantId = UserContext.tenantId();
         boolean isPlatformAdmin = UserContext.isSuperAdmin() && tenantId == null;
+        if (!isPlatformAdmin) {
+            TenantAssert.assertTenantContext();
+        }
+        final Long effectiveTenantId = tenantId;
 
         Set<String> orphanOrderIds = isPlatformAdmin ? getAllOrphanOrderIds() : getOrphanOrderIds(tenantId);
 
@@ -142,6 +147,9 @@ public class OrphanDataDetector {
     public List<OrphanDataItemDTO> listOrphanData(String tableName, int page, int pageSize) {
         Long tenantId = UserContext.tenantId();
         boolean isPlatformAdmin = UserContext.isSuperAdmin() && tenantId == null;
+        if (!isPlatformAdmin) {
+            TenantAssert.assertTenantContext();
+        }
         Set<String> orphanOrderIds = isPlatformAdmin ? getAllOrphanOrderIds() : getOrphanOrderIds(tenantId);
         if (orphanOrderIds.isEmpty()) return List.of();
 
@@ -170,6 +178,7 @@ public class OrphanDataDetector {
 
     @org.springframework.transaction.annotation.Transactional
     public int deleteOrphanData(String tableName, List<String> ids) {
+        TenantAssert.assertTenantContext();
         if (ids == null || ids.isEmpty()) return 0;
         int deleted = 0;
         switch (tableName) {

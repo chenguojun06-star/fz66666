@@ -44,6 +44,7 @@ public class ProfessionalReportOrchestrator {
      * 生成专业报告 Excel 文件
      */
     public byte[] generateReport(String reportType, LocalDate baseDate) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
         if (baseDate == null) baseDate = LocalDate.now();

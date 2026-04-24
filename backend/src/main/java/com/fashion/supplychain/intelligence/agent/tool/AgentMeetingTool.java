@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.entity.AgentMeeting;
@@ -89,7 +90,8 @@ public class AgentMeetingTool implements AgentTool {
                 result.put("durationMs", meeting.getDurationMs());
                 return OBJECT_MAPPER.writeValueAsString(result);
             } else {
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
                 List<AgentMeeting> meetings = meetingOrchestrator.listByTenant(tenantId, 5);
                 List<Map<String, Object>> items = new ArrayList<>();
                 for (AgentMeeting m : meetings) {

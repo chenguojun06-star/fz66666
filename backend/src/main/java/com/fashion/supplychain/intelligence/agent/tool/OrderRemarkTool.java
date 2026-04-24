@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.service.OrderRemarkService;
@@ -42,10 +43,11 @@ public class OrderRemarkTool extends AbstractAgentTool {
         int limit = Optional.ofNullable(optionalInt(args, "limit")).orElse(20);
         limit = Math.min(limit, 50);
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<OrderRemark> remarks = orderRemarkService.lambdaQuery()
                 .eq(OrderRemark::getTargetNo, orderNo)
-                .eq(tenantId != null, OrderRemark::getTenantId, tenantId)
+                .eq(OrderRemark::getTenantId, tenantId)
                 .eq(OrderRemark::getDeleteFlag, 0)
                 .orderByDesc(OrderRemark::getCreateTime)
                 .last("LIMIT " + limit)

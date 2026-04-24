@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ApprovalAdvisorResponse;
 import com.fashion.supplychain.intelligence.dto.ApprovalAdvisorResponse.ApprovalAdvice;
 import com.fashion.supplychain.system.entity.ChangeApproval;
@@ -38,6 +39,7 @@ public class ApprovalAdvisorOrchestrator {
     private ChangeApprovalMapper changeApprovalMapper;
 
     public ApprovalAdvisorResponse advise() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime now = LocalDateTime.now();
 

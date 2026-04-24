@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.production.entity.MaterialInbound;
@@ -41,6 +42,7 @@ public class MonthlyBizSummaryOrchestrator {
     @Autowired private FinishedProductSettlementService settlementService;
 
     public Map<String, Object> getMonthly(int year, int month) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
         LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0, 0);

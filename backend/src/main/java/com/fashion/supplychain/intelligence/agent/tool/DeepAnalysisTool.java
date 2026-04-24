@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -88,6 +89,7 @@ public class DeepAnalysisTool implements AgentTool {
         String analysisType = (String) args.getOrDefault("analysisType", "factory_ranking");
         int days = args.containsKey("days") ? ((Number) args.get("days")).intValue() : 30;
         String factoryName = (String) args.get("factoryName");
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDateTime.now().minusDays(days);
 

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.SmartNotificationResponse;
 import com.fashion.supplychain.intelligence.dto.SmartNotificationResponse.NotificationItem;
 import com.fashion.supplychain.intelligence.entity.MindPushLog;
@@ -23,7 +24,8 @@ public class SmartNotificationOrchestrator {
     public SmartNotificationResponse generateNotifications() {
         SmartNotificationResponse resp = new SmartNotificationResponse();
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             List<NotificationItem> notifications = new ArrayList<>();
 
             LocalDateTime since = LocalDateTime.now().minusHours(24);

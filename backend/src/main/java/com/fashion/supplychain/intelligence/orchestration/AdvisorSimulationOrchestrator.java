@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.SimulationResult;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -42,6 +43,7 @@ public class AdvisorSimulationOrchestrator {
      * @return 影响评估
      */
     public SimulationResult simulateDelay(int delayDays) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null || delayDays <= 0) {
             return emptyResult("参数无效");
@@ -91,6 +93,7 @@ public class AdvisorSimulationOrchestrator {
      * @return 预估加速效果
      */
     public SimulationResult simulateCapacityBoost(int capacityBoostPercent) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null || capacityBoostPercent <= 0) {
             return emptyResult("参数无效");

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.PatternProduction;
@@ -97,6 +98,7 @@ public class SampleWorkflowTool implements AgentTool {
     }
 
     private String listSampleWorkflow(Map<String, Object> args) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String keyword = text(args.get("keyword"));
         String styleNo = text(args.get("styleNo"));
@@ -157,6 +159,7 @@ public class SampleWorkflowTool implements AgentTool {
     }
 
     private String listPatternProductions(Map<String, Object> args) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String styleNo = text(args.get("styleNo"));
         int limit = intOf(args.get("limit"), 10);
@@ -192,6 +195,7 @@ public class SampleWorkflowTool implements AgentTool {
     }
 
     private StyleInfo findStyle(Map<String, Object> args) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String styleId = text(args.get("styleId"));
         if (StringUtils.hasText(styleId)) {

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.AiJobRunLog;
 import com.fashion.supplychain.intelligence.mapper.AiJobRunLogMapper;
 import lombok.extern.slf4j.Slf4j;

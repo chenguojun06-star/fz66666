@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.SmartAssignmentRequest;
 import com.fashion.supplychain.intelligence.dto.SmartAssignmentResponse;
 import com.fashion.supplychain.intelligence.dto.SmartAssignmentResponse.WorkerRecommendation;
@@ -46,6 +47,7 @@ public class SmartAssignmentOrchestrator {
         }
 
         response.setStageName(request.getStageName());
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDate today = LocalDate.now();
         LocalDateTime from = today.minusDays(30).atStartOfDay();
@@ -53,7 +55,7 @@ public class SmartAssignmentOrchestrator {
 
         // 查询该工序30天内所有成功扫码记录
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("scan_result", "success")
           .gt("quantity", 0)
           .ge("scan_time", from)

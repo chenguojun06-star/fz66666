@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.PatternDiscovery;
 import com.fashion.supplychain.intelligence.orchestration.PatternDiscoveryOrchestrator;
@@ -80,7 +81,8 @@ public class PatternDiscoveryTool implements AgentTool {
                 return OBJECT_MAPPER.writeValueAsString(Map.of("action", "discover", "found", items.size(), "patterns", items));
             } else {
                 String patternType = args.path("patternType").asText(null);
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
                 List<PatternDiscovery> patterns = patternOrchestrator.listByTenant(tenantId, patternType, 10);
                 List<Map<String, Object>> items = new ArrayList<>();
                 for (PatternDiscovery p : patterns) {

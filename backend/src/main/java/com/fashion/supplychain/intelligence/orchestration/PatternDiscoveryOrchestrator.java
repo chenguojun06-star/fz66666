@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.AgentExecutionLog;
 import com.fashion.supplychain.intelligence.entity.PatternDiscovery;
 import com.fashion.supplychain.intelligence.mapper.AgentExecutionLogMapper;
@@ -34,6 +35,7 @@ public class PatternDiscoveryOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public List<PatternDiscovery> discoverPatterns(int lookbackDays) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDateTime.now().minusDays(lookbackDays).withHour(0).withMinute(0).withSecond(0);
 
@@ -95,6 +97,7 @@ public class PatternDiscoveryOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void markApplied(Long patternId, String appliedResult) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         PatternDiscovery pd = patternMapper.selectOne(
                 new QueryWrapper<PatternDiscovery>()

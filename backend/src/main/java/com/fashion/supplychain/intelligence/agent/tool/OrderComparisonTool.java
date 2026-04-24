@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -58,6 +59,7 @@ public class OrderComparisonTool extends AbstractAgentTool {
     protected String doExecute(String argumentsJson) throws Exception {
         Map<String, Object> args = parseArgs(argumentsJson);
         String orderNo = requireString(args, "orderNo");
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 1) 定位目标订单

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.CapacityGapResponse;
 import com.fashion.supplychain.intelligence.dto.CapacityGapResponse.FactoryCapacityGap;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -46,13 +47,14 @@ public class CapacityGapOrchestrator {
     private ScanRecordMapper scanRecordMapper;
 
     public CapacityGapResponse analyze() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
         CapacityGapResponse response = new CapacityGapResponse();
 
         // 1. 在手订单（production + cutting 状态）
         QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
-        oqw.eq(tenantId != null, "tenant_id", tenantId)
+        oqw.eq("tenant_id", tenantId)
            .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
            .eq("delete_flag", 0)
            .in("status", "production", "cutting")
@@ -73,7 +75,7 @@ public class CapacityGapOrchestrator {
         // 3. 近30天扫码产出（按工厂）
         LocalDateTime since = LocalDateTime.now().minusDays(CAPACITY_WINDOW_DAYS);
         QueryWrapper<ScanRecord> sqw = new QueryWrapper<>();
-        sqw.eq(tenantId != null, "tenant_id", tenantId)
+        sqw.eq("tenant_id", tenantId)
            .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
            .eq("scan_result", "success")
            .ge("scan_time", since)

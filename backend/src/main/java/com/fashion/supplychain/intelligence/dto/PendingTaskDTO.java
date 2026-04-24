@@ -29,8 +29,14 @@ public class PendingTaskDTO {
     private String startTime;
     /** 样衣开发：交板日期（截止时间，ISO格式字符串） */
     private String endTime;
-    /** 样衣开发：当前阶段领取人名字 */
+    /** 当前阶段领取人名字 */
     private String assigneeName;
+    /** 责任人用户ID（用于按责任人过滤） */
+    private String assigneeId;
+    /** 任务状态：pending=待处理 / completed=已完成 */
+    private String taskStatus;
+    /** 责任人角色标签（如"跟单员"、"财务人员"、"工厂"），前端展示用 */
+    private String assigneeRole;
 
     public int getPriorityOrder() {
         if ("high".equals(priority)) return 0;

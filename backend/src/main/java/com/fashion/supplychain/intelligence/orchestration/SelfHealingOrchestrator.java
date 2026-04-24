@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.SelfHealingResponse;
 import com.fashion.supplychain.intelligence.dto.SelfHealingResponse.DiagnosisItem;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -47,6 +48,7 @@ public class SelfHealingOrchestrator {
     public SelfHealingResponse diagnose() {
         SelfHealingResponse resp = new SelfHealingResponse();
         try {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<DiagnosisItem> items = new ArrayList<>();
         int autoFixed = 0;
@@ -90,7 +92,7 @@ public class SelfHealingOrchestrator {
         item.setCheckType("progress");
 
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .in("status", "production", "IN_PROGRESS", "CREATED");
         List<ProductionOrder> orders = productionOrderService.list(qw);
@@ -125,7 +127,7 @@ public class SelfHealingOrchestrator {
         item.setCheckType("progress");
 
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .notIn("status", TERMINAL_STATUSES);
         List<ProductionOrder> orders = productionOrderService.list(qw);
@@ -157,7 +159,7 @@ public class SelfHealingOrchestrator {
 
         // 简化检查：查最近7天成功扫码
         QueryWrapper<ScanRecord> sqw = new QueryWrapper<>();
-        sqw.eq(tenantId != null, "tenant_id", tenantId)
+        sqw.eq("tenant_id", tenantId)
           .eq("scan_result", "success")
           .ne("scan_type", "orchestration")
           .ge("scan_time", LocalDateTime.now().minusDays(7));
@@ -198,7 +200,7 @@ public class SelfHealingOrchestrator {
         item.setCheckType("stock");
 
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .eq("status", "production");
         List<ProductionOrder> orders = productionOrderService.list(qw);
@@ -235,6 +237,7 @@ public class SelfHealingOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public SelfHealingResponse repair() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<DiagnosisItem> items = new ArrayList<>();
         int autoFixed = 0;
@@ -277,7 +280,7 @@ public class SelfHealingOrchestrator {
         item.setCheckType("progress");
 
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .in("status", "production", "IN_PROGRESS", "CREATED");
         List<ProductionOrder> orders = productionOrderService.list(qw);
@@ -316,7 +319,7 @@ public class SelfHealingOrchestrator {
         item.setCheckType("progress");
 
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .notIn("status", TERMINAL_STATUSES);
         List<ProductionOrder> orders = productionOrderService.list(qw);

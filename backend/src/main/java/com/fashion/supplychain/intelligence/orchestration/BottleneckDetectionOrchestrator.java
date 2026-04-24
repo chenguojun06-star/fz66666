@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.BottleneckDetectionRequest;
 import com.fashion.supplychain.intelligence.dto.BottleneckDetectionResponse;
 import com.fashion.supplychain.intelligence.dto.BottleneckDetectionResponse.BottleneckItem;
@@ -45,6 +46,7 @@ public class BottleneckDetectionOrchestrator {
     public BottleneckDetectionResponse detect(BottleneckDetectionRequest request) {
         BottleneckDetectionResponse response = new BottleneckDetectionResponse();
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<ProductionOrder> orders = loadActiveOrders(tenantId, request);
         if (orders.isEmpty()) {
@@ -111,7 +113,7 @@ public class BottleneckDetectionOrchestrator {
     private List<ProductionOrder> loadActiveOrders(Long tenantId,
             BottleneckDetectionRequest request) {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId)
+        qw.eq("tenant_id", tenantId)
           .eq("delete_flag", 0)
           .in("status", "production", "cutting");
 

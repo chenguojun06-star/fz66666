@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.StyleQuoteSuggestionResponse;
 import com.fashion.supplychain.intelligence.dto.StyleQuoteSuggestionResponse.HistoricalOrder;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -55,11 +56,12 @@ public class StyleQuoteSuggestionOrchestrator {
         }
 
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             // 1. 查询该款号历史生产订单
             QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
-            oqw.eq(tenantId != null, "tenant_id", tenantId)
+            oqw.eq("tenant_id", tenantId)
                .eq("style_no", styleNo.trim())
                .eq("delete_flag", 0)
                .orderByDesc("create_time")

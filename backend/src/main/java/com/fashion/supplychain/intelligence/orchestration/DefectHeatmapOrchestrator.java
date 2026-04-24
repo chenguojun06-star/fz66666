@@ -73,6 +73,7 @@ public class DefectHeatmapOrchestrator {
         DefectHeatmapResponse resp = new DefectHeatmapResponse();
         try {
         TenantAssert.assertTenantContext();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime start = LocalDateTime.now().minusDays(30);
 

@@ -48,6 +48,7 @@ public class RhythmDnaOrchestrator {
         resp.setOrders(Collections.emptyList());
         try {
         TenantAssert.assertTenantContext();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
 

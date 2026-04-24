@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
@@ -96,6 +97,7 @@ public class WarehouseOpLogTool implements AgentTool {
         }
 
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         // 解析参数

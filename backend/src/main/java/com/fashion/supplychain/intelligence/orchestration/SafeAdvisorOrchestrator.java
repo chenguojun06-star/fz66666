@@ -1,7 +1,9 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.tool.KnowledgeSearchTool;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.CragEvaluator;
@@ -47,6 +49,7 @@ public class SafeAdvisorOrchestrator {
      */
     public Result<String> analyzeAndSuggest(String question) {
         // ① 配额校验
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (!aiAdvisorService.checkAndConsumeQuota(tenantId)) {
             return Result.fail("今日 AI 咨询次数已达上限，请明天继续");

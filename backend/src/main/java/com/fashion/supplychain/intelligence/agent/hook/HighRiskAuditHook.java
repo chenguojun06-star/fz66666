@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.hook;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ public class HighRiskAuditHook implements ToolExecutionHook {
             return true;
         }
         String userId = UserContext.userId();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String confirmKey = userId + ":" + toolName + ":" + hashArgs(arguments);
         Long pendingAt = pendingConfirmations.get(confirmKey);

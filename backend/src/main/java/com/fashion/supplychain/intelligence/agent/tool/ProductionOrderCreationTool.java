@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
@@ -244,7 +245,8 @@ public class ProductionOrderCreationTool implements AgentTool {
                 return buildMissingFieldResponse(missingFields);
             }
 
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             String userId = UserContext.userId();
             String username = UserContext.username();
 
@@ -471,7 +473,7 @@ public class ProductionOrderCreationTool implements AgentTool {
         if (StringUtils.hasText(styleNo)) {
             StyleInfo exact = styleInfoService.getOne(new QueryWrapper<StyleInfo>()
                     .eq("style_no", styleNo.trim())
-                    .eq(tenantId != null, "tenant_id", tenantId)
+                    .eq("tenant_id", tenantId)
                     .eq("delete_flag", 0)
                     .last("LIMIT 1"), false);
             if (exact != null) {
@@ -483,7 +485,7 @@ public class ProductionOrderCreationTool implements AgentTool {
             return null;
         }
         List<StyleInfo> candidates = styleInfoService.list(new QueryWrapper<StyleInfo>()
-                .eq(tenantId != null, "tenant_id", tenantId)
+                .eq("tenant_id", tenantId)
                 .eq("delete_flag", 0)
                 .and(w -> w.like("style_name", keyword.trim()).or().like("style_no", keyword.trim())));
         if (candidates == null || candidates.isEmpty()) {
@@ -533,7 +535,7 @@ public class ProductionOrderCreationTool implements AgentTool {
             return FactoryResolution.fail("请提供外发工厂名称");
         }
         List<Factory> factories = factoryService.list(new QueryWrapper<Factory>()
-                .eq(tenantId != null, "tenant_id", tenantId)
+                .eq("tenant_id", tenantId)
                 .eq("delete_flag", 0)
                 .and(w -> w.eq("factory_name", factoryName.trim()).or().like("factory_name", factoryName.trim())));
         if (factories == null || factories.isEmpty()) {
@@ -561,7 +563,7 @@ public class ProductionOrderCreationTool implements AgentTool {
             return FactoryResolution.fail("请提供内部生产组名称");
         }
         List<OrganizationUnit> units = organizationUnitService.list(new QueryWrapper<OrganizationUnit>()
-                .eq(tenantId != null, "tenant_id", tenantId)
+                .eq("tenant_id", tenantId)
                 .eq("delete_flag", 0)
                 .and(w -> w.eq("node_name", orgUnitName.trim()).or().like("node_name", orgUnitName.trim())));
         if (units == null || units.isEmpty()) {

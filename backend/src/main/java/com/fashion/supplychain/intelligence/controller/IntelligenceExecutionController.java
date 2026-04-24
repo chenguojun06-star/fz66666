@@ -1,11 +1,13 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionDecision;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -90,7 +92,8 @@ public class IntelligenceExecutionController {
         try {
             String userIdStr = UserContext.userId();  // 获取当前用户
             Long userId = userIdStr != null ? Long.parseLong(userIdStr) : null;
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             log.debug("[Controller] 用户 {} 请求执行命令: {}", userId, command.getCommandId());
 
@@ -182,7 +185,8 @@ public class IntelligenceExecutionController {
         try {
             String userId = UserContext.userId();
             String remark = body != null ? body.get("remark") : "用户已批准";
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             log.info("[Controller] 用户 {} 批准命令: {}", userId, commandId);
 
@@ -239,7 +243,8 @@ public class IntelligenceExecutionController {
         try {
             String userId = UserContext.userId();
             String rejectReason = body != null ? body.get("reason") : "用户已拒绝";
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             log.info("[Controller] 用户 {} 拒绝命令: {} 原因: {}",
                 userId, commandId, rejectReason);
@@ -298,7 +303,8 @@ public class IntelligenceExecutionController {
     @GetMapping("/commands/pending")
     public Result<?> getPendingCommands() {
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             // 从 DB 查询当前租户的待审批命令
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
@@ -363,7 +369,8 @@ public class IntelligenceExecutionController {
         @RequestParam(required = false) String endTime
     ) {
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             log.debug("[Controller] 查询审计日志: page={}, status={}, action={}",
                 page, status, action);
@@ -414,7 +421,8 @@ public class IntelligenceExecutionController {
     @GetMapping("/execution-stats")
     public Result<?> getExecutionStats() {
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             log.debug("[Controller] 获取执行统计数据");
 
@@ -435,7 +443,8 @@ public class IntelligenceExecutionController {
     @GetMapping("/commands/{commandId}")
     public Result<?> getCommandDetail(@PathVariable String commandId) {
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             log.debug("[Controller] 查询命令详情: {}", commandId);
 
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
@@ -484,7 +493,8 @@ public class IntelligenceExecutionController {
             if (text == null || text.isBlank()) {
                 return Result.fail("指令内容不能为空");
             }
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             String userIdStr = UserContext.userId();
             Long operatorId = userIdStr != null ? Long.parseLong(userIdStr) : null;
 

@@ -15,6 +15,7 @@ const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string
   high: { label: '紧急', color: '#cf1322', bg: '#fff1f0', border: '#ffa39e' },
   medium: { label: '一般', color: '#d48806', bg: '#fffbe6', border: '#ffe58f' },
   low: { label: '低', color: '#389e0d', bg: '#f6ffed', border: '#b7eb8f' },
+  completed: { label: '已完成', color: '#8c8c8c', bg: '#f5f5f5', border: '#d9d9d9' },
 };
 
 const MODULE_LABELS: Record<string, string> = {
@@ -211,17 +212,19 @@ const TaskItem: React.FC<{
   task: PendingTaskDTO;
   onClick: (task: PendingTaskDTO) => void;
 }> = ({ task, onClick }) => {
-  const prio = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
+  const isCompleted = task.taskStatus === 'completed';
+  const prioKey = isCompleted ? 'completed' : (task.priority || 'medium');
+  const prio = PRIORITY_CONFIG[prioKey] || PRIORITY_CONFIG.medium;
   const moduleLabel = MODULE_LABELS[task.module] || task.module;
 
   const startText = fmtDateTime(task.startTime);
   const endText = fmtDateTime(task.endTime);
-  const showExtra = task.quantity != null || !!startText || !!endText || !!task.assigneeName;
+  const showExtra = task.quantity != null || !!startText || !!endText || !!task.assigneeName || !!task.assigneeRole;
 
   return (
     <div
       className={styles.taskItem}
-      style={{ borderLeftColor: prio.color }}
+      style={{ borderLeftColor: prio.color, opacity: isCompleted ? 0.7 : 1 }}
       onClick={() => onClick(task)}
     >
       <div className={styles.taskItemTop}>
@@ -263,8 +266,14 @@ const TaskItem: React.FC<{
           )}
           {task.assigneeName && (
             <span className={styles.taskExtraItem}>
-              <span className={styles.taskExtraLabel}>领取人</span>
+              <span className={styles.taskExtraLabel}>{task.assigneeRole || '领取人'}</span>
               <span className={styles.taskExtraValue}>{task.assigneeName}</span>
+            </span>
+          )}
+          {!task.assigneeName && task.assigneeRole && (
+            <span className={styles.taskExtraItem}>
+              <span className={styles.taskExtraLabel}>负责人</span>
+              <span className={styles.taskExtraValue}>{task.assigneeRole}</span>
             </span>
           )}
         </div>

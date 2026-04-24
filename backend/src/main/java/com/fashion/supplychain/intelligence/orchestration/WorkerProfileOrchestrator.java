@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.WorkerProfileRequest;
 import com.fashion.supplychain.intelligence.dto.WorkerProfileResponse;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -49,6 +50,7 @@ public class WorkerProfileOrchestrator {
             return empty;
         }
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDate dateTo   = parseDateOrDefault(request.getDateTo(),   LocalDate.now());
         LocalDate dateFrom = parseDateOrDefault(request.getDateFrom(), dateTo.minusDays(29));
@@ -258,7 +260,7 @@ public class WorkerProfileOrchestrator {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("scan_result", "success")
           .gt("quantity", 0)
-          .eq(tenantId != null, "tenant_id", tenantId)
+          .eq("tenant_id", tenantId)
           .eq("operator_name", operatorName)
           .ge("scan_time", from)
           .lt("scan_time", to);
@@ -274,7 +276,7 @@ public class WorkerProfileOrchestrator {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("scan_result", "success")
           .gt("quantity", 0)
-          .eq(tenantId != null, "tenant_id", tenantId)
+          .eq("tenant_id", tenantId)
           .eq("operator_name", operatorName)
           .orderByDesc("scan_time")
           .last("LIMIT 1");
@@ -289,7 +291,7 @@ public class WorkerProfileOrchestrator {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("scan_result", "success")
           .gt("quantity", 0)
-          .eq(tenantId != null, "tenant_id", tenantId)
+          .eq("tenant_id", tenantId)
           .ge("scan_time", from)
           .lt("scan_time", to);
         return scanRecordMapper.selectList(qw);

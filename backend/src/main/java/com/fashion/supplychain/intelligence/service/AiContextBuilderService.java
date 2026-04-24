@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.dashboard.orchestration.DailyBriefOrchestrator;
 import com.fashion.supplychain.intelligence.dto.HealthIndexResponse;
 import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
@@ -53,6 +54,7 @@ public class AiContextBuilderService {
      * 同一租户 60 秒内复用缓存，避免重复调用 4 个数据编排器。
      */
     public String buildSystemPrompt() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId != null) {
             CachedContext cached = contextCache.get(tenantId);

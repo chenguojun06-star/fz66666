@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.orchestration.ManagementInsightOrchestrator;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,7 @@ public class ManagementDashboardTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         Map<String, Object> args = parseArgs(argumentsJson);
         String section = optionalString(args, "section");

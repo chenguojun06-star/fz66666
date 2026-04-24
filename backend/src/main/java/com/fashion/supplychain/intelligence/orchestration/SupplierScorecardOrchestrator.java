@@ -52,7 +52,8 @@ public class SupplierScorecardOrchestrator {
         SupplierScorecardResponse resp = new SupplierScorecardResponse();
         try {
             TenantAssert.assertTenantContext();
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             String factoryId = UserContext.factoryId();
             LocalDateTime since = LocalDateTime.now().minusMonths(RECENT_MONTHS);
 

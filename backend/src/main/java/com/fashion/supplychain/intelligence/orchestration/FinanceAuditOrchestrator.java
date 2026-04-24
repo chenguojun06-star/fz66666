@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.FinanceAuditResponse;
 import com.fashion.supplychain.intelligence.dto.FinanceAuditResponse.AuditFinding;
 import com.fashion.supplychain.intelligence.dto.FinanceAuditResponse.PriceDeviation;
@@ -41,7 +42,8 @@ public class FinanceAuditOrchestrator {
     public FinanceAuditResponse audit() {
         FinanceAuditResponse resp = new FinanceAuditResponse();
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             String factoryId = UserContext.factoryId();
             List<ProductionOrder> orders = loadRecentOrders(tenantId, factoryId);
             List<AuditFinding> findings = new ArrayList<>();

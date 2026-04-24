@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.RiskIndicator;
 import com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -47,6 +48,7 @@ public class AdvisorRiskOrchestrator {
      * 所有数字均来自数据库查询，不经过 LLM。
      */
     public List<RiskIndicator> quantifyRisks() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) return List.of();
 

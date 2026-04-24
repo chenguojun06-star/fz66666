@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.system.entity.Factory;
@@ -36,6 +37,7 @@ public class EntityFactChecker {
     }
 
     public FactCheckResult verifyEntities(String aiContent) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<String> phantoms = new ArrayList<>();
 

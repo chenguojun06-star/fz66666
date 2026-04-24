@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +34,8 @@ public abstract class AbstractAgentTool implements AgentTool {
     @Override
     public final String execute(String argumentsJson) throws Exception {
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             if (tenantId == null) {
                 log.warn("[{}] 租户上下文丢失，拒绝执行", getName());
                 return errorJson("租户上下文丢失，请重新登录");

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.WhatIfRequest;
 import com.fashion.supplychain.intelligence.dto.WhatIfResponse;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -52,6 +53,7 @@ public class WhatIfSimulationOrchestrator {
     public WhatIfResponse simulate(WhatIfRequest req) {
         if (req == null) return errorResponse("请求不能为空");
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<ProductionOrder> orders = fetchOrders(tenantId, req.getOrderIds());
         if (orders.isEmpty()) return errorResponse("未找到有效订单");

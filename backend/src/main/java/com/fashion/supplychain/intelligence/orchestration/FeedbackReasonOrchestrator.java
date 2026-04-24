@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.FeedbackReasonResponse;
 import com.fashion.supplychain.intelligence.dto.FeedbackRequest;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackReason;
@@ -47,10 +48,11 @@ public class FeedbackReasonOrchestrator {
     }
 
     public List<FeedbackReasonResponse> listCurrentTenantFeedbackReasons(int limit) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int size = limit <= 0 ? 20 : Math.min(limit, 100);
         return intelligenceFeedbackReasonService.list(new LambdaQueryWrapper<IntelligenceFeedbackReason>()
-                        .eq(tenantId != null, IntelligenceFeedbackReason::getTenantId, tenantId)
+                        .eq(IntelligenceFeedbackReason::getTenantId, tenantId)
                         .orderByDesc(IntelligenceFeedbackReason::getCreateTime)
                         .last("LIMIT " + size))
                 .stream()

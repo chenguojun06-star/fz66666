@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.mapper.KnowledgeBaseMapper;
 import com.fashion.supplychain.intelligence.orchestration.FeedbackReasonOrchestrator;
@@ -97,7 +98,7 @@ public class FeedbackReasonController {
         try {
             Long exists = knowledgeBaseMapper.selectCount(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<KnowledgeBase>()
-                            .eq(tenantId != null, KnowledgeBase::getTenantId, tenantId)
+                            .eq(KnowledgeBase::getTenantId, tenantId)
                             .eq(KnowledgeBase::getTitle, title)
                             .eq(KnowledgeBase::getDeleteFlag, 0));
             if (exists != null && exists > 0) return;

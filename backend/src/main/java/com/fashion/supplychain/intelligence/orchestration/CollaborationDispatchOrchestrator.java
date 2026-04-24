@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ActionCenterResponse;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchResponse;
@@ -44,6 +45,7 @@ public class CollaborationDispatchOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public CollaborationDispatchResponse dispatch(CollaborationDispatchRequest request) {
         CollaborationDispatchResponse response = new CollaborationDispatchResponse();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String orderNo = trim(request.getOrderNo());
         String instruction = trim(request.getInstruction());
@@ -101,6 +103,7 @@ public class CollaborationDispatchOrchestrator {
             return cached;
         }
         CollaborationDispatchResponse response = new CollaborationDispatchResponse();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String normalizedRole = hasText(targetRole) ? normalizeRole(targetRole) : null;
         List<SysNotice> notices = sysNoticeService.lambdaQuery()

@@ -2,7 +2,9 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
@@ -107,6 +109,7 @@ public class AgentActivityController {
 
     @GetMapping("/agents")
     public Result<List<Map<String, Object>>> getAgentList() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDateTime.now().minusHours(24);
 
@@ -142,6 +145,7 @@ public class AgentActivityController {
             @PathVariable String agentId,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         if (startTime == null) startTime = LocalDateTime.now().minusHours(24);
         if (endTime == null) endTime = LocalDateTime.now();
@@ -188,6 +192,7 @@ public class AgentActivityController {
 
     @GetMapping("/departments")
     public Result<List<Map<String, Object>>> getDepartmentStats() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDateTime.now().minusHours(24);
 
@@ -230,6 +235,7 @@ public class AgentActivityController {
 
     @GetMapping("/alerts")
     public Result<List<Map<String, Object>>> getAlerts() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<Map<String, Object>> alerts = new ArrayList<>();
 

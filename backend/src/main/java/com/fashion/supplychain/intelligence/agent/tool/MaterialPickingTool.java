@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
@@ -57,7 +58,8 @@ public class MaterialPickingTool extends AbstractAgentTool {
 
         return switch (action) {
             case "list" -> {
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
                 String orderNo = optionalString(args, "orderNo");
                 LambdaQueryWrapper<MaterialPicking> wrapper = new LambdaQueryWrapper<MaterialPicking>()
                         .eq(MaterialPicking::getTenantId, tenantId);
@@ -84,7 +86,8 @@ public class MaterialPickingTool extends AbstractAgentTool {
                 String remark = optionalString(args, "remark");
 
                 String userId = UserContext.userId();
-                Long tenantId = UserContext.tenantId();
+                TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
                 MaterialPicking picking = new MaterialPicking();
                 picking.setOrderId(orderId);

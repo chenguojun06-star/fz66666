@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.AiSkillNode;
 import com.fashion.supplychain.intelligence.mapper.AiSkillNodeMapper;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +68,7 @@ public class SkillTreeOrchestrator {
             return;
         }
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String skillName = buildSkillName(scene, toolName);
 
@@ -104,6 +106,7 @@ public class SkillTreeOrchestrator {
      * 记录技能执行失败（供 AiAgentOrchestrator 在工具调用异常时调用）。
      */
     public void recordFailure(String toolName, String scene) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String skillName = buildSkillName(scene, toolName);
         AiSkillNode existing = skillNodeMapper.selectOne(new LambdaQueryWrapper<AiSkillNode>()
@@ -129,6 +132,7 @@ public class SkillTreeOrchestrator {
      * @param limit  最多返回条数
      */
     public List<AiSkillNode> getActiveSkills(String domain, int limit) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<AiSkillNode> w = new LambdaQueryWrapper<AiSkillNode>()
                 .eq(AiSkillNode::getDeleteFlag, 0)
@@ -147,6 +151,7 @@ public class SkillTreeOrchestrator {
      * @param domain 领域过滤（null 则返回全部）
      */
     public List<AiSkillNode> getSkillTree(String domain) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         return skillNodeMapper.selectList(new LambdaQueryWrapper<AiSkillNode>()
                 .eq(AiSkillNode::getDeleteFlag, 0)

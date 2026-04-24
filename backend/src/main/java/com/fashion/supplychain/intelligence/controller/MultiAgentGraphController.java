@@ -3,7 +3,9 @@ package com.fashion.supplychain.intelligence.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.GraphExecutionResult;
 import com.fashion.supplychain.intelligence.dto.MultiAgentRequest;
 import com.fashion.supplychain.intelligence.entity.AgentExecutionLog;
@@ -81,6 +83,7 @@ public class MultiAgentGraphController {
     public Result<List<AgentExecutionLog>> history(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int safeSize = Math.min(size, 50);
         List<AgentExecutionLog> logs = logMapper.selectList(
@@ -113,7 +116,8 @@ public class MultiAgentGraphController {
     public Result<List<Map<String, Object>>> abStats(
             @RequestParam(defaultValue = "30") int days) {
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             int safeDays = Math.min(Math.max(days, 1), 90);
             List<Map<String, Object>> stats = logMapper.selectAbStatsByScene(tenantId, safeDays);
             return Result.success(stats);

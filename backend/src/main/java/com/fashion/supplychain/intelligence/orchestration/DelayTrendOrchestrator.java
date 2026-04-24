@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.PatternProductionService;
@@ -28,6 +29,7 @@ public class DelayTrendOrchestrator {
     private PatternProductionService patternProductionService;
 
     public Map<String, Object> analyze(String period) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
         int weeks = "month".equalsIgnoreCase(period) ? 12 : 8;
@@ -37,7 +39,7 @@ public class DelayTrendOrchestrator {
 
         // 查询生产订单
         LambdaQueryWrapper<ProductionOrder> oqw = new LambdaQueryWrapper<>();
-        oqw.eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+        oqw.eq(ProductionOrder::getTenantId, tenantId)
            .eq(factoryId != null && !factoryId.isBlank(), ProductionOrder::getFactoryId, factoryId)
            .eq(ProductionOrder::getDeleteFlag, 0)
            .isNotNull(ProductionOrder::getPlannedEndDate)
@@ -48,7 +50,7 @@ public class DelayTrendOrchestrator {
 
         // 查询样板
         LambdaQueryWrapper<PatternProduction> sqw = new LambdaQueryWrapper<>();
-        sqw.eq(tenantId != null, PatternProduction::getTenantId, tenantId)
+        sqw.eq(PatternProduction::getTenantId, tenantId)
            .eq(PatternProduction::getDeleteFlag, 0)
            .isNotNull(PatternProduction::getDeliveryTime)
            .ge(PatternProduction::getDeliveryTime, startDate.atStartOfDay())

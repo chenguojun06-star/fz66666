@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.StagnantAlertResponse;
 import com.fashion.supplychain.intelligence.dto.StagnantAlertResponse.StagnantOrderAlert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -43,12 +44,13 @@ public class StagnantAlertOrchestrator {
     private ScanRecordMapper scanRecordMapper;
 
     public StagnantAlertResponse detect() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         StagnantAlertResponse response = new StagnantAlertResponse();
 
         // 1. 在手订单
         QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
-        oqw.eq(tenantId != null, "tenant_id", tenantId)
+        oqw.eq("tenant_id", tenantId)
            .eq("delete_flag", 0)
            .in("status", "production", "cutting");
         List<ProductionOrder> orders = productionOrderMapper.selectList(oqw);
@@ -68,7 +70,7 @@ public class StagnantAlertOrchestrator {
         for (int i = 0; i < orderIds.size(); i += batchSize) {
             List<String> batch = orderIds.subList(i, Math.min(i + batchSize, orderIds.size()));
             QueryWrapper<ScanRecord> sqw = new QueryWrapper<>();
-            sqw.eq(tenantId != null, "tenant_id", tenantId)
+            sqw.eq("tenant_id", tenantId)
                .eq("scan_result", "success")
                .in("order_id", batch)
                .ge("scan_time", since)

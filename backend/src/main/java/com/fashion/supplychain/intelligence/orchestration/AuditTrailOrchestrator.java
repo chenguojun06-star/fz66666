@@ -186,7 +186,7 @@ public class AuditTrailOrchestrator {
     queryAuditLogs(Long tenantId, int page, int pageSize, String status) {
         Page<IntelligenceAuditLog> pageReq = new Page<>(page, pageSize);
         QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
-        qw.eq(tenantId != null, "tenant_id", tenantId);
+        qw.eq("tenant_id", tenantId);
         if (status != null && !status.isEmpty()) {
             qw.eq("status", status);
         }
@@ -200,12 +200,12 @@ public class AuditTrailOrchestrator {
     public Map<String, Object> getExecutionStats(Long tenantId) {
         // 总执行数（排除 PENDING_APPROVAL / EXECUTING / FEEDBACK 等中间态）
         QueryWrapper<IntelligenceAuditLog> totalQw = new QueryWrapper<>();
-        totalQw.eq(tenantId != null, "tenant_id", tenantId)
+        totalQw.eq("tenant_id", tenantId)
                .notIn("status", "PENDING_APPROVAL", "EXECUTING", "FEEDBACK");
         long totalExecuted = auditLogMapper.selectCount(totalQw);
 
         QueryWrapper<IntelligenceAuditLog> successQw = new QueryWrapper<>();
-        successQw.eq(tenantId != null, "tenant_id", tenantId)
+        successQw.eq("tenant_id", tenantId)
                  .eq("status", "SUCCESS");
         long successCount = auditLogMapper.selectCount(successQw);
 

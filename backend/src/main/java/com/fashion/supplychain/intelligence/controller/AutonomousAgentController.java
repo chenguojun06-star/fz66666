@@ -1,7 +1,9 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.entity.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
@@ -44,6 +46,7 @@ public class AutonomousAgentController {
 
     @PostMapping("/rca/list")
     public Result<List<RootCauseAnalysis>> listRca(@RequestBody(required = false) Map<String, Object> body) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String category = body != null ? (String) body.get("category") : null;
         int limit = body != null && body.get("limit") != null ? ((Number) body.get("limit")).intValue() : 20;
@@ -61,6 +64,7 @@ public class AutonomousAgentController {
 
     @PostMapping("/patterns/list")
     public Result<List<PatternDiscovery>> listPatterns(@RequestBody(required = false) Map<String, Object> body) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String type = body != null ? (String) body.get("patternType") : null;
         int limit = body != null && body.get("limit") != null ? ((Number) body.get("limit")).intValue() : 20;

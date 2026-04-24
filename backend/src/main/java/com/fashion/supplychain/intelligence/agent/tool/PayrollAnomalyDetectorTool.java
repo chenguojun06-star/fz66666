@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +70,8 @@ public class PayrollAnomalyDetectorTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
             String period = parsePeriod(argumentsJson);
 
             LocalDate periodStart = LocalDate.parse(period + "-01");

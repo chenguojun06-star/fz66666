@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ProcessPriceHintResponse;
 import com.fashion.supplychain.intelligence.dto.ProcessPriceHintResponse.RecentRecord;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -58,7 +59,8 @@ public class ProcessPriceHintOrchestrator {
         }
 
         try {
-            Long tenantId = UserContext.tenantId();
+            TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
 
             // 1. 获取当前租户的所有款式 ID → Map<styleId, styleNo>
             Map<Long, String> styleIdToNo = fetchStyleIdToNoMap(tenantId);
@@ -132,7 +134,7 @@ public class ProcessPriceHintOrchestrator {
 
     private Map<Long, String> fetchStyleIdToNoMap(Long tenantId) {
         QueryWrapper<StyleInfo> sqw = new QueryWrapper<>();
-        sqw.eq(tenantId != null, "tenant_id", tenantId)
+        sqw.eq("tenant_id", tenantId)
            .select("id", "style_no");
         List<StyleInfo> styles = styleInfoService.list(sqw);
         return styles.stream()

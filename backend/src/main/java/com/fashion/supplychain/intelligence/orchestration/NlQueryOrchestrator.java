@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.NlQueryRequest;
 import com.fashion.supplychain.intelligence.dto.NlQueryResponse;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
@@ -33,6 +34,7 @@ public class NlQueryOrchestrator {
 
     public NlQueryResponse query(NlQueryRequest req) {
         String question = req.getQuestion().trim();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
         log.info("[NlQuery] question={}, tenant={}, factory={}", question, tenantId, factoryId);

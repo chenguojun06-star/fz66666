@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.service.KnowledgeBaseService;
@@ -75,6 +76,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
             return errorJson("请提供搜索关键词");
         }
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         if (tenantId == null) {

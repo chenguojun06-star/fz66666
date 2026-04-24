@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.IntelligenceSignalResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceSignalResponse.SignalItem;
 import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
@@ -52,6 +53,7 @@ public class IntelligenceSignalOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public IntelligenceSignalResponse collectAndAnalyze() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         IntelligenceSignalResponse response = new IntelligenceSignalResponse();
         boolean aiEnabled = aiAdvisorService.isEnabled();

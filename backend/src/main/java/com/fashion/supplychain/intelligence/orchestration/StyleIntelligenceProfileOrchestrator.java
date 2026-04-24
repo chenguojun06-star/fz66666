@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.FinanceSummary;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.ProductionSummary;
@@ -124,6 +125,7 @@ public class StyleIntelligenceProfileOrchestrator {
         if (normalized.isEmpty()) {
             return null;
         }
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<StyleInfo> qw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
@@ -163,6 +165,7 @@ public class StyleIntelligenceProfileOrchestrator {
     }
 
     private List<ProductionOrder> loadOrders(String styleNo) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<ProductionOrder> qw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
@@ -216,6 +219,7 @@ public class StyleIntelligenceProfileOrchestrator {
     }
 
     private List<ScanRecord> loadScanRecords(String styleNo) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
@@ -276,6 +280,7 @@ public class StyleIntelligenceProfileOrchestrator {
     }
 
     private List<SampleStock> loadSampleStocks(String styleNo) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<SampleStock> qw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
