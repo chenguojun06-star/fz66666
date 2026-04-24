@@ -68,13 +68,8 @@ public class StyleQuotation {
     /**
      * 币种
      */
-    @TableField(exist = false)
     private String currency;
 
-    /**
-     * 版本号
-     */
-    @TableField(exist = false)
     private String version;
 
     /**

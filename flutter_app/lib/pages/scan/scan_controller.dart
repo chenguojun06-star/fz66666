@@ -178,12 +178,20 @@ class ScanController extends GetxController {
 
   Future<void> onScanResult(String code) async {
     if (scanning.value) return;
+
+    if (selectedScanType.value == ScanType.sample) {
+      scanning.value = false;
+      Get.snackbar('提示', '样衣扫码请使用样衣扫码页面', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
     scanCode.value = code;
     scanning.value = true;
 
     final parsed = QRCodeParser.parse(code);
 
     try {
+      final userInfo = _storage.getUserInfo();
       final res = await _api.executeScan({
         'scanCode': code,
         'orderNo': parsed.orderNo,
@@ -197,6 +205,8 @@ class ScanController extends GetxController {
         'color': parsed.color,
         'size': parsed.size,
         'source': 'flutter',
+        'operatorId': userInfo?['id']?.toString() ?? '',
+        'operatorName': userInfo?['username']?.toString() ?? '',
         'requestId': 'flutter_${DateTime.now().millisecondsSinceEpoch}_${code.hashCode.abs()}',
       });
       final data = res.data;

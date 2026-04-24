@@ -103,7 +103,7 @@ public class PayrollAggregationOrchestrator {
                 "备料", "到料", "订单创建", "创建订单", "开单", "制单");
 
         // 查询扫码记录（安全上限，防止无限制全表扫描）
-        qw.last("LIMIT 50000");
+        qw.last("LIMIT 5000");
         List<ScanRecord> scanRecords = scanRecordService.list(qw);
 
         // 按 operator_id + order_id + process_name + color + size 分组
@@ -143,7 +143,7 @@ public class PayrollAggregationOrchestrator {
             QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
             orderQw.in("order_no", orderNos);
             orderQw.eq("tenant_id", tenantId);
-            orderQw.last("LIMIT 10000");
+            orderQw.last("LIMIT 5000");
             Map<String, String> orderNoToStatus = productionOrderService.list(orderQw).stream()
                     .collect(Collectors.toMap(
                             ProductionOrder::getOrderNo,

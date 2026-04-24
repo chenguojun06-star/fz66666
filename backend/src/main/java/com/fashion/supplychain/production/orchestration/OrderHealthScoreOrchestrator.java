@@ -48,6 +48,7 @@ public class OrderHealthScoreOrchestrator {
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .in(ProductionOrder::getId, orderIds)
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .list();
 
         Map<String, OrderHealthScoreDTO> resultMap = new HashMap<>(orders.size());
@@ -69,22 +70,21 @@ public class OrderHealthScoreOrchestrator {
         Long tenantId = UserContext.tenantId();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .orderByAsc(ProductionOrder::getId)
                 .list();
 
         return orders.stream()
                 .map(this::calculateScoreDTO)
-                .sorted(Comparator.comparingInt(OrderHealthScoreDTO::getScore))  // 按分数升序
+                .sorted(Comparator.comparingInt(OrderHealthScoreDTO::getScore))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 获取高风险订单列表（评分 < 50）
-     */
     public List<OrderHealthScoreDTO> getHighRiskOrders(int limit) {
         Long tenantId = UserContext.tenantId();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .orderByAsc(ProductionOrder::getId)
                 .last("LIMIT " + (limit > 0 ? limit : 100))
                 .list();

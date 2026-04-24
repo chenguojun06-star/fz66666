@@ -62,6 +62,9 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     @Autowired
     private PatternStatusHelper patternStatusHelper;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.ScanRecordService scanRecordService;
+
     @Override
     public IPage<SampleStock> queryPage(Map<String, Object> params) {
         Integer page = ParamUtils.getPage(params);
@@ -142,6 +145,30 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             scanRecord.setCreateTime(LocalDateTime.now());
             scanRecord.setDeleteFlag(0);
             patternScanRecordService.save(scanRecord);
+
+            try {
+                com.fashion.supplychain.production.entity.ScanRecord sr = new com.fashion.supplychain.production.entity.ScanRecord();
+                sr.setScanType("pattern");
+                sr.setScanResult("success");
+                sr.setOperatorId(UserContext.userId());
+                sr.setOperatorName(UserContext.username());
+                sr.setScanTime(LocalDateTime.now());
+                sr.setStyleNo(matchedPattern.getStyleNo());
+                sr.setOrderNo(matchedPattern.getStyleNo());
+                sr.setColor(matchedPattern.getColor());
+                sr.setProcessName("样衣入库");
+                sr.setProcessCode("样衣入库");
+                sr.setProgressStage("样衣入库");
+                sr.setQuantity(1);
+                sr.setTenantId(currentTenantId);
+                sr.setFactoryId(null);
+                sr.setCuttingBundleNo(null);
+                sr.setRemark(stock.getRemark() != null ? stock.getRemark() : "PC端样衣库存入库");
+                sr.setCreateTime(LocalDateTime.now());
+                scanRecordService.saveScanRecord(sr);
+            } catch (Exception e) {
+                log.warn("PC端入库同步写入ScanRecord失败，不影响主流程: {}", e.getMessage());
+            }
 
             patternStatusHelper.updatePatternStatusByOperation(matchedPattern, "WAREHOUSE_IN", UserContext.username());
 

@@ -77,7 +77,10 @@ public class CrmClientController {
             return Result.fail("密码错误");
         }
 
-        Customer customer = customerService.getById(user.getCustomerId());
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, user.getCustomerId())
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
         if (customer == null) {
             return Result.fail("客户信息不存在");
         }
@@ -118,7 +121,10 @@ public class CrmClientController {
             return Result.fail("请先登录");
         }
 
-        Customer customer = customerService.getById(customerId);
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, customerId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
         if (customer == null || !tenantId.equals(customer.getTenantId())) {
             return Result.fail("客户信息不存在");
         }
@@ -176,7 +182,10 @@ public class CrmClientController {
             return Result.fail("请先登录");
         }
 
-        Customer customer = customerService.getById(customerId);
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, customerId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
         if (customer == null) {
             return Result.fail("客户不存在");
         }
@@ -363,7 +372,10 @@ public class CrmClientController {
             return Result.fail("请先登录");
         }
 
-        Customer customer = customerService.getById(customerId);
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, customerId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
         if (customer == null || !tenantId.equals(customer.getTenantId())) {
             return Result.fail("客户不存在");
         }
@@ -379,7 +391,10 @@ public class CrmClientController {
     }
 
     private List<ProductionOrder> findCustomerOrders(String customerId, Long tenantId) {
-        Customer customer = customerService.getById(customerId);
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, customerId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
         if (customer == null || !tenantId.equals(customer.getTenantId())) {
             return Collections.emptyList();
         }
@@ -400,7 +415,10 @@ public class CrmClientController {
     }
 
     private boolean isOrderBelongsToCustomer(ProductionOrder order, String customerId) {
-        Customer customer = customerService.getById(customerId);
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, customerId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
         if (customer == null || !StringUtils.hasText(customer.getCompanyName())) {
             return false;
         }

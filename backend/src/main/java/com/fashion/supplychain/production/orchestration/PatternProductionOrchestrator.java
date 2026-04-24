@@ -128,7 +128,8 @@ public class PatternProductionOrchestrator {
 
         patternProductionService.updateById(record);
 
-        // 同步更新 StyleInfo
+        createPatternScanRecordForWage(record, "领取样板", UserContext.userId(), currentUser, LocalDateTime.now());
+
         statusHelper.syncStyleInfoOnReceive(record.getStyleId(), currentUser);
         statusHelper.syncStyleInfoSampleStage(record);
 
@@ -188,29 +189,32 @@ public class PatternProductionOrchestrator {
         LocalDateTime now = LocalDateTime.now();
         String operatorName = UserContext.username();
 
+        boolean wasRework = "REWORK".equals(pattern.getStatus());
+
         PatternScanRecord scanRecord = new PatternScanRecord();
         scanRecord.setPatternProductionId(patternId);
         scanRecord.setStyleId(pattern.getStyleId());
         scanRecord.setStyleNo(pattern.getStyleNo());
         scanRecord.setColor(pattern.getColor());
-        scanRecord.setOperationType("REWORK".equals(pattern.getStatus()) ? "REWORK" : "COMPLETE");
+        scanRecord.setOperationType(wasRework ? "REWORK" : "COMPLETE");
         scanRecord.setOperatorId(currentUserId);
         scanRecord.setOperatorName(operatorName);
         scanRecord.setOperatorRole("PLATE_WORKER");
         scanRecord.setScanTime(now);
-        scanRecord.setRemark("REWORK".equals(pattern.getStatus()) ? "返修完成" : "制作完成");
+        scanRecord.setRemark(wasRework ? "返修完成" : "制作完成");
         patternScanRecordService.save(scanRecord);
 
         statusHelper.markPatternProductionCompleted(pattern, now);
 
-        if ("REWORK".equals(pattern.getStatus())) {
+        if (wasRework) {
             pattern.setReviewStatus("PENDING");
             pattern.setReworkCount(pattern.getReworkCount() != null ? pattern.getReworkCount() + 1 : 1);
         }
         patternProductionService.updateById(pattern);
 
         statusHelper.syncStyleInfoSampleStage(pattern);
-        statusHelper.syncStyleInfoOnComplete(pattern);
+
+        createPatternScanRecordForWage(pattern, wasRework ? "返修完成" : "制作完成", currentUserId, operatorName, now);
 
         log.info("[样衣完成] patternId={} operator={} type={}", patternId, operatorName, scanRecord.getOperationType());
 
@@ -464,10 +468,37 @@ public class PatternProductionOrchestrator {
             case "PLATE":            return "车板扫码";
             case "FOLLOW_UP":        return "跟单确认";
             case "COMPLETE":         return "完成确认";
+            case "REWORK":           return "返修完成";
             case "WAREHOUSE_IN":     return "样衣入库";
             case "WAREHOUSE_OUT":    return "样衣出库";
             case "WAREHOUSE_RETURN": return "样衣归还";
             default:                 return "样衣操作";
+        }
+    }
+
+    private void createPatternScanRecordForWage(PatternProduction pattern, String processLabel,
+                                                  String operatorId, String operatorName, LocalDateTime scanTime) {
+        try {
+            ScanRecord sr = new ScanRecord();
+            sr.setScanType("pattern");
+            sr.setScanResult("success");
+            sr.setOperatorId(operatorId);
+            sr.setOperatorName(operatorName);
+            sr.setScanTime(scanTime);
+            sr.setStyleNo(pattern.getStyleNo());
+            sr.setOrderNo(pattern.getStyleNo());
+            sr.setColor(pattern.getColor());
+            sr.setProcessName(processLabel);
+            sr.setProcessCode(processLabel);
+            sr.setProgressStage(processLabel);
+            sr.setQuantity(1);
+            sr.setTenantId(UserContext.tenantId());
+            sr.setFactoryId(null);
+            sr.setCuttingBundleNo(null);
+            sr.setCreateTime(LocalDateTime.now());
+            scanRecordService.saveScanRecord(sr);
+        } catch (Exception e) {
+            log.warn("样衣操作同步写入ScanRecord失败，不影响主流程: {}", e.getMessage());
         }
     }
 }

@@ -229,6 +229,7 @@ public class PendingTaskOrchestrator {
                         ProductionOrder::getStyleNo, ProductionOrder::getExpectedShipDate,
                         ProductionOrder::getProductionProgress)
                 .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                 .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                 .isNotNull(ProductionOrder::getExpectedShipDate)

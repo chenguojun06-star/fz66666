@@ -98,7 +98,7 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo) {
     scanCode: detail.scanCode || '',
     scanType: 'quality',
     qualityStage: 'confirm',
-    qualityResult: qualityModal.result, // 'qualified' | 'unqualified'
+    qualityResult: qualityModal.result,
     orderNo: detail.orderNo || '',
     orderId: detail.orderId || '',
     styleNo: detail.styleNo || '',
@@ -107,6 +107,7 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo) {
     quantity: totalQty,
     operatorId: userInfo.id || '',
     operatorName: userInfo.name || userInfo.username || '',
+    source: 'h5',
   };
 }
 

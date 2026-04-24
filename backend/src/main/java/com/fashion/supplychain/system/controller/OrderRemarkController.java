@@ -72,9 +72,12 @@ public class OrderRemarkController {
     }
 
     private List<OrderRemark> extractOrderInlineRemarks(String orderNo) {
+        Long tenantId = UserContext.tenantId();
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getRemarks)
                 .eq(ProductionOrder::getOrderNo, orderNo)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .last("LIMIT 1")
                 .one();
         if (order == null || !StringUtils.hasText(order.getRemarks())) {

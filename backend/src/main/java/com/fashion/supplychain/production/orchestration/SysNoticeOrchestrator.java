@@ -73,6 +73,7 @@ public class SysNoticeOrchestrator {
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getOrderNo, orderNo)
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .one();
         if (order == null) {
             throw new IllegalArgumentException("订单不存在: " + orderNo);

@@ -148,6 +148,7 @@ public class SignalCollectorHelper {
         List<SignalItem> items = new ArrayList<>();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .in(ProductionOrder::getStatus, List.of("production", "delayed"))
                 .isNotNull(ProductionOrder::getStyleId)
                 .last("LIMIT 80").list();
@@ -181,6 +182,7 @@ public class SignalCollectorHelper {
         List<SignalItem> items = new ArrayList<>();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getStatus, "production")
                 .last("LIMIT 80").list();
 
@@ -188,7 +190,8 @@ public class SignalCollectorHelper {
             try {
                 List<ScanRecord> scans = scanRecordService.lambdaQuery()
                         .eq(ScanRecord::getOrderId, order.getId().toString())
-                        .eq(ScanRecord::getScanResult, "success").list();
+                        .eq(ScanRecord::getScanResult, "success")
+                        .ne(ScanRecord::getScanType, "orchestration").list();
                 if (scans.isEmpty()) continue;
 
                 Set<String> stages = scans.stream()
@@ -229,6 +232,7 @@ public class SignalCollectorHelper {
 
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .in(ProductionOrder::getStatus, List.of("production", "delayed"))
                 .last("LIMIT 100").list();
 
@@ -270,6 +274,7 @@ public class SignalCollectorHelper {
 
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .in(ProductionOrder::getStatus, List.of("production", "delayed"))
                 .lt(ProductionOrder::getCreateTime, startThreshold)
                 .last("LIMIT 100").list();

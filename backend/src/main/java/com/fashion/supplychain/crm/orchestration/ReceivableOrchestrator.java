@@ -189,7 +189,10 @@ public class ReceivableOrchestrator {
         }
 
         if (receivable.getCustomerId() != null && !StringUtils.hasText(receivable.getCustomerName())) {
-            Customer customer = customerService.getById(receivable.getCustomerId());
+            Customer customer = customerService.lambdaQuery()
+                    .eq(Customer::getId, receivable.getCustomerId())
+                    .eq(Customer::getDeleteFlag, 0)
+                    .one();
             if (customer != null) {
                 receivable.setCustomerName(customer.getCompanyName());
             }

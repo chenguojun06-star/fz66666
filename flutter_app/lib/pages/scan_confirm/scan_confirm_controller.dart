@@ -3,9 +3,11 @@ import 'package:dio/dio.dart';
 import '../../utils/api_service.dart';
 import '../../utils/error_handler.dart';
 import '../../utils/scan/qr_code_parser.dart';
+import '../../utils/storage_service.dart';
 
 class ScanConfirmController extends GetxController {
   final ApiService _api = Get.find<ApiService>();
+  final StorageService _storage = Get.find<StorageService>();
 
   final loading = false.obs;
   final orderNo = ''.obs;
@@ -61,6 +63,7 @@ class ScanConfirmController extends GetxController {
   Future<void> confirm() async {
     loading.value = true;
     try {
+      final userInfo = _storage.getUserInfo();
       final res = await _api.executeScan({
         'scanCode': _qrCode,
         'orderNo': orderNo.value,
@@ -71,6 +74,8 @@ class ScanConfirmController extends GetxController {
         'progressStage': progressStage.value,
         'quantity': int.tryParse(quantity.value),
         'source': 'flutter',
+        'operatorId': userInfo?['id']?.toString() ?? '',
+        'operatorName': userInfo?['username']?.toString() ?? '',
         'requestId': 'flutter_${DateTime.now().millisecondsSinceEpoch}_${_qrCode.hashCode.abs()}',
       });
       final data = res.data;

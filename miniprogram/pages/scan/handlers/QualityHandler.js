@@ -98,7 +98,7 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo) {
     scanCode: detail.scanCode || '',
     scanType: 'quality',
     qualityStage: 'confirm',
-    qualityResult: qualityModal.result, // 'qualified' | 'unqualified'
+    qualityResult: qualityModal.result,
     orderNo: detail.orderNo || '',
     orderId: detail.orderId || '',
     styleNo: detail.styleNo || '',
@@ -107,6 +107,7 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo) {
     quantity: totalQty,
     operatorId: userInfo.id || '',
     operatorName: userInfo.name || userInfo.username || '',
+    source: 'miniprogram',
   };
 }
 
@@ -171,6 +172,7 @@ async function submitQualityResult(page) {
       quantity: payload.quantity, scanCode: payload.scanCode,
       scanType: 'quality', qualityStage: 'receive',
       operatorId: payload.operatorId, operatorName: payload.operatorName,
+      source: 'miniprogram',
     };
     try {
       await api.production.executeScan(receivePayload);

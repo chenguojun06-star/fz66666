@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/api_service.dart';
 import '../../utils/error_handler.dart';
+import '../../utils/storage_service.dart';
 
 class ScanQualityController extends GetxController {
   final ApiService _api = Get.find<ApiService>();
+  final StorageService _storage = Get.find<StorageService>();
   final tasks = <Map<String, dynamic>>[].obs;
   final loading = false.obs;
 
@@ -33,6 +35,7 @@ class ScanQualityController extends GetxController {
 
   Future<void> submitQuality(String orderId, int qualified, int defective, {String? remark, String? scanCode, String? orderNo}) async {
     try {
+      final userInfo = _storage.getUserInfo();
       final receiveRes = await _api.executeScan({
         'scanCode': scanCode ?? orderId,
         'orderNo': orderNo ?? '',
@@ -41,6 +44,8 @@ class ScanQualityController extends GetxController {
         'qualityStage': 'receive',
         'quantity': qualified + defective,
         'source': 'flutter',
+        'operatorId': userInfo?['id']?.toString() ?? '',
+        'operatorName': userInfo?['username']?.toString() ?? '',
       });
       final receiveData = receiveRes.data;
       if (receiveData is! Map || receiveData['code'] != 200) {
@@ -59,6 +64,8 @@ class ScanQualityController extends GetxController {
         'defectQuantity': defective,
         'remark': remark,
         'source': 'flutter',
+        'operatorId': userInfo?['id']?.toString() ?? '',
+        'operatorName': userInfo?['username']?.toString() ?? '',
       });
       final data = res.data;
       if (data is Map && data['code'] == 200) {

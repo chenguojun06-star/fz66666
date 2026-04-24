@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternRevision;
 import com.fashion.supplychain.production.service.PatternRevisionService;
 import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
@@ -58,7 +60,12 @@ public class PatternRevisionController {
      */
     @GetMapping("/{id}")
     public Result<?> detail(@PathVariable String id) {
-        PatternRevision revision = patternRevisionService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        PatternRevision revision = patternRevisionService.lambdaQuery()
+                .eq(PatternRevision::getId, id)
+                .eq(PatternRevision::getTenantId, tenantId)
+                .one();
         if (revision == null) {
             return Result.fail("记录不存在");
         }
@@ -103,10 +110,16 @@ public class PatternRevisionController {
      */
     @PutMapping("/{id}")
     public Result<?> update(@PathVariable String id, @RequestBody PatternRevision revision) {
-        PatternRevision existing = patternRevisionService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        PatternRevision existing = patternRevisionService.lambdaQuery()
+                .eq(PatternRevision::getId, id)
+                .eq(PatternRevision::getTenantId, tenantId)
+                .one();
         if (existing == null) {
             return Result.fail("记录不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "纸样改版记录");
 
         // 只有草稿状态才能修改
         if (!"DRAFT".equals(existing.getStatus())) {
@@ -126,10 +139,16 @@ public class PatternRevisionController {
      */
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable String id) {
-        PatternRevision existing = patternRevisionService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        PatternRevision existing = patternRevisionService.lambdaQuery()
+                .eq(PatternRevision::getId, id)
+                .eq(PatternRevision::getTenantId, tenantId)
+                .one();
         if (existing == null) {
             return Result.fail("记录不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "纸样改版记录");
 
         // 只有草稿状态才能删除
         if (!"DRAFT".equals(existing.getStatus())) {

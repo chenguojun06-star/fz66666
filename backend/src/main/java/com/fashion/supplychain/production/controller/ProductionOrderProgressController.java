@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -98,8 +100,12 @@ public class ProductionOrderProgressController {
 
         String targetId = id;
         if (!StringUtils.hasText(targetId) && StringUtils.hasText(orderNo)) {
+            TenantAssert.assertTenantContext();
+            Long tenantId = UserContext.tenantId();
             ProductionOrder order = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
                     .last("LIMIT 1")
                     .one();
             if (order != null) {

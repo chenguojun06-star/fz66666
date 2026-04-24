@@ -70,6 +70,7 @@ public class ProductionAgenticCrewOrchestrator {
         String sessionId = UUID.randomUUID().toString();
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getOrderNo, orderNo)
                 .one();
         if (order == null) {
@@ -181,6 +182,7 @@ public class ProductionAgenticCrewOrchestrator {
     public List<CrewAdvice> scanAndAdvise(Long tenantId, String userId, int maxOrders) {
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "archived", "closed")
                 .last("LIMIT " + Math.min(maxOrders, 20))
                 .list();
@@ -256,6 +258,7 @@ public class ProductionAgenticCrewOrchestrator {
             try {
                 ProductionOrder order = productionOrderService.lambdaQuery()
                         .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
                         .eq(ProductionOrder::getOrderNo, orderNo)
                         .one();
                 if (order != null) {
@@ -310,6 +313,7 @@ public class ProductionAgenticCrewOrchestrator {
                 action.startsWith("quality:") || action.startsWith("factory:"))) {
             ProductionOrder o = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
                     .eq(ProductionOrder::getOrderNo, ref)
                     .one();
             if (o != null) return o.getId();

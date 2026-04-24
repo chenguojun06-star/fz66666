@@ -120,12 +120,12 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_style_info", "dry_clean_code", "VARCHAR(20) DEFAULT NULL COMMENT '干洗代码'");
         add("t_style_info", "fabric_composition_parts", "TEXT DEFAULT NULL COMMENT '多部位面料成分JSON'");
         add("t_style_info", "update_by", "VARCHAR(100) DEFAULT NULL COMMENT '最后维护人'");
-        add("t_style_info", "description_locked", "INT NOT NULL DEFAULT 1 COMMENT '制单锁定'");
-        add("t_style_info", "description_return_comment", "VARCHAR(500) DEFAULT NULL COMMENT '制单退回备注'");
+        add("t_style_info", "description_locked", "TINYINT(1) NOT NULL DEFAULT 1 COMMENT '制单锁定'");
+        add("t_style_info", "description_return_comment", "TEXT DEFAULT NULL COMMENT '制单退回备注'");
         add("t_style_info", "description_return_by", "VARCHAR(100) DEFAULT NULL COMMENT '制单退回人'");
         add("t_style_info", "description_return_time", "DATETIME DEFAULT NULL COMMENT '制单退回时间'");
-        add("t_style_info", "pattern_rev_locked", "INT NOT NULL DEFAULT 0 COMMENT '纸样修改锁定'");
-        add("t_style_info", "pattern_rev_return_comment", "VARCHAR(500) DEFAULT NULL COMMENT '纸样退回备注'");
+        add("t_style_info", "pattern_rev_locked", "TINYINT(1) NOT NULL DEFAULT 1 COMMENT '纸样修改锁定'");
+        add("t_style_info", "pattern_rev_return_comment", "TEXT DEFAULT NULL COMMENT '纸样退回备注'");
         add("t_style_info", "pattern_rev_return_by", "VARCHAR(100) DEFAULT NULL COMMENT '纸样退回人'");
         add("t_style_info", "pattern_rev_return_time", "DATETIME DEFAULT NULL COMMENT '纸样退回时间'");
         add("t_style_info", "pushed_by_name", "VARCHAR(50) DEFAULT NULL COMMENT '推版人姓名'");
@@ -167,7 +167,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
         add("t_style_quotation", "profit_rate", "DECIMAL(5,2) NOT NULL DEFAULT 0.00");
         add("t_style_quotation", "total_price", "DECIMAL(12,2) DEFAULT NULL");
-        add("t_style_quotation", "style_id", "VARCHAR(32) DEFAULT NULL");
+        add("t_style_quotation", "style_id", "BIGINT DEFAULT NULL");
         add("t_style_quotation", "tenant_id", "BIGINT DEFAULT NULL");
         add("t_style_quotation", "creator_id", "VARCHAR(32) DEFAULT NULL");
         add("t_style_quotation", "creator_name", "VARCHAR(100) DEFAULT NULL");
@@ -181,7 +181,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_style_quotation", "currency", "VARCHAR(10) DEFAULT NULL COMMENT '币种'");
         add("t_style_quotation", "version", "VARCHAR(20) DEFAULT NULL COMMENT '版本号'");
         add("t_style_quotation", "is_locked", "INT DEFAULT 0 COMMENT '是否锁定'");
-        add("t_style_quotation", "standard_other_cost", "DECIMAL(15,2) DEFAULT NULL COMMENT '标准其他成本'");
+        add("t_style_quotation", "standard_other_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '标准其他成本'");
 
         add("t_style_process", "difficulty", "VARCHAR(10) DEFAULT NULL");
         add("t_style_process", "rate_multiplier", "DECIMAL(5,2) DEFAULT NULL");
@@ -206,6 +206,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_cutting_task", "updater_id", "VARCHAR(64) DEFAULT NULL COMMENT '更新人ID'");
         add("t_cutting_task", "updater_name", "VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名'");
         add("t_cutting_task", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_cutting_task", "order_qr_code", "VARCHAR(200) DEFAULT NULL COMMENT '订单二维码'");
 
         add("t_cutting_bundle", "root_bundle_id", "VARCHAR(64) DEFAULT NULL COMMENT '根菲号ID'");
         add("t_cutting_bundle", "parent_bundle_id", "VARCHAR(64) DEFAULT NULL COMMENT '父菲号ID'");
@@ -261,6 +262,9 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_product_warehousing", "defect_code", "VARCHAR(64) DEFAULT NULL COMMENT '缺陷代码'");
         add("t_product_warehousing", "defect_severity", "VARCHAR(16) DEFAULT NULL COMMENT '缺陷严重度'");
         add("t_product_warehousing", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标志'");
+        add("t_product_warehousing", "cutting_bundle_id", "VARCHAR(36) DEFAULT NULL COMMENT '裁剪菲号ID'");
+        add("t_product_warehousing", "cutting_bundle_no", "INT DEFAULT NULL COMMENT '裁剪菲号编号'");
+        add("t_product_warehousing", "cutting_bundle_qr_code", "VARCHAR(100) DEFAULT NULL COMMENT '裁剪菲号二维码'");
 
         add("t_product_outstock", "approval_status", "VARCHAR(20) DEFAULT NULL COMMENT '审批状态'");
         add("t_product_outstock", "approve_by", "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
@@ -377,12 +381,12 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_scan_record", "confirm_time", "DATETIME DEFAULT NULL COMMENT '录入结果/完成时间'");
 
         add("t_production_order", "progress_workflow_json", "LONGTEXT DEFAULT NULL COMMENT '生产进度工作流JSON'");
-        add("t_production_order", "progress_workflow_locked", "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '进度流程是否锁定'");
+        add("t_production_order", "progress_workflow_locked", "INT NOT NULL DEFAULT 0 COMMENT '进度流程是否锁定'");
         add("t_production_order", "progress_workflow_locked_at", "DATETIME DEFAULT NULL COMMENT '锁定时间'");
         add("t_production_order", "progress_workflow_locked_by", "VARCHAR(64) DEFAULT NULL COMMENT '锁定人ID'");
         add("t_production_order", "progress_workflow_locked_by_name", "VARCHAR(100) DEFAULT NULL COMMENT '锁定人姓名'");
         add("t_production_order", "skc", "VARCHAR(64) DEFAULT NULL COMMENT 'SKC统一编号'");
-        add("t_production_order", "urgency_level", "INT NOT NULL DEFAULT 0 COMMENT '紧急程度'");
+        add("t_production_order", "urgency_level", "VARCHAR(20) DEFAULT NULL COMMENT '紧急程度'");
         add("t_production_order", "plate_type", "VARCHAR(20) DEFAULT NULL COMMENT '板型'");
         add("t_production_order", "order_biz_type", "VARCHAR(30) DEFAULT NULL COMMENT '订单业务类型'");
         add("t_production_order", "factory_type", "VARCHAR(20) DEFAULT NULL COMMENT '工厂类型'");
@@ -1392,14 +1396,14 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_product_warehousing", "defect_severity", "VARCHAR(16) DEFAULT NULL");
 
             // t_style_quotation: 标准成本差异字段
-            repaired += ensureColumn(conn, schema, "t_style_quotation", "standard_material_cost", "DECIMAL(15,2) DEFAULT NULL");
-            repaired += ensureColumn(conn, schema, "t_style_quotation", "standard_process_cost", "DECIMAL(15,2) DEFAULT NULL");
-            repaired += ensureColumn(conn, schema, "t_style_quotation", "material_variance", "DECIMAL(15,2) DEFAULT NULL");
-            repaired += ensureColumn(conn, schema, "t_style_quotation", "process_variance", "DECIMAL(15,2) DEFAULT NULL");
-            repaired += ensureColumn(conn, schema, "t_style_quotation", "total_variance", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "standard_material_cost", "DECIMAL(12,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "standard_process_cost", "DECIMAL(12,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "material_variance", "DECIMAL(12,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "process_variance", "DECIMAL(12,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "total_variance", "DECIMAL(12,2) DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_style_quotation", "variance_rate", "DECIMAL(5,2) DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_style_quotation", "overhead_allocation_rate", "DECIMAL(5,2) DEFAULT NULL");
-            repaired += ensureColumn(conn, schema, "t_style_quotation", "allocated_overhead_cost", "DECIMAL(15,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "allocated_overhead_cost", "DECIMAL(12,2) DEFAULT NULL");
 
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列", repaired);

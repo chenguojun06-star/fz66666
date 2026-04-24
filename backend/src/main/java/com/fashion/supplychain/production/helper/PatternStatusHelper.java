@@ -142,6 +142,13 @@ public class PatternStatusHelper {
                 markPatternProductionCompleted(pattern, now);
                 needUpdate = true;
                 break;
+            case "REWORK":
+                pattern.setStatus("IN_PROGRESS");
+                if (!StringUtils.hasText(pattern.getReceiver()) && StringUtils.hasText(operatorName)) {
+                    pattern.setReceiver(operatorName);
+                }
+                needUpdate = true;
+                break;
             default:
                 ensureInProgress(pattern, operatorName);
                 String dynamicStage = resolveOperationProgressStage(pattern, normalizedOperation);

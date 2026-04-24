@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -32,7 +34,13 @@ public class ProductionOrderNodeController {
      */
     @GetMapping("/node-operations/{id}")
     public Result<?> getNodeOperations(@PathVariable String id) {
-        ProductionOrder order = productionOrderService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, id)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
         if (order == null) {
             return Result.fail("订单不存在");
         }
@@ -64,10 +72,17 @@ public class ProductionOrderNodeController {
      */
     @PostMapping("/node-operations")
     public Result<?> saveNodeOperations(@Valid @RequestBody SaveNodeOperationsRequest body) {
-        ProductionOrder order = productionOrderService.getById(body.getId());
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, body.getId())
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
         if (order == null) {
             return Result.fail("订单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         order.setNodeOperations(body.getNodeOperations());
         boolean success = productionOrderService.updateById(order);
         return success ? Result.success("保存成功") : Result.fail("保存失败");

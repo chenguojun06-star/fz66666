@@ -60,6 +60,7 @@ public class ProactivePatrolAgent {
 
         List<ProductionOrder> activeOrders = productionOrderService.lambdaQuery()
                 .in(ProductionOrder::getStatus, "IN_PRODUCTION", "MATERIAL_PREPARATION")
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .list();
 
         if (activeOrders == null || activeOrders.isEmpty()) {
