@@ -79,7 +79,7 @@ public class GlobalSearchOrchestrator {
 
             LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .orderByDesc(ProductionOrder::getId)
                 .last(pinyin ? "LIMIT 200" : "LIMIT 10");
 
@@ -119,7 +119,7 @@ public class GlobalSearchOrchestrator {
             boolean pinyin = PinyinSearchUtils.isPinyinQuery(q);
 
             LambdaQueryWrapper<StyleInfo> wrapper = new LambdaQueryWrapper<StyleInfo>()
-                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .eq(StyleInfo::getTenantId, tenantId)
                 .orderByDesc(StyleInfo::getId)
                 .last(pinyin ? "LIMIT 200" : "LIMIT 8");
 
@@ -153,7 +153,7 @@ public class GlobalSearchOrchestrator {
             boolean pinyin = PinyinSearchUtils.isPinyinQuery(q);
 
             LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
-                .eq(tenantId != null, User::getTenantId, tenantId)
+                .eq(User::getTenantId, tenantId)
                 .ne(User::getStatus, "DISABLED")
                 .orderByDesc(User::getId)
                 .last(pinyin ? "LIMIT 100" : "LIMIT 6");

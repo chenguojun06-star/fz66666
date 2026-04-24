@@ -1,6 +1,7 @@
 package com.fashion.supplychain.datacenter.service.impl;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.datacenter.service.DataCenterQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -47,30 +48,30 @@ public class DataCenterQueryServiceImpl implements DataCenterQueryService {
     @Override
     @Cacheable(value = "dataCenter", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':enabledStylesCount'")
     public long countEnabledStyles() {
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         return styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStatus, "ENABLED")
-                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
+                .eq(StyleInfo::getTenantId, tenantId)
                 .count();
     }
 
     @Override
     @Cacheable(value = "dataCenter", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':materialPurchasesCount'")
     public long countMaterialPurchases() {
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         return materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId)
+                .eq(MaterialPurchase::getTenantId, tenantId)
                 .count();
     }
 
     @Override
     @Cacheable(value = "dataCenter", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':productionOrdersCount'")
     public long countProductionOrders() {
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .count();
     }
 

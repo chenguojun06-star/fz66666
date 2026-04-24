@@ -2,6 +2,7 @@ package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.*;
 import com.fashion.supplychain.finance.service.*;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +49,7 @@ public class FinancialReportOrchestrator {
      */
     public Map<String, Object> generateProfitLoss(LocalDate startDate, LocalDate endDate) {
         assertNotFactoryAccount();
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt   = endDate.atTime(LocalTime.MAX);
 
@@ -95,7 +96,7 @@ public class FinancialReportOrchestrator {
      */
     public Map<String, Object> generateBalanceSheet(LocalDate asOfDate) {
         assertNotFactoryAccount();
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
 
         // 应付余额（未结清）
         BigDecimal payableBalance = BigDecimal.ZERO;
@@ -103,7 +104,7 @@ public class FinancialReportOrchestrator {
                 new LambdaQueryWrapper<Payable>()
                         .eq(Payable::getDeleteFlag, 0)
                         .in(Payable::getStatus, "PENDING", "PARTIAL", "OVERDUE")
-                        .eq(tenantId != null, Payable::getTenantId, tenantId));
+                        .eq(Payable::getTenantId, tenantId));
         for (Payable p : payables) {
             BigDecimal paid = p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO;
             payableBalance = payableBalance.add(p.getAmount().subtract(paid));
@@ -115,7 +116,7 @@ public class FinancialReportOrchestrator {
                 new LambdaQueryWrapper<Invoice>()
                         .eq(Invoice::getDeleteFlag, 0)
                         .eq(Invoice::getStatus, "ISSUED")
-                        .eq(tenantId != null, Invoice::getTenantId, tenantId));
+                        .eq(Invoice::getTenantId, tenantId));
         for (Invoice inv : invoices) {
             invoiceBalance = invoiceBalance.add(inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO);
         }
@@ -134,7 +135,7 @@ public class FinancialReportOrchestrator {
      */
     public Map<String, Object> generateCashFlow(LocalDate startDate, LocalDate endDate) {
         assertNotFactoryAccount();
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt   = endDate.atTime(LocalTime.MAX);
 
@@ -148,7 +149,7 @@ public class FinancialReportOrchestrator {
                 new LambdaQueryWrapper<Payable>()
                         .eq(Payable::getDeleteFlag, 0)
                         .eq(Payable::getStatus, "PAID")
-                        .eq(tenantId != null, Payable::getTenantId, tenantId)
+                        .eq(Payable::getTenantId, tenantId)
                         .ge(Payable::getUpdateTime, startDt)
                         .le(Payable::getUpdateTime, endDt));
         for (Payable p : paidPayables) {
@@ -175,7 +176,7 @@ public class FinancialReportOrchestrator {
         List<ShipmentReconciliation> list = shipmentReconciliationService.list(
                 new LambdaQueryWrapper<ShipmentReconciliation>()
                         .in(ShipmentReconciliation::getStatus, "verified", "paid")
-                        .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId)
+                        .eq(ShipmentReconciliation::getTenantId, tenantId)
                         .ge(ShipmentReconciliation::getCreateTime, start)
                         .le(ShipmentReconciliation::getCreateTime, end));
         return list.stream()
@@ -187,7 +188,7 @@ public class FinancialReportOrchestrator {
         List<EcSalesRevenue> list = ecSalesRevenueService.list(
                 new LambdaQueryWrapper<EcSalesRevenue>()
                         .eq(EcSalesRevenue::getStatus, "confirmed")
-                        .eq(tenantId != null, EcSalesRevenue::getTenantId, tenantId)
+                        .eq(EcSalesRevenue::getTenantId, tenantId)
                         .ge(EcSalesRevenue::getCreateTime, start)
                         .le(EcSalesRevenue::getCreateTime, end));
         return list.stream()
@@ -199,7 +200,7 @@ public class FinancialReportOrchestrator {
         List<MaterialReconciliation> list = materialReconciliationService.list(
                 new LambdaQueryWrapper<MaterialReconciliation>()
                         .in(MaterialReconciliation::getStatus, "verified", "paid")
-                        .eq(tenantId != null, MaterialReconciliation::getTenantId, tenantId)
+                        .eq(MaterialReconciliation::getTenantId, tenantId)
                         .ge(MaterialReconciliation::getCreateTime, start)
                         .le(MaterialReconciliation::getCreateTime, end));
         return list.stream()
@@ -212,7 +213,7 @@ public class FinancialReportOrchestrator {
                 new LambdaQueryWrapper<ExpenseReimbursement>()
                         .eq(ExpenseReimbursement::getStatus, "approved")
                         .eq(ExpenseReimbursement::getDeleteFlag, 0)
-                        .eq(tenantId != null, ExpenseReimbursement::getTenantId, tenantId)
+                        .eq(ExpenseReimbursement::getTenantId, tenantId)
                         .ge(ExpenseReimbursement::getCreateTime, start)
                         .le(ExpenseReimbursement::getCreateTime, end));
         return list.stream()
@@ -225,7 +226,7 @@ public class FinancialReportOrchestrator {
                 new LambdaQueryWrapper<Invoice>()
                         .eq(Invoice::getDeleteFlag, 0)
                         .eq(Invoice::getStatus, "ISSUED")
-                        .eq(tenantId != null, Invoice::getTenantId, tenantId)
+                        .eq(Invoice::getTenantId, tenantId)
                         .ge(Invoice::getCreateTime, start)
                         .le(Invoice::getCreateTime, end));
         return list.stream()

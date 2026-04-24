@@ -29,6 +29,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -84,14 +85,13 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String receiverId = (String) safeParams.getOrDefault("receiverId", "");
         String receiverName = (String) safeParams.getOrDefault("receiverName", "");
 
-        // 提前获取 tenantId（供 keywordMatchedOrderIds 及后续 notIn 优化复用）
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
 
         final List<String> keywordMatchedOrderIds = StringUtils.hasText(orderNo)
             ? productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                     .select(ProductionOrder::getId)
-                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getTenantId, tenantId)
                     .and(w -> w.like(ProductionOrder::getFactoryName, orderNo.trim())
                         .or().like(ProductionOrder::getOrderNo, orderNo.trim())
                         .or().like(ProductionOrder::getStyleNo, orderNo.trim()))
@@ -108,8 +108,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
                 .eq(MaterialPurchase::getDeleteFlag, 0);
 
-        // 🔒 多租户隔离：非工厂账号也必须按 tenantId 过滤，防止跨租户数据泄漏
-        wrapper.eq(tenantId != null, MaterialPurchase::getTenantId, tenantId);
+        wrapper.eq(MaterialPurchase::getTenantId, tenantId);
 
         // orderNo作为通用搜索关键词，支持订单号/采购单号/物料编码/物料名称的or查询
         if (StringUtils.hasText(orderNo)) {
@@ -181,7 +180,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         List<String> scrappedOrderIds = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .select(ProductionOrder::getId)
-                        .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getTenantId, tenantId)
                         .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1)
                                 .or().eq(ProductionOrder::getStatus, "scrapped")))
                 .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
@@ -199,7 +198,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             List<String> ftOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                            .eq(ProductionOrder::getTenantId, tenantId)
                             .eq(ProductionOrder::getFactoryType, factoryType.trim().toUpperCase())
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
                             .ne(ProductionOrder::getStatus, "scrapped"))
@@ -214,7 +213,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             List<String> fnOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                            .eq(ProductionOrder::getTenantId, tenantId)
                             .like(ProductionOrder::getFactoryName, factoryName.trim())
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
                             .ne(ProductionOrder::getStatus, "scrapped"))

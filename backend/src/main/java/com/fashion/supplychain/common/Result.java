@@ -68,11 +68,23 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 失败响应
+     * 失败响应（服务端错误，HTTP 500）
      */
     public static <T> Result<T> fail(String message) {
         Result<T> result = new Result<>();
         result.setCode(500);
+        result.setMessage(message);
+        result.setData(null);
+        result.setRequestId(currentRequestId());
+        return result;
+    }
+
+    /**
+     * 客户端参数校验失败（HTTP 400）
+     */
+    public static <T> Result<T> badRequest(String message) {
+        Result<T> result = new Result<>();
+        result.setCode(400);
         result.setMessage(message);
         result.setData(null);
         result.setRequestId(currentRequestId());

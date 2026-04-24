@@ -360,7 +360,7 @@ public class DashboardOrchestrator {
                 ProductionOrder::getPlannedEndDate
             )
             .eq(ProductionOrder::getDeleteFlag, 0)
-            .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+            .eq(ProductionOrder::getTenantId, tenantId)
             .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
             .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "closed", "archived")
             .list();

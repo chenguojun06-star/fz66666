@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -48,7 +49,7 @@ public class CustomerOrchestrator {
 
         LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<Customer>()
                 .eq(Customer::getDeleteFlag, 0)
-                .eq(tenantId != null, Customer::getTenantId, tenantId)
+                .eq(Customer::getTenantId, tenantId)
                 .and(StringUtils.hasText(keyword), w -> w
                         .like(Customer::getCompanyName, keyword)
                         .or().like(Customer::getContactPerson, keyword)
@@ -76,7 +77,7 @@ public class CustomerOrchestrator {
         return productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getTenantId, tenantId)
                         .like(ProductionOrder::getCompany, customer.getCompanyName())
                         .orderByDesc(ProductionOrder::getCreateTime)
                         .last("LIMIT 100"));
@@ -86,7 +87,7 @@ public class CustomerOrchestrator {
         Long tenantId = currentTenantId();
         LambdaQueryWrapper<Customer> base = new LambdaQueryWrapper<Customer>()
                 .eq(Customer::getDeleteFlag, 0)
-                .eq(tenantId != null, Customer::getTenantId, tenantId);
+                .eq(Customer::getTenantId, tenantId);
 
         long total = customerService.count(base);
 
@@ -95,20 +96,20 @@ public class CustomerOrchestrator {
         long newThisMonth = customerService.count(
                 new LambdaQueryWrapper<Customer>()
                         .eq(Customer::getDeleteFlag, 0)
-                        .eq(tenantId != null, Customer::getTenantId, tenantId)
+                        .eq(Customer::getTenantId, tenantId)
                         .ge(Customer::getCreateTime, startOfMonth));
 
         long vip = customerService.count(
                 new LambdaQueryWrapper<Customer>()
                         .eq(Customer::getDeleteFlag, 0)
                         .eq(Customer::getCustomerLevel, "VIP")
-                        .eq(tenantId != null, Customer::getTenantId, tenantId));
+                        .eq(Customer::getTenantId, tenantId));
 
         long activeCount = customerService.count(
                 new LambdaQueryWrapper<Customer>()
                         .eq(Customer::getDeleteFlag, 0)
                         .eq(Customer::getStatus, "ACTIVE")
-                        .eq(tenantId != null, Customer::getTenantId, tenantId));
+                        .eq(Customer::getTenantId, tenantId));
 
         Map<String, Object> result = new HashMap<>();
         result.put("total", total);
@@ -171,8 +172,7 @@ public class CustomerOrchestrator {
     // ─── 工具 ───────────────────────────────────────────────────────────────
 
     private Long currentTenantId() {
-        UserContext ctx = UserContext.get();
-        return ctx != null ? ctx.getTenantId() : null;
+        return TenantAssert.requireTenantId();
     }
 
     private int parseInt(Object val, int def) {

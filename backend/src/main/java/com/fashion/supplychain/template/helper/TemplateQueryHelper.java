@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -49,10 +50,10 @@ public class TemplateQueryHelper {
         if (!StringUtils.hasText(sn)) {
             return; // 无款号，由业务方法自行校验
         }
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         long count = productionOrderService.count(new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getFactoryId, currentFactoryId)
                 .eq(ProductionOrder::getStyleNo, sn));
         if (count == 0) {
@@ -64,10 +65,10 @@ public class TemplateQueryHelper {
         // 外发工厂用户：只能看到分配给自己工厂的款式的模板
         String currentFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(currentFactoryId)) {
-            Long tenantId = UserContext.tenantId();
+            Long tenantId = TenantAssert.requireTenantId();
             List<String> allowedStyleNos = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getDeleteFlag, 0)
-                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getTenantId, tenantId)
                     .eq(ProductionOrder::getFactoryId, currentFactoryId)
                     .isNotNull(ProductionOrder::getStyleNo)
                     .ne(ProductionOrder::getStyleNo, "")
@@ -123,10 +124,10 @@ public class TemplateQueryHelper {
         // 外发工厂用户：只返回分配给本工厂的款式的模板
         String currentFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(currentFactoryId)) {
-            Long tenantId = UserContext.tenantId();
+            Long tenantId = TenantAssert.requireTenantId();
             List<String> allowedStyleNos = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getDeleteFlag, 0)
-                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getTenantId, tenantId)
                     .eq(ProductionOrder::getFactoryId, currentFactoryId)
                     .isNotNull(ProductionOrder::getStyleNo)
                     .ne(ProductionOrder::getStyleNo, "")
@@ -300,10 +301,10 @@ public class TemplateQueryHelper {
     }
 
     private List<Map<String, Object>> listProcessPriceStyleOptionsForFactory(String factoryId, String keywordText) {
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getFactoryId, factoryId)
                 .isNotNull(ProductionOrder::getStyleNo)
                 .ne(ProductionOrder::getStyleNo, "")
@@ -330,10 +331,10 @@ public class TemplateQueryHelper {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
         if (!StringUtils.hasText(sn)) return new ArrayList<>();
         String currentFactoryId = UserContext.factoryId();
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         LambdaQueryWrapper<ProductionOrder> q = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getStyleNo, sn)
                 .isNotNull(ProductionOrder::getStyleNo);
         if (StringUtils.hasText(currentFactoryId)) {

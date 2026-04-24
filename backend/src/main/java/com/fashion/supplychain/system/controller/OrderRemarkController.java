@@ -3,6 +3,7 @@ package com.fashion.supplychain.system.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -45,12 +46,12 @@ public class OrderRemarkController {
         if (!StringUtils.hasText(targetType) || !StringUtils.hasText(targetNo)) {
             return Result.fail("targetType 和 targetNo 不能为空");
         }
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
 
         List<OrderRemark> result = new ArrayList<>();
 
         LambdaQueryWrapper<OrderRemark> wrapper = new LambdaQueryWrapper<OrderRemark>()
-                .eq(tenantId != null, OrderRemark::getTenantId, tenantId)
+                .eq(OrderRemark::getTenantId, tenantId)
                 .eq(OrderRemark::getTargetType, targetType)
                 .eq(OrderRemark::getTargetNo, targetNo)
                 .eq(OrderRemark::getDeleteFlag, 0)
@@ -218,9 +219,9 @@ public class OrderRemarkController {
         if (!StringUtils.hasText(targetType) || targetNos == null || targetNos.isEmpty()) {
             return Result.success(new HashMap<>());
         }
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         List<OrderRemark> all = orderRemarkService.lambdaQuery()
-                .eq(tenantId != null, OrderRemark::getTenantId, tenantId)
+                .eq(OrderRemark::getTenantId, tenantId)
                 .eq(OrderRemark::getTargetType, targetType)
                 .in(OrderRemark::getTargetNo, targetNos)
                 .eq(OrderRemark::getDeleteFlag, 0)

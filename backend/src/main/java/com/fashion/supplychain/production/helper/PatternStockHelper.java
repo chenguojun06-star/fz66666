@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.stock.entity.SampleLoan;
@@ -43,7 +44,7 @@ public class PatternStockHelper {
     public void syncStockByOperation(PatternProduction pattern, PatternScanRecord scanRecord,
                                       String operationType, String operatorId, String operatorName) {
         if (pattern == null) return;
-        Long tenantId = UserContext.tenantId();
+        Long tenantId = TenantAssert.requireTenantId();
         int qty = pattern.getQuantity() != null && pattern.getQuantity() > 0
                 ? pattern.getQuantity() : 1;
 
@@ -55,7 +56,7 @@ public class PatternStockHelper {
                         .eq(SampleStock::getStyleNo, stock.getStyleNo())
                         .eq(SampleStock::getColor, stock.getColor())
                         .eq(SampleStock::getSize, stock.getSize())
-                        .eq(tenantId != null, SampleStock::getTenantId, tenantId);
+                        .eq(SampleStock::getTenantId, tenantId);
                 SampleStock existing = sampleStockService.getOne(q);
                 if (existing != null) {
                     throw new IllegalStateException("该颜色尺码已存在库存，不能重复扫码入库");
@@ -69,7 +70,7 @@ public class PatternStockHelper {
                     .eq(SampleStock::getDeleteFlag, 0)
                     .eq(SampleStock::getStyleNo, pattern.getStyleNo())
                     .eq(SampleStock::getColor, pattern.getColor())
-                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
+                    .eq(SampleStock::getTenantId, tenantId);
             SampleStock stock = sampleStockService.getOne(q);
             if (stock == null) {
                 log.warn("[样衣出库] 未找到对应库存记录，跳过借出登记 styleNo={}", pattern.getStyleNo());
@@ -102,7 +103,7 @@ public class PatternStockHelper {
                     .eq(SampleStock::getDeleteFlag, 0)
                     .eq(SampleStock::getStyleNo, pattern.getStyleNo())
                     .eq(SampleStock::getColor, pattern.getColor())
-                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
+                    .eq(SampleStock::getTenantId, tenantId);
             SampleStock stock = sampleStockService.getOne(sq);
             if (stock == null) {
                 log.warn("[样衣归还] 未找到库存记录，跳过 styleNo={}", pattern.getStyleNo());

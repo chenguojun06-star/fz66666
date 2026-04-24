@@ -121,7 +121,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         Factory supplier = factoryService.getById(supplierId);
@@ -184,7 +184,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
@@ -215,7 +215,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
@@ -234,7 +234,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
@@ -291,7 +291,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         LambdaQueryWrapper<MaterialStock> wrapper = new LambdaQueryWrapper<>();
@@ -321,7 +321,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         LambdaQueryWrapper<Payable> wrapper = new LambdaQueryWrapper<>();
@@ -347,7 +347,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
@@ -373,7 +373,7 @@ public class SupplierPortalController {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
-            return Result.fail("请先登录");
+            return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
         Factory supplier = factoryService.getById(supplierId);
