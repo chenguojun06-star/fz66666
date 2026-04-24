@@ -35,7 +35,7 @@ public class CragEvaluator {
                 String filtered = filterLowScoreItems(root, LOW_RELEVANCE);
                 return new CragResult(RelevanceLevel.MEDIUM, topScore, filtered);
             }
-            return new CragResult(RelevanceLevel.LOW, topScore, "");
+            return new CragResult(RelevanceLevel.LOW, topScore, knowledgeJson);
         } catch (Exception e) {
             log.debug("[CRAG] 解析知识库JSON失败，按MEDIUM处理: {}", e.getMessage());
             return new CragResult(RelevanceLevel.MEDIUM, 0.5, knowledgeJson);

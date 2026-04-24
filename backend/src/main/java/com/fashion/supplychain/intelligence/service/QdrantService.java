@@ -9,6 +9,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -78,10 +82,35 @@ public class QdrantService {
     @Value("${ai.deepseek.base-url:https://api.deepseek.com}")
     private String deepseekBaseUrl;
 
+    @Value("${intelligence.qdrant.timeout-seconds:10}")
+    private int qdrantTimeoutSeconds;
+
     @Autowired
     private ObjectMapper objectMapper;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private RestTemplate restTemplate;
+
+    private final ConcurrentHashMap<String, EmbeddingCacheEntry> embeddingCache = new ConcurrentHashMap<>();
+    private static final long EMBEDDING_CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(30);
+    private static final int EMBEDDING_CACHE_MAX = 500;
+
+    private final AtomicBoolean collectionVerified = new AtomicBoolean(false);
+    private final AtomicBoolean styleImageCollectionVerified = new AtomicBoolean(false);
+
+    private static class EmbeddingCacheEntry {
+        final float[] vector;
+        final long createdAt;
+        EmbeddingCacheEntry(float[] vector) { this.vector = vector; this.createdAt = System.currentTimeMillis(); }
+        boolean isExpired() { return System.currentTimeMillis() - createdAt > EMBEDDING_CACHE_TTL_MS; }
+    }
+
+    @PostConstruct
+    void initRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) TimeUnit.SECONDS.toMillis(Math.max(qdrantTimeoutSeconds, 5)));
+        factory.setReadTimeout((int) TimeUnit.SECONDS.toMillis(qdrantTimeoutSeconds));
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     /** F4: 启动时校验 Qdrant 集合向量维度是否与当前配置一致 */
     @PostConstruct
@@ -333,11 +362,12 @@ public class QdrantService {
     // ──────────────────────────────────────────────────────────────
 
     private void ensureCollectionExists() {
+        if (collectionVerified.get()) return;
         try {
             restTemplate.getForEntity(
                     qdrantUrl + "/collections/" + collectionName, String.class);
+            collectionVerified.set(true);
         } catch (Exception e) {
-            // collection 不存在，自动创建
             try {
                 ObjectNode body = objectMapper.createObjectNode();
                 ObjectNode params = body.putObject("vectors");
@@ -347,6 +377,7 @@ public class QdrantService {
                         qdrantUrl + "/collections/" + collectionName,
                         jsonEntity(body.toString()), String.class);
                 log.info("[Qdrant] 集合 {} 已自动创建", collectionName);
+                collectionVerified.set(true);
             } catch (Exception ex) {
                 log.warn("[Qdrant] 集合创建失败: {}", ex.getMessage());
             }
@@ -362,24 +393,34 @@ public class QdrantService {
         if (text == null || text.isBlank()) {
             return null;
         }
-        // ① Voyage AI（首选，语义质量最高）
+        String cacheKey = Integer.toHexString(text.hashCode());
+        EmbeddingCacheEntry cached = embeddingCache.get(cacheKey);
+        if (cached != null && !cached.isExpired()) {
+            return cached.vector;
+        }
+        float[] vector = null;
         if (voyageApiKey != null && !voyageApiKey.isEmpty()) {
             try {
-                return callVoyageEmbeddingApi(text);
+                vector = callVoyageEmbeddingApi(text);
             } catch (Exception e) {
                 log.warn("[Voyage] Embedding API 调用失败，降级到 DeepSeek: {}", e.getMessage());
             }
         }
-        // ② DeepSeek Embedding（备用）
-        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+        if (vector == null && deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
             try {
-                return callEmbeddingApi(text);
+                vector = callEmbeddingApi(text);
             } catch (Exception e) {
                 log.warn("[Qdrant] DeepSeek Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
             }
         }
-        // ③ 伪向量兜底
-        return pseudoEmbedding(text);
+        if (vector == null) {
+            vector = pseudoEmbedding(text);
+        }
+        embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector));
+        if (embeddingCache.size() > EMBEDDING_CACHE_MAX) {
+            embeddingCache.entrySet().removeIf(e -> e.getValue().isExpired());
+        }
+        return vector;
     }
 
     /**
@@ -614,10 +655,14 @@ public class QdrantService {
     }
 
     private void ensureStyleImageCollectionExists() {
+        if (styleImageCollectionVerified.get()) return;
         try {
             ResponseEntity<String> r = restTemplate.getForEntity(
                     qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION, String.class);
-            if (r.getStatusCode().is2xxSuccessful()) return;
+            if (r.getStatusCode().is2xxSuccessful()) {
+                styleImageCollectionVerified.set(true);
+                return;
+            }
         } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         try {
             ObjectNode body = objectMapper.createObjectNode();
@@ -628,6 +673,7 @@ public class QdrantService {
                     qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION,
                     jsonEntity(body.toString()), String.class);
             log.info("[Qdrant] 集合 {} 已自动创建", STYLE_IMAGE_COLLECTION);
+            styleImageCollectionVerified.set(true);
         } catch (Exception ex) {
             log.warn("[Qdrant] style_images集合创建失败: {}", ex.getMessage());
         }

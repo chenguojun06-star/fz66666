@@ -73,9 +73,13 @@ public class CohereRerankService {
             // 构建 documents 列表（title + keywords + content 拼接，提升语义覆盖）
             List<Map<String, String>> documents = new ArrayList<>(candidates.size());
             for (KnowledgeBase kb : candidates) {
-                String text = (kb.getTitle() != null ? kb.getTitle() : "")
-                        + (kb.getKeywords() != null ? "\n" + kb.getKeywords() : "")
-                        + (kb.getContent() != null ? "\n" + kb.getContent() : "");
+                String title = kb.getTitle() != null ? kb.getTitle() : "";
+                String keywords = kb.getKeywords() != null ? kb.getKeywords() : "";
+                String content = kb.getContent() != null ? kb.getContent() : "";
+                if (content.length() > 500) {
+                    content = content.substring(0, 500);
+                }
+                String text = title + "\n" + keywords + "\n" + content;
                 documents.add(Map.of("text", text));
             }
 

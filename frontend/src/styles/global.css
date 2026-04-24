@@ -906,7 +906,6 @@ body {
   padding: 12px 8px;
   border-bottom: 2px solid var(--table-border-color) !important;
   letter-spacing: 0.04em;
-  overflow: hidden;
 }
 
 .ant-table-thead > tr > th.ant-table-cell-align-left {
@@ -1008,7 +1007,7 @@ body {
 }
 
 .ant-table-wrapper .ant-table-thead > tr > th::before {
-  background-color: var(--table-border-color) !important;
+  background: transparent !important;
 }
 
 .ant-table-cell-scrollbar {
@@ -1026,12 +1025,12 @@ body {
   border-inline-end: none !important;
 }
 
-.ant-table-wrapper .ant-table-container table {
+.ant-table:not(.resizable-table) .ant-table-container table {
   width: 100%;
 }
 
-.resizable-table .ant-table-thead > tr > th::before {
-  z-index: 0 !important;
+.resizable-table .ant-table-container table {
+  table-layout: fixed;
 }
 
 .resizable-table .resizable-handle {
@@ -1041,7 +1040,7 @@ body {
   bottom: 0;
   width: 8px;
   cursor: col-resize;
-  z-index: 2;
+  z-index: 5;
 }
 
 .resizable-table .resizable-handle::after {

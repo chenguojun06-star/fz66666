@@ -404,7 +404,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         const explicitWidth = parseWidthPx(colRecord.width);
         const persistedWidth = columnWidths[colId];
         const smartDefaultWidth = getSmartDefaultWidth(colRecord);
-        const baseWidth = persistedWidth
+        const isResizable = resizableColumns && !maybeAction;
+        const baseWidth = (isResizable ? persistedWidth : undefined)
           ?? explicitWidth
           ?? (maybeAction ? actionColumnWidth : smartDefaultWidth);
         const clampedWidth = typeof baseWidth === 'number'
@@ -419,7 +420,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           ...safeColRecord,
           width: clampedWidth,
           colId,
-          _resizable: resizableColumns && !maybeAction,
+          _resizable: isResizable,
           fixed,
         };
       });
