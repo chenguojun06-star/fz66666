@@ -95,8 +95,9 @@ public class OrphanDataDetector {
 
     public OrphanDataScanResultDTO scan() {
         Long tenantId = UserContext.tenantId();
+        boolean isPlatformAdmin = UserContext.isSuperAdmin() && tenantId == null;
 
-        Set<String> orphanOrderIds = getOrphanOrderIds(tenantId);
+        Set<String> orphanOrderIds = isPlatformAdmin ? getAllOrphanOrderIds() : getOrphanOrderIds(tenantId);
 
         Map<String, OrphanDataScanResultDTO.CategoryStat> categoryStats = new LinkedHashMap<>();
         long totalOrphanCount = 0;
@@ -105,20 +106,20 @@ public class OrphanDataDetector {
         // 而不是整个扫描接口 500。之前仅 t_process_price_adjustment 被包裹，其余 13 个裸调用
         // 会因 t_bill_aggregation / t_receivable 等表在云端不存在而抛异常导致全接口 500。
         Map<String, Long> counts = new HashMap<>();
-        counts.put("t_scan_record",                safeCount(() -> countScanRecords(orphanOrderIds, tenantId), "t_scan_record"));
-        counts.put("t_material_purchase",           safeCount(() -> countMaterialPurchases(orphanOrderIds, tenantId), "t_material_purchase"));
-        counts.put("t_product_warehousing",         safeCount(() -> countProductWarehousing(orphanOrderIds, tenantId), "t_product_warehousing"));
-        counts.put("t_product_outstock",            safeCount(() -> countProductOutstocks(orphanOrderIds, tenantId), "t_product_outstock"));
-        counts.put("t_factory_shipment",            safeCount(() -> countFactoryShipments(orphanOrderIds, tenantId), "t_factory_shipment"));
-        counts.put("t_cutting_task",                safeCount(() -> countCuttingTasks(orphanOrderIds, tenantId), "t_cutting_task"));
-        counts.put("t_cutting_bundle",              safeCount(() -> countCuttingBundles(orphanOrderIds, tenantId), "t_cutting_bundle"));
-        counts.put("t_production_process_tracking", safeCount(() -> countProcessTrackings(orphanOrderIds, tenantId), "t_production_process_tracking"));
-        counts.put("t_process_price_adjustment",    safeCount(() -> countProcessPriceAdjustments(orphanOrderIds, tenantId), "t_process_price_adjustment"));
-        counts.put("t_material_picking",            safeCount(() -> countMaterialPickings(orphanOrderIds, tenantId), "t_material_picking"));
-        counts.put("t_material_quality_issue",      safeCount(() -> countMaterialQualityIssues(orphanOrderIds, tenantId), "t_material_quality_issue"));
-        counts.put("t_production_exception_report", safeCount(() -> countExceptionReports(orphanOrderIds, tenantId), "t_production_exception_report"));
-        counts.put("t_bill_aggregation",            safeCount(() -> countBillAggregations(orphanOrderIds, tenantId), "t_bill_aggregation"));
-        counts.put("t_receivable",                  safeCount(() -> countReceivables(orphanOrderIds, tenantId), "t_receivable"));
+        counts.put("t_scan_record",                safeCount(() -> countScanRecords(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_scan_record"));
+        counts.put("t_material_purchase",           safeCount(() -> countMaterialPurchases(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_material_purchase"));
+        counts.put("t_product_warehousing",         safeCount(() -> countProductWarehousing(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_product_warehousing"));
+        counts.put("t_product_outstock",            safeCount(() -> countProductOutstocks(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_product_outstock"));
+        counts.put("t_factory_shipment",            safeCount(() -> countFactoryShipments(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_factory_shipment"));
+        counts.put("t_cutting_task",                safeCount(() -> countCuttingTasks(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_cutting_task"));
+        counts.put("t_cutting_bundle",              safeCount(() -> countCuttingBundles(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_cutting_bundle"));
+        counts.put("t_production_process_tracking", safeCount(() -> countProcessTrackings(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_production_process_tracking"));
+        counts.put("t_process_price_adjustment",    safeCount(() -> countProcessPriceAdjustments(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_process_price_adjustment"));
+        counts.put("t_material_picking",            safeCount(() -> countMaterialPickings(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_material_picking"));
+        counts.put("t_material_quality_issue",      safeCount(() -> countMaterialQualityIssues(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_material_quality_issue"));
+        counts.put("t_production_exception_report", safeCount(() -> countExceptionReports(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_production_exception_report"));
+        counts.put("t_bill_aggregation",            safeCount(() -> countBillAggregations(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_bill_aggregation"));
+        counts.put("t_receivable",                  safeCount(() -> countReceivables(orphanOrderIds, isPlatformAdmin ? null : tenantId), "t_receivable"));
 
         for (Map.Entry<String, Long> entry : counts.entrySet()) {
             String table = entry.getKey();
@@ -140,27 +141,29 @@ public class OrphanDataDetector {
 
     public List<OrphanDataItemDTO> listOrphanData(String tableName, int page, int pageSize) {
         Long tenantId = UserContext.tenantId();
-        Set<String> orphanOrderIds = getOrphanOrderIds(tenantId);
+        boolean isPlatformAdmin = UserContext.isSuperAdmin() && tenantId == null;
+        Set<String> orphanOrderIds = isPlatformAdmin ? getAllOrphanOrderIds() : getOrphanOrderIds(tenantId);
         if (orphanOrderIds.isEmpty()) return List.of();
 
         int offset = (page - 1) * pageSize;
         Map<String, String> statusCache = batchGetOrderStatus(orphanOrderIds);
+        Long tid = isPlatformAdmin ? null : tenantId;
 
         switch (tableName) {
-            case "t_scan_record":               return listScanRecords(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_material_purchase":          return listMaterialPurchases(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_product_warehousing":        return listProductWarehousing(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_product_outstock":           return listProductOutstocks(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_factory_shipment":           return listFactoryShipments(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_cutting_task":               return listCuttingTasks(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_cutting_bundle":             return listCuttingBundles(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_production_process_tracking": return listProcessTrackings(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_process_price_adjustment":   return listProcessPriceAdjustments(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_material_picking":           return listMaterialPickings(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_material_quality_issue":     return listMaterialQualityIssues(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_production_exception_report": return listExceptionReports(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_bill_aggregation":           return listBillAggregations(orphanOrderIds, tenantId, offset, pageSize, statusCache);
-            case "t_receivable":                 return listReceivables(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_scan_record":               return listScanRecords(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_material_purchase":          return listMaterialPurchases(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_product_warehousing":        return listProductWarehousing(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_product_outstock":           return listProductOutstocks(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_factory_shipment":           return listFactoryShipments(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_cutting_task":               return listCuttingTasks(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_cutting_bundle":             return listCuttingBundles(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_production_process_tracking": return listProcessTrackings(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_process_price_adjustment":   return listProcessPriceAdjustments(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_material_picking":           return listMaterialPickings(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_material_quality_issue":     return listMaterialQualityIssues(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_production_exception_report": return listExceptionReports(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_bill_aggregation":           return listBillAggregations(orphanOrderIds, tid, offset, pageSize, statusCache);
+            case "t_receivable":                 return listReceivables(orphanOrderIds, tid, offset, pageSize, statusCache);
             default: return List.of();
         }
     }
@@ -209,13 +212,27 @@ public class OrphanDataDetector {
         Set<String> ids = new java.util.HashSet<>();
         productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId)
-                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                 .in(ProductionOrder::getStatus, ORPHAN_ORDER_STATUSES)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .list().forEach(o -> ids.add(o.getId()));
         productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId)
-                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 1)
+                .list().forEach(o -> ids.add(o.getId()));
+        return ids;
+    }
+
+    private Set<String> getAllOrphanOrderIds() {
+        Set<String> ids = new java.util.HashSet<>();
+        productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId)
+                .in(ProductionOrder::getStatus, ORPHAN_ORDER_STATUSES)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .list().forEach(o -> ids.add(o.getId()));
+        productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId)
                 .eq(ProductionOrder::getDeleteFlag, 1)
                 .list().forEach(o -> ids.add(o.getId()));
         return ids;
@@ -225,13 +242,27 @@ public class OrphanDataDetector {
         Set<String> nos = new java.util.HashSet<>();
         productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getOrderNo)
-                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                 .in(ProductionOrder::getStatus, ORPHAN_ORDER_STATUSES)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .list().forEach(o -> nos.add(o.getOrderNo()));
         productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getOrderNo)
-                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 1)
+                .list().forEach(o -> nos.add(o.getOrderNo()));
+        return nos;
+    }
+
+    private Set<String> getAllOrphanOrderNos() {
+        Set<String> nos = new java.util.HashSet<>();
+        productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getOrderNo)
+                .in(ProductionOrder::getStatus, ORPHAN_ORDER_STATUSES)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .list().forEach(o -> nos.add(o.getOrderNo()));
+        productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getOrderNo)
                 .eq(ProductionOrder::getDeleteFlag, 1)
                 .list().forEach(o -> nos.add(o.getOrderNo()));
         return nos;
@@ -266,47 +297,47 @@ public class OrphanDataDetector {
     private long countScanRecords(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return scanRecordService.lambdaQuery().in(ScanRecord::getOrderId, deadIds)
-                .eq(ScanRecord::getTenantId, tenantId).count();
+                .eq(tenantId != null, ScanRecord::getTenantId, tenantId).count();
     }
     private long countMaterialPurchases(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return materialPurchaseService.lambdaQuery().in(MaterialPurchase::getOrderId, deadIds)
-                .eq(MaterialPurchase::getTenantId, tenantId).ne(MaterialPurchase::getDeleteFlag, 1).count();
+                .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId).ne(MaterialPurchase::getDeleteFlag, 1).count();
     }
     private long countProductWarehousing(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return productWarehousingService.lambdaQuery().in(ProductWarehousing::getOrderId, deadIds)
-                .eq(ProductWarehousing::getTenantId, tenantId).ne(ProductWarehousing::getDeleteFlag, 1).count();
+                .eq(tenantId != null, ProductWarehousing::getTenantId, tenantId).ne(ProductWarehousing::getDeleteFlag, 1).count();
     }
     private long countProductOutstocks(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return productOutstockService.lambdaQuery().in(ProductOutstock::getOrderId, deadIds)
-                .eq(ProductOutstock::getTenantId, tenantId).count();
+                .eq(tenantId != null, ProductOutstock::getTenantId, tenantId).count();
     }
     private long countFactoryShipments(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return factoryShipmentService.lambdaQuery().in(FactoryShipment::getOrderId, deadIds)
-                .eq(FactoryShipment::getTenantId, tenantId).count();
+                .eq(tenantId != null, FactoryShipment::getTenantId, tenantId).count();
     }
     private long countCuttingTasks(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return cuttingTaskService.lambdaQuery().in(CuttingTask::getProductionOrderId, deadIds)
-                .eq(CuttingTask::getTenantId, tenantId).count();
+                .eq(tenantId != null, CuttingTask::getTenantId, tenantId).count();
     }
     private long countCuttingBundles(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return cuttingBundleService.lambdaQuery().in(CuttingBundle::getProductionOrderId, deadIds)
-                .eq(CuttingBundle::getTenantId, tenantId).count();
+                .eq(tenantId != null, CuttingBundle::getTenantId, tenantId).count();
     }
     private long countProcessTrackings(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return processTrackingService.lambdaQuery().in(ProductionProcessTracking::getProductionOrderId, deadIds)
-                .eq(ProductionProcessTracking::getTenantId, tenantId).count();
+                .eq(tenantId != null, ProductionProcessTracking::getTenantId, tenantId).count();
     }
     private long countProcessPriceAdjustments(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return processPriceAdjustmentService.lambdaQuery().in(ProcessPriceAdjustment::getOrderId, deadIds)
-                .eq(ProcessPriceAdjustment::getTenantId, tenantId).count();
+                .eq(tenantId != null, ProcessPriceAdjustment::getTenantId, tenantId).count();
     }
     /** 安全统计：若表不存在则返回 0，避免孤儿数据扫描因缺表整体 500 */
     private long safeCount(java.util.function.Supplier<Long> fn, String tableName) {
@@ -319,36 +350,36 @@ public class OrphanDataDetector {
     private long countMaterialPickings(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return materialPickingService.lambdaQuery().in(MaterialPicking::getOrderId, deadIds)
-                .eq(MaterialPicking::getTenantId, tenantId).count();
+                .eq(tenantId != null, MaterialPicking::getTenantId, tenantId).count();
     }
     private long countMaterialQualityIssues(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return materialQualityIssueService.lambdaQuery().in(MaterialQualityIssue::getOrderId, deadIds)
-                .eq(MaterialQualityIssue::getTenantId, tenantId).eq(MaterialQualityIssue::getDeleteFlag, 0).count();
+                .eq(tenantId != null, MaterialQualityIssue::getTenantId, tenantId).eq(MaterialQualityIssue::getDeleteFlag, 0).count();
     }
     private long countExceptionReports(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
-        Set<String> orphanOrderNos = getOrphanOrderNos(tenantId);
+        Set<String> orphanOrderNos = tenantId != null ? getOrphanOrderNos(tenantId) : getAllOrphanOrderNos();
         if (orphanOrderNos.isEmpty()) return 0;
         return exceptionReportService.lambdaQuery().in(ProductionExceptionReport::getOrderNo, orphanOrderNos)
-                .eq(ProductionExceptionReport::getTenantId, tenantId).count();
+                .eq(tenantId != null, ProductionExceptionReport::getTenantId, tenantId).count();
     }
     private long countBillAggregations(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return billAggregationService.lambdaQuery().in(BillAggregation::getOrderId, deadIds)
-                .eq(BillAggregation::getTenantId, tenantId).count();
+                .eq(tenantId != null, BillAggregation::getTenantId, tenantId).count();
     }
     private long countReceivables(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return receivableService.lambdaQuery().in(Receivable::getOrderId, deadIds)
-                .eq(Receivable::getTenantId, tenantId).count();
+                .eq(tenantId != null, Receivable::getTenantId, tenantId).count();
     }
 
     // ── list methods ──
 
     private List<OrphanDataItemDTO> listScanRecords(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return scanRecordService.lambdaQuery().in(ScanRecord::getOrderId, deadIds)
-                .eq(ScanRecord::getTenantId, tenantId)
+                .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(r -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(r.getId()); d.setTableName("t_scan_record"); d.setTableLabel("扫码记录"); d.setModule("生产管理");
@@ -361,7 +392,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listMaterialPurchases(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return materialPurchaseService.lambdaQuery().in(MaterialPurchase::getOrderId, deadIds)
-                .eq(MaterialPurchase::getTenantId, tenantId).ne(MaterialPurchase::getDeleteFlag, 1)
+                .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId).ne(MaterialPurchase::getDeleteFlag, 1)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(p -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(p.getId()); d.setTableName("t_material_purchase"); d.setTableLabel("面料采购"); d.setModule("生产管理");
@@ -374,7 +405,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listProductWarehousing(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return productWarehousingService.lambdaQuery().in(ProductWarehousing::getOrderId, deadIds)
-                .eq(ProductWarehousing::getTenantId, tenantId).ne(ProductWarehousing::getDeleteFlag, 1)
+                .eq(tenantId != null, ProductWarehousing::getTenantId, tenantId).ne(ProductWarehousing::getDeleteFlag, 1)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(w -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(w.getId()); d.setTableName("t_product_warehousing"); d.setTableLabel("成品入库"); d.setModule("生产管理");
@@ -387,7 +418,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listProductOutstocks(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return productOutstockService.lambdaQuery().in(ProductOutstock::getOrderId, deadIds)
-                .eq(ProductOutstock::getTenantId, tenantId)
+                .eq(tenantId != null, ProductOutstock::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(o -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(o.getId()); d.setTableName("t_product_outstock"); d.setTableLabel("成品出库"); d.setModule("生产管理");
@@ -400,7 +431,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listFactoryShipments(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return factoryShipmentService.lambdaQuery().in(FactoryShipment::getOrderId, deadIds)
-                .eq(FactoryShipment::getTenantId, tenantId)
+                .eq(tenantId != null, FactoryShipment::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(s -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(s.getId()); d.setTableName("t_factory_shipment"); d.setTableLabel("工厂发货"); d.setModule("生产管理");
@@ -413,7 +444,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listCuttingTasks(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return cuttingTaskService.lambdaQuery().in(CuttingTask::getProductionOrderId, deadIds)
-                .eq(CuttingTask::getTenantId, tenantId)
+                .eq(tenantId != null, CuttingTask::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(t -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(t.getId()); d.setTableName("t_cutting_task"); d.setTableLabel("裁剪任务"); d.setModule("生产管理");
@@ -426,7 +457,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listCuttingBundles(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return cuttingBundleService.lambdaQuery().in(CuttingBundle::getProductionOrderId, deadIds)
-                .eq(CuttingBundle::getTenantId, tenantId)
+                .eq(tenantId != null, CuttingBundle::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(b -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(b.getId()); d.setTableName("t_cutting_bundle"); d.setTableLabel("裁剪扎条"); d.setModule("生产管理");
@@ -439,7 +470,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listProcessTrackings(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return processTrackingService.lambdaQuery().in(ProductionProcessTracking::getProductionOrderId, deadIds)
-                .eq(ProductionProcessTracking::getTenantId, tenantId)
+                .eq(tenantId != null, ProductionProcessTracking::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(t -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(t.getId()); d.setTableName("t_production_process_tracking"); d.setTableLabel("工序追踪"); d.setModule("生产管理");
@@ -452,7 +483,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listProcessPriceAdjustments(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return processPriceAdjustmentService.lambdaQuery().in(ProcessPriceAdjustment::getOrderId, deadIds)
-                .eq(ProcessPriceAdjustment::getTenantId, tenantId)
+                .eq(tenantId != null, ProcessPriceAdjustment::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(a -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(a.getId()); d.setTableName("t_process_price_adjustment"); d.setTableLabel("工序调价"); d.setModule("生产管理");
@@ -465,7 +496,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listMaterialPickings(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return materialPickingService.lambdaQuery().in(MaterialPicking::getOrderId, deadIds)
-                .eq(MaterialPicking::getTenantId, tenantId)
+                .eq(tenantId != null, MaterialPicking::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(p -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(p.getId()); d.setTableName("t_material_picking"); d.setTableLabel("物料出库单"); d.setModule("生产管理");
@@ -478,7 +509,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listMaterialQualityIssues(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return materialQualityIssueService.lambdaQuery().in(MaterialQualityIssue::getOrderId, deadIds)
-                .eq(MaterialQualityIssue::getTenantId, tenantId).eq(MaterialQualityIssue::getDeleteFlag, 0)
+                .eq(tenantId != null, MaterialQualityIssue::getTenantId, tenantId).eq(MaterialQualityIssue::getDeleteFlag, 0)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(i -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(i.getId()); d.setTableName("t_material_quality_issue"); d.setTableLabel("物料品质异常"); d.setModule("生产管理");
@@ -493,7 +524,7 @@ public class OrphanDataDetector {
         Set<String> orphanOrderNos = getOrphanOrderNos(tenantId);
         if (orphanOrderNos.isEmpty()) return List.of();
         return exceptionReportService.lambdaQuery().in(ProductionExceptionReport::getOrderNo, orphanOrderNos)
-                .eq(ProductionExceptionReport::getTenantId, tenantId)
+                .eq(tenantId != null, ProductionExceptionReport::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(r -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(String.valueOf(r.getId())); d.setTableName("t_production_exception_report"); d.setTableLabel("生产异常报告"); d.setModule("生产管理");
@@ -505,7 +536,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listBillAggregations(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return billAggregationService.lambdaQuery().in(BillAggregation::getOrderId, deadIds)
-                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(b -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(b.getId()); d.setTableName("t_bill_aggregation"); d.setTableLabel("账单汇总"); d.setModule("财务管理");
@@ -518,7 +549,7 @@ public class OrphanDataDetector {
     }
     private List<OrphanDataItemDTO> listReceivables(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return receivableService.lambdaQuery().in(Receivable::getOrderId, deadIds)
-                .eq(Receivable::getTenantId, tenantId)
+                .eq(tenantId != null, Receivable::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(r -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(r.getId()); d.setTableName("t_receivable"); d.setTableLabel("应收款"); d.setModule("客户管理");
