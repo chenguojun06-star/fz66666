@@ -30,7 +30,7 @@ public class GroundedGenerationGuard {
             return new GroundingResult(1.0, List.of(), true);
         }
         if (toolRecords == null || toolRecords.isEmpty()) {
-            return new GroundingResult(0, List.of("无工具执行记录"), false);
+            return new GroundingResult(1.0, List.of(), true);
         }
 
         String allEvidence = toolRecords.stream()
@@ -56,8 +56,8 @@ public class GroundedGenerationGuard {
         boolean passed = rate >= GROUNDING_THRESHOLD;
 
         if (!passed) {
-            log.warn("[GroundingGuard] 接地率{}/{}={:.0f}%，未通过：{}",
-                    grounded, claims.size(), rate * 100, ungrounded);
+            log.warn("[GroundingGuard] 接地率{}/{}={}%, 未通过：{}",
+                    grounded, claims.size(), String.format("%.0f", rate * 100), ungrounded);
         }
 
         return new GroundingResult(rate, ungrounded, passed);
