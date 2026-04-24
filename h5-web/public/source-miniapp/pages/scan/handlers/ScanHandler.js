@@ -414,7 +414,7 @@ class ScanHandler {
       ...workerInfo,
       scanTime: formatLocalDateTime(new Date()),
       warehouse: warehouse || '',
-      source: 'miniprogram',
+      source: 'h5',
     };
     return {
       success: true,

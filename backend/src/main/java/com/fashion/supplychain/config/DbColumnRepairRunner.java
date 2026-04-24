@@ -255,6 +255,12 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_product_warehousing", "warehousing_end_time", "DATETIME DEFAULT NULL COMMENT '入库完成时间'");
         add("t_product_warehousing", "warehousing_operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '入库人员ID'");
         add("t_product_warehousing", "warehousing_operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '入库人员姓名'");
+        add("t_product_warehousing", "aql_level", "VARCHAR(16) DEFAULT NULL COMMENT 'AQL等级'");
+        add("t_product_warehousing", "cpk", "DECIMAL(5,2) DEFAULT NULL COMMENT '过程能力指数Cpk'");
+        add("t_product_warehousing", "ppk", "DECIMAL(5,2) DEFAULT NULL COMMENT '过程性能指数Ppk'");
+        add("t_product_warehousing", "defect_code", "VARCHAR(64) DEFAULT NULL COMMENT '缺陷代码'");
+        add("t_product_warehousing", "defect_severity", "VARCHAR(16) DEFAULT NULL COMMENT '缺陷严重度'");
+        add("t_product_warehousing", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标志'");
 
         add("t_product_outstock", "approval_status", "VARCHAR(20) DEFAULT NULL COMMENT '审批状态'");
         add("t_product_outstock", "approve_by", "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");

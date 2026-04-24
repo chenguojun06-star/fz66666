@@ -355,7 +355,7 @@ Page({
 
       var tasks = requests.map(function (req) {
         req.scanType = normalizeScanType(raw.progressStage, req.scanType || 'production');
-        req.source = 'miniprogram';
+        req.source = 'h5';
         return api.production.executeScan(req);
       });
 

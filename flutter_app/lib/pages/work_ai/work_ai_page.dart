@@ -138,10 +138,10 @@ class WorkAiPage extends GetView<WorkAiController> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.all(10),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Color(0xFFFFF1F0), Color(0xFFFFF7E6)]),
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
-            border: Border.all(color: Color(0xFFFFCCC7)),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFFFF1F0), Color(0xFFFFF7E6)]),
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+            border: Border.all(color: const Color(0xFFFFCCC7)),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
@@ -167,7 +167,7 @@ class WorkAiPage extends GetView<WorkAiController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFFFFF1F0) : Colors.white.withOpacity(0.85),
+        color: highlight ? const Color(0xFFFFF1F0) : Colors.white.withValues(alpha: 0.85),
         border: Border.all(color: highlight ? const Color(0xFFFFA39E) : const Color(0xFFFFD8D8)),
         borderRadius: BorderRadius.circular(6),
       ),
@@ -189,7 +189,7 @@ class WorkAiPage extends GetView<WorkAiController> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFF0F0F0)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 3, offset: const Offset(0, 1))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 3, offset: const Offset(0, 1))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [

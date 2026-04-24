@@ -30,6 +30,7 @@ public class SystemTableMigrator {
         ensureDictTable();
         createAdminUser(jdbc);
         fixAppStorePrices(jdbc);
+        fixSystemTableEncoding(jdbc);
         ensureMissingColumns(jdbc);
     }
 
@@ -558,6 +559,134 @@ public class SystemTableMigrator {
             }
         } catch (Exception e) {
             log.warn("Failed to add columns to t_material_picking: {}", e.getMessage());
+        }
+    }
+
+    private void fixSystemTableEncoding(JdbcTemplate jdbc) {
+        fixAppStoreEncoding(jdbc);
+        fixRoleEncoding(jdbc);
+        fixDictEncoding(jdbc);
+        fixPermissionEncoding(jdbc);
+    }
+
+    private void fixAppStoreEncoding(JdbcTemplate jdbc) {
+        if (!dbHelper.tableExists("t_app_store")) {
+            return;
+        }
+        try {
+            Integer garbledCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM t_app_store WHERE app_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                Integer.class);
+            if (garbledCount == null || garbledCount == 0) {
+                return;
+            }
+            log.info("[EncodingFix] Detected {} garbled app_store records, fixing...", garbledCount);
+            jdbc.update("UPDATE t_app_store SET app_name='下单对接', app_desc='与客户系统对接，自动同步订单数据，减少人工录入', category='CORE' WHERE app_code='ORDER_SYNC'");
+            jdbc.update("UPDATE t_app_store SET app_name='质检反馈', app_desc='质检结果实时同步，不良品反馈，质量数据分析', category='CORE' WHERE app_code='QUALITY_FEEDBACK'");
+            jdbc.update("UPDATE t_app_store SET app_name='物流对接', app_desc='物流信息实时同步，发货通知，物流轨迹跟踪', category='CORE' WHERE app_code='LOGISTICS_SYNC'");
+            jdbc.update("UPDATE t_app_store SET app_name='付款对接', app_desc='付款信息自动同步，对账管理，结算数据对接', category='CORE' WHERE app_code='PAYMENT_SYNC'");
+            jdbc.update("UPDATE t_app_store SET app_name='面辅料供应对接', app_desc='采购单自动同步、库存实时查询、价格自动更新、物流跟踪', category='CORE' WHERE app_code='MATERIAL_SUPPLY'");
+            jdbc.update("UPDATE t_app_store SET app_name='淘宝', app_desc='对接淘宝平台，导入订单、同步库存' WHERE app_code='EC_TAOBAO'");
+            jdbc.update("UPDATE t_app_store SET app_name='天猫', app_desc='对接天猫旗舰店，管理品牌订单与退换货' WHERE app_code='EC_TMALL'");
+            jdbc.update("UPDATE t_app_store SET app_name='京东', app_desc='对接京东平台，实时同步订单与物流' WHERE app_code='EC_JD'");
+            jdbc.update("UPDATE t_app_store SET app_name='抖音', app_desc='对接抖音小店，直播带货订单自动流转' WHERE app_code='EC_DOUYIN'");
+            jdbc.update("UPDATE t_app_store SET app_name='拼多多', app_desc='对接拼多多，批量订单处理与发货' WHERE app_code='EC_PINDUODUO'");
+            jdbc.update("UPDATE t_app_store SET app_name='小红书', app_desc='对接小红书商城，内容种草带来的订单管理' WHERE app_code='EC_XIAOHONGSHU'");
+            jdbc.update("UPDATE t_app_store SET app_name='微信小店', app_desc='对接微信小店与视频号，私域订单全管理' WHERE app_code='EC_WECHAT_SHOP'");
+            jdbc.update("UPDATE t_app_store SET app_name='Shopify', app_desc='对接 Shopify 独立站，跨境订单一体化管理' WHERE app_code='EC_SHOPIFY'");
+            jdbc.update("UPDATE t_app_store SET app_name='客户管理', app_desc='客户档案管理、应收账款跟踪、客户查询门户（扫码查进度）。深度整合生产数据，一站式管理您的客户关系与回款。' WHERE app_code='CRM_MODULE'");
+            jdbc.update("UPDATE t_app_store SET app_name='财税对接', app_desc='一键导出金蝶KIS / 用友T3 格式账目，工资汇总表、物料对账单、发货记录单全覆盖，告别手工录入，3分钟完成月结。' WHERE app_code='FINANCE_TAX'");
+            jdbc.update("UPDATE t_app_store SET app_name='供应商采购', app_desc='采购订单管理、收货确认、应付账款核算，与仓库库存深度联动，自动触发缺料预警，告别 Excel 采购台账。' WHERE app_code='PROCUREMENT'");
+            log.info("[EncodingFix] App store encoding fixed successfully.");
+        } catch (Exception e) {
+            log.warn("[EncodingFix] Failed to fix app store encoding: {}", e.getMessage());
+        }
+    }
+
+    private void fixRoleEncoding(JdbcTemplate jdbc) {
+        if (!dbHelper.tableExists("t_role")) {
+            return;
+        }
+        try {
+            Integer roleGarbled = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM t_role WHERE role_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                Integer.class);
+            if (roleGarbled != null && roleGarbled > 0) {
+                log.info("[EncodingFix] Detected {} garbled role records, fixing...", roleGarbled);
+                jdbc.update("UPDATE t_role SET role_name='系统管理员', description='系统管理员' WHERE role_code='admin' AND id=1");
+                jdbc.update("UPDATE t_role SET role_name='财务人员', description='财务人员' WHERE role_code='finance' AND id=2");
+                jdbc.update("UPDATE t_role SET role_name='生产人员', description='生产人员' WHERE role_code='production' AND id=3");
+                jdbc.update("UPDATE t_role SET role_name='普通用户', description='普通用户' WHERE role_code='user' AND id=4");
+            }
+        } catch (Exception e) {
+            log.warn("[EncodingFix] Failed to fix role encoding: {}", e.getMessage());
+        }
+    }
+
+    private void fixDictEncoding(JdbcTemplate jdbc) {
+        if (!dbHelper.tableExists("t_dict")) {
+            return;
+        }
+        try {
+            Integer dictGarbled = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM t_dict WHERE dict_label REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                Integer.class);
+            if (dictGarbled != null && dictGarbled > 0) {
+                log.info("[EncodingFix] Detected {} garbled dict records, fixing...", dictGarbled);
+                jdbc.update("UPDATE t_dict SET dict_label='女装' WHERE dict_code='WOMAN' AND dict_type='category'");
+                jdbc.update("UPDATE t_dict SET dict_label='男装' WHERE dict_code='MAN' AND dict_type='category'");
+                jdbc.update("UPDATE t_dict SET dict_label='童装' WHERE dict_code='KID' AND dict_type='category'");
+                jdbc.update("UPDATE t_dict SET dict_label='春季' WHERE dict_code='SPRING' AND dict_type='season'");
+                jdbc.update("UPDATE t_dict SET dict_label='夏季' WHERE dict_code='SUMMER' AND dict_type='season'");
+                jdbc.update("UPDATE t_dict SET dict_label='秋季' WHERE dict_code='AUTUMN' AND dict_type='season'");
+                jdbc.update("UPDATE t_dict SET dict_label='冬季' WHERE dict_code='WINTER' AND dict_type='season'");
+            }
+        } catch (Exception e) {
+            log.warn("[EncodingFix] Failed to fix dict encoding: {}", e.getMessage());
+        }
+    }
+
+    private void fixPermissionEncoding(JdbcTemplate jdbc) {
+        if (!dbHelper.tableExists("t_permission")) {
+            return;
+        }
+        try {
+            Integer permGarbled = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM t_permission WHERE permission_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                Integer.class);
+            if (permGarbled == null || permGarbled == 0) {
+                return;
+            }
+            log.info("[EncodingFix] Detected {} garbled permission records, fixing...", permGarbled);
+            jdbc.update("UPDATE t_permission SET permission_name='仪表盘' WHERE id=1");
+            jdbc.update("UPDATE t_permission SET permission_name='基础资料' WHERE id=2");
+            jdbc.update("UPDATE t_permission SET permission_name='样衣开发' WHERE id=6");
+            jdbc.update("UPDATE t_permission SET permission_name='下单管理' WHERE id=7");
+            jdbc.update("UPDATE t_permission SET permission_name='资料中心' WHERE id=8");
+            jdbc.update("UPDATE t_permission SET permission_name='单价维护' WHERE id=9");
+            jdbc.update("UPDATE t_permission SET permission_name='我的订单' WHERE id=10");
+            jdbc.update("UPDATE t_permission SET permission_name='物料采购' WHERE id=11");
+            jdbc.update("UPDATE t_permission SET permission_name='裁剪管理' WHERE id=12");
+            jdbc.update("UPDATE t_permission SET permission_name='生产进度' WHERE id=13");
+            jdbc.update("UPDATE t_permission SET permission_name='物料对账' WHERE id=15");
+            jdbc.update("UPDATE t_permission SET permission_name='成品结算' WHERE id=16");
+            jdbc.update("UPDATE t_permission SET permission_name='审批付款' WHERE id=17");
+            jdbc.update("UPDATE t_permission SET permission_name='人员管理' WHERE id=19");
+            jdbc.update("UPDATE t_permission SET permission_name='角色管理' WHERE id=20");
+            jdbc.update("UPDATE t_permission SET permission_name='加工厂管理' WHERE id=21");
+            jdbc.update("UPDATE t_permission SET permission_name='登录日志' WHERE id=23");
+            jdbc.update("UPDATE t_permission SET permission_name='工资支付管理' WHERE id=28713");
+            jdbc.update("UPDATE t_permission SET permission_name='工资支付查看' WHERE id=28714");
+            jdbc.update("UPDATE t_permission SET permission_name='结算审批' WHERE id=28715");
+            jdbc.update("UPDATE t_permission SET permission_name='月度经营汇总' WHERE id=55487");
+            jdbc.update("UPDATE t_permission SET permission_name='API对接管理' WHERE permission_code='MENU_TENANT_APP'");
+            jdbc.update("UPDATE t_permission SET permission_name='订单转移' WHERE permission_code='MENU_ORDER_TRANSFER'");
+            jdbc.update("UPDATE t_permission SET permission_name='智能运营中心' WHERE permission_code='MENU_INTELLIGENCE_CENTER'");
+            jdbc.update("UPDATE t_permission SET parent_name='仪表盘' WHERE id=55487");
+            jdbc.update("UPDATE t_permission SET parent_name='生产管理' WHERE id=55738");
+            log.info("[EncodingFix] Permission encoding fixed successfully.");
+        } catch (Exception e) {
+            log.warn("[EncodingFix] Failed to fix permission encoding: {}", e.getMessage());
         }
     }
 

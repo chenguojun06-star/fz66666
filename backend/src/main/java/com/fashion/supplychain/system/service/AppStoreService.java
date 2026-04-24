@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +30,7 @@ public class AppStoreService extends ServiceImpl<AppStoreMapper, AppStore> {
     public List<AppStore> listWithJson() {
         List<AppStore> appList = list();
         for (AppStore app : appList) {
+            fixMojibakeFields(app);
             parseJsonFields(app);
         }
         return appList;
@@ -40,6 +42,7 @@ public class AppStoreService extends ServiceImpl<AppStoreMapper, AppStore> {
     public AppStore getByIdWithJson(Long id) {
         AppStore app = getById(id);
         if (app != null) {
+            fixMojibakeFields(app);
             parseJsonFields(app);
         }
         return app;
@@ -79,5 +82,42 @@ public class AppStoreService extends ServiceImpl<AppStoreMapper, AppStore> {
             app.setFeatureList(new ArrayList<>());
             app.setScreenshotList(new ArrayList<>());
         }
+    }
+
+    private void fixMojibakeFields(AppStore app) {
+        app.setAppName(fixMojibake(app.getAppName()));
+        app.setAppDesc(fixMojibake(app.getAppDesc()));
+        app.setCategory(fixMojibake(app.getCategory()));
+        app.setFeatures(fixMojibake(app.getFeatures()));
+    }
+
+    private String fixMojibake(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        if (!looksMojibake(text)) {
+            return text;
+        }
+        try {
+            return new String(text.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return text;
+        }
+    }
+
+    private boolean looksMojibake(String text) {
+        boolean hasCjk = false;
+        boolean hasLatin1Ext = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '\u4e00' && c <= '\u9fff') {
+                hasCjk = true;
+                break;
+            }
+            if (c >= '\u00c0' && c <= '\u00ff') {
+                hasLatin1Ext = true;
+            }
+        }
+        return !hasCjk && hasLatin1Ext;
     }
 }
