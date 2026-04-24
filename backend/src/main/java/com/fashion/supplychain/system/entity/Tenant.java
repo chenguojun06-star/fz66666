@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -91,6 +92,7 @@ public class Tenant {
 
     /** 申请密码BCrypt（仅申请入驻流程使用，审批通过后创建账号，之后清空） */
     @TableField("apply_password")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String applyPassword;
 
     /** 最大用户数限制（0=不限制） */

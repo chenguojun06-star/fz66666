@@ -78,14 +78,21 @@ public class DataCenterQueryServiceImpl implements DataCenterQueryService {
     @Override
     @Cacheable(value = "style", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + (#styleId != null ? 'style:' + #styleId : (#styleNo != null ? 'styleByNo:' + #styleNo.trim() : 'style:null'))")
     public StyleInfo findStyle(Long styleId, String styleNo) {
+        Long tenantId = TenantAssert.requireTenantId();
         if (styleId != null) {
-            return styleInfoService.getById(styleId);
+            return styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getId, styleId)
+                    .eq(StyleInfo::getTenantId, tenantId)
+                    .one();
         }
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
         if (!StringUtils.hasText(sn)) {
             return null;
         }
-        return styleInfoService.lambdaQuery().eq(StyleInfo::getStyleNo, sn).one();
+        return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getStyleNo, sn)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .one();
     }
 
     @Override

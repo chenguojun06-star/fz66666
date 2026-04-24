@@ -423,7 +423,8 @@ public class PermissionCalculationEngine {
             if (v != null && !v.isBlank()) {
                 try {
                     out.add(Long.parseLong(v.trim()));
-                } catch (NumberFormatException ignored) {
+                } catch (NumberFormatException e) {
+                    log.debug("[PermissionCalc] 非数字ID跳过: {}", e.getMessage());
                 }
             }
         }

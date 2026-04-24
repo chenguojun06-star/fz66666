@@ -285,6 +285,7 @@ public class MaterialInboundOrchestrator {
      * @return 入库记录列表
      */
     public List<MaterialInbound> queryInboundRecords(String purchaseId, String materialCode) {
+        Long tenantId = TenantAssert.requireTenantId();
         if (purchaseId != null && !purchaseId.trim().isEmpty()) {
             return materialInboundService.listByPurchaseId(purchaseId);
         }
@@ -292,9 +293,14 @@ public class MaterialInboundOrchestrator {
             return materialInboundService.list(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialInbound>()
                     .eq(MaterialInbound::getMaterialCode, materialCode.trim())
+                    .eq(MaterialInbound::getTenantId, tenantId)
                     .orderByDesc(MaterialInbound::getInboundTime));
         }
-        return materialInboundService.list();
+        return materialInboundService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialInbound>()
+                .eq(MaterialInbound::getTenantId, tenantId)
+                .orderByDesc(MaterialInbound::getInboundTime)
+                .last("LIMIT 5000"));
     }
 
     private void syncInboundTraceRecord(MaterialInbound inbound, MaterialPurchase purchase, String sourceType) {

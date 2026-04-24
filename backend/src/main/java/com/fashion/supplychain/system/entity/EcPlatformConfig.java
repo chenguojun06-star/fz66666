@@ -1,6 +1,7 @@
 package com.fashion.supplychain.system.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -29,6 +30,7 @@ public class EcPlatformConfig {
     private String appKey;
 
     /** AppSecret / Client Secret */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String appSecret;
 
     /** 扩展字段，如 Shopify 的店铺域名 */

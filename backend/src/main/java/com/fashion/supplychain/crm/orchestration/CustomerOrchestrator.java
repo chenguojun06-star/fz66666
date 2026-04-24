@@ -62,18 +62,27 @@ public class CustomerOrchestrator {
     }
 
     public Customer getById(String id) {
-        return customerService.getById(id);
+        Long tenantId = currentTenantId();
+        return customerService.lambdaQuery()
+                .eq(Customer::getId, id)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
     }
 
     /**
      * 查询该客户关联的生产订单（通过 company 字段模糊匹配）
      */
     public List<ProductionOrder> getCustomerOrders(String customerId) {
-        Customer customer = customerService.getById(customerId);
+        Long tenantId = currentTenantId();
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, customerId)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
         if (customer == null || !StringUtils.hasText(customer.getCompanyName())) {
             return Collections.emptyList();
         }
-        Long tenantId = currentTenantId();
         return productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getDeleteFlag, 0)
@@ -126,11 +135,13 @@ public class CustomerOrchestrator {
         if (!StringUtils.hasText(customer.getCompanyName())) {
             throw new IllegalArgumentException("公司名称不能为空");
         }
+        Long tenantId = currentTenantId();
         UserContext ctx = UserContext.get();
         LocalDateTime now = LocalDateTime.now();
         customer.setCreateTime(now);
         customer.setUpdateTime(now);
         customer.setDeleteFlag(0);
+        customer.setTenantId(tenantId);
         if (!StringUtils.hasText(customer.getStatus())) {
             customer.setStatus("ACTIVE");
         }
@@ -143,7 +154,6 @@ public class CustomerOrchestrator {
         if (ctx != null) {
             customer.setCreatorId(ctx.getUserId());
             customer.setCreatorName(ctx.getUsername());
-            customer.setTenantId(ctx.getTenantId());
         }
         customerService.save(customer);
         log.info("[CRM] 新建客户: id={} company={}", customer.getId(), customer.getCompanyName());
@@ -155,6 +165,16 @@ public class CustomerOrchestrator {
         if (!StringUtils.hasText(customer.getId())) {
             throw new IllegalArgumentException("客户ID不能为空");
         }
+        Long tenantId = currentTenantId();
+        Customer existing = customerService.lambdaQuery()
+                .eq(Customer::getId, customer.getId())
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
+        if (existing == null) {
+            throw new IllegalArgumentException("客户不存在或无权操作");
+        }
+        customer.setTenantId(tenantId);
         customer.setUpdateTime(LocalDateTime.now());
         customerService.updateById(customer);
         log.info("[CRM] 更新客户: id={}", customer.getId());
@@ -165,7 +185,18 @@ public class CustomerOrchestrator {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("客户ID不能为空");
         }
-        customerService.removeById(id);
+        Long tenantId = currentTenantId();
+        Customer existing = customerService.lambdaQuery()
+                .eq(Customer::getId, id)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
+        if (existing == null) {
+            throw new IllegalArgumentException("客户不存在或无权操作");
+        }
+        existing.setDeleteFlag(1);
+        existing.setUpdateTime(LocalDateTime.now());
+        customerService.updateById(existing);
         log.info("[CRM] 删除客户: id={}", id);
     }
 

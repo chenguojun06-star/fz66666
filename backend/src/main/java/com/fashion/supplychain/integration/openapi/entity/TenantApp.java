@@ -1,6 +1,7 @@
 package com.fashion.supplychain.integration.openapi.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -39,6 +40,7 @@ public class TenantApp {
     private String appKey;
 
     /** 应用密钥（加密存储，首次生成后只显示一次） */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String appSecret;
 
     /** 状态: active=启用, disabled=停用, expired=过期 */
@@ -50,6 +52,7 @@ public class TenantApp {
     private String callbackUrl;
 
     /** 回调签名密钥（我们推送时用此密钥签名，客户验签） */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String callbackSecret;
 
     /** 客户系统的API地址（用于主动调客户接口） */

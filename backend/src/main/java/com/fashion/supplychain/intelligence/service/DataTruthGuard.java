@@ -14,12 +14,8 @@ public class DataTruthGuard {
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%?");
     private static final Set<String> FABRICATED_INDICATORS = Set.of(
-            "大约", "约", "估计", "估算", "可能", "推测", "假设", "假设性",
-            "模拟", "虚拟", "演示", "示例", "参考值", "默认值",
-            "大概", "差不多", "左右", "近似", "像",
-            "看似", "应该是", "据我了解", "据我所知", "通常来说",
-            "一般来说", "据推测", "猜测", "也许是", "或许是",
-            "估计是", "应该是约", "大概在", "应该在"
+            "模拟数据", "虚拟数据", "演示数据", "示例数据", "参考值如下",
+            "默认值如下", "假设性数据", "编造", "虚构的"
     );
 
     public static class TruthCheckResult {
@@ -71,12 +67,12 @@ public class DataTruthGuard {
                 .filter(indicator -> aiContent.contains(indicator))
                 .count();
 
-        if (!hasToolEvidence && fabricatedCount >= 1) {
+        if (!hasToolEvidence && fabricatedCount >= 2) {
             return new TruthCheckResult(false,
                     "AI输出含虚构指示词且无工具数据支撑", "ai_unverified");
         }
 
-        if (hasToolEvidence && fabricatedCount >= 2) {
+        if (hasToolEvidence && fabricatedCount >= 3) {
             return new TruthCheckResult(false,
                     "AI输出含多个虚构指示词，即使有部分工具数据也需审查", "ai_partial_unverified");
         }
@@ -130,15 +126,13 @@ public class DataTruthGuard {
 
     public String tagDataSource(String content, String source) {
         if (content == null || source == null) return content;
+        if (content.contains("[数据来源：")) return content;
         String tag = switch (source) {
             case "real" -> "[数据来源：真实业务记录]";
             case "ai_with_evidence" -> "[数据来源：AI分析+工具数据验证]";
-            case "ai_no_evidence" -> "[数据来源：AI推理，未经工具数据验证，仅供参考]";
-            case "simulated" -> "[数据来源：模拟推演，非真实数据]";
-            case "default_estimate" -> "[数据来源：系统默认估算，非实测数据]";
-            default -> "[数据来源：" + source + "]";
+            default -> null;
         };
-        if (content.contains("[数据来源：")) return content;
+        if (tag == null) return content;
         return tag + "\n\n" + content;
     }
 

@@ -3,6 +3,7 @@ package com.fashion.supplychain.integration.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -18,9 +19,11 @@ public class LogisticsProvider {
     private String expressCompanyCode;
     private String apiUrl;
     private String apiKey;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String apiSecret;
     private String merchantId;
     private String ebillAccount;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String ebillPassword;
     private String monthlyAccount;
     private Integer enabled;

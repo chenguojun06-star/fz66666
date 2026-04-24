@@ -228,31 +228,27 @@ public class AiAgentOrchestrator {
                 revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, stepWizardCards);
                 revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
 
-                // ── 数据真实性守卫：校验AI输出是否有工具数据支撑 ──
+                // ── 数据真实性守卫：校验AI输出是否有工具数据支撑（仅记日志，不修改回复） ──
                 String toolEvidence = allExecRecords.isEmpty() ? "" : allExecRecords.stream()
                         .map(r -> r.evidence).reduce((a, b) -> a + " " + b).orElse("");
                 DataTruthGuard.TruthCheckResult truthCheck = dataTruthGuard.checkAiOutputTruth(revisedContent, toolEvidence);
                 if (!truthCheck.isPassed()) {
                     log.warn("[AiAgent] 数据真实性校验未通过: {}", truthCheck.getReason());
-                    revisedContent = "⚠️ " + truthCheck.getReason() + "\n\n" + revisedContent;
                 }
                 DataTruthGuard.NumericConsistencyResult numCheck = dataTruthGuard.checkNumericConsistency(revisedContent, toolEvidence);
                 if (!numCheck.isConsistent()) {
                     log.warn("[AiAgent] 数字一致性校验异常: {}", numCheck.getMismatches());
-                    revisedContent = "⚠️ 部分数据与查询结果不一致，请以工具返回数据为准\n\n" + revisedContent;
                 }
                 revisedContent = dataTruthGuard.tagDataSource(revisedContent, truthCheck.getDataSource());
 
                 EntityFactChecker.FactCheckResult factCheck = entityFactChecker.verifyEntities(revisedContent);
                 if (!factCheck.allVerified()) {
                     log.warn("[AiAgent] 实体事实校验发现不存在的实体: {}", factCheck.phantomEntities());
-                    revisedContent = "⚠️ " + factCheck.toWarningText() + "\n\n" + revisedContent;
                 }
 
                 GroundedGenerationGuard.GroundingResult grounding = groundedGenerationGuard.verify(revisedContent, allExecRecords);
                 if (!grounding.passed()) {
                     log.warn("[AiAgent] 接地率检查未通过: rate={}", grounding.groundingRate());
-                    revisedContent = grounding.toWarningText() + "\n\n" + revisedContent;
                 }
 
                 log.info("[AiAgent] 返回最终结果给用户");
@@ -463,28 +459,26 @@ public class AiAgentOrchestrator {
                     revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, stepWizardCards);
                     revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
 
-                    // ── 数据真实性守卫：校验AI输出是否有工具数据支撑 ──
+                    // ── 数据真实性守卫：校验AI输出是否有工具数据支撑（仅记日志，不修改回复） ──
                     String streamToolEvidence = allExecRecords.isEmpty() ? "" : allExecRecords.stream()
                             .map(r -> r.evidence).reduce((a, b) -> a + " " + b).orElse("");
                     DataTruthGuard.TruthCheckResult streamTruthCheck = dataTruthGuard.checkAiOutputTruth(revisedContent, streamToolEvidence);
                     if (!streamTruthCheck.isPassed()) {
                         log.warn("[AiAgent-Stream] 数据真实性校验未通过: {}", streamTruthCheck.getReason());
-                        revisedContent = "⚠️ " + streamTruthCheck.getReason() + "\n\n" + revisedContent;
                     }
                     DataTruthGuard.NumericConsistencyResult streamNumCheck = dataTruthGuard.checkNumericConsistency(revisedContent, streamToolEvidence);
                     if (!streamNumCheck.isConsistent()) {
                         log.warn("[AiAgent-Stream] 数字一致性校验异常: {}", streamNumCheck.getMismatches());
-                        revisedContent = "⚠️ 部分数据与查询结果不一致，请以工具返回数据为准\n\n" + revisedContent;
                     }
                     revisedContent = dataTruthGuard.tagDataSource(revisedContent, streamTruthCheck.getDataSource());
 
                     EntityFactChecker.FactCheckResult streamFactCheck = entityFactChecker.verifyEntities(revisedContent);
                     if (!streamFactCheck.allVerified()) {
-                        revisedContent = "⚠️ " + streamFactCheck.toWarningText() + "\n\n" + revisedContent;
+                        log.warn("[AiAgent-Stream] 实体事实校验发现不存在的实体: {}", streamFactCheck.phantomEntities());
                     }
                     GroundedGenerationGuard.GroundingResult streamGrounding = groundedGenerationGuard.verify(revisedContent, allExecRecords);
                     if (!streamGrounding.passed()) {
-                        revisedContent = streamGrounding.toWarningText() + "\n\n" + revisedContent;
+                        log.warn("[AiAgent-Stream] 接地率检查未通过: rate={}", streamGrounding.groundingRate());
                     }
 
                     // 最终回答

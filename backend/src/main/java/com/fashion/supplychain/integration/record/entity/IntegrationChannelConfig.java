@@ -1,6 +1,7 @@
 package com.fashion.supplychain.integration.record.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,9 +36,11 @@ public class IntegrationChannelConfig {
     private String appId;
 
     /** AppSecret / MchId */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String appSecret;
 
     /** 私钥 / API密钥 */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String privateKey;
 
     /** 公钥 */
