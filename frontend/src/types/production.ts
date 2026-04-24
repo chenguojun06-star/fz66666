@@ -142,7 +142,7 @@ export interface ScanRecord extends Record<string, unknown> {
   operatorId: string;
   operatorName: string;
   scanTime: string;
-  scanType: 'material' | 'procurement' | 'production' | 'sewing' | 'ironing' | 'packaging' | 'quality' | 'warehouse' | 'cutting' | 'shipment';
+  scanType: 'cutting' | 'production' | 'quality' | 'warehouse' | 'pattern' | 'orchestration';
   scanResult: 'success' | 'failure';
   remark?: string;
   settlementStatus?: string;

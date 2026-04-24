@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
@@ -25,8 +26,6 @@ import org.springframework.util.StringUtils;
 @Component
 @Slf4j
 public class OrderProgressFillHelper {
-
-    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     private boolean isDirectCuttingOrder(ProductionOrder order) {
         if (order == null || !StringUtils.hasText(order.getOrderNo())) {
@@ -345,7 +344,7 @@ public class OrderProgressFillHelper {
     }
 
     private boolean isTerminalStatus(String status) {
-        return TERMINAL_STATUSES.contains(status == null ? "" : status.trim().toLowerCase());
+        return OrderStatusConstants.isTerminal(status);
     }
 
     private long sumDoneByStageName(Map<String, Long> doneByProcess, String stageName) {

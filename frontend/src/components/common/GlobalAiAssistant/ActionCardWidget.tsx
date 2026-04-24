@@ -1,7 +1,8 @@
 import React from 'react';
 import type { ActionCard } from './types';
 import UrgeOrderCard from './UrgeOrderCard';
-import styles from './index.module.css';
+import styles from './ActionCardWidget.module.css';
+import sharedStyles from './index.module.css';
 
 const ActionCardWidget: React.FC<{
   card: ActionCard;
@@ -28,7 +29,7 @@ const ActionCardWidget: React.FC<{
         {card.actions.map((action, i) => (
           <button
             key={i}
-            className={`${styles.actionBtn} ${action.type === 'mark_urgent' ? styles.actionBtnDanger : styles.actionBtnPrimary}`}
+            className={`${sharedStyles.actionBtn} ${action.type === 'mark_urgent' ? sharedStyles.actionBtnDanger : sharedStyles.actionBtnPrimary}`}
             onClick={() => onAction(action.type, action.path, card.orderId)}
           >
             {action.label}

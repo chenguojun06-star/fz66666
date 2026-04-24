@@ -1,4 +1,5 @@
 import type { XiaoyunInsightCardData } from '@/components/common/XiaoyunInsightCard';
+import type { OverdueFactoryCardData } from '@/components/common/GlobalAiAssistant/OverdueFactoryCardWidget';
 
 export interface XiaoyunChatPayload {
   answer?: string;
@@ -19,6 +20,7 @@ export interface ParsedXiaoyunLegacyMeta {
   bundleSplitCards: unknown[];
   stepWizardCards: unknown[];
   clarificationHints?: string[];
+  overdueFactoryCard?: OverdueFactoryCardData;
 }
 
 function safeParseJson(raw: string, _label: string): unknown[] {
@@ -117,6 +119,34 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     } catch {}
   }
 
+  let overdueFactoryCard: OverdueFactoryCardData | undefined;
+  const overdueFactoryRe = /【OVERDUE_FACTORY】([\s\S]*?)【\/OVERDUE_FACTORY】/g;
+  while ((match = overdueFactoryRe.exec(rawText)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      if (parsed && typeof parsed === 'object') {
+        const factoryGroups = Array.isArray(parsed) ? parsed : [parsed];
+        const first = factoryGroups[0] as Record<string, unknown> | undefined;
+        if (first && typeof first === 'object' && 'factoryName' in first) {
+          overdueFactoryCard = {
+            overdueCount: factoryGroups.reduce((s: number, g: Record<string, unknown>) => s + ((g.totalOrders as number) || 0), 0),
+            totalQuantity: factoryGroups.reduce((s: number, g: Record<string, unknown>) => s + ((g.totalQuantity as number) || 0), 0),
+            avgProgress: factoryGroups.length > 0
+              ? Math.round(factoryGroups.reduce((s: number, g: Record<string, unknown>) => s + ((g.avgProgress as number) || 0), 0) / factoryGroups.length)
+              : 0,
+            avgOverdueDays: factoryGroups.length > 0
+              ? Math.round(factoryGroups.reduce((s: number, g: Record<string, unknown>) => s + ((g.avgOverdueDays as number) || 0), 0) / factoryGroups.length)
+              : 0,
+            factoryGroupCount: factoryGroups.length,
+            factoryGroups: factoryGroups as OverdueFactoryCardData['factoryGroups'],
+          };
+        } else if ('overdueCount' in (parsed as Record<string, unknown>)) {
+          overdueFactoryCard = parsed as unknown as OverdueFactoryCardData;
+        }
+      }
+    } catch {}
+  }
+
   const displayText = rawText
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
@@ -126,6 +156,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     .replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '')
     .replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '')
     .replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '')
+    .replace(/【OVERDUE_FACTORY】[\s\S]*?【\/OVERDUE_FACTORY】/g, '')
     .trim();
 
   return {
@@ -138,5 +169,6 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     bundleSplitCards,
     stepWizardCards,
     clarificationHints,
+    overdueFactoryCard,
   };
 };

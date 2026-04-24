@@ -83,7 +83,7 @@ class ScanModeResolver {
       return null;
     }
     const map = {
-      procurement: { processName: '采购', progressStage: '采购', scanType: 'procurement' },
+      procurement: { processName: '采购', progressStage: '采购', scanType: 'production' },
       cutting: { processName: '裁剪', progressStage: '裁剪', scanType: 'cutting' },
       production: { processName: '车缝', progressStage: '车缝', scanType: 'production' },
       sewing: { processName: '车缝', progressStage: '车缝', scanType: 'production' },
@@ -105,8 +105,11 @@ class ScanModeResolver {
  */
 function normalizeScanType(processName, scanType) {
   const raw = String(scanType || '').trim().toLowerCase();
-  if (raw === 'production' || raw === 'quality' || raw === 'warehouse' || raw === 'cutting' || raw === 'procurement') {
+  if (raw === 'production' || raw === 'quality' || raw === 'warehouse' || raw === 'cutting') {
     return raw;
+  }
+  if (raw === 'procurement') {
+    return 'production';
   }
 
   const stage = String(processName || '').trim();
@@ -118,9 +121,6 @@ function normalizeScanType(processName, scanType) {
   }
   if (stage === '裁剪') {
     return 'cutting';
-  }
-  if (stage === '采购') {
-    return 'procurement';
   }
   return 'production';
 }

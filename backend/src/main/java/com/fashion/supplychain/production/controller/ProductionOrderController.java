@@ -389,10 +389,10 @@ public class ProductionOrderController {
      * 批量查询订单健康度评分（0-100，三维度加权：进度/交期/物料）
      */
     @PostMapping("/health-scores")
-    public Result<List<Map<String, Object>>> healthScores(@RequestBody Map<String, Object> payload) {
+    public Result<Map<String, com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO>> healthScores(@RequestBody Map<String, Object> payload) {
         @SuppressWarnings("unchecked")
         List<String> ids = (List<String>) payload.get("orderIds");
-        return Result.success(orderHealthScoreOrchestrator.batchScores(ids));
+        return Result.success(orderHealthScoreOrchestrator.batchCalculateHealth(ids));
     }
 
     private Result<?> upsert(ProductionOrder productionOrder) {

@@ -50,16 +50,9 @@ public class MaterialInboundServiceImpl extends ServiceImpl<MaterialInboundMappe
 
     @Override
     public String generateInboundNo() {
-        // 优先使用分布式锁（支持多实例部署）；Redis 不可用时降级为单机 synchronized
-        if (distributedLockService != null) {
-            return distributedLockService.executeWithStrictLock(
-                    "inbound:generateNo", 5, TimeUnit.SECONDS,
-                    this::doGenerateInboundNo);
-        }
-        // 降级：单机 synchronized
-        synchronized (this) {
-            return doGenerateInboundNo();
-        }
+        return distributedLockService.executeWithStrictLock(
+                "inbound:generateNo", 5, TimeUnit.SECONDS,
+                this::doGenerateInboundNo);
     }
 
     private String doGenerateInboundNo() {

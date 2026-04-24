@@ -9,6 +9,7 @@ import { Tooltip } from 'antd';
 import XiaoyunInsightCard from '@/components/common/XiaoyunInsightCard';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { paths } from '@/routeConfig';
+import msgStyles from './MessageBubble.module.css';
 import styles from './index.module.css';
 import MiniChartWidget from './MiniChartWidget';
 import { AiTraceCardWidget, BundleSplitCardWidget, PurchaseDocCardWidget, TeamStatusCardWidget } from './AgentCards';
@@ -18,6 +19,7 @@ import { renderSimpleMarkdown, sanitizeHtml } from './markdownUtils';
 import ActionCardWidget from './ActionCardWidget';
 import FollowUpActionPanel from './FollowUpActionPanel';
 import { RiskIndicatorWidget, SimulationWidget, ClarificationCard, FeedbackWidget } from './HyperAdvisorWidgets';
+import OverdueFactoryCardWidget from './OverdueFactoryCardWidget';
 
 export interface MessageBubbleProps {
   msg: Message;
@@ -41,15 +43,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onOpenTraceCenter, onFeedback, onJumpToIntelligence, onSafeNavigate,
   onSpeak, onPurchaseDocAction, onWizardSubmit,
 }) => (
-  <div className={`${styles.messageRow} ${msg.role === 'ai' ? styles.rowAi : styles.rowUser}`}>
+  <div className={`${msgStyles.messageRow} ${msg.role === 'ai' ? msgStyles.rowAi : msgStyles.rowUser}`}>
     {msg.role === 'ai' && (
-      <div className={styles.messageAvatar}><XiaoyunCloudAvatar size={24} active /></div>
+      <div className={msgStyles.messageAvatar}><XiaoyunCloudAvatar size={24} active /></div>
     )}
 
-    <div className={`${styles.messageBubble} ${msg.role === 'ai' ? styles.bubbleAi : styles.bubbleUser}`}>
+    <div className={`${msgStyles.messageBubble} ${msg.role === 'ai' ? msgStyles.bubbleAi : msgStyles.bubbleUser}`}>
       {msg.role === 'ai' ? (
         <div
-          className={styles.mdContent}
+          className={msgStyles.mdContent}
           onClick={(e) => {
             const el = (e.target as HTMLElement).closest?.('[data-orderno]') as HTMLElement | null;
             const orderNo = el?.dataset?.orderno;
@@ -66,20 +68,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.text.includes('【推荐追问】：') && (
-        <div className={styles.recommendWrapper}>
-          <div className={styles.recommendTitle}>你可以接着问：</div>
-          <div className={styles.recommendPills}>
+        <div className={msgStyles.recommendWrapper}>
+          <div className={msgStyles.recommendTitle}>你可以接着问：</div>
+          <div className={msgStyles.recommendPills}>
             {msg.text.split('【推荐追问】：')[1].split('|').map((q, idx) => {
               const question = q.trim();
               if (!question) return null;
-              return <div key={idx} className={styles.recommendPill} onClick={() => onSend(question)}>{question}</div>;
+              return <div key={idx} className={msgStyles.recommendPill} onClick={() => onSend(question)}>{question}</div>;
             })}
           </div>
         </div>
       )}
 
       {msg.role === 'ai' && msg.intent && (
-        <div className={styles.intentWidgetHint} onClick={() => onJumpToIntelligence(msg.text)}>
+        <div className={msgStyles.intentWidgetHint} onClick={() => onJumpToIntelligence(msg.text)}>
           <ExportOutlined /> 在智能驾驶舱展开查看完整图表
         </div>
       )}
@@ -87,7 +89,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       {msg.role === 'ai' && msg.reportType && (
         <div style={{ marginTop: 12 }}>
           <button
-            className={styles.reportDownloadBtn}
+            className={msgStyles.reportDownloadBtn}
             disabled={!!downloadingType}
             onClick={() => onDownloadReport(msg.reportType!)}
             style={{ width: '100%', marginBottom: 0 }}
@@ -99,13 +101,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && !!msg.charts?.length && (
-        <div className={styles.chartsWrapper}>
+        <div className={msgStyles.chartsWrapper}>
           {msg.charts.map((chart, i) => <MiniChartWidget key={i} chart={chart} />)}
         </div>
       )}
 
       {msg.role === 'ai' && !!msg.cards?.length && (
-        <div className={styles.teamStatusWrapper}>
+        <div className={msgStyles.teamStatusWrapper}>
           {msg.cards.map((card, i) => (
             <XiaoyunInsightCard
               key={`${card.title ?? 'insight'}-${i}`}
@@ -118,7 +120,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && !!msg.actionCards?.length && (
-        <div className={styles.actionCardsWrapper}>
+        <div className={msgStyles.actionCardsWrapper}>
           {msg.actionCards.map((card, i) => (
             <ActionCardWidget
               key={i}
@@ -135,7 +137,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && !!msg.teamStatusCards?.length && (
-        <div className={styles.teamStatusWrapper}>
+        <div className={msgStyles.teamStatusWrapper}>
           {msg.teamStatusCards.map((card, i) => (
             <TeamStatusCardWidget
               key={`${card.orderNo ?? 'team'}-${i}`}
@@ -147,7 +149,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && !!msg.bundleSplitCards?.length && (
-        <div className={styles.teamStatusWrapper}>
+        <div className={msgStyles.teamStatusWrapper}>
           {msg.bundleSplitCards.map((card, i) => (
             <BundleSplitCardWidget
               key={`${card.sourceBundleId ?? card.rootBundleId ?? 'split'}-${i}`}
@@ -170,7 +172,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && msg.purchaseDocCard && (
-        <div className={styles.teamStatusWrapper}>
+        <div className={msgStyles.teamStatusWrapper}>
           <PurchaseDocCardWidget
             card={msg.purchaseDocCard}
             onAutoAction={(mode, card) => void onPurchaseDocAction(msg.id, mode, card)}
@@ -179,7 +181,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && !!msg.stepWizardCards?.length && (
-        <div className={styles.teamStatusWrapper}>
+        <div className={msgStyles.teamStatusWrapper}>
           {msg.stepWizardCards.map((card, i) => (
             <StepWizardCard
               key={`${card.wizardType}-${i}`}
@@ -193,7 +195,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && msg.agentCommandId && (
-        <div className={styles.quickActionsRow}>
+        <div className={msgStyles.quickActionsRow}>
           <button className={styles.actionBtn} onClick={() => void onShowAgentTrace(msg.agentCommandId)}>查看执行轨迹</button>
           <button className={styles.actionBtn} onClick={() => onOpenTraceCenter(msg.agentCommandId)}>打开独立页</button>
           <button className={styles.actionBtn} onClick={() => void onShowRecentTraces()}>最近执行记录</button>
@@ -201,11 +203,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       {msg.role === 'ai' && msg.agentTraceCard && (
-        <div className={styles.teamStatusWrapper}><AiTraceCardWidget card={msg.agentTraceCard} /></div>
+        <div className={msgStyles.teamStatusWrapper}><AiTraceCardWidget card={msg.agentTraceCard} /></div>
       )}
 
       {msg.role === 'ai' && !!msg.quickActions?.length && (
-        <div className={styles.quickActionsRow}>
+        <div className={msgStyles.quickActionsRow}>
           {msg.quickActions.map((action, i) => (
             <button
               key={i}
@@ -260,12 +262,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       {msg.role === 'ai' && msg.needsClarification && <ClarificationCard missingInfo={msg.clarificationHints} onAsk={(q) => onSend(q)} />}
       {msg.role === 'ai' && !!msg.riskIndicators?.length && <RiskIndicatorWidget items={msg.riskIndicators} />}
       {msg.role === 'ai' && msg.simulation && <SimulationWidget data={msg.simulation} />}
-      {/* P0: 显示反馈按钮 — traceId (HyperAdvisor) 或 agentCommandId (AI Agent) 均可触发 */}
+      {msg.role === 'ai' && msg.overdueFactoryCard && (
+        <OverdueFactoryCardWidget data={msg.overdueFactoryCard} onNavigate={(path) => onSafeNavigate(path)} />
+      )}
       {msg.role === 'ai' && (msg.traceId || msg.agentCommandId) && <FeedbackWidget msg={msg} onFeedback={onFeedback} />}
     </div>
 
     {msg.role === 'ai' && (
-      <button className={styles.speechBtn} onClick={() => onSpeak(msg.text)} title="朗读回答">
+      <button className={msgStyles.speechBtn} onClick={() => onSpeak(msg.text)} title="朗读回答">
         <SoundOutlined />
       </button>
     )}

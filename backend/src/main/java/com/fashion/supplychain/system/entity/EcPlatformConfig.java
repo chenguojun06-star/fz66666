@@ -36,6 +36,9 @@ public class EcPlatformConfig {
     /** 扩展字段，如 Shopify 的店铺域名 */
     private String extraField;
 
+    /** 物流回传API地址（平台发货回调URL），填写后系统出库自动回传物流信息 */
+    private String callbackUrl;
+
     /** 状态：ACTIVE / DISABLED */
     private String status;
 

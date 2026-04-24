@@ -63,45 +63,6 @@ public class OrderHealthScoreOrchestrator {
     }
 
     /**
-     * 批量计算订单健康分（向后兼容，接收 String 类型订单 ID，返回 Map）
-     * @deprecated 请使用 batchCalculateHealth(List<Long>) 替换
-     */
-    @Deprecated(since = "2026-03-22", forRemoval = false)
-    public List<Map<String, Object>> batchScores(List<String> orderIds) {
-        if (orderIds == null || orderIds.isEmpty()) return Collections.emptyList();
-        Long tenantId = UserContext.tenantId();
-
-        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                .in(ProductionOrder::getId,
-                    orderIds.stream()
-                        .map(id -> {
-                            try { return Long.parseLong(id); } catch (NumberFormatException e) { return null; }
-                        })
-                        .filter(java.util.Objects::nonNull)
-                        .collect(Collectors.toList()))
-                .eq(ProductionOrder::getTenantId, tenantId)
-                .list();
-
-        Map<String, ProductionOrder> byId = new HashMap<>();
-        for (ProductionOrder o : orders) byId.put(String.valueOf(o.getId()), o);
-
-        List<Map<String, Object>> result = new ArrayList<>(orderIds.size());
-        for (String id : orderIds) {
-            ProductionOrder o = byId.get(id);
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("orderId", id);
-            if (o != null) {
-                int score = calcScore(o);
-                item.put("score", score);
-                item.put("level", scoreToLevel(score));
-                item.put("hint", calculateBadge(score));
-            }
-            result.add(item);
-        }
-        return result;
-    }
-
-    /**
      * 获取租户所有订单的健康度评分（按风险排序）
      */
     public List<OrderHealthScoreDTO> getTenantOrdersHealthScores() {

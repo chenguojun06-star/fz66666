@@ -1,7 +1,7 @@
 import React from 'react';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { ActionCard } from './types';
-import styles from './index.module.css';
+import styles from './UrgeOrderCard.module.css';
 
 /** 催单内联编辑卡片 — 跟单员/老板直接在 AI 对话中填写出货日期和备注 */
 const UrgeOrderCard: React.FC<{ card: ActionCard; onSaved: () => void }> = ({ card, onSaved }) => {

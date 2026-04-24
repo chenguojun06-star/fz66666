@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.util.ProductionOrderUtils;
 import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
@@ -244,10 +245,7 @@ public class ProductionOrderCommandService {
         productionOrder.setFactoryType(snapshot.getFactoryType());
     }
 
-    private static final Set<String> TERMINAL_STATUSES =
-            Set.of("completed", "cancelled", "scrapped", "archived", "closed");
-
     private boolean isTerminalStatus(String status) {
-        return status != null && TERMINAL_STATUSES.contains(status.trim().toLowerCase());
+        return OrderStatusConstants.isTerminal(status);
     }
 }

@@ -160,11 +160,43 @@ public class OpenApiMaterialHelper {
 
             log.info("[面辅料供应] 收到供应商订单确认: purchaseOrderNo={}, status={}", purchaseOrderNo, confirmStatus);
 
+            MaterialPurchase purchase = materialPurchaseService.getOne(
+                    new LambdaQueryWrapper<MaterialPurchase>()
+                            .eq(MaterialPurchase::getPurchaseNo, purchaseOrderNo)
+                            .eq(app.getTenantId() != null, MaterialPurchase::getTenantId, app.getTenantId())
+                            .last("LIMIT 1"), false);
+            if (purchase != null) {
+                String newStatus = switch (confirmStatus) {
+                    case "ACCEPTED", "CONFIRMED" -> "confirmed";
+                    case "REJECTED" -> "rejected";
+                    case "IN_PRODUCTION" -> "in_production";
+                    case "SHIPPED" -> "shipped";
+                    default -> confirmStatus.toLowerCase();
+                };
+                purchase.setStatus(newStatus);
+                if (request.get("estimatedDeliveryDate") != null) {
+                    try {
+                        purchase.setExpectedArrivalDate(
+                                LocalDate.parse((String) request.get("estimatedDeliveryDate")).atStartOfDay());
+                    } catch (Exception e) {
+                        log.warn("[面辅料供应] 预计送达日期解析失败: {}", e.getMessage());
+                    }
+                }
+                if (request.get("supplierOrderNo") != null) {
+                    purchase.setRemark((purchase.getRemark() != null ? purchase.getRemark() + " | " : "")
+                            + "供应商单号: " + request.get("supplierOrderNo"));
+                }
+                materialPurchaseService.updateById(purchase);
+                log.info("[面辅料供应] 采购单状态已更新: {} → {}", purchaseOrderNo, newStatus);
+            } else {
+                log.warn("[面辅料供应] 未找到采购单: {}, 可能尚未在系统创建", purchaseOrderNo);
+            }
+
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("purchaseOrderNo", purchaseOrderNo);
             result.put("confirmStatus", confirmStatus);
             result.put("receivedAt", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            result.put("message", "采购单确认已接收");
+            result.put("message", "采购单确认已接收并更新状态");
             return result;
         } catch (IllegalArgumentException e) {
             throw e;
@@ -194,10 +226,36 @@ public class OpenApiMaterialHelper {
 
             log.info("[面辅料供应] 收到供应商价格更新: {} 条记录", priceUpdates.size());
 
+            int updatedCount = 0;
+            for (Map<String, Object> update : priceUpdates) {
+                String materialCode = (String) update.get("materialCode");
+                Object newPriceObj = update.get("newPrice");
+                if (!StringUtils.hasText(materialCode) || newPriceObj == null) continue;
+
+                try {
+                    BigDecimal newPrice = new BigDecimal(newPriceObj.toString());
+                    List<MaterialPurchase> purchases = materialPurchaseService.list(
+                            new LambdaQueryWrapper<MaterialPurchase>()
+                                    .eq(MaterialPurchase::getMaterialCode, materialCode)
+                                    .eq(app.getTenantId() != null, MaterialPurchase::getTenantId, app.getTenantId()));
+                    for (MaterialPurchase p : purchases) {
+                        p.setUnitPrice(newPrice);
+                    }
+                    if (!purchases.isEmpty()) {
+                        materialPurchaseService.updateBatchById(purchases);
+                        updatedCount += purchases.size();
+                    }
+                } catch (Exception e) {
+                    log.warn("[面辅料供应] 价格更新失败 materialCode={}: {}", materialCode, e.getMessage());
+                }
+            }
+            log.info("[面辅料供应] 价格更新完成: 影响采购单{}条", updatedCount);
+
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("updatedCount", priceUpdates.size());
+            result.put("affectedPurchases", updatedCount);
             result.put("receivedAt", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            result.put("message", "价格更新已接收，共 " + priceUpdates.size() + " 条");
+            result.put("message", "价格更新已接收并同步，共 " + priceUpdates.size() + " 条物料，影响 " + updatedCount + " 条采购单");
             return result;
         } catch (IllegalArgumentException e) {
             throw e;
@@ -232,11 +290,29 @@ public class OpenApiMaterialHelper {
 
             log.info("[面辅料供应] 收到供应商发货通知: purchaseOrderNo={}, shippingNo={}", purchaseOrderNo, shippingNo);
 
+            MaterialPurchase purchase = materialPurchaseService.getOne(
+                    new LambdaQueryWrapper<MaterialPurchase>()
+                            .eq(MaterialPurchase::getPurchaseNo, purchaseOrderNo)
+                            .eq(app.getTenantId() != null, MaterialPurchase::getTenantId, app.getTenantId())
+                            .last("LIMIT 1"), false);
+            if (purchase != null) {
+                purchase.setStatus("shipped");
+                String remark = "物流单号: " + shippingNo;
+                if (request.get("logisticsCompany") != null) {
+                    remark += " | 物流公司: " + request.get("logisticsCompany");
+                }
+                purchase.setRemark((purchase.getRemark() != null ? purchase.getRemark() + " | " : "") + remark);
+                materialPurchaseService.updateById(purchase);
+                log.info("[面辅料供应] 采购单物流信息已更新: {} → shipped", purchaseOrderNo);
+            } else {
+                log.warn("[面辅料供应] 未找到采购单: {}, 物流信息暂存", purchaseOrderNo);
+            }
+
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("purchaseOrderNo", purchaseOrderNo);
             result.put("shippingNo", shippingNo);
             result.put("receivedAt", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            result.put("message", "发货物流信息已接收，可在【仓库管理→面辅料库存】查看");
+            result.put("message", "发货物流信息已接收并更新采购单状态");
             result.put("viewUrl", "/warehouse/material");
             return result;
         } catch (IllegalArgumentException e) {

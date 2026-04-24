@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.production.constants.ProductionConstants;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -30,9 +31,7 @@ import java.util.Set;
 @Slf4j
 public class ProductionScanStageSupport {
 
-    private static final String[] FIXED_PRODUCTION_NODES = {
-            "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"
-    };
+    private static final String[] FIXED_PRODUCTION_NODES = ProductionConstants.FIXED_PRODUCTION_NODES_ARRAY;
 
     private static final Map<String, String> STAGE_KEY_TO_PARENT = new LinkedHashMap<>();
 
@@ -93,6 +92,9 @@ public class ProductionScanStageSupport {
         String targetParent = normalizeFixedProductionNodeName(progressStage);
         int currentIdx = indexOfFixedNode(targetParent);
         if (currentIdx <= 0) {
+            if (targetParent == null && StringUtils.hasText(progressStage)) {
+                log.warn("子工序 '{}' 未映射到父节点，跳过阶段门禁: orderNo={}", progressStage, order.getOrderNo());
+            }
             return;
         }
 

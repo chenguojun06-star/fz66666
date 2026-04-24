@@ -4,11 +4,24 @@ import { Card, Row, Col, Tag, Button, Form, Input, Select, InputNumber, App, Spi
 import ResizableModal from '@/components/common/ResizableModal';
 import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, BookOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { appStoreService } from '@/services/system/appStore';
+import { appStoreService, ecPlatformConfigService } from '@/services/system/appStore';
 import type { MyAppInfo } from '@/services/system/appStore';
 import './index.css';
 
 const { Text } = Typography;
+
+const EC_PLATFORM_MAP: Record<string, { code: string; label: string; extraHint: string }> = {
+  EC_TAOBAO:      { code: 'TAOBAO',      label: '淘宝',   extraHint: '' },
+  EC_TMALL:       { code: 'TMALL',       label: '天猫',   extraHint: '' },
+  EC_JD:          { code: 'JD',          label: '京东',   extraHint: '' },
+  EC_DOUYIN:      { code: 'DOUYIN',      label: '抖音',   extraHint: '' },
+  EC_PINDUODUO:   { code: 'PINDUODUO',   label: '拼多多', extraHint: '' },
+  EC_XIAOHONGSHU: { code: 'XIAOHONGSHU', label: '小红书', extraHint: '' },
+  EC_WECHAT_SHOP: { code: 'WECHAT_SHOP', label: '微信小店', extraHint: '' },
+  EC_SHOPIFY:     { code: 'SHOPIFY',     label: 'Shopify', extraHint: '店铺域名，如 mystore.myshopify.com' },
+};
+
+const isEcApp = (appCode: string) => !!EC_PLATFORM_MAP[appCode];
 
 interface AppStoreItem {
   id: number;
@@ -178,22 +191,39 @@ const AppStore: React.FC = () => {
   const handleSetupComplete = async () => {
     try {
       const values = await setupForm.validateFields();
-      const { callbackUrl, externalApiUrl } = values;
-      if ((callbackUrl || externalApiUrl) && wizardData.tenantAppId) {
-        setSetupLoading(true);
-        try {
-          await appStoreService.quickSetup(wizardData.tenantAppId, {
-            callbackUrl: callbackUrl || undefined,
-            externalApiUrl: externalApiUrl || undefined,
-          });
-          message.success(' 配置完成！API对接已就绪');
-          setWizardStep(2);
-        } catch { message.warning('URL保存失败，您可以稍后在「API对接管理」中配置'); }
-        finally { setSetupLoading(false); }
-      } else {
-        message.success(' 试用已开通！您可以稍后配置API地址');
+      setSetupLoading(true);
+      try {
+        if (isEcApp(wizardData.appCode || '')) {
+          const ecInfo = EC_PLATFORM_MAP[wizardData.appCode || ''];
+          if (ecInfo && values.ecAppKey && values.ecAppSecret) {
+            await ecPlatformConfigService.save({
+              platformCode: ecInfo.code,
+              shopName: values.shopName || '',
+              appKey: values.ecAppKey,
+              appSecret: values.ecAppSecret,
+              extraField: values.extraField || '',
+              callbackUrl: values.callbackUrl || '',
+            });
+          }
+          if (wizardData.tenantAppId && values.callbackUrl) {
+            await appStoreService.quickSetup(wizardData.tenantAppId, {
+              callbackUrl: values.callbackUrl,
+            });
+          }
+          message.success(`${EC_PLATFORM_MAP[wizardData.appCode || '']?.label || '电商平台'}凭证配置完成！系统已就绪`);
+        } else {
+          const { callbackUrl, externalApiUrl } = values;
+          if ((callbackUrl || externalApiUrl) && wizardData.tenantAppId) {
+            await appStoreService.quickSetup(wizardData.tenantAppId, {
+              callbackUrl: callbackUrl || undefined,
+              externalApiUrl: externalApiUrl || undefined,
+            });
+          }
+          message.success('配置完成！API对接已就绪');
+        }
         setWizardStep(2);
-      }
+      } catch { message.warning('配置保存失败，您可以稍后在「API对接管理」中配置'); }
+      finally { setSetupLoading(false); }
       fetchMyApps();
     } catch { /* form validation */ }
   };
@@ -525,32 +555,66 @@ const AppStore: React.FC = () => {
 
         {wizardStep === 1 && (
           <div>
-            <Alert type="info" showIcon title="只需填写您的接口地址，内部API已全部自动配置好"
-              description="我们会将数据推送到您填写的回调地址。如果您需要主动调用我们的API，使用上一步的凭证即可。"
-              style={{ marginBottom: 16 }} />
-            <Form form={setupForm} layout="vertical" size="small">
-              <Form.Item
-                label={<span>回调地址（Webhook）<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>我们会向此地址推送数据</Text></span>}
-                name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}
-              >
-                <Input placeholder={MODULE_CONFIG[wizardData.appCode || '']?.urlHint || 'https://your-system.com/webhook/callback'} prefix={<LinkOutlined />} />
-              </Form.Item>
-              <Form.Item
-                label={<span>您的API地址<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>用于我们主动调用您的系统</Text></span>}
-                name="externalApiUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}
-              >
-                <Input placeholder="https://your-system.com/api" prefix={<ApiOutlined />} />
-              </Form.Item>
-            </Form>
-            <Divider style={{ margin: '16px 0' }} />
-            <div style={{ background: '#f6f8fa', borderRadius: 6, padding: 12, marginBottom: 16, fontSize: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}> 不确定填什么？</div>
-              <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
-                <li><strong>回调地址</strong>：您系统中接收推送通知的URL（如质检结果、物流信息）</li>
-                <li><strong>您的API地址</strong>：我们主动调用您系统的地址（如查询订单状态）</li>
-                <li>两个地址都可以稍后再填，不影响试用开通</li>
-              </ul>
-            </div>
+            {isEcApp(wizardData.appCode || '') ? (
+              <>
+                <Alert type="info" showIcon title={`配置${EC_PLATFORM_MAP[wizardData.appCode || '']?.label || '电商平台'}对接凭证`}
+                  description="填写平台颁发的AppKey和AppSecret，系统将自动接收平台推单并回传物流信息。"
+                  style={{ marginBottom: 16 }} />
+                <Form form={setupForm} layout="vertical" size="small">
+                  <Form.Item label="店铺名称" name="shopName">
+                    <Input placeholder="请输入店铺名称" />
+                  </Form.Item>
+                  <Form.Item label="AppKey / Client ID" name="ecAppKey" rules={[{ required: true, message: '请输入AppKey' }]}>
+                    <Input placeholder="平台颁发的AppKey或Client ID" />
+                  </Form.Item>
+                  <Form.Item label="AppSecret / Client Secret" name="ecAppSecret" rules={[{ required: true, message: '请输入AppSecret' }]}>
+                    <Input.Password placeholder="平台颁发的AppSecret或Client Secret" />
+                  </Form.Item>
+                  {EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint && (
+                    <Form.Item label={
+                      <span>扩展字段<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                        {EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint}
+                      </Text></span>
+                    } name="extraField">
+                      <Input placeholder={EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint} />
+                    </Form.Item>
+                  )}
+                  <Form.Item label={<span>物流回传地址<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>出库后自动回传物流信息到此地址</Text></span>}
+                    name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}>
+                    <Input placeholder="https://open.platform.com/api/logistics/callback" prefix={<LinkOutlined />} />
+                  </Form.Item>
+                </Form>
+              </>
+            ) : (
+              <>
+                <Alert type="info" showIcon title="只需填写您的接口地址，内部API已全部自动配置好"
+                  description="我们会将数据推送到您填写的回调地址。如果您需要主动调用我们的API，使用上一步的凭证即可。"
+                  style={{ marginBottom: 16 }} />
+                <Form form={setupForm} layout="vertical" size="small">
+                  <Form.Item
+                    label={<span>回调地址（Webhook）<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>我们会向此地址推送数据</Text></span>}
+                    name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}
+                  >
+                    <Input placeholder={MODULE_CONFIG[wizardData.appCode || '']?.urlHint || 'https://your-system.com/webhook/callback'} prefix={<LinkOutlined />} />
+                  </Form.Item>
+                  <Form.Item
+                    label={<span>您的API地址<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>用于我们主动调用您的系统</Text></span>}
+                    name="externalApiUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}
+                  >
+                    <Input placeholder="https://your-system.com/api" prefix={<ApiOutlined />} />
+                  </Form.Item>
+                </Form>
+                <Divider style={{ margin: '16px 0' }} />
+                <div style={{ background: '#f6f8fa', borderRadius: 6, padding: 12, marginBottom: 16, fontSize: 12 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}> 不确定填什么？</div>
+                  <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
+                    <li><strong>回调地址</strong>：您系统中接收推送通知的URL（如质检结果、物流信息）</li>
+                    <li><strong>您的API地址</strong>：我们主动调用您系统的地址（如查询订单状态）</li>
+                    <li>两个地址都可以稍后再填，不影响试用开通</li>
+                  </ul>
+                </div>
+              </>
+            )}
             <div style={{ textAlign: 'right' }}>
               <Button style={{ marginRight: 8 }} onClick={() => setWizardStep(0)}>上一步</Button>
               <Button style={{ marginRight: 8 }} onClick={handleSetupSkip}>稍后配置</Button>

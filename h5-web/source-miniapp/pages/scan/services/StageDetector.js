@@ -60,13 +60,13 @@ class StageDetector {
     // ⚠️ 这套规则仅作兜底，后端 /process-config 接口现在已统一返回 scanType
     // 工序名称到 scanType 的映射规则
     this.scanTypeRules = {
-      采购: 'procurement',
+      采购: 'production',
       裁剪: 'cutting',
       质检: 'quality',
       入库: 'warehouse',
     };
     // 合法的 scanType 集合（用于校验后端返回值）
-    this.VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting', 'procurement']);
+    this.VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting']);
     // 默认 scanType（不在上述规则中的工序）
     this.defaultScanType = 'production';
   }
@@ -225,16 +225,8 @@ class StageDetector {
     );
 
     if (currentIndex < 0) {
-      console.warn(
-        `[StageDetector] 当前工序[${currentProgress}]不在订单[${orderNo}]的配置中`
-      );
-      return {
-        processName: currentProgress,
-        progressStage: currentProgress,
-        scanType: this._inferScanType(currentProgress),
-        hint: `当前工序: ${currentProgress}`,
-        isCompleted: false,
-      };
+      // 历史 bug：此处曾软兼容返回推断工序，导致当工序名与配置不匹配时误展示错误工序页面。
+      throw new Error(`当前工序「${currentProgress}」不在订单[${orderNo}]的工序配置中，请在PC端检查工序模板配置`);
     }
 
     // ✅ 修复：后端 currentProcessName 语义 = "第一个尚未完成的工序"
@@ -766,40 +758,37 @@ class StageDetector {
    * @returns {Promise<Array>} 扫码记录数组
    */
   async _getScanHistory(orderNo, bundleNo) {
-    // ⚠️ 注意：此处不能静默 catch 并返回 []！
-    // 若网络异常返回空数组，会导致 scannedProcessNames={} → 所有工序都被认为未完成
-    // → 始终识别第一个工序而非实际下一工序 →「大烫一直识别、扫码无效」循环问题
-    // 正确做法：网络异常直接抛出，让上层显示「网络异常，请检查网络后重试」
-    const historyRes = await this.api.production.listScans({
-      page: 1,
-      pageSize: 100,
-      orderNo: orderNo,
-      bundleNo: bundleNo,
-    });
+    var allRecords = [];
+    var page = 1;
+    var pageSize = 200;
+    var maxPages = 5;
+    while (page <= maxPages) {
+      var historyRes = await this.api.production.listScans({
+        page: page,
+        pageSize: pageSize,
+        orderNo: orderNo,
+        bundleNo: bundleNo,
+      });
+      var records = historyRes && historyRes.records ? historyRes.records : [];
+      if (records.length === 0) break;
+      allRecords = allRecords.concat(records);
+      if (records.length < pageSize) break;
+      page++;
+    }
 
-    const allRecords = historyRes && historyRes.records ? historyRes.records : [];
+    var manualRecords = allRecords.filter(function(record) {
+      var requestId = (record.requestId || '').trim();
+      var scanType = (record.scanType || '').toLowerCase();
 
-    // ✅ 修复：过滤掉系统自动生成的记录
-    // 统计手动扫码的【生产工序】记录（车缝、大烫、质检等）
-    const manualRecords = allRecords.filter(record => {
-      const requestId = (record.requestId || '').trim();
-      const scanType = (record.scanType || '').toLowerCase();
-
-      // 排除系统自动生成的记录（根据 requestId 前缀判断）
-      const isSystemGenerated =
+      var isSystemGenerated =
         requestId.startsWith('ORDER_CREATED:') ||
         requestId.startsWith('CUTTING_BUNDLED:') ||
         requestId.startsWith('ORDER_PROCUREMENT:') ||
         requestId.startsWith('WAREHOUSING:') ||
         requestId.startsWith('SYSTEM:');
 
-      // 统计 production 和 quality 类型的扫码记录
-      const isValidScan = scanType === 'production' || scanType === 'quality' || scanType === 'cutting' || scanType === 'warehouse';
-
-      // ✅ 修复：只统计扫码成功的记录，失败记录不应阻断工序流转
-      // 原因：若某次扫码 scanResult='fail'，该工序实际未完成，
-      //       不能将其计入 scannedProcessNames，否则下次扫同一菲号会跳到错误的下一工序
-      const isSuccess = record.scanResult === 'success';
+      var isValidScan = scanType === 'production' || scanType === 'quality' || scanType === 'cutting' || scanType === 'warehouse';
+      var isSuccess = record.scanResult === 'success';
 
       return !isSystemGenerated && isValidScan && isSuccess;
     });

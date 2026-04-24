@@ -36,6 +36,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Lazy;
 
 @Service
@@ -232,6 +233,7 @@ public class StyleInfoOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean save(StyleInfo styleInfo) {
         if (styleInfo == null) {
             throw new IllegalArgumentException("参数错误");
@@ -300,6 +302,7 @@ public class StyleInfoOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean update(StyleInfo styleInfo) {
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
@@ -419,6 +422,7 @@ public class StyleInfoOrchestrator {
      * 若存在未删除的生产订单则拒绝删除。
      */
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean delete(Long id) {
         long activeOrders = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
@@ -436,6 +440,7 @@ public class StyleInfoOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public Object deleteWithApproval(Long id, String reason) {
         StyleInfo style = styleInfoService.getById(id);
         if (style == null) {

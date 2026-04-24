@@ -102,6 +102,11 @@ async function handleUndo(page) {
         statusText: '已撤销',
         statusClass: 'warning',
       },
+      lastLocalScanRecord: page.data.lastLocalScanRecord ? {
+        ...page.data.lastLocalScanRecord,
+        success: false,
+        processName: '已撤销',
+      } : null,
       'undo.canUndo': false,
       'undo.loading': false,
     });

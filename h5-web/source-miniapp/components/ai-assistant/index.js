@@ -83,11 +83,34 @@ function parseAiCards(text) {
   }
   text = text.replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '');
 
+  var overdueFactoryCard = null;
+  var overdueRe = /【OVERDUE_FACTORY】([\s\S]*?)【\/OVERDUE_FACTORY】/g;
+  while ((m = overdueRe.exec(text)) !== null) {
+    var op = safeParse(m[1]);
+    if (op && typeof op === 'object') {
+      var groups = Array.isArray(op) ? op : [op];
+      var first = groups[0];
+      if (first && first.factoryName) {
+        overdueFactoryCard = {
+          overdueCount: groups.reduce(function (s, g) { return s + (g.totalOrders || 0); }, 0),
+          totalQuantity: groups.reduce(function (s, g) { return s + (g.totalQuantity || 0); }, 0),
+          avgProgress: groups.length > 0 ? Math.round(groups.reduce(function (s, g) { return s + (g.avgProgress || 0); }, 0) / groups.length) : 0,
+          avgOverdueDays: groups.length > 0 ? Math.round(groups.reduce(function (s, g) { return s + (g.avgOverdueDays || 0); }, 0) / groups.length) : 0,
+          factoryGroupCount: groups.length,
+          factoryGroups: groups,
+        };
+      } else if (op.overdueCount) {
+        overdueFactoryCard = op;
+      }
+    }
+  }
+  text = text.replace(/【OVERDUE_FACTORY】[\s\S]*?【\/OVERDUE_FACTORY】/g, '');
+
   text = text.replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '');
   text = text.replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '');
   text = text.replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '');
 
-  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards };
+  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards, overdueFactoryCard: overdueFactoryCard };
 }
 
 Component({
@@ -503,6 +526,7 @@ Component({
               id: aiMsgId, role: 'ai', content: parsed.text,
               recommendPills: recommendPills,
               actions: actions,
+              overdueFactoryCard: parsed.overdueFactoryCard,
             };
             self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
@@ -561,6 +585,7 @@ Component({
                 id: aiMsgId, role: 'ai', content: parsed.text,
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
+                overdueFactoryCard: parsed.overdueFactoryCard,
               };
               self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();

@@ -19,6 +19,7 @@ class ParsedQrCode {
   final String? styleNo;
   final String? processCode;
   final String? processName;
+  final String? progressStage;
   final String? color;
   final String? size;
   final int? quantity;
@@ -33,6 +34,7 @@ class ParsedQrCode {
     this.styleNo,
     this.processCode,
     this.processName,
+    this.progressStage,
     this.color,
     this.size,
     this.quantity,
@@ -99,6 +101,8 @@ class QRCodeParser {
         bundleNo: map['bundleNo']?.toString(),
         styleNo: map['styleNo']?.toString(),
         processCode: map['processCode']?.toString(),
+        processName: map['processName']?.toString(),
+        progressStage: map['progressStage']?.toString(),
         extra: map,
       );
     } catch (_) {

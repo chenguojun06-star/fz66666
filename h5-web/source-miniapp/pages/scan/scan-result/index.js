@@ -19,6 +19,7 @@ Page({
     selectedCount: 0,
     selectedAmount: 0,
     quantity: 1,
+    warehouseName: '成品库',
     warehouseCode: '',
     warehouseOptions: [],
     showWarehouse: false,
@@ -42,8 +43,6 @@ Page({
       processOptions = [{
         label: raw.processName,
         value: raw.processName,
-        processCode: '',
-        progressStage: raw.progressStage || '',
         scanType: raw.scanType || 'production',
         unitPrice: 0,
         hidePrice: true,
@@ -58,8 +57,6 @@ Page({
       processOptions = [{
         label: '入库',
         value: raw.progressStage || 'warehouse',
-        processCode: '',
-        progressStage: raw.progressStage || 'warehouse',
         scanType: 'warehouse',
         unitPrice: 0,
         hidePrice: true,
@@ -98,7 +95,6 @@ Page({
         orderNo: raw.orderNo || '',
         bundleNo: bundleNo,
         processName: raw.processName || '',
-        processCode: raw.processCode || (raw.stageResult && raw.stageResult.processCode) || '',
         progressStage: raw.progressStage || '',
         timeDisplay: raw.timeDisplay || '',
         color: color,
@@ -224,13 +220,9 @@ Page({
       })
       .map(function(p) {
         var name = p.processName || p.name || '';
-        var code = String(p.id || p.processCode || '').trim();
-        var displayName = code ? code + ' ' + name : name;
         return {
-          label: displayName,
+          label: name,
           value: name,
-          processCode: code,
-          progressStage: p.progressStage || name,
           scanType: p.scanType || 'production',
           unitPrice: p.unitPrice || 0,
           hidePrice: !p.unitPrice,
@@ -298,8 +290,8 @@ Page({
 
   async _loadWarehouseOptions() {
     try {
-      // getDictList 使用 ok() 帮助函数，已自动解包 resp.data，res 直接是数组
-      var res = await api.system.getDictList('warehouse_location');
+      // 加载成品仓库库位（默认）
+      var res = await api.system.getDictList('finished_warehouse_location');
       var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res && res.data ? res.data : []));
       if (records.length > 0) {
         var options = records
@@ -359,8 +351,6 @@ Page({
         var scanPayload = Object.assign({}, raw.scanData || {}, {
           scanType: normalizeScanType(raw.progressStage, effectiveScanType),
           processName: option.value,
-          processCode: option.processCode || '',
-          progressStage: option.progressStage || raw.progressStage || '',
           quantity: quantity
         });
         if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
@@ -386,6 +376,14 @@ Page({
 
       if (successCount > 0) {
         this._emitRefresh();
+        var firstOption = selectedOptions[0] || {};
+        getApp().globalData.lastScanResult = {
+          orderNo: raw.orderNo || '',
+          processCode: raw.processCode || firstOption.value || '',
+          processName: firstOption.value || raw.processName || '',
+          quantity: quantity || 0,
+          success: true,
+        };
       }
 
       if (failedItems.length === 0) {
@@ -414,11 +412,25 @@ Page({
       } else {
         this.setData({ loading: false });
         var msg = failedItems[0].error || '提交失败，请稍后重试';
+        getApp().globalData.lastScanResult = {
+          orderNo: raw.orderNo || '',
+          processCode: raw.processCode || '',
+          processName: (selectedOptions[0] && selectedOptions[0].value) || raw.processName || '',
+          quantity: quantity || 0,
+          success: false,
+        };
         wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
       }
     } catch (e) {
       this.setData({ loading: false });
       var errMsg = this._buildFriendlyError(e);
+      getApp().globalData.lastScanResult = {
+        orderNo: (raw && raw.orderNo) || '',
+        processCode: (raw && raw.processCode) || '',
+        processName: (raw && raw.processName) || '',
+        quantity: quantity || 0,
+        success: false,
+      };
       wx.showModal({ title: '扫码失败', content: errMsg, showCancel: false, confirmText: '知道了' });
     }
   },

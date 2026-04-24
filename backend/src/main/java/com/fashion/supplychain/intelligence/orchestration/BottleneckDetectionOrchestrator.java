@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.BottleneckDetectionRequest;
 import com.fashion.supplychain.intelligence.dto.BottleneckDetectionResponse;
 import com.fashion.supplychain.intelligence.dto.BottleneckDetectionResponse.BottleneckItem;
+import com.fashion.supplychain.production.constants.ProductionConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -33,8 +34,7 @@ import org.springframework.stereotype.Service;
 public class BottleneckDetectionOrchestrator {
 
     /** 标准生产工序流转顺序 */
-    private static final List<String> STAGE_ORDER = List.of(
-            "采购", "裁剪", "二次工艺", "车缝", "尾部", "质检", "入库");
+    private static final List<String> STAGE_ORDER = ProductionConstants.FIXED_PRODUCTION_NODES;
 
     @Autowired
     private ProductionOrderService productionOrderService;

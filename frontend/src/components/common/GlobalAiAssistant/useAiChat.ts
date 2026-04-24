@@ -156,10 +156,10 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
             const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
-            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards } = parseAiResponse(rawContent);
+            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard } = parseAiResponse(rawContent);
             accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, agentCommandId: commandId }
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, agentCommandId: commandId }
               : m));
           } else if (event.type === 'follow_up_actions') {
             const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
@@ -186,6 +186,19 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
               advisorSessionId: ha.sessionId, userQuery: text,
             } : m));
           }).catch((e) => { console.warn('[AiChat] 顾问请求失败:', e); });
+
+          setMessages(prev => {
+            const msg = prev.find(m => m.id === aiMsgId);
+            if (msg && !msg.overdueFactoryCard && /逾期|延期|超期|overdue/i.test(accumulatedText)) {
+              api.get('/dashboard/overdue-factory-stats').then(res => {
+                const d = (res as any)?.data ?? res;
+                if (d && d.factoryGroups?.length) {
+                  setMessages(prev2 => prev2.map(m2 => m2.id === aiMsgId ? { ...m2, overdueFactoryCard: d } : m2));
+                }
+              }).catch(() => {});
+            }
+            return prev;
+          });
         },
         async (err) => {
           if (completed) return;
@@ -202,7 +215,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             const rawAnswer = payload?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
             const displayAnswer = payload?.displayAnswer || rawAnswer;
             const commandId = payload?.commandId;
-            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards } = parseAiResponse(rawAnswer);
+            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards, overdueFactoryCard: parsedOverdueCard } = parseAiResponse(rawAnswer);
             const cards = payload?.cards || [];
             const followUpActions = (payload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
             setMessages(prev => {
@@ -213,6 +226,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
                 cards: cards.length ? cards : parsedCards,
                 actionCards, quickActions, teamStatusCards, bundleSplitCards,
                 stepWizardCards: parsedStepWizardCards,
+                overdueFactoryCard: parsedOverdueCard,
                 agentCommandId: commandId, followUpActions,
               };
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
@@ -233,14 +247,14 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
                   const retryAnswer = retryPayload?.answer || '';
                   if (retryAnswer) {
                     const retryDisplay = retryPayload?.displayAnswer || retryAnswer;
-                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc } = parseAiResponse(retryAnswer);
+                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc, overdueFactoryCard: ofc } = parseAiResponse(retryAnswer);
                     const retryCards = retryPayload?.cards || [];
                     const retryFollowUp = (retryPayload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
                     setMessages(prev => prev.map(m => m.id === aiMsgId ? {
                       ...m, text: retryDisplay || dt, intent: retryPayload?.source,
                       charts: ch, cards: retryCards.length ? retryCards : pc,
                       actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc,
-                      stepWizardCards: swc,
+                      stepWizardCards: swc, overdueFactoryCard: ofc,
                       agentCommandId: retryPayload?.commandId, followUpActions: retryFollowUp,
                     } : m));
                     speak(retryDisplay || dt);

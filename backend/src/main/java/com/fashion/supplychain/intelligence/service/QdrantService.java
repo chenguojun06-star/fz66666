@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.security.MessageDigest;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,15 +94,34 @@ public class QdrantService {
     private final ConcurrentHashMap<String, EmbeddingCacheEntry> embeddingCache = new ConcurrentHashMap<>();
     private static final long EMBEDDING_CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(30);
     private static final int EMBEDDING_CACHE_MAX = 500;
+    private static final String PROVIDER_VOYAGE = "voyage";
+    private static final String PROVIDER_DEEPSEEK = "deepseek";
 
     private final AtomicBoolean collectionVerified = new AtomicBoolean(false);
     private final AtomicBoolean styleImageCollectionVerified = new AtomicBoolean(false);
 
     private static class EmbeddingCacheEntry {
         final float[] vector;
+        final String provider;
         final long createdAt;
-        EmbeddingCacheEntry(float[] vector) { this.vector = vector; this.createdAt = System.currentTimeMillis(); }
+        EmbeddingCacheEntry(float[] vector, String provider) {
+            this.vector = vector;
+            this.provider = provider;
+            this.createdAt = System.currentTimeMillis();
+        }
         boolean isExpired() { return System.currentTimeMillis() - createdAt > EMBEDDING_CACHE_TTL_MS; }
+    }
+
+    private String sha256Hex(String text) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            return String.valueOf(text.hashCode());
+        }
     }
 
     @PostConstruct
@@ -393,34 +413,45 @@ public class QdrantService {
         if (text == null || text.isBlank()) {
             return null;
         }
-        String cacheKey = Integer.toHexString(text.hashCode());
+        String activeProvider = resolveActiveProvider();
+        String cacheKey = sha256Hex(text) + ":" + activeProvider;
         EmbeddingCacheEntry cached = embeddingCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
             return cached.vector;
         }
-        float[] vector = null;
-        if (voyageApiKey != null && !voyageApiKey.isEmpty()) {
+        if (PROVIDER_VOYAGE.equals(activeProvider)) {
             try {
-                vector = callVoyageEmbeddingApi(text);
+                float[] vector = callVoyageEmbeddingApi(text);
+                embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector, PROVIDER_VOYAGE));
+                evictCacheIfNeeded();
+                return vector;
             } catch (Exception e) {
                 log.warn("[Voyage] Embedding API 调用失败，降级到 DeepSeek: {}", e.getMessage());
             }
         }
-        if (vector == null && deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+        if (PROVIDER_DEEPSEEK.equals(activeProvider)) {
             try {
-                vector = callEmbeddingApi(text);
+                float[] vector = callEmbeddingApi(text);
+                embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector, PROVIDER_DEEPSEEK));
+                evictCacheIfNeeded();
+                return vector;
             } catch (Exception e) {
                 log.warn("[Qdrant] DeepSeek Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
             }
         }
-        if (vector == null) {
-            vector = pseudoEmbedding(text);
-        }
-        embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector));
+        return pseudoEmbedding(text);
+    }
+
+    private String resolveActiveProvider() {
+        if (voyageApiKey != null && !voyageApiKey.isEmpty()) return PROVIDER_VOYAGE;
+        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) return PROVIDER_DEEPSEEK;
+        return "pseudo";
+    }
+
+    private void evictCacheIfNeeded() {
         if (embeddingCache.size() > EMBEDDING_CACHE_MAX) {
             embeddingCache.entrySet().removeIf(e -> e.getValue().isExpired());
         }
-        return vector;
     }
 
     /**

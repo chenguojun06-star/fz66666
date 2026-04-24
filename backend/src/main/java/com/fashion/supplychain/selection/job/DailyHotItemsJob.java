@@ -15,17 +15,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import com.fashion.supplychain.common.lock.DistributedLockService;
+import org.springframework.beans.factory.annotation.Value;
 
-/**
- * 今日热榜定时任务
- * 每天凌晨 2 点自动从多外部渠道拉取热门商品快照，
- * 写入 t_trend_snapshot（tenantId=0 系统级），供"今日热榜"接口读取。
- */
 @Component
 @Slf4j
 public class DailyHotItemsJob {
 
-    /** 与前端 HOT_KEYWORDS 保持一致 */
     static final List<String> HOT_KEYWORDS = List.of(
             "连衣裙", "卫衣", "外套", "牛仔裤", "T恤",
             "衬衫", "半身裙", "针织衫", "风衣", "西装",
@@ -45,8 +40,15 @@ public class DailyHotItemsJob {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
+    @Value("${selection.daily-hot.cron-enabled:false}")
+    private boolean cronEnabled;
+
     @Scheduled(cron = "0 0 2 * * ?")
     public void scheduled() {
+        if (!cronEnabled) {
+            log.debug("[DailyHotJob] 定时任务未启用，跳过（selection.daily-hot.cron-enabled=false）");
+            return;
+        }
         if (distributedLockService != null) {
             String lockValue = distributedLockService.tryLock("job:daily-hot-items", 30, TimeUnit.MINUTES);
             if (lockValue == null) {

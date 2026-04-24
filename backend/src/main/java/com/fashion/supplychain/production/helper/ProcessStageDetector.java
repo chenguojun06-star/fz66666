@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.fashion.supplychain.production.constants.ProductionConstants;
+
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,8 +32,7 @@ import java.util.Map;
 @Slf4j
 public class ProcessStageDetector {
 
-    private static final List<String> FIXED_PRODUCTION_NODES = Arrays.asList(
-            "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库");
+    private static final List<String> FIXED_PRODUCTION_NODES = ProductionConstants.FIXED_PRODUCTION_NODES;
 
     private static final Map<String, String> CHILD_TO_PARENT = new LinkedHashMap<>();
     static {
@@ -341,13 +342,16 @@ public class ProcessStageDetector {
             if (isAutoSkippableStageName(order, pn)) continue;
             if (templateLibraryService.isProgressQualityStageName(pn)) continue;
 
-            lastCandidate = pn;
             long v = done.getOrDefault(pn, 0L);
             if (v < orderQty) {
                 return pn;
             }
+            lastCandidate = pn;
         }
-        return lastCandidate;
+        if (lastCandidate != null) {
+            log.info("订单[{}]所有工序已完成(doneQty >= orderQty)，不再返回工序", order.getOrderNo());
+        }
+        return null;
     }
 
     private boolean hasText(String str) {

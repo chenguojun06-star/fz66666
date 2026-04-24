@@ -25,6 +25,7 @@ class ScanPage extends GetView<ScanController> {
               Obx(() => _buildOfflineHint()),
               const SizedBox(height: AppSpacing.sm),
               Obx(() => _buildScanTypeSelector()),
+              Obx(() => _buildLastScanRecord()),
               const SizedBox(height: AppSpacing.lg),
               _buildScanArea(),
               const SizedBox(height: AppSpacing.md),
@@ -131,6 +132,68 @@ class ScanPage extends GetView<ScanController> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildLastScanRecord() {
+    final record = controller.lastScanRecord.value;
+    if (record == null) return const SizedBox.shrink();
+    final success = record['success'] == true;
+    final bgColor = success ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE);
+    final tagColor = success ? AppColors.success : AppColors.error;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: tagColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              success ? '成功' : '失败',
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record['orderNo']?.toString() ?? '',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        (record['processCode']?.toString() ?? '').isNotEmpty
+                            ? '${record['processCode']} ${record['processName'] ?? ''}'
+                            : '${record['processName'] ?? ''}',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      '${record['quantity'] ?? 0}件',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

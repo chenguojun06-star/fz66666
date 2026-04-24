@@ -4,6 +4,7 @@ import type { XiaoyunInsightCardData } from '@/components/common/XiaoyunInsightC
 import type { ChartSpec } from './MiniChartWidget';
 import type { AiTraceCardData, BundleSplitCardData, PurchaseDocCardData, TeamStatusCardData } from './AgentCards';
 import type { StepWizardCardData } from './StepWizardCard';
+import type { OverdueFactoryCardData } from './OverdueFactoryCardWidget';
 
 export interface ActionCard {
   title: string;
@@ -64,6 +65,7 @@ export function parseAiResponse(rawText: string): {
   bundleSplitCards: BundleSplitCardData[];
   stepWizardCards: StepWizardCardData[];
   clarificationHints?: string[];
+  overdueFactoryCard?: OverdueFactoryCardData;
 } {
   const parsed = parseXiaoyunLegacyMeta(rawText);
   return {
@@ -76,6 +78,7 @@ export function parseAiResponse(rawText: string): {
     bundleSplitCards: parsed.bundleSplitCards as BundleSplitCardData[],
     stepWizardCards: parsed.stepWizardCards as StepWizardCardData[],
     clarificationHints: parsed.clarificationHints,
+    overdueFactoryCard: parsed.overdueFactoryCard,
   };
 }
 
@@ -120,4 +123,6 @@ export interface Message {
   };
   /* ── 上下文跟进动作 ── */
   followUpActions?: FollowUpAction[];
+  /* ── 逾期工厂卡片 ── */
+  overdueFactoryCard?: OverdueFactoryCardData;
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -424,10 +425,7 @@ public class ProductWarehousingQueryHelper {
 
             if (order != null) {
                 String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
-                if ("closed".equals(orderStatus)
-                        || "completed".equals(orderStatus)
-                        || "cancelled".equals(orderStatus)
-                        || "archived".equals(orderStatus)) {
+                if (OrderStatusConstants.isTerminal(orderStatus)) {
                     continue;
                 }
             }
@@ -466,10 +464,7 @@ public class ProductWarehousingQueryHelper {
         ProductionOrder order = productionOrderService.getById(oid);
         if (order != null) {
             String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
-            if ("closed".equals(orderStatus)
-                    || "completed".equals(orderStatus)
-                    || "cancelled".equals(orderStatus)
-                    || "archived".equals(orderStatus)) {
+            if (OrderStatusConstants.isTerminal(orderStatus)) {
                 Map<String, Object> empty = new java.util.LinkedHashMap<>();
                 empty.put("qcReadyQrs", new ArrayList<>());
                 empty.put("warehouseReadyQrs", new ArrayList<>());

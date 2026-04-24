@@ -436,7 +436,7 @@ const OrdersTab: React.FC = () => {
           <Form.Item name="expressCompany" label="快递公司"
             rules={[{ required: true, message: '请输入快递公司' }]}>
             <Select placeholder="请选择快递公司" showSearch allowClear>
-              {['顺丰','中通','圆通','韵达','路定','极写','百世汇','丬京快递','吉日物流','丬丰物流','其他'].map(c => (
+              {['顺丰','中通','圆通','韵达','申通','极兔','百世汇通','京东快递','德邦物流','EMS','其他'].map(c => (
                 <Select.Option key={c} value={c}>{c}</Select.Option>
               ))}
             </Select>

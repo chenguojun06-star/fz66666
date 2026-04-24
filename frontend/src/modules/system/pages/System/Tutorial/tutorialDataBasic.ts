@@ -12,7 +12,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '进入订单管理页面',
-          description: '从左侧菜单选择「订单管理」→「我的订单」，进入订单列表页面。',
+          description: '从左侧菜单选择「生产管理」→「我的订单」，进入订单列表页面。',
           tips: [
             '确保你有「订单管理」权限，如无权限请联系管理员',
             '首次使用建议先查看「款式资料」确保有可用款式',
@@ -86,7 +86,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '从订单创建裁剪单',
-          description: '在「生产管理」→「裁剪单」页面，选择已创建的生产订单，点击「生成裁剪单」。',
+          description: '在「生产管理」→「裁剪管理」页面，选择已创建的生产订单，点击「生成裁剪单」。',
           tips: [
             '订单必须有完整的SKU配置',
             '系统会根据订单数量自动计算裁剪份数',
@@ -152,7 +152,7 @@ export const tutorialsBasic: Tutorial[] = [
         },
         {
           title: '智能工序识别',
-          description: '系统根据扫码次数自动识别当前工序（第1次=做领，第2次=上领...），无需手动选择。',
+          description: '系统根据扫码类型和模板配置识别当前工序。扫码类型有4大阶段按顺序流转：裁剪(cutting)→生产(production)→质检(quality)→入库(warehouse)。子工序通过模板配置和动态映射表映射到6大父节点（采购→裁剪→二次工艺→车缝→尾部→入库）。',
           tips: [
             '工序顺序由订单配置决定',
             '每次扫码间隔有防重复保护（最少30秒）',
@@ -242,7 +242,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '物料采购入库',
-          description: '从「生产管理」→「物料采购」创建采购单，供应商送货后进行入库操作。',
+          description: '从「物料管理」→「物料采购」创建采购单，供应商送货后进行入库操作。',
           tips: [
             '入库前需要核对采购单信息',
             '检查物料规格、数量、质量',
@@ -294,7 +294,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '创建出库单',
-          description: '从「仓储管理」→「成品出库」创建出库单，选择订单和出库数量。',
+          description: '从「成品管理」→「成品进销存」创建出库单，选择订单和出库数量。',
           tips: [
             '出库数量不能超过库存数量',
             '可部分出库（分批发货）',
@@ -350,7 +350,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '工厂对账',
-          description: '从「财务管理」→「工厂对账」进入，选择对账周期和工厂，系统自动汇总该期间的订单和工序数据。',
+          description: '从「财务管理」→「订单结算(外)」进入，选择对账周期和工厂，在「工厂订单汇总」Tab中查看该期间的订单和工序数据。',
           tips: [
             '建议每月对账一次',
             '对账前确保所有扫码记录已提交',
@@ -462,7 +462,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '创建样板生产任务',
-          description: '从「样衣管理」→「样板生产」进入，选择款式创建样板任务。',
+          description: '从「样衣管理」→「样衣开发」进入，选择款式创建样板生产任务。',
           tips: [
             '可同时创建多个款式的样板任务',
             '设置优先级和交期',
@@ -551,7 +551,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '维护物料单价',
-          description: '从「样衣管理」→「单价维护」进入，更新面料、辅料的采购单价。',
+          description: '从「样衣管理」→「资料单价」进入，更新面料、辅料的采购单价。',
           tips: [
             '定期更新单价（建议每月）',
             '保留历史单价记录',
@@ -594,7 +594,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '添加新物料',
-          description: '从「采购管理」→「物料资料库」点击「新增物料」，填写物料基本信息。',
+          description: '从「物料管理」→「物料新增」点击「新增物料」，填写物料基本信息。',
           tips: [
             '物料编号建议统一格式（如F001-面料，F002-辅料）',
             '详细填写规格参数便于后续查找',
@@ -733,7 +733,7 @@ export const tutorialsBasic: Tutorial[] = [
       steps: [
         {
           title: '查看库存总览',
-          description: '从「仓库管理」→「数据看板」查看物料和成品的总库存、周转率等数据。',
+          description: '从「智能运营中心」→「数据看板」查看物料和成品的总库存、周转率等数据。',
           tips: [
             '红色表示低于安全库存',
             '黄色表示接近安全库存',
@@ -879,10 +879,12 @@ export const tutorialsBasic: Tutorial[] = [
         },
         {
           title: '配置数据权限',
-          description: '设置用户的数据范围（全部数据 / 仅本工厂数据），多工厂场景下实现数据隔离。',
+          description: '选择数据范围（dataScope）：all（全部数据）/ brand（品牌）/ department（部门）/ custom（自定义）',
           tips: [
-            'dataScope=ALL：查看所有工厂数据（适合管理员）',
-            'dataScope=FACTORY_ONLY：仅查看本工厂数据（适合工厂操作员）',
+            'dataScope=all：查看所有数据（适合管理员）',
+            'dataScope=brand：查看品牌维度数据',
+            'dataScope=department：查看部门维度数据',
+            'dataScope=custom：自定义数据范围',
             '数据权限与菜单权限独立配置',
           ],
         },

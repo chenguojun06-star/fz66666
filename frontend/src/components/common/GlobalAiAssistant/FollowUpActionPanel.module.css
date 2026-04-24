@@ -1,0 +1,104 @@
+.followUpPanel {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0, 229, 255, 0.25);
+}
+.followUpHeader {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 6px;
+}
+.followUpList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.followUpCard {
+  display: flex;
+  flex-direction: column;
+}
+.followUpBtn {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #00e5ff;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+}
+.followUpBtn:hover {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: rgba(0, 229, 255, 0.4);
+}
+.followUpExecBadge {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.15);
+  color: #00e5ff;
+}
+.followUpSummary {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 3px 12px 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.followUpForm {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+}
+.followUpPrefilled {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.followUpTag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.1);
+  color: rgba(255,255,255,0.7);
+}
+.followUpField {
+  margin-bottom: 6px;
+}
+.followUpFieldLabel {
+  display: block;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 3px;
+}
+.followUpInput {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  background: rgba(0,0,0,0.2);
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.followUpInput:focus {
+  border-color: rgba(0, 229, 255, 0.5);
+}
+.followUpFormActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}

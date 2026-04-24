@@ -181,7 +181,8 @@ public class FinancialReportOrchestrator {
                         .in(ShipmentReconciliation::getStatus, "verified", "paid")
                         .eq(ShipmentReconciliation::getTenantId, tenantId)
                         .ge(ShipmentReconciliation::getCreateTime, start)
-                        .le(ShipmentReconciliation::getCreateTime, end));
+                        .le(ShipmentReconciliation::getCreateTime, end)
+                        .last("LIMIT 5000"));
         return list.stream()
                 .map(s -> s.getFinalAmount() != null ? s.getFinalAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -193,7 +194,8 @@ public class FinancialReportOrchestrator {
                         .eq(EcSalesRevenue::getStatus, "confirmed")
                         .eq(EcSalesRevenue::getTenantId, tenantId)
                         .ge(EcSalesRevenue::getCreateTime, start)
-                        .le(EcSalesRevenue::getCreateTime, end));
+                        .le(EcSalesRevenue::getCreateTime, end)
+                        .last("LIMIT 5000"));
         return list.stream()
                 .map(e -> e.getPayAmount() != null ? e.getPayAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -205,7 +207,8 @@ public class FinancialReportOrchestrator {
                         .in(MaterialReconciliation::getStatus, "verified", "paid")
                         .eq(MaterialReconciliation::getTenantId, tenantId)
                         .ge(MaterialReconciliation::getCreateTime, start)
-                        .le(MaterialReconciliation::getCreateTime, end));
+                        .le(MaterialReconciliation::getCreateTime, end)
+                        .last("LIMIT 5000"));
         return list.stream()
                 .map(m -> m.getTotalAmount() != null ? m.getTotalAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -218,7 +221,8 @@ public class FinancialReportOrchestrator {
                         .eq(ExpenseReimbursement::getDeleteFlag, 0)
                         .eq(ExpenseReimbursement::getTenantId, tenantId)
                         .ge(ExpenseReimbursement::getCreateTime, start)
-                        .le(ExpenseReimbursement::getCreateTime, end));
+                        .le(ExpenseReimbursement::getCreateTime, end)
+                        .last("LIMIT 5000"));
         return list.stream()
                 .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -231,7 +235,8 @@ public class FinancialReportOrchestrator {
                         .eq(Invoice::getStatus, "ISSUED")
                         .eq(Invoice::getTenantId, tenantId)
                         .ge(Invoice::getCreateTime, start)
-                        .le(Invoice::getCreateTime, end));
+                        .le(Invoice::getCreateTime, end)
+                        .last("LIMIT 5000"));
         return list.stream()
                 .map(i -> i.getTaxAmount() != null ? i.getTaxAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

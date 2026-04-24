@@ -52,8 +52,8 @@ const STAGE_ALIASES: Record<string, string[]> = {
   cutting:     ['裁剪', '裁断'],
   secondary:   ['二次工艺', '二次', '特种', '印花', '绣花', '洗水'],
   sewing:      ['车缝', '缝制', '制衣'],
-  tail:        ['尾部', '尾工', '后整', '套结', '剪线', '锁边'],
-  warehousing: ['入库', '仓库', '验收', '质检'],
+  tail:        ['尾部', '尾工', '后整', '套结', '剪线', '锁边', '质检'],
+  warehousing: ['入库', '仓库', '验收'],
 };
 
 function stageMatch(progressStage: string, stageKey: string): boolean {

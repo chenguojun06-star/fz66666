@@ -30,7 +30,7 @@ public class AiAdvisorChatResponseOrchestrator {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Pattern INSIGHT_CARD_PATTERN = Pattern.compile("【INSIGHT_CARDS】([\\s\\S]*?)【/INSIGHT_CARDS】");
     private static final Pattern CHART_PATTERN = Pattern.compile("【CHART】([\\s\\S]*?)【/CHART】");
-    private static final Pattern AI_META_BLOCK_PATTERN = Pattern.compile("【(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS|STEP_WIZARD)】[\\s\\S]*?【/(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS|STEP_WIZARD)】|```ACTIONS_JSON\\s*\\n[\\s\\S]*?\\n```");
+    private static final Pattern AI_META_BLOCK_PATTERN = Pattern.compile("【(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS|STEP_WIZARD|OVERDUE_FACTORY)】[\\s\\S]*?【/(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS|STEP_WIZARD|OVERDUE_FACTORY)】|```ACTIONS_JSON\\s*\\n[\\s\\S]*?\\n```");
 
     public AiAdvisorChatResponse build(String question, String commandId, Result<String> agentResult) {
         return build(question, commandId, agentResult, Collections.emptyList());

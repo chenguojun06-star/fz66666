@@ -89,6 +89,9 @@ public class OpenApiTrackingHelper {
             if (StringUtils.hasText(orderNo)) {
                 wrapper.eq(com.fashion.supplychain.production.entity.ScanRecord::getOrderNo, orderNo);
             }
+            if (app.getTenantId() != null) {
+                wrapper.eq(com.fashion.supplychain.production.entity.ScanRecord::getTenantId, app.getTenantId());
+            }
             wrapper.orderByDesc(com.fashion.supplychain.production.entity.ScanRecord::getCreateTime);
 
             Page<com.fashion.supplychain.production.entity.ScanRecord> pageResult =
@@ -165,6 +168,9 @@ public class OpenApiTrackingHelper {
             int size = params.get("size") != null ? ((Number) params.get("size")).intValue() : 20;
 
             LambdaQueryWrapper<com.fashion.supplychain.production.entity.ProductOutstock> wrapper = new LambdaQueryWrapper<>();
+            if (app.getTenantId() != null) {
+                wrapper.eq(com.fashion.supplychain.production.entity.ProductOutstock::getTenantId, app.getTenantId());
+            }
             wrapper.orderByDesc(com.fashion.supplychain.production.entity.ProductOutstock::getCreateTime);
 
             Page<com.fashion.supplychain.production.entity.ProductOutstock> pageResult =
@@ -203,6 +209,7 @@ public class OpenApiTrackingHelper {
             new LambdaQueryWrapper<com.fashion.supplychain.finance.entity.ShipmentReconciliation>()
                 .in(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getStatus,
                     Arrays.asList("pending_payment", "approved"))
+                .eq(app.getTenantId() != null, com.fashion.supplychain.finance.entity.ShipmentReconciliation::getTenantId, app.getTenantId())
                 .orderByDesc(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getCreateTime)
         );
 
@@ -238,7 +245,10 @@ public class OpenApiTrackingHelper {
             }
 
             // 查询对账单
-            ShipmentReconciliation recon = shipmentReconciliationService.getById(reconciliationId);
+            ShipmentReconciliation recon = shipmentReconciliationService.getOne(
+                    new LambdaQueryWrapper<ShipmentReconciliation>()
+                            .eq(ShipmentReconciliation::getId, reconciliationId)
+                            .eq(app.getTenantId() != null, ShipmentReconciliation::getTenantId, app.getTenantId()));
             if (recon == null) {
                 throw new IllegalArgumentException("对账单不存在: " + reconciliationId);
             }
@@ -288,6 +298,9 @@ public class OpenApiTrackingHelper {
             int size = params.get("size") != null ? ((Number) params.get("size")).intValue() : 20;
 
             LambdaQueryWrapper<com.fashion.supplychain.finance.entity.ShipmentReconciliation> wrapper = new LambdaQueryWrapper<>();
+            if (app.getTenantId() != null) {
+                wrapper.eq(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getTenantId, app.getTenantId());
+            }
             wrapper.orderByDesc(com.fashion.supplychain.finance.entity.ShipmentReconciliation::getCreateTime);
 
             Page<com.fashion.supplychain.finance.entity.ShipmentReconciliation> pageResult =

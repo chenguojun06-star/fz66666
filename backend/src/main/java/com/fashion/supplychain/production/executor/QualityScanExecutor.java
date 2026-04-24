@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.executor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -120,8 +121,8 @@ public class QualityScanExecutor {
         }
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("进度节点已完成，该订单已结束质检");
+        if (OrderStatusConstants.isTerminal(st)) {
+            throw new IllegalStateException("订单已终态(" + st + ")，无法继续质检");
         }
 
         validateNotAlreadyQualityCheckedByPc(order.getId(), bundle.getId());
@@ -986,6 +987,7 @@ public class QualityScanExecutor {
         sr.setStyleId(order.getStyleId());
         sr.setStyleNo(order.getStyleNo());
         sr.setTenantId(order.getTenantId());
+        sr.setFactoryId(com.fashion.supplychain.common.UserContext.factoryId());
         String color = colorResolver.apply(null);
         if (!hasText(color) && bundle != null) {
             color = TextUtils.safeText(bundle.getColor());

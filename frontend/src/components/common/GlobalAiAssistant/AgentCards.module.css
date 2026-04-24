@@ -1,0 +1,218 @@
+.teamStatusCard {
+  background: linear-gradient(180deg, #f6ffed 0%, #fcffe6 100%);
+  border: 1px solid #b7eb8f;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+}
+
+.teamStatusHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.teamStatusTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #237804;
+}
+
+.teamStatusMeta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #4d7c0f;
+}
+
+.teamStatusSummary {
+  font-size: 12px;
+  color: #355f1b;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.teamStatusStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #5b8c00;
+  margin-bottom: 10px;
+}
+
+.teamStatusStats span {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(183, 235, 143, 0.9);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.teamStatusRecipients {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.teamRecipientItem {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(183, 235, 143, 0.95);
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+
+.teamRecipientHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.teamRecipientName {
+  font-size: 12px;
+  font-weight: 700;
+  color: #135200;
+}
+
+.teamRecipientRole {
+  font-size: 11px;
+  color: #52c41a;
+}
+
+.teamRecipientStage {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #237804;
+  margin-bottom: 3px;
+}
+
+.teamRecipientNext {
+  font-size: 11px;
+  color: #5b8c00;
+  line-height: 1.5;
+}
+
+.teamStatusWarning {
+  margin-top: 8px;
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #cf1322;
+}
+
+.teamStatusHistory {
+  margin-top: 10px;
+  border-top: 1px dashed rgba(24, 144, 255, 0.18);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.teamStatusHistoryItem {
+  display: grid;
+  grid-template-columns: 124px 72px 70px 1fr;
+  gap: 6px;
+  font-size: 11px;
+  color: #4d7c0f;
+  background: rgba(255, 255, 255, 0.68);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.purchaseDocCard {
+  background: linear-gradient(180deg, #fff7e6 0%, #fffbe6 100%);
+  border: 1px solid #ffd591;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+}
+
+.purchaseDocHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.purchaseDocTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ad4e00;
+}
+
+.purchaseDocMeta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #ad6800;
+}
+
+.purchaseDocActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.purchaseDocSummary {
+  font-size: 12px;
+  color: #613400;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.purchaseDocStats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.purchaseDocStats span {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 213, 145, 0.9);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #ad6800;
+}
+
+.purchaseDocItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.purchaseDocItem {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 213, 145, 0.95);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.purchaseDocItemHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #874d00;
+}
+
+.purchaseDocItemMeta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #ad6800;
+}
+
+.purchaseDocItemTip {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #d46b08;
+}

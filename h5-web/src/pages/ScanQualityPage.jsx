@@ -115,6 +115,7 @@ export default function ScanQualityPage() {
       progressStage: detail.progressStage, scanCode: detail.scanCode || detail.orderNo,
       scanType: 'quality', qualityResult: result, qualityStage: 'confirm',
       operatorId: userInfo.userId || '', operatorName: userInfo.name || userInfo.username || '',
+      source: 'h5',
     };
 
     const receivePayload = {
@@ -122,6 +123,7 @@ export default function ScanQualityPage() {
       processName: payload.processName, progressStage: payload.progressStage,
       scanCode: payload.scanCode, scanType: 'quality', qualityStage: 'receive',
       operatorId: payload.operatorId, operatorName: payload.operatorName,
+      source: 'h5',
     };
 
     setLoading(true);

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationSyncService;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 物料对账同步服务实现类
@@ -25,6 +27,9 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
 
     @Autowired
     private MaterialReconciliationService materialReconciliationService;
+
+    @Autowired
+    private DistributedLockService distributedLockService;
 
     /**
      * 创建物料对账记录（单模块操作）
@@ -96,7 +101,13 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
      * 生成对账单号
      * 格式：MR+YYYYMM+4位序号（如：MR2026010001）
      */
-    private synchronized String generateReconciliationNo() {
+    private String generateReconciliationNo() {
+        return distributedLockService.executeWithStrictLock(
+                "materialReconciliation:generateNo", 5, TimeUnit.SECONDS,
+                this::doGenerateReconciliationNo);
+    }
+
+    private String doGenerateReconciliationNo() {
         String monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
         String prefix = "MR" + monthPrefix;
 

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
@@ -35,8 +36,6 @@ import org.springframework.util.StringUtils;
 @Service
 @Slf4j
 public class ProductionOrderQueryService {
-
-    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private ProductionOrderMapper productionOrderMapper;
@@ -123,14 +122,14 @@ public class ProductionOrderQueryService {
 
         // 统一终态过滤：默认生产页只看在制单，不混入已完成/已取消/已报废/已归档/已关单
         if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
-            wrapper.notIn("status", TERMINAL_STATUSES);
+            wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
 
         // 延期订单筛选：plannedEndDate < 当前时间，且排除终态订单
         if ("true".equalsIgnoreCase(delayedOnly)) {
             wrapper.isNotNull("planned_end_date")
                    .lt("planned_end_date", java.time.LocalDateTime.now())
-                   .notIn("status", TERMINAL_STATUSES);
+                   .notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
 
         // 当天下单筛选：createTime 在今天 00:00:00 ~ 23:59:59
@@ -440,13 +439,13 @@ public class ProductionOrderQueryService {
             .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
 
         if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
-            wrapper.notIn("status", TERMINAL_STATUSES);
+            wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
 
         if ("true".equalsIgnoreCase(delayedOnly)) {
             wrapper.isNotNull("planned_end_date")
                     .lt("planned_end_date", LocalDateTime.now())
-                    .notIn("status", TERMINAL_STATUSES);
+                    .notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
 
         if ("true".equalsIgnoreCase(todayOnly)) {
@@ -546,7 +545,7 @@ public class ProductionOrderQueryService {
     }
 
     private boolean isTerminalStatus(String status) {
-        return TERMINAL_STATUSES.contains(normalizeStatus(status));
+        return OrderStatusConstants.TERMINAL_STATUSES.contains(normalizeStatus(status));
     }
 
     private String normalizeStatus(String status) {

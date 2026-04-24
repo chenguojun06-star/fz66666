@@ -130,12 +130,9 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   const [addLoading, setAddLoading] = useState<Record<number, boolean>>({});
   const [deployLoading, setDeployLoading] = useState<Record<number, boolean>>({});
   const [dailyHot, setDailyHot] = useState<DailyHotResponse | null>(null);
-  const [dailyHotLoading, setDailyHotLoading] = useState(true);
+  const [dailyHotLoading, setDailyHotLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>('ALL');
-
-  /* 页面打开时自动加载今日热榜 */
-  useEffect(() => { loadDailyHot(); }, []);
 
   useEffect(() => {
     try {
@@ -159,11 +156,8 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
     try {
       const res = await refreshDailyHotItems() as any;
       if (res?.started) {
-        // 异步任务已启动，约1分钟后完成
-        message.success('热榜刷新任务已启动，约1分钟后完成，请稍后刷新页面查看');
-        setTimeout(() => loadDailyHot(), 65000);
+        message.success('热榜刷新任务已启动，约1分钟后完成，请稍后再次点击刷新查看');
       } else {
-        // 兼容旧响应格式（同步执行的情况）
         message.success(`热榜已更新：${res?.success ?? 0} 个关键词成功`);
         await loadDailyHot();
       }
@@ -328,10 +322,14 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                 {option.label}
               </Tag>
             ))}
-            <Button size="small" icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefreshDailyHot} type="text">刷新</Button>
+            {!dailyHot ? (
+              <Button size="small" icon={<FireOutlined />} loading={dailyHotLoading} onClick={loadDailyHot} type="text">加载热榜</Button>
+            ) : (
+              <Button size="small" icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefreshDailyHot} type="text">刷新</Button>
+            )}
           </Space>
         </div>
-        <Spin spinning={dailyHotLoading} size="small">
+        <Spin spinning={dailyHotLoading || refreshing} size="small">
           {dailyHot && dailyHot.cached && dailyHot.groups.length > 0 ? (
             <Tabs size="small" type="card"
               items={dailyHot.groups.map(g => ({
@@ -369,11 +367,11 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
               }))}
             />
           ) : (
-            !dailyHotLoading && (
+            !dailyHotLoading && !refreshing && (
               <Text type="secondary" style={{ fontSize: 12 }}>
                 {dailyHot?.serpApiEnabled === false
                   ? 'SerpApi 未配置，热榜暂不可用'
-                  : '今日热榜暂未生成，点击「刷新」立即拉取'}
+                  : '点击「加载热榜」获取今日市场热门商品数据'}
               </Text>
             )
           )}

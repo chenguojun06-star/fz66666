@@ -58,16 +58,16 @@ export const matchRecordToStage = (recordStage?: string, recordProcess?: string,
 
 export const getScanTypeFromNodeKey = (nodeTypeKey?: string) => {
   const map: Record<string, string> = {
-    procurement: 'procurement',
+    procurement: 'production',
     cutting: 'cutting',
-    sewing: 'sewing',
-    carSewing: 'sewing',       // List/utils.ts 使用 carSewing 键名，需对齐
+    sewing: 'production',
+    carSewing: 'production',
     quality: 'quality',
-    ironing: 'pressing',
-    packaging: 'packaging',
-    tailProcess: 'packaging',  // 尾部=大尾部工序（整烫/包装/质检）
-    warehousing: 'warehousing',
-    secondaryProcess: 'sewing', // 二次工艺归入扫码类型 sewing
+    ironing: 'production',
+    packaging: 'production',
+    tailProcess: 'production',
+    warehousing: 'warehouse',
+    secondaryProcess: 'production',
   };
   const key = String(nodeTypeKey || '').trim();
   return map[key];

@@ -1,0 +1,109 @@
+.urgeOrderCard {
+  background: #fff7e6;
+  border: 1.5px solid #ffd591;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 8px 0;
+}
+.urgeCardHeader {
+  font-size: 14px;
+  font-weight: 700;
+  color: #d46b08;
+  margin-bottom: 4px;
+}
+.urgeCardFactory {
+  font-weight: 400;
+  color: #874d00;
+  font-size: 12px;
+}
+.urgeCardPerson {
+  font-size: 12px;
+  color: #613400;
+  margin-bottom: 4px;
+}
+.urgeCardDesc {
+  font-size: 12px;
+  color: #874d00;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.urgeCardForm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.urgeFormLabel {
+  font-size: 11px;
+  color: #8c6e00;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.urgeFormInput {
+  border: 1px solid #ffc069;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #fffbf0;
+  color: #333;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.urgeFormInput:focus {
+  border-color: #fa8c16;
+  box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.2);
+}
+.urgeFormTextarea {
+  border: 1px solid #ffc069;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #fffbf0;
+  color: #333;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.urgeFormTextarea:focus {
+  border-color: #fa8c16;
+  box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.2);
+}
+.urgeCardError {
+  font-size: 12px;
+  color: #cf1322;
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.urgeSubmitBtn {
+  margin-top: 6px;
+  background: #fa8c16;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+.urgeSubmitBtn:hover:not(:disabled) {
+  background: #d46b08;
+}
+.urgeSubmitBtn:disabled {
+  background: #ffbb6e;
+  cursor: not-allowed;
+}
+.urgeCardSaved {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #389e0d;
+  font-size: 13px;
+  margin: 6px 0;
+}

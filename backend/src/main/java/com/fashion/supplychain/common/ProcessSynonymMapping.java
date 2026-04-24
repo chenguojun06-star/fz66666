@@ -18,10 +18,9 @@ public class ProcessSynonymMapping {
      */
     public static final String PROCESS_PROCUREMENT = "采购";
     public static final String PROCESS_CUTTING = "裁剪";
+    public static final String PROCESS_SECONDARY = "二次工艺";
     public static final String PROCESS_SEWING = "车缝";
-    public static final String PROCESS_IRONING = "大烫";
-    public static final String PROCESS_QUALITY = "质检";
-    public static final String PROCESS_PACKAGING = "包装";
+    public static final String PROCESS_TAIL = "尾部";
     public static final String PROCESS_WAREHOUSE = "入库";
 
     /**
@@ -41,18 +40,17 @@ public class ProcessSynonymMapping {
 
         // 车缝/生产环节同义词（核心映射）
         map.put(PROCESS_SEWING, Set.of(
-                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产"));
+                "车缝", "缝制", "缝纫", "车工", "生产", "制作", "车位", "车间生产", "整件"));
 
-        // 大烫环节同义词
-        map.put(PROCESS_IRONING, Set.of(
-                "大烫", "整烫", "熨烫", "烫整", "后整烫"));
+        // 二次工艺同义词
+        map.put(PROCESS_SECONDARY, Set.of(
+                "二次工艺", "绣花", "印花", "水洗", "压花", "烫钻", "烫画", "钉珠", "烫金",
+                "数码印", "打孔", "激光", "转印", "植绒", "涂层", "磨毛", "染色", "后处理"));
 
-        // 质检环节同义词
-        map.put(PROCESS_QUALITY, Set.of(
-                "质检", "检验", "品检", "验货", "QC", "品控", "检查"));
-
-        // 包装环节同义词
-        map.put(PROCESS_PACKAGING, Set.of(
+        // 尾部环节同义词（含大烫/质检/包装等尾部子工序）
+        map.put(PROCESS_TAIL, Set.of(
+                "尾部", "大烫", "整烫", "熨烫", "烫整", "后整烫", "剪线", "锁边",
+                "质检", "检验", "品检", "验货", "QC", "品控", "检查",
                 "包装", "后整", "打包", "装箱", "封箱", "贴标"));
 
         // 入库环节同义词

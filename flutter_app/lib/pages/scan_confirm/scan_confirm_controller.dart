@@ -12,6 +12,7 @@ class ScanConfirmController extends GetxController {
   final bundleNo = ''.obs;
   final processName = ''.obs;
   final processCode = ''.obs;
+  final progressStage = ''.obs;
   final quantity = ''.obs;
   final details = <SummaryItemData>[].obs;
 
@@ -41,6 +42,7 @@ class ScanConfirmController extends GetxController {
           final order = data['data'] as Map<String, dynamic>;
           processName.value = order['currentProcessName']?.toString() ?? '';
           processCode.value = order['currentProcessCode']?.toString() ?? '';
+          progressStage.value = order['currentProgressStage']?.toString() ?? '';
           quantity.value = order['quantity']?.toString() ?? order['totalQuantity']?.toString() ?? '0';
           details.value = [
             SummaryItemData(key: '款号', value: order['styleNo']?.toString() ?? '-'),
@@ -63,8 +65,10 @@ class ScanConfirmController extends GetxController {
         'scanCode': _qrCode,
         'orderNo': orderNo.value,
         'bundleNo': bundleNo.value,
-        'scanType': 'production',
+        'scanType': _resolveScanType(processName.value),
         'processName': processName.value,
+        'processCode': processCode.value,
+        'progressStage': progressStage.value,
         'quantity': int.tryParse(quantity.value),
         'source': 'flutter',
         'requestId': 'flutter_${DateTime.now().millisecondsSinceEpoch}_${_qrCode.hashCode.abs()}',
@@ -82,6 +86,14 @@ class ScanConfirmController extends GetxController {
     } finally {
       loading.value = false;
     }
+  }
+
+  static String _resolveScanType(String processName) {
+    final p = processName.trim();
+    if (p == '裁剪' || p == 'cutting') return 'cutting';
+    if (p == '质检' || p == 'quality') return 'quality';
+    if (p == '入库' || p == 'warehouse') return 'warehouse';
+    return 'production';
   }
 }
 

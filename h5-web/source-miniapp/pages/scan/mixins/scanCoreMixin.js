@@ -409,7 +409,13 @@ const scanCoreMixin = Behavior({
       if (result && result.success === false) {
         const message = result.message || result.errMsg || '扫码失败，请重试';
         toast.error(message);
-        this.handleScanError({ message });
+        this.handleScanError({
+          message,
+          orderNo: result.orderNo,
+          processCode: result.processCode,
+          processName: result.processName,
+          quantity: result.quantity,
+        });
         return;
       }
 
@@ -440,6 +446,7 @@ const scanCoreMixin = Behavior({
         } else {
           toast.success(msg);
         }
+        var completedOrderNo = e.orderNo || '';
         this.setData({
           lastResult: {
             success: true,
@@ -447,6 +454,14 @@ const scanCoreMixin = Behavior({
             displayTime: new Date().toLocaleTimeString(),
             statusText: '已完成',
             statusClass: 'success',
+          },
+          lastLocalScanRecord: {
+            orderNo: completedOrderNo,
+            processName: '全部工序已完成',
+            processCode: '',
+            quantity: 0,
+            success: true,
+            time: new Date().toLocaleTimeString(),
           },
         });
         this.setData({ loading: false });
@@ -507,8 +522,19 @@ const scanCoreMixin = Behavior({
         sessionQty: newSessionQty,
       };
 
+      // 最新扫码记录（不持久化，新记录覆盖旧记录）
+      const localRecord = {
+        orderNo: result.orderNo || '',
+        processCode: result.processCode || '',
+        processName: result.processName || '',
+        quantity: result.quantity || 0,
+        success: true,
+        time: new Date().toLocaleTimeString(),
+      };
+
       this.setData({
         lastResult: formattedResult,
+        lastLocalScanRecord: localRecord,
         quantity: '', // 清空手动输入的数量
       });
 
@@ -569,8 +595,19 @@ const scanCoreMixin = Behavior({
         errorAction,
       };
 
+      // 最新扫码记录（不持久化，新记录覆盖旧记录）
+      const localRecord = {
+        orderNo: error.orderNo || '',
+        processCode: error.processCode || '',
+        processName: error.processName || '',
+        quantity: error.quantity || 0,
+        success: false,
+        time: new Date().toLocaleTimeString(),
+      };
+
       this.setData({
         lastResult: errorResult,
+        lastLocalScanRecord: localRecord,
       });
 
       // 错误提示已在 Handler 或 processScanCode 中通过 Toast 显示，这里主要更新 UI 状态
@@ -585,16 +622,16 @@ const scanCoreMixin = Behavior({
      */
     mapScanType(stageName) {
       const map = {
-        采购: 'procurement',
-        裁剪: 'cutting',
-        车缝: 'production',
-        大烫: 'production',
-        整烫: 'production',
-        整件: 'production',  // 整件车缝工序
-        质检: 'quality',
-        包装: 'production',
-        入库: 'warehouse',
-      };
+      采购: 'production',
+      裁剪: 'cutting',
+      车缝: 'production',
+      大烫: 'production',
+      整烫: 'production',
+      整件: 'production',
+      质检: 'quality',
+      包装: 'production',
+      入库: 'warehouse',
+    };
       return map[stageName] || 'production';
     },
   },

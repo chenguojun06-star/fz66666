@@ -116,6 +116,7 @@ class ScanOfflineQueue {
             orderId: item.orderId,
             bundleNo: item.bundleNo,
             requestId: item.requestId || `offline_${item.id}_${Date.now()}`,
+            source: 'h5',
           });
           await this.remove(item.id);
           submitted++;

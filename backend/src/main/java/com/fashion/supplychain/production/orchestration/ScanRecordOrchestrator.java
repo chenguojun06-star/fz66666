@@ -246,14 +246,12 @@ public class ScanRecordOrchestrator {
 
         boolean autoProcess = false;
         Integer qty = NumberUtils.toInt(safeParams.get("quantity"));
-        if ("sewing".equals(scanType)) {
+        if ("sewing".equals(scanType) || "procurement".equals(scanType)) {
             scanType = "production";
             autoProcess = true;
         }
 
-        // procurement: ORDER码采购扫码经此路由后走 productionScanExecutor，progressStage='采购'
-        // pattern: 样衣扫码应走专门的 PatternProductionOrchestrator，禁止通过此入口
-        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse", "procurement");
+        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse");
         if (!ALLOWED_SCAN_TYPES.contains(scanType)) {
             throw new IllegalArgumentException("不支持的扫码类型: " + scanType);
         }
@@ -261,6 +259,14 @@ public class ScanRecordOrchestrator {
         Integer qtyParam = NumberUtils.toInt(safeParams.get("quantity"));
         if (qtyParam != null && qtyParam <= 0) {
             throw new IllegalArgumentException("扫码数量必须大于0");
+        }
+
+        // ★ 统一终态校验：在路由到各执行器之前拦截终态订单
+        String checkOrderId = TextUtils.safeText(safeParams.get("orderId"));
+        String checkOrderNo = TextUtils.safeText(safeParams.get("orderNo"));
+        ProductionOrder preCheckOrder = scanRecordPermissionHelper.findScopedOrder(checkOrderId, checkOrderNo);
+        if (preCheckOrder != null && scanRecordPermissionHelper.isTerminalOrderStatus(preCheckOrder.getStatus())) {
+            throw new IllegalStateException("订单已终态(" + preCheckOrder.getStatus() + ")，无法继续扫码");
         }
 
         // 质检扫码路由
@@ -370,9 +376,7 @@ public class ScanRecordOrchestrator {
                     .orderByDesc(ScanRecord::getScanTime)
                     .orderByDesc(ScanRecord::getCreateTime)
                     .last("limit 1");
-            if (tenantId != null) {
-                qw.eq(ScanRecord::getTenantId, tenantId);
-            }
+            qw.eq(ScanRecord::getTenantId, tenantId);
             if (hasText(scanType)) {
                 qw.eq(ScanRecord::getScanType, scanType);
             }
@@ -599,7 +603,7 @@ public class ScanRecordOrchestrator {
         Long rescanTenantId = UserContext.tenantId();
         ScanRecord target = scanRecordService.lambdaQuery()
                 .eq(ScanRecord::getId, recordId)
-                .eq(rescanTenantId != null, ScanRecord::getTenantId, rescanTenantId)
+                .eq(ScanRecord::getTenantId, rescanTenantId)
                 .one();
         if (target == null) {
             throw new IllegalStateException("未找到扫码记录");

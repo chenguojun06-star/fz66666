@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.production.constants.ProductionConstants;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,8 +33,7 @@ import org.springframework.stereotype.Service;
 public class DefectHeatmapOrchestrator {
 
     /** 标准父工序顺序 */
-    private static final List<String> STAGE_ORDER =
-            Arrays.asList("采购", "裁剪", "二次工艺", "车缝", "尾部", "质检", "入库");
+    private static final List<String> STAGE_ORDER = ProductionConstants.FIXED_PRODUCTION_NODES;
 
     /** 历史脏数据规范化映射：子工序名 / 旧写法 → 标准父工序 */
     private static final Map<String, String> NORMALIZE;

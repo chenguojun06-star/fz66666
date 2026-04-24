@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
 import type { RiskIndicator, SimulationResultData } from '@/services/intelligence/intelligenceApi';
 import type { Message } from './types';
-import styles from './index.module.css';
+import styles from './HyperAdvisorWidgets.module.css';
+import sharedStyles from './index.module.css';
 
 /** 风险量化指标卡 */
 export const RiskIndicatorWidget: React.FC<{ items: RiskIndicator[] }> = ({ items }) => {
@@ -54,7 +55,7 @@ export const ClarificationCard: React.FC<{ missingInfo?: string[]; onAsk?: (ques
         {missingInfo.map((info, idx) => (
           <button
             key={idx}
-            className={styles.actionBtn}
+            className={sharedStyles.actionBtn}
             style={{ fontSize: 12, padding: '2px 10px' }}
             onClick={() => onAsk?.(info)}
           >{info}</button>

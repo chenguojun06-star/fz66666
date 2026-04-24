@@ -652,8 +652,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<ProductionOrder> listAllOverdueOrders() {
-        // 获取所有延期订单：交货日期 < 今天 且 生产中（排除已关闭/已完成/已取消/已归档）
         LocalDateTime now = LocalDateTime.now();
+        Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
         return productionOrderService.lambdaQuery()
             .select(
                 ProductionOrder::getId,
@@ -661,9 +662,13 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 ProductionOrder::getStyleNo,
                 ProductionOrder::getOrderQuantity,
                 ProductionOrder::getPlannedEndDate,
-                ProductionOrder::getFactoryName
+                ProductionOrder::getFactoryName,
+                ProductionOrder::getFactoryId,
+                ProductionOrder::getProductionProgress
             )
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped")
                 .orderByAsc(ProductionOrder::getPlannedEndDate)

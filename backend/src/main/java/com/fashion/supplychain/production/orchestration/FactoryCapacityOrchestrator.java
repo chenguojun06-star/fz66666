@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -30,8 +31,6 @@ import java.util.stream.Collectors;
 public class FactoryCapacityOrchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(FactoryCapacityOrchestrator.class);
-
-    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -94,7 +93,7 @@ public class FactoryCapacityOrchestrator {
         // 查询进行中（非 completed）且未删除的订单
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId)
-          .notIn("status", TERMINAL_STATUSES)
+          .notIn("status", OrderStatusConstants.TERMINAL_STATUSES)
           .eq("delete_flag", 0)
           .isNotNull("factory_name")
           .ne("factory_name", "");

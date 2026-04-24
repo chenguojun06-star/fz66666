@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.helper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -230,8 +231,7 @@ public class ScanRecordQueryHelper {
                     continue;
                 }
                 String orderStatus = order.getStatus();
-                if ("closed".equals(orderStatus) || "completed".equals(orderStatus)
-                        || "cancelled".equals(orderStatus) || "archived".equals(orderStatus)) {
+                if (OrderStatusConstants.isTerminal(orderStatus)) {
                     continue;
                 }
             }

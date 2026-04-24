@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
@@ -192,8 +193,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         }
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if (STATUS_COMPLETED.equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已完成，已停止入库");
+        if (OrderStatusConstants.isTerminal(st)) {
+            throw new IllegalStateException("订单已终态(" + st + ")，已停止入库");
         }
 
         String existingWarehousingNo = helper.findExistingWarehousingNoByOrderId(order.getId());
@@ -455,7 +456,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             throw new NoSuchElementException("订单不存在");
         }
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if (STATUS_COMPLETED.equalsIgnoreCase(st)) {
+        if (OrderStatusConstants.isTerminal(st)) {
             throw new IllegalStateException("订单已完成，已停止入库");
         }
 
@@ -551,7 +552,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (StringUtils.hasText(oldWarehousing.getOrderId())) {
             ProductionOrder order = productionOrderService.getById(oldWarehousing.getOrderId());
             String st = order == null ? "" : (order.getStatus() == null ? "" : order.getStatus().trim());
-            if (STATUS_COMPLETED.equalsIgnoreCase(st)) {
+            if (OrderStatusConstants.isTerminal(st)) {
                 throw new IllegalStateException("订单已完成，已停止入库");
             }
         }

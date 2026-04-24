@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.dto.DeliveryRiskResponse;
 import com.fashion.supplychain.intelligence.dto.DeliveryRiskResponse.DeliveryRiskItem;
 import com.fashion.supplychain.intelligence.entity.IntelligenceProcessStats;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
+import com.fashion.supplychain.production.constants.ProductionConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -42,8 +43,7 @@ import org.springframework.util.StringUtils;
 public class OrderDeliveryRiskOrchestrator {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final List<String> STAGE_ORDER = List.of(
-            "采购", "裁剪", "二次工艺", "车缝", "尾部", "质检", "入库");
+    private static final List<String> STAGE_ORDER = ProductionConstants.FIXED_PRODUCTION_NODES;
 
     @Autowired
     private ProductionOrderService productionOrderService;

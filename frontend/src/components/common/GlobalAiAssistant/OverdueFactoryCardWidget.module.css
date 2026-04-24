@@ -1,0 +1,246 @@
+.overdueCardWrapper {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.overdueSummaryBar {
+  background: linear-gradient(135deg, #fff1f0 0%, #fff7e6 100%);
+  border: 1px solid #ffccc7;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.overdueSummaryTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #cf1322;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.overdueAlertDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4d4f;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+.overdueSummaryStats {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.overdueStatChip {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #ffd8d8;
+  border-radius: 8px;
+  padding: 4px 8px;
+  text-align: center;
+  min-width: 52px;
+}
+
+.overdueStatChipHighlight {
+  border-color: #ffa39e;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.overdueStatValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.overdueStatChipHighlight .overdueStatValue {
+  color: #cf1322;
+}
+
+.overdueStatUnit {
+  font-size: 10px;
+  font-weight: 400;
+  color: #8c8c8c;
+  margin-left: 1px;
+}
+
+.overdueStatLabel {
+  font-size: 10px;
+  color: #8c8c8c;
+  line-height: 1.3;
+}
+
+.overdueFactoryCard {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.overdueFactoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.overdueFactoryName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #262626;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.overdueFactoryIcon {
+  font-size: 14px;
+}
+
+.overdueFactoryBadge {
+  font-size: 11px;
+  color: #8c8c8c;
+  background: #f5f5f5;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.overdueFactoryMetrics {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #f0f0f0;
+}
+
+.overdueMetricRing {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overdueMetricRingLabel {
+  position: absolute;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.overdueMetricRingValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: #262626;
+}
+
+.overdueMetricRingUnit {
+  font-size: 9px;
+  color: #8c8c8c;
+}
+
+.overdueMetricItems {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+
+.overdueMetricItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.overdueMetricLabel {
+  font-size: 10px;
+  color: #8c8c8c;
+}
+
+.overdueMetricValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.overdueMetricDanger {
+  color: #cf1322;
+}
+
+.overdueOrderList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overdueOrderItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  background: #fafafa;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.overdueOrderItem:hover {
+  background: #e6f7ff;
+}
+
+.overdueOrderLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.overdueOrderNo {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.overdueOrderNo:hover {
+  text-decoration: underline;
+}
+
+.overdueOrderStyle {
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+.overdueOrderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overdueOrderProgress {
+  font-size: 12px;
+  font-weight: 600;
+  color: #faad14;
+}
+
+.overdueOrderDanger {
+  color: #ff4d4f;
+}
+
+.overdueOrderDays {
+  font-size: 11px;
+  color: #cf1322;
+  background: #fff1f0;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}

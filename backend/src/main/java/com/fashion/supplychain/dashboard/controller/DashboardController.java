@@ -98,4 +98,10 @@ public class DashboardController {
     public Result<?> overdueOrders() {
         return Result.success(dashboardOrchestrator.getOverdueOrders());
     }
+
+    @GetMapping("/overdue-factory-stats")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> overdueFactoryStats() {
+        return Result.success(dashboardOrchestrator.getOverdueFactoryStats());
+    }
 }

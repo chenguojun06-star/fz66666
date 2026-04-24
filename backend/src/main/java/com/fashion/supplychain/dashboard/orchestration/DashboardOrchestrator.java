@@ -637,6 +637,90 @@ public class DashboardOrchestrator {
         return result;
     }
 
+    public Map<String, Object> getOverdueFactoryStats() {
+        List<ProductionOrder> allOverdues = dashboardQueryService.listAllOverdueOrders();
+        LocalDateTime now = LocalDateTime.now();
+
+        Map<String, List<ProductionOrder>> byFactory = new HashMap<>();
+        for (ProductionOrder o : allOverdues) {
+            String fName = o.getFactoryName() != null ? o.getFactoryName() : "未指定";
+            byFactory.computeIfAbsent(fName, k -> new ArrayList<>()).add(o);
+        }
+
+        List<Map<String, Object>> factoryGroups = new ArrayList<>();
+        int totalQuantity = 0;
+        int totalProgress = 0;
+        int totalOverdueDays = 0;
+
+        for (Map.Entry<String, List<ProductionOrder>> entry : byFactory.entrySet()) {
+            String fName = entry.getKey();
+            List<ProductionOrder> orders = entry.getValue();
+            int fOrderCount = orders.size();
+            int fTotalQty = 0;
+            int fProgressSum = 0;
+            int fOverdueDaysSum = 0;
+            List<Map<String, Object>> orderItems = new ArrayList<>();
+
+            for (ProductionOrder o : orders) {
+                int qty = o.getOrderQuantity() != null ? o.getOrderQuantity() : 0;
+                int prog = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
+                int days = o.getPlannedEndDate() != null ? (int) ChronoUnit.DAYS.between(o.getPlannedEndDate(), now) : 0;
+                fTotalQty += qty;
+                fProgressSum += prog;
+                fOverdueDaysSum += Math.max(0, days);
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("orderNo", o.getOrderNo());
+                item.put("styleNo", o.getStyleNo());
+                item.put("progress", prog);
+                item.put("overdueDays", Math.max(0, days));
+                item.put("quantity", qty);
+                item.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : null);
+                orderItems.add(item);
+            }
+
+            int fAvgProgress = fOrderCount > 0 ? fProgressSum / fOrderCount : 0;
+            int fAvgOverdueDays = fOrderCount > 0 ? fOverdueDaysSum / fOrderCount : 0;
+            int fEstDays = fAvgProgress > 0
+                    ? (int) Math.ceil((100.0 - fAvgProgress) / Math.max(fAvgProgress, 1) * (fAvgOverdueDays > 0 ? fAvgOverdueDays : 7))
+                    : -1;
+
+            Map<String, Object> group = new HashMap<>();
+            group.put("factoryName", fName);
+            group.put("totalOrders", fOrderCount);
+            group.put("totalQuantity", fTotalQty);
+            group.put("avgProgress", fAvgProgress);
+            group.put("avgOverdueDays", fAvgOverdueDays);
+            group.put("activeWorkers", 0);
+            group.put("estimatedCompletionDays", fEstDays);
+            group.put("orders", orderItems);
+            factoryGroups.add(group);
+
+            totalQuantity += fTotalQty;
+            totalProgress += fProgressSum;
+            totalOverdueDays += fOverdueDaysSum;
+        }
+
+        int totalCount = allOverdues.size();
+        int overallAvgProgress = totalCount > 0 ? totalProgress / totalCount : 0;
+        int overallAvgOverdueDays = totalCount > 0 ? totalOverdueDays / totalCount : 0;
+
+        factoryGroups.sort((a, b) -> {
+            int oa = (int) a.get("totalOrders");
+            int ob = (int) b.get("totalOrders");
+            return ob - oa;
+        });
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("overdueCount", totalCount);
+        result.put("totalQuantity", totalQuantity);
+        result.put("avgProgress", overallAvgProgress);
+        result.put("avgOverdueDays", overallAvgOverdueDays);
+        result.put("factoryGroupCount", byFactory.size());
+        result.put("factoryGroups", factoryGroups);
+        return result;
+    }
+
     // ─────────────────────────────────────────────────────────────
     // 实时扫码动态流（太空舱模块）
     // ─────────────────────────────────────────────────────────────

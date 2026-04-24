@@ -1,5 +1,17 @@
   <!-- ④ 扫码区（一行：扫码主键） -->
   <view class="scan-area-big">
+    <!-- 最新扫码记录（不持久化，新记录覆盖旧记录） -->
+    <view wx:if="{{lastLocalScanRecord}}" class="last-scan-record {{lastLocalScanRecord.success ? 'ok' : 'err'}}">
+      <view class="lsr-row">
+        <text class="lsr-tag {{lastLocalScanRecord.success ? 'ok' : 'err'}}">{{lastLocalScanRecord.success ? '成功' : '失败'}}</text>
+        <text class="lsr-order">{{lastLocalScanRecord.orderNo}}</text>
+      </view>
+      <view class="lsr-row lsr-sub">
+        <text wx:if="{{lastLocalScanRecord.processCode}}" class="lsr-process">{{lastLocalScanRecord.processCode}} {{lastLocalScanRecord.processName}}</text>
+        <text wx:else class="lsr-process">{{lastLocalScanRecord.processName}}</text>
+        <text class="lsr-qty">{{lastLocalScanRecord.quantity}}件</text>
+      </view>
+    </view>
     <view class="scan-row">
       <view class="scan-btn-big {{loading ? 'off' : ''}}" hover-class="scan-btn-big-hover" hover-stay-time="100" bindtap="onScan">
         <view class="scan-btn-icon-svg">

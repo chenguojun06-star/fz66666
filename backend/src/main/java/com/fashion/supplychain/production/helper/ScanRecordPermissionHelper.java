@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -9,7 +10,6 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -72,13 +72,7 @@ public class ScanRecordPermissionHelper {
         return productionOrderService.getOne(qw, false);
     }
 
-    private static final Set<String> TERMINAL_STATUSES =
-            Set.of("completed", "cancelled", "scrapped", "archived", "closed");
-
     public boolean isTerminalOrderStatus(String status) {
-        if (status == null) {
-            return false;
-        }
-        return TERMINAL_STATUSES.contains(status.trim().toLowerCase());
+        return OrderStatusConstants.isTerminal(status);
     }
 }

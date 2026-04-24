@@ -221,6 +221,7 @@ export interface EcConfigSaveRequest {
   appKey: string;
   appSecret: string;
   extraField?: string;
+  callbackUrl?: string;
 }
 
 export const ecPlatformConfigService = {

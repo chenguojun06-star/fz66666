@@ -65,7 +65,7 @@ class ScanStageProcessor {
         return {
           processName: currentProcessName,
           progressStage: currentProcessName,
-          scanType: currentProcessName === '采购' ? 'procurement' : 'cutting',
+          scanType: currentProcessName === '采购' ? 'production' : 'cutting',
           quantity: parsedData.quantity || 0,
           isDuplicate: false,
           isCompleted: false,

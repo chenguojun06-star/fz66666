@@ -341,15 +341,15 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_scan_record", "scan_mode", "VARCHAR(20) DEFAULT NULL COMMENT '扫码模式'");
         add("t_scan_record", "sku_completed_count", "INT DEFAULT NULL COMMENT 'SKU已完成数'");
         add("t_scan_record", "sku_total_count", "INT DEFAULT NULL COMMENT 'SKU总数'");
-        add("t_scan_record", "process_unit_price", "DECIMAL(12,4) DEFAULT NULL COMMENT '工序单价'");
-        add("t_scan_record", "scan_cost", "DECIMAL(12,4) DEFAULT NULL COMMENT '本次扫码工序成本'");
+        add("t_scan_record", "process_unit_price", "DECIMAL(15,2) DEFAULT NULL COMMENT '工序单价'");
+        add("t_scan_record", "scan_cost", "DECIMAL(15,2) DEFAULT NULL COMMENT '本次扫码工序成本'");
         add("t_scan_record", "delegate_target_type", "VARCHAR(20) DEFAULT NULL COMMENT '指派目标类型'");
         add("t_scan_record", "delegate_target_id", "VARCHAR(64) DEFAULT NULL COMMENT '指派目标ID'");
         add("t_scan_record", "delegate_target_name", "VARCHAR(100) DEFAULT NULL COMMENT '指派目标名称'");
         add("t_scan_record", "actual_operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '实际操作员ID'");
         add("t_scan_record", "actual_operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '实际操作员名称'");
         add("t_scan_record", "cutting_bundle_qr_code", "VARCHAR(200) DEFAULT NULL COMMENT '裁剪菲号二维码'");
-        add("t_scan_record", "progress_stage", "VARCHAR(30) DEFAULT NULL COMMENT '生产阶段'");
+        add("t_scan_record", "progress_stage", "VARCHAR(100) DEFAULT NULL COMMENT '生产阶段'");
         add("t_scan_record", "payroll_settlement_id", "VARCHAR(64) DEFAULT NULL COMMENT '关联工资结算单ID'");
         add("t_scan_record", "factory_id", "VARCHAR(64) DEFAULT NULL COMMENT '扫码时归属外发工厂ID'");
         add("t_scan_record", "process_code", "VARCHAR(50) DEFAULT NULL COMMENT '工序代码'");
@@ -1297,6 +1297,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_ai_conversation_memory", "ai_response", "TEXT DEFAULT NULL");
         add("t_ai_conversation_memory", "feedback_score", "TINYINT DEFAULT NULL");
         add("t_ai_conversation_memory", "feedback_reason", "VARCHAR(500) DEFAULT NULL");
+
+        add("t_ec_platform_config", "callback_url", "VARCHAR(500) DEFAULT NULL");
     }
 
     private static void add(String table, String column, String definition) {

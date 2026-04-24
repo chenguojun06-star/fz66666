@@ -88,7 +88,11 @@ public class EcSalesRevenueOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public void confirm(Long id, String remark) {
-        EcSalesRevenue rev = ecSalesRevenueService.getById(id);
+        Long tenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
+        EcSalesRevenue rev = ecSalesRevenueService.getOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EcSalesRevenue>()
+                        .eq(EcSalesRevenue::getId, id)
+                        .eq(EcSalesRevenue::getTenantId, tenantId));
         if (rev == null) throw new IllegalArgumentException("收入流水不存在: " + id);
         if (!"pending".equals(rev.getStatus())) {
             throw new IllegalStateException("仅 pending 状态可确认，当前状态=" + rev.getStatus());
@@ -106,7 +110,11 @@ public class EcSalesRevenueOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public void reconcile(Long id) {
-        EcSalesRevenue rev = ecSalesRevenueService.getById(id);
+        Long tenantId = com.fashion.supplychain.common.tenant.TenantAssert.requireTenantId();
+        EcSalesRevenue rev = ecSalesRevenueService.getOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EcSalesRevenue>()
+                        .eq(EcSalesRevenue::getId, id)
+                        .eq(EcSalesRevenue::getTenantId, tenantId));
         if (rev == null) throw new IllegalArgumentException("收入流水不存在: " + id);
         if (!"confirmed".equals(rev.getStatus())) {
             throw new IllegalStateException("仅 confirmed 状态可入账，当前状态=" + rev.getStatus());
@@ -223,10 +231,7 @@ public class EcSalesRevenueOrchestrator {
     }
 
     private void checkTenant(Long recordTenantId) {
-        Long current = UserContext.tenantId();
-        if (current != null && !current.equals(recordTenantId)) {
-            throw new IllegalStateException("无权操作其他租户的收入记录");
-        }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(recordTenantId, "收入记录");
     }
 
     private int parseIntSafe(Object v, int def) {

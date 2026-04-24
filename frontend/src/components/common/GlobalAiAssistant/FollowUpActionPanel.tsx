@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import type { FollowUpAction, ActionField } from './types';
-import styles from './index.module.css';
+import styles from './FollowUpActionPanel.module.css';
+import sharedStyles from './index.module.css';
 
 /* ── 单个跟进动作卡片（含可选表单输入） ── */
 const FollowUpCard: React.FC<{
@@ -91,7 +92,7 @@ const FollowUpCard: React.FC<{
           {/* 执行 / 取消 */}
           <div className={styles.followUpFormActions}>
             <button
-              className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+              className={`${sharedStyles.actionBtn} ${sharedStyles.actionBtnPrimary}`}
               onClick={() => {
                 const mergedParams = { ...action.prefilledParams, ...formValues };
                 onExecute(action.command ?? action.label, mergedParams);
@@ -100,7 +101,7 @@ const FollowUpCard: React.FC<{
             >
               执行
             </button>
-            <button className={styles.actionBtn} onClick={handleCancel}>
+            <button className={sharedStyles.actionBtn} onClick={handleCancel}>
               取消
             </button>
           </div>

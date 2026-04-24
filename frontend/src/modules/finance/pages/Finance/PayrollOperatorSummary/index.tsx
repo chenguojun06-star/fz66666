@@ -14,6 +14,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { getSummaryColumns, getDetailColumns, scanTypeText } from './payrollOperatorColumns';
+import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 import WageSlipPrintModal from './WageSlipPrintModal';
 import { PrinterOutlined, SearchOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -169,19 +170,13 @@ const PayrollOperatorSummary: React.FC = () => {
         { title: '状态', dataIndex: 'status', key: 'status', width: 80, align: 'center' as const,
             render: (v: unknown) => {
                 const s = String(v || '');
-                const statusMap: Record<string, { label: string; color: string }> = {
-                    'completed': { label: '已完成', color: 'green' },
-                    'closed': { label: '已关单', color: 'green' },
-                    'processing': { label: '处理中', color: 'blue' },
-                    'pending': { label: '待处理', color: 'orange' },
-                    'rejected': { label: '已驳回', color: 'red' },
-                };
-                const statusInfo = statusMap[s] || { label: s, color: 'default' };
-                return <Tag color={statusInfo.color}>{statusInfo.label}</Tag>;
+                const label = ORDER_STATUS_LABEL[s] || s;
+                const color = ORDER_STATUS_COLOR[s] || 'default';
+                return <Tag color={color}>{label}</Tag>;
             }
         },
-        { title: '关单时间', dataIndex: 'closedTime', key: 'closedTime', width: 140, ellipsis: true,
-            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+        { title: '关单时间', dataIndex: 'completeTime', key: 'completeTime', width: 160, ellipsis: true,
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm') : '-',
         },
     ];
 

@@ -39,16 +39,12 @@ public class EcPlatformConfigController {
 
     @Data
     static class SaveRequest {
-        /** 平台编码：TAOBAO / TMALL / JD / DOUYIN / PINDUODUO / XIAOHONGSHU / WECHAT_SHOP / SHOPIFY */
         private String platformCode;
-        /** 店铺名称 */
         private String shopName;
-        /** AppKey / Client ID / App ID */
         private String appKey;
-        /** AppSecret / Client Secret */
         private String appSecret;
-        /** 扩展字段，如 Shopify 店铺域名 */
         private String extraField;
+        private String callbackUrl;
     }
 
     @Data
@@ -56,9 +52,9 @@ public class EcPlatformConfigController {
         private String platformCode;
         private String shopName;
         private String appKey;
-        /** AppSecret 脱敏显示，仅显示前4位 */
         private String appSecretMasked;
         private String extraField;
+        private String callbackUrl;
         private String status;
         private String updatedAt;
     }
@@ -84,7 +80,8 @@ public class EcPlatformConfigController {
                 req.getShopName(),
                 req.getAppKey(),
                 req.getAppSecret(),
-                req.getExtraField()
+                req.getExtraField(),
+                req.getCallbackUrl()
         );
         return Result.success(toVO(saved));
     }
@@ -144,6 +141,7 @@ public class EcPlatformConfigController {
             vo.setAppSecretMasked(s.length() > 4 ? s.substring(0, 4) + "****" : "****");
         }
         vo.setExtraField(config.getExtraField());
+        vo.setCallbackUrl(config.getCallbackUrl());
         vo.setStatus(config.getStatus());
         if (config.getUpdatedAt() != null) {
             vo.setUpdatedAt(config.getUpdatedAt().toString());

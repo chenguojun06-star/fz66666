@@ -72,6 +72,9 @@ public class ProductWarehousingOrchestrator {
     private OrderRemarkService orderRemarkService;
 
     @Autowired
+    private com.fashion.supplychain.integration.openapi.service.WebhookPushService webhookPushService;
+
+    @Autowired
     private WebSocketService webSocketService;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
@@ -309,6 +312,24 @@ public class ProductWarehousingOrchestrator {
             }
         } catch (Exception e) {
             log.warn("自动写入质检入库备注失败，不影响主流程", e);
+        }
+
+        try {
+            if (webhookPushService != null && StringUtils.hasText(productWarehousing.getOrderNo())) {
+                int qualified = productWarehousing.getQualifiedQuantity() != null
+                        ? productWarehousing.getQualifiedQuantity() : 0;
+                int unqualified = productWarehousing.getUnqualifiedQuantity() != null
+                        ? productWarehousing.getUnqualifiedQuantity() : 0;
+                webhookPushService.pushQualityResult(
+                        productWarehousing.getOrderNo(),
+                        "质检入库",
+                        qualified,
+                        unqualified,
+                        Map.of("warehouse", productWarehousing.getWarehouse() != null ? productWarehousing.getWarehouse() : "",
+                               "warehousingNo", productWarehousing.getWarehousingNo() != null ? productWarehousing.getWarehousingNo() : ""));
+            }
+        } catch (Exception e) {
+            log.warn("[Webhook] 质检结果推送失败，不影响主流程: {}", e.getMessage());
         }
 
         return true;

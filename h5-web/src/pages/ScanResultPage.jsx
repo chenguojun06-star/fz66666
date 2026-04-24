@@ -276,7 +276,10 @@ export default function ScanResultPage() {
         const scanPayload = {
           ...(scanResultData.scanData || {}),
           scanType: normalizeScanType(scanResultData.progressStage, effectiveScanType),
-          processName: option.value, quantity,
+          processName: option.value,
+          progressStage: scanResultData.progressStage,
+          processCode: option.processCode || '',
+          quantity,
         };
         if (scanResultData.progressStage === 'quality' || scanResultData.progressStage === '质检') {
           scanPayload.qualityStage = scanPayload.qualityStage || scanResultData.qualityStage || 'receive';

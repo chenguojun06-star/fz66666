@@ -18,6 +18,9 @@ import { useAuth } from '@/utils/AuthContext';
 import { useWebSocket, type WsMessage } from '@/hooks/useWebSocket';
 import XiaoyunCloudAvatar, { CuteCloudTrigger, type XiaoyunCloudMood } from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
+import cloudStyles from './CloudTrigger.module.css';
+import emojiStyles from './EmojiPicker.module.css';
+import msgStyles from './MessageBubble.module.css';
 import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
 import { INITIAL_MSG, EMOJI_GROUPS, getPageSuggestions } from './constants';
 import { choose } from './helpers';
@@ -471,7 +474,7 @@ const GlobalAiAssistant: React.FC = () => {
           <div className={styles.chatArea} ref={chatAreaRef}>
             {/* 预警待办 */}
             {messages.length === 1 && visiblePendingItems.length > 0 && (
-              <div className={styles.pendingItems}>
+              <div className={msgStyles.pendingItems}>
                 {visiblePendingItems.slice(0, 6).map((item: any) => {
                   const isPendingTask = !!item.taskType;
                   const dl = item.daysLeft;
@@ -489,7 +492,7 @@ const GlobalAiAssistant: React.FC = () => {
                       })()
                     : `/production?orderNo=${encodeURIComponent(item.orderNo || '')}`;
                   return (
-                    <div key={item.id || item.orderNo} className={styles.pendingItem} style={{position:'relative'}}
+                    <div key={item.id || item.orderNo} className={msgStyles.pendingItem} style={{position:'relative'}}
                       onClick={() => { setIsOpen(false); onSafeNavigate(navPath); }}
                     >
                       <span>{item.categoryIcon || '⚠️'}</span>
@@ -501,7 +504,7 @@ const GlobalAiAssistant: React.FC = () => {
                       </span>
                       <span style={{color:'#1890ff',fontSize:11}}>查看 →</span>
                       <button
-                        className={styles.pendingDismissBtn}
+                        className={msgStyles.pendingDismissBtn}
                         onClick={(e) => dismissPendingItem(item.id || item.orderNo, e)}
                         title="今日不再提醒"
                       >×</button>
@@ -509,7 +512,7 @@ const GlobalAiAssistant: React.FC = () => {
                   );
                 })}
                 {visiblePendingItems.length > 6 && (
-                  <div className={styles.pendingMoreBtn} onClick={() => { setIsOpen(false); openTaskPanel(); }}>
+                  <div className={msgStyles.pendingMoreBtn} onClick={() => { setIsOpen(false); openTaskPanel(); }}>
                     还有 {visiblePendingItems.length - 6} 项待办，查看全部 →
                   </div>
                 )}
@@ -517,12 +520,12 @@ const GlobalAiAssistant: React.FC = () => {
             )}
             {messages.length === 1 && (
               <>
-                <div className={styles.quickHint}>
+                <div className={msgStyles.quickHint}>
                   直接自然语言输入就可以，下面只是常用示例
                 </div>
-                <div className={styles.suggestionChips}>
+                <div className={msgStyles.suggestionChips}>
                   {pageSuggestions.map(q => (
-                    <div key={q} className={styles.chip} onClick={() => handleSend(q)}>
+                    <div key={q} className={msgStyles.chip} onClick={() => handleSend(q)}>
                       {q}
                     </div>
                   ))}
@@ -558,12 +561,12 @@ const GlobalAiAssistant: React.FC = () => {
 
             {/* Loading Indicator */}
             {isTyping && (
-              <div className={`${styles.messageRow} ${styles.rowAi}`}>
-                <div className={styles.messageAvatar}>
+              <div className={`${msgStyles.messageRow} ${msgStyles.rowAi}`}>
+                <div className={msgStyles.messageAvatar}>
                   <XiaoyunCloudAvatar size={28} active loading />
                 </div>
-                <div className={`${styles.messageBubble} ${styles.bubbleAi}`}>
-                  <div className={styles.typingText}>小云正在处理，请稍等一下…</div>
+                <div className={`${msgStyles.messageBubble} ${msgStyles.bubbleAi}`}>
+                  <div className={msgStyles.typingText}>小云正在处理，请稍等一下…</div>
                 </div>
               </div>
             )}
@@ -601,32 +604,32 @@ const GlobalAiAssistant: React.FC = () => {
               >
                 AI记录
               </button>
-              <div className={styles.emojiWrapper} ref={emojiPanelRef}>
+              <div className={emojiStyles.emojiWrapper} ref={emojiPanelRef}>
                 <button
-                  className={`${styles.uploadBtn} ${showEmojiPicker ? styles.emojiActive : ''}`}
+                  className={`${styles.uploadBtn} ${showEmojiPicker ? emojiStyles.emojiActive : ''}`}
                   title="表情"
                   onClick={() => setShowEmojiPicker(v => !v)}
                 >
                   <SmileOutlined />
                 </button>
                 {showEmojiPicker && (
-                  <div className={styles.emojiPanel}>
-                    <div className={styles.emojiTabs}>
+                  <div className={emojiStyles.emojiPanel}>
+                    <div className={emojiStyles.emojiTabs}>
                       {EMOJI_GROUPS.map((g, i) => (
                         <button
                           key={g.label}
-                          className={`${styles.emojiTabBtn} ${emojiTab === i ? styles.emojiTabActive : ''}`}
+                          className={`${emojiStyles.emojiTabBtn} ${emojiTab === i ? emojiStyles.emojiTabActive : ''}`}
                           onClick={() => setEmojiTab(i)}
                         >
                           {g.label}
                         </button>
                       ))}
                     </div>
-                    <div className={styles.emojiGrid}>
+                    <div className={emojiStyles.emojiGrid}>
                       {EMOJI_GROUPS[emojiTab].emojis.map((em, i) => (
                         <button
                           key={`${em}-${i}`}
-                          className={styles.emojiItem}
+                          className={emojiStyles.emojiItem}
                           onClick={() => handleEmojiSelect(em)}
                         >
                           {em}
@@ -671,14 +674,14 @@ const GlobalAiAssistant: React.FC = () => {
 
       {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘 */}
       <div
-        className={`${styles.triggerBtn} ${isActiveDrag ? styles.triggerDragging : ''} ${isDocked && !isOpen && !isTaskPanelOpen ? styles.triggerDocked : ''} ${isDocked && triggerPos.edge === 'right' ? styles.triggerDockedRight : ''}`}
+        className={`${cloudStyles.triggerBtn} ${isActiveDrag ? cloudStyles.triggerDragging : ''} ${isDocked && !isOpen && !isTaskPanelOpen ? cloudStyles.triggerDocked : ''} ${isDocked && triggerPos.edge === 'right' ? cloudStyles.triggerDockedRight : ''}`}
         style={{ left: triggerPos.x, top: triggerPos.y }}
         onMouseDown={handleTriggerMouseDown}
         title="召唤小云智能助手"
       >
         <CuteCloudTrigger size={56} active={isOpen || isTaskPanelOpen} />
         {!isOpen && !isTaskPanelOpen && visiblePendingItems.length > 0 && (
-          <span className={styles.triggerBadge} onClick={(e) => { e.stopPropagation(); openTaskPanel(); }}>{visiblePendingItems.length}</span>
+          <span className={cloudStyles.triggerBadge} onClick={(e) => { e.stopPropagation(); openTaskPanel(); }}>{visiblePendingItems.length}</span>
         )}
       </div>
     </>

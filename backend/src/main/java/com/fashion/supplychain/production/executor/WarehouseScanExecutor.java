@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -28,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 /**
  * 仓库入库扫码执行器
@@ -43,8 +43,6 @@ import java.util.Set;
 @Component
 @Slf4j
 public class WarehouseScanExecutor {
-
-    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private ProductionScanStageSupport stageSupport;
@@ -124,7 +122,7 @@ public class WarehouseScanExecutor {
 
         // ★ 订单完成状态检查：所有环节统一拦截
         String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim();
-        if (TERMINAL_STATUSES.contains(orderStatus.toLowerCase())) {
+        if (OrderStatusConstants.isTerminal(orderStatus)) {
             throw new IllegalStateException("订单已终态(" + orderStatus + ")，无法继续入库");
         }
 
@@ -711,7 +709,7 @@ public class WarehouseScanExecutor {
             r.put("message", "未找到关联订单，请指定订单号");
             return r;
         }
-        if (order.getStatus() != null && TERMINAL_STATUSES.contains(order.getStatus().trim().toLowerCase())) {
+        if (order.getStatus() != null && OrderStatusConstants.isTerminal(order.getStatus())) {
             Map<String, Object> r = new HashMap<>();
             r.put("success", false);
             r.put("message", "订单已终态，无法继续入库");

@@ -99,7 +99,7 @@ public class ScanRecord {
     private LocalDateTime scanTime;
 
     /**
-     * 扫码类型(material:物料扫码, production:生产扫码, quality:质检扫码, warehouse:入库扫码)
+     * 扫码类型(cutting:裁剪扫码, production:生产扫码, quality:质检扫码, warehouse:入库扫码, pattern:样衣扫码, orchestration:系统编排)
      */
     private String scanType;
 

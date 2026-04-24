@@ -363,12 +363,27 @@ public class SerpApiTrendService {
 
     private String buildSearchUrl(MarketSource source, String searchKeyword, int limit) {
         StringBuilder url = new StringBuilder(BASE_URL)
-                .append("?engine=").append(source.engine)
-                .append("&q=").append(URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8))
-                .append("&num=").append(Math.max(limit, 10));
+                .append("?engine=").append(source.engine);
+
+        switch (source.engine) {
+            case "amazon":
+                url.append("&k=").append(URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8));
+                break;
+            case "ebay":
+                url.append("&_nkw=").append(URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8));
+                break;
+            case "walmart":
+                url.append("&query=").append(URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8));
+                break;
+            default:
+                url.append("&q=").append(URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8));
+                break;
+        }
+
+        url.append("&num=").append(Math.max(limit, 10));
 
         if ("google_shopping".equals(source.engine)) {
-            url.append("&hl=zh-cn");
+            url.append("&gl=cn&hl=zh-cn");
         } else {
             url.append("&hl=en");
         }

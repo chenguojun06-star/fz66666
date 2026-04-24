@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.production.constants.ProductionConstants;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
@@ -30,9 +31,7 @@ import java.util.Map;
 @Slf4j
 public class UnitPriceResolver {
 
-    private static final String[] FIXED_PRODUCTION_NODES = {
-            "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"
-    };
+    private static final String[] FIXED_PRODUCTION_NODES = ProductionConstants.FIXED_PRODUCTION_NODES_ARRAY;
 
     @Autowired
     private TemplateLibraryService templateLibraryService;

@@ -235,7 +235,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
       return 'cutting';
     }
     if (currentType === 'procurement' || processCode.startsWith('procurement') || processName.includes('采购')) {
-      return 'procurement';
+      return 'production';
     }
     return 'production';
   }, [nodeType, processType]);

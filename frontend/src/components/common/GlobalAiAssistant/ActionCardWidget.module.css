@@ -1,0 +1,22 @@
+.actionCard {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 6px 0;
+}
+.cardUrgent {
+  background: #fff1f0;
+  border-color: #ffa39e;
+}
+.cardWarning {
+  background: #fffbe6;
+  border-color: #ffe58f;
+}
+.cardNormal {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+.actionCardTitle { font-size: 13px; font-weight: 600; color: #873800; margin-bottom: 4px; }
+.actionCardDesc { font-size: 12px; color: #874d00; margin-bottom: 8px; line-height: 1.5; }
+.actionCardBtns { display: flex; gap: 6px; flex-wrap: wrap; }

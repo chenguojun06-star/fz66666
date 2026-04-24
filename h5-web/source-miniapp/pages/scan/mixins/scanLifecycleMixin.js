@@ -98,6 +98,15 @@ const scanLifecycleMixin = Behavior({
       this.getTabBar().setData({ selected: 2 });
     }
 
+    // 从扫码确认页返回时，读取最新扫码结果并显示在扫码按钮上方
+    try {
+      const lastResult = getApp().globalData.lastScanResult;
+      if (lastResult) {
+        this.setData({ lastLocalScanRecord: lastResult });
+        getApp().globalData.lastScanResult = null;
+      }
+    } catch (_) { /* ignore */ }
+
     // 每次显示都检查登录状态和更新统计
     const isLogin = await this.checkLoginStatus();
     if (isLogin) {
@@ -274,7 +283,8 @@ const scanLifecycleMixin = Behavior({
      */
     async _loadWarehouseOptions() {
       try {
-        const res = await api.system.getDictList('warehouse_location');
+        // 加载成品仓库库位（默认）
+        const res = await api.system.getDictList('finished_warehouse_location');
         const records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res?.data || []));
         if (Array.isArray(records) && records.length > 0) {
           const options = records

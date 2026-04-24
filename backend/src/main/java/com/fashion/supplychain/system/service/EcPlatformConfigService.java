@@ -42,7 +42,8 @@ public class EcPlatformConfigService extends ServiceImpl<EcPlatformConfigMapper,
      */
     public EcPlatformConfig saveOrUpdate(Long tenantId, String platformCode,
                                          String shopName, String appKey,
-                                         String appSecret, String extraField) {
+                                         String appSecret, String extraField,
+                                         String callbackUrl) {
         EcPlatformConfig existing = getByTenantAndPlatform(tenantId, platformCode);
         if (existing == null) {
             existing = new EcPlatformConfig();
@@ -54,6 +55,7 @@ public class EcPlatformConfigService extends ServiceImpl<EcPlatformConfigMapper,
         existing.setAppKey(appKey);
         existing.setAppSecret(appSecret);
         existing.setExtraField(extraField);
+        existing.setCallbackUrl(callbackUrl);
         saveOrUpdate(existing);
         log.info("[EcConfig] 租户{} 平台{} 凭证已保存，店铺：{}", tenantId, platformCode, shopName);
         return existing;
@@ -68,5 +70,17 @@ public class EcPlatformConfigService extends ServiceImpl<EcPlatformConfigMapper,
                 .eq("platform_code", platformCode)
                 .set("status", "DISABLED"));
         log.info("[EcConfig] 租户{} 平台{} 已断开连接", tenantId, platformCode);
+    }
+
+    public EcPlatformConfig getByAppKey(String appKey) {
+        return getOne(new QueryWrapper<EcPlatformConfig>()
+                .eq("app_key", appKey)
+                .eq("status", "ACTIVE"));
+    }
+
+    public List<EcPlatformConfig> listByPlatformCode(String platformCode) {
+        return list(new QueryWrapper<EcPlatformConfig>()
+                .eq("platform_code", platformCode)
+                .eq("status", "ACTIVE"));
     }
 }

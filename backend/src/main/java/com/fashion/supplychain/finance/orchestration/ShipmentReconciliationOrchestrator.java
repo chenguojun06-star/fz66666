@@ -3,6 +3,7 @@ package com.fashion.supplychain.finance.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
@@ -38,6 +40,9 @@ public class ShipmentReconciliationOrchestrator {
 
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
+
+    @Autowired
+    private DistributedLockService distributedLockService;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -437,7 +442,13 @@ public class ShipmentReconciliationOrchestrator {
         }
     }
 
-    private synchronized String generateReconciliationNo() {
+    private String generateReconciliationNo() {
+        return distributedLockService.executeWithStrictLock(
+                "shipmentReconciliation:generateNo", 5, TimeUnit.SECONDS,
+                this::doGenerateReconciliationNo);
+    }
+
+    private String doGenerateReconciliationNo() {
         String monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
         String prefix = "SR" + monthPrefix;
 

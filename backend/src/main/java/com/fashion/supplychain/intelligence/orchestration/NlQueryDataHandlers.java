@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -109,26 +111,114 @@ public class NlQueryDataHandlers {
         if (count == 0) {
             resp.setAnswer("🎉 当前没有延期订单，生产进度良好！");
             resp.setConfidence(95);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("overdueCount", 0);
+            data.put("factoryGroups", Collections.emptyList());
+            resp.setData(data);
         } else {
-            List<ProductionOrder> overdues = dashboardQueryService.listOverdueOrders(5);
-            StringBuilder sb = new StringBuilder(String.format("⚠️ 当前共有 %d 个延期订单", count));
-            if (!overdues.isEmpty()) {
-                sb.append("，最紧急的几个：\n");
-                for (ProductionOrder o : overdues) {
-                    long days = o.getPlannedEndDate() != null
-                            ? ChronoUnit.DAYS.between(o.getPlannedEndDate(), LocalDateTime.now()) : 0;
-                    sb.append(String.format("• %s — 已延期 %d 天，进度 %d%%，工厂：%s\n",
-                            o.getOrderNo(), days,
-                            o.getProductionProgress() != null ? o.getProductionProgress() : 0,
-                            o.getFactoryName() != null ? o.getFactoryName() : "未指定"));
+            List<ProductionOrder> allOverdues = dashboardQueryService.listOverdueOrders(200);
+            LocalDateTime now = LocalDateTime.now();
+
+            Map<String, List<ProductionOrder>> byFactory = allOverdues.stream()
+                    .collect(Collectors.groupingBy(
+                            o -> o.getFactoryName() != null ? o.getFactoryName() : "未指定",
+                            LinkedHashMap::new, Collectors.toList()));
+
+            List<Map<String, Object>> factoryGroups = new ArrayList<>();
+            int totalQuantity = 0;
+            int totalProgress = 0;
+            int totalOverdueDays = 0;
+
+            for (Map.Entry<String, List<ProductionOrder>> entry : byFactory.entrySet()) {
+                String fName = entry.getKey();
+                List<ProductionOrder> orders = entry.getValue();
+                int fOrderCount = orders.size();
+                int fTotalQty = orders.stream().mapToInt(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum();
+                int fAvgProgress = (int) orders.stream().mapToInt(o -> o.getProductionProgress() != null ? o.getProductionProgress() : 0).average().orElse(0);
+                int fAvgOverdueDays = (int) orders.stream().mapToInt(o -> {
+                    if (o.getPlannedEndDate() != null) return (int) ChronoUnit.DAYS.between(o.getPlannedEndDate(), now);
+                    return 0;
+                }).average().orElse(0);
+
+                long fActiveWorkers = 0;
+                try {
+                    Set<String> factoryIds = orders.stream()
+                            .map(ProductionOrder::getFactoryId)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+                    if (!factoryIds.isEmpty()) {
+                        QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
+                        aqw.eq(tenantId != null, "tenant_id", tenantId)
+                           .in("factory_id", factoryIds)
+                           .eq("scan_result", "success")
+                           .ge("scan_time", now.minusDays(30))
+                           .select("DISTINCT operator_id");
+                        fActiveWorkers = scanRecordService.list(aqw).stream()
+                                .map(ScanRecord::getOperatorId).filter(Objects::nonNull).distinct().count();
+                    }
+                } catch (Exception e) {
+                    log.warn("[智能问答] 查询工厂活跃工人失败: factory={}, error={}", fName, e.getMessage());
                 }
+
+                int fEstDays = fAvgProgress > 0 && fTotalQty > 0
+                        ? (int) Math.ceil((100.0 - fAvgProgress) / Math.max(fAvgProgress, 1) * (fAvgOverdueDays > 0 ? fAvgOverdueDays : 7))
+                        : -1;
+
+                List<Map<String, Object>> orderItems = orders.stream().map(o -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("orderNo", o.getOrderNo());
+                    item.put("styleNo", o.getStyleNo());
+                    item.put("progress", o.getProductionProgress() != null ? o.getProductionProgress() : 0);
+                    item.put("overdueDays", o.getPlannedEndDate() != null ? (int) ChronoUnit.DAYS.between(o.getPlannedEndDate(), now) : 0);
+                    item.put("quantity", o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
+                    item.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : null);
+                    return item;
+                }).collect(Collectors.toList());
+
+                Map<String, Object> group = new LinkedHashMap<>();
+                group.put("factoryName", fName);
+                group.put("totalOrders", fOrderCount);
+                group.put("totalQuantity", fTotalQty);
+                group.put("avgProgress", fAvgProgress);
+                group.put("avgOverdueDays", fAvgOverdueDays);
+                group.put("activeWorkers", fActiveWorkers);
+                group.put("estimatedCompletionDays", fEstDays);
+                group.put("orders", orderItems);
+                factoryGroups.add(group);
+
+                totalQuantity += fTotalQty;
+                totalProgress += orders.stream().mapToInt(o -> o.getProductionProgress() != null ? o.getProductionProgress() : 0).sum();
+                totalOverdueDays += orders.stream().mapToInt(o -> {
+                    if (o.getPlannedEndDate() != null) return (int) ChronoUnit.DAYS.between(o.getPlannedEndDate(), now);
+                    return 0;
+                }).sum();
             }
+
+            int overallAvgProgress = count > 0 ? totalProgress / (int) count : 0;
+            int overallAvgOverdueDays = count > 0 ? totalOverdueDays / (int) count : 0;
+
+            StringBuilder sb = new StringBuilder(String.format("⚠️ 当前共有 %d 个延期订单，涉及 %d 家工厂", count, byFactory.size()));
+            sb.append(String.format("，总件数 %d，平均进度 %d%%，平均延期 %d 天", totalQuantity, overallAvgProgress, overallAvgOverdueDays));
+
+            try {
+                String factoryGroupsJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(factoryGroups);
+                sb.append("\n【OVERDUE_FACTORY】").append(factoryGroupsJson).append("【/OVERDUE_FACTORY】");
+            } catch (Exception e) {
+                log.warn("[智能问答] 序列化工厂分组数据失败: {}", e.getMessage());
+            }
+
             resp.setAnswer(sb.toString().trim());
             resp.setConfidence(90);
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("overdueCount", (int) count);
+            data.put("totalQuantity", totalQuantity);
+            data.put("avgProgress", overallAvgProgress);
+            data.put("avgOverdueDays", overallAvgOverdueDays);
+            data.put("factoryGroupCount", byFactory.size());
+            data.put("factoryGroups", factoryGroups);
+            resp.setData(data);
         }
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("overdueCount", (int) count);
-        resp.setData(data);
         tryAddAiInsight(resp, tenantId, factoryId);
         resp.setSuggestions(Arrays.asList("今日产量如何？", "哪个工厂延期最多？", "整体情况怎么样？"));
         return resp;

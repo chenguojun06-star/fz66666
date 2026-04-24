@@ -31,7 +31,7 @@ export default function ScanConfirmPage() {
     if (!confirmScanData) { toast.error('数据异常'); navigate(-1); return; }
     const raw = confirmScanData;
     const orderDetail = raw.orderDetail || {};
-    const isProc = raw.progressStage === '采购';
+    const isProc = raw.progressStage === '采购' || raw.progressStage === 'procurement';
     const isCut = raw.progressStage === '裁剪';
     setIsProcurement(isProc);
     setIsCutting(isCut);

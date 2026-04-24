@@ -130,3 +130,59 @@
   box-sizing: border-box;
 }
 
+/* ===== 最新扫码记录条（扫码按钮上方，不持久化） ===== */
+.last-scan-record {
+  border-radius: var(--radius-lg);
+  padding: 8px 8px 6px;
+  margin-bottom: 6px;
+}
+.last-scan-record.ok {
+  background: var(--color-success-bg);
+}
+.last-scan-record.err {
+  background: var(--color-error-bg);
+}
+.lsr-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lsr-tag {
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-white);
+}
+.lsr-tag.ok {
+  background: var(--color-success);
+}
+.lsr-tag.err {
+  background: var(--color-error);
+}
+.lsr-order {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lsr-sub {
+  margin-top: 3px;
+}
+.lsr-process {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lsr-qty {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+

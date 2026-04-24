@@ -153,6 +153,7 @@ public class OrderReconciliationHelper {
             List<ScanRecord> scans = scanRecordService.list(
                 new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, orderId)
+                    .isNull(ScanRecord::getFactoryId)
             );
 
             BigDecimal total = scans.stream()

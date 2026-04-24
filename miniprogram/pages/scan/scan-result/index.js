@@ -223,6 +223,7 @@ Page({
         return {
           label: name,
           value: name,
+          progressStage: p.progressStage || '',
           scanType: p.scanType || 'production',
           unitPrice: p.unitPrice || 0,
           hidePrice: !p.unitPrice,
@@ -376,6 +377,14 @@ Page({
 
       if (successCount > 0) {
         this._emitRefresh();
+        var firstOption = selectedOptions[0] || {};
+        getApp().globalData.lastScanResult = {
+          orderNo: raw.orderNo || '',
+          processCode: raw.processCode || firstOption.value || '',
+          processName: firstOption.value || raw.processName || '',
+          quantity: quantity || 0,
+          success: true,
+        };
       }
 
       if (failedItems.length === 0) {
@@ -404,11 +413,25 @@ Page({
       } else {
         this.setData({ loading: false });
         var msg = failedItems[0].error || '提交失败，请稍后重试';
+        getApp().globalData.lastScanResult = {
+          orderNo: raw.orderNo || '',
+          processCode: raw.processCode || '',
+          processName: (selectedOptions[0] && selectedOptions[0].value) || raw.processName || '',
+          quantity: quantity || 0,
+          success: false,
+        };
         wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
       }
     } catch (e) {
       this.setData({ loading: false });
       var errMsg = this._buildFriendlyError(e);
+      getApp().globalData.lastScanResult = {
+        orderNo: (raw && raw.orderNo) || '',
+        processCode: (raw && raw.processCode) || '',
+        processName: (raw && raw.processName) || '',
+        quantity: quantity || 0,
+        success: false,
+      };
       wx.showModal({ title: '扫码失败', content: errMsg, showCancel: false, confirmText: '知道了' });
     }
   },

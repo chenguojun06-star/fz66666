@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.SensitiveDataMaskHelper;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -32,8 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/production/scan")
 @PreAuthorize("isAuthenticated()")
 public class ScanRecordController {
-
-    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private ScanRecordOrchestrator scanRecordOrchestrator;
@@ -125,7 +124,7 @@ public class ScanRecordController {
             }
             if (order != null) {
                 report.put("step4_order", "✅ 找到订单 id=" + order.getId() + " status=" + order.getStatus() + " styleNo=" + order.getStyleNo());
-                if (order.getStatus() != null && TERMINAL_STATUSES.contains(order.getStatus().trim().toLowerCase())) {
+                if (order.getStatus() != null && OrderStatusConstants.isTerminal(order.getStatus())) {
                     report.put("step4_order_warn", "🚫 订单状态=" + order.getStatus() + "，扫码会被拦截！");
                 }
             } else {

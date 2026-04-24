@@ -27,6 +27,7 @@ class ScanController extends GetxController {
   final selectedScanType = ScanType.production.obs;
   final offlineCount = 0.obs;
   final lastScanResult = <String, dynamic>{}.obs;
+  final lastScanRecord = Rx<Map<String, dynamic>?>(null);
   final pendingQualityTasks = 0.obs;
   final pendingRepairTasks = 0.obs;
 
@@ -190,6 +191,7 @@ class ScanController extends GetxController {
         'scanType': _normalizeScanType(selectedScanType.value),
         'processName': parsed.processName,
         'processCode': parsed.processCode,
+        'progressStage': parsed.progressStage ?? '',
         'quantity': parsed.quantity,
         'styleNo': parsed.styleNo,
         'color': parsed.color,
@@ -200,6 +202,13 @@ class ScanController extends GetxController {
       final data = res.data;
       if (data is Map && data['code'] == 200) {
         lastScanResult.value = data['data'] is Map ? data['data'] as Map<String, dynamic> : {'qrCode': code};
+        lastScanRecord.value = {
+          'orderNo': parsed.orderNo ?? data['data']?['orderNo'] ?? '',
+          'processCode': parsed.processCode ?? '',
+          'processName': parsed.processName ?? data['data']?['processName'] ?? '',
+          'quantity': parsed.quantity ?? data['data']?['quantity'] ?? 0,
+          'success': true,
+        };
         Get.snackbar('扫码成功', '${parsed.displayName} 已记录',
           snackPosition: SnackPosition.TOP,
           backgroundColor: AppColors.success,
@@ -210,6 +219,13 @@ class ScanController extends GetxController {
         _tryUploadOffline();
       } else {
         final msg = data is Map ? (data['message'] ?? '扫码失败') : '扫码失败';
+        lastScanRecord.value = {
+          'orderNo': parsed.orderNo ?? '',
+          'processCode': parsed.processCode ?? '',
+          'processName': parsed.processName ?? '',
+          'quantity': parsed.quantity ?? 0,
+          'success': false,
+        };
         Get.snackbar('扫码失败', msg.toString(),
           snackPosition: SnackPosition.TOP,
           backgroundColor: AppColors.error,
@@ -229,6 +245,13 @@ class ScanController extends GetxController {
         'size': parsed.size,
         'source': 'flutter',
       });
+      lastScanRecord.value = {
+        'orderNo': parsed.orderNo ?? '',
+        'processCode': parsed.processCode ?? '',
+        'processName': parsed.processName ?? '',
+        'quantity': parsed.quantity ?? 0,
+        'success': false,
+      };
       _loadOfflineCount();
       Get.snackbar('离线保存', '网络异常，扫码已保存到本地（${offlineCount.value + 1}条待上传）',
         snackPosition: SnackPosition.TOP,
