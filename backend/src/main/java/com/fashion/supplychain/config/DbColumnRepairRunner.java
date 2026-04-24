@@ -297,6 +297,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_pattern_production", "maintainer", "VARCHAR(100) DEFAULT NULL COMMENT '维护人'");
         add("t_pattern_production", "maintain_time", "DATETIME DEFAULT NULL COMMENT '维护时间'");
         add("t_pattern_production", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_pattern_production", "rework_count", "INT NOT NULL DEFAULT 0 COMMENT '返修次数'");
+        add("t_pattern_production", "rework_remark", "VARCHAR(500) DEFAULT NULL COMMENT '返修备注'");
 
         add("t_material_picking_item", "specification", "VARCHAR(200) DEFAULT NULL COMMENT '规格'");
         add("t_material_picking_item", "unit_price", "DECIMAL(12,2) DEFAULT NULL COMMENT '单价'");

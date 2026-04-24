@@ -159,4 +159,8 @@ public class PatternProduction {
      */
     @TableField("has_secondary_process")
     private Integer hasSecondaryProcess;
+
+    private Integer reworkCount;
+
+    private String reworkRemark;
 }

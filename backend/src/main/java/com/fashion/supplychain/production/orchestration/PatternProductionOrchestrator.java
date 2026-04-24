@@ -168,6 +168,62 @@ public class PatternProductionOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> completeByTask(String patternId) {
+        if (!StringUtils.hasText(patternId)) {
+            throw new IllegalArgumentException("样板生产ID不能为空");
+        }
+        PatternProduction pattern = patternProductionService.getById(patternId);
+        if (pattern == null || pattern.getDeleteFlag() == 1) {
+            throw new IllegalArgumentException("样板生产记录不存在");
+        }
+        if (!"IN_PROGRESS".equals(pattern.getStatus()) && !"REWORK".equals(pattern.getStatus())) {
+            throw new IllegalStateException("当前状态不允许完成，仅制作中或返修中可操作");
+        }
+        String currentUserId = UserContext.userId();
+        if (pattern.getReceiverId() != null && !pattern.getReceiverId().equals(currentUserId)) {
+            throw new IllegalStateException("仅领取人可点击完成");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String operatorName = UserContext.username();
+
+        PatternScanRecord scanRecord = new PatternScanRecord();
+        scanRecord.setPatternProductionId(patternId);
+        scanRecord.setStyleId(pattern.getStyleId());
+        scanRecord.setStyleNo(pattern.getStyleNo());
+        scanRecord.setColor(pattern.getColor());
+        scanRecord.setOperationType("REWORK".equals(pattern.getStatus()) ? "REWORK" : "COMPLETE");
+        scanRecord.setOperatorId(currentUserId);
+        scanRecord.setOperatorName(operatorName);
+        scanRecord.setOperatorRole("PLATE_WORKER");
+        scanRecord.setScanTime(now);
+        scanRecord.setRemark("REWORK".equals(pattern.getStatus()) ? "返修完成" : "制作完成");
+        patternScanRecordService.save(scanRecord);
+
+        statusHelper.markPatternProductionCompleted(pattern, now);
+
+        if ("REWORK".equals(pattern.getStatus())) {
+            pattern.setReviewStatus("PENDING");
+            pattern.setReworkCount(pattern.getReworkCount() != null ? pattern.getReworkCount() + 1 : 1);
+        }
+        patternProductionService.updateById(pattern);
+
+        statusHelper.syncStyleInfoSampleStage(pattern);
+        statusHelper.syncStyleInfoOnComplete(pattern);
+
+        log.info("[样衣完成] patternId={} operator={} type={}", patternId, operatorName, scanRecord.getOperationType());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("recordId", scanRecord.getId());
+        result.put("patternId", patternId);
+        result.put("styleNo", pattern.getStyleNo());
+        result.put("color", pattern.getColor());
+        result.put("operationType", scanRecord.getOperationType());
+        result.put("newStatus", "PRODUCTION_COMPLETED");
+        return result;
+    }
+
     /**
      * 提交样板生产扫码记录（跨域：创建扫码记录 + 更新样板状态）
      */
@@ -313,13 +369,13 @@ public class PatternProductionOrchestrator {
         }
 
         String normalizedResult = StringUtils.hasText(result) ? result.trim().toUpperCase() : "";
-        if (!"APPROVED".equals(normalizedResult) && !"REJECTED".equals(normalizedResult)) {
-            throw new IllegalArgumentException("审核结论无效，仅支持 APPROVED 或 REJECTED");
+        if ("PASS".equals(normalizedResult)) { normalizedResult = "APPROVED"; }
+        if ("REWORK".equals(normalizedResult) || "REJECT".equals(normalizedResult) || "APPROVED".equals(normalizedResult)) {
+            // valid
+        } else if (!"REJECTED".equals(normalizedResult)) {
+            throw new IllegalArgumentException("审核结论无效，仅支持 PASS/REWORK/REJECT");
         }
         String normalizedRemark = StringUtils.hasText(remark) ? remark.trim() : "";
-        if (!StringUtils.hasText(normalizedRemark)) {
-            throw new IllegalArgumentException("请填写样衣审核备注");
-        }
 
         String operatorName = UserContext.username();
         String operatorId = UserContext.userId();
@@ -331,8 +387,18 @@ public class PatternProductionOrchestrator {
         pattern.setReviewTime(LocalDateTime.now());
         pattern.setUpdateBy(operatorName);
         pattern.setUpdateTime(LocalDateTime.now());
+
+        if ("REWORK".equals(normalizedResult)) {
+            pattern.setStatus("REWORK");
+        }
+
         patternProductionService.updateById(pattern);
         statusHelper.syncStyleInfoReviewFields(pattern, normalizedResult, normalizedRemark, operatorName);
+
+        String msg;
+        if ("APPROVED".equals(normalizedResult)) { msg = "样衣审核通过"; }
+        else if ("REWORK".equals(normalizedResult)) { msg = "样衣审核返修，请扫码返修"; }
+        else { msg = "样衣审核已驳回"; }
 
         Map<String, Object> response = new HashMap<>();
         response.put("patternId", pattern.getId());
@@ -342,7 +408,8 @@ public class PatternProductionOrchestrator {
         response.put("reviewBy", pattern.getReviewBy());
         response.put("reviewById", pattern.getReviewById());
         response.put("reviewTime", pattern.getReviewTime());
-        response.put("message", "APPROVED".equals(normalizedResult) ? "样衣审核通过" : "样衣审核已驳回");
+        response.put("newStatus", pattern.getStatus());
+        response.put("message", msg);
         return response;
     }
 

@@ -355,6 +355,8 @@ public class PatternStatusHelper {
                 mappedStatus = "PASS";
             } else if ("REJECTED".equalsIgnoreCase(reviewResult)) {
                 mappedStatus = "REJECT";
+            } else if ("REWORK".equalsIgnoreCase(reviewResult)) {
+                mappedStatus = "REWORK";
             } else {
                 mappedStatus = reviewResult;
             }

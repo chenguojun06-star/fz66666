@@ -1,0 +1,13 @@
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_pattern_production' AND COLUMN_NAME = 'rework_count') = 0,
+    'ALTER TABLE t_pattern_production ADD COLUMN rework_count INT NOT NULL DEFAULT 0',
+    'SELECT 1');
+PREPARE stmt FROM @s;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_pattern_production' AND COLUMN_NAME = 'rework_remark') = 0,
+    'ALTER TABLE t_pattern_production ADD COLUMN rework_remark VARCHAR(500) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

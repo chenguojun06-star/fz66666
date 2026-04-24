@@ -205,6 +205,16 @@ public class PatternProductionController {
         }
     }
 
+    @PostMapping("/{id}/complete")
+    public Result<Map<String, Object>> completeByTask(@PathVariable String id) {
+        try {
+            Map<String, Object> result = patternProductionOrchestrator.completeByTask(id);
+            return Result.success(result);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
     /**
      * 更新工序进度
      */
