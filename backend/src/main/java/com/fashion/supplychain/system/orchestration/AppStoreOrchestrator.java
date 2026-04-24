@@ -220,6 +220,7 @@ public class AppStoreOrchestrator {
         if (app == null) {
             throw new RuntimeException("应用不存在");
         }
+        appStoreService.fixMojibakeFields(app);
 
         // 2. 检查是否支持试用
         if (app.getTrialDays() == null || app.getTrialDays() <= 0) {
@@ -411,6 +412,7 @@ public class AppStoreOrchestrator {
         if (app == null) {
             throw new RuntimeException("关联应用不存在");
         }
+        appStoreService.fixMojibakeFields(app);
 
         // 4. 计算订阅有效期
         LocalDateTime startTime = LocalDateTime.now();
@@ -498,6 +500,7 @@ public class AppStoreOrchestrator {
             List<AppStore> allApps = appStoreService.list();
             List<Map<String, Object>> result = new ArrayList<>();
             for (AppStore app : allApps) {
+                appStoreService.fixMojibakeFields(app);
                 Map<String, Object> appInfo = new LinkedHashMap<>();
                 appInfo.put("appCode", app.getAppCode());
                 appInfo.put("appName", app.getAppName());

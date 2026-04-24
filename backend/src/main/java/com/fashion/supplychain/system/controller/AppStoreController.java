@@ -76,8 +76,9 @@ public class AppStoreController {
 
         List<AppStore> appList = appStoreService.list(wrapper);
 
-        // 解析JSON字段
+        // 解析JSON字段 + 修复乱码
         for (AppStore app : appList) {
+            appStoreService.fixMojibakeFields(app);
             appStoreService.parseJsonFields(app);
         }
 

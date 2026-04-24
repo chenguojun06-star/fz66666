@@ -241,6 +241,7 @@ public class SignalCollectorHelper {
                 ScanRecord lastScan = scanRecordService.lambdaQuery()
                         .eq(ScanRecord::getOrderId, order.getId().toString())
                         .eq(ScanRecord::getScanResult, "success")
+                        .ne(ScanRecord::getScanType, "orchestration")
                         .orderByDesc(ScanRecord::getScanTime).last("LIMIT 1").one();
                 if (lastScan != null && lastScan.getScanTime() != null
                         && lastScan.getScanTime().isBefore(threshold)) {
@@ -282,7 +283,8 @@ public class SignalCollectorHelper {
         for (ProductionOrder order : orders) {
             try {
                 long scanCount = scanRecordService.lambdaQuery()
-                        .eq(ScanRecord::getOrderId, order.getId().toString()).count();
+                        .eq(ScanRecord::getOrderId, order.getId().toString())
+                        .ne(ScanRecord::getScanType, "orchestration").count();
                 if (scanCount == 0) {
                     long hours = ChronoUnit.HOURS.between(order.getCreateTime(), LocalDateTime.now());
                     SignalItem s = new SignalItem();

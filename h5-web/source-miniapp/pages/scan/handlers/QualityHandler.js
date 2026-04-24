@@ -172,6 +172,7 @@ async function submitQualityResult(page) {
       quantity: payload.quantity, scanCode: payload.scanCode,
       scanType: 'quality', qualityStage: 'receive',
       operatorId: payload.operatorId, operatorName: payload.operatorName,
+      source: 'h5',
     };
     try {
       await api.production.executeScan(receivePayload);

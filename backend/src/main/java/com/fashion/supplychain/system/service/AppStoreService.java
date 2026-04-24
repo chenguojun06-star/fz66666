@@ -84,7 +84,7 @@ public class AppStoreService extends ServiceImpl<AppStoreMapper, AppStore> {
         }
     }
 
-    private void fixMojibakeFields(AppStore app) {
+    public void fixMojibakeFields(AppStore app) {
         app.setAppName(fixMojibake(app.getAppName()));
         app.setAppDesc(fixMojibake(app.getAppDesc()));
         app.setCategory(fixMojibake(app.getCategory()));
