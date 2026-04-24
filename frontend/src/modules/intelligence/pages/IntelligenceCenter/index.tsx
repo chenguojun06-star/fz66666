@@ -275,9 +275,9 @@ const IntelligenceCenter: React.FC = () => {
                   const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
                   return (
                     <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
-                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }} />
+                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e8686a' }} />
                       <span className="c-fa-name">{f.factoryName}</span>
-                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#ff4136' }}>{timeStr}</span>
+                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e8686a' }}>{timeStr}</span>
                       <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
                     </div>
                   );
@@ -324,7 +324,7 @@ const IntelligenceCenter: React.FC = () => {
                         const grd = w.overallScore >= 85 ? { g: 'A', c: '#39ff14' }
                           : w.overallScore >= 70 ? { g: 'B', c: '#00e5ff' }
                           : w.overallScore >= 55 ? { g: 'C', c: '#f7a600' }
-                          : { g: 'D', c: '#ff4136' };
+                          : { g: 'D', c: '#e8686a' };
                         return (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 10 }}>{grd.g}</b>
@@ -398,7 +398,7 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-shortage-qty">缺&nbsp;{item.shortageQuantity}&nbsp;{item.unit}</span>
                   <span style={{
                     marginLeft: 'auto', fontSize: 10, flexShrink: 0, fontWeight: 600,
-                    color: item.riskLevel === 'HIGH' ? '#ff4136' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
+                    color: item.riskLevel === 'HIGH' ? '#e8686a' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
                   }}>
                     {item.riskLevel === 'HIGH' ? ' 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
                   </span>
@@ -417,7 +417,7 @@ const IntelligenceCenter: React.FC = () => {
           {/* 缺陷热力图 */}
           <div className="c-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('heatmap')}>
-              <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? '#ff4136' : '#39ff14'} />
+              <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? '#e8686a' : '#39ff14'} />
               质量缺陷热力图
               {heatmap && (
                 <span className="c-card-badge red-badge">
@@ -430,8 +430,8 @@ const IntelligenceCenter: React.FC = () => {
             {heatmap?.cells?.length ? (
               <>
                 <div className="c-heatmap-meta">
-                  风险工序：<b style={{ color: '#ff4136' }}>{heatmap.worstProcess}</b>
-                  &nbsp;·&nbsp;风险工厂：<b style={{ color: '#ff4136' }}>{heatmap.worstFactory}</b>
+                  风险工序：<b style={{ color: '#e8686a' }}>{heatmap.worstProcess}</b>
+                  &nbsp;·&nbsp;风险工厂：<b style={{ color: '#e8686a' }}>{heatmap.worstFactory}</b>
                 </div>
                 <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${(heatmap.factories || []).length}, 1fr)` }}>
                   <div />
@@ -517,7 +517,7 @@ const IntelligenceCenter: React.FC = () => {
                   {repairing ? '修复中…' : ' 一键修复'}
                 </button>
                 {repairResult && (
-                  <span style={{ fontSize: 11, color: repairResult.needManual < 0 ? '#ff4d4f' : '#73d13d' }}>
+                  <span style={{ fontSize: 11, color: repairResult.needManual < 0 ? '#ff7875' : '#73d13d' }}>
                     {repairResult.needManual < 0 ? '修复失败' : `已修复 ${repairResult.autoFixed} 项，${repairResult.needManual} 项需人工`}
                   </span>
                 )}

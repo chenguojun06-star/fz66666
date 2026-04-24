@@ -51,13 +51,13 @@ const BrainActionGrid: React.FC<BrainActionGridProps> = ({
               <div style={{ fontSize: 10, color: '#7aaec8' }}>异常项</div>
             </div>
             <div style={{ textAlign: 'center', padding: '6px 0', background: 'rgba(255,65,54,0.04)', borderRadius: 6, border: '1px solid rgba(255,65,54,0.1)' }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: brain.summary.highRiskOrders > 0 ? '#ff4136' : '#39ff14' }}>{brain.summary.highRiskOrders}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: brain.summary.highRiskOrders > 0 ? '#e8686a' : '#39ff14' }}>{brain.summary.highRiskOrders}</div>
               <div style={{ fontSize: 10, color: '#7aaec8' }}>高风险订单</div>
             </div>
           </div>
           {/* 模型网关状态 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, fontSize: 11, color: '#b0c4de' }}>
-            <span style={{ color: brain.modelGateway.status === 'CONNECTED' ? '#39ff14' : '#ff4136', fontWeight: 600 }}>
+            <span style={{ color: brain.modelGateway.status === 'CONNECTED' ? '#39ff14' : '#e8686a', fontWeight: 600 }}>
               ● {brain.modelGateway.status}
             </span>
             <span>{brain.modelGateway.provider} · {brain.modelGateway.activeModel}</span>
@@ -66,7 +66,7 @@ const BrainActionGrid: React.FC<BrainActionGridProps> = ({
           {/* 信号列表 */}
           {brain.signals?.slice(0, 4).map((sig: any, i: number) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <span style={{ color: sig.level === 'CRITICAL' ? '#ff4136' : sig.level === 'WARNING' ? '#f7a600' : '#39ff14', fontWeight: 600, fontSize: 10, minWidth: 52 }}>
+              <span style={{ color: sig.level === 'CRITICAL' ? '#e8686a' : sig.level === 'WARNING' ? '#f7a600' : '#39ff14', fontWeight: 600, fontSize: 10, minWidth: 52 }}>
                 {sig.level}
               </span>
               <span style={{ color: '#b0c4de', flex: 1 }}>{sig.title}</span>
@@ -113,7 +113,7 @@ const BrainActionGrid: React.FC<BrainActionGridProps> = ({
               <span style={{
                 fontSize: 9, fontWeight: 700, minWidth: 22, textAlign: 'center', padding: '1px 4px', borderRadius: 3,
                 background: task.priority === 'CRITICAL' ? 'rgba(255,65,54,0.15)' : task.priority === 'HIGH' ? 'rgba(247,166,0,0.12)' : 'rgba(0,229,255,0.08)',
-                color: task.priority === 'CRITICAL' ? '#ff4136' : task.priority === 'HIGH' ? '#f7a600' : '#00e5ff',
+                color: task.priority === 'CRITICAL' ? '#e8686a' : task.priority === 'HIGH' ? '#f7a600' : '#00e5ff',
               }}>
                 L{task.escalationLevel}
               </span>
@@ -122,7 +122,7 @@ const BrainActionGrid: React.FC<BrainActionGridProps> = ({
               {task.dueHint && <span style={{ color: '#f7a600', fontSize: 9 }}>{task.dueHint}</span>}
               {task.autoExecutable && (
                 executeTaskResult?.taskCode === task.taskCode ? (
-                  <span style={{ fontSize: 9, color: executeTaskResult.ok ? '#73d13d' : '#ff4136', fontWeight: 600 }}>
+                  <span style={{ fontSize: 9, color: executeTaskResult.ok ? '#73d13d' : '#e8686a', fontWeight: 600 }}>
                     {executeTaskResult.ok ? ' 已执行' : ' 失败'}
                   </span>
                 ) : (

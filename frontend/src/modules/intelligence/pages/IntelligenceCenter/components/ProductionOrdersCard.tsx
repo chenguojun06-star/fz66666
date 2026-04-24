@@ -65,7 +65,7 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,65,54,0.12)')}
       >
         <div style={{ color: '#ff6b6b', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>已逾期</div>
-        <div style={{ color: '#ff4136', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
+        <div style={{ color: '#e8686a', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
           {overdueRisk.overdue.length}<span style={{ color: '#ff8080', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span>
         </div>
         <div style={{ color: '#ff8080', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{orderStats.overdueQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 11, marginLeft: 2 }}>件</span></div>
@@ -108,7 +108,7 @@ const ProductionOrdersCard: React.FC<any> = ({
             <div key={String(o.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3, gap: 4 }}>
               <span style={{ color: '#e0e0e0', flex: '0 0 auto', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.orderNo}</span>
               <span style={{ color: '#7dacc4', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>{o.factoryName ?? '—'}</span>
-              <span style={{ color: '#ff4136', flex: '0 0 auto', whiteSpace: 'nowrap' }}>逾{d}天·{(Number(o.orderQuantity)||0).toLocaleString()}件</span>
+              <span style={{ color: '#e8686a', flex: '0 0 auto', whiteSpace: 'nowrap' }}>逾{d}天·{(Number(o.orderQuantity)||0).toLocaleString()}件</span>
             </div>
           );
         })}

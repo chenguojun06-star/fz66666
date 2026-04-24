@@ -8,7 +8,7 @@ import './VisualAIPanel.css';
 const { Option } = Select;
 
 const LEVEL_COLOR: Record<string, string> = {
-  CRITICAL: '#ff4d4f',
+  CRITICAL: '#ff7875',
   HIGH:     '#ff7a45',
   MEDIUM:   '#faad14',
   LOW:      '#52c41a',
@@ -136,7 +136,7 @@ const VisualAIPanel: React.FC = () => {
             <div className="vai-result-status">
               {result.success
                 ? <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 5 }} />
-                : <AlertOutlined style={{ color: '#ff4d4f', marginRight: 5 }} />
+                : <AlertOutlined style={{ color: '#ff7875', marginRight: 5 }} />
               }
               <span className="vai-task-label">{TASK_LABELS[result.taskType] ?? result.taskType}</span>
             </div>

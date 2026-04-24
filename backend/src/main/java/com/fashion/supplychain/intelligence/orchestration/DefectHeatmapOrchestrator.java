@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.constants.ProductionConstants;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -17,51 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-/**
- * 质量缺陷热力图编排器 — 「父工序 × 工厂」 缺陷矩阵
- *
- * <p>算法：
- * <ol>
- *   <li>取最近 30 天所有扫码记录</li>
- *   <li>按 (progressStage[父工序], factoryName) 二维分组，而非 processName[子工序]</li>
- *   <li>计算每个格子的 defectRate = failCount / totalCount</li>
- *   <li>热度等级：0=优秀(≤1%), 1=良好(≤5%), 2=警告(≤10%), 3=严重(>10%)</li>
- * </ol>
- */
 @Service
 @Slf4j
 public class DefectHeatmapOrchestrator {
 
-    /** 标准父工序顺序 */
     private static final List<String> STAGE_ORDER = ProductionConstants.FIXED_PRODUCTION_NODES;
-
-    /** 历史脏数据规范化映射：子工序名 / 旧写法 → 标准父工序 */
-    private static final Map<String, String> NORMALIZE;
-    static {
-        Map<String, String> m = new HashMap<>();
-        // 质检系列
-        m.put("质检领取", "质检"); m.put("质检验收", "质检");
-        m.put("质检确认", "质检"); m.put("质检", "质检");
-        m.put("质检收货", "质检");
-        // 入库系列
-        m.put("仓库入库", "入库"); m.put("入库", "入库");
-        m.put("成品入库", "入库");
-        // 二次工艺子工序 → 二次工艺
-        m.put("绣花", "二次工艺"); m.put("印花", "二次工艺");
-        m.put("烟洗", "二次工艺"); m.put("压花", "二次工艺");
-        m.put("洗水", "二次工艺");
-        // 尾部子工序
-        m.put("剪线", "尾部"); m.put("整烫", "尾部");
-        m.put("包装", "尾部"); m.put("辅料", "尾部");
-        NORMALIZE = Collections.unmodifiableMap(m);
-    }
-
-    /** 规范化：已知子工序/旧写法→父工序；不在 STAGE_ORDER 里的返回 null（过滤掉） */
-    private String normalizeStage(String raw) {
-        if (raw == null) return null;
-        String mapped = NORMALIZE.getOrDefault(raw, raw);
-        return STAGE_ORDER.contains(mapped) ? mapped : null;
-    }
 
     @Autowired
     private ScanRecordService scanRecordService;
@@ -69,10 +30,20 @@ public class DefectHeatmapOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private ProcessParentMappingService processParentMappingService;
+
+    private String normalizeStage(String raw) {
+        if (raw == null) return null;
+        if (STAGE_ORDER.contains(raw)) return raw;
+        String mapped = processParentMappingService.resolveParentNode(raw);
+        if (mapped != null && STAGE_ORDER.contains(mapped)) return mapped;
+        return null;
+    }
+
     public DefectHeatmapResponse analyze() {
         DefectHeatmapResponse resp = new DefectHeatmapResponse();
         try {
-        TenantAssert.assertTenantContext();
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDateTime start = LocalDateTime.now().minusDays(30);
@@ -100,7 +71,7 @@ public class DefectHeatmapOrchestrator {
         Map<String, String> orderToFactory = new HashMap<>();
         if (!orderIds.isEmpty()) {
             QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
-            oqw.in("id", orderIds).select("id", "factory_name");
+            oqw.eq("tenant_id", tenantId).in("id", orderIds).select("id", "factory_name");
             productionOrderService.list(oqw).forEach(o ->
                     orderToFactory.put(String.valueOf(o.getId()),
                             o.getFactoryName() != null ? o.getFactoryName() : "未分配"));

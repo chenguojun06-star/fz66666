@@ -28,7 +28,7 @@ function KpiCard({ label, value, unit, color, icon }: {
 
 function RiskBadge({ level }: { level: string }) {
   const map: Record<string, { color: string; label: string }> = {
-    critical: { color: '#ff4d4f', label: '高危' },
+    critical: { color: '#ff7875', label: '高危' },
     high:     { color: '#fa8c16', label: '高风险' },
     medium:   { color: '#fadb14', label: '关注' },
     low:      { color: '#52c41a', label: '正常' },
@@ -115,7 +115,7 @@ export default function IntelligenceScreen() {
             <KpiCard label="活跃工人" value={activeWks} unit="人"
               color="#9254de" icon={<TeamOutlined />} />
             <KpiCard label="高风险订单" value={riskOrders} unit="单"
-              color={Number(riskOrders) > 0 ? '#ff4d4f' : '#52c41a'} icon={<AlertOutlined />} />
+              color={Number(riskOrders) > 0 ? '#ff7875' : '#52c41a'} icon={<AlertOutlined />} />
             <KpiCard label="物料缺口" value={shortage?.items?.length ?? 0} unit="项"
               color={shortage?.items?.length > 0 ? '#fa8c16' : '#52c41a'} icon={<AlertOutlined />} />
           </section>
@@ -162,7 +162,7 @@ export default function IntelligenceScreen() {
                       style={{
                         width: `${prog}%`,
                         background: prog >= 80 ? '#52c41a'
-                          : prog >= 40 ? '#fadb14' : '#ff4d4f',
+                          : prog >= 40 ? '#fadb14' : '#ff7875',
                       }} />
                   </div>
                   <span className="screen-progress-pct">{prog}%</span>

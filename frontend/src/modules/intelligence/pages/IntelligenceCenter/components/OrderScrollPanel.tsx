@@ -81,7 +81,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           })()}
           {daysLeft !== null && (
             <span className="order-pop-days" style={{
-              color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#39ff14',
+              color: daysLeft < 0 ? '#e8686a' : daysLeft <= 3 ? '#f7a600' : '#39ff14',
             }}>
               {daysLeft < 0 ? ` 逾期${-daysLeft}天` : daysLeft === 0 ? '今日交货' : `剩 ${daysLeft} 天`}
             </span>
@@ -118,7 +118,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         <div style={{ margin: '8px 0 6px', padding: '6px 8px',
           background: 'rgba(255,65,54,0.04)', borderRadius: 5,
           border: '1px solid rgba(255,65,54,0.15)' }}>
-          <div style={{ fontSize: 10, color: '#ff4136', fontWeight: 700,
+          <div style={{ fontSize: 10, color: '#e8686a', fontWeight: 700,
             marginBottom: 5, letterSpacing: 0.5 }}> 工序瓶颈 Top{intel.bottleneck.items.length > 1 ? '2' : '1'}</div>
           {intel.bottleneck.items.slice(0, 2).map((b, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center',
@@ -175,7 +175,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           {intel.anomalies.map((a, i) => (
             <div key={i} style={{
               fontSize: 10, lineHeight: 1.5, marginBottom: i < intel.anomalies.length - 1 ? 3 : 0,
-              color: ({ critical: '#ff4136', warning: '#f7a600', info: '#00e5ff' } as Record<string, string>)[a.severity] ?? '#888',
+              color: ({ critical: '#e8686a', warning: '#f7a600', info: '#00e5ff' } as Record<string, string>)[a.severity] ?? '#888',
             }}>
               · <b>{a.title}</b>: {a.description}
             </div>
@@ -235,7 +235,7 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
   const daysLeft = order.plannedEndDate
     ? Math.ceil((new Date(order.plannedEndDate).getTime() - Date.now()) / 86400000)
     : null;
-  const riskColor = daysLeft !== null && daysLeft < 0 ? '#ff4136'
+  const riskColor = daysLeft !== null && daysLeft < 0 ? '#e8686a'
     : daysLeft !== null && daysLeft <= 3 ? '#f7a600'
     : prog < 20 ? '#f7a600'
     : '#39ff14';
@@ -265,7 +265,7 @@ const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             <span className="c-order-pct" style={{ color: riskColor }}>{prog}%</span>
             {daysLeft !== null && (
               <span className="c-order-days" style={{
-                color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#3ab870',
+                color: daysLeft < 0 ? '#e8686a' : daysLeft <= 3 ? '#f7a600' : '#3ab870',
               }}>
                 {daysLeft < 0 ? `逾${-daysLeft}d` : `${daysLeft}d`}
               </span>
@@ -373,7 +373,7 @@ export const OrderScrollPanel: React.FC<{
 
 export const BottleneckRow: React.FC<{ item: FactoryBottleneckItem }> = ({ item }) => {
   const navigate = useNavigate();
-  const c = item.stuckPct < 20 ? '#ff4136' : item.stuckPct < 50 ? '#f7a600' : '#39ff14';
+  const c = item.stuckPct < 20 ? '#e8686a' : item.stuckPct < 50 ? '#f7a600' : '#39ff14';
   const focusNode = String(item.stuckStage || '').trim();
   const primaryOrderNo = String(item.worstOrders?.[0]?.orderNo || '').trim();
 

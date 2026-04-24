@@ -53,7 +53,7 @@ function formatDaysLeft(days: number): { text: string; className: string } {
 function getProgressColor(percent: number): string {
   if (percent >= 80) return '#52c41a';
   if (percent >= 50) return '#faad14';
-  return '#ff4d4f';
+  return '#ff7875';
 }
 
 const PersonalWorkPlan: React.FC = () => {

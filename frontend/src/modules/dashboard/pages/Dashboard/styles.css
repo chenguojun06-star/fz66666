@@ -232,7 +232,7 @@
 }
 
 .stat-card--overdue {
-  border-color: #ff4d4f;
+  border-color: #ff7875;
   background: #fff1f0;
 }
 
@@ -274,7 +274,7 @@
 }
 
 .stat-card--unqualified {
-  border-color: #ff4d4f;
+  border-color: #ff7875;
 }
 
 .stat-card--urgent {
@@ -326,7 +326,7 @@
 }
 
 .stat-icon--overdue {
-  color: #ff4d4f;
+  color: #ff7875;
   background: #ffccc7;
 }
 
@@ -372,7 +372,7 @@
 }
 
 .stat-icon--unqualified {
-  color: #ff4d4f;
+  color: #ff7875;
   background: #fff1f0;
 }
 
@@ -898,7 +898,7 @@
   background: #fbfff7;
 }
 :root[data-theme="white"] .stat-card--overdue {
-  border-left-color: #ff4d4f;
+  border-left-color: #ff7875;
   background: #fffbfb;
 }
 :root[data-theme="white"] .stat-card--today-warehousing {

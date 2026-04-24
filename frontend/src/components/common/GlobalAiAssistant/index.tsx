@@ -654,7 +654,7 @@ const GlobalAiAssistant: React.FC = () => {
                 title="语音输入（点击后说话）"
                 onClick={handleVoiceInput}
                 disabled={isTyping || isRecording}
-                style={{ color: isRecording ? '#f5222d' : undefined }}
+                style={{ color: isRecording ? '#e8686a' : undefined }}
               >
                 {isRecording ? <LoadingOutlined spin /> : <SoundOutlined />}
                 <span>语音</span>

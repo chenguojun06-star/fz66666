@@ -161,7 +161,7 @@
   gap: 5px;
   font-size: 12px;
   font-weight: 700;
-  color: #ff4136;
+  color: #e8686a;
   background: rgba(255,65,54,0.1);
   border: 1px solid rgba(255,65,54,0.35);
   padding: 4px 10px;
@@ -286,7 +286,7 @@
 /* 停滞节点 — 红色告警 */
 .c-stage-card.stagnant {
   border-color: rgba(255,65,54,0.5);
-  background: color-mix(in srgb, #ff4136 7%, rgba(9,19,36,0.97));
+  background: color-mix(in srgb, #e8686a 7%, rgba(9,19,36,0.97));
 }
 .c-stage-card.stagnant:hover,
 .c-stage-card.stagnant.active {
@@ -578,7 +578,7 @@
 .cyan-badge   { background: rgba(0,229,255,0.12);  color: #00e5ff;  border: 1px solid rgba(0,229,255,0.3);  }
 .green-badge  { background: rgba(57,255,20,0.12);   color: #39ff14;  border: 1px solid rgba(57,255,20,0.3);  }
 .purple-badge { background: rgba(124,77,255,0.12);  color: #a78bfa;  border: 1px solid rgba(124,77,255,0.3); }
-.red-badge    { background: rgba(255,65,54,0.12);   color: #ff4136;  border: 1px solid rgba(255,65,54,0.3);  }
+.red-badge    { background: rgba(255,65,54,0.12);   color: #e8686a;  border: 1px solid rgba(255,65,54,0.3);  }
 
 /* ────────────────────────────────────────────────
    KPI 数字卡
@@ -682,14 +682,14 @@
 /* 危险 KPI 卡 */
 .c-kpi-danger { animation: danger-border-pulse 3s ease-in-out infinite; }
 .c-kpi-danger .c-card-title { color: rgba(255,65,54,0.6); }
-.c-kpi-danger::before { background: linear-gradient(90deg, transparent, #ff413644, #ff413666, #ff413644, transparent); }
+.c-kpi-danger::before { background: linear-gradient(90deg, transparent, #e8686a44, #e8686a66, #e8686a44, transparent); }
 
 /* 预警 KPI 卡 */
 .c-kpi-warn { animation: warn-border-pulse 3.5s ease-in-out infinite; }
 .c-kpi-warn::before { background: linear-gradient(90deg, transparent, #f7a60044, #f7a60066, #f7a60044, transparent); }
 
 /* 闪烁文字 */
-.blink-text { animation: blink-alert 2.8s ease-in-out infinite; color: #ff4136; }
+.blink-text { animation: blink-alert 2.8s ease-in-out infinite; color: #e8686a; }
 
 /* ────────────────────────────────────────────────
    实时生产脉搏 (扫描线卡片)
@@ -732,12 +732,12 @@
 .c-stagnant-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: #ff4136;
+  background: #e8686a;
   flex-shrink: 0;
   animation: dot-warn-blink 2s ease-in-out infinite;
 }
 .c-stagnant-name { color: #e8d8d0; flex: 1; font-size: 13px; }
-.c-stagnant-time { color: #ff4136; font-size: 12px; }
+.c-stagnant-time { color: #e8686a; font-size: 12px; }
 
 /* 工厂活跃状态列表 */
 .c-factory-activity-list {
@@ -885,7 +885,7 @@
   border: 1px solid currentColor;
 }
 .c-shortage-name { color: #9ab0c4; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.c-shortage-qty  { color: #ff4136; font-weight: 700; flex-shrink: 0; font-size: 13px; }
+.c-shortage-qty  { color: #e8686a; font-weight: 700; flex-shrink: 0; font-size: 13px; }
 .c-summary { font-size: 12px; color: #6ba8c6; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
 
 /* ────────────────────────────────────────────────
@@ -1035,7 +1035,7 @@
 .c-empty { color: #5a8aa8; font-size: 12px; text-align: center; padding: 20px 0; }
 
 /* 语义颜色类 (保留兼容) */
-.severity-critical { color: #ff4136; font-weight: 600; }
+.severity-critical { color: #e8686a; font-weight: 600; }
 .severity-warning  { color: #f7a600; font-weight: 600; }
 .severity-info     { color: #00e5ff; }
 .severity-normal   { color: #39ff14; }
@@ -1411,7 +1411,7 @@
 .kpi-pop-warn {
   margin-top: 12px;
   font-size: 12px;
-  color: #ff4136;
+  color: #e8686a;
   background: rgba(255,65,54,0.08);
   border: 1px solid rgba(255,65,54,0.25);
   border-radius: 6px;
@@ -1470,7 +1470,7 @@
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 700;
-  color: #ff4136;
+  color: #e8686a;
   padding: 0 10px;
   border-right: 1px solid rgba(255,65,54,0.2);
   letter-spacing: 0.5px;
@@ -1554,7 +1554,7 @@
   display: inline-block;
 }
 .kpi-delta-up   { color: #39ff14; }
-.kpi-delta-down { color: #ff4136; }
+.kpi-delta-down { color: #e8686a; }
 
 /* ═══════════════════════════════════════════════
    通用自动滚动容器（AutoScrollBox 渲染 DOM 层）

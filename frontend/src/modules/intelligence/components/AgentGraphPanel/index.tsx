@@ -14,7 +14,7 @@ const SCENES = [
 ];
 
 const ROUTE_MAP: Record<string, [string, string]> = {
-  delivery_risk: ['货期风险路由', '#ff4d4f'],
+  delivery_risk: ['货期风险路由', '#ff7875'],
   sourcing:      ['采购路由',     '#1890ff'],
   compliance:    ['合规路由',     '#52c41a'],
   logistics:     ['物流路由',     '#13c2c2'],
@@ -30,7 +30,7 @@ const NODE_LABELS: Record<string, [string, string]> = {
 };
 
 const confColor = (v: number) =>
-  v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff4d4f';
+  v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff7875';
 
 const RouteTag: React.FC<{ route?: string }> = ({ route }) => {
   const [label, color] = ROUTE_MAP[route ?? ''] ?? [route ?? '—', '#999'];

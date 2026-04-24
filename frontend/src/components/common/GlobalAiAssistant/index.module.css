@@ -285,7 +285,7 @@
   padding: 0 2px;
   flex-shrink: 0;
 }
-.attachChipRemove:hover { color: #f5222d; }
+.attachChipRemove:hover { color: #e8686a; }
 
 .actionBtn {
   border: none;
@@ -297,5 +297,5 @@
 }
 .actionBtnPrimary { background: #1890ff; color: #fff; }
 .actionBtnPrimary:hover { background: #096dd9; }
-.actionBtnDanger { background: #ff4d4f; color: #fff; }
+.actionBtnDanger { background: #ff7875; color: #fff; }
 .actionBtnDanger:hover { background: #cf1322; }

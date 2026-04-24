@@ -11,7 +11,6 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -45,9 +44,6 @@ public class HealthIndexOrchestrator {
 
     @Autowired
     private MaterialStockService materialStockService;
-
-    @Autowired
-    private DashboardQueryService dashboardQueryService;
 
     private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
@@ -139,7 +135,15 @@ public class HealthIndexOrchestrator {
         long totalOrders = productionOrderService.count(all);
         if (totalOrders == 0) return 20;
 
-        long overdue = dashboardQueryService.countOverdueOrders();
+        LocalDateTime now = LocalDateTime.now();
+        QueryWrapper<ProductionOrder> overdueQw = new QueryWrapper<>();
+        overdueQw.eq("tenant_id", tenantId)
+                 .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+                 .eq("delete_flag", 0)
+                 .notIn("status", TERMINAL_STATUSES)
+                 .isNotNull("planned_end_date")
+                 .lt("planned_end_date", now);
+        long overdue = productionOrderService.count(overdueQw);
         double overdueRatio = (double) overdue / totalOrders;
         return (int) Math.round(Math.max(0, 1 - overdueRatio) * 20);
     }
@@ -215,25 +219,90 @@ public class HealthIndexOrchestrator {
             LocalDateTime start = LocalDateTime.of(date, LocalTime.MIN);
             LocalDateTime end = LocalDateTime.of(date, LocalTime.MAX);
 
-            // 简化：用当天扫码成功率 × 100 作为当日指数估算
-            QueryWrapper<ScanRecord> total = new QueryWrapper<>();
-            total.eq("tenant_id", tenantId)
-                 .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
-                 .between("scan_time", start, end);
-            long dayTotal = scanRecordService.count(total);
-
-            QueryWrapper<ScanRecord> ok = new QueryWrapper<>();
-            ok.eq("tenant_id", tenantId)
-              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
-              .between("scan_time", start, end)
-              .eq("scan_result", "success");
-            long dayOk = scanRecordService.count(ok);
+            int dayProduction = calcDayProduction(tenantId, factoryId, start, end);
+            int dayDelivery = calcDayDelivery(tenantId, factoryId, start, end);
+            int dayQuality = calcDayQuality(tenantId, factoryId, start, end);
+            int dayInventory = calcInventoryScore(tenantId);
+            int dayFinance = calcDayFinance(tenantId, factoryId, start, end);
+            int dayIndex = Math.min(100, Math.max(0,
+                    dayProduction + dayDelivery + dayQuality + dayInventory + dayFinance));
 
             DailyIndex d = new DailyIndex();
             d.setDate(date.toString());
-            d.setIndex(dayTotal > 0 ? (int) Math.round((double) dayOk / dayTotal * 100) : 0);
+            d.setIndex(dayIndex);
             trend.add(d);
         }
         return trend;
+    }
+
+    private int calcDayProduction(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId)
+          .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+          .eq("delete_flag", 0).eq("status", "production")
+          .between("update_time", start, end);
+        List<ProductionOrder> orders = productionOrderService.list(qw);
+        if (orders.isEmpty()) return 20;
+        double avgProgress = orders.stream()
+                .mapToInt(o -> o.getProductionProgress() != null ? o.getProductionProgress() : 0)
+                .average().orElse(0);
+        return (int) Math.round(avgProgress / 100.0 * 20);
+    }
+
+    private int calcDayDelivery(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<ProductionOrder> allQw = new QueryWrapper<>();
+        allQw.eq("tenant_id", tenantId)
+             .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+             .eq("delete_flag", 0)
+             .in("status", Arrays.asList("production", "completed", "delayed"))
+             .between("update_time", start, end);
+        long totalOrders = productionOrderService.count(allQw);
+        if (totalOrders == 0) return 20;
+        QueryWrapper<ProductionOrder> overdueQw = new QueryWrapper<>();
+        overdueQw.eq("tenant_id", tenantId)
+                 .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+                 .eq("delete_flag", 0)
+                 .notIn("status", TERMINAL_STATUSES)
+                 .isNotNull("planned_end_date")
+                 .lt("planned_end_date", end)
+                 .between("update_time", start, end);
+        long overdue = productionOrderService.count(overdueQw);
+        double overdueRatio = (double) overdue / totalOrders;
+        return (int) Math.round(Math.max(0, 1 - overdueRatio) * 20);
+    }
+
+    private int calcDayQuality(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<ScanRecord> totalQw = new QueryWrapper<>();
+        totalQw.eq("tenant_id", tenantId)
+               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+               .between("scan_time", start, end);
+        long totalScans = scanRecordService.count(totalQw);
+        if (totalScans == 0) return 20;
+        QueryWrapper<ScanRecord> okQw = new QueryWrapper<>();
+        okQw.eq("tenant_id", tenantId)
+            .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+            .between("scan_time", start, end)
+            .eq("scan_result", "success");
+        long successScans = scanRecordService.count(okQw);
+        return (int) Math.round((double) successScans / totalScans * 20);
+    }
+
+    private int calcDayFinance(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<ProductionOrder> totalQw = new QueryWrapper<>();
+        totalQw.eq("tenant_id", tenantId)
+               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+               .eq("delete_flag", 0)
+               .notIn("status", TERMINAL_STATUSES)
+               .between("update_time", start, end);
+        long totalOrders = productionOrderService.count(totalQw);
+        if (totalOrders == 0) return 20;
+        QueryWrapper<ProductionOrder> completedQw = new QueryWrapper<>();
+        completedQw.eq("tenant_id", tenantId)
+                   .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+                   .eq("delete_flag", 0)
+                   .eq("status", "completed")
+                   .between("update_time", start, end);
+        long completedCount = productionOrderService.count(completedQw);
+        return (int) Math.round((double) completedCount / totalOrders * 20);
     }
 }

@@ -141,14 +141,31 @@ public class FactoryLeaderboardOrchestrator {
                 .filter(s -> "success".equals(s.getScanResult())).count();
         r.setQualityScore(totalScans > 0 ? Math.min(100, (int) (successScans * 100 / totalScans)) : 50);
 
-        // 效率分：简化为 日均产量百分位
-        r.setEfficiencyScore(completedQty > 0 ? Math.min(100, (int) (completedQty / Math.max(1, active + completed))) : 50);
+        long successQty = scans.stream()
+                .filter(s -> "success".equals(s.getScanResult()) && s.getQuantity() != null)
+                .mapToLong(ScanRecord::getQuantity).sum();
+        long activeDays = scans.stream()
+                .filter(s -> s.getScanTime() != null)
+                .map(s -> s.getScanTime().toLocalDate())
+                .distinct().count();
+        double dailyAvg = activeDays > 0 ? (double) successQty / activeDays : 0;
+        double baseline = totalQty > 0 ? (double) totalQty / 30 : 1;
+        r.setEfficiencyScore(dailyAvg > 0 ? Math.min(100, (int) (dailyAvg * 50 / Math.max(1, baseline))) : 50);
 
-        // 综合分
         r.setTotalScore((r.getCapacityScore() + r.getDeliveryScore()
                 + r.getQualityScore() + r.getEfficiencyScore()) / 4);
 
-        r.setTrend("same"); // 简化
+        long recent7Qty = scans.stream()
+                .filter(s -> s.getScanTime() != null && s.getScanTime().isAfter(LocalDateTime.now().minusDays(7)))
+                .filter(s -> "success".equals(s.getScanResult()) && s.getQuantity() != null)
+                .mapToLong(ScanRecord::getQuantity).sum();
+        long prev7Qty = scans.stream()
+                .filter(s -> s.getScanTime() != null
+                        && !s.getScanTime().isAfter(LocalDateTime.now().minusDays(7))
+                        && s.getScanTime().isAfter(LocalDateTime.now().minusDays(14)))
+                .filter(s -> "success".equals(s.getScanResult()) && s.getQuantity() != null)
+                .mapToLong(ScanRecord::getQuantity).sum();
+        r.setTrend(recent7Qty > prev7Qty * 1.1 ? "up" : recent7Qty < prev7Qty * 0.9 ? "down" : "same");
         return r;
     }
 

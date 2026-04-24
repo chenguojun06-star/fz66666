@@ -68,7 +68,7 @@ const AgentMeetingCard: React.FC<AgentMeetingCardProps> = ({
           )}
         </div>
       )}
-      {meetingResult?.error && <div style={{ padding: '6px 14px', fontSize: 12, color: '#ff4d4f' }}>例会调用失败，请稍后重试</div>}
+      {meetingResult?.error && <div style={{ padding: '6px 14px', fontSize: 12, color: '#ff7875' }}>例会调用失败，请稍后重试</div>}
       {/* 历史记录 */}
       {meetingHistory.length > 0 && (
         <div style={{ padding: '0 14px 10px' }}>

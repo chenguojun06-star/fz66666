@@ -27,7 +27,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff4d4f;
+  background: #ff7875;
   animation: badgePulse 2s ease-in-out infinite;
 }
 
@@ -229,7 +229,7 @@
 }
 
 .overdueOrderDanger {
-  color: #ff4d4f;
+  color: #ff7875;
 }
 
 .overdueOrderDays {

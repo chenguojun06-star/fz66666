@@ -8,7 +8,7 @@ const profitStatusColor: Record<string, string> = {
   // 后端返回中文字段
   '盈利': '#39ff14',
   '微利': '#f7a600',
-  '亏损': '#ff4136',
+  '亏损': '#e8686a',
 };
 const profitStatusLabel: Record<string, string> = {
   '盈利': '盈利', '微利': '微利', '亏损': '亏损',
@@ -130,7 +130,7 @@ const ProfitDeliveryPanel: React.FC = () => {
             {/* 成本拆解 */}
             {[
               { label: '营业收入', val: profit.quotationTotal,   color: '#39ff14' },
-              { label: '物料成本', val: profit.materialCost,    color: '#ff4136' },
+              { label: '物料成本', val: profit.materialCost,    color: '#e8686a' },
               { label: '人工成本', val: profit.wageCost,         color: '#f7a600' },
               { label: '管理成本', val: profit.otherCost,        color: '#a78bfa' },
               { label: '总成本',   val: profit.totalCost,        color: '#4a6d8a' },
@@ -156,7 +156,7 @@ const ProfitDeliveryPanel: React.FC = () => {
             {[
               { label: '乐观完工', date: delivery.optimisticDate,  color: '#39ff14' },
               { label: '预计完工', date: delivery.mostLikelyDate, color: '#00e5ff' },
-              { label: '悲观完工', date: delivery.pessimisticDate, color: '#ff4136' },
+              { label: '悲观完工', date: delivery.pessimisticDate, color: '#e8686a' },
             ].map(({ label, date, color }) => (
               <div key={label} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',

@@ -44,16 +44,21 @@ export function useCockpit() {
   const { user, isAuthenticated } = useAuth();
   const [data, setData] = useState<CockpitData>(INITIAL);
 
+  const loadingRef = useRef(false);
+
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap, rProductionStats] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap, rProductionStats] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
         intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
         intelligenceApi.getMaterialShortage(),
+        intelligenceApi.runSelfHealing(),
         intelligenceApi.getFactoryBottleneck(),
-        productionOrderApi.list({ pageSize: 200, excludeTerminal: true } as any),
+        productionOrderApi.list({ page: 1, pageSize: 500, excludeTerminal: true }),
         intelligenceApi.getBrainSnapshot(),
         intelligenceApi.getActionCenter(),
         productionOrderApi.getFactoryCapacity(),
@@ -72,19 +77,21 @@ export function useCockpit() {
       : null;
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
-      heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: null,
+      heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
       bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
       orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped', 'archived', 'closed'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,
       productionStats: productionStatsResult,
       loading: false, ts: Date.now(),
     });
+    loadingRef.current = false;
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   /* 10 秒快刷：仅更新实时脉搏 */
   const fetchPulseOnly = useCallback(async () => {
+    if (loadingRef.current) return;
     try {
       const res: ApiResult<LivePulseResponse> = await intelligenceApi.getLivePulse();
       const newPulse = (res?.data ?? res) as LivePulseResponse;

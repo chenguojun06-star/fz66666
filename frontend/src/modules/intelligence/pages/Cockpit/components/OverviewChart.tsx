@@ -57,7 +57,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
         const res = await api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
           params: {
             page: 1,
-            pageSize: 1000,
+            pageSize: 500,
             startDate: start.toISOString(),
             endDate: end.toISOString(),
             excludeTerminal: true,

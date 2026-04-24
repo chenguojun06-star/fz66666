@@ -54,7 +54,9 @@ const loadWidgetState = (): WidgetState => {
       const parsed = JSON.parse(saved);
       return { ...DEFAULT_WIDGETS, ...parsed };
     }
-  } catch {}
+  } catch (e) {
+    console.warn('[Cockpit] localStorage 读取失败:', e);
+  }
   return DEFAULT_WIDGETS;
 };
 
@@ -77,7 +79,9 @@ const CockpitPage: React.FC = () => {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(widgets));
-    } catch {}
+    } catch (e) {
+      console.warn('[Cockpit] localStorage 写入失败:', e);
+    }
   }, [widgets]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -115,7 +119,6 @@ const CockpitPage: React.FC = () => {
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     setRefreshKey(k => k + 1);
-    setTimeout(() => setRefreshing(false), 1200);
   }, []);
 
   const handleResetLayout = useCallback(() => {
@@ -131,6 +134,23 @@ const CockpitPage: React.FC = () => {
       key,
       startX: e.clientX,
       startY: e.clientY,
+      startWidgetX: widget.x,
+      startWidgetY: widget.y,
+      startWidth: widget.width,
+      startHeight: widget.height,
+      mode,
+    };
+  }, [widgets]);
+
+  const handleTouchStart = useCallback((key: keyof WidgetState, e: React.TouchEvent, mode: 'move' | 'resize') => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    if (!touch) return;
+    const widget = widgets[key];
+    dragRef.current = {
+      key,
+      startX: touch.clientX,
+      startY: touch.clientY,
       startWidgetX: widget.x,
       startWidgetY: widget.y,
       startWidth: widget.width,
@@ -172,6 +192,16 @@ const CockpitPage: React.FC = () => {
       }
     };
 
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dragRef.current || !e.touches[0]) return;
+      e.preventDefault();
+      pendingDelta.x = e.touches[0].clientX - dragRef.current.startX;
+      pendingDelta.y = e.touches[0].clientY - dragRef.current.startY;
+      if (!rafId) {
+        rafId = requestAnimationFrame(updatePosition);
+      }
+    };
+
     const handleMouseUp = () => {
       if (rafId) {
         cancelAnimationFrame(rafId);
@@ -182,9 +212,13 @@ const CockpitPage: React.FC = () => {
 
     document.addEventListener('mousemove', handleMouseMove, { passive: false });
     document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleMouseUp);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleMouseUp);
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);
@@ -322,6 +356,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-header"
                     onMouseDown={(e) => handleMouseDown('overview', e, 'move')}
+                    onTouchStart={(e) => handleTouchStart('overview', e, 'move')}
                   >
                     <span className="cockpit-widget-title">业务概览</span>
                     <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('overview')}>×</Button>
@@ -337,6 +372,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-resize"
                     onMouseDown={(e) => handleMouseDown('overview', e, 'resize')}
+                    onTouchStart={(e) => handleTouchStart('overview', e, 'resize')}
                   />
                 </div>
               )}
@@ -354,6 +390,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-header"
                     onMouseDown={(e) => handleMouseDown('order', e, 'move')}
+                    onTouchStart={(e) => handleTouchStart('order', e, 'move')}
                   >
                     <span className="cockpit-widget-title">下单管理</span>
                     <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('order')}>×</Button>
@@ -369,6 +406,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-resize"
                     onMouseDown={(e) => handleMouseDown('order', e, 'resize')}
+                    onTouchStart={(e) => handleTouchStart('order', e, 'resize')}
                   />
                 </div>
               )}
@@ -386,6 +424,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-header"
                     onMouseDown={(e) => handleMouseDown('sample', e, 'move')}
+                    onTouchStart={(e) => handleTouchStart('sample', e, 'move')}
                   >
                     <span className="cockpit-widget-title">样衣开发</span>
                     <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('sample')}>×</Button>
@@ -401,6 +440,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-resize"
                     onMouseDown={(e) => handleMouseDown('sample', e, 'resize')}
+                    onTouchStart={(e) => handleTouchStart('sample', e, 'resize')}
                   />
                 </div>
               )}
@@ -418,6 +458,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-header"
                     onMouseDown={(e) => handleMouseDown('production', e, 'move')}
+                    onTouchStart={(e) => handleTouchStart('production', e, 'move')}
                   >
                     <span className="cockpit-widget-title">大货生产</span>
                     <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('production')}>×</Button>
@@ -433,6 +474,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-resize"
                     onMouseDown={(e) => handleMouseDown('production', e, 'resize')}
+                    onTouchStart={(e) => handleTouchStart('production', e, 'resize')}
                   />
                 </div>
               )}
@@ -450,6 +492,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-header"
                     onMouseDown={(e) => handleMouseDown('procurement', e, 'move')}
+                    onTouchStart={(e) => handleTouchStart('procurement', e, 'move')}
                   >
                     <span className="cockpit-widget-title">物料采购</span>
                     <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('procurement')}>×</Button>
@@ -465,6 +508,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-resize"
                     onMouseDown={(e) => handleMouseDown('procurement', e, 'resize')}
+                    onTouchStart={(e) => handleTouchStart('procurement', e, 'resize')}
                   />
                 </div>
               )}
@@ -482,6 +526,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-header"
                     onMouseDown={(e) => handleMouseDown('warehouse', e, 'move')}
+                    onTouchStart={(e) => handleTouchStart('warehouse', e, 'move')}
                   >
                     <span className="cockpit-widget-title">成品仓库</span>
                     <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('warehouse')}>×</Button>
@@ -497,6 +542,7 @@ const CockpitPage: React.FC = () => {
                   <div
                     className="cockpit-widget-resize"
                     onMouseDown={(e) => handleMouseDown('warehouse', e, 'resize')}
+                    onTouchStart={(e) => handleTouchStart('warehouse', e, 'resize')}
                   />
                 </div>
               )}

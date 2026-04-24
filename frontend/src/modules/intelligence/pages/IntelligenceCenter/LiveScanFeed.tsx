@@ -231,8 +231,8 @@ const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ minMinutesSinceLastScan, cu
       {idleLevel !== 'normal' && (
         <div className={`lsf-idle-note ${idleLevel}`}>
           {idleLevel === 'danger'
-            ? effectiveSilentMinutes === Infinity ? '静默预警：当前暂无任何活跃扫码' : effectiveSilentMinutes === Infinity ? '静默预警：当前暂无任何活跃扫码' : `静默预警：最近 ${Math.max(1, Math.round(effectiveSilentMinutes))} 分钟未见有效扫码`
-            : effectiveSilentMinutes === Infinity ? '脉冲走弱：当前扫码较少' : effectiveSilentMinutes === Infinity ? '脉冲走弱：当前扫码较少' : `脉冲走弱：最近 ${Math.max(1, Math.round(effectiveSilentMinutes))} 分钟扫码明显变少`}
+            ? effectiveSilentMinutes === Infinity ? '静默预警：当前暂无任何活跃扫码' : `静默预警：最近 ${Math.max(1, Math.round(effectiveSilentMinutes))} 分钟未见有效扫码`
+            : effectiveSilentMinutes === Infinity ? '脉冲走弱：当前扫码较少' : `脉冲走弱：最近 ${Math.max(1, Math.round(effectiveSilentMinutes))} 分钟扫码明显变少`}
         </div>
       )}
 

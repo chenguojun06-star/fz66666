@@ -176,13 +176,13 @@ const MonthlyBizSummary: React.FC = () => {
               label="次品率"
               value={data.production.defectRatePct}
               unit="%"
-              color={data.production.defectRatePct > 5 ? '#ff4136' : '#39ff14'}
+              color={data.production.defectRatePct > 5 ? '#e8686a' : '#39ff14'}
             />
             <KpiBox
               label="返修率"
               value={data.production.repairRatePct}
               unit="%"
-              color={data.production.repairRatePct > 5 ? '#ff4136' : '#39ff14'}
+              color={data.production.repairRatePct > 5 ? '#e8686a' : '#39ff14'}
             />
           </div>
 
@@ -265,7 +265,7 @@ const MonthlyBizSummary: React.FC = () => {
               label="结算利润"
               value={'¥' + (data.finance.settlementProfit / 10000).toFixed(2)}
               unit="万元"
-              color={data.finance.settlementProfit >= 0 ? '#39ff14' : '#ff4136'}
+              color={data.finance.settlementProfit >= 0 ? '#39ff14' : '#e8686a'}
             />
             <KpiBox
               label="毛利率"
