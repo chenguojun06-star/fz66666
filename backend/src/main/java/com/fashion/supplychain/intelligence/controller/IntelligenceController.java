@@ -185,13 +185,13 @@ public class IntelligenceController {
 
     private com.fashion.supplychain.intelligence.orchestration.OrphanDataDetector orphanDataDetector;
 
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/orphan-data/scan")
     public Result<com.fashion.supplychain.intelligence.dto.OrphanDataScanResultDTO> scanOrphanData() {
         return Result.success(orphanDataDetector.scan());
     }
 
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/orphan-data/list")
     public Result<List<com.fashion.supplychain.intelligence.dto.OrphanDataItemDTO>> listOrphanData(
             @RequestParam String tableName,
@@ -200,7 +200,7 @@ public class IntelligenceController {
         return Result.success(orphanDataDetector.listOrphanData(tableName, page, pageSize));
     }
 
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/orphan-data/delete")
     public Result<Integer> deleteOrphanData(@RequestBody Map<String, Object> body) {
         String tableName = (String) body.get("tableName");
