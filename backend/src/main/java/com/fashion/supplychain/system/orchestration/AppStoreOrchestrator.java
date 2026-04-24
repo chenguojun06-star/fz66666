@@ -702,6 +702,7 @@ public class AppStoreOrchestrator {
                 }
                 Long appId = ((Number) appRows.get(0).get("id")).longValue();
                 String appName = (String) appRows.get(0).get("app_name");
+                appName = fixMojibakeString(appName);
 
                 // 查询是否已有有效订阅
                 List<Map<String, Object>> existing = jdbcTemplate.queryForList(
@@ -740,5 +741,23 @@ public class AppStoreOrchestrator {
         result.put("failed", failed);
         result.put("endTime", endTime.toString());
         return result;
+    }
+
+    private String fixMojibakeString(String text) {
+        if (text == null || text.isEmpty()) return text;
+        boolean hasLatin1Ext = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '\u00c0' && c <= '\u00ff') {
+                hasLatin1Ext = true;
+                break;
+            }
+        }
+        if (!hasLatin1Ext) return text;
+        try {
+            return new String(text.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return text;
+        }
     }
 }

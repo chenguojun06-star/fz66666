@@ -107,6 +107,7 @@ public class AppStoreController {
             if (app == null) {
                 return Result.fail("应用不存在");
             }
+            appStoreService.fixMojibakeFields(app);
             Long tenantId = UserContext.tenantId();
             AppOrder order = appStoreOrchestrator.createOrder(app, tenantId,
                     request.getSubscriptionType(), request.getUserCount(),
