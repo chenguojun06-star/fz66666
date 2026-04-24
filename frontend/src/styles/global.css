@@ -1025,12 +1025,16 @@ body {
   border-inline-end: none !important;
 }
 
-.ant-table:not(.resizable-table) .ant-table-container table {
+/* ── 普通 Ant Design 表格默认撑满容器 ── */
+.ant-table-wrapper .ant-table-container table {
   width: 100%;
 }
 
-.resizable-table .ant-table-container table {
+/* ── ResizableTable 使用 fixed 布局，列宽受显式定义约束 ── */
+.resizable-table .ant-table-container table,
+.resizable-table-shell .ant-table-container table {
   table-layout: fixed;
+  width: auto;
 }
 
 .resizable-table .resizable-handle {
