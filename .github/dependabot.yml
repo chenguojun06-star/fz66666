@@ -11,6 +11,15 @@ updates:
       - "backend"
     commit-message:
       prefix: "deps(backend)"
+    ignore:
+      - dependency-name: "com.mysql:mysql-connector-j"
+        versions: [">=9"]
+      - dependency-name: "org.springdoc:springdoc-openapi-starter-webmvc-ui"
+        versions: [">=3"]
+      - dependency-name: "com.baomidou:mybatis-plus-spring-boot3-starter"
+        versions: [">=4"]
+      - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+        versions: [">=4"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -26,6 +35,12 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "antd"
+        versions: [">=7"]
+      - dependency-name: "react"
+        versions: [">=19"]
+      - dependency-name: "react-dom"
+        versions: [">=19"]
 
   - package-ecosystem: "npm"
     directory: "/h5-web"
@@ -38,6 +53,15 @@ updates:
       - "h5"
     commit-message:
       prefix: "deps(h5)"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        versions: [">=19"]
+      - dependency-name: "react-dom"
+        versions: [">=19"]
+      - dependency-name: "react-router-dom"
+        versions: [">=7"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -49,3 +73,6 @@ updates:
       - "ci"
     commit-message:
       prefix: "ci(deps)"
+    ignore:
+      - dependency-name: "docker/build-push-action"
+        versions: [">=6"]
