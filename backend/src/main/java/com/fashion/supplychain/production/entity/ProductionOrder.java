@@ -144,6 +144,18 @@ public class ProductionOrder {
     private String company;
 
     /**
+     * CRM客户ID（关联t_customer.id）
+     */
+    @TableField("customer_id")
+    private String customerRefId;
+
+    /**
+     * CRM客户名称（快照，从Customer.companyName带入）
+     */
+    @TableField("customer_name")
+    private String customerName;
+
+    /**
      * 品类（从样衣开发带入，可修改）
      */
     @TableField("product_category")

@@ -22,7 +22,7 @@ function toSpeakable(raw: string): string {
   s = s.replace(/```[\s\S]*?```/g, '');
   s = s.replace(/`[^`]+`/g, '');
   s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
-  s = s.replace(/[*_~`#>\[\]\-]/g, '');
+  s = s.replace(/[*_~`#>[\]-]/g, '');
   s = s.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '');
   s = s.replace(/[\\n\\r]+/g, '，');
   s = s.replace(/\n+/g, '，');

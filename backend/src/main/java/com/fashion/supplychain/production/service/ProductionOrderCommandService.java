@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
+import com.fashion.supplychain.crm.entity.Customer;
+import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.util.ProductionOrderUtils;
 import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
@@ -35,17 +37,20 @@ public class ProductionOrderCommandService {
     private final StyleInfoService styleInfoService;
     private final FactoryService factoryService;
     private final OrganizationUnitBindingHelper organizationUnitBindingHelper;
+    private final CustomerService customerService;
 
     @Autowired
     public ProductionOrderCommandService(
             ProductionOrderService productionOrderService,
             StyleInfoService styleInfoService,
             FactoryService factoryService,
-            OrganizationUnitBindingHelper organizationUnitBindingHelper) {
+            OrganizationUnitBindingHelper organizationUnitBindingHelper,
+            CustomerService customerService) {
         this.productionOrderService = productionOrderService;
         this.styleInfoService = styleInfoService;
         this.factoryService = factoryService;
         this.organizationUnitBindingHelper = organizationUnitBindingHelper;
+        this.customerService = customerService;
     }
 
     /**
@@ -78,6 +83,7 @@ public class ProductionOrderCommandService {
         }
 
         applyFactorySnapshot(productionOrder);
+        applyCustomerSnapshot(productionOrder);
 
         // 设置基础字段
         LocalDateTime now = LocalDateTime.now();
@@ -243,6 +249,22 @@ public class ProductionOrderCommandService {
         productionOrder.setParentOrgUnitName(snapshot.getParentOrgUnitName());
         productionOrder.setOrgPath(snapshot.getOrgPath());
         productionOrder.setFactoryType(snapshot.getFactoryType());
+    }
+
+    private void applyCustomerSnapshot(ProductionOrder productionOrder) {
+        if (!StringUtils.hasText(productionOrder.getCustomerRefId())) {
+            return;
+        }
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, productionOrder.getCustomerRefId().trim())
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
+        if (customer == null) {
+            return;
+        }
+        if (!StringUtils.hasText(productionOrder.getCustomerName())) {
+            productionOrder.setCustomerName(customer.getCompanyName());
+        }
     }
 
     private boolean isTerminalStatus(String status) {

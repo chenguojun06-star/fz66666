@@ -1,0 +1,4 @@
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_production_order' AND COLUMN_NAME='customer_name')=0,
+    'ALTER TABLE `t_production_order` ADD COLUMN `customer_name` VARCHAR(100) NULL COMMENT \'CRM客户名称快照\'',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

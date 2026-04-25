@@ -399,6 +399,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_production_order", "factory_contact_phone", "VARCHAR(20) DEFAULT NULL");
         add("t_production_order", "merchandiser", "VARCHAR(50) DEFAULT NULL");
         add("t_production_order", "customer_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_production_order", "customer_name", "VARCHAR(100) DEFAULT NULL COMMENT 'CRM客户名称快照'");
         add("t_production_order", "company", "VARCHAR(100) DEFAULT NULL");
         add("t_production_order", "product_category", "VARCHAR(50) DEFAULT NULL");
         add("t_production_order", "pattern_maker", "VARCHAR(50) DEFAULT NULL");

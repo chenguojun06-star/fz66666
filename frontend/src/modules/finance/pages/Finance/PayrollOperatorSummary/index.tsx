@@ -16,7 +16,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { getSummaryColumns, getDetailColumns, scanTypeText } from './payrollOperatorColumns';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 import WageSlipPrintModal from './WageSlipPrintModal';
-import { PrinterOutlined, SearchOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceApi';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -42,6 +42,7 @@ const PayrollOperatorSummary: React.FC = () => {
     const [detailSelectedKeys, setDetailSelectedKeys] = useState<string[]>([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
     const [printModalVisible, setPrintModalVisible] = useState(false);
+    const [kingdeeExportFormat, setKingdeeExportFormat] = useState<string>('KINGDEE');
     const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
     // ── 内部工厂订单汇总 Tab 数据 ──────────────────────────────────────────
@@ -528,6 +529,24 @@ const PayrollOperatorSummary: React.FC = () => {
         }
     };
 
+    const handleKingdeeExport = () => {
+        const params: Record<string, string> = { format: kingdeeExportFormat };
+        if (dateRange?.[0] && dateRange?.[1]) {
+            params.startDate = dayjs(dateRange[0]).format('YYYY-MM-DD');
+            params.endDate = dayjs(dateRange[1]).format('YYYY-MM-DD');
+        }
+        const qs = new URLSearchParams(params).toString();
+        const token = localStorage.getItem('token') || '';
+        const url = `/api/finance/tax-export/payroll-detail?${qs}&token=${encodeURIComponent(token)}`;
+        const link = document.createElement('a');
+        link.href = url;
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        message.success('财税导出已开始下载');
+    };
+
     // Tab1: 审核单条明细行（写库持久化）
     const handleAuditDetail = async (row: any) => {
         if (!isOrderFrozenByStatus({ status: String(row?.orderStatus || '') })) {
@@ -807,6 +826,23 @@ const PayrollOperatorSummary: React.FC = () => {
                             disabled={loading || rows.length === 0}
                         >
                             导出Excel
+                        </Button>
+                        <Select
+                            style={{ width: 120 }}
+                            value={kingdeeExportFormat}
+                            onChange={setKingdeeExportFormat}
+                            options={[
+                                { value: 'KINGDEE', label: '金蝶KIS' },
+                                { value: 'UFIDA', label: '用友T3' },
+                                { value: 'STANDARD', label: '标准格式' },
+                            ]}
+                        />
+                        <Button
+                            icon={<DownloadOutlined />}
+                            onClick={handleKingdeeExport}
+                            disabled={loading || rows.length === 0}
+                        >
+                            财税导出
                         </Button>
                     </Space>
                 </Card>

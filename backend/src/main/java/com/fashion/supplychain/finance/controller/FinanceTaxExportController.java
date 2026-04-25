@@ -53,6 +53,36 @@ public class FinanceTaxExportController {
     }
 
     /**
+     * 导出工资人员工序明细 Excel（金蝶KIS/用友T3/标准格式）
+     * 按人员汇总生成凭证分录，附带工序明细核对表
+     *
+     * @param startDate 开始日期，格式 yyyy-MM-dd，默认当月1日
+     * @param endDate   结束日期，格式 yyyy-MM-dd，默认今日
+     * @param format    导出格式：STANDARD（默认）/ KINGDEE（金蝶KIS）/ UFIDA（用友T3）
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/payroll-detail")
+    public ResponseEntity<byte[]> exportPayrollDetail(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+
+        String start = (startDate != null && !startDate.isBlank()) ? startDate
+                : LocalDate.now().withDayOfMonth(1).toString();
+        String end = (endDate != null && !endDate.isBlank()) ? endDate
+                : LocalDate.now().toString();
+
+        byte[] data = taxExportOrchestrator.exportPayrollDetailExcel(start, end, format);
+        String filename = buildFilename("工资明细", format, start, end);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodeFilename(filename))
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(data.length)
+                .body(data);
+    }
+
+    /**
      * 导出物料对账 Excel
      */
     @PreAuthorize("isAuthenticated()")
