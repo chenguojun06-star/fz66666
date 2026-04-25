@@ -62,6 +62,9 @@ public class ProcurementTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        if (UserContext.factoryId() != null) {
+            return errorJson("外发工厂账号无权访问采购数据");
+        }
         Map<String, Object> args = parseArgs(argumentsJson);
         String action = requireString(args, "action");
 

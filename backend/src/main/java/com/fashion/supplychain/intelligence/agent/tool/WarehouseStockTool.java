@@ -118,9 +118,11 @@ public class WarehouseStockTool implements AgentTool {
                 dto.put("color", stock.getColor());
                 dto.put("size", stock.getSize());
                 dto.put("supplierName", stock.getSupplierName());
-                dto.put("quantity", stock.getQuantity()); // 实际可用库存
-                dto.put("lockedQuantity", stock.getLockedQuantity()); // 锁定库存
-                dto.put("unitPrice", stock.getUnitPrice());
+                dto.put("quantity", stock.getQuantity());
+                dto.put("lockedQuantity", stock.getLockedQuantity());
+                if (stock.getUnitPrice() != null) {
+                    dto.put("unitPrice", UserContext.factoryId() != null ? "***" : stock.getUnitPrice());
+                }
                 dto.put("unit", stock.getUnit());
                 dto.put("location", stock.getLocation());
                 resultList.add(dto);

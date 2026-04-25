@@ -66,6 +66,9 @@ public class MaterialReconciliationTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) throws Exception {
         TenantAssert.assertTenantContext();
+        if (UserContext.factoryId() != null) {
+            return "{\"success\":false,\"error\":\"外发工厂账号无权访问物料对账数据\"}";
+        }
         if (UserContext.tenantId() == null) {
             return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
         }

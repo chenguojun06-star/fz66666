@@ -88,6 +88,9 @@ public class FinancialPayrollTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
+        if (UserContext.factoryId() != null) {
+            return "{\"success\":false,\"error\":\"外发工厂账号无权访问工资数据\"}";
+        }
         try {
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {

@@ -335,7 +335,8 @@ export const useProgressColumns = ({
                       value: (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           <span style={metaValueStyle}>{shipDate}</span>
-                          {text ? <span style={{ color, fontWeight: 700, fontSize: 12 }}>{text}</span> : null}
+                          {/* 已完成/已报废/已关单 的状态已由上方 Tag 展示，此处不重复显示 */}
+                          {text && text !== '已完成' && text !== '已报废' && text !== '已关单' ? <span style={{ color, fontWeight: 700, fontSize: 12 }}>{text}</span> : null}
                         </span>
                       ),
                       labelStyle: { ...metaLabelStyle, fontWeight: 500 },

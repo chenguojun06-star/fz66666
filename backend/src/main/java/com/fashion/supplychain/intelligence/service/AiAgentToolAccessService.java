@@ -202,7 +202,15 @@ public class AiAgentToolAccessService {
             "tool_query_style_info",
             "tool_query_style_difficulty",
             "tool_style_quotation",
-            "tool_pattern_revision"
+            "tool_pattern_revision",
+            "tool_order_learning",
+            "tool_procurement",
+            "tool_invoice",
+            "tool_financial_report",
+            "tool_ec_sales_revenue",
+            "tool_tax_config",
+            "tool_ecommerce_order",
+            "tool_payroll_anomaly_detector"
     );
 
     private static final List<String> SUPER_ADMIN_ONLY_TOOLS = List.of(

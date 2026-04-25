@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.orchestration.ShipmentReconciliationOrchestrator;
 import com.fashion.supplychain.intelligence.agent.AiTool;
@@ -47,6 +48,9 @@ public class ShipmentReconciliationTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        if (UserContext.factoryId() != null) {
+            return errorJson("外发工厂账号无权访问出货对账数据");
+        }
         Map<String, Object> args = parseArgs(argumentsJson);
         String action = requireString(args, "action");
         return switch (action) {

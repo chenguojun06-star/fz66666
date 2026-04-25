@@ -71,6 +71,9 @@ public class OrderLearningTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (UserContext.factoryId() != null) {
+            return MAPPER.writeValueAsString(Map.of("success", false, "error", "外发工厂账号无权使用下单学习功能"));
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = String.valueOf(args.getOrDefault("action", "")).trim();
         if (!StringUtils.hasText(action)) {
