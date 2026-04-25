@@ -29,7 +29,7 @@
         <poi.version>5.3.0</poi.version>
         <lombok.version>1.18.38</lombok.version>
         <!-- 编译和构建 -->
-        <maven.compiler.version>3.13.0</maven.compiler.version>
+        <maven.compiler.version>3.15.0</maven.compiler.version>
         <maven.jar.version>3.3.0</maven.jar.version>
         <maven.dependency.version>3.9.0</maven.dependency.version>
     </properties>
