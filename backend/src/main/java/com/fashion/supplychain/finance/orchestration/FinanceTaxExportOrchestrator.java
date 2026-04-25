@@ -470,56 +470,23 @@ public class FinanceTaxExportOrchestrator {
 
     private byte[] buildPayrollDetailStandard(List<PayrollOperatorProcessSummaryDTO> list) throws IOException {
         try (Workbook wb = new XSSFWorkbook()) {
-            Sheet sheet = wb.createSheet("人员工序明细");
-            CellStyle headerStyle = createHeaderStyle(wb);
-            CellStyle moneyStyle = createMoneyStyle(wb);
-
-            String[] headers = {"人员", "订单号", "款号", "颜色", "尺码", "工序",
-                    "数量", "单价(元)", "金额(元)", "扫码类型", "开始时间", "完成时间"};
-            Row hRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) {
-                Cell c = hRow.createCell(i);
-                c.setCellValue(headers[i]);
-                c.setCellStyle(headerStyle);
-                sheet.setColumnWidth(i, 16 * 256);
-            }
-
-            int rowIdx = 1;
-            BigDecimal totalAmt = BigDecimal.ZERO;
-            long totalQty = 0;
-            for (PayrollOperatorProcessSummaryDTO d : list) {
-                Row row = sheet.createRow(rowIdx++);
-                row.createCell(0).setCellValue(safeStr(d.getOperatorName()));
-                row.createCell(1).setCellValue(safeStr(d.getOrderNo()));
-                row.createCell(2).setCellValue(safeStr(d.getStyleNo()));
-                row.createCell(3).setCellValue(safeStr(d.getColor()));
-                row.createCell(4).setCellValue(safeStr(d.getSize()));
-                row.createCell(5).setCellValue(safeStr(d.getProcessName()));
-                Cell qtyCell = row.createCell(6);
-                qtyCell.setCellValue(d.getQuantity() != null ? d.getQuantity() : 0);
-                Cell priceCell = row.createCell(7);
-                priceCell.setCellValue(d.getUnitPrice() != null ? d.getUnitPrice().doubleValue() : 0.0);
-                priceCell.setCellStyle(moneyStyle);
-                Cell amtCell = row.createCell(8);
-                amtCell.setCellValue(d.getTotalAmount() != null ? d.getTotalAmount().doubleValue() : 0.0);
-                amtCell.setCellStyle(moneyStyle);
-                row.createCell(9).setCellValue(translateScanType(d.getScanType()));
-                row.createCell(10).setCellValue(formatDt(d.getStartTime()));
-                row.createCell(11).setCellValue(formatDt(d.getEndTime()));
-                if (d.getTotalAmount() != null) totalAmt = totalAmt.add(d.getTotalAmount());
-                if (d.getQuantity() != null) totalQty += d.getQuantity();
-            }
-
+            writePayrollDetailSheet(wb, list);
+            Sheet sheet = wb.getSheetAt(0);
+            BigDecimal totalAmt = list.stream()
+                    .map(d -> d.getTotalAmount() != null ? d.getTotalAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            long totalQty = list.stream()
+                    .mapToLong(d -> d.getQuantity() != null ? d.getQuantity() : 0)
+                    .sum();
+            int rowIdx = sheet.getLastRowNum() + 1;
             Row sumRow = sheet.createRow(rowIdx);
             Cell sumLabel = sumRow.createCell(0);
             sumLabel.setCellValue("合计 (" + list.size() + " 条)");
-            sumLabel.setCellStyle(headerStyle);
-            Cell sumQty = sumRow.createCell(6);
-            sumQty.setCellValue(totalQty);
+            sumLabel.setCellStyle(createHeaderStyle(wb));
+            sumRow.createCell(6).setCellValue(totalQty);
             Cell sumAmt = sumRow.createCell(8);
             sumAmt.setCellValue(totalAmt.doubleValue());
-            sumAmt.setCellStyle(moneyStyle);
-
+            sumAmt.setCellStyle(createMoneyStyle(wb));
             return toBytes(wb);
         }
     }
@@ -539,21 +506,12 @@ public class FinanceTaxExportOrchestrator {
                 voucherSheet.setColumnWidth(i, 18 * 256);
             }
 
-            Map<String, BigDecimal> operatorTotals = list.stream()
-                    .filter(d -> d.getOperatorName() != null)
-                    .collect(Collectors.groupingBy(
-                            PayrollOperatorProcessSummaryDTO::getOperatorName,
-                            LinkedHashMap::new,
-                            Collectors.reducing(BigDecimal.ZERO,
-                                    d -> d.getTotalAmount() != null ? d.getTotalAmount() : BigDecimal.ZERO,
-                                    BigDecimal::add)));
-
+            Map<String, BigDecimal> operatorTotals = aggregateByOperator(list);
             String today = DATE_FMT.format(java.time.LocalDate.now());
             int rowIdx = 1;
             for (Map.Entry<String, BigDecimal> entry : operatorTotals.entrySet()) {
-                String operatorName = entry.getKey();
+                String desc = "计提工资-" + entry.getKey();
                 BigDecimal totalAmt = entry.getValue();
-                String desc = "计提工资-" + operatorName;
 
                 Row drRow = voucherSheet.createRow(rowIdx++);
                 drRow.createCell(0).setCellValue(today);
@@ -578,38 +536,7 @@ public class FinanceTaxExportOrchestrator {
                 crCell.setCellStyle(moneyStyle);
             }
 
-            Sheet detailSheet = wb.createSheet("人员工序明细");
-            String[] detailHeaders = {"人员", "订单号", "款号", "颜色", "尺码", "工序",
-                    "数量", "单价(元)", "金额(元)", "扫码类型", "开始时间", "完成时间"};
-            Row dhRow = detailSheet.createRow(0);
-            for (int i = 0; i < detailHeaders.length; i++) {
-                Cell c = dhRow.createCell(i);
-                c.setCellValue(detailHeaders[i]);
-                c.setCellStyle(headerStyle);
-                detailSheet.setColumnWidth(i, 16 * 256);
-            }
-
-            int dRowIdx = 1;
-            for (PayrollOperatorProcessSummaryDTO d : list) {
-                Row row = detailSheet.createRow(dRowIdx++);
-                row.createCell(0).setCellValue(safeStr(d.getOperatorName()));
-                row.createCell(1).setCellValue(safeStr(d.getOrderNo()));
-                row.createCell(2).setCellValue(safeStr(d.getStyleNo()));
-                row.createCell(3).setCellValue(safeStr(d.getColor()));
-                row.createCell(4).setCellValue(safeStr(d.getSize()));
-                row.createCell(5).setCellValue(safeStr(d.getProcessName()));
-                row.createCell(6).setCellValue(d.getQuantity() != null ? d.getQuantity() : 0);
-                Cell priceCell = row.createCell(7);
-                priceCell.setCellValue(d.getUnitPrice() != null ? d.getUnitPrice().doubleValue() : 0.0);
-                priceCell.setCellStyle(moneyStyle);
-                Cell amtCell = row.createCell(8);
-                amtCell.setCellValue(d.getTotalAmount() != null ? d.getTotalAmount().doubleValue() : 0.0);
-                amtCell.setCellStyle(moneyStyle);
-                row.createCell(9).setCellValue(translateScanType(d.getScanType()));
-                row.createCell(10).setCellValue(formatDt(d.getStartTime()));
-                row.createCell(11).setCellValue(formatDt(d.getEndTime()));
-            }
-
+            writePayrollDetailSheet(wb, list);
             return toBytes(wb);
         }
     }
@@ -629,22 +556,13 @@ public class FinanceTaxExportOrchestrator {
                 voucherSheet.setColumnWidth(i, 18 * 256);
             }
 
-            Map<String, BigDecimal> operatorTotals = list.stream()
-                    .filter(d -> d.getOperatorName() != null)
-                    .collect(Collectors.groupingBy(
-                            PayrollOperatorProcessSummaryDTO::getOperatorName,
-                            LinkedHashMap::new,
-                            Collectors.reducing(BigDecimal.ZERO,
-                                    d -> d.getTotalAmount() != null ? d.getTotalAmount() : BigDecimal.ZERO,
-                                    BigDecimal::add)));
-
+            Map<String, BigDecimal> operatorTotals = aggregateByOperator(list);
             String today = DATE_FMT.format(java.time.LocalDate.now());
             int rowIdx = 1;
             int voucherNo = 1;
             for (Map.Entry<String, BigDecimal> entry : operatorTotals.entrySet()) {
-                String operatorName = entry.getKey();
+                String desc = "计提工资-" + entry.getKey();
                 BigDecimal totalAmt = entry.getValue();
-                String desc = "计提工资-" + operatorName;
 
                 Row drRow = voucherSheet.createRow(rowIdx++);
                 drRow.createCell(0).setCellValue(today);
@@ -670,40 +588,55 @@ public class FinanceTaxExportOrchestrator {
                 voucherNo++;
             }
 
-            Sheet detailSheet = wb.createSheet("人员工序明细");
-            String[] detailHeaders = {"人员", "订单号", "款号", "颜色", "尺码", "工序",
-                    "数量", "单价(元)", "金额(元)", "扫码类型", "开始时间", "完成时间"};
-            Row dhRow = detailSheet.createRow(0);
-            for (int i = 0; i < detailHeaders.length; i++) {
-                Cell c = dhRow.createCell(i);
-                c.setCellValue(detailHeaders[i]);
-                c.setCellStyle(headerStyle);
-                detailSheet.setColumnWidth(i, 16 * 256);
-            }
-
-            int dRowIdx = 1;
-            for (PayrollOperatorProcessSummaryDTO d : list) {
-                Row row = detailSheet.createRow(dRowIdx++);
-                row.createCell(0).setCellValue(safeStr(d.getOperatorName()));
-                row.createCell(1).setCellValue(safeStr(d.getOrderNo()));
-                row.createCell(2).setCellValue(safeStr(d.getStyleNo()));
-                row.createCell(3).setCellValue(safeStr(d.getColor()));
-                row.createCell(4).setCellValue(safeStr(d.getSize()));
-                row.createCell(5).setCellValue(safeStr(d.getProcessName()));
-                row.createCell(6).setCellValue(d.getQuantity() != null ? d.getQuantity() : 0);
-                Cell priceCell = row.createCell(7);
-                priceCell.setCellValue(d.getUnitPrice() != null ? d.getUnitPrice().doubleValue() : 0.0);
-                priceCell.setCellStyle(moneyStyle);
-                Cell amtCell = row.createCell(8);
-                amtCell.setCellValue(d.getTotalAmount() != null ? d.getTotalAmount().doubleValue() : 0.0);
-                amtCell.setCellStyle(moneyStyle);
-                row.createCell(9).setCellValue(translateScanType(d.getScanType()));
-                row.createCell(10).setCellValue(formatDt(d.getStartTime()));
-                row.createCell(11).setCellValue(formatDt(d.getEndTime()));
-            }
-
+            writePayrollDetailSheet(wb, list);
             return toBytes(wb);
         }
+    }
+
+    private void writePayrollDetailSheet(Workbook wb, List<PayrollOperatorProcessSummaryDTO> list) {
+        CellStyle headerStyle = createHeaderStyle(wb);
+        CellStyle moneyStyle = createMoneyStyle(wb);
+        Sheet sheet = wb.createSheet("人员工序明细");
+        String[] headers = {"人员", "订单号", "款号", "颜色", "尺码", "工序",
+                "数量", "单价(元)", "金额(元)", "扫码类型", "开始时间", "完成时间"};
+        Row hRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            Cell c = hRow.createCell(i);
+            c.setCellValue(headers[i]);
+            c.setCellStyle(headerStyle);
+            sheet.setColumnWidth(i, 16 * 256);
+        }
+        int rowIdx = 1;
+        for (PayrollOperatorProcessSummaryDTO d : list) {
+            Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(safeStr(d.getOperatorName()));
+            row.createCell(1).setCellValue(safeStr(d.getOrderNo()));
+            row.createCell(2).setCellValue(safeStr(d.getStyleNo()));
+            row.createCell(3).setCellValue(safeStr(d.getColor()));
+            row.createCell(4).setCellValue(safeStr(d.getSize()));
+            row.createCell(5).setCellValue(safeStr(d.getProcessName()));
+            row.createCell(6).setCellValue(d.getQuantity() != null ? d.getQuantity() : 0);
+            Cell priceCell = row.createCell(7);
+            priceCell.setCellValue(d.getUnitPrice() != null ? d.getUnitPrice().doubleValue() : 0.0);
+            priceCell.setCellStyle(moneyStyle);
+            Cell amtCell = row.createCell(8);
+            amtCell.setCellValue(d.getTotalAmount() != null ? d.getTotalAmount().doubleValue() : 0.0);
+            amtCell.setCellStyle(moneyStyle);
+            row.createCell(9).setCellValue(translateScanType(d.getScanType()));
+            row.createCell(10).setCellValue(formatDt(d.getStartTime()));
+            row.createCell(11).setCellValue(formatDt(d.getEndTime()));
+        }
+    }
+
+    private Map<String, BigDecimal> aggregateByOperator(List<PayrollOperatorProcessSummaryDTO> list) {
+        return list.stream()
+                .filter(d -> d.getOperatorName() != null)
+                .collect(Collectors.groupingBy(
+                        PayrollOperatorProcessSummaryDTO::getOperatorName,
+                        LinkedHashMap::new,
+                        Collectors.reducing(BigDecimal.ZERO,
+                                d -> d.getTotalAmount() != null ? d.getTotalAmount() : BigDecimal.ZERO,
+                                BigDecimal::add)));
     }
 
     private LocalDateTime parseStartOfDay(String dateStr) {

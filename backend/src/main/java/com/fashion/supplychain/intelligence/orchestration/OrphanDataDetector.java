@@ -102,7 +102,17 @@ public class OrphanDataDetector {
         }
         final Long effectiveTenantId = tenantId;
 
-        Set<String> orphanOrderIds = isPlatformAdmin ? getAllOrphanOrderIds() : getOrphanOrderIds(tenantId);
+        Set<String> orphanOrderIds;
+        try {
+            orphanOrderIds = isPlatformAdmin ? getAllOrphanOrderIds() : getOrphanOrderIds(tenantId);
+        } catch (Exception e) {
+            log.warn("[OrphanDetector] 查询孤儿订单失败，返回空结果: {}", e.getMessage());
+            OrphanDataScanResultDTO empty = new OrphanDataScanResultDTO();
+            empty.setTotalOrphanCount(0);
+            empty.setCategoryStats(new LinkedHashMap<>());
+            empty.setScanTime(LocalDateTime.now());
+            return empty;
+        }
 
         Map<String, OrphanDataScanResultDTO.CategoryStat> categoryStats = new LinkedHashMap<>();
         long totalOrphanCount = 0;

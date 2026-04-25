@@ -422,13 +422,6 @@ const PayrollOperatorSummary: React.FC = () => {
         }
     }, [activeTab]);
 
-    // 当切换到工序明细tab时，若无数据则自动加载
-    useEffect(() => {
-        if (activeTab === 'detail' && rows.length === 0 && !loading) {
-            doFetchData();
-        }
-    }, [activeTab]);
-
     const buildPayload = () => {
         const payload: Record<string, any> = {
             scanType: scanType ? String(scanType || '').trim() : undefined,
