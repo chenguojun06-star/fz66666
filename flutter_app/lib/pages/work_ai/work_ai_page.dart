@@ -41,15 +41,15 @@ class WorkAiPage extends GetView<WorkAiController> {
                         child: Text(msg.content, style: const TextStyle(fontSize: 14, color: Colors.white)),
                       )
                     : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        if (msg.overdueFactoryCard != null) _buildOverdueFactoryCard(msg.overdueFactoryCard!),
+                        ...msg.actionCards.map((act) => _buildActionCard(act)),
+                        ...msg.insightCards.map((card) => _buildInsightCard(card)),
                         if (msg.content.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(AppSpacing.md), border: Border.all(color: AppColors.borderLight)),
                             child: Text(msg.content, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
                           ),
-                        ...msg.insightCards.map((card) => _buildInsightCard(card)),
-                        ...msg.actionCards.map((act) => _buildActionCard(act)),
-                        if (msg.overdueFactoryCard != null) _buildOverdueFactoryCard(msg.overdueFactoryCard!),
                         if (msg.clarificationHints.isNotEmpty) _buildClarificationCard(msg.clarificationHints),
                       ]),
               ),
