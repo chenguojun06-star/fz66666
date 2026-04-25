@@ -73,6 +73,7 @@ public class SampleWorkflowTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         if (UserContext.tenantId() == null) {
             return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
         }
@@ -140,6 +141,9 @@ public class SampleWorkflowTool implements AgentTool {
             default -> throw new IllegalArgumentException("不支持的样衣阶段动作");
         };
         StyleInfo latest = styleInfoService.getById(style.getId());
+        if (latest != null) {
+            TenantAssert.assertBelongsToCurrentTenant(latest.getTenantId(), "样衣款式");
+        }
         return ok("已执行样衣阶段动作", Map.of("style", latest == null ? toStyleDto(style) : toStyleDto(latest), "result", actionResult));
     }
 
@@ -191,6 +195,9 @@ public class SampleWorkflowTool implements AgentTool {
             default -> throw new IllegalArgumentException("不支持的样板动作");
         };
         PatternProduction latest = patternProductionService.getById(pattern.getId());
+        if (latest != null) {
+            TenantAssert.assertBelongsToCurrentTenant(latest.getTenantId(), "样板生产");
+        }
         return ok("已执行样板工作流动作", Map.of("pattern", latest == null ? toPatternDto(pattern) : toPatternDto(latest), "result", result));
     }
 
@@ -199,8 +206,11 @@ public class SampleWorkflowTool implements AgentTool {
         Long tenantId = UserContext.tenantId();
         String styleId = text(args.get("styleId"));
         if (StringUtils.hasText(styleId)) {
-            StyleInfo style = styleInfoService.getById(Long.parseLong(styleId));
-            if (style != null && (tenantId == null || tenantId.equals(style.getTenantId()))) {
+            StyleInfo style = styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getId, Long.parseLong(styleId))
+                    .eq(StyleInfo::getTenantId, tenantId)
+                    .one();
+            if (style != null) {
                 return style;
             }
         }
@@ -214,14 +224,19 @@ public class SampleWorkflowTool implements AgentTool {
                 return style;
             }
         }
-        throw new IllegalArgumentException("未找到样衣款式");
+        throw new IllegalArgumentException("未找到样衣款式或无权访问");
     }
 
     private PatternProduction findPattern(Map<String, Object> args) {
         String patternId = required(args, "patternId");
-        PatternProduction pattern = patternProductionService.getById(patternId);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        PatternProduction pattern = patternProductionService.lambdaQuery()
+                .eq(PatternProduction::getId, patternId)
+                .eq(PatternProduction::getTenantId, tenantId)
+                .one();
         if (pattern == null || (pattern.getDeleteFlag() != null && pattern.getDeleteFlag() != 0)) {
-            throw new IllegalArgumentException("样板生产记录不存在");
+            throw new IllegalArgumentException("样板生产记录不存在或无权访问");
         }
         return pattern;
     }

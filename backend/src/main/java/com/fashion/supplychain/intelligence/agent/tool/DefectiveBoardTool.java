@@ -77,6 +77,7 @@ public class DefectiveBoardTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = (String) args.get("action");
         if (action == null || action.isBlank()) {
@@ -213,7 +214,10 @@ public class DefectiveBoardTool implements AgentTool {
         for (Map<String, Object> task : tasks) {
             if (bundleId.trim().equals(String.valueOf(task.get("bundleId")))) {
                 String orderId = String.valueOf(task.get("orderId"));
-                ProductionOrder order = productionOrderService.getById(orderId);
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .eq(ProductionOrder::getId, orderId)
+                        .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                        .one();
                 if (order != null && !userFactoryId.equals(order.getFactoryId())) {
                     return MAPPER.writeValueAsString(Map.of("error", "该次品不属于您的工厂，无权操作"));
                 }

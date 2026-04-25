@@ -107,7 +107,7 @@ public class SystemOverviewTool implements AgentTool {
 
         QueryWrapper<ProductionOrder> baseQuery = new QueryWrapper<>();
         baseQuery.eq("delete_flag", 0);
-        if (tenantId != null) baseQuery.eq("tenant_id", tenantId);
+        baseQuery.eq("tenant_id", tenantId);
         baseQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         long totalOrders = productionOrderService.count(baseQuery);
 
@@ -117,7 +117,7 @@ public class SystemOverviewTool implements AgentTool {
         for (String s : statuses) {
             QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
             q.eq("delete_flag", 0).eq("status", s);
-            if (tenantId != null) q.eq("tenant_id", tenantId);
+            q.eq("tenant_id", tenantId);
             q.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
             statusCounts.put(s, productionOrderService.count(q));
         }
@@ -128,7 +128,7 @@ public class SystemOverviewTool implements AgentTool {
         // 查询所有未删除订单的总件数
         QueryWrapper<ProductionOrder> allQuery = new QueryWrapper<>();
         allQuery.eq("delete_flag", 0);
-        if (tenantId != null) allQuery.eq("tenant_id", tenantId);
+        allQuery.eq("tenant_id", tenantId);
         allQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         List<ProductionOrder> allOrders = productionOrderService.list(allQuery);
         int totalOrderQuantity = allOrders.stream()
@@ -164,7 +164,7 @@ public class SystemOverviewTool implements AgentTool {
                 .notIn("status", TERMINAL_STATUSES)
                 .isNotNull("planned_end_date")
                 .lt("planned_end_date", LocalDateTime.now());
-        if (tenantId != null) overdueQuery.eq("tenant_id", tenantId);
+        overdueQuery.eq("tenant_id", tenantId);
         overdueQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         List<ProductionOrder> overdueOrders = productionOrderService.list(overdueQuery);
         risk.put("overdueCount", overdueOrders.size());
@@ -194,7 +194,7 @@ public class SystemOverviewTool implements AgentTool {
                 .isNotNull("planned_end_date")
                 .le("planned_end_date", sevenDaysLater)
                 .ge("planned_end_date", LocalDateTime.now());
-        if (tenantId != null) highRiskQuery.eq("tenant_id", tenantId);
+        highRiskQuery.eq("tenant_id", tenantId);
         highRiskQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         List<ProductionOrder> highRiskOrders = productionOrderService.list(highRiskQuery);
         // 过滤进度<50%
@@ -231,7 +231,8 @@ public class SystemOverviewTool implements AgentTool {
         // 今日扫码量
         QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> scanQuery = new QueryWrapper<>();
         scanQuery.eq("scan_result", "success").ge("scan_time", todayStart);
-        if (tenantId != null) scanQuery.eq("tenant_id", tenantId);
+        scanQuery.eq("tenant_id", tenantId);
+        scanQuery.ne("scan_type", "orchestration");
         scanQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         long todayScanCount = scanRecordService.count(scanQuery);
         today.put("scanCount", todayScanCount);
@@ -239,7 +240,8 @@ public class SystemOverviewTool implements AgentTool {
         // 昨日扫码量（对比）
         QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> ydScanQ = new QueryWrapper<>();
         ydScanQ.eq("scan_result", "success").ge("scan_time", yesterdayStart).le("scan_time", yesterdayEnd);
-        if (tenantId != null) ydScanQ.eq("tenant_id", tenantId);
+        ydScanQ.eq("tenant_id", tenantId);
+        ydScanQ.ne("scan_type", "orchestration");
         ydScanQ.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         long yesterdayScanCount = scanRecordService.count(ydScanQ);
         today.put("yesterdayScanCount", yesterdayScanCount);
@@ -248,14 +250,14 @@ public class SystemOverviewTool implements AgentTool {
         // 今日新建订单
         QueryWrapper<ProductionOrder> newOrderQuery = new QueryWrapper<>();
         newOrderQuery.eq("delete_flag", 0).ge("create_time", todayStart);
-        if (tenantId != null) newOrderQuery.eq("tenant_id", tenantId);
+        newOrderQuery.eq("tenant_id", tenantId);
         newOrderQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         today.put("newOrderCount", productionOrderService.count(newOrderQuery));
 
         // 今日完成订单
         QueryWrapper<ProductionOrder> completedQuery = new QueryWrapper<>();
         completedQuery.eq("delete_flag", 0).eq("status", "COMPLETED").ge("update_time", todayStart);
-        if (tenantId != null) completedQuery.eq("tenant_id", tenantId);
+        completedQuery.eq("tenant_id", tenantId);
         completedQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         today.put("completedTodayCount", productionOrderService.count(completedQuery));
 
@@ -268,7 +270,7 @@ public class SystemOverviewTool implements AgentTool {
         Map<String, Object> stock = new LinkedHashMap<>();
 
         QueryWrapper<com.fashion.supplychain.production.entity.MaterialStock> stockQuery = new QueryWrapper<>();
-        if (tenantId != null) stockQuery.eq("tenant_id", tenantId);
+        stockQuery.eq("tenant_id", tenantId);
         stockQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         long totalItems = materialStockService.count(stockQuery);
         stock.put("totalMaterialTypes", totalItems);
@@ -286,7 +288,7 @@ public class SystemOverviewTool implements AgentTool {
         QueryWrapper<ProductionOrder> overdueQ = new QueryWrapper<>();
         overdueQ.eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES)
                 .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
-        if (tenantId != null) overdueQ.eq("tenant_id", tenantId);
+        overdueQ.eq("tenant_id", tenantId);
         overdueQ.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         List<ProductionOrder> overdue = productionOrderService.list(overdueQ);
         for (ProductionOrder o : overdue.stream().limit(3).toList()) {
@@ -308,7 +310,7 @@ public class SystemOverviewTool implements AgentTool {
         urgentQ.eq("delete_flag", 0).eq("status", "IN_PROGRESS").isNotNull("planned_end_date")
                 .le("planned_end_date", LocalDateTime.now().plusDays(3))
                 .ge("planned_end_date", LocalDateTime.now());
-        if (tenantId != null) urgentQ.eq("tenant_id", tenantId);
+        urgentQ.eq("tenant_id", tenantId);
         urgentQ.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         List<ProductionOrder> urgentSoon = productionOrderService.list(urgentQ).stream()
                 .filter(o -> o.getProductionProgress() == null || o.getProductionProgress() < 80)
@@ -332,7 +334,7 @@ public class SystemOverviewTool implements AgentTool {
         QueryWrapper<ProductionOrder> zeroQ = new QueryWrapper<>();
         zeroQ.eq("delete_flag", 0).eq("status", "IN_PROGRESS")
                 .and(w -> w.isNull("production_progress").or().eq("production_progress", 0));
-        if (tenantId != null) zeroQ.eq("tenant_id", tenantId);
+        zeroQ.eq("tenant_id", tenantId);
         zeroQ.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         long zeroProgressCount = productionOrderService.count(zeroQ);
         if (zeroProgressCount > 0) {

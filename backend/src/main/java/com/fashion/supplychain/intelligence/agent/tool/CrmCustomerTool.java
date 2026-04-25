@@ -92,9 +92,7 @@ public class CrmCustomerTool implements AgentTool {
             }
             TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-            if (tenantId != null) {
-                query.eq("tenant_id", tenantId);
-            }
+            query.eq("tenant_id", tenantId);
 
             // 限制返回条数，避免大对象
             query.last("LIMIT 10");

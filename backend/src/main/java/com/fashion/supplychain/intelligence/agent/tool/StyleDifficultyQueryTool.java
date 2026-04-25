@@ -94,9 +94,7 @@ public class StyleDifficultyQueryTool implements AgentTool {
         // ② 批量查询（关键词 / 全部已分析）
         QueryWrapper<StyleInfo> qw = new QueryWrapper<>();
         qw.eq("delete_flag", 0);
-        if (tenantId != null) {
-            qw.eq("tenant_id", tenantId);
-        }
+        qw.eq("tenant_id", tenantId);
         if (keyword != null && !keyword.isBlank()) {
             qw.and(w -> w.like("style_no", keyword.trim()).or().like("style_name", keyword.trim()));
         }
@@ -137,9 +135,7 @@ public class StyleDifficultyQueryTool implements AgentTool {
         QueryWrapper<StyleInfo> qw = new QueryWrapper<>();
         qw.eq("style_no", styleNo);
         qw.eq("delete_flag", 0);
-        if (tenantId != null) {
-            qw.eq("tenant_id", tenantId);
-        }
+        qw.eq("tenant_id", tenantId);
         StyleInfo info = styleInfoService.getOne(qw);
         if (info == null) {
             return "未找到款号为 " + styleNo + " 的款式。";

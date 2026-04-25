@@ -107,11 +107,15 @@ public class OrderEditTool implements AgentTool {
             return MAPPER.writeValueAsString(Map.of("error", "请提供订单ID（orderId）"));
         }
 
-        ProductionOrder order = productionOrderService.getById(orderId.trim());
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId.trim())
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null) {
-            return MAPPER.writeValueAsString(Map.of("error", "订单不存在"));
+            return MAPPER.writeValueAsString(Map.of("error", "订单不存在或无权访问"));
         }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
 
         // 工厂账号只能编辑自己工厂的订单
         String userFactoryId = UserContext.factoryId();

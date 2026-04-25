@@ -1,7 +1,6 @@
 package com.fashion.supplychain.intelligence.aspect;
 
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -48,18 +47,29 @@ public class JobRunObservabilityAspect {
         String methodName = pjp.getSignature().getName();
         LocalDateTime startTime = LocalDateTime.now();
         long startMs = System.currentTimeMillis();
-        TenantAssert.assertTenantContext();
+        // 定时任务运行在 scheduling 线程中，默认没有登录用户/租户上下文。
+        // 这里不能调用 TenantAssert.assertTenantContext()，否则全局任务（如异步审计 flush）
+        // 会在真正执行前每 2 秒抛一次异常，形成 TaskUtils 日志风暴。
+        // tenantId 为空表示“平台级/全局任务”，写入 t_ai_job_run_log 时允许为 NULL。
         Long tenantId = UserContext.tenantId();
 
         try {
             Object result = pjp.proceed();
             long durationMs = System.currentTimeMillis() - startMs;
             String summary = result != null ? truncate(result.toString(), 490) : "completed";
-            jobRunLogService.logSuccess(jobName, methodName, startTime, durationMs, summary, tenantId);
+            try {
+                jobRunLogService.logSuccess(jobName, methodName, startTime, durationMs, summary, tenantId);
+            } catch (Exception logEx) {
+                log.warn("[JobObserver] logSuccess调用异常(不影响任务): {}", logEx.getMessage());
+            }
             return result;
         } catch (Throwable t) {
             long durationMs = System.currentTimeMillis() - startMs;
-            jobRunLogService.logFailed(jobName, methodName, startTime, durationMs, t.getMessage(), tenantId);
+            try {
+                jobRunLogService.logFailed(jobName, methodName, startTime, durationMs, t.getMessage(), tenantId);
+            } catch (Exception logEx) {
+                log.warn("[JobObserver] logFailed调用异常(不影响任务): {}", logEx.getMessage());
+            }
             throw t;
         }
     }

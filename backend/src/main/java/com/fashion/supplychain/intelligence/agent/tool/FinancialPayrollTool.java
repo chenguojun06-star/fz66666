@@ -110,9 +110,7 @@ public class FinancialPayrollTool implements AgentTool {
             if (!aiAgentToolAccessService.hasManagerAccess() && currentUserId != null) {
                 QueryWrapper<PayrollSettlementItem> selfQuery = new QueryWrapper<>();
                 selfQuery.eq("operator_id", currentUserId);
-                if (tenantId != null) {
-                    selfQuery.eq("tenant_id", tenantId);
-                }
+                selfQuery.eq("tenant_id", tenantId);
                 if (orderNo != null && !orderNo.isBlank()) {
                     selfQuery.eq("order_no", orderNo);
                 }
@@ -158,9 +156,7 @@ public class FinancialPayrollTool implements AgentTool {
                 if (orderNo != null && !orderNo.isBlank()) {
                     itemQuery.eq("order_no", orderNo);
                 }
-                if (tenantId != null) {
-                    itemQuery.eq("tenant_id", tenantId);
-                }
+                itemQuery.eq("tenant_id", tenantId);
                 itemQuery.orderByDesc("create_time");
                 itemQuery.last("LIMIT 15");
 
@@ -194,9 +190,7 @@ public class FinancialPayrollTool implements AgentTool {
                 if (status != null && !status.isBlank()) {
                     query.eq("status", status);
                 }
-                if (tenantId != null) {
-                    query.eq("tenant_id", tenantId);
-                }
+                query.eq("tenant_id", tenantId);
                 query.orderByDesc("create_time");
                 query.last("LIMIT 5");
 

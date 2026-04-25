@@ -509,7 +509,8 @@ public class DeepAnalysisTool implements AgentTool {
     private QueryWrapper<ScanRecord> baseScanQuery(Long tenantId) {
         QueryWrapper<ScanRecord> q = new QueryWrapper<>();
         q.eq("scan_result", "success");
-        if (tenantId != null) q.eq("tenant_id", tenantId);
+        q.eq("tenant_id", tenantId);
+        q.ne("scan_type", "orchestration");
         
         // 工厂隔离
         String factoryId = UserContext.factoryId();
@@ -523,7 +524,7 @@ public class DeepAnalysisTool implements AgentTool {
     private QueryWrapper<ProductionOrder> baseOrderQuery(Long tenantId) {
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("delete_flag", 0);
-        if (tenantId != null) q.eq("tenant_id", tenantId);
+        q.eq("tenant_id", tenantId);
         
         // 工厂隔离
         String factoryId = UserContext.factoryId();

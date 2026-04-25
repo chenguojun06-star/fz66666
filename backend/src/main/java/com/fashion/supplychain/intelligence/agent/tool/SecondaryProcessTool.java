@@ -59,13 +59,14 @@ public class SecondaryProcessTool extends AbstractAgentTool {
             case "list" -> {
                 String styleId = optionalString(args, "styleId");
                 TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
+            Long tenantId = UserContext.tenantId();
                 LambdaQueryWrapper<SecondaryProcess> wrapper = new LambdaQueryWrapper<SecondaryProcess>()
                         .eq(SecondaryProcess::getTenantId, tenantId);
                 if (styleId != null) {
                     wrapper.eq(SecondaryProcess::getStyleId, Long.parseLong(styleId));
                 }
                 wrapper.orderByDesc(SecondaryProcess::getCreatedAt);
+                wrapper.last("LIMIT 100");
                 List<SecondaryProcess> list = secondaryProcessService.list(wrapper);
                 yield successJson("查询成功", Map.of("list", list, "total", list.size()));
             }
@@ -77,8 +78,10 @@ public class SecondaryProcessTool extends AbstractAgentTool {
                 String unitPriceStr = optionalString(args, "unitPrice");
                 String factoryName = optionalString(args, "factoryName");
                 String remark = optionalString(args, "remark");
+                TenantAssert.assertTenantContext();
 
                 SecondaryProcess process = new SecondaryProcess();
+                process.setTenantId(UserContext.tenantId());
                 process.setStyleId(Long.parseLong(styleId));
                 process.setProcessType(processType);
                 process.setProcessName(processName);
@@ -95,12 +98,15 @@ public class SecondaryProcessTool extends AbstractAgentTool {
                 String processId = requireString(args, "processId");
                 String status = requireString(args, "status");
                 validateStatus(status);
+                TenantAssert.assertTenantContext();
+                Long tenantId = UserContext.tenantId();
 
                 SecondaryProcess process = secondaryProcessService.getById(processId);
-                if (process == null) throw new IllegalStateException("工序记录不存在：" + processId);
-                Long currentTenantId = UserContext.tenantId();
-                if (process.getTenantId() != null && !process.getTenantId().equals(currentTenantId)) {
-                    throw new IllegalStateException("无权操作其他租户的工序记录");
+                if (process == null) {
+                    throw new IllegalStateException("工序记录不存在或无权访问：" + processId);
+                }
+                if (process.getTenantId() != null && !process.getTenantId().equals(tenantId)) {
+                    throw new IllegalStateException("工序记录不存在或无权访问：" + processId);
                 }
 
                 process.setStatus(status);

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.dto.OrderLearningRecommendationResponse;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
@@ -183,7 +184,12 @@ public class OrderLearningTool implements AgentTool {
     private ProductionOrder findOrder(Map<String, Object> args) {
         String orderId = stringValue(args.get("orderId"));
         if (StringUtils.hasText(orderId)) {
-            return productionOrderService.getById(orderId);
+            TenantAssert.assertTenantContext();
+            Long tenantId = UserContext.tenantId();
+            return productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, orderId)
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
         }
         String orderNo = stringValue(args.get("orderNo"));
         if (!StringUtils.hasText(orderNo)) {

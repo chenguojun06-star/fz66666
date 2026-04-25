@@ -361,7 +361,7 @@ public class ActionExecutorTool implements AgentTool {
     private ProductionOrder findOrder(Long tenantId, String orderNo) {
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("order_no", orderNo).eq("delete_flag", 0);
-        if (tenantId != null) q.eq("tenant_id", tenantId);
+        q.eq("tenant_id", tenantId);
 
         // 【安全增强】工厂账号隔离：外发工厂账号只能操作自己工厂的订单
         String factoryId = UserContext.factoryId();

@@ -100,9 +100,7 @@ public class WarehouseStockTool implements AgentTool {
             }
             TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-            if (tenantId != null) {
-                query.eq("tenant_id", tenantId);
-            }
+            query.eq("tenant_id", tenantId);
 
             // 为了防止数据过多，我们只拉取前10条
             query.last("LIMIT 10");

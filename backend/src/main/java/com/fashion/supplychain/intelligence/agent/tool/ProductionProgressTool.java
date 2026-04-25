@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -146,9 +147,7 @@ public class ProductionProgressTool implements AgentTool {
             }
             TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-            if (tenantId != null) {
-                query.eq("tenant_id", tenantId);
-            }
+            query.eq("tenant_id", tenantId);
             query.eq("delete_flag", 0);
             query.orderByDesc("create_time");
             query.last("LIMIT " + limit);
@@ -174,6 +173,21 @@ public class ProductionProgressTool implements AgentTool {
                 orderDto.put("completedQuantity", order.getCompletedQuantity());
                 orderDto.put("productionProgress", order.getProductionProgress());
                 orderDto.put("status", order.getStatus());
+                if (order.getFactoryUnitPrice() != null) {
+                    orderDto.put("factoryUnitPrice", order.getFactoryUnitPrice());
+                }
+                BigDecimal quotationUnitPrice = com.fashion.supplychain.production.util.OrderPricingSnapshotUtils
+                        .resolveQuotationUnitPrice(order.getOrderDetails());
+                if (quotationUnitPrice != null && quotationUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    if (UserContext.factoryId() != null) {
+                        orderDto.put("quotationUnitPrice", "***");
+                    } else {
+                        orderDto.put("quotationUnitPrice", quotationUnitPrice);
+                    }
+                }
+                if (order.getPricingMode() != null) {
+                    orderDto.put("pricingMode", order.getPricingMode());
+                }
                 if (order.getPlannedStartDate() != null) {
                     orderDto.put("plannedStartDate", order.getPlannedStartDate().format(dtf));
                 }
@@ -209,6 +223,7 @@ public class ProductionProgressTool implements AgentTool {
                     QueryWrapper<ScanRecord> scanQuery = new QueryWrapper<>();
                     scanQuery.eq("order_id", order.getId());
                     scanQuery.eq("scan_result", "success");
+                    scanQuery.ne("scan_type", "orchestration");
                     scanQuery.orderByDesc("scan_time");
                     scanQuery.last("LIMIT 30");
 
@@ -222,6 +237,12 @@ public class ProductionProgressTool implements AgentTool {
                         scanDto.put("processName", scan.getProcessName());
                         scanDto.put("operatorName", scan.getOperatorName());
                         scanDto.put("quantity", scan.getQuantity());
+                        if (scan.getProcessUnitPrice() != null) {
+                            scanDto.put("processUnitPrice", scan.getProcessUnitPrice());
+                        }
+                        if (scan.getScanCost() != null) {
+                            scanDto.put("scanCost", scan.getScanCost());
+                        }
                         if (scan.getScanTime() != null) {
                             scanDto.put("scanTime", scan.getScanTime().format(dtf));
                         }

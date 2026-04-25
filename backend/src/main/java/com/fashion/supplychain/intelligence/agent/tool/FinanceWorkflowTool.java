@@ -75,6 +75,7 @@ public class FinanceWorkflowTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         if (UserContext.tenantId() == null) {
             return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
         }
@@ -130,7 +131,8 @@ public class FinanceWorkflowTool implements AgentTool {
         List<FinishedProductSettlement> finishedPending = finishedProductSettlementService.list(new LambdaQueryWrapper<FinishedProductSettlement>()
                 .eq(FinishedProductSettlement::getTenantId, tenantId)
                 .notIn(FinishedProductSettlement::getStatus, "cancelled", "CANCELLED", "deleted", "DELETED", "scrapped")
-                .orderByDesc(FinishedProductSettlement::getCreateTime));
+                .orderByDesc(FinishedProductSettlement::getCreateTime)
+                .last("LIMIT 100"));
 
         List<Map<String, Object>> settlementItems = finishedPending.stream()
                 .filter(item -> !approvedIds.contains(item.getOrderId()))
@@ -213,11 +215,15 @@ public class FinanceWorkflowTool implements AgentTool {
 
     private String approveFinishedSettlement(Map<String, Object> args) throws Exception {
         String settlementId = required(args, "settlementId");
-        FinishedProductSettlement settlement = finishedProductSettlementService.getById(settlementId);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        FinishedProductSettlement settlement = finishedProductSettlementService.lambdaQuery()
+                .eq(FinishedProductSettlement::getOrderId, settlementId)
+                .eq(FinishedProductSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
-            throw new IllegalArgumentException("成品结算单不存在");
+            throw new IllegalArgumentException("成品结算单不存在或无权访问");
         }
-        Long tenantId = settlement.getTenantId() != null ? settlement.getTenantId() : UserContext.tenantId();
         finishedSettlementApprovalStatusService.markApproved(settlementId, tenantId, UserContext.userId(), UserContext.username());
         return ok("已通过成品结算审批", Map.of("settlement", toSettlementDto(settlement)));
     }

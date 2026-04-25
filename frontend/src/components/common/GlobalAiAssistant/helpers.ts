@@ -74,6 +74,19 @@ export const describeToolName = (toolName?: string, isSuperAdmin?: boolean) => {
     tool_query_crm_customer: 'CRM客户',
     tool_query_system_user: '系统用户',
     tool_think: '内部推理',
+    tool_invoice: '发票管理',
+    tool_financial_report: '财务报表',
+    tool_ec_sales_revenue: '电商营收',
+    tool_tax_config: '税务配置',
+    tool_ecommerce_order: '电商订单',
+    tool_order_transfer: '订单转单',
+    tool_style_quotation: '款式报价',
+    tool_pattern_revision: '样衣改版',
+    tool_material_roll: '物料卷',
+    tool_material_quality_issue: '物料质量',
+    tool_inventory_check: '盘点管理',
+    tool_supplier: '供应商',
+    tool_dict: '数据字典',
   };
   return mapped[raw] || raw.replace(/^tool_/, '').replace(/_/g, ' ');
 };

@@ -150,12 +150,12 @@ public class SampleLoanTool implements AgentTool {
         }
 
         // 安全门禁3：租户隔离
-        SampleStock stock = sampleStockService.getById(sampleStockId);
+        SampleStock stock = sampleStockService.lambdaQuery()
+                .eq(SampleStock::getId, sampleStockId)
+                .eq(SampleStock::getTenantId, tenantId)
+                .one();
         if (stock == null) {
-            return MAPPER.writeValueAsString(Map.of("error", "样衣库存不存在：" + sampleStockId));
-        }
-        if (tenantId != null && !tenantId.equals(stock.getTenantId())) {
-            return MAPPER.writeValueAsString(Map.of("error", "无权操作其他租户的样衣数据"));
+            return MAPPER.writeValueAsString(Map.of("error", "样衣库存不存在或无权访问：" + sampleStockId));
         }
 
         SampleLoan loan = new SampleLoan();

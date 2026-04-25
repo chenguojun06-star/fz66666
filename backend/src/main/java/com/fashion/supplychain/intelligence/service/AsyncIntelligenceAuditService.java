@@ -44,8 +44,13 @@ public class AsyncIntelligenceAuditService {
 
     @Scheduled(fixedDelay = 2000, initialDelay = 5000)
     public void flush() {
-        flushInserts();
-        flushUpdates();
+        try {
+            flushInserts();
+            flushUpdates();
+        } catch (Exception e) {
+            log.error("[AsyncAudit] 定时刷盘异常 inserts={} updates={}: {}",
+                    insertQueue.size(), updateQueue.size(), e.getMessage(), e);
+        }
     }
 
     private void flushInserts() {

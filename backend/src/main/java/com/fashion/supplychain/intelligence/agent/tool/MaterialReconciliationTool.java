@@ -65,6 +65,7 @@ public class MaterialReconciliationTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         if (UserContext.tenantId() == null) {
             return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
         }
@@ -118,7 +119,11 @@ public class MaterialReconciliationTool implements AgentTool {
         String reconciliationId = required(args, "reconciliationId");
         String status = required(args, "status");
         String message = reconciliationStatusOrchestrator.updateMaterialStatus(reconciliationId, status);
-        MaterialReconciliation current = materialReconciliationService.getById(reconciliationId);
+        Long tenantId = UserContext.tenantId();
+        MaterialReconciliation current = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getId, reconciliationId)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .one();
         return ok(message, Map.of("reconciliationId", reconciliationId, "status", status, "item", current == null ? Map.of() : toDto(current)));
     }
 
@@ -126,7 +131,11 @@ public class MaterialReconciliationTool implements AgentTool {
         String reconciliationId = required(args, "reconciliationId");
         String reason = required(args, "reason");
         String message = reconciliationStatusOrchestrator.returnMaterialToPrevious(reconciliationId, reason);
-        MaterialReconciliation current = materialReconciliationService.getById(reconciliationId);
+        Long tenantId2 = UserContext.tenantId();
+        MaterialReconciliation current = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getId, reconciliationId)
+                .eq(MaterialReconciliation::getTenantId, tenantId2)
+                .one();
         return ok(message, Map.of("reconciliationId", reconciliationId, "reason", reason, "item", current == null ? Map.of() : toDto(current)));
     }
 
@@ -188,9 +197,14 @@ public class MaterialReconciliationTool implements AgentTool {
 
     private MaterialReconciliation findRequired(Map<String, Object> args) {
         String reconciliationId = required(args, "reconciliationId");
-        MaterialReconciliation item = materialReconciliationService.getById(reconciliationId);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        MaterialReconciliation item = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getId, reconciliationId)
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .one();
         if (item == null || (item.getDeleteFlag() != null && item.getDeleteFlag() != 0)) {
-            throw new IllegalArgumentException("物料对账单不存在");
+            throw new IllegalArgumentException("物料对账单不存在或无权访问");
         }
         return item;
     }

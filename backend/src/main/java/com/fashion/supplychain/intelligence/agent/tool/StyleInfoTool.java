@@ -77,7 +77,7 @@ public class StyleInfoTool extends AbstractAgentTool {
         Long tenantId = UserContext.tenantId();
             QueryWrapper<StyleInfo> qw = new QueryWrapper<>();
             qw.eq("style_no", styleNo);
-            if (tenantId != null) qw.eq("tenant_id", tenantId);
+            qw.eq("tenant_id", tenantId);
             qw.eq("delete_flag", 0);
             StyleInfo info = styleInfoService.getOne(qw);
             if (info == null) return errorJson("未找到款号 " + styleNo + " 的款式");

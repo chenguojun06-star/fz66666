@@ -105,6 +105,24 @@ public class AiAgentToolAccessService {
         register("tool_query_system_user", "系统用户查询：用户账号与角色信息", false, ToolDomain.SYSTEM);
         // ── GENERAL 补充 ──
         register("tool_think", "内部推理：复杂问题分步思考，无副作用", true, ToolDomain.GENERAL);
+        // ── FINANCE 新增 ──
+        register("tool_invoice", "发票管理：查询/创建/开票/作废发票，发票统计", false, ToolDomain.FINANCE);
+        register("tool_financial_report", "财务报表：利润表/资产负债表/现金流量表", false, ToolDomain.FINANCE);
+        register("tool_ec_sales_revenue", "电商营收：查看电商渠道营收记录与统计", false, ToolDomain.FINANCE);
+        register("tool_tax_config", "税务配置：查看税率列表、当前生效税率、计算税费", false, ToolDomain.FINANCE);
+        // ── PRODUCTION 新增 ──
+        register("tool_ecommerce_order", "电商订单：查看电商渠道订单列表与统计", false, ToolDomain.PRODUCTION);
+        register("tool_order_transfer", "订单转单：查看/创建/接受/拒绝转单", false, ToolDomain.PRODUCTION);
+        // ── STYLE 新增 ──
+        register("tool_style_quotation", "款式报价：查询/创建/审核/解锁报价", false, ToolDomain.STYLE);
+        register("tool_pattern_revision", "样衣改版：查看/创建/审批改版记录", false, ToolDomain.STYLE);
+        // ── WAREHOUSE 新增 ──
+        register("tool_material_roll", "物料卷：查看物料卷列表/详情/扫码", false, ToolDomain.WAREHOUSE);
+        register("tool_material_quality_issue", "物料质量问题：查看/统计/解决质量问题", false, ToolDomain.WAREHOUSE);
+        register("tool_inventory_check", "盘点管理：查看/创建/确认/取消盘点", false, ToolDomain.WAREHOUSE);
+        register("tool_supplier", "供应商查询：查看供应商列表与详情", false, ToolDomain.WAREHOUSE);
+        // ── SYSTEM 新增 ──
+        register("tool_dict", "数据字典：查看字典列表、按类型查询字典项", false, ToolDomain.SYSTEM);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
@@ -116,7 +134,11 @@ public class AiAgentToolAccessService {
             "tool_finance_workflow", "tool_quality_inbound", "tool_finished_outbound",
             "tool_sample_workflow", "tool_style_template", "tool_team_dispatch",
             "tool_material_doc_receive", "tool_material_receive", "tool_material_audit",
-            "tool_material_reconciliation", "tool_defective_board"
+            "tool_material_reconciliation", "tool_defective_board",
+            "tool_invoice", "tool_financial_report", "tool_style_quotation",
+            "tool_order_transfer", "tool_pattern_revision", "tool_inventory_check",
+            "tool_sample_loan", "tool_order_contact_urge", "tool_production_exception",
+            "tool_secondary_process", "tool_material_picking", "tool_material_quality_issue"
     );
 
     public static boolean isHighRisk(String toolName) {
@@ -166,6 +188,23 @@ public class AiAgentToolAccessService {
                 || role.contains("老板");
     }
 
+    private static final Set<ToolDomain> FACTORY_BLOCKED_DOMAINS = Set.of(
+            ToolDomain.FINANCE, ToolDomain.STYLE
+    );
+
+    private static final Set<String> FACTORY_BLOCKED_TOOLS = Set.of(
+            "tool_shipment_reconciliation",
+            "tool_material_reconciliation",
+            "tool_sample_workflow",
+            "tool_sample_loan",
+            "tool_sample_stock",
+            "tool_style_template",
+            "tool_query_style_info",
+            "tool_query_style_difficulty",
+            "tool_style_quotation",
+            "tool_pattern_revision"
+    );
+
     private static final List<String> SUPER_ADMIN_ONLY_TOOLS = List.of(
             "tool_critic_evolution",
             "tool_ai_self_optimize_report"
@@ -178,10 +217,14 @@ public class AiAgentToolAccessService {
 
         boolean managerAccess = hasManagerAccess();
         boolean superAdmin = UserContext.isSuperAdmin();
+        boolean factoryUser = UserContext.factoryId() != null;
         return registeredTools.stream()
                 .filter(tool -> {
                     if (SUPER_ADMIN_ONLY_TOOLS.contains(tool.getName())) {
                         return superAdmin;
+                    }
+                    if (factoryUser && isFactoryBlocked(tool.getName())) {
+                        return false;
                     }
                     return managerAccess || isWorkerVisible(tool.getName());
                 })
@@ -204,7 +247,18 @@ public class AiAgentToolAccessService {
         if (SUPER_ADMIN_ONLY_TOOLS.contains(toolName)) {
             return UserContext.isSuperAdmin();
         }
+        if (UserContext.factoryId() != null && isFactoryBlocked(toolName)) {
+            return false;
+        }
         return hasManagerAccess() || isWorkerVisible(toolName);
+    }
+
+    private boolean isFactoryBlocked(String toolName) {
+        if (FACTORY_BLOCKED_TOOLS.contains(toolName)) {
+            return true;
+        }
+        ToolRule rule = TOOL_RULES.get(toolName);
+        return rule != null && FACTORY_BLOCKED_DOMAINS.contains(rule.domain);
     }
 
     public String buildToolGuide(List<AgentTool> visibleTools) {

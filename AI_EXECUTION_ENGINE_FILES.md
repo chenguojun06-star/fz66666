@@ -6,6 +6,59 @@
 
 ---
 
+## 🆕 2026-04-25 增量更新（AgentTool 扩容 + 安全收口）
+
+### 本次新增 13 个 AgentTool
+
+- Finance
+  - `tool_invoice` → `backend/.../InvoiceTool.java`
+  - `tool_financial_report` → `backend/.../FinancialReportTool.java`
+  - `tool_ec_sales_revenue` → `backend/.../EcSalesRevenueTool.java`
+  - `tool_tax_config` → `backend/.../TaxConfigTool.java`
+- Production
+  - `tool_ecommerce_order` → `backend/.../EcommerceOrderTool.java`
+  - `tool_order_transfer` → `backend/.../OrderTransferTool.java`
+- Style
+  - `tool_style_quotation` → `backend/.../StyleQuotationTool.java`
+  - `tool_pattern_revision` → `backend/.../PatternRevisionTool.java`
+- Warehouse
+  - `tool_material_roll` → `backend/.../MaterialRollTool.java`
+  - `tool_material_quality_issue` →
+    `backend/.../MaterialQualityIssueTool.java`
+  - `tool_inventory_check` → `backend/.../InventoryCheckTool.java`
+  - `tool_supplier` → `backend/.../SupplierTool.java`
+- System
+  - `tool_dict` → `backend/.../DictTool.java`
+
+### 同步更新的执行引擎关键文件
+
+- `backend/.../AiAgentToolAccessService.java`
+  - 注册新工具、扩展高风险名单、增加工厂账号禁用域 /
+    禁用工具规则
+- `backend/.../AiAgentDomainRouter.java`
+  - 增加发票、税率、电商订单、订单转单、报价、改版、
+    供应商等关键词路由
+- `frontend/src/components/common/GlobalAiAssistant/helpers.ts`
+  - 为新工具补中文展示名，保证前端执行面板可读
+
+### 安全与统计口径调整
+
+- 多个 AgentTool 的详情查询改为 `lambdaQuery().eq(id).eq(tenantId)`，优先在数据库层收紧租户边界。
+- 统计类工具统一排除 `scan_type = orchestration`，避免编排型系统记录污染真实扫码产量、订单进度和仪表盘统计。
+- `SecondaryProcessTool` 补齐创建时的 `tenantId` 赋值，避免 AI 新建的二次工序记录脱离租户域。
+
+### 定时任务观测补充
+
+- `backend/.../intelligence/aspect/JobRunObservabilityAspect.java`
+  - 去掉对 scheduler 线程的 `TenantAssert.assertTenantContext()`
+    强制断言，允许平台级任务以 `tenantId = null` 记录执行日志
+
+> 说明：该修复直接解决云端
+> `AsyncIntelligenceAuditService.flush()` 每 2 秒触发一次
+> `Unexpected error occurred in scheduled task` 的日志风暴问题。
+
+---
+
 ## 📂 整体文件结构
 
 ```

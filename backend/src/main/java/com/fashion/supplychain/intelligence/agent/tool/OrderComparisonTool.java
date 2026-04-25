@@ -163,6 +163,7 @@ public class OrderComparisonTool extends AbstractAgentTool {
             List<ScanRecord> scans = scanRecordService.lambdaQuery()
                     .eq(ScanRecord::getOrderId, order.getId())
                     .eq(ScanRecord::getScanResult, "success")
+                    .ne(ScanRecord::getScanType, "orchestration")
                     .select(ScanRecord::getScanResult, ScanRecord::getQuantity)
                     .list();
             int total = scans.size();

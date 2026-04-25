@@ -113,9 +113,7 @@ public class SampleStockTool implements AgentTool {
 
             TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-            if (tenantId != null) {
-                query.eq("tenant_id", tenantId);
-            }
+            query.eq("tenant_id", tenantId);
 
             query.last("LIMIT 15");
 
