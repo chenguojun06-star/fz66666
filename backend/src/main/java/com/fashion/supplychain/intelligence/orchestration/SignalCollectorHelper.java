@@ -191,7 +191,7 @@ public class SignalCollectorHelper {
                 List<ScanRecord> scans = scanRecordService.lambdaQuery()
                         .eq(ScanRecord::getOrderId, order.getId().toString())
                         .eq(ScanRecord::getScanResult, "success")
-                        .ne(ScanRecord::getScanType, "orchestration").list();
+                        .ne(ScanRecord::getScanType, "orchestration").last("LIMIT 10000").list();
                 if (scans.isEmpty()) continue;
 
                 Set<String> stages = scans.stream()

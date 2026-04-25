@@ -40,7 +40,7 @@ export const columnOptions = [
   { key: 'styleNo', label: '款号' },
   { key: 'styleName', label: '款名' },
   { key: 'category', label: '品类' },
-  { key: 'companyName', label: '公司' },
+  { key: 'companyName', label: '客户' },
   { key: 'attachments', label: '附件' },
   { key: 'factoryName', label: '加工厂' },
   { key: 'merchandiser', label: '跟单员' },

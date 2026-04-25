@@ -306,7 +306,7 @@ public class OrderProfitOrchestrator {
         BigDecimal total = BigDecimal.ZERO;
         try {
             List<StyleBom> boms = styleBomService.lambdaQuery()
-                    .eq(StyleBom::getStyleId, styleId).list();
+                    .eq(StyleBom::getStyleId, styleId).last("LIMIT 5000").list();
             if (boms != null) {
                 for (StyleBom b : boms) {
                     if (b == null) continue;
@@ -327,7 +327,7 @@ public class OrderProfitOrchestrator {
         }
         try {
             List<StyleProcess> processes = styleProcessService.lambdaQuery()
-                    .eq(StyleProcess::getStyleId, styleId).list();
+                    .eq(StyleProcess::getStyleId, styleId).last("LIMIT 5000").list();
             if (processes != null) {
                 for (StyleProcess p : processes) {
                     if (p == null || p.getPrice() == null) continue;
@@ -341,7 +341,7 @@ public class OrderProfitOrchestrator {
         }
         try {
             List<SecondaryProcess> secondaries = secondaryProcessService.lambdaQuery()
-                    .eq(SecondaryProcess::getStyleId, styleId).list();
+                    .eq(SecondaryProcess::getStyleId, styleId).last("LIMIT 5000").list();
             if (secondaries != null) {
                 for (SecondaryProcess s : secondaries) {
                     if (s == null || s.getTotalPrice() == null) continue;

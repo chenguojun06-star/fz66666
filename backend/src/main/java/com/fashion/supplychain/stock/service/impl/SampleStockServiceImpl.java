@@ -613,6 +613,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .eq(StringUtils.hasText(stock.getStyleId()), SampleStock::getStyleId, stock.getStyleId())
                 .eq(StringUtils.hasText(stock.getColor()), SampleStock::getColor, stock.getColor().trim())
                 .eq(StringUtils.hasText(stock.getSize()), SampleStock::getSize, stock.getSize().trim())
+                .last("LIMIT 5000")
                 .list();
         int currentTotal = existingStocks.stream()
                 .mapToInt(item -> item.getQuantity() == null ? 0 : item.getQuantity())

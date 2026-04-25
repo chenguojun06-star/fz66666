@@ -497,7 +497,7 @@ public class AppStoreOrchestrator {
     public List<Map<String, Object>> getMyApps(Long tenantId) {
         // 超管特权：拥有所有应用，永不过期
         if (UserContext.isSuperAdmin()) {
-            List<AppStore> allApps = appStoreService.list();
+            List<AppStore> allApps = appStoreService.lambdaQuery().last("LIMIT 500").list();
             List<Map<String, Object>> result = new ArrayList<>();
             for (AppStore app : allApps) {
                 appStoreService.fixMojibakeFields(app);

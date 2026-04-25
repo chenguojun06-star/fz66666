@@ -218,7 +218,7 @@ export function useProductionColumns({
       render: (v: any) => toCategoryCn(v),
     },
     {
-      title: '公司',
+      title: '客户',
       dataIndex: 'company',
       key: 'company',
       width: 120,

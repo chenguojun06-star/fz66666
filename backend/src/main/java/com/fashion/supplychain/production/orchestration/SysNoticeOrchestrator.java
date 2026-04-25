@@ -224,6 +224,7 @@ public class SysNoticeOrchestrator {
                 .eq(User::getTenantId, tenantId)
                 .like(User::getRoleName, "仓库")
                 .eq(User::getStatus, "active")
+                .last("LIMIT 5000")
                 .list();
 
         // 兜底：无仓库用户时通知租户主账号
@@ -305,6 +306,7 @@ public class SysNoticeOrchestrator {
                 .eq(User::getTenantId, tenantId)
                 .and(w -> w.like(User::getRoleName, "生产").or().like(User::getRoleName, "跟单"))
                 .eq(User::getStatus, "active")
+                .last("LIMIT 5000")
                 .list();
 
         // 兜底：无匹配角色时通知租户主账号
@@ -364,6 +366,7 @@ public class SysNoticeOrchestrator {
     public int broadcastGlobal(String type, String title, String content) {
         List<Tenant> tenants = tenantService.lambdaQuery()
                 .eq(Tenant::getStatus, "active")
+                .last("LIMIT 500")
                 .list();
 
         List<SysNotice> notices = new ArrayList<>();

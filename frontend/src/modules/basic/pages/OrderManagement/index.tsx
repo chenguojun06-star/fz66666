@@ -42,6 +42,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import CustomerSelect from '@/components/common/CustomerSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import OrderAnalysisTab from './components/OrderAnalysisTab';
@@ -1053,10 +1054,21 @@ const OrderManagement: React.FC = () => {
               <div style={{ marginBottom: 12 }}>
                 <Row gutter={[12, 12]}>
                   <Col xs={24} sm={8}>
-                    <InlineField label="公司">
+                    <InlineField label="客户">
                       <Form.Item name="company" style={{ marginBottom: 0 }}>
-                        <SupplierSelect placeholder="选填" allowClear />
+                        <CustomerSelect
+                          placeholder="选填"
+                          allowClear
+                          onChange={(_value: string, option?: { customerId: string }) => {
+                            if (option?.customerId) {
+                              form.setFieldsValue({ customerId: option.customerId });
+                            } else {
+                              form.setFieldsValue({ customerId: undefined });
+                            }
+                          }}
+                        />
                       </Form.Item>
+                      <Form.Item name="customerId" hidden><Input /></Form.Item>
                     </InlineField>
                   </Col>
                   <Col xs={24} sm={8}>

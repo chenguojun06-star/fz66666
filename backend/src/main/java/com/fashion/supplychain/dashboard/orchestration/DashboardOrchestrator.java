@@ -178,6 +178,7 @@ public class DashboardOrchestrator {
             )
                 .eq(ProductionOrder::getFactoryId, factoryId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("LIMIT 5000")
                 .list();
 
         data.setProductionOrderCount(factoryOrders.size());
@@ -229,6 +230,7 @@ public class DashboardOrchestrator {
                 .eq(ProductionOrder::getFactoryId, factoryId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .select(ProductionOrder::getOrderQuantity, ProductionOrder::getCreateTime)
+                .last("LIMIT 5000")
                 .list();
         TopStatsResponse.TimeRangeStats bulkStats = new TopStatsResponse.TimeRangeStats();
         bulkStats.setDay((int) sumFactoryOrderQty(factoryOrders, dayStart, endTime));
@@ -371,6 +373,7 @@ public class DashboardOrchestrator {
             .eq(ProductionOrder::getTenantId, tenantId)
             .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
             .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "closed", "archived")
+            .last("LIMIT 5000")
             .list();
 
         // 如果没有订单，直接返回空结果

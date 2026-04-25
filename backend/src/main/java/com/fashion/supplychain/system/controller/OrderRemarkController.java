@@ -230,6 +230,7 @@ public class OrderRemarkController {
                 .in(OrderRemark::getTargetNo, targetNos)
                 .eq(OrderRemark::getDeleteFlag, 0)
                 .orderByDesc(OrderRemark::getCreateTime)
+                .last("LIMIT 5000")
                 .list();
         Map<String, String> result = new HashMap<>();
         for (OrderRemark r : all) {

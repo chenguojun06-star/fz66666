@@ -49,6 +49,7 @@ public class OrderHealthScoreOrchestrator {
                 .in(ProductionOrder::getId, orderIds)
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("LIMIT 5000")
                 .list();
 
         Map<String, OrderHealthScoreDTO> resultMap = new HashMap<>(orders.size());
@@ -72,6 +73,7 @@ public class OrderHealthScoreOrchestrator {
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .orderByAsc(ProductionOrder::getId)
+                .last("LIMIT 5000")
                 .list();
 
         return orders.stream()
