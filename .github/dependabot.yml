@@ -17,7 +17,7 @@ updates:
       - dependency-name: "org.springdoc:springdoc-openapi-starter-webmvc-ui"
         versions: [">=3"]
       - dependency-name: "com.baomidou:mybatis-plus-spring-boot3-starter"
-        versions: [">=4"]
+        versions: [">=3.5.16"]
       - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
         versions: [">=4"]
 
@@ -36,7 +36,7 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "antd"
-        versions: [">=7"]
+        versions: [">=6.3"]
       - dependency-name: "react"
         versions: [">=19"]
       - dependency-name: "react-dom"
