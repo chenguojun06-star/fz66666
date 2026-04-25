@@ -41,6 +41,8 @@ updates:
         versions: [">=19"]
       - dependency-name: "react-dom"
         versions: [">=19"]
+      - dependency-name: "typescript"
+        versions: [">=5.4"]
 
   - package-ecosystem: "npm"
     directory: "/h5-web"
