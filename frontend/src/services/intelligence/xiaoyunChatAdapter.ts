@@ -1,5 +1,6 @@
 import type { XiaoyunInsightCardData } from '@/components/common/XiaoyunInsightCard';
 import type { OverdueFactoryCardData } from '@/components/common/GlobalAiAssistant/OverdueFactoryCardWidget';
+import type { ReportPreviewData } from '@/components/common/GlobalAiAssistant/types';
 
 export interface XiaoyunChatPayload {
   answer?: string;
@@ -21,6 +22,8 @@ export interface ParsedXiaoyunLegacyMeta {
   stepWizardCards: unknown[];
   clarificationHints?: string[];
   overdueFactoryCard?: OverdueFactoryCardData;
+  reportPreview?: ReportPreviewData;
+  reportType?: 'daily' | 'weekly' | 'monthly';
 }
 
 function safeParseJson(raw: string, _label: string): unknown[] {
@@ -147,6 +150,19 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     } catch {}
   }
 
+  let reportPreview: ReportPreviewData | undefined;
+  let reportType: 'daily' | 'weekly' | 'monthly' | undefined;
+  const reportPreviewRe = /【REPORT_PREVIEW】([\s\S]*?)【\/REPORT_PREVIEW】/g;
+  while ((match = reportPreviewRe.exec(rawText)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      if (parsed && typeof parsed === 'object' && 'kpis' in parsed) {
+        reportPreview = parsed as ReportPreviewData;
+        reportType = (parsed.reportType as 'daily' | 'weekly' | 'monthly') || 'daily';
+      }
+    } catch {}
+  }
+
   const displayText = rawText
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
@@ -157,6 +173,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     .replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '')
     .replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '')
     .replace(/【OVERDUE_FACTORY】[\s\S]*?【\/OVERDUE_FACTORY】/g, '')
+    .replace(/【REPORT_PREVIEW】[\s\S]*?【\/REPORT_PREVIEW】/g, '')
     .trim();
 
   return {
@@ -170,5 +187,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     stepWizardCards,
     clarificationHints,
     overdueFactoryCard,
+    reportPreview,
+    reportType,
   };
 };

@@ -56,6 +56,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {msg.overdueFactoryCard && (
             <OverdueFactoryCardWidget data={msg.overdueFactoryCard} onNavigate={(path) => onSafeNavigate(path)} />
           )}
+          {msg.reportType && (
+            <div style={{ marginTop: 6 }}>
+              {msg.reportPreview && <ReportPreviewCardWidget data={msg.reportPreview} />}
+              <button
+                className={msgStyles.reportDownloadBtn}
+                disabled={!!downloadingType}
+                onClick={() => (msg.reportPreview ? onActualDownload(msg.reportType!) : onDownloadReport(msg.reportType!))}
+                style={{ width: '100%', marginTop: msg.reportPreview ? 10 : 0, marginBottom: 0 }}
+              >
+                {downloadingType === msg.reportType ? <LoadingOutlined /> : <DownloadOutlined />}
+                <span>{msg.reportPreview ? '下载 Excel 完整版' : `下载${msg.reportType === 'daily' ? '运营日报' : msg.reportType === 'weekly' ? '运营周报' : '运营月报'}`}</span>
+              </button>
+            </div>
+          )}
           {!!msg.riskIndicators?.length && <RiskIndicatorWidget items={msg.riskIndicators} />}
           {!!msg.actionCards?.length && (
             <div className={msgStyles.actionCardsWrapper}>
@@ -88,20 +102,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {!!msg.charts?.length && (
             <div className={msgStyles.chartsWrapper}>
               {msg.charts.map((chart, i) => <MiniChartWidget key={i} chart={chart} />)}
-            </div>
-          )}
-          {msg.reportType && (
-            <div style={{ marginTop: 12 }}>
-              {msg.reportPreview && <ReportPreviewCardWidget data={msg.reportPreview} />}
-              <button
-                className={msgStyles.reportDownloadBtn}
-                disabled={!!downloadingType}
-                onClick={() => (msg.reportPreview ? onActualDownload(msg.reportType!) : onDownloadReport(msg.reportType!))}
-                style={{ width: '100%', marginTop: msg.reportPreview ? 10 : 0, marginBottom: 0 }}
-              >
-                {downloadingType === msg.reportType ? <LoadingOutlined /> : <DownloadOutlined />}
-                <span>{msg.reportPreview ? '下载 Excel 完整版' : `下载${msg.reportType === 'daily' ? '运营日报' : msg.reportType === 'weekly' ? '运营周报' : '运营月报'}`}</span>
-              </button>
             </div>
           )}
           {!!msg.teamStatusCards?.length && (

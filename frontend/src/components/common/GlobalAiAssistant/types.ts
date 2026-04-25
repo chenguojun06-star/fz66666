@@ -66,6 +66,8 @@ export function parseAiResponse(rawText: string): {
   stepWizardCards: StepWizardCardData[];
   clarificationHints?: string[];
   overdueFactoryCard?: OverdueFactoryCardData;
+  reportPreview?: ReportPreviewData;
+  reportType?: 'daily' | 'weekly' | 'monthly';
 } {
   const parsed = parseXiaoyunLegacyMeta(rawText);
   return {
@@ -79,6 +81,8 @@ export function parseAiResponse(rawText: string): {
     stepWizardCards: parsed.stepWizardCards as StepWizardCardData[],
     clarificationHints: parsed.clarificationHints,
     overdueFactoryCard: parsed.overdueFactoryCard,
+    reportPreview: parsed.reportPreview,
+    reportType: parsed.reportType,
   };
 }
 

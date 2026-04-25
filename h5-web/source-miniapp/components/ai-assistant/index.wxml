@@ -140,6 +140,40 @@
                   </view>
                 </view>
               </view>
+              <view class="report-preview-wrapper" wx:if="{{item.reportPreview && item.reportPreview.kpis.length > 0}}">
+                <view class="report-preview-header">
+                  <view class="report-preview-title">📊 运营{{item.reportPreview.typeLabel || '日报'}}看板</view>
+                  <view class="report-preview-range">{{item.reportPreview.rangeLabel}}</view>
+                </view>
+                <view class="report-kpi-grid">
+                  <view class="report-kpi-item" wx:for="{{item.reportPreview.kpis}}" wx:for-item="kpi" wx:key="name">
+                    <view class="report-kpi-name">{{kpi.name}}</view>
+                    <view class="report-kpi-val">{{kpi.current}}<text class="report-kpi-unit" wx:if="{{kpi.unit}}">{{kpi.unit}}</text></view>
+                    <view class="report-kpi-change {{kpi.change && kpi.change[0] === '+' ? 'report-change-up' : kpi.change && kpi.change[0] === '-' ? 'report-change-down' : ''}}" wx:if="{{kpi.change}}">{{kpi.change}}</view>
+                  </view>
+                </view>
+                <view class="report-risk-summary" wx:if="{{item.reportPreview.riskSummary}}">
+                  <view class="report-risk-title">⚠️ 风险概览</view>
+                  <view class="report-risk-grid">
+                    <view class="report-risk-item report-risk-danger"><text class="report-risk-val">{{item.reportPreview.riskSummary.overdueCount || 0}}</text><text class="report-risk-label">逾期</text></view>
+                    <view class="report-risk-item report-risk-warning"><text class="report-risk-val">{{item.reportPreview.riskSummary.highRiskCount || 0}}</text><text class="report-risk-label">高风险</text></view>
+                    <view class="report-risk-item"><text class="report-risk-val">{{item.reportPreview.riskSummary.stagnantCount || 0}}</text><text class="report-risk-label">停滞</text></view>
+                  </view>
+                </view>
+                <view class="report-factory-ranking" wx:if="{{item.reportPreview.factoryRanking.length > 0}}">
+                  <view class="report-ranking-title">🏭 工厂排名</view>
+                  <view class="report-ranking-item" wx:for="{{item.reportPreview.factoryRanking}}" wx:for-item="factory" wx:key="rank">
+                    <view class="report-ranking-badge">{{factory.rank}}</view>
+                    <view class="report-ranking-name">{{factory.name || factory.factoryName}}</view>
+                    <view class="report-ranking-stats">{{factory.scanCount}}次 / {{factory.scanQty || factory.scanQuantity}}件</view>
+                  </view>
+                </view>
+                <view class="report-cost-summary" wx:if="{{item.reportPreview.costSummary}}">
+                  <view class="report-cost-title">💰 成本汇总</view>
+                  <view class="report-cost-row"><text class="report-cost-label">扫码总成本</text><text class="report-cost-val">¥{{item.reportPreview.costSummary.totalCost}}</text></view>
+                  <view class="report-cost-row"><text class="report-cost-label">扫码记录数</text><text class="report-cost-val">{{item.reportPreview.costSummary.scanCount}}条</text></view>
+                </view>
+              </view>
               <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
               <view class="clarification-card" wx:if="{{item.clarificationHints && item.clarificationHints.length > 0}}">
                 <view class="clarification-label">🤔 需要补充信息：</view>

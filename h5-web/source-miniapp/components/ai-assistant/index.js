@@ -106,11 +106,23 @@ function parseAiCards(text) {
   }
   text = text.replace(/【OVERDUE_FACTORY】[\s\S]*?【\/OVERDUE_FACTORY】/g, '');
 
+  var reportPreview = null;
+  var reportType = null;
+  var reportRe = /【REPORT_PREVIEW】([\s\S]*?)【\/REPORT_PREVIEW】/g;
+  while ((m = reportRe.exec(text)) !== null) {
+    var rpp = safeParse(m[1]);
+    if (rpp && typeof rpp === 'object' && rpp.kpis) {
+      reportPreview = rpp;
+      reportType = rpp.reportType || 'daily';
+    }
+  }
+  text = text.replace(/【REPORT_PREVIEW】[\s\S]*?【\/REPORT_PREVIEW】/g, '');
+
   text = text.replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '');
   text = text.replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '');
   text = text.replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '');
 
-  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards, overdueFactoryCard: overdueFactoryCard };
+  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards, overdueFactoryCard: overdueFactoryCard, reportPreview: reportPreview, reportType: reportType };
 }
 
 Component({
@@ -527,6 +539,8 @@ Component({
               recommendPills: recommendPills,
               actions: actions,
               overdueFactoryCard: parsed.overdueFactoryCard,
+              reportPreview: parsed.reportPreview,
+              reportType: parsed.reportType,
             };
             self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
@@ -586,6 +600,8 @@ Component({
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
                 overdueFactoryCard: parsed.overdueFactoryCard,
+                reportPreview: parsed.reportPreview,
+                reportType: parsed.reportType,
               };
               self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();

@@ -42,6 +42,7 @@ class WorkAiPage extends GetView<WorkAiController> {
                       )
                     : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         if (msg.overdueFactoryCard != null) _buildOverdueFactoryCard(msg.overdueFactoryCard!),
+                        if (msg.reportPreview != null) _buildReportPreviewCard(msg.reportPreview!),
                         ...msg.actionCards.map((act) => _buildActionCard(act)),
                         ...msg.insightCards.map((card) => _buildInsightCard(card)),
                         if (msg.content.isNotEmpty)
@@ -248,5 +249,89 @@ class WorkAiPage extends GetView<WorkAiController> {
         ]),
       ]),
     );
+  }
+
+  Widget _buildReportPreviewCard(ReportPreview report) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE6F7FF)),
+        borderRadius: BorderRadius.circular(AppSpacing.md),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 3, offset: const Offset(0, 1))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('📊 运营${report.typeLabel}看板', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1677FF))),
+          Text(report.rangeLabel, style: const TextStyle(fontSize: 10, color: Color(0xFF8C8C8C))),
+        ]),
+        const Divider(height: 12),
+        Wrap(spacing: 6, runSpacing: 6, children: report.kpis.map((kpi) => Container(
+          width: (MediaQuery.of(Get.context!).size.width * 0.8 - 32) / 2,
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(color: const Color(0xFFF6F8FA), borderRadius: BorderRadius.circular(6)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(kpi.name, style: const TextStyle(fontSize: 10, color: Color(0xFF8C8C8C))),
+            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text('${kpi.current}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF262626))),
+              if (kpi.unit != null) Text(kpi.unit!, style: const TextStyle(fontSize: 10, color: Color(0xFF8C8C8C))),
+            ]),
+            if (kpi.change != null) Text(kpi.change!, style: TextStyle(fontSize: 10, color: kpi.change!.startsWith('+') ? const Color(0xFFCF1322) : kpi.change!.startsWith('-') ? const Color(0xFF389E0D) : const Color(0xFF8C8C8C))),
+          ]),
+        )).toList()),
+        if (report.riskSummary != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: const Color(0xFFFFF7E6), borderRadius: BorderRadius.circular(6), border: Border.all(color: const Color(0xFFFFE7BA))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('⚠️ 风险概览', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFD46B08))),
+              const SizedBox(height: 4),
+              Row(children: [
+                _buildRiskChip('${report.riskSummary!['overdueCount'] ?? 0}', '逾期', const Color(0xFFCF1322)),
+                const SizedBox(width: 8),
+                _buildRiskChip('${report.riskSummary!['highRiskCount'] ?? 0}', '高风险', const Color(0xFFD46B08)),
+                const SizedBox(width: 8),
+                _buildRiskChip('${report.riskSummary!['stagnantCount'] ?? 0}', '停滞', const Color(0xFF262626)),
+              ]),
+            ]),
+          ),
+        ],
+        if (report.factoryRanking.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('🏭 工厂排名', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF262626))),
+          const SizedBox(height: 4),
+          ...report.factoryRanking.map((f) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(children: [
+              Container(width: 18, height: 18, decoration: const BoxDecoration(color: Color(0xFF1677FF), shape: BoxShape.circle), child: Center(child: Text('${f['rank'] ?? ''}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)))),
+              const SizedBox(width: 6),
+              Expanded(child: Text(f['name']?.toString() ?? f['factoryName']?.toString() ?? '', style: const TextStyle(fontSize: 12, color: Color(0xFF262626)))),
+              Text('${f['scanCount'] ?? 0}次 / ${f['scanQty'] ?? f['scanQuantity'] ?? 0}件', style: const TextStyle(fontSize: 10, color: Color(0xFF8C8C8C))),
+            ]),
+          )),
+        ],
+        if (report.costSummary != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: const Color(0xFFF6FFED), borderRadius: BorderRadius.circular(6), border: Border.all(color: const Color(0xFFD9F7BE))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('💰 成本汇总', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF389E0D))),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('扫码总成本', style: TextStyle(fontSize: 11, color: Color(0xFF8C8C8C))), Text('¥${report.costSummary!['totalCost'] ?? '0'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF262626)))]),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('扫码记录数', style: TextStyle(fontSize: 11, color: Color(0xFF8C8C8C))), Text('${report.costSummary!['scanCount'] ?? 0}条', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF262626)))]),
+            ]),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _buildRiskChip(String value, String label, Color color) {
+    return Column(children: [
+      Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+      Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF8C8C8C))),
+    ]);
   }
 }

@@ -119,7 +119,7 @@ const OverdueFactoryCardWidget: React.FC<{
               </div>
               <div className={styles.overdueMetricItem}>
                 <span className={styles.overdueMetricLabel}>生产人数</span>
-                <span className={styles.overdueMetricValue}>{factory.activeWorkers || '—'}人</span>
+                <span className={styles.overdueMetricValue}>{factory.activeWorkers != null ? factory.activeWorkers : '—'}人</span>
               </div>
             </div>
           </div>

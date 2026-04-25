@@ -233,10 +233,10 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
             const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
-            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard } = parseAiResponse(rawContent);
+            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, reportPreview, reportType: parsedReportType } = parseAiResponse(rawContent);
             accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, agentCommandId: commandId }
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload || parsedReportType, reportPreview: reportPreview, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, agentCommandId: commandId }
               : m));
           } else if (event.type === 'follow_up_actions') {
             const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
@@ -292,14 +292,14 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             const rawAnswer = payload?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
             const displayAnswer = payload?.displayAnswer || rawAnswer;
             const commandId = payload?.commandId;
-            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards, overdueFactoryCard: parsedOverdueCard } = parseAiResponse(rawAnswer);
+            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards, overdueFactoryCard: parsedOverdueCard, reportPreview: parsedReportPreview, reportType: parsedReportType } = parseAiResponse(rawAnswer);
             const cards = payload?.cards || [];
             const followUpActions = (payload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
             setMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               const msgData = {
                 text: displayAnswer || displayText, intent: payload?.source,
-                reportType: reportTypeToDownload, charts,
+                reportType: reportTypeToDownload || parsedReportType, reportPreview: parsedReportPreview, charts,
                 cards: cards.length ? cards : parsedCards,
                 actionCards, quickActions, teamStatusCards, bundleSplitCards,
                 stepWizardCards: parsedStepWizardCards,
@@ -324,7 +324,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
                   const retryAnswer = retryPayload?.answer || '';
                   if (retryAnswer) {
                     const retryDisplay = retryPayload?.displayAnswer || retryAnswer;
-                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc, overdueFactoryCard: ofc } = parseAiResponse(retryAnswer);
+                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc, overdueFactoryCard: ofc, reportPreview: rp, reportType: rpt } = parseAiResponse(retryAnswer);
                     const retryCards = retryPayload?.cards || [];
                     const retryFollowUp = (retryPayload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
                     setMessages(prev => prev.map(m => m.id === aiMsgId ? {
@@ -332,6 +332,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
                       charts: ch, cards: retryCards.length ? retryCards : pc,
                       actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc,
                       stepWizardCards: swc, overdueFactoryCard: ofc,
+                      reportPreview: rp, reportType: rpt,
                       agentCommandId: retryPayload?.commandId, followUpActions: retryFollowUp,
                     } : m));
                     speak(retryDisplay || dt);

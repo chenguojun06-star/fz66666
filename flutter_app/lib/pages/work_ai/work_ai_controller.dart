@@ -46,6 +46,27 @@ class OverdueFactoryCard {
   OverdueFactoryCard({required this.overdueCount, this.totalQuantity = 0, this.avgProgress = 0, this.avgOverdueDays = 0, this.factoryGroupCount = 0, this.factoryGroups = const []});
 }
 
+class ReportKpi {
+  final String name;
+  final dynamic current;
+  final dynamic previous;
+  final String? unit;
+  final String? change;
+  ReportKpi({required this.name, this.current, this.previous, this.unit, this.change});
+}
+
+class ReportPreview {
+  final String reportType;
+  final String typeLabel;
+  final String rangeLabel;
+  final String baseDate;
+  final List<ReportKpi> kpis;
+  final Map<String, dynamic>? riskSummary;
+  final List<Map<String, dynamic>> factoryRanking;
+  final Map<String, dynamic>? costSummary;
+  ReportPreview({required this.reportType, this.typeLabel = '日报', this.rangeLabel = '', this.baseDate = '', this.kpis = const [], this.riskSummary, this.factoryRanking = const [], this.costSummary});
+}
+
 class ChatMessage {
   final String content;
   final bool isUser;
@@ -54,7 +75,8 @@ class ChatMessage {
   final List<String> clarificationHints;
   final List<Map<String, dynamic>> actionCards;
   final OverdueFactoryCard? overdueFactoryCard;
-  ChatMessage({required this.content, required this.isUser, required this.time, this.insightCards = const [], this.clarificationHints = const [], this.actionCards = const [], this.overdueFactoryCard});
+  final ReportPreview? reportPreview;
+  ChatMessage({required this.content, required this.isUser, required this.time, this.insightCards = const [], this.clarificationHints = const [], this.actionCards = const [], this.overdueFactoryCard, this.reportPreview});
 }
 
 class ParsedAiReply {
@@ -63,7 +85,8 @@ class ParsedAiReply {
   final List<String> clarificationHints;
   final List<Map<String, dynamic>> actionCards;
   final OverdueFactoryCard? overdueFactoryCard;
-  ParsedAiReply({required this.displayText, this.insightCards = const [], this.clarificationHints = const [], this.actionCards = const [], this.overdueFactoryCard});
+  final ReportPreview? reportPreview;
+  ParsedAiReply({required this.displayText, this.insightCards = const [], this.clarificationHints = const [], this.actionCards = const [], this.overdueFactoryCard, this.reportPreview});
 }
 
 OverdueFactoryOrder _parseOverdueOrder(Map<String, dynamic> m) {
@@ -99,6 +122,7 @@ ParsedAiReply _parseAiReply(String rawText) {
   final clarificationHints = <String>[];
   final actionCards = <Map<String, dynamic>>[];
   OverdueFactoryCard? overdueFactoryCard;
+  ReportPreview? reportPreview;
 
   final tagPattern = RegExp(r'【(\w+)】([\s\S]*?)【\/\1】');
   final matches = tagPattern.allMatches(rawText);
@@ -161,6 +185,28 @@ ParsedAiReply _parseAiReply(String rawText) {
             );
           }
         } catch (_) {}
+      } else if (tag == 'REPORT_PREVIEW') {
+        try {
+          if (parsed is Map && parsed['kpis'] != null) {
+            final kpisRaw = parsed['kpis'] as List? ?? [];
+            reportPreview = ReportPreview(
+              reportType: parsed['reportType']?.toString() ?? 'daily',
+              typeLabel: parsed['typeLabel']?.toString() ?? '日报',
+              rangeLabel: parsed['rangeLabel']?.toString() ?? '',
+              baseDate: parsed['baseDate']?.toString() ?? '',
+              kpis: kpisRaw.whereType<Map<String, dynamic>>().map((k) => ReportKpi(
+                name: k['name']?.toString() ?? '',
+                current: k['current'],
+                previous: k['previous'],
+                unit: k['unit']?.toString(),
+                change: k['change']?.toString(),
+              )).toList(),
+              riskSummary: parsed['riskSummary'] is Map ? Map<String, dynamic>.from(parsed['riskSummary']) : null,
+              factoryRanking: (parsed['factoryRanking'] as List?)?.whereType<Map<String, dynamic>>().map(Map<String, dynamic>.from).toList() ?? [],
+              costSummary: parsed['costSummary'] is Map ? Map<String, dynamic>.from(parsed['costSummary']) : null,
+            );
+          }
+        } catch (_) {}
       }
     } catch (_) {}
   }
@@ -169,7 +215,7 @@ ParsedAiReply _parseAiReply(String rawText) {
   text = text.replaceAll(RegExp(r'```ACTIONS_JSON\s*\n[\s\S]*?\n```'), '');
   text = text.trim();
 
-  return ParsedAiReply(displayText: text, insightCards: insightCards, clarificationHints: clarificationHints, actionCards: actionCards, overdueFactoryCard: overdueFactoryCard);
+  return ParsedAiReply(displayText: text, insightCards: insightCards, clarificationHints: clarificationHints, actionCards: actionCards, overdueFactoryCard: overdueFactoryCard, reportPreview: reportPreview);
 }
 
 class WorkAiController extends GetxController {
@@ -199,6 +245,7 @@ class WorkAiController extends GetxController {
           clarificationHints: parsed.clarificationHints,
           actionCards: parsed.actionCards,
           overdueFactoryCard: parsed.overdueFactoryCard,
+          reportPreview: parsed.reportPreview,
         ));
       } else {
         messages.add(ChatMessage(content: '抱歉，暂时无法回复', isUser: false, time: DateTime.now()));

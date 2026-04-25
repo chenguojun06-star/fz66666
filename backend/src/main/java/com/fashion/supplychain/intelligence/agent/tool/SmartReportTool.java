@@ -136,7 +136,106 @@ public class SmartReportTool implements AgentTool {
         // 5. 成本汇总
         report.put("costSummary", buildCostSummary(tenantId, periodStart, periodEnd));
 
-        return MAPPER.writeValueAsString(report);
+        // 6. 构建前端卡片所需的预览数据
+        Map<String, Object> previewData = buildPreviewData(report, reportType, baseDate);
+        report.put("_previewData", previewData);
+
+        String jsonResult = MAPPER.writeValueAsString(report);
+
+        // 嵌入【REPORT_PREVIEW】标记块，前端可解析为卡片
+        try {
+            String previewJson = MAPPER.writeValueAsString(previewData);
+            return jsonResult + "\n【REPORT_PREVIEW】" + previewJson + "【/REPORT_PREVIEW】";
+        } catch (Exception e) {
+            log.warn("[SmartReport] 序列化预览数据失败: {}", e.getMessage());
+            return jsonResult;
+        }
+    }
+
+    private Map<String, Object> buildPreviewData(Map<String, Object> report, String reportType, LocalDate baseDate) {
+        Map<String, Object> preview = new LinkedHashMap<>();
+        String typeLabel = "daily".equals(reportType) ? "日报" : "weekly".equals(reportType) ? "周报" : "月报";
+        preview.put("reportType", reportType);
+        preview.put("typeLabel", typeLabel);
+        preview.put("rangeLabel", report.getOrDefault("period", baseDate.toString()));
+        preview.put("baseDate", baseDate.toString());
+
+        // KPI指标
+        List<Map<String, Object>> kpis = new ArrayList<>();
+        Map<String, Object> scanStats = (Map<String, Object>) report.get("scanStats");
+        if (scanStats != null) {
+            kpis.add(buildKpi("扫码次数", scanStats.get("scanCount"), scanStats.get("prevScanCount"), "次", (String) scanStats.get("scanCountChange")));
+            kpis.add(buildKpi("扫码件数", scanStats.get("scanQuantity"), scanStats.get("prevScanQuantity"), "件", (String) scanStats.get("scanQtyChange")));
+        }
+        Map<String, Object> orderStats = (Map<String, Object>) report.get("orderStats");
+        if (orderStats != null) {
+            kpis.add(buildKpi("新增订单", orderStats.get("newOrders"), orderStats.get("prevNewOrders"), "张", (String) orderStats.get("newOrdersChange")));
+            kpis.add(buildKpi("完成订单", orderStats.get("completedOrders"), null, "张", null));
+        }
+        Map<String, Object> costSummary = (Map<String, Object>) report.get("costSummary");
+        if (costSummary != null) {
+            kpis.add(buildKpi("扫码总成本", costSummary.get("totalScanCost"), null, "元", null));
+        }
+        preview.put("kpis", kpis);
+
+        // 扫码类型分布
+        List<Map<String, Object>> scanTypes = new ArrayList<>();
+        if (scanStats != null && scanStats.get("byType") instanceof Map) {
+            Map<String, Long> byType = (Map<String, Long>) scanStats.get("byType");
+            long total = byType.values().stream().mapToLong(Long::longValue).sum();
+            for (Map.Entry<String, Long> e : byType.entrySet()) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("name", "production".equals(e.getKey()) ? "生产" : "quality".equals(e.getKey()) ? "质检" : "warehouse".equals(e.getKey()) ? "入库" : e.getKey());
+                item.put("count", e.getValue());
+                item.put("percent", total > 0 ? Math.round(e.getValue() * 100.0 / total) : 0);
+                scanTypes.add(item);
+            }
+        }
+        preview.put("scanTypes", scanTypes);
+
+        // 工厂排名
+        List<Map<String, Object>> factoryRanking = (List<Map<String, Object>>) report.get("factoryRanking");
+        if (factoryRanking != null) {
+            for (int i = 0; i < factoryRanking.size(); i++) {
+                factoryRanking.get(i).put("rank", i + 1);
+            }
+        }
+        preview.put("factoryRanking", factoryRanking != null ? factoryRanking : Collections.emptyList());
+
+        // 风险概览
+        Map<String, Object> riskSummary = (Map<String, Object>) report.get("riskSummary");
+        if (riskSummary != null) {
+            Map<String, Object> risk = new LinkedHashMap<>();
+            risk.put("overdueCount", riskSummary.getOrDefault("overdueCount", 0));
+            risk.put("highRiskCount", riskSummary.getOrDefault("highRiskCount", 0));
+            risk.put("stagnantCount", riskSummary.getOrDefault("stagnantCount", 0));
+            preview.put("riskSummary", risk);
+
+            List<Map<String, Object>> overdueTop5 = (List<Map<String, Object>>) riskSummary.get("overdueTop5");
+            preview.put("overdueOrders", overdueTop5 != null ? overdueTop5 : Collections.emptyList());
+            List<Map<String, Object>> highRiskTop5 = (List<Map<String, Object>>) riskSummary.get("highRiskTop5");
+            preview.put("highRiskOrders", highRiskTop5 != null ? highRiskTop5 : Collections.emptyList());
+        }
+
+        // 成本汇总
+        if (costSummary != null) {
+            Map<String, Object> cost = new LinkedHashMap<>();
+            cost.put("totalCost", String.valueOf(costSummary.getOrDefault("totalScanCost", "0")));
+            cost.put("scanCount", costSummary.getOrDefault("scanRecordCount", 0));
+            preview.put("costSummary", cost);
+        }
+
+        return preview;
+    }
+
+    private Map<String, Object> buildKpi(String name, Object current, Object previous, String unit, String change) {
+        Map<String, Object> kpi = new LinkedHashMap<>();
+        kpi.put("name", name);
+        kpi.put("current", current);
+        kpi.put("previous", previous);
+        kpi.put("unit", unit);
+        kpi.put("change", change);
+        return kpi;
     }
 
     private Map<String, Object> buildScanStats(Long tenantId, LocalDateTime start, LocalDateTime end,
