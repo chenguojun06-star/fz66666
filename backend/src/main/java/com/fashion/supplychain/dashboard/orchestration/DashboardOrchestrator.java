@@ -10,11 +10,13 @@ import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
 import com.fashion.supplychain.dashboard.dto.ScanCountChartResponse;
 import com.fashion.supplychain.dashboard.dto.TopStatsResponse;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.orchestration.MaterialStockOrchestrator;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import java.time.LocalDate;
@@ -27,6 +29,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -37,14 +42,17 @@ public class DashboardOrchestrator {
     private final DashboardQueryService dashboardQueryService;
     private final ProductionOrderService productionOrderService;
     private final MaterialStockOrchestrator materialStockOrchestrator;
+    private final ScanRecordService scanRecordService;
 
     public DashboardOrchestrator(
             DashboardQueryService dashboardQueryService,
             ProductionOrderService productionOrderService,
-            MaterialStockOrchestrator materialStockOrchestrator) {
+            MaterialStockOrchestrator materialStockOrchestrator,
+            ScanRecordService scanRecordService) {
         this.dashboardQueryService = dashboardQueryService;
         this.productionOrderService = productionOrderService;
         this.materialStockOrchestrator = materialStockOrchestrator;
+        this.scanRecordService = scanRecordService;
     }
 
     public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
@@ -685,13 +693,33 @@ public class DashboardOrchestrator {
                     ? (int) Math.ceil((100.0 - fAvgProgress) / Math.max(fAvgProgress, 1) * (fAvgOverdueDays > 0 ? fAvgOverdueDays : 7))
                     : -1;
 
+            int fActiveWorkers = 0;
+            try {
+                Set<String> factoryIds = orders.stream()
+                        .map(ProductionOrder::getFactoryId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+                if (!factoryIds.isEmpty()) {
+                    QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
+                    aqw.eq("tenant_id", com.fashion.supplychain.common.UserContext.tenantId())
+                       .in("factory_id", factoryIds)
+                       .eq("scan_result", "success")
+                       .ge("scan_time", now.minusDays(30))
+                       .select("DISTINCT operator_id");
+                    fActiveWorkers = (int) scanRecordService.list(aqw).stream()
+                            .map(ScanRecord::getOperatorId).filter(Objects::nonNull).distinct().count();
+                }
+            } catch (Exception e) {
+                log.warn("[Dashboard] 查询工厂活跃工人失败: factory={}, error={}", fName, e.getMessage());
+            }
+
             Map<String, Object> group = new HashMap<>();
             group.put("factoryName", fName);
             group.put("totalOrders", fOrderCount);
             group.put("totalQuantity", fTotalQty);
             group.put("avgProgress", fAvgProgress);
             group.put("avgOverdueDays", fAvgOverdueDays);
-            group.put("activeWorkers", 0);
+            group.put("activeWorkers", fActiveWorkers);
             group.put("estimatedCompletionDays", fEstDays);
             group.put("orders", orderItems);
             factoryGroups.add(group);

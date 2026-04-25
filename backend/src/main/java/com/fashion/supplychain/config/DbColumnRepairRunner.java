@@ -1311,6 +1311,19 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_ai_conversation_memory", "feedback_reason", "VARCHAR(500) DEFAULT NULL");
 
         add("t_ec_platform_config", "callback_url", "VARCHAR(500) DEFAULT NULL");
+
+        add("t_knowledge_base", "id", "VARCHAR(64) NOT NULL");
+        add("t_knowledge_base", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_knowledge_base", "category", "VARCHAR(32) NOT NULL COMMENT '类别'");
+        add("t_knowledge_base", "title", "VARCHAR(200) NOT NULL COMMENT '标题'");
+        add("t_knowledge_base", "content", "TEXT NOT NULL COMMENT '正文内容'");
+        add("t_knowledge_base", "keywords", "VARCHAR(500) DEFAULT NULL COMMENT '关键词'");
+        add("t_knowledge_base", "source", "VARCHAR(100) DEFAULT 'system' COMMENT '来源'");
+        add("t_knowledge_base", "view_count", "INT DEFAULT 0");
+        add("t_knowledge_base", "helpful_count", "INT DEFAULT 0");
+        add("t_knowledge_base", "delete_flag", "TINYINT DEFAULT 0");
+        add("t_knowledge_base", "created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP");
+        add("t_knowledge_base", "updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
     }
 
     private static void add(String table, String column, String definition) {

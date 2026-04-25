@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Prometheus 服务
   prometheus:
     image: prom/prometheus:v2.45.0
     container_name: fashion-prometheus
@@ -9,6 +8,7 @@ services:
       - "127.0.0.1:9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -21,7 +21,17 @@ services:
       - monitoring
     restart: unless-stopped
 
-  # Grafana 服务
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: fashion-alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    networks:
+      - monitoring
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:10.0.0
     container_name: fashion-grafana

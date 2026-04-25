@@ -828,7 +828,7 @@
 
 /* ═══════════════════════════════════════════════════════════
    SmartAlertBell — 顶栏今日预警按钮 + 下滑面板
-   配色：蓝紫系（#6d28d9 / #0284c7），禁止橙红色
+   配色：蓝紫系（#2D7FF9 / #0284c7），禁止橙红色
 ════════════════════════════════════════════════════════════ */
 
 /* ── 触发按钮 ── */
@@ -837,10 +837,10 @@
   align-items: center;
   gap: 5px;
   padding: 4px 10px 4px 8px;
-  border: 1.5px solid rgba(109, 40, 217, 0.22);
+  border: 1.5px solid rgba(45, 127, 249, 0.2);
   border-radius: 20px;
-  background: rgba(109, 40, 217, 0.05);
-  color: #4c1d95;
+  background: rgba(45, 127, 249, 0.04);
+  color: #1a5fb4;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -850,9 +850,9 @@
 }
 .smart-alert-btn:hover,
 .smart-alert-btn.open {
-  background: rgba(109, 40, 217, 0.1);
-  border-color: rgba(109, 40, 217, 0.45);
-  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.15);
+  background: rgba(45, 127, 249, 0.08);
+  border-color: rgba(45, 127, 249, 0.35);
+  box-shadow: 0 2px 8px rgba(45, 127, 249, 0.12);
 }
 
 /* 图标 + 红点容器 */
@@ -883,7 +883,7 @@
 }
 .smart-alert-btn-sub {
   font-size: 9px;
-  color: #9d5fff;
+  color: #6ba3ff;
   font-weight: 500;
   letter-spacing: 0.03em;
   opacity: 0.85;
@@ -912,8 +912,8 @@
   box-sizing: border-box;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(109, 40, 217, 0.13), 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1.5px solid rgba(109, 40, 217, 0.14);
+  box-shadow: 0 8px 32px rgba(45, 127, 249, 0.13), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1.5px solid rgba(45, 127, 249, 0.14);
   z-index: 1100;
   overflow: hidden;
 
@@ -934,7 +934,7 @@
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(90deg, #6d28d9, #0284c7);
+  background: linear-gradient(90deg, #2D7FF9, #0284c7);
 }
 
 /* 面板头 */
@@ -1040,12 +1040,12 @@
   background: #faf5ff;
   border-radius: 8px;
   padding: 8px 10px;
-  border: 1px solid rgba(109, 40, 217, 0.1);
+  border: 1px solid rgba(45, 127, 249, 0.08);
   transition: background 0.15s, box-shadow 0.15s;
 }
 .sap-priority-card:hover {
   background: #f3e8ff;
-  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.12);
+  box-shadow: 0 2px 8px rgba(45, 127, 249, 0.12);
 }
 .sap-priority-row {
   display: flex;
@@ -1053,7 +1053,7 @@
   justify-content: space-between;
   margin-bottom: 6px;
 }
-.sap-priority-no  { font-size: 12px; font-weight: 600; color: #4c1d95; }
+.sap-priority-no  { font-size: 12px; font-weight: 600; color: #1a5fb4; }
 .sap-priority-factory { font-size: 11px; color: #9ca3af; }
 .sap-priority-bar-wrap {
   display: flex;
@@ -1069,7 +1069,7 @@
 .sap-priority-bar {
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  background: linear-gradient(90deg, #6d28d9, #8b5cf6);
+  background: linear-gradient(90deg, #2D7FF9, #4f8ff7);
   border-radius: 4px;
   transition: width 0.5s ease;
 }
@@ -1077,7 +1077,7 @@
   position: relative;
   font-size: 10px;
   font-weight: 700;
-  color: #4c1d95;
+  color: #1a5fb4;
   margin-left: auto;
   z-index: 1;
 }
@@ -1161,7 +1161,7 @@
 .sap-ai-label {
   font-size: 11px;
   font-weight: 600;
-  color: #6d28d9;
+  color: #2D7FF9;
   margin-bottom: 6px;
   display: flex;
   align-items: center;
@@ -1200,9 +1200,9 @@
 .sap-ai-send {
   width: 28px; height: 28px;
   border-radius: 8px;
-  border: 1.5px solid rgba(109, 40, 217, 0.35);
-  background: rgba(109, 40, 217, 0.06);
-  color: #6d28d9;
+  border: 1.5px solid rgba(45, 127, 249, 0.35);
+  background: rgba(45, 127, 249, 0.06);
+  color: #2D7FF9;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1210,7 +1210,7 @@
   flex-shrink: 0;
   transition: background 0.15s;
 }
-.sap-ai-send:hover:not(:disabled) { background: rgba(109, 40, 217, 0.15); }
+.sap-ai-send:hover:not(:disabled) { background: rgba(45, 127, 249, 0.12); }
 .sap-ai-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── AI 对话历史气泡样式 ── */
@@ -1243,12 +1243,12 @@
   word-break: break-word;
 }
 .sap-ai-msg-ai .sap-ai-msg-bubble {
-  background: rgba(109, 40, 217, 0.07);
+  background: rgba(45, 127, 249, 0.07);
   color: #222;
   border-bottom-left-radius: 3px;
 }
 .sap-ai-msg-user .sap-ai-msg-bubble {
-  background: #6d28d9;
+  background: #2D7FF9;
   color: #fff;
   border-bottom-right-radius: 3px;
   margin-left: auto;
@@ -1262,15 +1262,15 @@
 .sap-ai-suggestion-btn {
   padding: 2px 8px;
   border-radius: 20px;
-  border: 1px solid rgba(109, 40, 217, 0.35);
-  background: rgba(109, 40, 217, 0.05);
-  color: #6d28d9;
+  border: 1px solid rgba(45, 127, 249, 0.35);
+  background: rgba(45, 127, 249, 0.04);
+  color: #2D7FF9;
   font-size: 11px;
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;
 }
-.sap-ai-suggestion-btn:hover:not(:disabled) { background: rgba(109, 40, 217, 0.15); }
+.sap-ai-suggestion-btn:hover:not(:disabled) { background: rgba(45, 127, 249, 0.12); }
 .sap-ai-suggestion-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── 4K / 超宽屏适配 ── */

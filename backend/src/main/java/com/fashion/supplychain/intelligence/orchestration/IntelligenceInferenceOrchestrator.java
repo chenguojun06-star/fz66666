@@ -59,6 +59,7 @@ public class IntelligenceInferenceOrchestrator {
     private static final int AI_ADVISOR_MAX_TIMEOUT_SECONDS = 20;
     private static final int NL_INTENT_MAX_TIMEOUT_SECONDS = 12;
     private static final int DAILY_BRIEF_MAX_TIMEOUT_SECONDS = 5;
+    private static final int CRITIC_REVIEW_MAX_TIMEOUT_SECONDS = 30;
 
     @Value("${ai.deepseek.api-key:}")
     private String directApiKey;
@@ -254,6 +255,8 @@ public class IntelligenceInferenceOrchestrator {
             cap = NL_INTENT_MAX_TIMEOUT_SECONDS;
         } else if ("daily-brief".equals(scene)) {
             cap = DAILY_BRIEF_MAX_TIMEOUT_SECONDS;
+        } else if ("critic_review".equals(scene)) {
+            cap = CRITIC_REVIEW_MAX_TIMEOUT_SECONDS;
         }
         int effective = Math.min(raw, cap);
         if (effective != raw) {

@@ -107,6 +107,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                         newSku.setSize(size);
                         newSku.setStatus("ENABLED");
                         newSku.setStockQuantity(quantity);
+                        newSku.setTenantId(tenantId);
                         if (style != null && style.getPrice() != null) {
                             newSku.setSalesPrice(style.getPrice());
                         }

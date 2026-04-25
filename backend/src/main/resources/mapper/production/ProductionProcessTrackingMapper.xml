@@ -81,4 +81,23 @@
           AND tenant_id = #{tenantId}
     </delete>
 
+    <select id="selectScannedBundleCountByOrderIds" resultType="java.util.HashMap">
+        SELECT
+            production_order_id AS orderId,
+            process_name AS processName,
+            COUNT(DISTINCT cutting_bundle_id) AS scannedBundleCount
+        FROM t_production_process_tracking
+        WHERE scan_status = 'scanned'
+          AND cutting_bundle_id IS NOT NULL
+          AND cutting_bundle_id != ''
+          AND production_order_id IN
+          <foreach collection="orderIds" item="id" open="(" separator="," close=")">
+              #{id}
+          </foreach>
+          <if test="tenantId != null">
+          AND tenant_id = #{tenantId}
+          </if>
+        GROUP BY production_order_id, process_name
+    </select>
+
 </mapper>

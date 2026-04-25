@@ -2,11 +2,15 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.FactoryShipment;
+import com.fashion.supplychain.production.entity.FactoryShipmentDetail;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.FactoryShipmentService;
+import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,8 +23,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
-import com.fashion.supplychain.production.entity.FactoryShipmentDetail;
 
 @Service
 @Slf4j
@@ -34,9 +36,12 @@ public class FactoryShipmentOrchestrator {
     private ProductionOrderService productionOrderService;
     @Autowired
     private FactoryShipmentDetailService factoryShipmentDetailService;
+    @Autowired
+    private ProductSkuService productSkuService;
 
     @Transactional(rollbackFor = Exception.class)
     public Result<FactoryShipment> ship(Map<String, Object> params) {
+        TenantAssert.assertTenantContext();
         String orderId = (String) params.get("orderId");
         if (!StringUtils.hasText(orderId)) {
             return Result.fail("缺少 orderId");
@@ -92,6 +97,9 @@ public class FactoryShipmentOrchestrator {
 
         factoryShipmentService.save(fs);
         factoryShipmentDetailService.saveDetails(fs.getId(), details, UserContext.tenantId());
+
+        deductSkuStockOnShip(fs.getStyleNo(), details);
+
         log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={} skuLines={}",
                 fs.getShipmentNo(), orderId, shipQuantity, details.size());
         return Result.success(fs);
@@ -148,8 +156,15 @@ public class FactoryShipmentOrchestrator {
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(fs.getFactoryId())) {
             return Result.fail("无权操作其他工厂的发货单");
         }
-        factoryShipmentService.removeById(shipmentId);
-        log.info("[FactoryShipment] 删除发货单 shipmentId={}", shipmentId);
+        FactoryShipment patch = new FactoryShipment();
+        patch.setId(shipmentId);
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(java.time.LocalDateTime.now());
+        factoryShipmentService.updateById(patch);
+
+        restoreSkuStockOnDelete(fs);
+
+        log.info("[FactoryShipment] 软删除发货单 shipmentId={}", shipmentId);
         return Result.success(null);
     }
 
@@ -207,5 +222,49 @@ public class FactoryShipmentOrchestrator {
         info.put("shippedTotal", shipped);
         info.put("remaining", Math.max(0, cuttingTotal - shipped));
         return info;
+    }
+
+    private void deductSkuStockOnShip(String styleNo, List<Map<String, Object>> details) {
+        if (!StringUtils.hasText(styleNo) || details == null || details.isEmpty()) {
+            return;
+        }
+        for (Map<String, Object> d : details) {
+            String color = (String) d.getOrDefault("color", "");
+            String sizeName = (String) d.getOrDefault("sizeName", "");
+            int qty = d.get("quantity") instanceof Number ? ((Number) d.get("quantity")).intValue() : 0;
+            if (qty <= 0 || !StringUtils.hasText(color) || !StringUtils.hasText(sizeName)) {
+                continue;
+            }
+            String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), sizeName.trim());
+            try {
+                productSkuService.updateStock(skuCode, -qty);
+            } catch (Exception e) {
+                log.warn("[FactoryShipment] SKU库存扣减失败: skuCode={}, qty={}, error={}", skuCode, qty, e.getMessage());
+            }
+        }
+    }
+
+    private void restoreSkuStockOnDelete(FactoryShipment fs) {
+        if (fs == null || !StringUtils.hasText(fs.getStyleNo())) {
+            return;
+        }
+        List<FactoryShipmentDetail> details = factoryShipmentDetailService.listByShipmentId(fs.getId());
+        if (details == null || details.isEmpty()) {
+            return;
+        }
+        for (FactoryShipmentDetail d : details) {
+            String color = d.getColor();
+            String sizeName = d.getSizeName();
+            int qty = d.getQuantity() != null ? d.getQuantity() : 0;
+            if (qty <= 0 || !StringUtils.hasText(color) || !StringUtils.hasText(sizeName)) {
+                continue;
+            }
+            String skuCode = String.format("%s-%s-%s", fs.getStyleNo().trim(), color.trim(), sizeName.trim());
+            try {
+                productSkuService.updateStock(skuCode, qty);
+            } catch (Exception e) {
+                log.warn("[FactoryShipment] SKU库存恢复失败: skuCode={}, qty={}, error={}", skuCode, qty, e.getMessage());
+            }
+        }
     }
 }

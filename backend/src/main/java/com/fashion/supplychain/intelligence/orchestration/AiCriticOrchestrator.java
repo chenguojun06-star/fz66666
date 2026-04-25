@@ -7,14 +7,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.*;
 
 @Service
 @Slf4j
 public class AiCriticOrchestrator {
 
+    private static final long CRITIC_TIMEOUT_MS = 30_000;
+
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
+    private final ExecutorService criticExecutor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "critic-worker");
+        t.setDaemon(true);
+        return t;
+    });
 
     public String reviewAndRevise(String userIntent, String draftResponse) {
         return reviewAndRevise(userIntent, draftResponse, null);
@@ -62,6 +70,19 @@ public class AiCriticOrchestrator {
 
         try {
             log.info("[AiCritic] 进行深度审查（含{}条工具记录）...", toolRecords != null ? toolRecords.size() : 0);
+            Future<String> future = criticExecutor.submit(() -> doReview(systemPrompt, userPrompt, draftResponse));
+            return future.get(CRITIC_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            log.warn("[AiCritic] 审查超时({}ms)，直接返回原草稿", CRITIC_TIMEOUT_MS);
+            return draftResponse;
+        } catch (Exception e) {
+            log.warn("[AiCritic] 审查失败，退回原草稿: {}", e.getMessage());
+            return draftResponse;
+        }
+    }
+
+    private String doReview(String systemPrompt, String userPrompt, String fallbackDraft) {
+        try {
             IntelligenceInferenceResult result = inferenceOrchestrator.chat("critic_review", systemPrompt, userPrompt);
             if (result != null && result.isSuccess() && result.getContent() != null && !result.getContent().isBlank()) {
                 String revised = result.getContent().trim();
@@ -71,7 +92,7 @@ public class AiCriticOrchestrator {
                     revised = revised.substring("修复后的正文：".length()).trim();
                 }
 
-                if (!revised.equals(draftResponse)) {
+                if (!revised.equals(fallbackDraft)) {
                     log.info("[AiCritic] 反思修正了原结果（含数据溯源审查）");
                 } else {
                     log.info("[AiCritic] 原结果通过审查，无修改");
@@ -79,8 +100,8 @@ public class AiCriticOrchestrator {
                 return revised;
             }
         } catch (Exception e) {
-            log.warn("[AiCritic] 审查失败，退回原草稿: {}", e.getMessage());
+            log.warn("[AiCritic] 审查LLM调用失败: {}", e.getMessage());
         }
-        return draftResponse + "\n\n⚠️ 此回答未经数据真实性审查，请以工具查询结果为准。";
+        return fallbackDraft;
     }
 }

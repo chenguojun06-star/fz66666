@@ -5,13 +5,19 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
+import com.fashion.supplychain.finance.entity.FinishedSettlementApprovalStatus;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
+import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
+import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
+import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
+import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.service.PaymentAccountService;
+import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.AllArgsConstructor;
@@ -69,6 +75,15 @@ public class WagePaymentOrchestrator {
 
     @Autowired
     private BillAggregationService billAggregationService;
+
+    @Autowired
+    private PayrollSettlementService payrollSettlementService;
+
+    @Autowired
+    private FinishedSettlementApprovalStatusService finishedSettlementApprovalStatusService;
+
+    @Autowired
+    private ShipmentReconciliationService shipmentReconciliationService;
 
     private static final AtomicLong PAYMENT_SEQ = new AtomicLong(1);
 
@@ -263,6 +278,7 @@ public class WagePaymentOrchestrator {
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(payment.getTenantId(), "支付记录");
 
         payment.setConfirmTime(LocalDateTime.now());
         payment.setConfirmBy(UserContext.userId());
@@ -373,8 +389,31 @@ public class WagePaymentOrchestrator {
                     break;
 
                 case "PAYROLL_SETTLEMENT":
+                    PayrollSettlement psRefund = payrollSettlementService.getById(payment.getBizId());
+                    if (psRefund != null && "paid".equals(psRefund.getStatus())) {
+                        PayrollSettlement psPatch = new PayrollSettlement();
+                        psPatch.setId(psRefund.getId());
+                        psPatch.setStatus("approved");
+                        psPatch.setUpdateTime(LocalDateTime.now());
+                        payrollSettlementService.updateById(psPatch);
+                        log.info("[工资支付] 退回回写工资结算: id={}, paid->approved", payment.getBizId());
+                    }
+                    break;
+
                 case "ORDER_SETTLEMENT":
-                    log.info("[工资支付] 退回: bizType={}, bizId={}, 通知相关人员重新处理", payment.getBizType(), payment.getBizId());
+                    FinishedSettlementApprovalStatus approvalRefund = finishedSettlementApprovalStatusService.lambdaQuery()
+                            .eq(FinishedSettlementApprovalStatus::getSettlementId, payment.getBizId())
+                            .eq(FinishedSettlementApprovalStatus::getStatus, "paid")
+                            .last("LIMIT 1")
+                            .one();
+                    if (approvalRefund != null) {
+                        FinishedSettlementApprovalStatus patchRefund = new FinishedSettlementApprovalStatus();
+                        patchRefund.setSettlementId(approvalRefund.getSettlementId());
+                        patchRefund.setStatus("approved");
+                        patchRefund.setUpdateTime(LocalDateTime.now());
+                        finishedSettlementApprovalStatusService.updateById(patchRefund);
+                        log.info("[工资支付] 退回回写成品结算审批: settlementId={}, paid->approved", payment.getBizId());
+                    }
                     break;
 
                 default:
@@ -473,14 +512,13 @@ public class WagePaymentOrchestrator {
 
     private void notifyPaymentCreated(WagePayment payment) {
         try {
-            java.util.Map<String, Object> payload = java.util.Map.of(
-                "payeeId", payment.getPayeeId(),
-                "payeeName", payment.getPayeeName(),
-                "amount", payment.getAmount(),
-                "paymentMethod", payment.getPaymentMethod(),
-                "paymentNo", payment.getPaymentNo(),
-                "timestamp", System.currentTimeMillis()
-            );
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("payeeId", payment.getPayeeId());
+            payload.put("payeeName", payment.getPayeeName());
+            payload.put("amount", payment.getAmount());
+            payload.put("paymentMethod", payment.getPaymentMethod());
+            payload.put("paymentNo", payment.getPaymentNo());
+            payload.put("timestamp", System.currentTimeMillis());
             webSocketService.sendToUser(payment.getPayeeId(),
                 com.fashion.supplychain.websocket.enums.WebSocketMessageType.PAYMENT_CREATED,
                 payload);
@@ -496,14 +534,13 @@ public class WagePaymentOrchestrator {
 
     private void notifyPaymentSuccess(WagePayment payment) {
         try {
-            java.util.Map<String, Object> payload = java.util.Map.of(
-                "payeeId", payment.getPayeeId(),
-                "payeeName", payment.getPayeeName(),
-                "amount", payment.getAmount(),
-                "paymentMethod", payment.getPaymentMethod(),
-                "paymentNo", payment.getPaymentNo(),
-                "timestamp", System.currentTimeMillis()
-            );
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("payeeId", payment.getPayeeId());
+            payload.put("payeeName", payment.getPayeeName());
+            payload.put("amount", payment.getAmount());
+            payload.put("paymentMethod", payment.getPaymentMethod());
+            payload.put("paymentNo", payment.getPaymentNo());
+            payload.put("timestamp", System.currentTimeMillis());
             webSocketService.sendToUser(payment.getPayeeId(),
                 com.fashion.supplychain.websocket.enums.WebSocketMessageType.PAYMENT_SUCCESS,
                 payload);
@@ -543,6 +580,7 @@ public class WagePaymentOrchestrator {
                     .eq(MaterialReconciliation::getStatus, "approved")
                     .eq(MaterialReconciliation::getDeleteFlag, 0)
                     .orderByDesc(MaterialReconciliation::getCreateTime)
+                    .last("LIMIT 5000")
             );
             for (MaterialReconciliation r : recons) {
                 items.add(PayableItemDTO.builder()
@@ -570,6 +608,7 @@ public class WagePaymentOrchestrator {
                     .eq(ExpenseReimbursement::getStatus, "approved")
                     .eq(ExpenseReimbursement::getDeleteFlag, 0)
                     .orderByDesc(ExpenseReimbursement::getCreateTime)
+                    .last("LIMIT 5000")
             );
             for (ExpenseReimbursement e : reimbs) {
                 items.add(PayableItemDTO.builder()
@@ -595,7 +634,8 @@ public class WagePaymentOrchestrator {
                 LambdaQueryWrapper<WagePayment> psWrapper = new LambdaQueryWrapper<>();
                 psWrapper.eq(WagePayment::getBizType, "PAYROLL_SETTLEMENT")
                          .eq(WagePayment::getStatus, "pending")
-                         .eq(WagePayment::getTenantId, tenantId);
+                         .eq(WagePayment::getTenantId, tenantId)
+                         .last("LIMIT 5000");
                 List<WagePayment> psPayments = wagePaymentService.list(psWrapper);
                 for (WagePayment wp : psPayments) {
                     items.add(PayableItemDTO.builder()
@@ -622,7 +662,8 @@ public class WagePaymentOrchestrator {
                 LambdaQueryWrapper<WagePayment> osWrapper = new LambdaQueryWrapper<>();
                 osWrapper.eq(WagePayment::getBizType, "ORDER_SETTLEMENT")
                          .eq(WagePayment::getStatus, "pending")
-                         .eq(WagePayment::getTenantId, tenantId);
+                         .eq(WagePayment::getTenantId, tenantId)
+                         .last("LIMIT 5000");
                 List<WagePayment> osPayments = wagePaymentService.list(osWrapper);
                 for (WagePayment wp : osPayments) {
                     items.add(PayableItemDTO.builder()
@@ -660,7 +701,8 @@ public class WagePaymentOrchestrator {
                     .eq(BillAggregation::getDeleteFlag, 0)
                     .eq("BILL_RECEIVABLE".equals(bizType), BillAggregation::getBillType, "RECEIVABLE")
                     .eq("BILL_PAYABLE".equals(bizType), BillAggregation::getBillType, "PAYABLE")
-                    .orderByDesc(BillAggregation::getCreateTime);
+                    .orderByDesc(BillAggregation::getCreateTime)
+                    .last("LIMIT 5000");
                 List<BillAggregation> confirmedBills = billAggregationService.list(billWrapper);
                 // 聚合：相同对方 + 账单类型 + 结算月份 → 合并为一条
                 Map<String, List<BillAggregation>> grouped = confirmedBills.stream().collect(
@@ -812,6 +854,38 @@ public class WagePaymentOrchestrator {
                     log.info("[付款中心] 驳回待付款(按bizId): bizType={}, bizId={}", bizType, bizId);
                 }
             }
+
+            // 驳回后回写上游审批状态
+            try {
+                if ("PAYROLL_SETTLEMENT".equals(bizType) && bizId != null) {
+                    PayrollSettlement ps = payrollSettlementService.getById(bizId);
+                    if (ps != null && "approved".equals(ps.getStatus())) {
+                        PayrollSettlement psPatch = new PayrollSettlement();
+                        psPatch.setId(ps.getId());
+                        psPatch.setStatus("rejected");
+                        psPatch.setUpdateTime(LocalDateTime.now());
+                        payrollSettlementService.updateById(psPatch);
+                        log.info("[付款中心] 驳回回写工资结算: id={}, approved->rejected", bizId);
+                    }
+                } else if ("ORDER_SETTLEMENT".equals(bizType) && bizId != null) {
+                    FinishedSettlementApprovalStatus approval = finishedSettlementApprovalStatusService.lambdaQuery()
+                            .eq(FinishedSettlementApprovalStatus::getSettlementId, bizId)
+                            .eq(FinishedSettlementApprovalStatus::getStatus, "approved")
+                            .last("LIMIT 1")
+                            .one();
+                    if (approval != null) {
+                        FinishedSettlementApprovalStatus patch = new FinishedSettlementApprovalStatus();
+                        patch.setSettlementId(approval.getSettlementId());
+                        patch.setStatus("rejected");
+                        patch.setUpdateTime(LocalDateTime.now());
+                        finishedSettlementApprovalStatusService.updateById(patch);
+                        log.info("[付款中心] 驳回回写成品结算审批: settlementId={}, approved->rejected", bizId);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("[付款中心] 驳回回写上游失败: bizType={}, bizId={}", bizType, bizId, e);
+            }
+
             return;
         }
 
@@ -923,21 +997,75 @@ public class WagePaymentOrchestrator {
 
                 case "PAYROLL":
                 case "PAYROLL_SETTLEMENT":
-                    // 工资结算 → 付款完成后无需回写（数据来源为扫码记录聚合，不修改源数据）
-                    log.info("[付款中心] 工资结算付款完成: bizId={}", bizId);
+                    PayrollSettlement ps = payrollSettlementService.getById(bizId);
+                    if (ps != null && "approved".equals(ps.getStatus())) {
+                        PayrollSettlement psPatch = new PayrollSettlement();
+                        psPatch.setId(ps.getId());
+                        psPatch.setStatus("paid");
+                        psPatch.setUpdateTime(LocalDateTime.now());
+                        payrollSettlementService.updateById(psPatch);
+                        log.info("[付款中心] 回写工资结算为paid: id={}", bizId);
+                    }
                     break;
 
                 case "ORDER_SETTLEMENT":
-                    // 工厂订单结算 → 付款完成后无需回写（结算数据来自视图，不修改源数据）
-                    log.info("[付款中心] 工厂订单结算付款完成: bizId={}", bizId);
+                    FinishedSettlementApprovalStatus approval = finishedSettlementApprovalStatusService.lambdaQuery()
+                            .eq(FinishedSettlementApprovalStatus::getSettlementId, bizId)
+                            .eq(FinishedSettlementApprovalStatus::getStatus, "approved")
+                            .last("LIMIT 1")
+                            .one();
+                    if (approval != null) {
+                        FinishedSettlementApprovalStatus approvalPatch = new FinishedSettlementApprovalStatus();
+                        approvalPatch.setSettlementId(approval.getSettlementId());
+                        approvalPatch.setStatus("paid");
+                        approvalPatch.setUpdateTime(LocalDateTime.now());
+                        finishedSettlementApprovalStatusService.updateById(approvalPatch);
+                        log.info("[付款中心] 回写成品结算审批为paid: settlementId={}", bizId);
+                    }
+                    break;
+
+                case "SHIPMENT_RECONCILIATION":
+                    ShipmentReconciliation sr = shipmentReconciliationService.getById(bizId);
+                    if (sr != null && "approved".equals(sr.getStatus())) {
+                        ShipmentReconciliation srPatch = new ShipmentReconciliation();
+                        srPatch.setId(sr.getId());
+                        srPatch.setStatus("paid");
+                        srPatch.setUpdateTime(LocalDateTime.now());
+                        shipmentReconciliationService.updateById(srPatch);
+                        log.info("[付款中心] 回写出货对账为paid: id={}", bizId);
+                    }
                     break;
 
                 default:
                     log.warn("[付款中心] 未知业务类型: bizType={}", bizType);
             }
+
+            if (billAggregationService != null) {
+                BillAggregation bill = billAggregationService.lambdaQuery()
+                        .eq(BillAggregation::getSourceType, bizType)
+                        .eq(BillAggregation::getSourceId, bizId)
+                        .eq(BillAggregation::getDeleteFlag, 0)
+                        .last("LIMIT 1")
+                        .one();
+                if (bill != null) {
+                    BigDecimal settled = bill.getSettledAmount() != null ? bill.getSettledAmount() : BigDecimal.ZERO;
+                    BigDecimal billAmt = bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO;
+                    String newStatus = settled.compareTo(billAmt) >= 0 ? "SETTLED" : "SETTLING";
+                    if ("PENDING".equals(bill.getStatus()) || "CONFIRMED".equals(bill.getStatus())) {
+                        newStatus = settled.compareTo(billAmt) >= 0 ? "SETTLED" : "SETTLING";
+                    }
+                    bill.setStatus(newStatus);
+                    bill.setSettledAmount(billAmt);
+                    bill.setSettledAt(LocalDateTime.now());
+                    bill.setSettledById(UserContext.userId());
+                    bill.setSettledByName(UserContext.username());
+                    bill.setUpdateTime(LocalDateTime.now());
+                    billAggregationService.updateById(bill);
+                    log.info("[付款中心] 联动账单汇总: billNo={}, ->{}", bill.getBillNo(), newStatus);
+                }
+            }
         } catch (Exception e) {
             log.error("[付款中心] 回写上游状态失败: bizType={}, bizId={}", bizType, bizId, e);
-            // 不抛异常——支付已创建，回写失败可人工处理
         }
     }
 

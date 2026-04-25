@@ -562,15 +562,7 @@ public class ProductWarehousingOrchestrator {
 
         String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
 
-        boolean ok = productWarehousingService.removeById(key);
-        if (!ok) {
-            throw new IllegalStateException("删除失败");
-        }
-
-        // Decrement Stock
         if (current.getQualifiedQuantity() != null && current.getQualifiedQuantity() > 0) {
-            // 必须加载菲号才能知道 color/size，否则无法回滚正确的 SKU 库存
-            // 先尝试 bundleId，再尝试 bundleQrCode（双重兜底）
             CuttingBundle bundleForDelete = null;
             if (StringUtils.hasText(current.getCuttingBundleId())) {
                 try {
@@ -579,7 +571,6 @@ public class ProductWarehousingOrchestrator {
                     log.warn("ProductWarehousingOrchestrator.delete 加载菲号异常: bundleId={}", current.getCuttingBundleId(), e);
                 }
             }
-            // QrCode 兜底：bundleId 找不到时，尝试 bundleQrCode
             if (bundleForDelete == null && StringUtils.hasText(current.getCuttingBundleQrCode())) {
                 try {
                     bundleForDelete = cuttingBundleService.getByQrCode(current.getCuttingBundleQrCode().trim());
@@ -590,10 +581,12 @@ public class ProductWarehousingOrchestrator {
             if (bundleForDelete != null) {
                 updateSkuStock(current, null, bundleForDelete, -current.getQualifiedQuantity());
             } else {
-                log.warn("[SKUStock删除] 无法加载菲号（bundleId+bundleQrCode 均为空或查不到），SKU库存不还原: warehousingId={}, bundleId={}, bundleQrCode={}",
+                log.error("[SKUStock删除] 无法加载菲号，SKU库存无法自动恢复，需人工修复: warehousingId={}, bundleId={}, bundleQrCode={}",
                         key, current.getCuttingBundleId(), current.getCuttingBundleQrCode());
             }
         }
+
+        boolean ok = productWarehousingService.removeById(key);
 
         if (StringUtils.hasText(orderId)) {
             try {

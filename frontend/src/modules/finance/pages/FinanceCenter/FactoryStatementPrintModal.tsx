@@ -181,7 +181,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                                                 <td>{idx + 1}</td>
                                                 <td>{detail.orderNo || '-'}</td>
                                                 <td>{detail.styleNo || '-'}</td>
-                                                <td>{detail.createTime ? dayjs(detail.createTime).format('MM-DD') : '-'}</td>
+                                                <td>{(detail.warehousingEndTime || detail.deliveryDate || detail.createTime) ? dayjs(detail.warehousingEndTime || detail.deliveryDate || detail.createTime).format('MM-DD') : '-'}</td>
                                                 <td>{detail.warehousedQuantity || 0}</td>
                                                 <td>{detail.styleFinalPrice ? Number(detail.styleFinalPrice).toFixed(2) : '0.00'}</td>
                                                 <td>{detail.totalAmount ? Number(detail.totalAmount).toFixed(2) : '0.00'}</td>

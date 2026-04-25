@@ -43,7 +43,7 @@ public class MaterialReconciliationOrchestrator {
     private ProductionOrderService productionOrderService;
 
     public IPage<MaterialReconciliation> list(Map<String, Object> params) {
-        // 工厂账号不可查看物料对账（供应商维度数据，与工厂无关）
+        TenantAssert.assertTenantContext();
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
             return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
         }
@@ -56,6 +56,7 @@ public class MaterialReconciliationOrchestrator {
     }
 
     public MaterialReconciliation getById(String id) {
+        TenantAssert.assertTenantContext();
         String key = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
@@ -179,6 +180,7 @@ public class MaterialReconciliationOrchestrator {
         try {
             orders = productionOrderService.listByIds(orderIds);
         } catch (Exception e) {
+            log.warn("[MaterialReconciliation] 查询生产订单失败: {}", e.getMessage());
             orders = List.of();
         }
 
@@ -202,8 +204,12 @@ public class MaterialReconciliationOrchestrator {
     }
 
     public boolean save(MaterialReconciliation materialReconciliation) {
+        TenantAssert.assertTenantContext();
         if (materialReconciliation == null) {
             throw new IllegalArgumentException("参数错误");
+        }
+        if (materialReconciliation.getTenantId() == null) {
+            materialReconciliation.setTenantId(UserContext.tenantId());
         }
         LocalDateTime now = LocalDateTime.now();
         UserContext ctx = UserContext.get();
@@ -287,7 +293,11 @@ public class MaterialReconciliationOrchestrator {
         if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st) && !UserContext.isTopAdmin()) {
             throw new IllegalStateException("当前状态不允许删除，请先退回到上一个环节");
         }
-        boolean ok = materialReconciliationService.removeById(key);
+        MaterialReconciliation patch = new MaterialReconciliation();
+        patch.setId(key);
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(java.time.LocalDateTime.now());
+        boolean ok = materialReconciliationService.updateById(patch);
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }

@@ -47,6 +47,8 @@ public interface ProductionProcessTrackingMapper extends BaseMapper<ProductionPr
 
     List<Map<String, Object>> selectScannedQtySummaryByOrderIds(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
+    List<Map<String, Object>> selectScannedBundleCountByOrderIds(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
+
     @Delete("DELETE FROM t_production_process_tracking WHERE production_order_no = #{productionOrderNo} AND tenant_id = #{tenantId}")
     int deleteByOrderNo(@Param("productionOrderNo") String productionOrderNo, @Param("tenantId") Long tenantId);
 }

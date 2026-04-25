@@ -9,6 +9,7 @@ import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.service.PayableService;
+import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -259,7 +260,19 @@ public class PayableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
-        payableService.removeById(id);
+        Long tenantId = UserContext.tenantId();
+        Payable existing = payableService.lambdaQuery()
+                .eq(Payable::getId, id)
+                .eq(Payable::getTenantId, tenantId)
+                .one();
+        if (existing == null) {
+            throw new NoSuchElementException("应付单不存在");
+        }
+        Payable patch = new Payable();
+        patch.setId(id);
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(java.time.LocalDateTime.now());
+        payableService.updateById(patch);
     }
 
     @Transactional(rollbackFor = Exception.class)

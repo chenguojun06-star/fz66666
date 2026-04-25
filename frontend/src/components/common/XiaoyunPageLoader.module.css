@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #f8fbff 0%, #f4f7ff 100%);
+  background: var(--neutral-bg-light, #f8fbff);
 }
 
 .inline {
@@ -19,7 +19,7 @@
   gap: 14px;
   padding: 24px 32px;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--neutral-bg, rgba(255, 255, 255, 0.78));
   box-shadow: 0 16px 36px rgba(95, 129, 196, 0.12);
   backdrop-filter: blur(10px);
 }
@@ -27,13 +27,22 @@
 .title {
   font-size: 18px;
   font-weight: 700;
-  color: #2f5fa8;
+  color: var(--primary-color, #2f5fa8);
   letter-spacing: 0.02em;
 }
 
 .desc {
   font-size: 13px;
-  color: #6f82a8;
+  color: var(--neutral-text-secondary, #6f82a8);
   text-align: center;
   line-height: 1.7;
+}
+
+:root[data-theme="dark"] .wrap {
+  background: var(--neutral-bg, #1a1d24);
+}
+
+:root[data-theme="dark"] .card {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
 }

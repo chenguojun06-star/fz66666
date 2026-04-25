@@ -292,8 +292,8 @@ public class PatternProductionOrchestrator {
             sr.setProcessName(processLabel);
             sr.setProcessCode(processLabel);
             sr.setProgressStage(processLabel);
-            sr.setQuantity(1);
             int patternQty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
+            sr.setQuantity(patternQty);
             if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
                 sr.setProcessUnitPrice(unitPrice);
                 sr.setScanCost(unitPrice.multiply(BigDecimal.valueOf(patternQty)));
@@ -491,7 +491,8 @@ public class PatternProductionOrchestrator {
             sr.setProcessName(processLabel);
             sr.setProcessCode(processLabel);
             sr.setProgressStage(processLabel);
-            sr.setQuantity(1);
+            int qty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
+            sr.setQuantity(qty);
             sr.setTenantId(UserContext.tenantId());
             sr.setFactoryId(null);
             sr.setCuttingBundleNo(null);

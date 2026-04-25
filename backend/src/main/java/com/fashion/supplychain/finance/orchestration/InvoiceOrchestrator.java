@@ -9,6 +9,7 @@ import com.fashion.supplychain.finance.entity.Invoice;
 import com.fashion.supplychain.finance.entity.TaxConfig;
 import com.fashion.supplychain.finance.service.InvoiceService;
 import com.fashion.supplychain.finance.service.TaxConfigService;
+import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -193,7 +194,19 @@ public class InvoiceOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
-        invoiceService.removeById(id);
+        Long tenantId = UserContext.tenantId();
+        Invoice existing = invoiceService.lambdaQuery()
+                .eq(Invoice::getId, id)
+                .eq(Invoice::getTenantId, tenantId)
+                .one();
+        if (existing == null) {
+            throw new NoSuchElementException("发票不存在");
+        }
+        Invoice patch = new Invoice();
+        patch.setId(id);
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(java.time.LocalDateTime.now());
+        invoiceService.updateById(patch);
     }
 
     // ─── 内部方法 ────────────────────────────────────────────────────────────

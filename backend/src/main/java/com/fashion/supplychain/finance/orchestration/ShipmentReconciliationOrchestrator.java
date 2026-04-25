@@ -115,7 +115,7 @@ public class ShipmentReconciliationOrchestrator {
     }
 
     public IPage<ShipmentReconciliation> list(Map<String, Object> params) {
-        // 工厂账号不可查看出货对账（客户维度数据，与工厂无关）
+        TenantAssert.assertTenantContext();
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
             return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
         }
@@ -206,8 +206,12 @@ public class ShipmentReconciliationOrchestrator {
     }
 
     public boolean save(ShipmentReconciliation shipmentReconciliation) {
+        TenantAssert.assertTenantContext();
         if (shipmentReconciliation == null) {
             throw new IllegalArgumentException("参数错误");
+        }
+        if (shipmentReconciliation.getTenantId() == null) {
+            shipmentReconciliation.setTenantId(UserContext.tenantId());
         }
         if (!StringUtils.hasText(shipmentReconciliation.getReconciliationNo())) {
             shipmentReconciliation.setReconciliationNo(generateReconciliationNo());
@@ -360,10 +364,9 @@ public class ShipmentReconciliationOrchestrator {
 
         BigDecimal unitPrice = current.getUnitPrice() == null ? BigDecimal.ZERO : current.getUnitPrice();
         int qty = current.getQuantity() == null ? 0 : current.getQuantity();
-        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty));
-        // 净扣款 = 扣款总额 - 补款总额；最终金额 = 货款总额 - 扣款 + 补款
-        BigDecimal deductionAmount = totalDeduction.subtract(totalSupplement);
-        BigDecimal finalAmount = totalAmount.subtract(totalDeduction).add(totalSupplement);
+        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal deductionAmount = totalDeduction.subtract(totalSupplement).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal finalAmount = totalAmount.subtract(totalDeduction).add(totalSupplement).setScale(2, java.math.RoundingMode.HALF_UP);
 
         ShipmentReconciliation patch = new ShipmentReconciliation();
         patch.setId(rid);

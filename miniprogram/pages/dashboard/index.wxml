@@ -194,8 +194,11 @@
               <text class="process-name">{{node.name}}</text>
               <text class="process-pct">{{node.percent}}%</text>
             </view>
-            <view class="process-bar">
-              <view class="process-bar-fill {{node.percent >= 100 ? 'process-bar-fill--done' : ''}}" style="width:{{node.percent}}%"></view>
+            <view class="process-bar-wrap">
+              <text class="bundle-stats" wx:if="{{node.bundleInfo}}">菲号 {{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}</text>
+              <view class="process-bar">
+                <view class="process-bar-fill {{node.percent >= 100 ? 'process-bar-fill--done' : ''}}" style="width:{{node.percent}}%"></view>
+              </view>
             </view>
           </view>
         </view>

@@ -226,23 +226,14 @@ const Dashboard: React.FC = () => {
 
         {/* 错误提示 */}
         {hasError && (
-          <div style={{
-            padding: '16px 24px',
-            marginBottom: '16px',
-            background: '#fff2e8',
-            border: '1px solid #ffbb96',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <WarningOutlined style={{ color: '#fa8c16', fontSize: '18px' }} />
+          <div className="dashboard-error-alert">
+            <div className="dashboard-error-alert-content">
+              <WarningOutlined className="dashboard-error-alert-icon" />
               <div>
-                <div style={{ fontWeight: 600, color: '#d4380d', marginBottom: '4px' }}>
+                <div className="dashboard-error-alert-title">
                   数据加载失败
                 </div>
-                <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)' }}>
+                <div className="dashboard-error-alert-desc">
                   {errorMessage || '无法连接到服务器，请检查网络连接后重试'}
                 </div>
               </div>
@@ -327,8 +318,12 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="card-content">
               {recentActivities.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--neutral-text-secondary)' }}>
-                  暂无最近动态
+                <div className="dashboard-empty-state">
+                  <div className="dashboard-empty-state-icon">
+                    <InboxOutlined />
+                  </div>
+                  <div className="dashboard-empty-state-text">暂无最近动态</div>
+                  <div className="dashboard-empty-state-hint">订单和扫码记录将在这里实时显示</div>
                 </div>
               ) : (
                 <ul className="activity-list">

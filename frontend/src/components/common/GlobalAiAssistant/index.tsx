@@ -25,6 +25,7 @@ import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
 import { INITIAL_MSG, EMOJI_GROUPS, getPageSuggestions } from './constants';
 import { choose } from './helpers';
 import { useAiChat } from './useAiChat';
+import { stopAllSpeech } from './speechUtils';
 import { useDragSnap } from './useDragSnap';
 import { usePendingTasks } from './usePendingTasks';
 import MessageBubble from './MessageBubble';
@@ -450,7 +451,7 @@ const GlobalAiAssistant: React.FC = () => {
               ) : (
                 <SoundOutlined
                   className={styles.headerActionBtn}
-                  onClick={() => setIsMuted(true)}
+                  onClick={() => { setIsMuted(true); stopAllSpeech(); }}
                   title="静音"
                 />
               )}

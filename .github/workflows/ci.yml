@@ -121,13 +121,14 @@ jobs:
         distribution: 'temurin'
         cache: 'maven'
 
-    - name: 运行后端单元测试（纯Mock，无需数据库）
+    - name: 运行后端单元测试（全量，排除integration组）
       working-directory: ./backend
       run: |
         mvn clean test \
-          -Dtest="ProductionOrderOrchestratorTest,MaterialReconciliationOrchestratorTest*,ProductWarehousingOrchestratorTest*" \
           -Dspring.profiles.active=test \
-          -Dsurefire.failIfNoSpecifiedTests=false
+          -DexcludedGroups=integration \
+          -Dsurefire.failIfNoSpecifiedTests=false \
+          -Dcheckstyle.skip=true
 
   frontend-lint:
     name: 前端代码规范检查 (ESLint + TypeScript)

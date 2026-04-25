@@ -310,7 +310,7 @@ public class MaterialStockOrchestrator {
             if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 return;
             }
-            BigDecimal amount = unitPrice.multiply(BigDecimal.valueOf(quantity));
+            BigDecimal amount = unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, java.math.RoundingMode.HALF_UP);
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
                 return;
             }

@@ -255,16 +255,27 @@ const OrderManagement: React.FC = () => {
   }), [bomByType.fabric, bomByType.lining, displaySizeLabel, normalizeSizeKey, orderLines, progressNodes, selectedStyle, sizePriceRows]);
 
   const watchedFactoryId = Form.useWatch('factoryId', form) as string | undefined;
+  const watchedOrgUnitId = Form.useWatch('orgUnitId', form) as string | undefined;
   const watchedPricingMode = (Form.useWatch('pricingMode', form) as 'PROCESS' | 'SIZE' | 'COST' | 'QUOTE' | 'MANUAL' | undefined) || 'PROCESS';
   const watchedManualOrderUnitPrice = Number(Form.useWatch('manualOrderUnitPrice', form) || 0);
 
-  // 当前选中工厂的产能信息（下单时即时显示）
+  // 当前选中工厂/车间的产能信息（下单时即时显示）
   const selectedFactoryStat = useMemo(() => {
-    if (!watchedFactoryId || !factoryCapacities.length) return null;
-    const factory = factories.find(f => f.id === watchedFactoryId);
-    if (!factory) return null;
-    return factoryCapacities.find(c => c.factoryName === factory.factoryName) ?? null;
-  }, [watchedFactoryId, factoryCapacities, factories]);
+    if (!factoryCapacities.length) return null;
+    if (factoryMode === 'EXTERNAL' && watchedFactoryId) {
+      const factory = factories.find(f => f.id === watchedFactoryId);
+      if (!factory) return null;
+      return factoryCapacities.find(c => c.factoryName === factory.factoryName) ?? null;
+    }
+    if (factoryMode === 'INTERNAL' && watchedOrgUnitId) {
+      const dept = departments.find(d => d.id === watchedOrgUnitId);
+      if (!dept) return null;
+      const deptName = dept.nodeName || dept.pathNames || '';
+      if (!deptName) return null;
+      return factoryCapacities.find(c => deptName.includes(c.factoryName) || c.factoryName.includes(deptName)) ?? null;
+    }
+    return null;
+  }, [factoryMode, watchedFactoryId, watchedOrgUnitId, factoryCapacities, factories, departments]);
 
   function splitOptions(value?: string) {
     if (!value) return [] as string[];
@@ -931,9 +942,11 @@ const OrderManagement: React.FC = () => {
               </div>
               <OrderSidebarInsights
                 styleNo={selectedStyle?.styleNo}
-                factoryName={factories.find(
-                  f => String(f.id) === String(watchedFactoryId)
-                )?.factoryName}
+                factoryName={
+                  factoryMode === 'EXTERNAL'
+                    ? factories.find(f => String(f.id) === String(watchedFactoryId))?.factoryName
+                    : departments.find(d => d.id === watchedOrgUnitId)?.nodeName || departments.find(d => d.id === watchedOrgUnitId)?.pathNames
+                }
                 capacityData={selectedFactoryStat}
                 schedulingLoading={schedulingLoading}
                 schedulingPlans={schedulingPlans}

@@ -124,7 +124,7 @@ public class FinishedProductSettlementExportService {
                 cell.setCellStyle(style);
             }
         } else if (value instanceof BigDecimal) {
-            cell.setCellValue(value.toString());
+            cell.setCellValue(((BigDecimal) value).doubleValue());
             if (style != null) {
                 cell.setCellStyle(style);
             }

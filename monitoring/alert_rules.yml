@@ -1,0 +1,110 @@
+groups:
+  - name: fashion-supplychain-alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: system_cpu_usage > 0.85
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU使用率过高"
+          description: "实例 {{ $labels.instance }} CPU使用率 {{ $value | humanizePercentage }} 超过85%，持续3分钟"
+
+      - alert: CriticalCPUUsage
+        expr: system_cpu_usage > 0.95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CPU使用率严重过高"
+          description: "实例 {{ $labels.instance }} CPU使用率 {{ $value | humanizePercentage }} 超过95%，持续2分钟"
+
+      - alert: HighMemoryUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM堆内存使用率过高"
+          description: "实例 {{ $labels.instance }} JVM堆内存使用率 {{ $value | humanizePercentage }} 超过85%，持续5分钟"
+
+      - alert: CriticalMemoryUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "JVM堆内存即将耗尽"
+          description: "实例 {{ $labels.instance }} JVM堆内存使用率 {{ $value | humanizePercentage }} 超过95%，持续2分钟，可能触发OOM"
+
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) / rate(http_server_requests_seconds_count[5m]) > 0.01
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx错误率过高"
+          description: "实例 {{ $labels.instance }} 5xx错误率 {{ $value | humanizePercentage }} 超过1%，持续3分钟"
+
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API响应时间P95过高"
+          description: "实例 {{ $labels.instance }} P95响应时间 {{ $value }}s 超过3秒，持续5分钟"
+
+      - alert: DatabaseConnectionPoolNearExhaustion
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.8
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "数据库连接池使用率过高"
+          description: "实例 {{ $labels.instance }} 活跃连接占比 {{ $value | humanizePercentage }} 超过80%，持续3分钟"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "数据库连接池即将耗尽"
+          description: "实例 {{ $labels.instance }} 活跃连接占比 {{ $value | humanizePercentage }} 超过95%，持续1分钟"
+
+      - alert: ApplicationDown
+        expr: up{job="fashion-supplychain"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "应用实例不可达"
+          description: "实例 {{ $labels.instance }} 已离线超过1分钟"
+
+      - alert: HighThreadCount
+        expr: jvm_threads_live_threads > 400
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM线程数过多"
+          description: "实例 {{ $labels.instance }} 活跃线程数 {{ $value }} 超过400，持续5分钟"
+
+      - alert: RedisConnectionFailure
+        expr: increase(hikaricp_connections_timeout_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "数据库连接超时"
+          description: "实例 {{ $labels.instance }} 最近5分钟内发生 {{ $value }} 次连接超时"
+
+      - alert: TooMany4xxErrors
+        expr: rate(http_server_requests_seconds_count{status=~"4.."}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "4xx错误请求过多"
+          description: "实例 {{ $labels.instance }} 4xx请求速率 {{ $value }}/s 超过10/s，可能遭受攻击"

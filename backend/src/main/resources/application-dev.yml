@@ -19,7 +19,16 @@ wechat:
   mini-program:
     mock-enabled: true
 
-# 日志级别调整为 DEBUG 便于开发调试
+ai:
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:}
+  doubao:
+    api-key: ${DOUBAO_API_KEY:}
+  gateway:
+    litellm:
+      enabled: ${AI_LITELLM_ENABLED:false}
+      base-url: ${AI_LITELLM_BASE_URL:}
+
 logging:
   level:
     com.fashion.supplychain: debug

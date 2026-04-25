@@ -81,11 +81,16 @@ public class PayrollSettlementOrchestrator {
     }
 
     public PayrollSettlement detail(String id) {
+        TenantAssert.assertTenantContext();
         String sid = TextUtils.safeText(id);
         if (!StringUtils.hasText(sid)) {
             throw new IllegalArgumentException("参数错误");
         }
-        PayrollSettlement settlement = payrollSettlementService.getDetailById(sid);
+        Long tenantId = UserContext.tenantId();
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, sid)
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .one();
         if (settlement == null) {
             throw new NoSuchElementException("工资结算单不存在");
         }
@@ -93,9 +98,17 @@ public class PayrollSettlementOrchestrator {
     }
 
     public List<PayrollSettlementItem> items(String settlementId) {
+        TenantAssert.assertTenantContext();
         String sid = TextUtils.safeText(settlementId);
         if (!StringUtils.hasText(sid)) {
             throw new IllegalArgumentException("参数错误");
+        }
+        PayrollSettlement settlement = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getId, sid)
+                .eq(PayrollSettlement::getTenantId, UserContext.tenantId())
+                .one();
+        if (settlement == null) {
+            throw new NoSuchElementException("工资结算单不存在");
         }
         return payrollSettlementItemService.lambdaQuery()
                 .eq(PayrollSettlementItem::getSettlementId, sid)
@@ -104,10 +117,11 @@ public class PayrollSettlementOrchestrator {
                 .list();
     }
 
+    private static final List<String> PAYROLL_SCAN_TYPES = List.of("production", "cutting", "pattern");
+
     public List<Map<String, Object>> operatorSummary(Map<String, Object> params) {
         PayrollQuery q = parseQuery(params, true, true);
 
-        // 权限控制：普通员工只能查看自己的工资数据，管理员/主管可查看全部
         if (UserContext.isWorker()) {
             String currentUserId = UserContext.userId();
             if (org.springframework.util.StringUtils.hasText(currentUserId)) {
@@ -116,6 +130,8 @@ public class PayrollSettlementOrchestrator {
             }
         }
 
+        List<String> effectiveScanTypes = StringUtils.hasText(q.scanType) ? null : PAYROLL_SCAN_TYPES;
+
         List<Map<String, Object>> rows = scanRecordMapper.selectPayrollAggregation(
                 q.orderId,
                 q.orderNo,
@@ -123,6 +139,7 @@ public class PayrollSettlementOrchestrator {
                 q.operatorId,
                 q.operatorName,
                 q.scanType,
+                effectiveScanTypes,
                 q.processName,
                 q.startTime,
                 q.endTime,
@@ -170,7 +187,8 @@ public class PayrollSettlementOrchestrator {
                 q.operatorId,
                 q.operatorName,
                 q.scanType,
-                null,
+                PAYROLL_SCAN_TYPES,
+                q.processName,
                 q.startTime,
                 q.endTime,
                 q.includeSettled,
@@ -256,7 +274,8 @@ public class PayrollSettlementOrchestrator {
                 .set(ScanRecord::getPayrollSettlementId, settlement.getId())
                 .set(ScanRecord::getUpdateTime, now)
                 .eq(ScanRecord::getScanResult, "success")
-                .gt(ScanRecord::getQuantity, 0);
+                .gt(ScanRecord::getQuantity, 0)
+                .eq(ScanRecord::getTenantId, UserContext.tenantId());
 
         if (!q.includeSettled) {
             uw.and(w -> w.isNull(ScanRecord::getPayrollSettlementId)
@@ -448,6 +467,7 @@ public class PayrollSettlementOrchestrator {
         try {
             return Integer.parseInt(v);
         } catch (Exception e) {
+            log.debug("[PayrollSettlement] parseInt failed: {}", v);
             return null;
         }
     }
@@ -469,6 +489,7 @@ public class PayrollSettlementOrchestrator {
         try {
             return new BigDecimal(v);
         } catch (Exception e) {
+            log.debug("[PayrollSettlement] parseBigDecimal failed: {}", v);
             return null;
         }
     }
@@ -501,6 +522,7 @@ public class PayrollSettlementOrchestrator {
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "工资结算单");
         if (!"pending".equalsIgnoreCase(settlement.getStatus())) {
             throw new IllegalStateException("当前状态不允许审核，只有待审核(pending)状态可以审核通过");
         }
@@ -528,10 +550,12 @@ public class PayrollSettlementOrchestrator {
 
         // 确认关联扫码记录的结算状态（payrollSettlementId 已在 generate() 时绑定）
         // 审核通过后 payrollSettlementId 保持不变，undo 操作会据此阻止撤回
+        Long tenantId = UserContext.tenantId();
         LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
                 .set(ScanRecord::getSettlementStatus, "payroll_approved")
                 .set(ScanRecord::getUpdateTime, now)
-                .eq(ScanRecord::getPayrollSettlementId, settlementId.trim());
+                .eq(ScanRecord::getPayrollSettlementId, settlementId.trim())
+                .eq(tenantId != null, ScanRecord::getTenantId, tenantId);
         scanRecordMapper.update(new ScanRecord(), scanUw);
 
         log.info("[PayrollApprove] 工资结算单审核通过: id={}, confirmerId={}", settlementId, confirmerId);
@@ -570,6 +594,7 @@ public class PayrollSettlementOrchestrator {
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "工资结算单");
         if (!"pending".equalsIgnoreCase(settlement.getStatus())) {
             throw new IllegalStateException("当前状态不允许取消，只有待审核(pending)状态可以取消");
         }
@@ -581,16 +606,12 @@ public class PayrollSettlementOrchestrator {
                 .eq(PayrollSettlement::getId, settlementId.trim());
         payrollSettlementService.update(settlementUw);
 
-        // 释放已关联的扫码记录（清除 payrollSettlementId 和 settlementStatus）
-        ScanRecord release = new ScanRecord();
-        release.setPayrollSettlementId("");
-        release.setSettlementStatus("");
-        release.setUpdateTime(LocalDateTime.now());
         LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
                 .set(ScanRecord::getPayrollSettlementId, null)
                 .set(ScanRecord::getSettlementStatus, null)
                 .set(ScanRecord::getUpdateTime, LocalDateTime.now())
-                .eq(ScanRecord::getPayrollSettlementId, settlementId.trim());
+                .eq(ScanRecord::getPayrollSettlementId, settlementId.trim())
+                .eq(settlement.getTenantId() != null, ScanRecord::getTenantId, settlement.getTenantId());
         scanRecordMapper.update(new ScanRecord(), scanUw);
 
         try {
@@ -618,6 +639,7 @@ public class PayrollSettlementOrchestrator {
         if (settlement == null) {
             throw new NoSuchElementException("结算单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "工资结算单");
         if (!"cancelled".equalsIgnoreCase(settlement.getStatus())) {
             throw new IllegalStateException("只允许删除已取消(cancelled)的结算单，请先取消");
         }

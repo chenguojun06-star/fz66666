@@ -77,8 +77,11 @@ public class FinishedProductSettlementController {
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) String factoryId
     ) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         Page<FinishedProductSettlement> pageObj = new Page<>(page, pageSize);
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(FinishedProductSettlement::getTenantId, tenantId);
 
         // 订单号模糊查询
         if (StringUtils.isNotBlank(orderNo)) {
@@ -134,6 +137,7 @@ public class FinishedProductSettlementController {
     public Result<FinishedProductSettlement> getByOrderNo(@PathVariable String orderNo) {
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(FinishedProductSettlement::getOrderNo, orderNo);
+        wrapper.eq(FinishedProductSettlement::getTenantId, UserContext.tenantId());
         FinishedProductSettlement settlement = settlementService.getOne(wrapper);
 
         if (settlement == null) {
@@ -292,7 +296,10 @@ public class FinishedProductSettlementController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(FinishedProductSettlement::getTenantId, tenantId);
 
         if (StringUtils.isNotBlank(factoryName)) {
             wrapper.like(FinishedProductSettlement::getFactoryName, factoryName);

@@ -194,6 +194,7 @@ app:
       - "127."
       - "0:0:0:0:0:0:0:1"
       - "::1"
+    pii-encryption-key: ${APP_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*,http://172.16.*.*:*,http://172.17.*.*:*,http://172.18.*.*:*,http://172.19.*.*:*,http://172.20.*.*:*,http://172.21.*.*:*,http://172.22.*.*:*,http://172.23.*.*:*,http://172.24.*.*:*,http://172.25.*.*:*,http://172.26.*.*:*,http://172.27.*.*:*,http://172.28.*.*:*,http://172.29.*.*:*,http://172.30.*.*:*,http://172.31.*.*:*,https://*.vercel.app}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
@@ -203,6 +204,10 @@ app:
     ai-daily-advice-warn-threshold-ms: ${APP_PERF_AI_DAILY_ADVICE_WARN_THRESHOLD_MS:5000}
     redis-delete-pattern-warn-threshold-ms: ${APP_PERF_REDIS_DELETE_PATTERN_WARN_THRESHOLD_MS:2000}
     production-order-query-warn-threshold-ms: ${APP_PERF_PRODUCTION_ORDER_QUERY_WARN_THRESHOLD_MS:2500}
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED:true}
+    default-max-requests: ${APP_RATE_LIMIT_DEFAULT_MAX:200}
+    default-window-seconds: ${APP_RATE_LIMIT_DEFAULT_WINDOW:60}
 
 springdoc:
   api-docs:
@@ -349,3 +354,53 @@ xiaoyun:
 serpapi:
   api-key: ${SERPAPI_KEY:}
   enabled: ${SERPAPI_ENABLED:false}
+
+tts:
+  provider: ${TTS_PROVIDER:edge}
+  azure:
+    subscription-key: ${TTS_AZURE_SUBSCRIPTION_KEY:}
+    region: ${TTS_AZURE_REGION:eastasia}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 80
+        slow-call-duration-threshold: 5s
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        minimum-number-of-calls: 5
+    instances:
+      database:
+        base-config: default
+        failure-rate-threshold: 60
+        slow-call-duration-threshold: 3s
+        wait-duration-in-open-state: 20s
+      aiService:
+        base-config: default
+        failure-rate-threshold: 70
+        slow-call-duration-threshold: 30s
+        wait-duration-in-open-state: 60s
+      paymentService:
+        base-config: default
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 10s
+        wait-duration-in-open-state: 30s
+      logisticsService:
+        base-config: default
+        failure-rate-threshold: 60
+        slow-call-duration-threshold: 15s
+        wait-duration-in-open-state: 60s
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 10s
+    instances:
+      aiService:
+        timeout-duration: 90s
+      paymentService:
+        timeout-duration: 30s
+      logisticsService:
+        timeout-duration: 15s

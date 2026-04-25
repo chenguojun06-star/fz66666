@@ -216,16 +216,16 @@ public class ProductOutstockOrchestrator {
         // 恢复SKU库存（出库时扣减了，删除时要加回来）
         int qty = current.getOutstockQuantity() != null ? current.getOutstockQuantity() : 0;
         if (qty > 0 && StringUtils.hasText(orderId)) {
-            ProductionOrder order = productionOrderService.getById(orderId);
-            if (order != null) {
-                String styleNo = StringUtils.hasText(current.getStyleNo()) ? current.getStyleNo() : order.getStyleNo();
-                String color = order.getColor();
-                String size = order.getSize();
-                if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                    String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
-                    productSkuService.updateStock(skuCode, qty);
-                    log.info("Restored SKU stock after outstock delete: skuCode={}, qty={}", skuCode, qty);
-                }
+            String styleNo = current.getStyleNo();
+            String color = current.getColor();
+            String size = current.getSize();
+            if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                productSkuService.updateStock(skuCode, qty);
+                log.info("Restored SKU stock after outstock delete: skuCode={}, qty={}", skuCode, qty);
+            } else {
+                log.warn("[出库删除] 出库记录缺少color/size，跳过SKU库存恢复: id={}, styleNo={}, color={}, size={}",
+                        current.getId(), styleNo, color, size);
             }
         }
 

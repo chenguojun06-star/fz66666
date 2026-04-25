@@ -279,6 +279,9 @@ public class ProductionOrder {
     @TableField(exist = false)
     private Integer cuttingBundleCount;
 
+    @TableField(exist = false)
+    private Map<String, Integer> stageScannedBundleCount;
+
     /**
      * 裁剪任务详情（用于判断裁剪是否真正完成）
      * 包含 receivedTime, bundledTime, status 等字段

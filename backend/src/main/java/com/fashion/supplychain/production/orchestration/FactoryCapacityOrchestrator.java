@@ -7,6 +7,8 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.service.FactoryService;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,9 @@ public class FactoryCapacityOrchestrator {
     @Autowired
     private ScanRecordService scanRecordService;
 
+    @Autowired
+    private FactoryService factoryService;
+
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
@@ -56,14 +61,12 @@ public class FactoryCapacityOrchestrator {
         private int totalQuantity;
         private int atRiskCount;
         private int overdueCount;
-        /** 这年内货期完成率 0-100，-1 表示这年内无完工记录 */
         private int deliveryOnTimeRate;
-        /** 近30天活跃生产人数（有扫码记录的不同操作员） */
         private int activeWorkers;
-        /** 近30天日均产量（件/天） */
         private double avgDailyOutput;
-        /** 预计完工天数（在制总件数 ÷ 日均产量），-1表示无产量数据 */
         private int estimatedCompletionDays;
+        private int matchScore;
+        private String capacitySource;
     }
 
     /**
@@ -74,7 +77,6 @@ public class FactoryCapacityOrchestrator {
     public List<FactoryCapacityItem> getFactoryCapacity() {
         Long tenantId = UserContext.tenantId();
 
-        // 尝试从Redis缓存读取
         if (stringRedisTemplate != null && tenantId != null) {
             try {
                 String cacheKey = CACHE_KEY_PREFIX + tenantId;
@@ -90,22 +92,45 @@ public class FactoryCapacityOrchestrator {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 查询进行中（非 completed）且未删除的订单
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId)
           .notIn("status", OrderStatusConstants.TERMINAL_STATUSES)
           .eq("delete_flag", 0)
           .isNotNull("factory_name")
           .ne("factory_name", "");
-
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
-        // 按工厂分组统计
         Map<String, List<ProductionOrder>> grouped = orders.stream()
             .collect(Collectors.groupingBy(o ->
                 o.getFactoryName() == null ? "未指定工厂" : o.getFactoryName().trim()
             ));
 
+        List<FactoryCapacityItem> result = buildCapacityItems(grouped, now);
+
+        fillDeliveryOnTimeRate(result, tenantId, now);
+
+        fillScanBasedCapacity(orders, result, now);
+
+        fillDailyCapacityFallback(result, tenantId);
+
+        calculateMatchScore(result);
+
+        result.sort(Comparator.comparingInt(FactoryCapacityItem::getMatchScore).reversed());
+
+        if (stringRedisTemplate != null && tenantId != null) {
+            try {
+                String cacheKey = CACHE_KEY_PREFIX + tenantId;
+                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                stringRedisTemplate.opsForValue().set(cacheKey, om.writeValueAsString(result), CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.debug("[工厂产能] 缓存写入失败: {}", e.getMessage());
+            }
+        }
+
+        return result;
+    }
+
+    private List<FactoryCapacityItem> buildCapacityItems(Map<String, List<ProductionOrder>> grouped, LocalDateTime now) {
         List<FactoryCapacityItem> result = new ArrayList<>();
         for (Map.Entry<String, List<ProductionOrder>> entry : grouped.entrySet()) {
             List<ProductionOrder> group = entry.getValue();
@@ -123,8 +148,10 @@ public class FactoryCapacityOrchestrator {
                 .count());
             result.add(item);
         }
+        return result;
+    }
 
-        // 查询这年内完工订单，计算货期完成率
+    private void fillDeliveryOnTimeRate(List<FactoryCapacityItem> result, Long tenantId, LocalDateTime now) {
         LocalDateTime yearAgo = now.minusDays(365);
         QueryWrapper<ProductionOrder> doneQw = new QueryWrapper<>();
         doneQw.eq("tenant_id", tenantId)
@@ -136,8 +163,8 @@ public class FactoryCapacityOrchestrator {
               .isNotNull("planned_end_date")
               .ge("actual_end_date", yearAgo);
         List<ProductionOrder> completedOrders = productionOrderService.list(doneQw);
-        // 按工厂分组，计算 actualEndDate <= plannedEndDate 的比例
-        Map<String, long[]> onTimeStats = new HashMap<>(); // key=factoryName, [0]=总数 [1]=按时数
+
+        Map<String, long[]> onTimeStats = new HashMap<>();
         for (ProductionOrder o : completedOrders) {
             String fn = o.getFactoryName().trim();
             onTimeStats.computeIfAbsent(fn, k -> new long[]{0, 0});
@@ -147,10 +174,6 @@ public class FactoryCapacityOrchestrator {
             }
         }
 
-        // 按订单数降序排列
-        result.sort(Comparator.comparingInt(FactoryCapacityItem::getTotalOrders).reversed());
-
-        // 回填货期完成率
         for (FactoryCapacityItem item : result) {
             long[] stats = onTimeStats.get(item.getFactoryName());
             if (stats == null || stats[0] == 0) {
@@ -159,22 +182,73 @@ public class FactoryCapacityOrchestrator {
                 item.setDeliveryOnTimeRate((int) Math.round(stats[1] * 100.0 / stats[0]));
             }
         }
+    }
 
-        // 基于扫码记录计算生产人数、日均产量、预计完工天数
-        fillScanBasedCapacity(orders, result, now);
+    private void fillDailyCapacityFallback(List<FactoryCapacityItem> result, Long tenantId) {
+        if (tenantId == null) return;
+        try {
+            QueryWrapper<Factory> fqw = new QueryWrapper<>();
+            fqw.eq("tenant_id", tenantId);
+            List<Factory> factories = factoryService.list(fqw);
+            Map<String, Factory> factoryByName = factories.stream()
+                .filter(f -> f.getFactoryName() != null)
+                .collect(Collectors.toMap(Factory::getFactoryName, f -> f, (a, b) -> a));
 
-        // 写入Redis缓存
-        if (stringRedisTemplate != null && tenantId != null) {
-            try {
-                String cacheKey = CACHE_KEY_PREFIX + tenantId;
-                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
-                stringRedisTemplate.opsForValue().set(cacheKey, om.writeValueAsString(result), CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-            } catch (Exception e) {
-                log.debug("[工厂产能] 缓存写入失败: {}", e.getMessage());
+            for (FactoryCapacityItem item : result) {
+                if (item.getAvgDailyOutput() > 0) {
+                    item.setCapacitySource("real");
+                    continue;
+                }
+                Factory f = factoryByName.get(item.getFactoryName());
+                if (f != null && f.getDailyCapacity() != null && f.getDailyCapacity() > 0 && f.getDailyCapacity() != 500) {
+                    item.setAvgDailyOutput(f.getDailyCapacity().doubleValue());
+                    item.setCapacitySource("configured");
+                    if (item.getTotalQuantity() > 0) {
+                        item.setEstimatedCompletionDays((int) Math.ceil(item.getTotalQuantity() / f.getDailyCapacity().doubleValue()));
+                    }
+                } else {
+                    item.setCapacitySource(item.getActiveWorkers() > 0 ? "real" : "none");
+                }
             }
+        } catch (Exception e) {
+            log.warn("[工厂产能] 日产能fallback查询失败: {}", e.getMessage());
         }
+    }
 
-        return result;
+    private void calculateMatchScore(List<FactoryCapacityItem> result) {
+        for (FactoryCapacityItem item : result) {
+            int capacityScore = calcCapacityScore(item);
+            int onTimeScore = calcOnTimeScore(item);
+            int loadScore = calcLoadScore(item);
+            int qualityScore = calcQualityScore(item);
+            item.setMatchScore(Math.min(100, capacityScore + onTimeScore + loadScore + qualityScore));
+        }
+    }
+
+    private int calcCapacityScore(FactoryCapacityItem item) {
+        if (item.getAvgDailyOutput() <= 0) return 5;
+        double ratio = item.getTotalQuantity() > 0
+            ? Math.min(1.0, item.getAvgDailyOutput() * 30.0 / item.getTotalQuantity())
+            : 1.0;
+        return (int) (ratio * 40);
+    }
+
+    private int calcOnTimeScore(FactoryCapacityItem item) {
+        if (item.getDeliveryOnTimeRate() < 0) return 18;
+        return (int) (item.getDeliveryOnTimeRate() / 100.0 * 30);
+    }
+
+    private int calcLoadScore(FactoryCapacityItem item) {
+        if (item.getTotalOrders() == 0) return 20;
+        int overdueRatio = item.getOverdueCount() * 100 / Math.max(1, item.getTotalOrders());
+        return Math.max(0, 20 - overdueRatio);
+    }
+
+    private int calcQualityScore(FactoryCapacityItem item) {
+        if (item.getActiveWorkers() <= 0 && item.getAvgDailyOutput() <= 0) return 3;
+        if (item.getActiveWorkers() >= 5) return 10;
+        if (item.getActiveWorkers() >= 2) return 7;
+        return 5;
     }
 
     /**

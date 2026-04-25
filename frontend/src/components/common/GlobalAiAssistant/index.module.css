@@ -16,8 +16,8 @@
 }
 
 .chatPanel {
-  width: 560px;
-  height: 760px;
+  width: 640px;
+  height: 820px;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 12px 32px rgba(0, 83, 204, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -31,7 +31,7 @@
 
 .panelHeader {
   height: 90px;
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae0ff 100%);
+  background: #1f5fcb;
   display: flex;
   align-items: center;
   padding: 0 20px;
@@ -65,13 +65,13 @@
 .headerTitle {
   font-size: 18px;
   font-weight: 600;
-  color: #003a8c;
+  color: #ffffff;
   margin-bottom: 4px;
 }
 
 .headerSubtitle {
   font-size: 14px;
-  color: #096dd9;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .headerActions {
@@ -83,7 +83,7 @@
 
 .headerActionBtn {
   font-size: 16px;
-  color: #69c0ff;
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   transition: all 0.2s;
   padding: 4px;
@@ -91,8 +91,8 @@
 }
 
 .headerActionBtn:hover {
-  color: #0050b3;
-  background: rgba(0, 80, 179, 0.08);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .headerActionBtn.closeBtnIcon:hover {
@@ -299,3 +299,79 @@
 .actionBtnPrimary:hover { background: #096dd9; }
 .actionBtnDanger { background: #ff7875; color: #fff; }
 .actionBtnDanger:hover { background: #cf1322; }
+
+/* ── Dark theme ── */
+:root[data-theme="dark"] .chatPanel {
+  background: #1a1d24;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="dark"] .panelHeader {
+  background: #0d2847;
+}
+:root[data-theme="dark"] .headerTitle { color: #e0e8f0; }
+:root[data-theme="dark"] .headerSubtitle { color: rgba(255, 255, 255, 0.55); }
+:root[data-theme="dark"] .headerActionBtn {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.65);
+}
+:root[data-theme="dark"] .headerActionBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+:root[data-theme="dark"] .chatArea {
+  background: rgba(0, 0, 0, 0.15);
+}
+:root[data-theme="dark"] .inputArea {
+  background: #1a1d24;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+:root[data-theme="dark"] .chatInput {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+}
+:root[data-theme="dark"] .chatInput:focus {
+  border-color: #6ba3ff;
+  box-shadow: 0 0 0 2px rgba(107, 163, 255, 0.15);
+}
+:root[data-theme="dark"] .chatInput::placeholder { color: rgba(255, 255, 255, 0.25); }
+:root[data-theme="dark"] .sendBtn {
+  background: #6ba3ff;
+}
+:root[data-theme="dark"] .sendBtn:hover { background: #85b5ff; }
+:root[data-theme="dark"] .sendBtn:disabled { background: rgba(255, 255, 255, 0.08); }
+:root[data-theme="dark"] .uploadBtn {
+  color: rgba(255, 255, 255, 0.45);
+}
+:root[data-theme="dark"] .uploadBtn:hover { color: #6ba3ff; }
+:root[data-theme="dark"] .voiceBtn { color: rgba(255, 255, 255, 0.45); }
+:root[data-theme="dark"] .voiceBtn:hover { color: #6ba3ff; }
+:root[data-theme="dark"] .voiceBtn.recording { color: #ff7875; }
+:root[data-theme="dark"] .attachChip {
+  background: rgba(45, 127, 249, 0.12);
+  border-color: rgba(45, 127, 249, 0.25);
+  color: #6ba3ff;
+}
+:root[data-theme="dark"] .actionBtnPrimary { background: #6ba3ff; color: #1a1d24; }
+:root[data-theme="dark"] .actionBtnPrimary:hover { background: #85b5ff; }
+:root[data-theme="dark"] .actionBtnDanger { background: #ff7875; color: #1a1d24; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 640px) {
+  .chatPanel {
+    width: calc(100vw - 16px) !important;
+    height: calc(100vh - 100px) !important;
+    bottom: 8px !important;
+    right: 8px !important;
+    border-radius: 16px;
+  }
+}
+@media (max-width: 480px) {
+  .chatPanel {
+    width: 100vw !important;
+    height: 100vh !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    border-radius: 0;
+  }
+}

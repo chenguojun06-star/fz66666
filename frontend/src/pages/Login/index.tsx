@@ -27,8 +27,6 @@ const Login: React.FC = () => {
   const { login, loginWithSms, sendLoginSmsCode } = useAuthState();
   const { language } = useAppLanguage();
   const [submitting, setSubmitting] = useState(false);
-  // 当前固定使用账号密码登录；短信登录分支保留在代码中但 UI 切换按钮已移除，
-  // 因此 setter 暂时用不到，使用 _ 前缀规避 eslint no-unused-vars（保留类型以便日后恢复）。
   const [loginMode, _setLoginMode] = useState<LoginMode>('password');
   const [smsSending, setSmsSending] = useState(false);
   const [smsCountdown, setSmsCountdown] = useState(0);
@@ -44,25 +42,20 @@ const Login: React.FC = () => {
     return d.toLocaleString('zh-CN', { hour12: false });
   }, [buildTime]);
 
-  // 租户列表
   const [tenantsLoading, setTenantsLoading] = useState(true);
-  // 当前选中的租户（搜索选中后锁定）
   const [selectedTenant, setSelectedTenant] = useState<TenantOption | null>(null);
   const tenantsRef = useRef<TenantOption[]>([]);
 
-  // 加载租户列表
   const loadTenants = useCallback(async () => {
     setTenantsLoading(true);
     try {
       const res = await api.get('/system/tenant/public-list', { timeout: 8000, retry: -1 } as any) as { code?: number; data?: TenantOption[] };
       if (res?.code === 200 && Array.isArray(res.data)) {
         tenantsRef.current = res.data;
-        // 如果只有一个租户，自动选中
         if (res.data.length === 1) {
           setSelectedTenant(res.data[0]);
           form.setFieldsValue({ companySearch: res.data[0].tenantName, tenantId: res.data[0].id });
         } else {
-          // 尝试恢复上次选择的租户
           const lastTenantId = localStorage.getItem('lastTenantId');
           if (lastTenantId) {
             const numId = Number(lastTenantId);
@@ -110,17 +103,14 @@ const Login: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [smsCountdown]);
 
-  // AutoComplete 搜索过滤
   const [searchOptions, setSearchOptions] = useState<{ value: string; label: React.ReactNode; key: number }[]>([]);
 
   const handleSearch = useCallback((text: string) => {
-    // 如果用户正在编辑已选中的公司名，清除选中状态
     if (selectedTenant && text !== selectedTenant.tenantName) {
       setSelectedTenant(null);
       form.setFieldsValue({ tenantId: undefined });
     }
     if (!text || !text.trim()) {
-      // 空输入不显示任何选项，避免默认展开全部
       setSearchOptions([]);
       return;
     }
@@ -134,13 +124,11 @@ const Login: React.FC = () => {
     if (tenant) {
       setSelectedTenant(tenant);
       form.setFieldsValue({ tenantId: tenant.id, companySearch: tenant.tenantName });
-      // 记住选择
       localStorage.setItem('lastTenantId', String(tenant.id));
       localStorage.setItem('lastTenantName', tenant.tenantName);
     }
   }, [form]);
 
-  // 登录表单提交处理
   const handleSendSmsCode = useCallback(async () => {
     if (smsSending || smsCountdown > 0) return;
     if (!selectedTenant) {
@@ -216,102 +204,49 @@ const Login: React.FC = () => {
       <div className="login-left-pane">
         <div className="tech-bg" aria-hidden="true">
           <div className="tech-grid" />
-          <div className="tech-world-map" />
-          <div className="tech-glow-left" />
-          <div className="tech-glow-right" />
-          <div className="tech-arc tech-arc-1" />
-          <div className="tech-arc tech-arc-2" />
-          <div className="tech-arc tech-arc-3" />
-          <span className="tech-node tech-node-1" />
-          <span className="tech-node tech-node-2" />
-          <span className="tech-node tech-node-3" />
-          <span className="tech-node tech-node-4" />
-          <span className="tech-node tech-node-5" />
-          <span className="tech-node tech-node-6" />
+          <div className="tech-glow-center" />
         </div>
         <section className="login-showcase">
-          <div className="login-showcase-shell">
-            <div className="login-showcase-copy">
-              <div className="login-kicker">MARS｜云裳协同管理</div>
-              <Title level={2} className="login-showcase-title">
-                云裳智链多端协同
-              </Title>
-              <div className="login-showcase-desc">
-                多厂协同管理, 实时数据看板 ,让交付变得更轻松.
+          <div className="login-showcase-visual">
+            <div className="tech-core-container">
+              <div className="tech-ring ring-1"></div>
+              <div className="tech-ring ring-2"></div>
+              <div className="tech-halo"></div>
+              <div className="tech-core tech-core--cloud">
+                <div className="tech-cloud-glow" />
+                <div className="tech-cloud">
+                  <span className="tech-cloud__part tech-cloud__part--left" />
+                  <span className="tech-cloud__part tech-cloud__part--center" />
+                  <span className="tech-cloud__part tech-cloud__part--right" />
+                  <span className="tech-cloud__base" />
+                  <span className="tech-cloud__eye tech-cloud__eye--left">
+                    <span className="tech-cloud__eye-highlight tech-cloud__eye-highlight--left" />
+                  </span>
+                  <span className="tech-cloud__eye tech-cloud__eye--right">
+                    <span className="tech-cloud__eye-highlight tech-cloud__eye-highlight--right" />
+                  </span>
+                  <span className="tech-cloud__smile" />
+                  <span className="tech-cloud__spark tech-cloud__spark--left" />
+                  <span className="tech-cloud__spark tech-cloud__spark--right" />
+                </div>
               </div>
-            </div>
-            <div className="login-showcase-visual">
-              <div className="tech-core-container">
-                <div className="tech-ring ring-1"></div>
-                <div className="tech-ring ring-2"></div>
-                <div className="tech-ring ring-3"></div>
-                <div className="tech-orbit orbit-a"></div>
-                <div className="tech-orbit orbit-b"></div>
-                <div className="tech-orbit orbit-c"></div>
-                <div className="tech-halo"></div>
-                <div className="tech-axis tech-axis-x"></div>
-                <div className="tech-axis tech-axis-y"></div>
-                <div className="signal-node signal-node-1"></div>
-                <div className="signal-node signal-node-2"></div>
-                <div className="signal-node signal-node-3"></div>
-                <div className="signal-node signal-node-4"></div>
-                <div className="tech-float-card tech-float-card-top">
-                  <span className="tech-float-label">订单在线</span>
-                  <strong className="tech-float-value">24h</strong>
-                </div>
-                <div className="tech-float-card tech-float-card-left">
-                  <span className="tech-float-label">排产协同</span>
-                  <strong className="tech-float-value">AI Flow</strong>
-                </div>
-                <div className="tech-float-card tech-float-card-right">
-                  <span className="tech-float-label">质检追踪</span>
-                  <strong className="tech-float-value">Live</strong>
-                </div>
-                <div className="tech-core tech-core--cloud">
-                  <div className="tech-cloud-glow" />
-                  <div className="tech-cloud">
-                    <span className="tech-cloud__part tech-cloud__part--left" />
-                    <span className="tech-cloud__part tech-cloud__part--center" />
-                    <span className="tech-cloud__part tech-cloud__part--right" />
-                    <span className="tech-cloud__base" />
-                    <span className="tech-cloud__eye tech-cloud__eye--left">
-                      <span className="tech-cloud__eye-highlight tech-cloud__eye-highlight--left" />
-                    </span>
-                    <span className="tech-cloud__eye tech-cloud__eye--right">
-                      <span className="tech-cloud__eye-highlight tech-cloud__eye-highlight--right" />
-                    </span>
-                    <span className="tech-cloud__smile" />
-                    <span className="tech-cloud__spark tech-cloud__spark--left" />
-                    <span className="tech-cloud__spark tech-cloud__spark--right" />
-                  </div>
-                </div>
-                <div className="small-ai-badge">AI</div>
-              </div>
+              <div className="small-ai-badge">AI</div>
             </div>
           </div>
-          <div className="login-showcase-highlights">
-            <div className="showcase-highlight-card">
-              <span className="highlight-label">统一视图</span>
-              <strong className="highlight-value">订单 / 产能 / 交付</strong>
-            </div>
-            <div className="showcase-highlight-card">
-              <span className="highlight-label">核心能力</span>
-              <strong className="highlight-value">在线协同 · 智能预警</strong>
-            </div>
-            <div className="showcase-highlight-card">
-              <span className="highlight-label">管理目标</span>
-              <strong className="highlight-value">提升履约确定性</strong>
+          <div className="login-showcase-copy">
+            <div className="login-tag">MARS｜云裳协同管理</div>
+            <div className="login-showcase-desc">
+              多厂协同 · 实时看板 · 智能预警
             </div>
           </div>
         </section>
       </div>
 
+      <div className="login-divider" aria-hidden="true" />
+
       <div className="login-right-pane">
-        <div className="login-panel-glow" aria-hidden="true" />
         <div className="login-form-wrapper">
           <div className="login-form-card">
-            <div className="login-card-accent login-card-accent-top" aria-hidden="true" />
-            <div className="login-card-accent login-card-accent-bottom" aria-hidden="true" />
             <div className="login-header">
               <Title level={2} className="login-title">
                 云裳智链
@@ -325,9 +260,7 @@ const Login: React.FC = () => {
               name="login"
               onFinish={handleLogin}
               className="login-form"
-              labelCol={{ flex: '80px' }}
-              wrapperCol={{ flex: 1 }}
-              labelAlign="left"
+              layout="vertical"
             >
               <Form.Item name="tenantId" hidden><Input autoComplete="off" /></Form.Item>
               <Form.Item
@@ -345,7 +278,6 @@ const Login: React.FC = () => {
                   },
                 ]}
                 validateTrigger={['onBlur', 'onSubmit']}
-                label={t('login.company', language)}
                 extra={selectedTenant ? <span className="login-company-selected">{t('login.companySelectedPrefix', language)}{selectedTenant.tenantName}</span> : null}
               >
                 <AutoComplete
@@ -375,7 +307,6 @@ const Login: React.FC = () => {
                   <Form.Item
                     name="username"
                     rules={[{ required: true, message: t('login.usernamePlaceholder', language) }]}
-                    label={t('login.username', language)}
                     htmlFor="login_username"
                   >
                     <Input
@@ -392,7 +323,6 @@ const Login: React.FC = () => {
                   <Form.Item
                     name="password"
                     rules={[{ required: true, message: t('login.passwordPlaceholder', language) }]}
-                    label={t('login.password', language)}
                     htmlFor="login_password"
                   >
                     <Input.Password
@@ -413,7 +343,6 @@ const Login: React.FC = () => {
                       { required: true, message: '请输入手机号' },
                       { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
                     ]}
-                    label="手机号"
                     htmlFor="login_phone"
                   >
                     <Input
@@ -430,7 +359,6 @@ const Login: React.FC = () => {
                   <Form.Item
                     name="smsCode"
                     rules={[{ required: true, message: '请输入验证码' }]}
-                    label="验证码"
                     htmlFor="login_sms_code"
                   >
                     <div className="login-code-row">

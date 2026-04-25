@@ -89,6 +89,9 @@ public class AiAgentOrchestrator {
                 && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|在吗|辛苦了|好的|收到|明白|知道了|了解).*")) {
             return true;
         }
+        if (totalToolCalls == 0) {
+            return true;
+        }
         return false;
     }
 
@@ -314,6 +317,7 @@ public class AiAgentOrchestrator {
         try {
             if (!inferenceOrchestrator.isAnyModelEnabled()) {
                 emitSse(emitter, "error", Map.of("message", "智能服务暂未配置或不可用"));
+                emitSse(emitter, "done", Map.of());
                 emitter.complete();
                 return;
             }
@@ -366,7 +370,6 @@ public class AiAgentOrchestrator {
             for (int i = 1; i <= maxIterations; i++) {
                 emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在思考第 " + i + " 轮…"));
 
-                // 进度感知：让 LLM 知道当前轮次，避免无效循环（每次替换旧提示，不叠加）
                 if (i > 2) {
                     messages.removeIf(m -> "system".equals(m.getRole())
                         && m.getContent() != null && m.getContent().startsWith("[进度提示]"));
@@ -374,10 +377,12 @@ public class AiAgentOrchestrator {
                         "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。", i, maxIterations)));
                 }
 
+                emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在调用推理模型，请稍候…"));
                 IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, visibleApiTools);
                 if (!result.isSuccess()) {
                     aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
                     emitSse(emitter, "error", Map.of("message", "推理服务暂时不可用: " + result.getErrorMessage()));
+                    emitSse(emitter, "done", Map.of());
                     emitter.complete();
                     return;
                 }
@@ -421,6 +426,7 @@ public class AiAgentOrchestrator {
                     for (AiToolCall toolCall : result.getToolCalls()) {
                         emitSse(emitter, "tool_call", Map.of("tool", toolCall.getFunction().getName(), "arguments", toolCall.getFunction().getArguments()));
                     }
+                    emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在执行工具查询，请稍候…"));
                     List<AiAgentToolExecHelper.ToolExecRecord> execRecords = toolExecHelper.executeToolsConcurrently(result.getToolCalls(), visibleToolMap, commandId, toolResultCache);
                     for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
                         evidenceHelper.captureTeamDispatchCard(rec.toolName, rec.rawResult, teamDispatchCards);
@@ -532,6 +538,7 @@ public class AiAgentOrchestrator {
             aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
             if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, "对话轮数超过限制"); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态失败跳过: {}", e.getMessage()); } }
             emitSse(emitter, "error", Map.of("message", "对话轮数超过限制"));
+            emitSse(emitter, "done", Map.of());
             emitter.complete();
 
         } catch (Exception e) {
@@ -542,6 +549,7 @@ public class AiAgentOrchestrator {
             if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, e.getMessage()); } catch (Exception ex) { log.debug("[AiAgent-Stream] 状态失败跳过: {}", ex.getMessage()); } }
             try {
                 emitSse(emitter, "error", Map.of("message", "系统异常: " + e.getMessage()));
+                emitSse(emitter, "done", Map.of());
                 emitter.complete();
             } catch (Exception ignored) {
                 emitter.completeWithError(e);

@@ -92,7 +92,7 @@ public class MaterialInboundOrchestrator {
         Integer currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
         Integer totalArrived = currentArrived + arrivedQuantity;
 
-        if (purchase.getPurchaseQuantity() == null || totalArrived > purchase.getPurchaseQuantity().intValue()) {
+        if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(java.math.BigDecimal.valueOf(totalArrived)) < 0) {
             throw new RuntimeException(String.format("到货数量超出采购数量: 已到货=%d, 本次到货=%d, 采购数量=%s",
                     currentArrived, arrivedQuantity,
                     purchase.getPurchaseQuantity() == null ? "null" : purchase.getPurchaseQuantity().toPlainString()));
@@ -131,7 +131,7 @@ public class MaterialInboundOrchestrator {
         purchase.setActualArrivalDate(LocalDateTime.now());
 
         // 根据到货情况更新状态
-        if (purchase.getPurchaseQuantity() == null || totalArrived >= purchase.getPurchaseQuantity().intValue()) {
+        if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(java.math.BigDecimal.valueOf(totalArrived)) <= 0) {
             purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
         } else {
             purchase.setStatus("partial_arrival");
@@ -218,6 +218,7 @@ public class MaterialInboundOrchestrator {
             String operatorName,
             String remark) {
 
+        TenantAssert.assertTenantContext();
         log.info("开始手动入库流程: materialCode={}, quantity={}", materialCode, quantity);
 
         // 1. 验证参数

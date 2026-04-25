@@ -1,0 +1,35 @@
+global:
+  resolve_timeout: 5m
+  http_config:
+    follow_redirects: true
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'wechat-webhook'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'wechat-webhook'
+      repeat_interval: 1h
+    - match:
+        severity: warning
+      receiver: 'wechat-webhook'
+      repeat_interval: 4h
+
+receivers:
+  - name: 'wechat-webhook'
+    webhook_configs:
+      - url: 'http://localhost:8088/api/integration/alert-webhook'
+        send_resolved: true
+        http_config:
+          follow_redirects: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']

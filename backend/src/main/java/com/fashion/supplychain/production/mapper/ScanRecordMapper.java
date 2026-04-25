@@ -115,6 +115,10 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "<if test='scanType != null and scanType != \"\"'>",
                         "  AND sr.scan_type = #{scanType}",
                         "</if>",
+                        "<if test='(scanType == null or scanType == \"\") and scanTypes != null and !scanTypes.isEmpty()'>",
+                        "  AND sr.scan_type IN",
+                        "  <foreach collection='scanTypes' item='st' open='(' separator=',' close=')'>#{st}</foreach>",
+                        "</if>",
                         "</script>"
         })
         Map<String, Object> selectPersonalStats(@Param("operatorId") String operatorId,
@@ -194,6 +198,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         @Param("operatorId") String operatorId,
                         @Param("operatorName") String operatorName,
                         @Param("scanType") String scanType,
+                        @Param("scanTypes") java.util.List<String> scanTypes,
                         @Param("processName") String processName,
                         @Param("startTime") java.time.LocalDateTime startTime,
                         @Param("endTime") java.time.LocalDateTime endTime,

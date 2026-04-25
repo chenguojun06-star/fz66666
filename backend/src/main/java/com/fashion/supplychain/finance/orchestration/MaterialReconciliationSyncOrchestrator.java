@@ -102,7 +102,7 @@ public class MaterialReconciliationSyncOrchestrator {
 
         // 计算总金额和最终金额
         if (purchase.getUnitPrice() != null && inbound.getInboundQuantity() != null) {
-            java.math.BigDecimal totalAmount = purchase.getUnitPrice().multiply(new java.math.BigDecimal(inbound.getInboundQuantity()));
+            java.math.BigDecimal totalAmount = purchase.getUnitPrice().multiply(java.math.BigDecimal.valueOf(inbound.getInboundQuantity())).setScale(2, java.math.RoundingMode.HALF_UP);
             reconciliation.setTotalAmount(totalAmount);
             reconciliation.setFinalAmount(totalAmount); // 初始无扣款，最终金额=总金额
         }

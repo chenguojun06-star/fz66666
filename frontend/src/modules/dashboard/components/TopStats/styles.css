@@ -1,9 +1,7 @@
-/* 顶部统计看板容器 */
 .top-stats-container {
   margin-bottom: 16px;
 }
 
-/* 统计卡片网格 - 一行4个 */
 .top-stats-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -28,54 +26,27 @@
   }
 }
 
-/* 单个统计项 - 紧凑设计 */
 .top-stat-item {
   padding: 12px 16px;
-  border-radius: 12px;
-  border: 1.5px solid #e8e8e8;
-  background: #ffffff;
+  border-radius: 10px;
+  border: none;
+  border-left: 3px solid #dde1e8;
+  background: var(--neutral-bg, #ffffff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
-}
-
-/* 中性颜色 */
-.stat-icon {
-  color: #595959;
-}
-
-.stat-label {
-  color: #595959;
-}
-
-.stat-total {
-  color: #1a1a1a;
-}
-
-.stat-tag {
-  border-color: #f0f0f0;
-  background: #fafafa;
-}
-
-.stat-tag-label {
-  color: #bfbfbf;
-}
-
-.stat-tag-value {
-  color: #434343;
 }
 
 .top-stat-item:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-/* 卡片内容 */
 .stat-card-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* 头部：图标 + 标签 + 汇总数量 排一行 */
 .stat-header {
   display: flex;
   align-items: center;
@@ -85,23 +56,24 @@
 .stat-icon {
   font-size: 20px;
   flex-shrink: 0;
+  color: var(--neutral-text-secondary, #8c8c8c);
 }
 
 .stat-label {
   font-size: 14px;
   font-weight: 600;
   flex-shrink: 0;
+  color: var(--neutral-text-secondary, #595959);
 }
 
-/* 汇总数量 - 推到右边 */
 .stat-total {
   margin-left: auto;
   font-size: 20px;
   font-weight: 700;
   line-height: 1;
+  color: var(--neutral-text, #1a1a1a);
 }
 
-/* 底部标签行：日/周/月/年 文字与数量同行 */
 .stat-tags-row {
   display: flex;
   gap: 6px;
@@ -115,72 +87,136 @@
   gap: 3px;
   padding: 3px 0;
   border-radius: 6px;
-  border: 1px solid;
+  border: 1px solid var(--neutral-border-light, #eef0f4);
+  background: var(--neutral-bg-light, #f5f7fa);
 }
 
 .stat-tag-label {
   font-size: 11px;
   font-weight: 500;
+  color: var(--neutral-text-light, #8c8c8c);
 }
 
 .stat-tag-value {
   font-size: 12px;
   font-weight: 700;
+  color: var(--neutral-text, #434343);
 }
 
-/* 深色主题适配 */
-@media (prefers-color-scheme: dark) {
-  .top-stat-item {
-    border-color: currentColor;
-  }
-
-  .top-stat-item:hover {
-    box-shadow: 0 3px 8px rgba(255, 255, 255, 0.08);
-  }
+/* ── Default theme: colored left border + icon ── */
+.top-stat--sample {
+  border-left-color: #1677ff;
+}
+.top-stat--sample .stat-icon {
+  color: #1677ff;
+}
+.top-stat--sample .stat-total {
+  color: #1677ff;
 }
 
-/* 深色主题覆盖规则 */
+.top-stat--bulk {
+  border-left-color: #13c2c2;
+}
+.top-stat--bulk .stat-icon {
+  color: #13c2c2;
+}
+.top-stat--bulk .stat-total {
+  color: #13c2c2;
+}
+
+.top-stat--cutting {
+  border-left-color: #52c41a;
+}
+.top-stat--cutting .stat-icon {
+  color: #52c41a;
+}
+.top-stat--cutting .stat-total {
+  color: #389e0d;
+}
+
+.top-stat--inbound {
+  border-left-color: #faad14;
+}
+.top-stat--inbound .stat-icon {
+  color: #faad14;
+}
+.top-stat--inbound .stat-total {
+  color: #d48806;
+}
+
+.top-stat--outbound {
+  border-left-color: #722ed1;
+}
+.top-stat--outbound .stat-icon {
+  color: #722ed1;
+}
+.top-stat--outbound .stat-total {
+  color: #722ed1;
+}
+
+/* ── Dark theme ── */
 :root[data-theme="dark"] .top-stat-item {
   background: transparent;
-  border-width: 1.5px;
+  border-left-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 
 :root[data-theme="dark"] .top-stat-item:hover {
-  background: transparent;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
 :root[data-theme="dark"] .stat-label {
-  color: var(--neutral-text-light);
+  color: var(--neutral-text-light, #8c8c8c);
 }
 
 :root[data-theme="dark"] .stat-total {
-  color: var(--neutral-text);
+  color: var(--neutral-text, #e0e0e0);
 }
 
 :root[data-theme="dark"] .stat-tag-label {
-  color: var(--neutral-text-lighter);
+  color: var(--neutral-text-lighter, #8c8c8c);
 }
 
 :root[data-theme="dark"] .stat-tag-value {
-  color: var(--neutral-text);
+  color: var(--neutral-text, #e0e0e0);
 }
 
-/* ==================== 白色主题 — 彩色左边框 + 图标着色 ==================== */
+:root[data-theme="dark"] .stat-tag {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .top-stat--sample { border-left-color: #1677ff; }
+:root[data-theme="dark"] .top-stat--sample .stat-icon { color: #4096ff; }
+:root[data-theme="dark"] .top-stat--sample .stat-total { color: #4096ff; }
+
+:root[data-theme="dark"] .top-stat--bulk { border-left-color: #13c2c2; }
+:root[data-theme="dark"] .top-stat--bulk .stat-icon { color: #36cfc9; }
+:root[data-theme="dark"] .top-stat--bulk .stat-total { color: #36cfc9; }
+
+:root[data-theme="dark"] .top-stat--cutting { border-left-color: #52c41a; }
+:root[data-theme="dark"] .top-stat--cutting .stat-icon { color: #73d13d; }
+:root[data-theme="dark"] .top-stat--cutting .stat-total { color: #73d13d; }
+
+:root[data-theme="dark"] .top-stat--inbound { border-left-color: #faad14; }
+:root[data-theme="dark"] .top-stat--inbound .stat-icon { color: #ffc53d; }
+:root[data-theme="dark"] .top-stat--inbound .stat-total { color: #ffc53d; }
+
+:root[data-theme="dark"] .top-stat--outbound { border-left-color: #722ed1; }
+:root[data-theme="dark"] .top-stat--outbound .stat-icon { color: #9254de; }
+:root[data-theme="dark"] .top-stat--outbound .stat-total { color: #9254de; }
+
+/* ── White theme ── */
 :root[data-theme="white"] .top-stat-item {
-  border: none;
-  border-left: 3px solid #dde1e8;
-  border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 :root[data-theme="white"] .top-stat-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* 标签文字对比度修复（#bfbfbf → #8c8c8c） */
 :root[data-theme="white"] .stat-tag-label {
   color: #8c8c8c;
 }
@@ -188,59 +224,4 @@
 :root[data-theme="white"] .stat-tag {
   background: #f5f7fa;
   border-color: #eef0f4;
-}
-
-/* ── 样衣开发 蓝色 #1677ff ── */
-:root[data-theme="white"] .top-stat--sample {
-  border-left-color: #1677ff;
-}
-:root[data-theme="white"] .top-stat--sample .stat-icon {
-  color: #1677ff;
-}
-:root[data-theme="white"] .top-stat--sample .stat-total {
-  color: #1677ff;
-}
-
-/* ── 大货下单 青色 #13c2c2 ── */
-:root[data-theme="white"] .top-stat--bulk {
-  border-left-color: #13c2c2;
-}
-:root[data-theme="white"] .top-stat--bulk .stat-icon {
-  color: #13c2c2;
-}
-:root[data-theme="white"] .top-stat--bulk .stat-total {
-  color: #13c2c2;
-}
-
-/* ── 裁剪数量 绿色 #52c41a ── */
-:root[data-theme="white"] .top-stat--cutting {
-  border-left-color: #52c41a;
-}
-:root[data-theme="white"] .top-stat--cutting .stat-icon {
-  color: #52c41a;
-}
-:root[data-theme="white"] .top-stat--cutting .stat-total {
-  color: #389e0d;
-}
-
-/* ── 入库数量 金色 #faad14 ── */
-:root[data-theme="white"] .top-stat--inbound {
-  border-left-color: #faad14;
-}
-:root[data-theme="white"] .top-stat--inbound .stat-icon {
-  color: #faad14;
-}
-:root[data-theme="white"] .top-stat--inbound .stat-total {
-  color: #d48806;
-}
-
-/* ── 出库数量 紫色 #722ed1 ── */
-:root[data-theme="white"] .top-stat--outbound {
-  border-left-color: #722ed1;
-}
-:root[data-theme="white"] .top-stat--outbound .stat-icon {
-  color: #722ed1;
-}
-:root[data-theme="white"] .top-stat--outbound .stat-total {
-  color: #722ed1;
 }

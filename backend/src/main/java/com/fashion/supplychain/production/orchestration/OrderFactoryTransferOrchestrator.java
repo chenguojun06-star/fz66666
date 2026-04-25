@@ -3,8 +3,10 @@ package com.fashion.supplychain.production.orchestration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.service.SysNoticeService;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.entity.User;
@@ -50,6 +52,9 @@ public class OrderFactoryTransferOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     @Autowired
     private SysNoticeService sysNoticeService;
@@ -139,6 +144,10 @@ public class OrderFactoryTransferOrchestrator {
                 isFullTransfer, transferQuantity, colorSizeLines, reason, operator);
 
         productionOrderService.updateById(order);
+
+        if (isFullTransfer) {
+            transferScanRecords(order.getId(), targetFactory.getId(), tenantId);
+        }
 
         // 6. 通知原工厂（如果有）
         notifyFactory(oldFactoryId, tenantId, orderNo, oldFactoryName, targetFactoryName,
@@ -246,6 +255,10 @@ public class OrderFactoryTransferOrchestrator {
         }
 
         productionOrderService.updateById(order);
+
+        if (wasFullTransfer && !"(未知)".equals(oldFactoryId)) {
+            transferScanRecords(order.getId(), oldFactoryId, tenantId);
+        }
 
         // 通知原工厂（撤回后它恢复接单）
         SysNotice n1 = buildNotice(tenantId, orderNo,
@@ -417,6 +430,23 @@ public class OrderFactoryTransferOrchestrator {
     private void appendRemark(ProductionOrder order, String msg) {
         String old = order.getRemarks() == null ? "" : order.getRemarks();
         order.setRemarks(old.isBlank() ? msg : old + "\n" + msg);
+    }
+
+    private void transferScanRecords(String orderId, String newFactoryId, Long tenantId) {
+        try {
+            List<ScanRecord> records = scanRecordService.lambdaQuery()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getTenantId, tenantId)
+                    .list();
+            if (records.isEmpty()) return;
+            for (ScanRecord sr : records) {
+                sr.setFactoryId(newFactoryId);
+            }
+            scanRecordService.updateBatchById(records);
+            log.info("[转厂] 已更新 {} 条扫码记录的factoryId → {}", records.size(), newFactoryId);
+        } catch (Exception e) {
+            log.warn("[转厂] 更新扫码记录factoryId失败（不影响转厂主流程）: {}", e.getMessage());
+        }
     }
 
     private String safeStr(Object s) {

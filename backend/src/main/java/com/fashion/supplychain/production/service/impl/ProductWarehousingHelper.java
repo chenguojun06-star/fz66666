@@ -347,7 +347,7 @@ public class ProductWarehousingHelper {
                         continue;
                     }
                     String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
-                    if ("quality_scan_scrap".equals(wt)) {
+                    if ("quality_scan_scrap".equals(wt) || "quality_scan".equals(wt)) {
                         continue;
                     }
                     int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();

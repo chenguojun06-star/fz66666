@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -43,6 +44,9 @@ public class KnowledgeBase {
     /** 删除标记 0=正常 1=已删除 */
     private Integer deleteFlag;
 
+    @TableField("created_at")
     private LocalDateTime createTime;
+
+    @TableField("updated_at")
     private LocalDateTime updateTime;
 }

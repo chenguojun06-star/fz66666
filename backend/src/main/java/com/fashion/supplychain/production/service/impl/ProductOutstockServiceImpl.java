@@ -147,14 +147,20 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
 
         boolean saved = this.save(outstock);
         if (saved) {
-            // 扣减SKU库存
             try {
                 String styleNo = outstock.getStyleNo();
-                String color = order.getColor();
-                String size = order.getSize();
+                String color = outstock.getColor();
+                String size = outstock.getSize();
                 if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
                     String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                    if (!StringUtils.hasText(outstock.getSkuCode())) {
+                        outstock.setSkuCode(skuCode);
+                        this.updateById(outstock);
+                    }
                     productSkuService.updateStock(skuCode, -qty);
+                } else {
+                    log.warn("[出库] 出库记录缺少color/size，跳过SKU库存扣减: id={}, styleNo={}, color={}, size={}",
+                            outstock.getId(), styleNo, color, size);
                 }
             } catch (Exception e) {
                 log.error("Failed to decrement stock for outstock: id={}, error={}", outstock.getId(), e.getMessage());
@@ -165,12 +171,42 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean softDeleteByOrderId(String orderId) {
         if (!StringUtils.hasText(orderId)) {
             return false;
         }
-        return this.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductOutstock>()
-                .eq(ProductOutstock::getOrderId, orderId.trim()));
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        java.util.List<ProductOutstock> outstocks = this.list(new LambdaQueryWrapper<ProductOutstock>()
+                .eq(ProductOutstock::getOrderId, orderId.trim())
+                .eq(ProductOutstock::getTenantId, tenantId)
+                .eq(ProductOutstock::getDeleteFlag, 0));
+        if (outstocks == null || outstocks.isEmpty()) {
+            return true;
+        }
+        for (ProductOutstock o : outstocks) {
+            int qty = o.getOutstockQuantity() != null ? o.getOutstockQuantity() : 0;
+            if (qty > 0) {
+                String styleNo = o.getStyleNo();
+                String color = o.getColor();
+                String size = o.getSize();
+                if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+                    String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                    try {
+                        productSkuService.updateStock(skuCode, qty);
+                    } catch (Exception e) {
+                        log.warn("[softDeleteByOrderId] SKU库存恢复失败: skuCode={}, qty={}, error={}", skuCode, qty, e.getMessage());
+                    }
+                }
+            }
+        }
+        ProductOutstock patch = new ProductOutstock();
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(LocalDateTime.now());
+        return this.update(patch, new LambdaQueryWrapper<ProductOutstock>()
+                .eq(ProductOutstock::getOrderId, orderId.trim())
+                .eq(ProductOutstock::getTenantId, tenantId)
+                .eq(ProductOutstock::getDeleteFlag, 0));
     }
 
     private String buildOutstockNo(LocalDateTime now) {

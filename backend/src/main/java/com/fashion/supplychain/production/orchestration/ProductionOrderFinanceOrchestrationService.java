@@ -114,6 +114,10 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("无权限完成订单，需要主管及以上权限");
+        }
+
         String oid = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("订单ID不能为空");

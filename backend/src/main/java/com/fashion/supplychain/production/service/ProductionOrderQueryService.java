@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 import com.fashion.supplychain.production.helper.OrderProgressFillHelper;
+import com.fashion.supplychain.production.helper.OrderStageBundleStatsFillHelper;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -60,6 +61,9 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private OrderProgressFillHelper progressFillHelper;
+
+    @Autowired
+    private OrderStageBundleStatsFillHelper stageBundleStatsFillHelper;
 
     @Autowired
     private SecondaryProcessService secondaryProcessService;
@@ -179,6 +183,7 @@ public class ProductionOrderQueryService {
             }
         });
         orderQualityFillService.fillQualityStats(resultPage.getRecords());
+        stageBundleStatsFillHelper.fillStageBundleStats(resultPage.getRecords());
         priceFillHelper.fillFactoryUnitPrice(resultPage.getRecords());
         priceFillHelper.fillQuotationUnitPrice(resultPage.getRecords());
         priceFillHelper.fillProgressNodeUnitPrices(resultPage.getRecords());

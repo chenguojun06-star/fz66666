@@ -14,14 +14,12 @@ export interface FactoryCapacityItem {
   totalQuantity: number;
   atRiskCount: number;
   overdueCount: number;
-  /** 货期完成率 0-100，-1表示这年内无完工订单 */
   deliveryOnTimeRate: number;
-  /** 近30天活跃生产人数 */
   activeWorkers: number;
-  /** 近30天日均产量（件/天） */
   avgDailyOutput: number;
-  /** 预计完工天数，-1表示无产量数据 */
   estimatedCompletionDays: number;
+  matchScore: number;
+  capacitySource: 'real' | 'configured' | 'none';
 }
 
 export interface ProductionOrderStats {

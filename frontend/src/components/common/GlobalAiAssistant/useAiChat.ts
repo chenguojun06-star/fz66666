@@ -84,7 +84,9 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const [advisorSessionId, setAdvisorSessionId] = useState(loadSession);
 
   const streamAbortRef = useRef<AbortController | null>(null);
+  const requestSeqRef = useRef(0);
   const historyFetchedRef = useRef(false);
+  const SSE_INACTIVITY_TIMEOUT_MS = 120_000;
 
   useEffect(() => {
     return () => { streamAbortRef.current?.abort(); };
@@ -189,7 +191,6 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }]);
     if (!manualText) setInputValue('');
 
-    // 报告类请求直接触发下载，不走 AI（避免 AI 返回"需要更多信息"的错误响应）
     let reportTypeToDownload: 'daily' | 'weekly' | 'monthly' | undefined;
     if (text.includes('日报')) reportTypeToDownload = 'daily';
     if (text.includes('周报')) reportTypeToDownload = 'weekly';
@@ -199,22 +200,52 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       return;
     }
 
+    if (streamAbortRef.current) {
+      streamAbortRef.current.abort();
+      streamAbortRef.current = null;
+    }
+
+    const currentSeq = ++requestSeqRef.current;
     setIsTyping(true);
 
     const aiMsgId = `a-${Date.now()}`;
+    let inactivityTimer: ReturnType<typeof setTimeout> | undefined;
+    let accumulatedText = '';
+    let completed = false;
+    let answerReceived = false;
+
+    const finishTyping = () => {
+      if (requestSeqRef.current !== currentSeq) return;
+      setIsTyping(false);
+    };
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        if (requestSeqRef.current === currentSeq) {
+          console.warn('[AiChat] SSE inactivity timeout (no events for 60s), unlocking input');
+          if (!answerReceived && !completed) {
+            setMessages(prev => prev.map(m => m.id === aiMsgId
+              ? { ...m, text: accumulatedText || '小云思考时间较长，请稍后再问一次试试 🤔' } : m));
+          }
+          finishTyping();
+        }
+      }, SSE_INACTIVITY_TIMEOUT_MS);
+    };
 
     try {
       let streamStarted = false;
-      let accumulatedText = '';
       let toolStatus = '';
-      let completed = false;
       const pageContext = location.pathname + location.search;
+
+      resetInactivityTimer();
 
       const ctrl = intelligenceApi.aiAdvisorChatStream(
         contextualText,
         pageContext,
         (event) => {
           streamStarted = true;
+          resetInactivityTimer();
           if (event.type === 'thinking') {
             toolStatus = `小云正在整理思路，准备给你结论…`;
             setMessages(prev => {
@@ -238,6 +269,11 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             setMessages(prev => prev.map(m => m.id === aiMsgId
               ? { ...m, text: accumulatedText, reportType: reportTypeToDownload || parsedReportType, reportPreview: reportPreview, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, agentCommandId: commandId }
               : m));
+            if (!answerReceived && rawContent.trim()) {
+              answerReceived = true;
+              if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
+              finishTyping();
+            }
           } else if (event.type === 'follow_up_actions') {
             const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
             if (actions.length) {
@@ -251,7 +287,10 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
         () => {
           if (completed) return;
           completed = true;
-          setIsTyping(false);
+          if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
+          if (!answerReceived) {
+            finishTyping();
+          }
           if (accumulatedText) speak(accumulatedText);
           intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText).then(resp => {
             const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
@@ -280,11 +319,12 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
         async (err) => {
           if (completed) return;
           completed = true;
+          if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
           console.warn('SSE stream failed, falling back to sync:', err);
           if (streamStarted) {
             setMessages(prev => prev.map(m => m.id === aiMsgId
               ? { ...m, text: accumulatedText || '网络中断，请重试 🌧️' } : m));
-            setIsTyping(false);
+            finishTyping();
             return;
           }
           try {
@@ -347,7 +387,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             };
             attemptRetry();
           } finally {
-            setIsTyping(false);
+            finishTyping();
           }
         },
       );
@@ -355,7 +395,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     } catch (error) {
       console.error('AI Query Error:', error);
       setMessages(prev => [...prev, { id: aiMsgId, role: 'ai', text: '当前连不到数据服务，请稍后再试。' }]);
-      setIsTyping(false);
+      if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
+      finishTyping();
     }
   }, [inputValue, isTyping, user, location, advisorSessionId, speak]);
 

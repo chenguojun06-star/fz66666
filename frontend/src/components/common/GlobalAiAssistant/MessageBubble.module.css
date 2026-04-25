@@ -308,3 +308,49 @@
   padding-top: 8px;
   border-top: 1px solid #f0f0f0;
 }
+
+
+/* ── Dark theme ── */
+:root[data-theme="dark"] .aiBubble {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+}
+:root[data-theme="dark"] .userBubble {
+  background: #6ba3ff;
+}
+:root[data-theme="dark"] .bubbleTime {
+  color: rgba(255, 255, 255, 0.3);
+}
+:root[data-theme="dark"] .errorBubble {
+  background: rgba(255, 77, 79, 0.1);
+  border-color: rgba(255, 77, 79, 0.3);
+}
+:root[data-theme="dark"] .suggestionChip {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+}
+:root[data-theme="dark"] .suggestionChip:hover {
+  border-color: #6ba3ff;
+  color: #6ba3ff;
+  background: rgba(107, 163, 255, 0.08);
+}
+:root[data-theme="dark"] .actionChip {
+  background: rgba(45, 127, 249, 0.1);
+  border-color: rgba(45, 127, 249, 0.25);
+  color: #6ba3ff;
+}
+:root[data-theme="dark"] .actionChip:hover {
+  background: rgba(45, 127, 249, 0.18);
+}
+:root[data-theme="dark"] .traceableAdvice {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+:root[data-theme="dark"] .adviceTitle { color: #e0e0e0; }
+:root[data-theme="dark"] .adviceSummary { color: rgba(255, 255, 255, 0.55); }
+:root[data-theme="dark"] .reasoningItem { color: rgba(255, 255, 255, 0.45); }
+:root[data-theme="dark"] .adviceActions {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
