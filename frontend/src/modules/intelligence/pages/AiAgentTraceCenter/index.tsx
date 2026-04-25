@@ -125,8 +125,9 @@ const AiAgentTraceCenter: React.FC = () => {
         executorKeyword: executorKeyword || undefined,
         startTime: timeRange?.[0] ? timeRange[0].toISOString() : undefined,
         endTime: timeRange?.[1] ? timeRange[1].toISOString() : undefined,
-      }) as unknown as { data?: { data?: TraceRow[] } };
-      setRows(Array.isArray(resp?.data?.data) ? resp.data?.data || [] : []);
+      }) as unknown as { code?: number; data?: TraceRow[] };
+      // 注意：axios 拦截器已将 response.data 提取为 { code, data } 对象，直接取 resp.data 即可
+      setRows(Array.isArray(resp?.data) ? resp.data || [] : []);
     } finally {
       setLoading(false);
     }
@@ -137,8 +138,8 @@ const AiAgentTraceCenter: React.FC = () => {
     setDetailOpen(true);
     setDetailLoading(true);
     try {
-      const resp = await intelligenceApi.getAiAgentTraceDetail(commandId) as unknown as { data?: { data?: { commandId?: string; logs?: TraceRow[]; count?: number } } };
-      setDetail(resp?.data?.data ?? { commandId, logs: [], count: 0 });
+      const resp = await intelligenceApi.getAiAgentTraceDetail(commandId) as unknown as { code?: number; data?: { commandId?: string; logs?: TraceRow[]; count?: number } };
+      setDetail(resp?.data ?? { commandId, logs: [], count: 0 });
       setSearchParams(commandId ? { commandId } : {});
     } finally {
       setDetailLoading(false);

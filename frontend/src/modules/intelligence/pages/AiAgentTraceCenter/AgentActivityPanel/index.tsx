@@ -643,8 +643,9 @@ const AgentActivityPanel: React.FC = () => {
   const fetchData = useCallback(async () => {
     try {
       const [agentsResp, alertsResp] = await Promise.all([intelligenceApi.getAgentActivityList(), intelligenceApi.getAgentAlerts()]);
-      const agentsData: any[] = (agentsResp as any)?.data?.data || [];
-      const alertsData = (alertsResp as any)?.data?.data || [];
+      // axios 拦截器已将 response.data 提取为 { code, data }，直接取 .data 即为数组
+      const agentsData: any[] = (agentsResp as any)?.data || [];
+      const alertsData = (alertsResp as any)?.data || [];
 
       if (agentsData.length > 0) {
         setIsLive(true);
