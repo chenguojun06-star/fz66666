@@ -64,6 +64,8 @@ updates:
         versions: [">=19"]
       - dependency-name: "react-router-dom"
         versions: [">=7"]
+      - dependency-name: "typescript"
+        versions: [">=5.4"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
