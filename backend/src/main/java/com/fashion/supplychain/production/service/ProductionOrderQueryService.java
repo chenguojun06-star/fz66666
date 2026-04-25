@@ -102,7 +102,7 @@ public class ProductionOrderQueryService {
         String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
         String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
         String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
-        String customerRefId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerRefId"));
+        String customerId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerId"));
         String customerName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerName"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
@@ -122,7 +122,7 @@ public class ProductionOrderQueryService {
                 .eq(StringUtils.hasText(parentOrgUnitId), "parent_org_unit_id", parentOrgUnitId)
                 .eq(StringUtils.hasText(factoryType), "factory_type", factoryType)
                 .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
-                .eq(StringUtils.hasText(customerRefId), "customer_id", customerRefId)
+                .eq(StringUtils.hasText(customerId), "customer_id", customerId)
                 .like(StringUtils.hasText(customerName), "customer_name", customerName)
                 .eq("delete_flag", 0)
                 // 我的订单页传 includeScrapped=true 时显示报废订单，其他页面默认过滤

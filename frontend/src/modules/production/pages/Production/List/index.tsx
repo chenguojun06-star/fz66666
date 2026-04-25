@@ -612,8 +612,8 @@ const ProductionList: React.FC = () => {
                     ]}
                   />
                   <CustomerFilterSelect
-                    value={queryParams.customerRefId || ''}
-                    onChange={(value) => setQueryParams({ ...queryParams, customerRefId: value || undefined, page: 1 })}
+                    value={queryParams.customerId || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, customerId: value || undefined, page: 1 })}
                   />
                 </>
           }

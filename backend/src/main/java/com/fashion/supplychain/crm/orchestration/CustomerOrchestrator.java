@@ -89,7 +89,7 @@ public class CustomerOrchestrator {
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getDeleteFlag, 0)
                         .eq(ProductionOrder::getTenantId, tenantId)
-                        .eq(ProductionOrder::getCustomerRefId, customerId)
+                        .eq(ProductionOrder::getCustomerId, customerId)
                         .orderByDesc(ProductionOrder::getCreateTime)
                         .last("LIMIT 100"));
 
@@ -137,7 +137,7 @@ public class CustomerOrchestrator {
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getDeleteFlag, 0)
                         .eq(ProductionOrder::getTenantId, tenantId)
-                        .isNotNull(ProductionOrder::getCustomerRefId));
+                        .isNotNull(ProductionOrder::getCustomerId));
 
         Map<String, Object> result = new HashMap<>();
         result.put("total", total);

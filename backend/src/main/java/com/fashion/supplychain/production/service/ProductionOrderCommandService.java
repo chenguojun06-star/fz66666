@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -252,16 +253,19 @@ public class ProductionOrderCommandService {
     }
 
     private void applyCustomerSnapshot(ProductionOrder productionOrder) {
-        if (!StringUtils.hasText(productionOrder.getCustomerRefId())) {
+        if (!StringUtils.hasText(productionOrder.getCustomerId())) {
             return;
         }
+        Long tenantId = TenantAssert.requireTenantId();
         Customer customer = customerService.lambdaQuery()
-                .eq(Customer::getId, productionOrder.getCustomerRefId().trim())
+                .eq(Customer::getId, productionOrder.getCustomerId().trim())
+                .eq(Customer::getTenantId, tenantId)
                 .eq(Customer::getDeleteFlag, 0)
                 .one();
         if (customer == null) {
             return;
         }
+        TenantAssert.assertBelongsToCurrentTenant(customer.getTenantId(), "客户");
         if (!StringUtils.hasText(productionOrder.getCustomerName())) {
             productionOrder.setCustomerName(customer.getCompanyName());
         }

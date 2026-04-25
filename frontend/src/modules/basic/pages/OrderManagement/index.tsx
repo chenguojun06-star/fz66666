@@ -1062,13 +1062,11 @@ const OrderManagement: React.FC = () => {
                             if (option?.customerId) {
                               form.setFieldsValue({
                                 customerId: option.customerId,
-                                customerRefId: option.customerId,
                                 customerName: option.customer?.companyName || _value || undefined,
                               });
                             } else {
                               form.setFieldsValue({
                                 customerId: undefined,
-                                customerRefId: undefined,
                                 customerName: undefined,
                               });
                             }
@@ -1076,7 +1074,6 @@ const OrderManagement: React.FC = () => {
                         />
                       </Form.Item>
                       <Form.Item name="customerId" hidden><Input /></Form.Item>
-                      <Form.Item name="customerRefId" hidden><Input /></Form.Item>
                       <Form.Item name="customerName" hidden><Input /></Form.Item>
                     </InlineField>
                   </Col>

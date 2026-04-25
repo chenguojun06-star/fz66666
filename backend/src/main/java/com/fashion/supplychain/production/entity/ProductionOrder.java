@@ -137,20 +137,18 @@ public class ProductionOrder {
     private String merchandiser;
 
     /**
-     * 公司/客户（从样衣开发带入，可修改）
+     * CRM客户ID（关联t_customer.id，映射customer_id列）
      */
-    @TableField("company")
+    @TableField("customer_id")
     private String customerId;
+
+    /**
+     * 客户公司名称（冗余快照，从样衣开发带入或CRM选择带入）
+     */
     private String company;
 
     /**
-     * CRM客户ID（关联t_customer.id）
-     */
-    @TableField("customer_id")
-    private String customerRefId;
-
-    /**
-     * CRM客户名称（快照，从Customer.companyName带入）
+     * CRM客户名称（快照，从Customer.companyName带入，优先于company显示）
      */
     @TableField("customer_name")
     private String customerName;

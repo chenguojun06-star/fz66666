@@ -439,6 +439,35 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_payroll_settlement", "confirm_time", "DATETIME DEFAULT NULL COMMENT '确认时间'");
         add("t_payroll_settlement", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
 
+        add("t_payroll_settlement_item", "settlement_id", "VARCHAR(64) DEFAULT NULL COMMENT '结算单ID'");
+        add("t_payroll_settlement_item", "operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '操作员ID'");
+        add("t_payroll_settlement_item", "operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '操作员姓名'");
+        add("t_payroll_settlement_item", "process_name", "VARCHAR(100) DEFAULT NULL COMMENT '工序名称'");
+        add("t_payroll_settlement_item", "quantity", "INT DEFAULT NULL COMMENT '数量'");
+        add("t_payroll_settlement_item", "unit_price", "DECIMAL(15,2) DEFAULT NULL COMMENT '单价'");
+        add("t_payroll_settlement_item", "total_amount", "DECIMAL(15,2) DEFAULT NULL COMMENT '总金额'");
+        add("t_payroll_settlement_item", "order_id", "VARCHAR(64) DEFAULT NULL COMMENT '订单ID'");
+        add("t_payroll_settlement_item", "order_no", "VARCHAR(64) DEFAULT NULL COMMENT '订单号'");
+        add("t_payroll_settlement_item", "style_no", "VARCHAR(64) DEFAULT NULL COMMENT '款号'");
+        add("t_payroll_settlement_item", "scan_type", "VARCHAR(20) DEFAULT NULL COMMENT '扫码类型'");
+        add("t_payroll_settlement_item", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+        add("t_customer", "customer_no", "VARCHAR(64) DEFAULT NULL COMMENT '客户编号'");
+        add("t_customer", "company_name", "VARCHAR(200) DEFAULT NULL COMMENT '公司/品牌名称'");
+        add("t_customer", "contact_person", "VARCHAR(50) DEFAULT NULL COMMENT '联系人'");
+        add("t_customer", "contact_phone", "VARCHAR(20) DEFAULT NULL COMMENT '联系电话'");
+        add("t_customer", "contact_email", "VARCHAR(100) DEFAULT NULL COMMENT '邮箱'");
+        add("t_customer", "address", "VARCHAR(500) DEFAULT NULL COMMENT '地址'");
+        add("t_customer", "customer_level", "VARCHAR(20) DEFAULT NULL COMMENT '客户等级'");
+        add("t_customer", "industry", "VARCHAR(50) DEFAULT NULL COMMENT '行业/品类'");
+        add("t_customer", "source", "VARCHAR(50) DEFAULT NULL COMMENT '来源'");
+        add("t_customer", "status", "VARCHAR(20) DEFAULT 'ACTIVE' COMMENT '状态'");
+        add("t_customer", "remark", "VARCHAR(500) DEFAULT NULL COMMENT '备注'");
+        add("t_customer", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标志'");
+        add("t_customer", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
+        add("t_customer", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
+        add("t_customer", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
         add("t_intelligence_prediction_log", "factory_name", "VARCHAR(128) DEFAULT NULL COMMENT '工厂名称'");
         add("t_intelligence_prediction_log", "daily_velocity", "DOUBLE DEFAULT NULL COMMENT '日均产量'");
         add("t_intelligence_prediction_log", "remaining_qty", "BIGINT DEFAULT NULL COMMENT '剩余件数'");

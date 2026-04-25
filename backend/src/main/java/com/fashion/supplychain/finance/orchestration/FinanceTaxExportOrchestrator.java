@@ -2,6 +2,7 @@ package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.Invoice;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.Payable;
@@ -65,6 +66,7 @@ public class FinanceTaxExportOrchestrator {
 
     public byte[] exportPayrollExcel(String startDate, String endDate, String format) throws IOException {
         assertNotFactoryAccount();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<PayrollSettlement> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
@@ -242,6 +244,7 @@ public class FinanceTaxExportOrchestrator {
 
     public byte[] exportMaterialExcel(String startDate, String endDate, String format) throws IOException {
         assertNotFactoryAccount();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<MaterialReconciliation> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
@@ -297,6 +300,7 @@ public class FinanceTaxExportOrchestrator {
 
     public byte[] exportSupplierPaymentExcel(String startDate, String endDate, String format) throws IOException {
         assertNotFactoryAccount();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<Payable> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
@@ -373,6 +377,7 @@ public class FinanceTaxExportOrchestrator {
 
     public byte[] exportTaxSummaryExcel(String startDate, String endDate, String format) throws IOException {
         assertNotFactoryAccount();
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         QueryWrapper<Invoice> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId);
@@ -447,6 +452,7 @@ public class FinanceTaxExportOrchestrator {
 
     public byte[] exportPayrollDetailExcel(String startDate, String endDate, String format) throws IOException {
         assertNotFactoryAccount();
+        TenantAssert.assertTenantContext();
 
         LocalDateTime startTime = parseStartOfDay(startDate);
         LocalDateTime endTime = parseEndOfDay(endDate);
