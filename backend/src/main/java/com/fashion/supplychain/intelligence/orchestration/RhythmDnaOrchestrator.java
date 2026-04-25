@@ -78,7 +78,13 @@ public class RhythmDnaOrchestrator {
             resp.setOrders(Collections.emptyList());
             return resp;
         }
-        List<Map<String, Object>> snapshots = scanRecordMapper.selectFlowStageSnapshot(orderIds, ctxTenantId);
+        List<Map<String, Object>> snapshots;
+        try {
+            snapshots = scanRecordMapper.selectFlowStageSnapshot(orderIds, ctxTenantId);
+        } catch (Exception e) {
+            log.warn("[节奏DNA] flow-stage-snapshot 查询失败，降级为空: {}", e.getMessage());
+            snapshots = Collections.emptyList();
+        }
         Map<String, Map<String, Object>> snapshotMap = snapshots.stream()
                 .collect(Collectors.toMap(
                         m -> String.valueOf(m.get("orderId")), m -> m, (a, b) -> a));

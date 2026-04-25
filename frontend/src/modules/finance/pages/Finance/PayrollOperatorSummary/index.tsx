@@ -194,8 +194,8 @@ const PayrollOperatorSummary: React.FC = () => {
             const res = await intelligenceApi.getWorkerEfficiency() as any;
             const list: WorkerEfficiencyItem[] = res?.data?.workers ?? res?.workers ?? [];
             setWorkerEffList([...list].sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0)));
-        } catch {
-            // 后端无数据时静默失败，不打扰用户
+        } catch (err) {
+            console.warn('[WorkerEfficiency] 加载工人效率数据失败:', err);
         } finally {
             setWorkerEffLoading(false);
         }

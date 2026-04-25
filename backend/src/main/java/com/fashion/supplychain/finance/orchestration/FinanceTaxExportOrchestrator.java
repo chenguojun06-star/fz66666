@@ -703,13 +703,6 @@ public class FinanceTaxExportOrchestrator {
         return style;
     }
 
-    private CellStyle createDateStyle(Workbook wb) {
-        CellStyle style = wb.createCellStyle();
-        DataFormat fmt = wb.createDataFormat();
-        style.setDataFormat(fmt.getFormat("yyyy-mm-dd"));
-        return style;
-    }
-
     private byte[] toBytes(Workbook wb) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         wb.write(out);

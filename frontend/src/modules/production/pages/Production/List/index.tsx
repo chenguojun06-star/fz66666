@@ -18,7 +18,7 @@ import SubProcessRemapModal from './components/SubProcessRemapModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
-import { customerApi } from '@/services/crm/customerApi';
+import { useCustomerOptions } from '@/hooks/useCustomerOptions';
 import type { PaginatedResponse } from '@/types/api';
 import api, {
   parseProductionOrderLines,
@@ -100,7 +100,7 @@ const CustomerFilterSelect: React.FC<{
           setCustomers(resp.data.records.map((c: any) => ({ id: c.id, companyName: c.companyName })));
         }
       } catch (_e) {
-        // ignore
+        console.warn('[CustomerFilterSelect] 加载客户列表失败:', _e);
       }
     })();
     return () => { cancelled = true; };
@@ -166,7 +166,7 @@ const ProductionList: React.FC = () => {
   // ===== 数据状态 =====
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [_selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
+  const [selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [viewMode, setViewModeState] = useState<'list' | 'card' | 'smart'>(
@@ -256,7 +256,6 @@ const ProductionList: React.FC = () => {
     quickEditSaving, handleQuickEditSave: hookQuickEditSave,
     handleCloseOrder, pendingCloseOrder, closeOrderLoading, confirmCloseOrder, cancelCloseOrder,
     handleScrapOrder, pendingScrapOrder, scrapOrderLoading, confirmScrapOrder, cancelScrapOrder,
-    exportSelected: _exportSelected,
     remarkPopoverId, setRemarkPopoverId, remarkText, setRemarkText, remarkSaving, handleRemarkSave,
     handleCopyOrder,
   } = useProductionActions({ message, isSupervisorOrAbove, fetchProductionList });
@@ -276,9 +275,8 @@ const ProductionList: React.FC = () => {
 
   const {
     processDetailVisible, processDetailRecord, processDetailType,
-    procurementStatus, processStatus, processDetailNodeOperations: _processDetailNodeOperations,
+    procurementStatus, processStatus,
     openProcessDetail, closeProcessDetail, syncProcessFromTemplate,
-    factories: _factories, factoriesLoading: _factoriesLoading,
   } = useProcessDetail({ message, fetchProductionList });
 
   const {
@@ -298,7 +296,7 @@ const ProductionList: React.FC = () => {
       processParentMappingApi.list().then((res: any) => {
         const data = res?.data?.data ?? res?.data ?? {};
         if (data && typeof data === 'object') setDynamicParentMapping(data);
-      }).catch(() => {});
+      }).catch((err) => { console.warn('[ProcessParentMapping] 加载动态映射失败:', err); });
     }
   }, []);
 

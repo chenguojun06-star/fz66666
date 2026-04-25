@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import dayjs from 'dayjs';
 
 export async function exportToExcel(
   data: Record<string, unknown>[],
@@ -34,4 +35,25 @@ export function mapColumns(
   headers: Record<string, string>,
 ): { header: string; key: string }[] {
   return Object.entries(headers).map(([key, header]) => ({ header, key }));
+}
+
+export function getExportFilename(prefix: string): string {
+  return `${prefix}_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`;
+}
+
+export async function exportTableToExcel(
+  data: Record<string, unknown>[],
+  columns: { title: string; dataIndex: string }[],
+  filenamePrefix: string,
+): Promise<void> {
+  if (data.length === 0) return;
+  const formattedData = data.map((item) => {
+    const row: Record<string, unknown> = {};
+    columns.forEach((col) => {
+      row[col.title] = (item as Record<string, unknown>)[col.dataIndex] ?? '';
+    });
+    return row;
+  });
+  const cols = columns.map((col) => ({ header: col.title, key: col.title }));
+  await exportToExcel(formattedData, cols, getExportFilename(filenamePrefix));
 }
