@@ -71,7 +71,8 @@ public class CustomerOrchestrator {
     }
 
     /**
-     * 查询该客户关联的生产订单（通过 company 字段模糊匹配）
+     * 查询该客户关联的生产订单
+     * 优先按 customer_id 精确匹配，兜底按 company 字段模糊匹配
      */
     public List<ProductionOrder> getCustomerOrders(String customerId) {
         Long tenantId = currentTenantId();
@@ -80,16 +81,28 @@ public class CustomerOrchestrator {
                 .eq(Customer::getTenantId, tenantId)
                 .eq(Customer::getDeleteFlag, 0)
                 .one();
-        if (customer == null || !StringUtils.hasText(customer.getCompanyName())) {
+        if (customer == null) {
             return Collections.emptyList();
         }
-        return productionOrderService.list(
+
+        List<ProductionOrder> orders = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getDeleteFlag, 0)
                         .eq(ProductionOrder::getTenantId, tenantId)
-                        .like(ProductionOrder::getCompany, customer.getCompanyName())
+                        .eq(ProductionOrder::getCustomerRefId, customerId)
                         .orderByDesc(ProductionOrder::getCreateTime)
                         .last("LIMIT 100"));
+
+        if (orders.isEmpty() && StringUtils.hasText(customer.getCompanyName())) {
+            orders = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getDeleteFlag, 0)
+                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .like(ProductionOrder::getCompany, customer.getCompanyName())
+                            .orderByDesc(ProductionOrder::getCreateTime)
+                            .last("LIMIT 100"));
+        }
+        return orders;
     }
 
     public Map<String, Object> getStats() {
@@ -120,12 +133,30 @@ public class CustomerOrchestrator {
                         .eq(Customer::getStatus, "ACTIVE")
                         .eq(Customer::getTenantId, tenantId));
 
+        long linkedOrderCount = productionOrderService.count(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .isNotNull(ProductionOrder::getCustomerRefId));
+
         Map<String, Object> result = new HashMap<>();
         result.put("total", total);
         result.put("newThisMonth", newThisMonth);
         result.put("vip", vip);
         result.put("activeCount", activeCount);
+        result.put("linkedOrderCount", linkedOrderCount);
         return result;
+    }
+
+    public List<Customer> listActive() {
+        Long tenantId = currentTenantId();
+        return customerService.lambdaQuery()
+                .eq(Customer::getDeleteFlag, 0)
+                .eq(Customer::getTenantId, tenantId)
+                .eq(Customer::getStatus, "ACTIVE")
+                .orderByDesc(Customer::getCreateTime)
+                .last("LIMIT 500")
+                .list();
     }
 
     // ─── 写入 ───────────────────────────────────────────────────────────────

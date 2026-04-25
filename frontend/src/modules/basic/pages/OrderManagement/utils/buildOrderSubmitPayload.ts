@@ -98,6 +98,8 @@ export const buildOrderSubmitPayload = ({
     merchandiser: values.merchandiser || null,
     company: values.company || null,
     customerId: values.customerId || null,
+    customerRefId: values.customerRefId || null,
+    customerName: values.customerName || values.company || null,
     productCategory: values.productCategory || null,
     patternMaker: values.patternMaker || null,
     urgencyLevel: values.urgencyLevel || 'normal',

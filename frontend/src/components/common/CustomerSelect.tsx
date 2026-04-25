@@ -40,7 +40,17 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
           setCustomers((response as any).data.records);
         }
       } catch {
-        if (mounted) setCustomers([]);
+        try {
+          const resp2 = await fetch('/api/crm/customers/active-list', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          });
+          const json = await resp2.json();
+          if (mounted && json.data) {
+            setCustomers(Array.isArray(json.data) ? json.data : []);
+          }
+        } catch {
+          if (mounted) setCustomers([]);
+        }
       } finally {
         if (mounted) setLoading(false);
       }

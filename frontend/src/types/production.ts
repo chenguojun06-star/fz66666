@@ -26,6 +26,8 @@ export interface ProductionOrder extends Record<string, unknown> {
   factoryContactPhone?: string; // 工厂联系电话
   merchandiser?: string; // 跟单员（选填，可选择系统用户）
   company?: string; // 公司/客户（选填）
+  customerRefId?: string; // CRM客户ID（关联t_customer.id）
+  customerName?: string; // CRM客户名称快照
   productCategory?: string; // 品类（选填）
   patternMaker?: string; // 纸样师（选填，可选择系统用户）
   orderQuantity: number;
@@ -466,6 +468,10 @@ export interface ProductionQueryParams {
   plateType?: string;
   /** 跟单员筛选（模糊匹配） */
   merchandiser?: string;
+  /** CRM客户ID筛选（精确匹配） */
+  customerRefId?: string;
+  /** CRM客户名称筛选（模糊匹配） */
+  customerName?: string;
   keyword?: string;
   /** 我的订单页传 true，显示报废订单；其他页面不传，默认过滤掉报废订单 */
   includeScrapped?: boolean;

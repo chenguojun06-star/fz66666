@@ -220,10 +220,10 @@ export function useProductionColumns({
     {
       title: '客户',
       dataIndex: 'company',
-      key: 'company',
+      key: 'companyName',
       width: 120,
       ellipsis: true,
-      render: (v: any) => v || '-',
+      render: (_: any, record: any) => record.customerName || record.company || '-',
     },
     {
       title: '纸样',

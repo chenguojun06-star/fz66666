@@ -121,14 +121,18 @@ jobs:
         distribution: 'temurin'
         cache: 'maven'
 
+    - name: 后端编译 + Checkstyle 代码规范检查
+      working-directory: ./backend
+      run: |
+        mvn clean compile checkstyle:check -q
+
     - name: 运行后端单元测试（全量，排除integration组）
       working-directory: ./backend
       run: |
-        mvn clean test \
+        mvn test \
           -Dspring.profiles.active=test \
           -DexcludedGroups=integration \
-          -Dsurefire.failIfNoSpecifiedTests=false \
-          -Dcheckstyle.skip=true
+          -Dsurefire.failIfNoSpecifiedTests=false
 
   frontend-lint:
     name: 前端代码规范检查 (ESLint + TypeScript)

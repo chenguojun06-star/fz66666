@@ -1,0 +1,23 @@
+# CODEOWNERS - 代码审核归属规则
+# 以下文件/目录的变更需要指定 reviewer 审核
+
+# 数据库迁移脚本 — 需要数据库管理员审核
+/backend/src/main/resources/db/migration/  @chenguojun06-star
+
+# DbColumnRepairRunner — 数据库自愈核心，必须审核
+/backend/src/main/java/com/fashion/supplychain/config/DbColumnRepairRunner.java  @chenguojun06-star
+
+# 扫码核心链路 — 必须审核
+/backend/src/main/java/com/fashion/supplychain/production/executor/  @chenguojun06-star
+/backend/src/main/java/com/fashion/supplychain/production/orchestration/ScanRecordOrchestrator.java  @chenguojun06-star
+/backend/src/main/java/com/fashion/supplychain/production/stage/  @chenguojun06-star
+
+# CI/CD 配置 — 需要运维审核
+/.github/workflows/  @chenguojun06-star
+
+# 安全相关 — 权限/认证/租户隔离
+/backend/src/main/java/com/fashion/supplychain/security/  @chenguojun06-star
+/backend/src/main/java/com/fashion/supplychain/tenant/  @chenguojun06-star
+
+# 默认规则 — 所有其他文件
+* @chenguojun06-star

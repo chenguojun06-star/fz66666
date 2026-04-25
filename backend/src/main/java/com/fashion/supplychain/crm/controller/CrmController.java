@@ -74,6 +74,12 @@ public class CrmController {
         return Result.success(customerOrchestrator.getStats());
     }
 
+    /** 活跃客户下拉列表（用于订单创建时选择客户） */
+    @GetMapping("/customers/active-list")
+    public Result<?> listActiveCustomers() {
+        return Result.success(customerOrchestrator.listActive());
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // 应收账款（AR / Receivable）
     // ──────────────────────────────────────────────────────────────────────

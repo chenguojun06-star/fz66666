@@ -14,8 +14,7 @@
  * const canSeePrice = usePriceVisible();
  */
 
-import type { UserInfo } from './AuthContext';
-import { isSupervisorOrAbove } from './AuthContext';
+import { isSupervisorOrAbove, type UserInfo } from './AuthContext';
 
 /** 脱敏占位符 */
 const MASKED_VALUE = '***';

@@ -41,7 +41,6 @@ import OrderSidebarInsights from './components/OrderSidebarInsights';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import StandardToolbar from '@/components/common/StandardToolbar';
-import SupplierSelect from '@/components/common/SupplierSelect';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
@@ -1059,16 +1058,26 @@ const OrderManagement: React.FC = () => {
                         <CustomerSelect
                           placeholder="选填"
                           allowClear
-                          onChange={(_value: string, option?: { customerId: string }) => {
+                          onChange={(_value: string, option?: { customerId: string; customer: any }) => {
                             if (option?.customerId) {
-                              form.setFieldsValue({ customerId: option.customerId });
+                              form.setFieldsValue({
+                                customerId: option.customerId,
+                                customerRefId: option.customerId,
+                                customerName: option.customer?.companyName || _value || undefined,
+                              });
                             } else {
-                              form.setFieldsValue({ customerId: undefined });
+                              form.setFieldsValue({
+                                customerId: undefined,
+                                customerRefId: undefined,
+                                customerName: undefined,
+                              });
                             }
                           }}
                         />
                       </Form.Item>
                       <Form.Item name="customerId" hidden><Input /></Form.Item>
+                      <Form.Item name="customerRefId" hidden><Input /></Form.Item>
+                      <Form.Item name="customerName" hidden><Input /></Form.Item>
                     </InlineField>
                   </Col>
                   <Col xs={24} sm={8}>

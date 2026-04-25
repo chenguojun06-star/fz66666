@@ -5,15 +5,14 @@
 
 <!--
   服装供应链管理系统 Checkstyle 规则
-  模式：report-only（只报告，不阻断构建）
-  目标：覆盖命名规范 + 基础代码质量，不检查格式缩进（项目已用 IDE 统一）
+  模式：strict（违规即阻断构建，CI 不再跳过）
+  目标：覆盖命名规范 + 代码质量 + 安全规范，不检查格式缩进（项目已用 IDE 统一）
 -->
 <module name="Checker">
     <property name="charset" value="UTF-8"/>
     <property name="severity" value="warning"/>
     <property name="fileExtensions" value="java"/>
 
-    <!-- 跳过生成代码和测试数据目录 -->
     <module name="BeforeExecutionExclusionFileFilter">
         <property name="fileNamePattern" value=".*[\\/]target[\\/].*"/>
     </module>
@@ -21,72 +20,123 @@
     <module name="TreeWalker">
 
         <!-- ===== 命名规范 ===== -->
-        <!-- 类名：大驼峰 -->
         <module name="TypeName">
             <property name="format" value="^[A-Z][a-zA-Z0-9]*$"/>
             <message key="name.invalidPattern" value="类名 ''{0}'' 应为大驼峰命名（如 ProductionOrder）"/>
         </module>
 
-        <!-- 方法名：小驼峰 -->
         <module name="MethodName">
             <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
             <message key="name.invalidPattern" value="方法名 ''{0}'' 应为小驼峰命名（如 createOrder）"/>
         </module>
 
-        <!-- 成员变量：小驼峰 -->
         <module name="MemberName">
             <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
             <message key="name.invalidPattern" value="成员变量 ''{0}'' 应为小驼峰命名"/>
         </module>
 
-        <!-- 局部变量：小驼峰 -->
         <module name="LocalVariableName">
             <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
             <message key="name.invalidPattern" value="局部变量 ''{0}'' 应为小驼峰命名"/>
         </module>
 
-        <!-- 参数名：小驼峰 -->
         <module name="ParameterName">
             <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
             <message key="name.invalidPattern" value="参数名 ''{0}'' 应为小驼峰命名"/>
         </module>
 
-        <!-- 常量：全大写下划线；保留 log/logger（SLF4J Lombok 约定小写，不强制改名） -->
         <module name="ConstantName">
             <property name="format" value="^(log|logger|[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)$"/>
             <message key="name.invalidPattern" value="常量 ''{0}'' 应为全大写下划线命名（如 MAX_RETRY_COUNT）"/>
         </module>
 
         <!-- ===== 代码质量 ===== -->
-        <!-- 不允许空 catch 块（吞异常） -->
         <module name="EmptyCatchBlock">
             <property name="exceptionVariableName" value="ignored|expected"/>
-            <message key="catch.block.empty" value="catch 块为空，请至少加注释说明为何忽略此异常"/>
+            <message key="catch.block.empty" value="catch 块为空，请至少加注释说明为何忽略此异常（规则15）"/>
         </module>
 
-        <!-- 不允许多余的 import -->
         <module name="UnusedImports"/>
 
-        <!-- 不允许重复 import -->
         <module name="RedundantImport"/>
 
-        <!-- 不允许使用 System.out.print（应用 log） -->
         <module name="Regexp">
             <property name="format" value="System\.(out|err)\.print"/>
             <property name="illegalPattern" value="true"/>
             <property name="message" value="请使用 log.info/warn/error 替代 System.out/err.print"/>
         </module>
 
-        <!-- 方法不宜过长（超过 80 行提示） -->
         <module name="MethodLength">
             <property name="max" value="80"/>
             <property name="severity" value="warning"/>
-            <message key="maxLen.method" value="方法过长（{0} 行），建议拆分为多个小方法（目标 ≤ 40 行）"/>
+            <message key="maxLen.method" value="方法过长（{0} 行），建议拆分为多个小方法（规则36: 目标 ≤ 80 行）"/>
+        </module>
+
+        <!-- ===== 新增规则 ===== -->
+
+        <module name="ParameterNumber">
+            <property name="max" value="8"/>
+            <property name="severity" value="warning"/>
+            <message key="maxParam" value="方法参数过多（{0} 个），建议封装为 DTO/Context 对象"/>
+        </module>
+
+        <module name="NestedIfDepth">
+            <property name="max" value="3"/>
+            <property name="severity" value="warning"/>
+            <message key="nested.if.depth" value="if 嵌套层级过深（{0} 层），建议提取方法或使用卫语句"/>
+        </module>
+
+        <module name="NestedTryDepth">
+            <property name="max" value="2"/>
+            <property name="severity" value="warning"/>
+            <message key="nested.try.depth" value="try 嵌套层级过深（{0} 层），建议重构异常处理逻辑"/>
+        </module>
+
+        <module name="ReturnCount">
+            <property name="max" value="5"/>
+            <property name="severity" value="warning"/>
+            <property name="format" value="^equals$"/>
+            <message key="return.count" value="方法 return 语句过多（{0} 个），建议简化逻辑"/>
+        </module>
+
+        <module name="CyclomaticComplexity">
+            <property name="max" value="15"/>
+            <property name="severity" value="warning"/>
+            <message key="cyclomaticComplexity" value="圈复杂度过高（{0}），建议拆分方法降低复杂度"/>
+        </module>
+
+        <module name="MissingOverride">
+            <property name="severity" value="warning"/>
+            <message key="annotation.missing.override" value="请添加 @Override 注解"/>
+        </module>
+
+        <module name="EqualsHashCode">
+            <message key="equals.noHashCode" value="重写了 equals() 但未重写 hashCode()"/>
+            <message key="equals.noEquals" value="重写了 hashCode() 但未重写 equals()"/>
+        </module>
+
+        <module name="Regexp">
+            <property name="format" value="@Autowired"/>
+            <property name="illegalPattern" value="true"/>
+            <property name="severity" value="ignore"/>
+            <message key="illegal.regexp" value="建议使用构造器注入替代 @Autowired 字段注入"/>
+        </module>
+
+        <module name="Regexp">
+            <property name="format" value="\.printStackTrace\(\)"/>
+            <property name="illegalPattern" value="true"/>
+            <message key="illegal.regexp" value="请使用 log.error() 替代 e.printStackTrace()"/>
+        </module>
+
+        <module name="Regexp">
+            <property name="format" value="Thread\.sleep\("/>
+            <property name="illegalPattern" value="true"/>
+            <property name="severity" value="warning"/>
+            <message key="illegal.regexp" value="避免使用 Thread.sleep()，建议使用 ScheduledExecutorService 或等待机制"/>
         </module>
 
     </module>
 
-    <!-- 行长度：超过 200 字符警告（宽松阈值，仅捕捉明显问题） -->
     <module name="LineLength">
         <property name="max" value="200"/>
         <property name="severity" value="warning"/>

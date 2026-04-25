@@ -18,6 +18,7 @@ import SubProcessRemapModal from './components/SubProcessRemapModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
+import { customerApi } from '@/services/crm/customerApi';
 import type { PaginatedResponse } from '@/types/api';
 import api, {
   parseProductionOrderLines,
@@ -84,6 +85,42 @@ const DEFAULT_HOVER_NODES: ProgressNode[] = [
   { id: '质检', name: '质检' },
   { id: '入库', name: '入库' },
 ];
+
+const CustomerFilterSelect: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+}> = ({ value, onChange }) => {
+  const [customers, setCustomers] = useState<{ id: string; companyName: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await customerApi.list({ pageSize: 500, status: 'ACTIVE' });
+        if (!cancelled && resp.data?.records) {
+          setCustomers(resp.data.records.map((c: any) => ({ id: c.id, companyName: c.companyName })));
+        }
+      } catch (_e) {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return (
+    <Select
+      value={value || ''}
+      onChange={onChange}
+      placeholder="客户"
+      allowClear
+      showSearch
+      optionFilterProp="label"
+      style={{ minWidth: 130 }}
+      options={[
+        { label: '全部客户', value: '' },
+        ...customers.map((c) => ({ label: c.companyName, value: c.id })),
+      ]}
+    />
+  );
+};
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -573,6 +610,10 @@ const ProductionList: React.FC = () => {
                       { label: '首单', value: 'FIRST' },
                       { label: '翻单', value: 'REORDER' },
                     ]}
+                  />
+                  <CustomerFilterSelect
+                    value={queryParams.customerRefId || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, customerRefId: value || undefined, page: 1 })}
                   />
                 </>
           }
