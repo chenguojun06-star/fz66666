@@ -203,6 +203,7 @@ public class MaterialReconciliationOrchestrator {
         }
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public boolean save(MaterialReconciliation materialReconciliation) {
         TenantAssert.assertTenantContext();
         if (materialReconciliation == null) {
@@ -231,6 +232,7 @@ public class MaterialReconciliationOrchestrator {
         return true;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public boolean update(MaterialReconciliation materialReconciliation) {
         if (materialReconciliation == null || !StringUtils.hasText(materialReconciliation.getId())) {
             throw new IllegalArgumentException("参数错误");

@@ -14,6 +14,6 @@ public interface PaymentRecordMapper extends BaseMapper<PaymentRecord> {
     @Select("SELECT * FROM t_payment_record WHERE tenant_id = #{tenantId} AND order_id = #{orderId} ORDER BY created_time DESC")
     List<PaymentRecord> findByOrderId(Long tenantId, String orderId);
 
-    @Select("SELECT * FROM t_payment_record WHERE third_party_order_id = #{thirdPartyOrderId} AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) LIMIT 1")
+    @Select("SELECT * FROM t_payment_record WHERE third_party_order_id = #{thirdPartyOrderId} AND tenant_id = #{tenantId} LIMIT 1")
     PaymentRecord findByThirdPartyOrderId(@Param("thirdPartyOrderId") String thirdPartyOrderId, @Param("tenantId") Long tenantId);
 }

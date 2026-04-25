@@ -378,26 +378,56 @@ public class ViewMigrator {
         try {
             jdbc.execute(createSql);
             log.info("View {} checked/created.", viewName);
-            return;
         } catch (Exception e) {
             log.warn("Failed to create view {}: {}", viewName, e.getMessage());
         }
-        boolean existsAfterFailure = false;
-        try {
-            Integer cnt = jdbc.queryForObject(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
-                    Integer.class, viewName);
-            existsAfterFailure = cnt != null && cnt > 0;
-        } catch (Exception ignored) {
-        }
-        if (!existsAfterFailure) {
-            log.error("[ViewMigrator] CRITICAL: view {} was dropped by failed CREATE OR REPLACE and does not exist! Attempting re-create...", viewName);
+
+        if (!verifyViewColumns(jdbc, viewName, createSql)) {
+            log.warn("[ViewMigrator] 视图 {} 列不完整，强制重建...", viewName);
             try {
+                jdbc.execute("DROP VIEW IF EXISTS " + viewName);
                 jdbc.execute(createSql);
-                log.info("View {} re-created successfully on retry.", viewName);
+                log.info("[ViewMigrator] 视图 {} 重建成功", viewName);
             } catch (Exception retryEx) {
-                log.error("[ViewMigrator] FATAL: view {} re-create also failed: {}", viewName, retryEx.getMessage());
+                log.error("[ViewMigrator] FATAL: 视图 {} 重建失败: {}", viewName, retryEx.getMessage());
             }
         }
+    }
+
+    private boolean verifyViewColumns(JdbcTemplate jdbc, String viewName, String createSql) {
+        try {
+            List<String> actualCols = jdbc.queryForList(
+                    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
+                    String.class, viewName);
+            if (actualCols.isEmpty()) {
+                log.error("[ViewMigrator] 视图 {} 不存在（0列）", viewName);
+                return false;
+            }
+            List<String> expectedCols = extractExpectedColumns(createSql);
+            for (String expected : expectedCols) {
+                if (!actualCols.contains(expected)) {
+                    log.error("[ViewMigrator] 视图 {} 缺列: 期望={}, 实际有={}", viewName, expected, actualCols);
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("[ViewMigrator] 视图 {} 列验证失败: {}", viewName, e.getMessage());
+            return true;
+        }
+    }
+
+    private List<String> extractExpectedColumns(String createSql) {
+        List<String> cols = new ArrayList<>();
+        Pattern aliasPattern = Pattern.compile("(?i)\\bAS\\s+(`?)([a-z_][a-z0-9_]*)\\1\\s*(?:,|\\n|\\r|$)");
+        Matcher m = aliasPattern.matcher(createSql);
+        while (m.find()) {
+            String col = m.group(2);
+            if (col != null && !cols.contains(col)) {
+                cols.add(col);
+            }
+        }
+        return cols;
     }
 }

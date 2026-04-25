@@ -551,7 +551,8 @@ public class AiAgentOrchestrator {
                 emitSse(emitter, "error", Map.of("message", "系统异常: " + e.getMessage()));
                 emitSse(emitter, "done", Map.of());
                 emitter.complete();
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                log.debug("[AI Agent] SSE完成异常: {}", ex.getMessage());
                 emitter.completeWithError(e);
             }
         }

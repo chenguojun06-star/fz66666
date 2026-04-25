@@ -148,7 +148,9 @@ public class ReflectionEngineOrchestrator {
         try {
             int v = JSON.readTree(critique).path("confidence").asInt(-1);
             if (v >= 0 && v <= 100) return v;
-        } catch (Exception ignored) { /* fall through */ }
+        } catch (Exception ex) {
+            log.debug("[ReflectionEngine] 置信度解析失败: {}", ex.getMessage());
+        }
         return estimateFallbackConfidence(state);
     }
 

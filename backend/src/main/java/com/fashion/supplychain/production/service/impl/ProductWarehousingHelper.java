@@ -567,6 +567,7 @@ public class ProductWarehousingHelper {
         log.info("[ReQc] 旧次品记录已清理: orderId={}, bundleId={}", orderId, cuttingBundleId);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
         if (deltaQuantity == 0) {
             return;

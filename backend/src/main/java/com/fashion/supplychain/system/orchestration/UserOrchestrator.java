@@ -477,8 +477,8 @@ public class UserOrchestrator {
                         result.put("tenantEnabledModules", currentTenant.getEnabledModules());
                     }
                 }
-            } catch (Exception ignored) {
-                // 查询租户信息失败不影响主流程
+            } catch (Exception ex) {
+                log.debug("[UserOrchestrator] 查询租户信息失败: {}", ex.getMessage());
             }
         }
 

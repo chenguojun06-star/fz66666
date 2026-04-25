@@ -383,7 +383,8 @@ public class ActionCenterOrchestrator {
         try {
             LocalDateTime reviewAt = LocalDateTime.parse(nextReviewAt, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
             return reviewAt.isBefore(LocalDateTime.now());
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.debug("[ActionCenter] 日期解析失败: {}", ex.getMessage());
             return false;
         }
     }

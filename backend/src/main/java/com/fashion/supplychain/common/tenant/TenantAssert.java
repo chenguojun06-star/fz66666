@@ -194,4 +194,43 @@ public class TenantAssert {
     public static Long currentTenantId() {
         return requireTenantId();
     }
+
+    /**
+     * 带租户校验的实体获取：先通过 service.getById(id) 获取实体，
+     * 再校验实体是否属于当前租户。如果实体为 null 或不属于当前租户，返回 null。
+     *
+     * <p>使用场景：替代裸调 service.getById(id)，确保不会返回其他租户的数据。
+     *
+     * <p>示例：
+     * <pre>
+     * // 之前（不安全）：
+     * ProductionOrder order = productionOrderService.getById(orderId);
+     *
+     * // 之后（安全）：
+     * ProductionOrder order = TenantAssert.getAndValidate(productionOrderService.getById(orderId), "生产订单");
+     * </pre>
+     *
+     * @param entity     通过 getById 获取的实体（可能为 null）
+     * @param entityDesc 实体描述（用于日志）
+     * @param <T>        实体类型（必须有 getTenantId() 方法）
+     * @return 实体（如果属于当前租户），null（如果实体为 null 或不属于当前租户）
+     */
+    public static <T> T getAndValidate(T entity, String entityDesc) {
+        if (entity == null) {
+            return null;
+        }
+        try {
+            Long entityTenantId = (Long) entity.getClass().getMethod("getTenantId").invoke(entity);
+            Long currentTenantId = requireTenantId();
+            if (entityTenantId != null && currentTenantId.equals(entityTenantId)) {
+                return entity;
+            }
+            log.warn("[租户安全] getById跨租户访问被拦截: currentTenant={}, entityTenant={}, entity={}",
+                    currentTenantId, entityTenantId, entityDesc);
+            return null;
+        } catch (Exception e) {
+            log.warn("[租户安全] 实体租户校验失败: entity={}, error={}", entityDesc, e.getMessage());
+            return entity;
+        }
+    }
 }

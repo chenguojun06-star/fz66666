@@ -17,7 +17,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
      * 统计成品总数
      */
     @Select("SELECT IFNULL(SUM(qualified_quantity), 0) FROM t_product_warehousing WHERE delete_flag = 0" +
-            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+            " AND tenant_id = #{tenantId}")
     Integer selectTotalQuantity(@Param("tenantId") Long tenantId);
 
     /**
@@ -25,7 +25,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
      */
     @Select("SELECT COUNT(*) FROM t_product_warehousing " +
             "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0" +
-            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+            " AND tenant_id = #{tenantId}")
     Integer selectTodayInboundCount(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
@@ -33,7 +33,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
      */
     @Select("SELECT * FROM t_product_warehousing " +
             "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0" +
-            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})" +
+            " AND tenant_id = #{tenantId}" +
             " ORDER BY warehousing_end_time DESC LIMIT 20")
     List<ProductWarehousing> selectTodayInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
@@ -43,7 +43,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     @Select("SELECT HOUR(warehousing_end_time) as hour, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
             "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0 " +
-            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "AND tenant_id = #{tenantId} " +
             "GROUP BY HOUR(warehousing_end_time)")
     List<Map<String, Object>> selectTodayInboundByHour(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
@@ -53,7 +53,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     @Select("SELECT DATE(warehousing_end_time) as date, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
             "WHERE warehousing_end_time >= DATE_SUB(#{today}, INTERVAL 7 DAY) AND delete_flag = 0 " +
-            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "AND tenant_id = #{tenantId} " +
             "GROUP BY DATE(warehousing_end_time)")
     List<Map<String, Object>> selectLast7DaysInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
@@ -64,7 +64,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
             "FROM t_product_warehousing " +
             "WHERE YEAR(warehousing_end_time) = YEAR(#{today}) " +
             "AND MONTH(warehousing_end_time) = MONTH(#{today}) AND delete_flag = 0 " +
-            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "AND tenant_id = #{tenantId} " +
             "GROUP BY DAY(warehousing_end_time)")
     List<Map<String, Object>> selectLast30DaysInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
@@ -74,7 +74,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     @Select("SELECT MONTH(warehousing_end_time) as month, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
             "WHERE YEAR(warehousing_end_time) = #{year} AND delete_flag = 0 " +
-            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "AND tenant_id = #{tenantId} " +
             "GROUP BY MONTH(warehousing_end_time)")
     List<Map<String, Object>> selectYearInboundByMonth(@Param("year") int year, @Param("tenantId") Long tenantId);
 
@@ -101,7 +101,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
             "    THEN warehousing_quantity ELSE 0 END), 0) AS todayQuantity",
             "FROM t_product_warehousing",
             "WHERE (delete_flag = 0 OR delete_flag IS NULL)",
-            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})"
+            "AND tenant_id = #{tenantId}"
     })
     Map<String, Object> selectWarehousingStats(@Param("tenantId") Long tenantId);
 }

@@ -9,6 +9,6 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface PayrollSettlementItemMapper extends BaseMapper<PayrollSettlementItem> {
-    @Select("SELECT * FROM t_payroll_settlement_item WHERE settlement_id = #{settlementId} AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY operator_name, process_name")
+    @Select("SELECT * FROM t_payroll_settlement_item WHERE settlement_id = #{settlementId} AND tenant_id = #{tenantId} ORDER BY operator_name, process_name")
     List<PayrollSettlementItem> selectBySettlementId(@Param("settlementId") String settlementId, @Param("tenantId") Long tenantId);
 }

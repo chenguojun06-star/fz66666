@@ -328,7 +328,8 @@ public class IntelligenceExecutionController {
                             l.getResultData(), ExecutableCommand.class);
                     cmd.put("params", originalCommand.getParams() != null ? originalCommand.getParams() : Map.of());
                     cmd.put("requiresApproval", originalCommand.getRequiresApproval());
-                } catch (Exception ignored) {
+                } catch (Exception ex) {
+                    log.debug("[智能执行] 命令参数解析失败: {}", ex.getMessage());
                     cmd.put("params", Map.of());
                     cmd.put("requiresApproval", true);
                 }

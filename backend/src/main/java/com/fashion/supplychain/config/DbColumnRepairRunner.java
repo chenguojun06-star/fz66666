@@ -552,6 +552,92 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
         add("t_order_remark", "id", "BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键'");
 
+        add("t_factory", "supplier_type", "VARCHAR(20) DEFAULT NULL COMMENT '供应商类型'");
+        add("t_factory", "supplier_code", "VARCHAR(64) DEFAULT NULL COMMENT '供应商编码'");
+        add("t_factory", "supplier_contact_person", "VARCHAR(50) DEFAULT NULL COMMENT '供应商联系人'");
+        add("t_factory", "supplier_contact_phone", "VARCHAR(20) DEFAULT NULL COMMENT '供应商联系电话'");
+        add("t_factory", "supplier_address", "VARCHAR(500) DEFAULT NULL COMMENT '供应商地址'");
+        add("t_factory", "supplier_rating", "DECIMAL(3,1) DEFAULT NULL COMMENT '供应商评级'");
+        add("t_factory", "supplier_cooperation_start", "DATE DEFAULT NULL COMMENT '合作开始日期'");
+        add("t_factory", "supplier_payment_terms", "VARCHAR(100) DEFAULT NULL COMMENT '付款条件'");
+        add("t_factory", "supplier_remark", "VARCHAR(500) DEFAULT NULL COMMENT '供应商备注'");
+        add("t_factory", "daily_capacity", "INT DEFAULT NULL COMMENT '日产能'");
+        add("t_factory", "manager_id", "VARCHAR(64) DEFAULT NULL COMMENT '负责人ID'");
+        add("t_factory", "manager_name", "VARCHAR(100) DEFAULT NULL COMMENT '负责人姓名'");
+        add("t_factory", "business_license", "VARCHAR(200) DEFAULT NULL COMMENT '营业执照'");
+        add("t_factory", "tax_number", "VARCHAR(50) DEFAULT NULL COMMENT '税号'");
+        add("t_factory", "bank_name", "VARCHAR(100) DEFAULT NULL COMMENT '开户银行'");
+        add("t_factory", "bank_account", "VARCHAR(50) DEFAULT NULL COMMENT '银行账号'");
+        add("t_factory", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+
+        add("t_product_stock", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_product_stock", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_product_stock", "factory_id", "VARCHAR(64) DEFAULT NULL COMMENT '工厂ID'");
+        add("t_product_stock", "warehouse_location", "VARCHAR(200) DEFAULT NULL COMMENT '库位'");
+
+        add("t_sample_stock", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_sample_stock", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_sample_stock", "style_no", "VARCHAR(64) DEFAULT NULL COMMENT '款号'");
+        add("t_sample_stock", "color", "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
+
+        add("t_sample_loan", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_sample_loan", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_sample_loan", "loan_type", "VARCHAR(20) DEFAULT NULL COMMENT '借出类型'");
+        add("t_sample_loan", "return_deadline", "DATETIME DEFAULT NULL COMMENT '归还截止日期'");
+
+        add("t_pattern_scan_record", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_pattern_scan_record", "operator_role", "VARCHAR(50) DEFAULT NULL COMMENT '操作员角色'");
+        add("t_pattern_scan_record", "factory_id", "VARCHAR(64) DEFAULT NULL COMMENT '工厂ID'");
+
+        add("t_production_process_tracking", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_production_process_tracking", "scan_status", "VARCHAR(20) DEFAULT NULL COMMENT '扫码状态'");
+        add("t_production_process_tracking", "scanned_quantity", "INT DEFAULT NULL COMMENT '已扫码数量'");
+        add("t_production_process_tracking", "unit_price", "DECIMAL(15,2) DEFAULT NULL COMMENT '工序单价'");
+        add("t_production_process_tracking", "process_code", "VARCHAR(50) DEFAULT NULL COMMENT '工序编号'");
+        add("t_production_process_tracking", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+
+        add("t_material_inbound", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_material_inbound", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_material_inbound", "inbound_no", "VARCHAR(64) DEFAULT NULL COMMENT '入库单号'");
+        add("t_material_inbound", "supplier_name", "VARCHAR(200) DEFAULT NULL COMMENT '供应商名称'");
+        add("t_material_inbound", "warehouse_location", "VARCHAR(200) DEFAULT NULL COMMENT '仓库位置'");
+
+        add("t_wage_payment", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_wage_payment", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_wage_payment", "payment_no", "VARCHAR(64) DEFAULT NULL COMMENT '付款单号'");
+        add("t_wage_payment", "payment_method", "VARCHAR(20) DEFAULT NULL COMMENT '付款方式'");
+        add("t_wage_payment", "payment_account_id", "VARCHAR(64) DEFAULT NULL COMMENT '付款账户ID'");
+
+        add("t_expense_reimbursement", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_expense_reimbursement", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_expense_reimbursement", "reimbursement_no", "VARCHAR(64) DEFAULT NULL COMMENT '报销单号'");
+        add("t_expense_reimbursement", "approval_status", "VARCHAR(20) DEFAULT NULL COMMENT '审批状态'");
+
+        add("t_payment_account", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_payment_account", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_payment_account", "account_name", "VARCHAR(100) DEFAULT NULL COMMENT '账户名称'");
+        add("t_payment_account", "account_type", "VARCHAR(20) DEFAULT NULL COMMENT '账户类型'");
+
+        add("t_process_price_adjustment", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_process_price_adjustment", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_process_price_adjustment", "adjustment_reason", "VARCHAR(500) DEFAULT NULL COMMENT '调价原因'");
+
+        add("t_material_quality_issue", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_material_quality_issue", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_material_quality_issue", "issue_type", "VARCHAR(50) DEFAULT NULL COMMENT '问题类型'");
+        add("t_material_quality_issue", "severity", "VARCHAR(20) DEFAULT NULL COMMENT '严重程度'");
+
+        add("t_ec_platform_config", "callback_url", "VARCHAR(500) DEFAULT NULL COMMENT '回调地址'");
+        add("t_ec_platform_config", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+        add("t_production_order", "delivery_sla_days", "INT DEFAULT NULL COMMENT '交付SLA天数'");
+        add("t_production_order", "delivery_sla_date", "DATE DEFAULT NULL COMMENT '交付SLA日期'");
+        add("t_production_order", "delivery_delay_days", "INT DEFAULT NULL COMMENT '延期天数'");
+        add("t_production_order", "delivery_delay_reason", "VARCHAR(500) DEFAULT NULL COMMENT '延期原因'");
+        add("t_production_order", "workflow_status", "VARCHAR(30) DEFAULT NULL COMMENT '工作流状态'");
+        add("t_production_order", "current_stage", "VARCHAR(50) DEFAULT NULL COMMENT '当前阶段'");
+        add("t_production_order", "stage_entered_at", "DATETIME DEFAULT NULL COMMENT '进入当前阶段时间'");
+
         TABLE_FIXES.put("t_intelligence_audit_log",
             "CREATE TABLE IF NOT EXISTS `t_intelligence_audit_log` ("
             + "`id` VARCHAR(32) NOT NULL COMMENT '审计日志ID',"
@@ -1324,6 +1410,28 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_knowledge_base", "delete_flag", "TINYINT DEFAULT 0");
         add("t_knowledge_base", "created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP");
         add("t_knowledge_base", "updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+        TABLE_FIXES.put("t_ai_skill_node",
+            "CREATE TABLE IF NOT EXISTS `t_ai_skill_node` ("
+            + "`id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
+            + "`tenant_id` BIGINT DEFAULT NULL,"
+            + "`skill_name` VARCHAR(200) NOT NULL,"
+            + "`skill_domain` VARCHAR(50) DEFAULT NULL,"
+            + "`trigger_pattern` VARCHAR(500) DEFAULT NULL,"
+            + "`tool_chain` TEXT DEFAULT NULL,"
+            + "`success_count` INT NOT NULL DEFAULT 0,"
+            + "`failure_count` INT NOT NULL DEFAULT 0,"
+            + "`avg_score` DECIMAL(5,2) NOT NULL DEFAULT 0,"
+            + "`last_activated_at` DATETIME DEFAULT NULL,"
+            + "`parent_skill_id` BIGINT DEFAULT NULL,"
+            + "`embedding_id` VARCHAR(100) DEFAULT NULL,"
+            + "`delete_flag` TINYINT NOT NULL DEFAULT 0,"
+            + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+            + "`update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            + "INDEX `idx_tenant_domain` (`tenant_id`, `skill_domain`),"
+            + "INDEX `idx_skill_name` (`skill_name`(100)),"
+            + "INDEX `idx_parent_skill_id` (`parent_skill_id`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
     private static void add(String table, String column, String definition) {

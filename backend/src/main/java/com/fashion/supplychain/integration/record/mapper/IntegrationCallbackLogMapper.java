@@ -11,9 +11,9 @@ import java.util.List;
 @Mapper
 public interface IntegrationCallbackLogMapper extends BaseMapper<IntegrationCallbackLog> {
 
-    @Select("SELECT * FROM t_integration_callback_log WHERE related_order_id = #{orderId} AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY created_time DESC")
+    @Select("SELECT * FROM t_integration_callback_log WHERE related_order_id = #{orderId} AND tenant_id = #{tenantId} ORDER BY created_time DESC")
     List<IntegrationCallbackLog> findByOrderId(@Param("orderId") String orderId, @Param("tenantId") Long tenantId);
 
-    @Select("SELECT * FROM t_integration_callback_log WHERE processed = 0 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY created_time ASC LIMIT #{limit}")
+    @Select("SELECT * FROM t_integration_callback_log WHERE processed = 0 AND tenant_id = #{tenantId} ORDER BY created_time ASC LIMIT #{limit}")
     List<IntegrationCallbackLog> findUnprocessed(@Param("limit") int limit, @Param("tenantId") Long tenantId);
 }

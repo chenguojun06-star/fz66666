@@ -54,6 +54,7 @@ public class PatternStatusHelper {
 
     // ==================== 状态流转 ====================
 
+    @org.springframework.transaction.annotation.Transactional
     public void updatePatternStatusByOperation(PatternProduction pattern, String operationType, String operatorName) {
         boolean needUpdate = false;
         LocalDateTime now = LocalDateTime.now();
@@ -473,6 +474,7 @@ public class PatternStatusHelper {
 
     // ==================== 进度节点更新 ====================
 
+    @org.springframework.transaction.annotation.Transactional
     public void updateProgressNode(PatternProduction pattern, String nodeName, int progress) {
         try {
             String progressNodes = pattern.getProgressNodes();

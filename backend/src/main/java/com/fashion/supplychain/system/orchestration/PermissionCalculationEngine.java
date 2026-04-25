@@ -315,7 +315,7 @@ public class PermissionCalculationEngine {
         }
 
         // 获取系统全部权限ID
-        List<Permission> allPerms = permissionService.list();
+        List<Permission> allPerms = getCachedAllPermissions();
         Set<Long> allPermIds = allPerms.stream()
                 .map(Permission::getId)
                 .filter(Objects::nonNull)
@@ -528,5 +528,17 @@ public class PermissionCalculationEngine {
         } catch (Exception e) {
             log.warn("[PermissionCache] 批量清除用户权限缓存失败，权限变更将在 TTL(30分钟)后自动生效: {}", e.getMessage());
         }
+    }
+
+    private static final String ALL_PERMS_ENTITY_CACHE_KEY = "perm:all_entities";
+
+    private List<Permission> getCachedAllPermissions() {
+        List<Permission> cached = readCacheList(ALL_PERMS_ENTITY_CACHE_KEY,
+                new TypeReference<List<Permission>>() {}, "all-perm-entities");
+        if (cached != null) return cached;
+
+        List<Permission> allPerms = permissionService.list();
+        writeCache(ALL_PERMS_ENTITY_CACHE_KEY, allPerms, "all-perm-entities");
+        return allPerms;
     }
 }

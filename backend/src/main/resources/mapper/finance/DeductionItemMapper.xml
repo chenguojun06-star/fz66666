@@ -12,7 +12,7 @@
             description
         FROM t_deduction_item
         WHERE reconciliation_id = #{reconciliationId}
-          AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})
+          AND tenant_id = #{tenantId}
         ORDER BY id
     </select>
     

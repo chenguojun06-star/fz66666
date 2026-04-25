@@ -205,6 +205,7 @@ public class ShipmentReconciliationOrchestrator {
         }
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public boolean save(ShipmentReconciliation shipmentReconciliation) {
         TenantAssert.assertTenantContext();
         if (shipmentReconciliation == null) {
@@ -237,6 +238,7 @@ public class ShipmentReconciliationOrchestrator {
         return true;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public boolean update(ShipmentReconciliation shipmentReconciliation) {
         if (shipmentReconciliation == null || !StringUtils.hasText(shipmentReconciliation.getId())) {
             throw new IllegalArgumentException("参数错误");

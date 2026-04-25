@@ -317,6 +317,7 @@ public class TenantRoleInitHelper {
     /**
      * 更新租户角色的权限（在天花板范围内微调）
      */
+    @org.springframework.transaction.annotation.Transactional
     public void updateTenantRolePermissions(Long roleId, List<Long> permissionIds) {
         assertSuperAdminOrTenantOwner();
 
@@ -561,6 +562,7 @@ public class TenantRoleInitHelper {
     /**
      * 审批通过注册用户
      */
+    @org.springframework.transaction.annotation.Transactional
     public boolean approveRegistration(Long userId, Long roleId) {
         assertSuperAdminOrTenantOwnerOrFactoryOwner();
 
@@ -614,6 +616,7 @@ public class TenantRoleInitHelper {
     /**
      * 拒绝注册用户
      */
+    @org.springframework.transaction.annotation.Transactional
     public boolean rejectRegistration(Long userId, String reason) {
         assertSuperAdminOrTenantOwnerOrFactoryOwner();
 

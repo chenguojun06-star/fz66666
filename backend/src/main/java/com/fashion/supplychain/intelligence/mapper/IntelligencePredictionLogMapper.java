@@ -15,7 +15,7 @@ import org.apache.ibatis.annotations.Update;
 public interface IntelligencePredictionLogMapper extends BaseMapper<IntelligencePredictionLog> {
 
     /** 根据预测ID查询记录（用于反馈回填） */
-    @Select("SELECT * FROM t_intelligence_prediction_log WHERE prediction_id = #{predictionId} AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) LIMIT 1")
+    @Select("SELECT * FROM t_intelligence_prediction_log WHERE prediction_id = #{predictionId} AND tenant_id = #{tenantId} LIMIT 1")
     IntelligencePredictionLog findByPredictionId(@Param("predictionId") String predictionId, @Param("tenantId") Long tenantId);
 
     /**
@@ -29,7 +29,7 @@ public interface IntelligencePredictionLogMapper extends BaseMapper<Intelligence
             + "    feedback_accepted  = #{feedbackAccepted}, "
             + "    update_time        = NOW() "
             + "WHERE prediction_id = #{predictionId} "
-            + "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+            + "  AND tenant_id = #{tenantId}")
     int updateFeedback(
             @Param("predictionId")     String predictionId,
             @Param("actualFinishTime") LocalDateTime actualFinishTime,
@@ -53,7 +53,7 @@ public interface IntelligencePredictionLogMapper extends BaseMapper<Intelligence
             + "    update_time        = NOW() "
             + "WHERE order_id = #{orderId} "
             + "  AND actual_finish_time IS NULL "
-            + "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+            + "  AND tenant_id = #{tenantId}")
     int backfillByOrderId(
             @Param("orderId")     String orderId,
             @Param("finishTime")  LocalDateTime finishTime,

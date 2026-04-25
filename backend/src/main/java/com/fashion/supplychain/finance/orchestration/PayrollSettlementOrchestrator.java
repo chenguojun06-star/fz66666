@@ -376,8 +376,9 @@ public class PayrollSettlementOrchestrator {
         ProductionOrder order = productionOrderService
                 .getOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getOrderNo, on)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
                         .last("limit 1"));
-        if (order != null && (order.getDeleteFlag() == null || order.getDeleteFlag() == 0)) {
+        if (order != null) {
             return order;
         }
         return null;

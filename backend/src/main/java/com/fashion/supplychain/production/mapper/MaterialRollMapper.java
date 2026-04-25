@@ -12,12 +12,12 @@ import java.util.List;
 public interface MaterialRollMapper extends BaseMapper<MaterialRoll> {
 
     @Select("SELECT * FROM t_material_roll WHERE inbound_id = #{inboundId} AND delete_flag = 0 " +
-            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY create_time ASC")
+            "AND tenant_id = #{tenantId} ORDER BY create_time ASC")
     List<MaterialRoll> selectByInboundId(@Param("inboundId") String inboundId, @Param("tenantId") Long tenantId);
 
     @Select("SELECT * FROM t_material_roll WHERE material_code = #{materialCode} " +
             "AND status = 'IN_STOCK' AND delete_flag = 0 " +
-            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY create_time ASC")
+            "AND tenant_id = #{tenantId} ORDER BY create_time ASC")
     List<MaterialRoll> selectInStockByMaterialCode(@Param("materialCode") String materialCode,
                                                     @Param("tenantId") Long tenantId);
 }

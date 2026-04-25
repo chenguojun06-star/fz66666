@@ -166,7 +166,9 @@ public class McpSseController {
                 errResponse.put("jsonrpc", "2.0");
                 errResponse.put("error", Map.of("code", -32603, "message", "Internal error: " + e.getMessage()));
                 sseSessionService.send(sessionId, objectMapper.writeValueAsString(errResponse));
-            } catch (Exception ignored) { /* 错误响应也失败了，放弃 */ }
+            } catch (Exception ex) {
+                log.debug("[MCP SSE] 错误响应发送失败: {}", ex.getMessage());
+            }
         }
     }
 }

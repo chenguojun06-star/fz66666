@@ -205,7 +205,16 @@ public class MaterialReconciliationSyncOrchestrator {
             return 0;
         }
 
-        // 2. 逐条同步
+        // 2. 批量预加载采购单（消除 N+1 查询）
+        java.util.Set<String> purchaseIds = inboundList.stream()
+                .map(MaterialInbound::getPurchaseId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<String, MaterialPurchase> purchaseMap = purchaseIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : materialPurchaseService.listByIds(purchaseIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(MaterialPurchase::getId, p -> p, (a, b) -> a));
+
         int syncCount = 0;
         for (MaterialInbound inbound : inboundList) {
             try {
@@ -213,8 +222,7 @@ public class MaterialReconciliationSyncOrchestrator {
                     continue;
                 }
 
-                // 查询关联的采购单
-                MaterialPurchase purchase = materialPurchaseService.getById(inbound.getPurchaseId());
+                MaterialPurchase purchase = purchaseMap.get(inbound.getPurchaseId());
                 if (purchase == null) {
                     log.warn("入库记录 {} 的采购单 {} 不存在", inbound.getInboundNo(), inbound.getPurchaseId());
                     continue;

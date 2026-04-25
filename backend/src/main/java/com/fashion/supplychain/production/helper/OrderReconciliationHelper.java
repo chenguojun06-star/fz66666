@@ -64,6 +64,7 @@ public class OrderReconciliationHelper {
      * 关单时创建订单结算记录（支持特需关单标记）
      * @param specialClose true=特需关单，quantity 为实际合格入库数，remark 自动标注
      */
+    @org.springframework.transaction.annotation.Transactional
     public void createShipmentReconciliationOnClose(ProductionOrder order, boolean specialClose) {
         if (order == null) {
             log.warn("订单为空，无法创建结算记录");

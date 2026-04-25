@@ -17,6 +17,6 @@ public interface AiJobRunLogMapper extends BaseMapper<AiJobRunLog> {
     /**
      * 查询最近 N 条任务日志（按开始时间倒序）
      */
-    @Select("SELECT * FROM t_ai_job_run_log WHERE (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY start_time DESC LIMIT #{limit}")
+    @Select("SELECT * FROM t_ai_job_run_log WHERE tenant_id = #{tenantId} ORDER BY start_time DESC LIMIT #{limit}")
     List<AiJobRunLog> selectRecent(@Param("limit") int limit, @Param("tenantId") Long tenantId);
 }

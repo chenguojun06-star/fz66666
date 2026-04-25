@@ -111,6 +111,7 @@ public class TenantBillingHelper {
     /**
      * 更新租户存储用量（由文件上传等服务调用）
      */
+    @org.springframework.transaction.annotation.Transactional
     public void updateStorageUsed(Long tenantId, Long usedMb) {
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) return;
@@ -406,6 +407,7 @@ public class TenantBillingHelper {
     /**
      * 租户维护自己的默认开票信息（发票抬头、税号、银行等）
      */
+    @org.springframework.transaction.annotation.Transactional
     public boolean updateMyInvoiceInfo(Map<String, String> invoiceInfo) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) throw new AccessDeniedException("超级管理员无需设置开票信息");

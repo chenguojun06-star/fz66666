@@ -26,7 +26,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "  SUM(IFNULL(p.arrived_quantity, 0)) AS arrivedQuantity",
             "FROM t_material_purchase p",
             "WHERE p.delete_flag = 0",
-            "  AND (#{tenantId} IS NULL OR p.tenant_id = #{tenantId})",
+            "  AND p.tenant_id = #{tenantId}",
             "  AND p.order_id IS NOT NULL",
             "  AND p.order_id &lt;&gt; ''",
             "  AND p.order_id IN",
@@ -36,33 +36,24 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
     })
     List<Map<String, Object>> selectProcurementSnapshot(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
-    /**
-     * 统计今日到货次数
-     */
     @Select("SELECT COUNT(*) FROM t_material_purchase " +
             "WHERE DATE(actual_arrival_date) = #{today} AND delete_flag = 0" +
-            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+            " AND tenant_id = #{tenantId}")
     Integer selectTodayArrivalCount(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
-    /**
-     * 查询今日到货列表
-     */
     @Select("SELECT * FROM t_material_purchase " +
             "WHERE DATE(actual_arrival_date) = #{today} AND delete_flag = 0" +
-            " AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})" +
+            " AND tenant_id = #{tenantId}" +
             " ORDER BY actual_arrival_date DESC LIMIT 20")
     List<MaterialPurchase> selectTodayArrivals(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
-    /**
-     * 查询今日按小时统计的物料入库数（按类型）
-     */
     @Select("SELECT " +
             "  HOUR(actual_arrival_date) as hour, " +
             "  COUNT(*) as count " +
             "FROM t_material_purchase " +
             "WHERE DATE(actual_arrival_date) = #{today} " +
             "  AND delete_flag = 0 " +
-            "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
             "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
             "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +
@@ -74,9 +65,6 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
         @Param("tenantId") Long tenantId
     );
 
-    /**
-     * 查询最近7天的物料入库数（按类型）
-     */
     @Select("SELECT " +
             "  DATE(actual_arrival_date) as date, " +
             "  COUNT(*) as count " +
@@ -84,7 +72,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "WHERE actual_arrival_date >= #{startDate} " +
             "  AND actual_arrival_date <= #{endDate} " +
             "  AND delete_flag = 0 " +
-            "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
             "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
             "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +
@@ -97,9 +85,6 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
         @Param("tenantId") Long tenantId
     );
 
-    /**
-     * 查询最近30天的物料入库数（按类型）
-     */
     @Select("SELECT " +
             "  DAY(actual_arrival_date) as day, " +
             "  COUNT(*) as count " +
@@ -107,7 +92,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "WHERE actual_arrival_date >= #{startDate} " +
             "  AND actual_arrival_date <= #{endDate} " +
             "  AND delete_flag = 0 " +
-            "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
             "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
             "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +
@@ -120,16 +105,13 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
         @Param("tenantId") Long tenantId
     );
 
-    /**
-     * 查询今年按月统计的物料入库数（按类型）
-     */
     @Select("SELECT " +
             "  MONTH(actual_arrival_date) as month, " +
             "  COUNT(*) as count " +
             "FROM t_material_purchase " +
             "WHERE YEAR(actual_arrival_date) = #{year} " +
             "  AND delete_flag = 0 " +
-            "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
+            "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
             "       OR (#{materialType} = 'fabric' AND material_type LIKE 'lining%') " +
             "       OR (#{materialType} = 'fabric' AND material_type = '面料') " +

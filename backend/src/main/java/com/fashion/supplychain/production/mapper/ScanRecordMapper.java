@@ -239,7 +239,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "    AND cutting_bundle_id != ''",
                         "    AND scan_result = 'success'",
                         // fix: jdbcType=BIGINT 告知 JDBC tenantId=null 时的类型，避免参数绑定失败
-                        "    AND (#{tenantId,jdbcType=BIGINT} IS NULL OR tenant_id = #{tenantId,jdbcType=BIGINT})",
+                        "    AND tenant_id = #{tenantId,jdbcType=BIGINT}",
                         "  GROUP BY cutting_bundle_id, tenant_id",
                         ") t"
         })

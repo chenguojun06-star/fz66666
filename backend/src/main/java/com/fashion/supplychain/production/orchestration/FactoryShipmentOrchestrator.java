@@ -177,10 +177,18 @@ public class FactoryShipmentOrchestrator {
                 .eq(FactoryShipment::getOrderId, orderId)
                 .eq(FactoryShipment::getDeleteFlag, 0)
                 .list();
-        // color -> sizeName -> totalQty
+        java.util.Set<String> shipmentIds = shipments.stream()
+                .map(FactoryShipment::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<String, List<FactoryShipmentDetail>> detailMap = shipmentIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : factoryShipmentDetailService.lambdaQuery()
+                        .in(FactoryShipmentDetail::getShipmentId, shipmentIds)
+                        .list().stream()
+                        .collect(java.util.stream.Collectors.groupingBy(FactoryShipmentDetail::getShipmentId));
         Map<String, Map<String, Integer>> colorSizeMap = new LinkedHashMap<>();
         for (FactoryShipment fs : shipments) {
-            List<FactoryShipmentDetail> details = factoryShipmentDetailService.listByShipmentId(fs.getId());
+            List<FactoryShipmentDetail> details = detailMap.getOrDefault(fs.getId(), java.util.Collections.emptyList());
             for (FactoryShipmentDetail d : details) {
                 String color = d.getColor() != null ? d.getColor() : "";
                 String size  = d.getSizeName() != null ? d.getSizeName() : "";
