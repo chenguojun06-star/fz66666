@@ -20,12 +20,14 @@ import ActionCardWidget from './ActionCardWidget';
 import FollowUpActionPanel from './FollowUpActionPanel';
 import { RiskIndicatorWidget, SimulationWidget, ClarificationCard, FeedbackWidget } from './HyperAdvisorWidgets';
 import OverdueFactoryCardWidget from './OverdueFactoryCardWidget';
+import ReportPreviewCardWidget from './ReportPreviewCardWidget';
 
 export interface MessageBubbleProps {
   msg: Message;
   downloadingType: string | null;
   onSend: (text: string) => void;
   onDownloadReport: (type: 'daily' | 'weekly' | 'monthly') => void;
+  onActualDownload: (type: 'daily' | 'weekly' | 'monthly') => void;
   onShowAgentTrace: (commandId?: string) => void;
   onShowRecentTraces: () => void;
   onOpenTraceCenter: (commandId?: string) => void;
@@ -39,7 +41,7 @@ export interface MessageBubbleProps {
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   msg, downloadingType,
-  onSend, onDownloadReport, onShowAgentTrace, onShowRecentTraces,
+  onSend, onDownloadReport, onActualDownload, onShowAgentTrace, onShowRecentTraces,
   onOpenTraceCenter, onFeedback, onJumpToIntelligence, onSafeNavigate,
   onSpeak, onPurchaseDocAction, onWizardSubmit,
 }) => (
@@ -88,14 +90,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
       {msg.role === 'ai' && msg.reportType && (
         <div style={{ marginTop: 12 }}>
+          {msg.reportPreview && <ReportPreviewCardWidget data={msg.reportPreview} />}
           <button
             className={msgStyles.reportDownloadBtn}
             disabled={!!downloadingType}
-            onClick={() => onDownloadReport(msg.reportType!)}
-            style={{ width: '100%', marginBottom: 0 }}
+            onClick={() => (msg.reportPreview ? onActualDownload(msg.reportType!) : onDownloadReport(msg.reportType!))}
+            style={{ width: '100%', marginTop: msg.reportPreview ? 10 : 0, marginBottom: 0 }}
           >
             {downloadingType === msg.reportType ? <LoadingOutlined /> : <DownloadOutlined />}
-            <span>下载{msg.reportType === 'daily' ? '运营日报' : msg.reportType === 'weekly' ? '运营周报' : '运营月报'}</span>
+            <span>{msg.reportPreview ? '下载 Excel 完整版' : `下载${msg.reportType === 'daily' ? '运营日报' : msg.reportType === 'weekly' ? '运营周报' : '运营月报'}`}</span>
           </button>
         </div>
       )}

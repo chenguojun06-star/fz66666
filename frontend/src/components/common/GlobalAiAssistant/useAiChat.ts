@@ -85,19 +85,40 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     const label = type === 'daily' ? '日报' : type === 'weekly' ? '周报' : '月报';
     setDownloadingType(type);
     try {
-      await intelligenceApi.downloadProfessionalReport(type);
+      // 第一步：拉取 JSON 摘要，作为看板内联展示
+      const resp = await intelligenceApi.getProfessionalReportPreview(type);
+      const previewData = (resp as any)?.data?.data || (resp as any)?.data;
       setMessages(prev => [...prev, {
-        id: `sys-${Date.now()}`, role: 'ai', text: `✅ ${label}已下载完成！Excel 格式的专业运营报告已保存到您的下载目录。`,
+        id: `report-${Date.now()}`,
+        role: 'ai',
+        text: `📊 ${label}已生成。下方看板展示了核心指标与风险订单，如需 Excel 完整版可点击下方"下载 Excel"按钮。`,
+        reportType: type,
+        reportPreview: previewData,
       }]);
-      speak(`${label}已下载完成`);
+      speak(`${label}已生成，看板已展示`);
     } catch {
       setMessages(prev => [...prev, {
-        id: `err-${Date.now()}`, role: 'ai', text: `❌ ${label}下载失败，请稍后重试。`,
+        id: `err-${Date.now()}`, role: 'ai', text: `❌ ${label}生成失败，请稍后重试。`,
       }]);
     } finally {
       setDownloadingType(null);
     }
   }, [downloadingType, speak]);
+
+  /** 实际下载 Excel（看板下方按钮触发） */
+  const handleActualDownload = useCallback(async (type: 'daily' | 'weekly' | 'monthly') => {
+    const label = type === 'daily' ? '日报' : type === 'weekly' ? '周报' : '月报';
+    try {
+      await intelligenceApi.downloadProfessionalReport(type);
+      setMessages(prev => [...prev, {
+        id: `sys-${Date.now()}`, role: 'ai', text: `✅ ${label} Excel 已下载到本地。`,
+      }]);
+    } catch {
+      setMessages(prev => [...prev, {
+        id: `err-${Date.now()}`, role: 'ai', text: `❌ ${label} Excel 下载失败，请稍后重试。`,
+      }]);
+    }
+  }, []);
 
   const handleSend = useCallback(async (manualText?: string) => {
     const text = (manualText || inputValue).trim();
@@ -436,6 +457,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     handleFileSelect,
     handleVoiceInput,
     handleDownloadReport,
+    handleActualDownload,
     handleAdvisorFeedback,
     handleShowAgentTrace,
     handleShowRecentTraces,

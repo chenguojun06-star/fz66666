@@ -107,6 +107,8 @@ logging:
     org.springframework.security: warn
     org.apache.ibatis: warn
     com.baomidou.mybatisplus: warn
+    # SSE/流式接口 response 已提交时 Spring 尝试渲染 error 页产生的已知无害噪音，直接屏蔽
+    '[org.springframework.boot.autoconfigure.web.servlet.error]': off
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"

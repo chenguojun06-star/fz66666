@@ -114,6 +114,7 @@ const GlobalAiAssistant: React.FC = () => {
     handleFileSelect,
     handleVoiceInput,
     handleDownloadReport,
+    handleActualDownload,
     handleAdvisorFeedback,
     handleShowAgentTrace,
     handleShowRecentTraces,
@@ -540,6 +541,7 @@ const GlobalAiAssistant: React.FC = () => {
                 downloadingType={downloadingType}
                 onSend={handleSend}
                 onDownloadReport={handleDownloadReport}
+                onActualDownload={handleActualDownload}
                 onShowAgentTrace={handleShowAgentTrace}
                 onShowRecentTraces={handleShowRecentTraces}
                 onOpenTraceCenter={openTraceCenter}

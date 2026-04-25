@@ -695,6 +695,176 @@ public class ProfessionalReportOrchestrator {
     }
 
     // ═══════════════════════════════════════════════════════════
+    //  报告 JSON 摘要 — 供前端 AI 助手卡片展示使用（与 Excel 同源数据）
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * 生成专业报告的 JSON 摘要（不生成 Excel），用于前端在 AI 助手卡片内直接预览。
+     * 保留 download 接口生成 Excel 的能力不变，本方法只输出结构化数据。
+     */
+    public Map<String, Object> generateReportSummary(String reportType, LocalDate baseDate) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
+        if (baseDate == null) baseDate = LocalDate.now();
+
+        boolean isManager = UserContext.canViewAll();
+        String currentUserId = UserContext.userId();
+        String currentUsername = UserContext.username();
+        String scopeUserId = isManager ? null : currentUserId;
+        String scopeUsername = isManager ? null : currentUsername;
+
+        TimeRange range = calcTimeRange(reportType, baseDate);
+
+        // 智能兜底：今日无数据 → 回溯到最近有数据的一天
+        if (baseDate.equals(LocalDate.now())) {
+            long todayScans = countScans(tenantId, range.start(), range.end(), scopeUserId, factoryId);
+            long todayOrders = countNewOrders(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
+            if (todayScans == 0 && todayOrders == 0) {
+                LocalDate fallbackDate = null;
+                QueryWrapper<ScanRecord> sq = new QueryWrapper<>();
+                sq.eq("tenant_id", tenantId);
+                if (scopeUserId != null) sq.eq("operator_id", scopeUserId);
+                if (factoryId != null && !factoryId.isBlank()) sq.eq("factory_id", factoryId);
+                sq.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
+                ScanRecord latestScan = scanRecordService.getOne(sq);
+                if (latestScan != null && latestScan.getScanTime() != null) {
+                    fallbackDate = latestScan.getScanTime().toLocalDate();
+                }
+                if (fallbackDate != null) {
+                    baseDate = fallbackDate;
+                    range = calcTimeRange(reportType, baseDate);
+                }
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("reportType", reportType);
+        result.put("typeLabel", "daily".equals(reportType) ? "日报" : "weekly".equals(reportType) ? "周报" : "月报");
+        result.put("rangeLabel", range.label());
+        result.put("baseDate", baseDate.format(DATE_FMT));
+        result.put("scope", isManager ? "全局数据" : "个人数据（" + (currentUsername != null ? currentUsername : "本人") + "）");
+
+        // KPI
+        long curScanCount = countScans(tenantId, range.start(), range.end(), scopeUserId, factoryId);
+        long prevScanCount = countScans(tenantId, range.prevStart(), range.prevEnd(), scopeUserId, factoryId);
+        long curScanQty = sumScanQty(tenantId, range.start(), range.end(), scopeUserId, factoryId);
+        long prevScanQty = sumScanQty(tenantId, range.prevStart(), range.prevEnd(), scopeUserId, factoryId);
+        long curNewOrders = countNewOrders(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
+        long prevNewOrders = countNewOrders(tenantId, range.prevStart(), range.prevEnd(), scopeUserId, scopeUsername, factoryId);
+        long curCompleted = countCompletedOrders(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
+
+        List<Map<String, Object>> kpis = new ArrayList<>();
+        kpis.add(buildKpi("扫码次数", curScanCount, prevScanCount, "次"));
+        kpis.add(buildKpi("扫码件数", curScanQty, prevScanQty, "件"));
+        kpis.add(buildKpi("新建订单", curNewOrders, prevNewOrders, "张"));
+        kpis.add(buildKpi("完成订单", curCompleted, -1, "张"));
+        result.put("kpis", kpis);
+
+        // 扫码类型分布
+        List<Map<String, Object>> scanTypes = new ArrayList<>();
+        long totalByType = 0;
+        Map<String, Long> typeCounts = new LinkedHashMap<>();
+        Map<String, String> typeLabels = Map.of("production", "生产扫码", "quality", "质检扫码", "warehouse", "入库扫码");
+        for (String type : new String[]{"production", "quality", "warehouse"}) {
+            long cnt = countScansByType(tenantId, range.start(), range.end(), type, scopeUserId, factoryId);
+            typeCounts.put(type, cnt);
+            totalByType += cnt;
+        }
+        for (Map.Entry<String, Long> e : typeCounts.entrySet()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("name", typeLabels.getOrDefault(e.getKey(), e.getKey()));
+            item.put("count", e.getValue());
+            item.put("percent", totalByType > 0 ? Math.round(e.getValue() * 1000.0 / totalByType) / 10.0 : 0.0);
+            scanTypes.add(item);
+        }
+        result.put("scanTypes", scanTypes);
+
+        // 订单状态分布
+        Map<String, String> statusLabels = new LinkedHashMap<>();
+        statusLabels.put("PENDING", "待开始");
+        statusLabels.put("IN_PROGRESS", "进行中");
+        statusLabels.put("COMPLETED", "已完成");
+        statusLabels.put("CANCELLED", "已取消");
+        List<Map<String, Object>> statusList = new ArrayList<>();
+        for (Map.Entry<String, String> e : statusLabels.entrySet()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("name", e.getValue());
+            item.put("count", countOrdersByStatus(tenantId, e.getKey(), scopeUserId, scopeUsername, factoryId));
+            statusList.add(item);
+        }
+        result.put("orderStatus", statusList);
+
+        // 工厂排名 Top 5
+        List<FactoryRank> rankings = buildFactoryRankings(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
+        List<Map<String, Object>> factoryList = new ArrayList<>();
+        int rank = 1;
+        for (FactoryRank fr : rankings.stream().limit(5).toList()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("rank", rank++);
+            item.put("name", fr.name());
+            item.put("scanCount", fr.scanCount());
+            item.put("scanQty", fr.scanQty());
+            factoryList.add(item);
+        }
+        result.put("factoryRanking", factoryList);
+
+        // 风险概览
+        List<ProductionOrder> overdue = getOverdueOrders(tenantId, scopeUserId, scopeUsername, factoryId);
+        List<ProductionOrder> highRisk = getHighRiskOrders(tenantId, scopeUserId, scopeUsername, factoryId);
+        long stagnant = countStagnantOrders(tenantId, scopeUserId, scopeUsername, factoryId);
+
+        Map<String, Object> riskSummary = new LinkedHashMap<>();
+        riskSummary.put("overdueCount", overdue.size());
+        riskSummary.put("highRiskCount", highRisk.size());
+        riskSummary.put("stagnantCount", stagnant);
+        result.put("riskSummary", riskSummary);
+
+        result.put("overdueOrders", overdue.stream().limit(5).map(this::orderToMap).toList());
+        result.put("highRiskOrders", highRisk.stream().limit(5).map(this::orderToMap).toList());
+
+        // 成本汇总
+        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
+        q.ge("scan_time", range.start()).le("scan_time", range.end());
+        List<ScanRecord> scans = scanRecordService.list(q);
+        BigDecimal totalCost = scans.stream()
+                .map(s -> s.getScanCost() != null ? s.getScanCost() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Map<String, Object> costSummary = new LinkedHashMap<>();
+        costSummary.put("totalCost", totalCost.setScale(2, RoundingMode.HALF_UP).toString());
+        costSummary.put("scanCount", scans.size());
+        result.put("costSummary", costSummary);
+
+        return result;
+    }
+
+    private Map<String, Object> buildKpi(String name, long current, long previous, String unit) {
+        Map<String, Object> kpi = new LinkedHashMap<>();
+        kpi.put("name", name);
+        kpi.put("current", current);
+        kpi.put("unit", unit);
+        if (previous >= 0) {
+            kpi.put("previous", previous);
+            kpi.put("change", changeStr(current, previous));
+        } else {
+            kpi.put("previous", null);
+            kpi.put("change", null);
+        }
+        return kpi;
+    }
+
+    private Map<String, Object> orderToMap(ProductionOrder o) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("orderNo", nullSafe(o.getOrderNo()));
+        m.put("styleName", nullSafe(o.getStyleName()));
+        m.put("factoryName", nullSafe(o.getFactoryName()));
+        m.put("quantity", o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
+        m.put("progress", o.getProductionProgress() != null ? o.getProductionProgress() : 0);
+        m.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().format(DATE_FMT) : null);
+        return m;
+    }
+
+    // ═══════════════════════════════════════════════════════════
     //  内部类
     // ═══════════════════════════════════════════════════════════
 

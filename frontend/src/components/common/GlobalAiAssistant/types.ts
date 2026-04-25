@@ -125,4 +125,38 @@ export interface Message {
   followUpActions?: FollowUpAction[];
   /* ── 逾期工厂卡片 ── */
   overdueFactoryCard?: OverdueFactoryCardData;
+  /* ── 专业运营报告预览（日/周/月） ── */
+  reportPreview?: ReportPreviewData;
+}
+
+/** 专业运营报告 JSON 摘要（与 Excel 同源数据） */
+export interface ReportPreviewData {
+  reportType: 'daily' | 'weekly' | 'monthly';
+  typeLabel: string;
+  rangeLabel: string;
+  baseDate: string;
+  scope: string;
+  kpis: Array<{
+    name: string;
+    current: number;
+    previous: number | null;
+    unit: string;
+    change: string | null;
+  }>;
+  scanTypes: Array<{ name: string; count: number; percent: number }>;
+  orderStatus: Array<{ name: string; count: number }>;
+  factoryRanking: Array<{ rank: number; name: string; scanCount: number; scanQty: number }>;
+  riskSummary: { overdueCount: number; highRiskCount: number; stagnantCount: number };
+  overdueOrders: Array<ReportPreviewOrder>;
+  highRiskOrders: Array<ReportPreviewOrder>;
+  costSummary: { totalCost: string; scanCount: number };
+}
+
+export interface ReportPreviewOrder {
+  orderNo: string;
+  styleName: string;
+  factoryName: string;
+  quantity: number;
+  progress: number;
+  plannedEndDate: string | null;
 }

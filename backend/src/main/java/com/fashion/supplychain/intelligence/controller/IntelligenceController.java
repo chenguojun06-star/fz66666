@@ -751,6 +751,19 @@ public class IntelligenceController {
         return Result.success(tenantIntelligenceBrainOrchestrator.unifiedSnapshot());
     }
 
+    /**
+     * 专业运营报告 JSON 摘要（与 Excel 同源数据，供前端 AI 助手卡片预览）。
+     * 与下载接口分离：先调本接口在小云对话内展示看板，用户再点"下载报表"按钮取 Excel。
+     */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @GetMapping("/professional-report/preview")
+    public Result<java.util.Map<String, Object>> previewProfessionalReport(
+            @RequestParam(defaultValue = "daily") String type,
+            @RequestParam(required = false) String date) {
+        LocalDate baseDate = (date != null && !date.isBlank()) ? LocalDate.parse(date) : LocalDate.now();
+        return Result.success(professionalReportOrchestrator.generateReportSummary(type, baseDate));
+    }
+
     /** 下载专业运营报告（Excel 格式，支持 daily/weekly/monthly） */
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @GetMapping("/professional-report/download")

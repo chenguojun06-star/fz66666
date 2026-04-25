@@ -1,0 +1,224 @@
+.reportWrapper {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reportHeader {
+  background: linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%);
+  border: 1px solid #91d5ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.reportTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #096dd9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.reportMeta {
+  font-size: 11px;
+  color: #5c5c5c;
+  line-height: 1.5;
+}
+
+.reportSection {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.kpiCard {
+  background: linear-gradient(135deg, #fafafa 0%, #f0f5ff 100%);
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.kpiName {
+  font-size: 11px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.kpiValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1890ff;
+  line-height: 1.2;
+}
+
+.kpiUnit {
+  font-size: 11px;
+  color: #595959;
+  margin-left: 2px;
+}
+
+.kpiChange {
+  font-size: 10px;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.kpiChangeUp { color: #52c41a; }
+.kpiChangeDown { color: #ff4d4f; }
+.kpiChangeFlat { color: #8c8c8c; }
+
+.distRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.distChip {
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #595959;
+}
+
+.distChip strong {
+  color: #1890ff;
+  margin: 0 2px;
+}
+
+.rankList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rankItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: #fafafa;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.rankBadge {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1890ff;
+  color: #fff;
+  text-align: center;
+  line-height: 18px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rankBadge1 { background: #faad14; }
+.rankBadge2 { background: #bfbfbf; }
+.rankBadge3 { background: #d4380d; }
+
+.rankName {
+  flex: 1;
+  color: #262626;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankMeta {
+  color: #8c8c8c;
+  font-size: 10px;
+}
+
+.riskGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.riskChip {
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 8px;
+  padding: 6px;
+  text-align: center;
+}
+
+.riskChipDanger {
+  background: #fff1f0;
+  border-color: #ffa39e;
+}
+
+.riskValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fa8c16;
+}
+
+.riskChipDanger .riskValue { color: #cf1322; }
+
+.riskLabel {
+  font-size: 10px;
+  color: #595959;
+  margin-top: 2px;
+}
+
+.orderList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orderItem {
+  font-size: 11px;
+  padding: 4px 6px;
+  background: #fafafa;
+  border-radius: 6px;
+  border-left: 3px solid #ff4d4f;
+}
+
+.orderItem.highRisk {
+  border-left-color: #faad14;
+}
+
+.orderNo {
+  font-weight: 700;
+  color: #262626;
+}
+
+.orderMeta {
+  color: #8c8c8c;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.emptyHint {
+  font-size: 11px;
+  color: #8c8c8c;
+  text-align: center;
+  padding: 6px 0;
+}

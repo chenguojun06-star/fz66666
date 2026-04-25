@@ -473,7 +473,14 @@ export const intelligenceApi = {
       params: { styleNo },
     }),
 
-  // ── 专业报告下载 ──
+  // ── 专业报告 ──
+
+  /** 获取专业运营报告 JSON 摘要（卡片预览，与 Excel 同源数据） */
+  getProfessionalReportPreview: (type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string) =>
+    api.get<{ code: number; data: import('@/components/common/GlobalAiAssistant/types').ReportPreviewData }>(
+      '/intelligence/professional-report/preview',
+      { params: date ? { type, date } : { type } },
+    ),
 
   /** 下载专业运营报告（Excel） */
   downloadProfessionalReport: async (type: 'daily' | 'weekly' | 'monthly' = 'daily', date?: string) => {

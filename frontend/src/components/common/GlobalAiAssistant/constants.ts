@@ -7,6 +7,9 @@ export const INITIAL_MSG: Message = {
 };
 
 export const SUGGESTIONS = [
+  '📄 今日日报',
+  '📊 本周周报',
+  '📈 本月月报',
   '🏭 查看今日生产进度',
   '⚠️ 有哪些逾期订单',
   '💰 本月工资汇总',
@@ -14,19 +17,19 @@ export const SUGGESTIONS = [
 
 export function getPageSuggestions(pathname: string): string[] {
   if (pathname.includes('/production')) {
-    return ['🏭 查看我的订单进度', '✂️ 裁剪完成情况', '⚠️ 有哪些逾期订单'];
+    return ['📄 今日日报', '🏭 查看我的订单进度', '✂️ 裁剪完成情况', '⚠️ 有哪些逾期订单'];
   }
   if (pathname.includes('/finance')) {
-    return ['💰 本月工资汇总', '📋 待审核对账单', '📊 订单成本分析'];
+    return ['📈 本月月报', '💰 本月工资汇总', '📋 待审核对账单', '📊 订单成本分析'];
   }
   if (pathname.includes('/warehouse') || pathname.includes('/material')) {
-    return ['📦 库存预警物料', '🛒 采购单状态', '📦 成品出库情况'];
+    return ['📄 今日日报', '📦 库存预警物料', '🛒 采购单状态', '📦 成品出库情况'];
   }
   if (pathname.includes('/style-info') || pathname.includes('/basic')) {
     return ['🎨 款式BOM完整性检查', '📏 样衣打样进度', '💰 款式成本估算'];
   }
   if (pathname.includes('/dashboard') || pathname.includes('/cockpit')) {
-    return ['📄 今日运营日报', '📊 本月运营月报', '⚠️ 系统异常概览'];
+    return ['📄 今日日报', '📊 本周周报', '📈 本月月报', '⚠️ 系统异常概览'];
   }
   return SUGGESTIONS;
 }
