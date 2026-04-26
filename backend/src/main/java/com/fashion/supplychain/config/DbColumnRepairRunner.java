@@ -541,6 +541,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_receivable", "source_biz_id", "VARCHAR(64) DEFAULT NULL COMMENT '来源业务ID'");
         add("t_receivable", "source_biz_no", "VARCHAR(64) DEFAULT NULL COMMENT '来源业务单号'");
         add("t_receivable", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_receivable", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
+        add("t_receivable", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
 
         add("t_material_purchase", "inbound_record_id", "VARCHAR(64) DEFAULT NULL COMMENT '入库记录ID'");
         add("t_material_purchase", "color", "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
@@ -551,6 +553,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_material_purchase", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
         add("t_material_purchase", "updater_id", "VARCHAR(64) DEFAULT NULL COMMENT '更新人ID'");
         add("t_material_purchase", "updater_name", "VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名'");
+        add("t_material_purchase", "style_cover", "VARCHAR(500) DEFAULT NULL COMMENT '款号封面图'");
 
         add("t_product_outstock", "operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '操作人ID'");
         add("t_product_outstock", "operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名'");

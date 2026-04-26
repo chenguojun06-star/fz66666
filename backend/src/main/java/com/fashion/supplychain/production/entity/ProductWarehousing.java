@@ -125,35 +125,22 @@ public class ProductWarehousing {
     /**
      * 裁剪数（从菲号CuttingBundle.quantity填充）
      */
-    @TableField(exist = false)
     private Integer cuttingQuantity;
 
-    @TableField(exist = false)
     private String factoryName;
 
-    @TableField(exist = false)
     private String factoryType;
 
-    /** 下单类型（来自关联的生产订单）: CMT / FOB / ODM / OEM */
-    @TableField(exist = false)
     private String orderBizType;
 
-    @TableField(exist = false)
     private String orgUnitId;
 
-    @TableField(exist = false)
     private String parentOrgUnitId;
 
-    @TableField(exist = false)
     private String parentOrgUnitName;
 
-    @TableField(exist = false)
     private String orgPath;
 
-    /**
-     * 扫码内容/菲号（从ScanRecord填充）
-     */
-    @TableField(exist = false)
     private String scanCode;
 
     // ==================== 质检人员字段（新增数据库字段）====================

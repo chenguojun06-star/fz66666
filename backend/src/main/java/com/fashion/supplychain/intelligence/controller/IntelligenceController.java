@@ -332,7 +332,7 @@ public class IntelligenceController {
         return Result.success(deliveryPredictionOrchestrator.predict(request));
     }
 
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/profit-estimation")
     public Result<ProfitEstimationResponse> profitEstimation(@RequestBody ProfitEstimationRequest request) {
         return Result.success(profitEstimationOrchestrator.estimate(request));
@@ -381,7 +381,7 @@ public class IntelligenceController {
         return Result.success(defectHeatmapOrchestrator.analyze());
     }
 
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/finance-audit")
     public Result<FinanceAuditResponse> financeAudit() {
         return Result.success(financeAuditOrchestrator.audit());
@@ -755,7 +755,7 @@ public class IntelligenceController {
      * 专业运营报告 JSON 摘要（与 Excel 同源数据，供前端 AI 助手卡片预览）。
      * 与下载接口分离：先调本接口在小云对话内展示看板，用户再点"下载报表"按钮取 Excel。
      */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/professional-report/preview")
     public Result<java.util.Map<String, Object>> previewProfessionalReport(
             @RequestParam(defaultValue = "daily") String type,
@@ -765,7 +765,7 @@ public class IntelligenceController {
     }
 
     /** 下载专业运营报告（Excel 格式，支持 daily/weekly/monthly） */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/professional-report/download")
     public ResponseEntity<byte[]> downloadProfessionalReport(
             @RequestParam(defaultValue = "daily") String type,
@@ -819,7 +819,7 @@ public class IntelligenceController {
     }
 
     /** B5 - 对账异常优先级：扫描挂单对账单，按优先分降序输出异常列表 */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/reconciliation/anomaly-priority")
     public Result<ReconciliationAnomalyResponse> reconciliationAnomalyPriority() {
         return Result.success(reconciliationAnomalyOrchestrator.analyze());
@@ -840,7 +840,7 @@ public class IntelligenceController {
 
     /** 月度经营汇总：生产完成/次品返修率/各工厂产量/面辅料/成品进出/人工成本/利润
      * 访问规则：平台超管 | 租户主账号(isTenantOwner) | 被显授 INTELLIGENCE_MONTHLY_VIEW 权限的角色 */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner', 'INTELLIGENCE_MONTHLY_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/monthly-biz-summary")
     public Result<Map<String, Object>> monthlyBizSummary(
             @RequestParam(defaultValue = "0") int year,
@@ -1040,7 +1040,7 @@ public class IntelligenceController {
     }
 
     /** 知识图谱构建 — 从业务数据异步构建知识图谱 */
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/knowledge-graph/build")
     public Result<Void> buildKnowledgeGraph() {
         knowledgeGraphOrchestrator.buildGraphFromBusinessData(UserContext.tenantId());
