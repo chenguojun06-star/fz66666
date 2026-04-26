@@ -18,6 +18,7 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import './styles.css';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 // 平台超管专属权限码，不在租户角色授权弹窗中展示
 const EXCLUDED_TOP_MODULE_CODES = new Set(['MENU_TENANT_APP_VIEW']);
@@ -33,6 +34,14 @@ const RoleList: React.FC = () => {
     page: 1,
     pageSize: readPageSize(10)
   });
+
+  const [roleNameInput, setRoleNameInput] = useState('');
+  const debouncedRoleName = useDebouncedValue(roleNameInput, 300);
+  useEffect(() => {
+    if (debouncedRoleName !== (queryParams.roleName || '')) {
+      setQueryParams((prev) => ({ ...prev, roleName: debouncedRoleName, page: 1 }));
+    }
+  }, [debouncedRoleName]);
 
   type RoleRecord = Role & Record<string, unknown>;
 
@@ -553,8 +562,8 @@ const RoleList: React.FC = () => {
                   placeholder="角色名称"
                   style={{ width: 220 }}
                   allowClear
-                  value={String(queryParams.roleName || '')}
-                  onChange={(e) => setQueryParams((prev) => ({ ...prev, roleName: e.target.value, page: 1 }))}
+                  value={roleNameInput}
+                  onChange={(e) => setRoleNameInput(e.target.value)}
                 />
                 <Input
                   placeholder="角色编码"

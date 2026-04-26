@@ -97,10 +97,9 @@ public class MaterialPickingController {
 
         LambdaQueryWrapper<MaterialPicking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialPicking::getDeleteFlag, 0);
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        if (tenantId != null) {
-            wrapper.eq(MaterialPicking::getTenantId, tenantId);
-        }
+        wrapper.eq(MaterialPicking::getTenantId, tenantId);
         if (factoryOrderIds != null) {
             wrapper.in(MaterialPicking::getOrderId, factoryOrderIds);
         }

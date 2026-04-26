@@ -294,6 +294,9 @@ const sampleStock = {
 
 const finance = {
   payrollSummary: (payload) => http.post('/api/finance/payroll-settlement/operator-summary', payload),
+  feedbackSubmit: (data) => http.post('/api/finance/wage-settlement-feedback/submit', data),
+  feedbackMyList: (data) => http.post('/api/finance/wage-settlement-feedback/my-list', data),
+  feedbackStats: () => http.get('/api/finance/wage-settlement-feedback/stats'),
 };
 
 const api = {

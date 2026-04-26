@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Select, Space } from 'antd';
+import { Button, Dropdown, Select, Space } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
 import type { TemplateLibrary } from '@/types/style';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 
@@ -21,6 +22,7 @@ interface StyleBomToolbarProps {
   onToggleEdit: () => void;
   onCancelEdit: () => void;
   onAddRows: (count: number) => void;
+
 }
 
 const toolbarStyle = {
@@ -95,18 +97,20 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
           onOpenChange={onTemplateOpenChange}
         />
 
-        <Button
-          disabled={locked || hasEditingRow || loading || templateLoading || tableEditable || !bomTemplateId}
-          onClick={() => onApplyTemplate('overwrite')}
+        <Dropdown
+          disabled={locked || hasEditingRow || loading || templateLoading || !bomTemplateId}
+          menu={{
+            items: [
+              { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
+              { key: 'append', label: '追加导入（保留现有数据）' },
+            ],
+            onClick: ({ key }) => onApplyTemplate(key as 'overwrite' | 'append'),
+          }}
         >
-          覆盖导入
-        </Button>
-        <Button
-          disabled={locked || hasEditingRow || loading || templateLoading || tableEditable || !bomTemplateId}
-          onClick={() => onApplyTemplate('append')}
-        >
-          追加导入
-        </Button>
+          <Button disabled={locked || hasEditingRow || loading || templateLoading || !bomTemplateId}>
+            导入模板 <DownOutlined />
+          </Button>
+        </Dropdown>
 
         <StyleBomAddRowsDropdown
           onAddRows={onAddRows}

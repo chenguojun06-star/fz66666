@@ -18,6 +18,7 @@ interface CuttingRatioPanelProps {
   entryOrderLines: Array<{ color: string; size: string; quantity: number; skuNo?: string }>;
   defaultTotalQty: number;
   sizeUsageMap?: Record<string, number>;
+  fabricUsageRows?: Array<{ materialName: string; materialType: string; sizeUsageMap: Record<string, number> }>;
   arrivedFabricM?: number;
   generating: boolean;
   disabled: boolean;
@@ -41,6 +42,7 @@ interface BundleRow {
 const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   entryOrderLines,
   sizeUsageMap,
+  fabricUsageRows,
   generating,
   disabled,
   onConfirm,
@@ -209,6 +211,18 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
 
   return (
     <div style={{ padding: '0 0 8px' }}>
+      {!entryOrderLines?.length && (
+        <div style={{
+          padding: '24px 0',
+          textAlign: 'center',
+          color: 'var(--neutral-text-light, #8c8c8c)',
+          fontSize: 13,
+        }}>
+          订单明细中无颜色/尺码数据，请先在订单中维护颜色尺码信息，或手动录入后生成菲号
+        </div>
+      )}
+      {entryOrderLines?.length > 0 && (
+      <>
       <Space align="center" wrap style={{ marginBottom: 16 }}>
         <Text strong>每扎件数：</Text>
         <InputNumber
@@ -250,6 +264,27 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         <Tag color="purple">总扎数：{totalBundles} 扎</Tag>
       </Space>
 
+      {fabricUsageRows && fabricUsageRows.length > 1 && (
+        <div style={{ marginBottom: 12, padding: '6px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 6, fontSize: 12 }}>
+          <div style={{ fontWeight: 500, marginBottom: 4, color: '#333' }}>面料用量参考</div>
+          {fabricUsageRows.map((row, idx) => {
+            const sizes = Object.entries(row.sizeUsageMap);
+            if (sizes.length === 0) return null;
+            const totalM = tableRows.reduce((sum, r) => {
+              const usage = row.sizeUsageMap[r.size] || 0;
+              return sum + usage * r.cuttingQty;
+            }, 0);
+            return (
+              <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 2, color: '#666' }}>
+                <span style={{ minWidth: 80, fontWeight: 500, color: '#333' }}>{row.materialName}</span>
+                <span>约 {totalM > 0 ? totalM.toFixed(1) : '-'} m</span>
+                <span style={{ color: '#999' }}>（{sizes.map(([s, v]) => `${s}:${v}m`).join(' ')}）</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <Form.Item style={{ marginBottom: 0 }}>
         <Space>
           <Button
@@ -265,6 +300,8 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           </Button>
         </Space>
       </Form.Item>
+      </>
+      )}
     </div>
   );
 };

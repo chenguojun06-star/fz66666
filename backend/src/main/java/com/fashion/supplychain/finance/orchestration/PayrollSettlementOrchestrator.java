@@ -120,6 +120,7 @@ public class PayrollSettlementOrchestrator {
     private static final List<String> PAYROLL_SCAN_TYPES = List.of("production", "cutting", "pattern");
 
     public List<Map<String, Object>> operatorSummary(Map<String, Object> params) {
+        TenantAssert.assertTenantContext();
         PayrollQuery q = parseQuery(params, true, true);
 
         if (UserContext.isWorker()) {
@@ -556,7 +557,7 @@ public class PayrollSettlementOrchestrator {
                 .set(ScanRecord::getSettlementStatus, "payroll_approved")
                 .set(ScanRecord::getUpdateTime, now)
                 .eq(ScanRecord::getPayrollSettlementId, settlementId.trim())
-                .eq(tenantId != null, ScanRecord::getTenantId, tenantId);
+                .eq(ScanRecord::getTenantId, tenantId);
         scanRecordMapper.update(new ScanRecord(), scanUw);
 
         log.info("[PayrollApprove] 工资结算单审核通过: id={}, confirmerId={}", settlementId, confirmerId);

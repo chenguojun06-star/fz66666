@@ -37,8 +37,8 @@
 
 /* 危险卡片边框呼吸 */
 @keyframes danger-border-pulse {
-  0%, 100% { border-color: rgba(255,65,54,0.35); box-shadow: 0 0 0 0 rgba(255,65,54,0); }
-  50%       { border-color: rgba(255,65,54,0.75); box-shadow: 0 0 16px 2px rgba(255,65,54,0.25); }
+  0%, 100% { border-color: rgba(224,48,48,0.35); box-shadow: 0 0 0 0 rgba(224,48,48,0); }
+  50%       { border-color: rgba(224,48,48,0.75); box-shadow: 0 0 16px 2px rgba(224,48,48,0.25); }
 }
 
 /* 预警卡片边框呼吸 */
@@ -161,9 +161,9 @@
   gap: 5px;
   font-size: 12px;
   font-weight: 700;
-  color: #e8686a;
-  background: rgba(255,65,54,0.1);
-  border: 1px solid rgba(255,65,54,0.35);
+  color: #e03030;
+  background: rgba(224,48,48,0.1);
+  border: 1px solid rgba(224,48,48,0.35);
   padding: 4px 10px;
   border-radius: 6px;
   min-width: 88px;  /* 固定宽，防止告警数字变化时右侧元素位移 */
@@ -285,22 +285,22 @@
 
 /* 停滞节点 — 红色告警 */
 .c-stage-card.stagnant {
-  border-color: rgba(255,65,54,0.5);
-  background: color-mix(in srgb, #e8686a 7%, rgba(9,19,36,0.97));
+  border-color: rgba(224,48,48,0.5);
+  background: color-mix(in srgb, #e03030 7%, rgba(9,19,36,0.97));
 }
 .c-stage-card.stagnant:hover,
 .c-stage-card.stagnant.active {
-  border-color: rgba(255,65,54,0.75);
-  box-shadow: 0 0 0 1px rgba(255,65,54,0.4), 0 0 18px rgba(255,65,54,0.22);
+  border-color: rgba(224,48,48,0.75);
+  box-shadow: 0 0 0 1px rgba(224,48,48,0.4), 0 0 18px rgba(224,48,48,0.22);
 }
 .c-stage-card.stagnant .c-stage-card-main {
-  color: #ff6b5a;
-  text-shadow: 0 0 14px rgba(255,65,54,0.42);
+  color: #e03030;
+  text-shadow: 0 0 14px rgba(224,48,48,0.42);
 }
 .c-stage-stagnant-bar {
   margin-top: 8px;
   font-size: 11px;
-  color: #ff5a4e;
+  color: #e03030;
   font-weight: 700;
   letter-spacing: 0.3px;
   position: relative;
@@ -447,8 +447,8 @@
 }
 
 .c-stage-order-row.stagnant {
-  border-color: rgba(255,65,54,0.3);
-  background: rgba(255,65,54,0.06);
+  border-color: rgba(224,48,48,0.3);
+  background: rgba(224,48,48,0.06);
 }
 
 .c-stage-order-no {
@@ -499,8 +499,8 @@
 .c-stagnant-badge {
   font-size: 10px;
   font-weight: 700;
-  color: #ff4d40;
-  border: 1px solid rgba(255,65,54,0.4);
+  color: #e03030;
+  border: 1px solid rgba(224,48,48,0.4);
   border-radius: 4px;
   padding: 0 5px;
   white-space: nowrap;
@@ -578,7 +578,7 @@
 .cyan-badge   { background: rgba(0,229,255,0.12);  color: #00e5ff;  border: 1px solid rgba(0,229,255,0.3);  }
 .green-badge  { background: rgba(57,255,20,0.12);   color: #39ff14;  border: 1px solid rgba(57,255,20,0.3);  }
 .purple-badge { background: rgba(124,77,255,0.12);  color: #a78bfa;  border: 1px solid rgba(124,77,255,0.3); }
-.red-badge    { background: rgba(255,65,54,0.12);   color: #e8686a;  border: 1px solid rgba(255,65,54,0.3);  }
+.red-badge    { background: rgba(224,48,48,0.12);   color: #e03030;  border: 1px solid rgba(224,48,48,0.3);  }
 
 /* ────────────────────────────────────────────────
    KPI 数字卡
@@ -681,15 +681,15 @@
 
 /* 危险 KPI 卡 */
 .c-kpi-danger { animation: danger-border-pulse 3s ease-in-out infinite; }
-.c-kpi-danger .c-card-title { color: rgba(255,65,54,0.6); }
-.c-kpi-danger::before { background: linear-gradient(90deg, transparent, #e8686a44, #e8686a66, #e8686a44, transparent); }
+.c-kpi-danger .c-card-title { color: rgba(224,48,48,0.6); }
+.c-kpi-danger::before { background: linear-gradient(90deg, transparent, #e0303044, #e0303066, #e0303044, transparent); }
 
 /* 预警 KPI 卡 */
 .c-kpi-warn { animation: warn-border-pulse 3.5s ease-in-out infinite; }
 .c-kpi-warn::before { background: linear-gradient(90deg, transparent, #f7a60044, #f7a60066, #f7a60044, transparent); }
 
 /* 闪烁文字 */
-.blink-text { animation: blink-alert 2.8s ease-in-out infinite; color: #e8686a; }
+.blink-text { animation: blink-alert 2.8s ease-in-out infinite; color: #e03030; }
 
 /* ────────────────────────────────────────────────
    实时生产脉搏 (扫描线卡片)
@@ -718,7 +718,7 @@
 /* 停滞工厂告警列表 */
 .c-stagnant-list {
   margin-top: 8px;
-  border-top: 1px solid rgba(255,65,54,0.12);
+  border-top: 1px solid rgba(224,48,48,0.12);
   padding-top: 8px;
 }
 .c-stagnant-row {
@@ -732,12 +732,12 @@
 .c-stagnant-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: #e8686a;
+  background: #e03030;
   flex-shrink: 0;
   animation: dot-warn-blink 2s ease-in-out infinite;
 }
 .c-stagnant-name { color: #e8d8d0; flex: 1; font-size: 13px; }
-.c-stagnant-time { color: #e8686a; font-size: 12px; }
+.c-stagnant-time { color: #e03030; font-size: 12px; }
 
 /* 工厂活跃状态列表 */
 .c-factory-activity-list {
@@ -758,7 +758,7 @@
   transition: background 0.2s;
 }
 .c-factory-activity-row.inactive {
-  background: rgba(255,65,54,0.04);
+  background: rgba(224,48,48,0.04);
 }
 .c-factory-activity-row:hover { background: rgba(0,229,255,0.08); }
 .c-fa-dot {
@@ -885,7 +885,7 @@
   border: 1px solid currentColor;
 }
 .c-shortage-name { color: #9ab0c4; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.c-shortage-qty  { color: #e8686a; font-weight: 700; flex-shrink: 0; font-size: 13px; }
+.c-shortage-qty  { color: #e03030; font-weight: 700; flex-shrink: 0; font-size: 13px; }
 .c-summary { font-size: 12px; color: #6ba8c6; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
 
 /* ────────────────────────────────────────────────
@@ -1035,7 +1035,7 @@
 .c-empty { color: #5a8aa8; font-size: 12px; text-align: center; padding: 20px 0; }
 
 /* 语义颜色类 (保留兼容) */
-.severity-critical { color: #e8686a; font-weight: 600; }
+.severity-critical { color: #e03030; font-weight: 600; }
 .severity-warning  { color: #f7a600; font-weight: 600; }
 .severity-info     { color: #00e5ff; }
 .severity-normal   { color: #39ff14; }
@@ -1411,9 +1411,9 @@
 .kpi-pop-warn {
   margin-top: 12px;
   font-size: 12px;
-  color: #e8686a;
-  background: rgba(255,65,54,0.08);
-  border: 1px solid rgba(255,65,54,0.25);
+  color: #e03030;
+  background: rgba(224,48,48,0.08);
+  border: 1px solid rgba(224,48,48,0.25);
   border-radius: 6px;
   padding: 7px 10px;
   line-height: 1.6;
@@ -1460,8 +1460,8 @@
   display: flex;
   align-items: center;
   height: 28px;
-  background: rgba(255,65,54,0.08);
-  border: 1px solid rgba(255,65,54,0.2);
+  background: rgba(224,48,48,0.08);
+  border: 1px solid rgba(224,48,48,0.2);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -1470,9 +1470,9 @@
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 700;
-  color: #e8686a;
+  color: #e03030;
   padding: 0 10px;
-  border-right: 1px solid rgba(255,65,54,0.2);
+  border-right: 1px solid rgba(224,48,48,0.2);
   letter-spacing: 0.5px;
   white-space: nowrap;
 }
@@ -1554,7 +1554,7 @@
   display: inline-block;
 }
 .kpi-delta-up   { color: #39ff14; }
-.kpi-delta-down { color: #e8686a; }
+.kpi-delta-down { color: #e03030; }
 
 /* ═══════════════════════════════════════════════
    通用自动滚动容器（AutoScrollBox 渲染 DOM 层）
@@ -1575,8 +1575,8 @@
   50%      { border-color: rgba(0,229,255,0.65); box-shadow: 0 0 22px 4px rgba(0,229,255,0.22); }
 }
 @keyframes breathe-red {
-  0%, 100% { border-color: rgba(255,65,54,0.18); box-shadow: 0 0 0   0 rgba(255,65,54,0);    }
-  50%      { border-color: rgba(255,65,54,0.70); box-shadow: 0 0 22px 4px rgba(255,65,54,0.24); }
+  0%, 100% { border-color: rgba(224,48,48,0.18); box-shadow: 0 0 0   0 rgba(224,48,48,0);    }
+  50%      { border-color: rgba(224,48,48,0.70); box-shadow: 0 0 22px 4px rgba(224,48,48,0.24); }
 }
 @keyframes breathe-green {
   0%, 100% { border-color: rgba(57,255,20,0.15); box-shadow: 0 0 0   0 rgba(57,255,20,0);    }
@@ -1611,7 +1611,7 @@
   border-top-color: rgba(247,166,0,0.22);
 }
 .lsf-root.danger {
-  border-top-color: rgba(255,65,54,0.28);
+  border-top-color: rgba(224,48,48,0.28);
 }
 
 /* 标题行 */

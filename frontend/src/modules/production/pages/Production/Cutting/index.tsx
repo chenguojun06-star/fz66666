@@ -658,12 +658,15 @@ const CuttingManagement: React.FC = () => {
                         entryOrderLines={bundles.entryOrderLines}
                         defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
                         sizeUsageMap={bundles.entrySizeUsageMap}
+                        fabricUsageRows={bundles.entryFabricUsageRows}
                         arrivedFabricM={bundles.entryMainFabricArrived}
                         generating={bundles.generateLoading}
                         disabled={bundles.importLocked}
                         onConfirm={(rows) => {
+                          // 同步更新 state（用于回显/状态保持）+ 直接把 rows 传入 handleGenerate，
+                          // 绕开 React setState 异步导致的 stale closure（详见 useCuttingBundles.handleGenerate 注释）
                           bundles.setBundlesInput(rows);
-                          setTimeout(() => bundles.handleGenerate(), 0);
+                          bundles.handleGenerate(rows);
                         }}
                         onClear={() => {
                           bundles.setImportLocked(false);

@@ -134,13 +134,14 @@ export const createOrderColorSizeMatrixInfoItems = ({
     return [{ label: '码数', value: '-', labelStyle, valueStyle }];
   }
 
-  const valueGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(${model.sizes.length}, minmax(${columnMinWidth}px, 1fr))`,
-    columnGap: gap,
-    rowGap: 0,
-    alignItems: 'center',
-    minWidth: 0,
+  const leadLabelStyle: React.CSSProperties = {
+    color: 'var(--neutral-text-light, #98a2b3)',
+    fontSize: labelStyle?.fontSize || fontSize,
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    textAlign: 'left',
+    alignSelf: 'center',
+    ...(labelStyle || {}),
   };
 
   const headerCellStyle: React.CSSProperties = {
@@ -159,44 +160,48 @@ export const createOrderColorSizeMatrixInfoItems = ({
     whiteSpace: 'nowrap',
   };
 
+  const totalValueStyle: React.CSSProperties = {
+    fontSize,
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    color: 'var(--neutral-text-light, #8c8c8c)',
+    ...(valueStyle || {}),
+  };
+
+  const gridTemplateColumns = `auto repeat(${model.sizes.length}, minmax(${Math.max(columnMinWidth, 28)}px, 1fr))`;
+
   return [
     {
-      label: '码数',
+      fullRow: true,
       value: (
-        <div style={valueGridStyle}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns,
+          columnGap: gap,
+          rowGap: 2,
+          alignItems: 'center',
+          minWidth: 0,
+        }}>
+          <span style={leadLabelStyle}>码数</span>
           {model.sizes.map((size) => (
             <span key={`matrix-size-${size}`} style={headerCellStyle}>{size}</span>
           ))}
-        </div>
-      ),
-      labelStyle,
-      valueStyle,
-    },
-    ...model.rows.map((row) => ({
-      label: row.label,
-      value: (
-        <div style={valueGridStyle}>
-          {model.sizes.map((size) => (
-            <span key={`matrix-${row.label}-${size}`} style={qtyCellStyle}>
-              {row.quantityMap.get(size) || 0}
-            </span>
+          {model.rows.map((row) => (
+            <React.Fragment key={`matrix-row-${row.label}`}>
+              <span style={leadLabelStyle}>{row.label}</span>
+              {model.sizes.map((size) => (
+                <span key={`matrix-${row.label}-${size}`} style={qtyCellStyle}>
+                  {row.quantityMap.get(size) || 0}
+                </span>
+              ))}
+            </React.Fragment>
           ))}
+          <span style={leadLabelStyle}>{totalLabel}</span>
+          <span style={{ ...totalValueStyle, gridColumn: `span ${model.sizes.length}` }}>
+            {model.total}{totalSuffix}
+          </span>
         </div>
       ),
-      labelStyle,
-      valueStyle,
-    })),
-    {
-      label: totalLabel,
-      value: `${model.total}${totalSuffix}`,
-      labelStyle,
-      valueStyle: {
-        color: 'var(--neutral-text-light, #8c8c8c)',
-        fontSize,
-        fontWeight: 600,
-        whiteSpace: 'nowrap',
-        ...(valueStyle || {}),
-      },
     },
   ];
 };

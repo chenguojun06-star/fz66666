@@ -5,6 +5,12 @@
   <!-- 顶部统计卡片 -->
   <summary-card title="我的工资" items="{{summaryItems}}"></summary-card>
 
+  <!-- 工资结算反馈入口 -->
+  <view class="feedback-entry" hover-class="feedback-entry-hover" bindtap="goFeedback">
+    <text class="feedback-entry-text">工资结算反馈</text>
+    <text class="feedback-entry-arrow">›</text>
+  </view>
+
   <!-- 筛选器 -->
   <view class="filter-bar">
     <view class="filter-tabs">

@@ -213,4 +213,14 @@ export const wagePaymentApi = {
   /** 退回已付款项（主管权限，回写上游状态） */
   refundPayment: (id: string, reason: string) =>
     api.post(`/finance/wage-payments/${id}/refund`, { reason }),
+
+  // ---- 工资结算反馈 ----
+  listFeedback: (params?: Record<string, string>) =>
+    api.post('/finance/wage-settlement-feedback/list', params || {}),
+
+  getFeedbackStats: () =>
+    api.get('/finance/wage-settlement-feedback/stats'),
+
+  resolveFeedback: (id: string, action: string, resolveRemark?: string) =>
+    api.post(`/finance/wage-settlement-feedback/${id}/resolve`, { action, resolveRemark }),
 };

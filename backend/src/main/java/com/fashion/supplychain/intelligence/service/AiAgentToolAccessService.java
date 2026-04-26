@@ -27,9 +27,8 @@ public class AiAgentToolAccessService {
         register("tool_smart_report", "智能报告生成：日报、周报、月报，适合经营汇总与正式报告输出", false, ToolDomain.ANALYSIS);
         register("tool_deep_analysis", "深度分析：工厂排名、瓶颈、交期风险、成本结构，适合经营诊断", false, ToolDomain.ANALYSIS);
         register("tool_whatif", "推演沙盘：提前交货、换厂、加人、延期开工等方案测算", false, ToolDomain.ANALYSIS);
-        register("tool_multi_agent", "多智能体综合分析：适合\u201c全面分析、综合评估、宏观判断\u201d", false, ToolDomain.ANALYSIS);
         // ── PRODUCTION 领域 ──
-        register("tool_query_production_progress", "工序跟进查询：按订单、款号、状态看进度与扫码记录", true, ToolDomain.PRODUCTION);
+        register("tool_query_production_progress", "生产进度查询：按订单/款号查6大工序进度、工人数量、出货预测(80-90%)，支持菲号进度和工人统计", true, ToolDomain.PRODUCTION);
         register("tool_action_executor", "动作执行：紧急标记、备注、通知等轻量写操作，适合对象明确的直接处理", false, ToolDomain.PRODUCTION);
         register("tool_scan_undo", "扫码撤回：撤销错误扫码，受时效和业务规则限制", false, ToolDomain.PRODUCTION);
         register("tool_cutting_task_create", "裁剪单创建：按款号和颜色尺码数量直接开裁剪单", false, ToolDomain.PRODUCTION);
@@ -62,24 +61,18 @@ public class AiAgentToolAccessService {
         // ── SYSTEM / GENERAL 领域 ──
         register("tool_knowledge_search", "知识库问答：行业术语、系统操作、业务规则与 FAQ", true, ToolDomain.GENERAL);
         register("tool_team_dispatch", "协同派单：把任务分配给跟单、采购、财务、仓库、主管等岗位", false, ToolDomain.SYSTEM);
-        register("tool_code_diagnostic", "系统代码诊断：扫描日志异常、分析根因、系统健康检查（仅超级管理员）", false, ToolDomain.SYSTEM);
         register("tool_create_production_order", "AI完整建单：按正式链路创建生产订单（仅管理员）", false, ToolDomain.PRODUCTION);
         register("tool_procurement", "采购管理：查询/创建采购单、确认到货入库（写操作仅管理员）", false, ToolDomain.WAREHOUSE);
         register("tool_org_query", "组织架构查询：部门树、部门列表、成员分布", false, ToolDomain.SYSTEM);
         // ── ANALYSIS 补充 ──
         register("tool_management_dashboard", "管理层经营仪表盘：实时KPI快照、风险等级、利润排名", false, ToolDomain.ANALYSIS);
-        register("tool_ai_accuracy_query", "AI准确率查询：交期命中率、建议采纳率、平均居移Tianzhu", false, ToolDomain.ANALYSIS);
-        register("tool_ai_self_optimize_report", "AI自优化报告：查询AI近期自我改进洞察、工具成功率趋势与交期预测准确率变化。用户问「你进步了多少」「学到什么了」「准确率提升了吗」时调用", false, ToolDomain.ANALYSIS);
+        register("tool_ai_accuracy_query", "AI准确率查询：交期命中率、建议采纳率、平均偏差天数、自优化洞察", false, ToolDomain.ANALYSIS);
         register("tool_root_cause_analysis", "根因分析：深入分析问题根因，适合\u201c为什么\u201d\u201c根因是什么\u201d", false, ToolDomain.ANALYSIS);
         register("tool_pattern_discovery", "模式发现：识别数据规律与异常模式", false, ToolDomain.ANALYSIS);
-        register("tool_goal_decompose", "目标分解：将经营目标拆解为可执行子任务", false, ToolDomain.ANALYSIS);
-        register("tool_agent_meeting", "智能体会议：多Agent讨论形成共识建议", false, ToolDomain.ANALYSIS);
-        register("tool_critic_evolution", "批判进化：优化系统自身审查能力", false, ToolDomain.ANALYSIS);
         register("tool_delay_trend", "延期趋势分析：延期率走势、延期集中领域", false, ToolDomain.ANALYSIS);
         register("tool_sample_delay_analysis", "样板延期分析：样板开发延期原因与影响", false, ToolDomain.ANALYSIS);
         register("tool_personnel_delay_analysis", "人员延期分析：跟单员/岗位延期分布", false, ToolDomain.ANALYSIS);
         register("tool_supplier_scorecard", "供应商评分卡：工厂综合评分与对比", false, ToolDomain.ANALYSIS);
-        register("tool_scenario_simulator", "场景模拟：不同假设下的经营预测", false, ToolDomain.ANALYSIS);
         register("tool_simulate_new_order", "新单模拟：模拟新订单对产能和交期的影响", false, ToolDomain.ANALYSIS);
         // ── PRODUCTION 补充 ──
         register("tool_defective_board", "次品看板：次品分布、返修/报废操作", false, ToolDomain.PRODUCTION);
@@ -123,13 +116,15 @@ public class AiAgentToolAccessService {
         register("tool_supplier", "供应商查询：查看供应商列表与详情", false, ToolDomain.WAREHOUSE);
         // ── SYSTEM 新增 ──
         register("tool_dict", "数据字典：查看字典列表、按类型查询字典项", false, ToolDomain.SYSTEM);
+        // ── GENERAL 新增 ── 技能链
+        register("tool_skill_execute", "执行预定义技能工作流：一句话触发多步操作，如月底财务结算、质检批量处理、风险订单巡检", false, ToolDomain.GENERAL);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
             "tool_scan_undo", "tool_cutting_task_create", "tool_order_edit",
             "tool_order_batch_close",
             "tool_payroll_approve", "tool_action_executor", "tool_bundle_split_transfer",
-            "tool_code_diagnostic", "tool_create_production_order",
+            "tool_create_production_order",
             "tool_change_approval", "tool_order_factory_transfer", "tool_order_factory_transfer_undo",
             "tool_finance_workflow", "tool_quality_inbound", "tool_finished_outbound",
             "tool_sample_workflow", "tool_style_template", "tool_team_dispatch",
@@ -213,10 +208,7 @@ public class AiAgentToolAccessService {
             "tool_payroll_anomaly_detector"
     );
 
-    private static final List<String> SUPER_ADMIN_ONLY_TOOLS = List.of(
-            "tool_critic_evolution",
-            "tool_ai_self_optimize_report"
-    );
+    private static final List<String> SUPER_ADMIN_ONLY_TOOLS = List.of();
 
     public List<AgentTool> resolveVisibleTools(List<AgentTool> registeredTools) {
         if (registeredTools == null || registeredTools.isEmpty()) {

@@ -3,6 +3,7 @@ import { App, Button, Card, Col, Input, Row, Space, Form, Select, DatePicker, Up
 
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
@@ -102,6 +103,13 @@ const DataCenter: React.FC = () => {
     pageSize: readPageSize(10),
     onlyCompleted: true,
   });
+  const [styleNoInput, setStyleNoInput] = useState('');
+  const debouncedStyleNo = useDebouncedValue(styleNoInput, 300);
+  useEffect(() => {
+    if (debouncedStyleNo !== (queryParams.styleNo || '')) {
+      setQueryParams(prev => ({ ...prev, styleNo: debouncedStyleNo, page: 1 }));
+    }
+  }, [debouncedStyleNo]);
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -504,7 +512,8 @@ const DataCenter: React.FC = () => {
                 <Input
                   placeholder="款号"
                   style={{ width: 180 }}
-                  onChange={(e) => setQueryParams(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))}
+                  value={styleNoInput}
+                  onChange={(e) => setStyleNoInput(e.target.value)}
                 />
                 <Input
                   placeholder="款名"

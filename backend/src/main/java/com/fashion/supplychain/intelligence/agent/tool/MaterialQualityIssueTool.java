@@ -115,6 +115,7 @@ public class MaterialQualityIssueTool extends AbstractAgentTool {
         Long tenantId = UserContext.tenantId();
         List<MaterialQualityIssue> all = materialQualityIssueService.lambdaQuery()
                 .eq(MaterialQualityIssue::getTenantId, tenantId)
+                .last("LIMIT 5000")
                 .list();
         long total = all.size();
         long open = all.stream().filter(i -> "open".equals(i.getStatus())).count();

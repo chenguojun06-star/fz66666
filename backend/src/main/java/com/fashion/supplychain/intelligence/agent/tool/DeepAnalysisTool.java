@@ -254,7 +254,7 @@ public class DeepAnalysisTool implements AgentTool {
     private List<Map<String, Object>> analyzeFactoryRanking(Long tenantId, LocalDateTime since) {
         // 获取进行中+已完成的订单
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId);
-        q.in("status", "IN_PROGRESS", "COMPLETED").isNotNull("factory_name");
+        q.in("status", "IN_PROGRESS", "COMPLETED").isNotNull("factory_name").last("LIMIT 5000");
         List<ProductionOrder> orders = productionOrderService.list(q);
 
         // 按工厂分组
@@ -308,7 +308,7 @@ public class DeepAnalysisTool implements AgentTool {
 
         // 查询最近扫码记录，按工序阶段分组
         QueryWrapper<ScanRecord> q = baseScanQuery(tenantId);
-        q.ge("scan_time", since).isNotNull("progress_stage");
+        q.ge("scan_time", since).isNotNull("progress_stage").last("LIMIT 5000");
         List<ScanRecord> scans = scanRecordService.list(q);
 
         // 按工序阶段聚合
@@ -339,7 +339,7 @@ public class DeepAnalysisTool implements AgentTool {
         if (factoryFilter != null && !factoryFilter.isBlank()) {
             oq.like("factory_name", factoryFilter);
         }
-        List<ProductionOrder> ipOrders = productionOrderService.list(oq);
+        List<ProductionOrder> ipOrders = productionOrderService.list(oq.last("LIMIT 5000"));
 
         // 进度分桶
         Map<String, Long> progressBuckets = new LinkedHashMap<>();
@@ -356,7 +356,7 @@ public class DeepAnalysisTool implements AgentTool {
 
     private List<Map<String, Object>> analyzeMerchandiserLoad(Long tenantId) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId);
-        q.notIn("status", TERMINAL_STATUSES).isNotNull("merchandiser");
+        q.notIn("status", TERMINAL_STATUSES).isNotNull("merchandiser").last("LIMIT 5000");
         List<ProductionOrder> active = productionOrderService.list(q);
 
         Map<String, List<ProductionOrder>> byMerchandiser = active.stream()
@@ -393,7 +393,7 @@ public class DeepAnalysisTool implements AgentTool {
 
     private List<Map<String, Object>> analyzeDeliveryRisk(Long tenantId) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId);
-        q.notIn("status", TERMINAL_STATUSES).isNotNull("planned_end_date");
+        q.notIn("status", TERMINAL_STATUSES).isNotNull("planned_end_date").last("LIMIT 5000");
         List<ProductionOrder> orders = productionOrderService.list(q);
 
         LocalDateTime now = LocalDateTime.now();
@@ -433,7 +433,7 @@ public class DeepAnalysisTool implements AgentTool {
         Map<String, Object> result = new LinkedHashMap<>();
 
         QueryWrapper<ScanRecord> q = baseScanQuery(tenantId);
-        q.ge("scan_time", since).isNotNull("total_amount");
+        q.ge("scan_time", since).isNotNull("total_amount").last("LIMIT 5000");
         List<ScanRecord> scans = scanRecordService.list(q);
 
         BigDecimal total = scans.stream()
@@ -473,7 +473,7 @@ public class DeepAnalysisTool implements AgentTool {
         Map<String, Object> result = new LinkedHashMap<>();
 
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId);
-        q.ge("create_time", since);
+        q.ge("create_time", since).last("LIMIT 5000");
         List<ProductionOrder> orders = productionOrderService.list(q);
 
         result.put("totalOrders", orders.size());

@@ -708,6 +708,11 @@ const StyleInfoDetailPage: React.FC = () => {
                     sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
                     sampleReviewer={(currentStyle as any)?.sampleReviewer}
                     sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
+                    completedTime={(currentStyle as any)?.completedTime}
+                    styleName={(currentStyle as any)?.styleName}
+                    color={(currentStyle as any)?.color}
+                    size={(currentStyle as any)?.size}
+                    sampleQuantity={(currentStyle as any)?.sampleQuantity}
                   />
                 )
               },

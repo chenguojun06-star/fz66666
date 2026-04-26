@@ -42,7 +42,7 @@ public class IntelligenceInferenceOrchestrator {
 
     /** F3: 按场景分级 max_tokens */
     private static final Map<String, Integer> SCENE_MAX_TOKENS = Map.of(
-        "agent-loop", 2048, "critic_review", 1024, "nl-intent", 256,
+        "agent-loop", 4096, "critic_review", 1024, "nl-intent", 256,
         "daily-brief", 512, "memory_summarize", 256, "history-compact", 256,
         "memory-extract", 256
     );
@@ -95,6 +95,8 @@ public class IntelligenceInferenceOrchestrator {
     private IntelligenceModelGatewayOrchestrator intelligenceModelGatewayOrchestrator;
     @Autowired
     private IntelligenceObservabilityOrchestrator intelligenceObservabilityOrchestrator;
+    @Autowired
+    private com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService aiAgentTokenBudgetService;
 
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {
         List<AiMessage> msgs = new ArrayList<>();
@@ -106,6 +108,19 @@ public class IntelligenceInferenceOrchestrator {
     public IntelligenceInferenceResult chat(String scene, List<AiMessage> messages, List<AiTool> tools) {
         long start = System.currentTimeMillis();
         String traceId = UUID.randomUUID().toString();
+
+        // ── 租户级 Token 预算预检：超额直接拒绝，防止单租户拖垮平台 AI 成本 ──
+        if (!aiAgentTokenBudgetService.canInvoke()) {
+            IntelligenceInferenceResult quotaResult = new IntelligenceInferenceResult();
+            quotaResult.setSuccess(false);
+            quotaResult.setErrorMessage("tenant-daily-token-quota-exceeded");
+            quotaResult.setContent("当前租户今日 AI 调用已达上限（"
+                    + aiAgentTokenBudgetService.getDailyLimit() + " tokens），请明日再试或联系管理员调整额度。");
+            quotaResult.setTraceId(traceId);
+            quotaResult.setLatencyMs(System.currentTimeMillis() - start);
+            return quotaResult;
+        }
+
         IntelligenceInferenceResult result;
         boolean gatewayUsed = false;
         if (intelligenceModelGatewayOrchestrator.isGatewayReady()
@@ -134,6 +149,8 @@ public class IntelligenceInferenceOrchestrator {
         result.setPromptChars(length(messages.toString()));
         result.setResponseChars(length(result.getContent()));
         intelligenceObservabilityOrchestrator.recordInvocation(scene, result, UserContext.tenantId(), UserContext.userId());
+        // 调用后累加租户 token 用量（限额扣减）
+        aiAgentTokenBudgetService.recordUsage(result.getPromptTokens(), result.getCompletionTokens());
         return result;
     }
 
@@ -322,6 +339,167 @@ public class IntelligenceInferenceOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    @FunctionalInterface
+    public interface StreamChunkConsumer {
+        void accept(String chunk, boolean isDone);
+    }
+
+    public IntelligenceInferenceResult chatStream(String scene, List<AiMessage> messages, List<AiTool> tools,
+                                                   StreamChunkConsumer chunkConsumer) {
+        long start = System.currentTimeMillis();
+        String traceId = UUID.randomUUID().toString();
+
+        if (!aiAgentTokenBudgetService.canInvoke()) {
+            IntelligenceInferenceResult quotaResult = new IntelligenceInferenceResult();
+            quotaResult.setSuccess(false);
+            quotaResult.setErrorMessage("tenant-daily-token-quota-exceeded");
+            quotaResult.setContent("当前租户今日 AI 调用已达上限，请明日再试。");
+            quotaResult.setTraceId(traceId);
+            return quotaResult;
+        }
+
+        String endpoint = directApiUrl;
+        String apiKey = directApiKey;
+        String model = directModel;
+        int timeout = directTimeoutSeconds;
+
+        if (intelligenceModelGatewayOrchestrator.isGatewayReady()
+                && !intelligenceModelGatewayOrchestrator.isCircuitOpen()) {
+            endpoint = normalizeChatCompletionsUrl(intelligenceModelGatewayOrchestrator.getGatewayBaseUrl());
+            apiKey = litellmApiKey;
+            model = intelligenceModelGatewayOrchestrator.getActiveModelName();
+            timeout = gatewayTimeoutSeconds;
+        }
+
+        IntelligenceInferenceResult result = new IntelligenceInferenceResult();
+        result.setProvider("stream");
+        result.setModel(model);
+        result.setTraceId(traceId);
+
+        if (!hasText(endpoint) || !hasText(apiKey)) {
+            result.setSuccess(false);
+            result.setErrorMessage("endpoint-or-key-missing");
+            return result;
+        }
+
+        int effectiveTimeout = Math.max(Math.min(timeout, DEFAULT_MAX_TIMEOUT_SECONDS), MIN_TIMEOUT_SECONDS);
+
+        try {
+            var root = MAPPER.createObjectNode();
+            root.put("model", model);
+            root.put("temperature", SCENE_TEMPERATURE.getOrDefault(scene, DEFAULT_TEMPERATURE));
+            root.put("max_tokens", SCENE_MAX_TOKENS.getOrDefault(scene, DEFAULT_MAX_TOKENS));
+            root.put("stream", true);
+            root.set("messages", MAPPER.valueToTree(messages));
+            if (tools != null && !tools.isEmpty()) {
+                root.set("tools", MAPPER.valueToTree(tools));
+            }
+            String body = MAPPER.writeValueAsString(root);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(endpoint))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("X-Trace-Id", traceId)
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .timeout(Duration.ofSeconds(effectiveTimeout))
+                    .build();
+
+            StringBuilder fullContent = new StringBuilder();
+            List<AiToolCall> toolCalls = new ArrayList<>();
+            java.util.Map<Integer, StringBuilder> toolCallArgs = new java.util.HashMap<>();
+            java.util.Map<Integer, String> toolCallNames = new java.util.HashMap<>();
+            java.util.Map<Integer, String> toolCallIds = new java.util.HashMap<>();
+
+            HttpResponse<java.util.stream.Stream<String>> response = sharedHttpClient.send(
+                    request, HttpResponse.BodyHandlers.ofLines());
+
+            if (response.statusCode() != 200) {
+                result.setSuccess(false);
+                result.setErrorMessage("http-" + response.statusCode());
+                return result;
+            }
+
+            response.body().forEach(line -> {
+                if (line == null || !line.startsWith("data: ")) return;
+                String data = line.substring(6).trim();
+                if ("[DONE]".equals(data)) return;
+                try {
+                    JsonNode chunk = MAPPER.readTree(data);
+                    JsonNode choices = chunk.path("choices");
+                    if (!choices.isArray() || choices.isEmpty()) return;
+                    JsonNode delta = choices.get(0).path("delta");
+                    String finishReason = choices.get(0).path("finish_reason").asText(null);
+
+                    String content = delta.path("content").asText(null);
+                    if (content != null && !content.isEmpty()) {
+                        fullContent.append(content);
+                        if (chunkConsumer != null) {
+                            chunkConsumer.accept(content, false);
+                        }
+                    }
+
+                    if (delta.has("tool_calls")) {
+                        for (JsonNode tc : delta.path("tool_calls")) {
+                            int idx = tc.path("index").asInt();
+                            if (tc.has("function")) {
+                                String name = tc.path("function").path("name").asText(null);
+                                String argsChunk = tc.path("function").path("arguments").asText(null);
+                                String id = tc.path("id").asText(null);
+                                if (id != null) toolCallIds.put(idx, id);
+                                if (name != null) toolCallNames.put(idx, name);
+                                if (argsChunk != null) toolCallArgs.computeIfAbsent(idx, k -> new StringBuilder()).append(argsChunk);
+                            }
+                        }
+                    }
+
+                    if ("stop".equals(finishReason) || "tool_calls".equals(finishReason)) {
+                        if (chunkConsumer != null) {
+                            chunkConsumer.accept("", true);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("[StreamInference] 解析chunk失败: {}", e.getMessage());
+                }
+            });
+
+            if (!toolCallNames.isEmpty()) {
+                for (int i = 0; i < toolCallNames.size(); i++) {
+                    AiToolCall tc = new AiToolCall();
+                    tc.setId(toolCallIds.getOrDefault(i, "tc_" + i));
+                    AiToolCall.AiFunctionCall fn = new AiToolCall.AiFunctionCall();
+                    fn.setName(toolCallNames.get(i));
+                    fn.setArguments(toolCallArgs.getOrDefault(i, new StringBuilder()).toString());
+                    tc.setFunction(fn);
+                    toolCalls.add(tc);
+                }
+                result.setToolCalls(toolCalls);
+                result.setToolCallCount(toolCalls.size());
+            }
+
+            result.setContent(fullContent.toString());
+            result.setSuccess(true);
+            result.setLatencyMs(System.currentTimeMillis() - start);
+            result.setPromptChars(length(messages.toString()));
+            result.setResponseChars(fullContent.length());
+
+            int estimatedPrompt = result.getPromptChars() / 4;
+            int estimatedCompletion = result.getResponseChars() / 2;
+            result.setPromptTokens(estimatedPrompt);
+            result.setCompletionTokens(estimatedCompletion);
+            aiAgentTokenBudgetService.recordUsage(estimatedPrompt, estimatedCompletion);
+
+            intelligenceObservabilityOrchestrator.recordInvocation(scene, result, UserContext.tenantId(), UserContext.userId());
+
+        } catch (Exception e) {
+            result.setSuccess(false);
+            result.setErrorMessage(e.getClass().getSimpleName() + ": " + e.getMessage());
+            log.warn("[StreamInference] 流式调用失败: {}", e.getMessage());
+        }
+
+        return result;
     }
 
     public boolean isVisionEnabled() {

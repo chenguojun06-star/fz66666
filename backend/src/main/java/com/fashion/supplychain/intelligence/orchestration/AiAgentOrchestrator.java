@@ -1,74 +1,43 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.intelligence.agent.AiMessage;
-import com.fashion.supplychain.intelligence.agent.AiTool;
-import com.fashion.supplychain.intelligence.agent.AiToolCall;
-import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
-import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
-import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
+import com.fashion.supplychain.intelligence.agent.AgentMode;
+import com.fashion.supplychain.intelligence.agent.AgentModeContext;
+import com.fashion.supplychain.intelligence.agent.loop.AgentLoopContext;
+import com.fashion.supplychain.intelligence.agent.loop.AgentLoopContextBuilder;
+import com.fashion.supplychain.intelligence.agent.loop.AgentLoopEngine;
+import com.fashion.supplychain.intelligence.agent.loop.StreamingAgentLoopCallback;
+import com.fashion.supplychain.intelligence.agent.loop.SyncAgentLoopCallback;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
-import com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
-import com.fashion.supplychain.intelligence.dto.FollowUpAction;
-import com.fashion.supplychain.intelligence.routing.AiAgentDomainRouter;
-import com.fashion.supplychain.intelligence.routing.AiAgentToolAdvisor;
-import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
-import com.fashion.supplychain.intelligence.service.AgentStateStore;
-import com.fashion.supplychain.intelligence.service.DataTruthGuard;
-import com.fashion.supplychain.intelligence.service.EntityFactChecker;
-import com.fashion.supplychain.intelligence.service.GroundedGenerationGuard;
-import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 public class AiAgentOrchestrator {
 
-    @Autowired private AiCriticOrchestrator criticOrchestrator;
-    @Autowired private XiaoyunInsightCardOrchestrator xiaoyunInsightCardOrchestrator;
-    @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
-    @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
-    @Autowired private AiAgentTraceOrchestrator aiAgentTraceOrchestrator;
-    @Autowired private List<AgentTool> registeredTools;
-
-    @Autowired private AiAgentPromptHelper promptHelper;
-    @Autowired private AiAgentToolExecHelper toolExecHelper;
-    @Autowired private AiAgentEvidenceHelper evidenceHelper;
+    @Autowired private AgentLoopContextBuilder contextBuilder;
+    @Autowired private AgentLoopEngine loopEngine;
     @Autowired private AiAgentMemoryHelper memoryHelper;
-    @Autowired private AiAgentDomainRouter domainRouter;
-    @Autowired private AiAgentToolAdvisor toolAdvisor;
-    @Autowired private FollowUpSuggestionEngine followUpSuggestionEngine;
-    @Autowired private AgentStateStore agentStateStore;
-    @Autowired private DataTruthGuard dataTruthGuard;
-    @Autowired private EntityFactChecker entityFactChecker;
-    @Autowired private GroundedGenerationGuard groundedGenerationGuard;
-    // ── 平台级闭环学习三件套（埋点：PRM / 决策卡 / 长期记忆）──
-    @Autowired private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
 
-    private static final int STUCK_MAX_REPEAT = 3;
-    private static final int CRICIC_SKIP_MAX_ITERATIONS = 2;
-    private static final int CRITIC_SKIP_MAX_TOOLS = 1;
+    private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
+    private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
+
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(5);
     private static final int CACHE_MAX_SIZE = 200;
     private final ConcurrentHashMap<String, CacheEntry> queryCache = new ConcurrentHashMap<>();
@@ -79,223 +48,120 @@ public class AiAgentOrchestrator {
         CacheEntry(String result) { this.result = result; this.createdAt = System.currentTimeMillis(); }
         boolean isExpired() { return System.currentTimeMillis() - createdAt > CACHE_TTL_MS; }
     }
-    /** 单次请求 token 预算上限（prompt + completion 合计），超出后强制终止循环 */
-    @Value("${xiaoyun.agent.token-budget:60000}")
-    private int tokenBudget;
-    private static final ObjectMapper JSON = new ObjectMapper();
-
-    private boolean shouldSkipCritic(String userMessage, int currentIteration, int totalToolCalls) {
-        if (userMessage != null && userMessage.length() < 15
-                && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|在吗|辛苦了|好的|收到|明白|知道了|了解).*")) {
-            return true;
-        }
-        if (totalToolCalls == 0) {
-            return true;
-        }
-        return false;
-    }
-
-    private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
-    private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
 
     public Result<String> executeAgent(String userMessage) {
         return executeAgent(userMessage, null);
     }
 
-    /**
-     * Feature C (PageContext) + F (ConversationId)：支持前端传递当前页面上下文，
-     * 让 AI 在回答时感知用户所处位置。conversationId 暂由 memoryHelper 管理，预留扩展位。
-     */
     public Result<String> executeAgent(String userMessage, String pageContext) {
-        if (!inferenceOrchestrator.isAnyModelEnabled()) {
+        if (!contextBuilder.isModelEnabled()) {
             return Result.fail("智能服务暂未配置或不可用");
         }
 
-        String commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
-        lastCommandIdHolder.set(commandId);
-        String stateSessionId = null;
-        try { // F31: finally 块强制清理 ThreadLocal，防止线程池复用泄漏
-        long requestStartAt = System.currentTimeMillis();
-        String userId = UserContext.userId();
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        try { stateSessionId = agentStateStore.createSession(tenantId, userId, userMessage); } catch (Exception e) { log.debug("[AiAgent] 状态会话创建跳过: {}", e.getMessage()); }
-        List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
-        // ── 领域路由裁剪：按用户意图缩减工具集，降低 token 消耗 ──
-        Set<ToolDomain> domains = domainRouter.route(userMessage);
-        if (!domains.isEmpty()) {
-            visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
-            log.info("[AiAgent] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
-        }
-        visibleTools = toolAdvisor.advise(visibleTools, userMessage);
-        Map<String, AgentTool> visibleToolMap = toolExecHelper.toToolLookup(visibleTools);
-        List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
-        List<AiMessage> messages = new ArrayList<>();
-        List<JsonNode> teamDispatchCards = new ArrayList<>();
-        List<JsonNode> bundleSplitCards = new ArrayList<>();
-        List<JsonNode> stepWizardCards = new ArrayList<>();
-        List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
-        messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));
-        // 加载对话记忆（最近 N 轮），超过阈值时自动 LLM 压缩
-        List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
-        messages.addAll(memoryHelper.compactConversationHistory(history));
-        messages.add(AiMessage.user(userMessage));
+        AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+        lastCommandIdHolder.set(ctx.getCommandId());
 
-        int maxIterations = promptHelper.estimateMaxIterations(userMessage);
-        int currentIter = 0;
-        long totalTokens = 0; // Token 预算追踪
-        List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测：跨轮次工具调用签名
-        Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new ConcurrentHashMap<>(); // 对话内工具结果缓存（线程安全：并发工具调用）
-        List<AiAgentToolExecHelper.ToolExecRecord> allExecRecords = new ArrayList<>(); // 全轮次工具执行记录（用于生成后续建议）
+        try {
+            SyncAgentLoopCallback cb = new SyncAgentLoopCallback(
+                    ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
+            String loopResult = loopEngine.run(ctx, cb);
 
-        while (currentIter < maxIterations) {
-            currentIter++;
-            log.info("[AiAgent] 开始第 {} 轮思考...", currentIter);
-
-            // 进度感知：让 LLM 知道当前轮次，避免无效循环（每次替换旧提示，不叠加）
-            if (currentIter > 2) {
-                messages.removeIf(m -> "system".equals(m.getRole())
-                    && m.getContent() != null && m.getContent().startsWith("[进度提示]"));
-                messages.add(AiMessage.system(String.format(
-                    "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。", currentIter, maxIterations)));
+            if ("stuck_detected".equals(loopResult)) {
+                return Result.success("抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。");
+            }
+            if ("max_iterations_exceeded".equals(loopResult)) {
+                return Result.fail("对话轮数超过限制 (" + ctx.getMaxIterations() + ")，可能陷入了死循环。");
+            }
+            if ("plan_mode".equals(loopResult)) {
+                return Result.success(cb.getFinalContent());
             }
 
-            IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, visibleApiTools);
-            if (!result.isSuccess()) {
-                log.error("[AiAgent] 推理失败: {}", result.getErrorMessage());
-                aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
-                return Result.fail("推理服务暂时不可用: " + result.getErrorMessage());
+            lastToolRecordsHolder.set(cb.getExecRecords());
+            String content = cb.getFinalContent();
+            if (content == null) {
+                return Result.fail("推理服务暂时不可用");
             }
-
-            // Token 预算追踪
-            totalTokens += result.getPromptTokens() + result.getCompletionTokens();
-            if (totalTokens > tokenBudget) {
-                log.warn("[AiAgent] Token 预算超限: {} > {}, 强制终止", totalTokens, tokenBudget);
-                String budgetMsg = "抱歉，本次对话消耗的计算资源已达上限，请分步提问以获得更好的回答。";
-                aiAgentTraceOrchestrator.finishRequest(commandId, budgetMsg, "token_budget_exceeded", System.currentTimeMillis() - requestStartAt);
-                return Result.success(budgetMsg);
-            }
-
-            // LLM Response
-            AiMessage assistantMessage = AiMessage.assistant(result.getContent());
-
-            // Handle Tool Calls
-            if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
-                // ── Stuck 检测：连续相同工具+参数调用超过阈值则强制终止 ──
-                Set<String> iterSignatures = new HashSet<>();
-                for (AiToolCall tc : result.getToolCalls()) {
-                    iterSignatures.add(toolExecHelper.buildStuckSignature(tc));
-                }
-                stuckSignatures.addAll(iterSignatures);
-                if (toolExecHelper.isStuck(stuckSignatures)) {
-                    log.warn("[AiAgent] Stuck 检测触发：连续 {} 轮重复相同工具调用，强制终止", STUCK_MAX_REPEAT);
-                    String stuckMsg = "抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。";
-                    aiAgentTraceOrchestrator.finishRequest(commandId, stuckMsg, "stuck_detected", System.currentTimeMillis() - requestStartAt);
-                    return Result.success(stuckMsg);
-                }
-
-                assistantMessage.setTool_calls(result.getToolCalls());
-                messages.add(assistantMessage);
-
-                // ── 并发执行多工具调用 + Pre/Post Hooks ──
-                List<AiAgentToolExecHelper.ToolExecRecord> execRecords = toolExecHelper.executeToolsConcurrently(result.getToolCalls(), visibleToolMap, commandId, toolResultCache);
-                for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
-                    evidenceHelper.captureTeamDispatchCard(rec.toolName, rec.rawResult, teamDispatchCards);
-                    evidenceHelper.captureBundleSplitCard(rec.toolName, rec.rawResult, bundleSplitCards);
-                    evidenceHelper.captureStepWizardCard(rec.toolName, rec.rawResult, stepWizardCards);
-                    xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, xiaoyunInsightCards);
-                    messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
-                }
-                allExecRecords.addAll(execRecords);
-                // ── 埋点1：PRM 过程奖励——每步工具执行结果自动评分 ──
-                try {
-                    for (int ri = 0; ri < execRecords.size(); ri++) {
-                        AiAgentToolExecHelper.ToolExecRecord rec = execRecords.get(ri);
-                        boolean ok = rec.rawResult != null && !rec.rawResult.startsWith("{\"error\"");
-                        processRewardOrchestrator.record(commandId, null, currentIter * 10 + ri,
-                            rec.toolName, "", rec.evidence == null ? "" : rec.evidence.length() > 500 ? rec.evidence.substring(0, 500) : rec.evidence,
-                            ok ? 1 : -1, null, "AUTO", ok ? "success" : "error",
-                            null, null, "agent_loop");
-                    }
-                } catch (Exception _prm) { log.debug("[AiAgent] PRM埋点跳过: {}", _prm.getMessage()); }
-                if (stateSessionId != null) { try { agentStateStore.saveCheckpoint(stateSessionId, currentIter, messages, execRecords, (int) totalTokens); } catch (Exception e) { log.debug("[AiAgent] 检查点保存跳过: {}", e.getMessage()); } }
-            } else {
-                // Done!
-                log.info("[AiAgent] 完成任务，进入自反思审查层");
-                String revisedContent;
-                if (shouldSkipCritic(userMessage, currentIter, allExecRecords.size())) {
-                    log.info("[AiAgent] 简单场景跳过Critic审查 (iter={}, tools={})", currentIter, allExecRecords.size());
-                    revisedContent = result.getContent();
-                } else {
-                    revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent(), allExecRecords);
-                }
-                revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
-                revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
-                revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, stepWizardCards);
-                revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
-
-                // ── 数据真实性守卫：校验AI输出是否有工具数据支撑（仅记日志，不修改回复） ──
-                String toolEvidence = allExecRecords.isEmpty() ? "" : allExecRecords.stream()
-                        .map(r -> r.evidence).reduce((a, b) -> a + " " + b).orElse("");
-                DataTruthGuard.TruthCheckResult truthCheck = dataTruthGuard.checkAiOutputTruth(revisedContent, toolEvidence);
-                if (!truthCheck.isPassed()) {
-                    log.warn("[AiAgent] 数据真实性校验未通过: {}", truthCheck.getReason());
-                }
-                DataTruthGuard.NumericConsistencyResult numCheck = dataTruthGuard.checkNumericConsistency(revisedContent, toolEvidence);
-                if (!numCheck.isConsistent()) {
-                    log.warn("[AiAgent] 数字一致性校验异常: {}", numCheck.getMismatches());
-                }
-                revisedContent = dataTruthGuard.tagDataSource(revisedContent, truthCheck.getDataSource());
-
-                EntityFactChecker.FactCheckResult factCheck = entityFactChecker.verifyEntities(revisedContent);
-                if (!factCheck.allVerified()) {
-                    log.warn("[AiAgent] 实体事实校验发现不存在的实体: {}", factCheck.phantomEntities());
-                }
-
-                GroundedGenerationGuard.GroundingResult grounding = groundedGenerationGuard.verify(revisedContent, allExecRecords);
-                if (!grounding.passed()) {
-                    log.warn("[AiAgent] 接地率检查未通过: rate={}", grounding.groundingRate());
-                }
-
-                log.info("[AiAgent] 返回最终结果给用户");
-                memoryHelper.saveConversationTurn(userId, tenantId, userMessage, revisedContent);
-                aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
-                // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
-                memoryHelper.enhanceMemoryAsync(userId, tenantId, userMessage, revisedContent);
-                // ── 埋点2：决策卡 + 长期记忆（有工具调用时才沉淀，轻量异步不阻塞） ──
-                if (!allExecRecords.isEmpty()) {
-                    try {
-                        String evidenceSummary = allExecRecords.stream()
-                            .map(r -> r.toolName + ": " + (r.evidence != null && r.evidence.length() > 200 ? r.evidence.substring(0, 200) : r.evidence))
-                            .reduce("", (a, b) -> a + "\n" + b);
-                        decisionCardOrchestrator.create(commandId, null, "agent_answer",
-                            userMessage.length() > 500 ? userMessage.substring(0, 500) : userMessage,
-                            revisedContent.length() > 1000 ? revisedContent.substring(0, 1000) : revisedContent,
-                            evidenceSummary, null, null, null, null, commandId);
-                    } catch (Exception _dc) { log.debug("[AiAgent] 决策卡埋点跳过: {}", _dc.getMessage()); }
-                    try {
-                        String memContent = "Q: " + (userMessage.length() > 200 ? userMessage.substring(0, 200) : userMessage)
-                            + "\nA: " + (revisedContent.length() > 500 ? revisedContent.substring(0, 500) : revisedContent);
-                        longTermMemoryOrchestrator.writeTenantMemory("EPISODIC", "user", userId,
-                            null, memContent, null, null, commandId);
-                    } catch (Exception _ltm) { log.debug("[AiAgent] 长期记忆埋点跳过: {}", _ltm.getMessage()); }
-                }
-                lastToolRecordsHolder.set(allExecRecords);
-                if (stateSessionId != null) { try { agentStateStore.completeSession(stateSessionId, revisedContent, (int) totalTokens, currentIter); } catch (Exception e) { log.debug("[AiAgent] 状态完成跳过: {}", e.getMessage()); } }
-                return Result.success(revisedContent);
-            }
-        }
-
-        aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
-        if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, "对话轮数超过限制"); } catch (Exception e) { log.debug("[AiAgent] 状态失败跳过: {}", e.getMessage()); } }
-        return Result.fail("对话轮数超过限制 (" + maxIterations + ")，可能陷入了死循环。");
-        } finally { // F31: 强制清理 ThreadLocal
-            // commandId 由 consumeLastCommandId() 负责清理（调用者消费后清理）；
-            // 若异常路径未调用 consume，下次同线程请求 set 时自动覆盖，无内存泄漏。
+            return Result.success(content);
+        } finally {
             lastToolRecordsHolder.remove();
+            AgentModeContext.clear();
         }
     }
 
+    public Result<String> executeAgent(String userMessage, String pageContext, AgentMode mode) {
+        AgentModeContext.set(mode);
+        return executeAgent(userMessage, pageContext);
+    }
+
+    public void executeAgentStreaming(String userMessage, String pageContext, AgentMode mode, SseEmitter emitter) {
+        AgentModeContext.set(mode);
+        executeAgentStreaming(userMessage, pageContext, emitter);
+    }
+
+    public void executeAgentStreaming(String userMessage, String pageContext, SseEmitter emitter) {
+        long requestStartAt = System.currentTimeMillis();
+        ScheduledExecutorService heartbeat = null;
+        try {
+            if (!contextBuilder.isModelEnabled()) {
+                emitSse(emitter, "error", java.util.Map.of("message", "智能服务暂未配置或不可用"));
+                emitSse(emitter, "done", java.util.Map.of());
+                emitter.complete();
+                return;
+            }
+
+            String cacheKey = UserContext.tenantId() + ":" + UserContext.userId() + ":" + userMessage;
+            CacheEntry cached = queryCache.get(cacheKey);
+            if (cached != null && !cached.isExpired()) {
+                log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.result.length());
+                AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+                emitSse(emitter, "answer", java.util.Map.of("content", cached.result, "commandId", ctx.getCommandId()));
+                emitSse(emitter, "done", java.util.Map.of());
+                emitter.complete();
+                return;
+            }
+            if (queryCache.size() > CACHE_MAX_SIZE) {
+                queryCache.entrySet().removeIf(e -> e.getValue().isExpired());
+            }
+
+            heartbeat = startHeartbeat(emitter, 15);
+
+            AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+            StreamingAgentLoopCallback cb = new StreamingAgentLoopCallback(
+                    emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
+
+            String loopResult = loopEngine.run(ctx, cb);
+
+            if ("plan_mode".equals(loopResult) || "stuck_detected".equals(loopResult)
+                    || "token_budget_exceeded".equals(loopResult) || "max_iterations_exceeded".equals(loopResult)) {
+                // Callback already handled SSE events
+            } else if (cb.getFinalContent() != null && cb.getExecRecords().size() <= 2) {
+                queryCache.put(cacheKey, new CacheEntry(deduplicateAnswer(cb.getFinalContent())));
+            }
+
+        } catch (Exception e) {
+            log.error("[AiAgent-Stream] 流式执行异常", e);
+            try {
+                emitSse(emitter, "error", java.util.Map.of("message", "系统异常: " + e.getMessage()));
+                emitSse(emitter, "done", java.util.Map.of());
+                emitter.complete();
+            } catch (Exception ex) {
+                log.debug("[AiAgent-Stream] SSE完成异常: {}", ex.getMessage());
+                emitter.completeWithError(e);
+            }
+        } finally {
+            if (heartbeat != null) {
+                heartbeat.shutdownNow();
+            }
+            AgentModeContext.clear();
+        }
+    }
+
+    public void saveCurrentConversationToMemory() {
+        String userId = UserContext.userId();
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        memoryHelper.saveCurrentConversationToMemory(userId, tenantId);
+    }
 
     public String consumeLastCommandId() {
         String commandId = lastCommandIdHolder.get();
@@ -309,271 +175,30 @@ public class AiAgentOrchestrator {
         return records != null ? records : Collections.emptyList();
     }
 
-
-    public void executeAgentStreaming(String userMessage, String pageContext, SseEmitter emitter) {
-        String commandId = null;
-        String stateSessionId = null;
-        long requestStartAt = System.currentTimeMillis();
+    private void emitSse(SseEmitter emitter, String eventName, java.util.Map<String, Object> data) {
         try {
-            if (!inferenceOrchestrator.isAnyModelEnabled()) {
-                emitSse(emitter, "error", Map.of("message", "智能服务暂未配置或不可用"));
-                emitSse(emitter, "done", Map.of());
-                emitter.complete();
-                return;
-            }
-
-            String cacheKey = UserContext.tenantId() + ":" + UserContext.userId() + ":" + userMessage;
-            CacheEntry cached = queryCache.get(cacheKey);
-            if (cached != null && !cached.isExpired()) {
-                log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.result.length());
-                commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
-                emitSse(emitter, "answer", Map.of("content", cached.result, "commandId", commandId));
-                emitSse(emitter, "done", Map.of());
-                aiAgentTraceOrchestrator.finishRequest(commandId, cached.result, null, System.currentTimeMillis() - requestStartAt);
-                emitter.complete();
-                return;
-            }
-            if (queryCache.size() > CACHE_MAX_SIZE) {
-                queryCache.entrySet().removeIf(e -> e.getValue().isExpired());
-            }
-
-            commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
-            String userId = UserContext.userId();
-            TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-            try { stateSessionId = agentStateStore.createSession(tenantId, userId, userMessage); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态会话创建跳过: {}", e.getMessage()); }
-            List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
-            // ── 领域路由裁剪：按用户意图缩减工具集，降低 token 消耗 ──
-            Set<ToolDomain> domains = domainRouter.route(userMessage);
-            if (!domains.isEmpty()) {
-                visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
-                log.info("[AiAgent-Stream] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
-            }
-            visibleTools = toolAdvisor.advise(visibleTools, userMessage);
-            Map<String, AgentTool> visibleToolMap = toolExecHelper.toToolLookup(visibleTools);
-            List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
-            List<AiMessage> messages = new ArrayList<>();
-            List<JsonNode> teamDispatchCards = new ArrayList<>();
-            List<JsonNode> bundleSplitCards = new ArrayList<>();
-            List<JsonNode> stepWizardCards = new ArrayList<>();
-            List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
-            messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));
-            List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
-            messages.addAll(memoryHelper.compactConversationHistory(history));
-            messages.add(AiMessage.user(userMessage));
-
-            int maxIterations = promptHelper.estimateMaxIterations(userMessage);
-            long totalTokens = 0; // Token 预算追踪
-            List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测
-            Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new ConcurrentHashMap<>(); // 对话内工具结果缓存（线程安全：并发工具调用）
-            List<AiAgentToolExecHelper.ToolExecRecord> allExecRecords = new ArrayList<>(); // 全轮次工具执行记录
-            for (int i = 1; i <= maxIterations; i++) {
-                emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在思考第 " + i + " 轮…"));
-
-                if (i > 2) {
-                    messages.removeIf(m -> "system".equals(m.getRole())
-                        && m.getContent() != null && m.getContent().startsWith("[进度提示]"));
-                    messages.add(AiMessage.system(String.format(
-                        "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。", i, maxIterations)));
-                }
-
-                emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在调用推理模型，请稍候…"));
-                IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, visibleApiTools);
-                if (!result.isSuccess()) {
-                    aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
-                    emitSse(emitter, "error", Map.of("message", "推理服务暂时不可用: " + result.getErrorMessage()));
-                    emitSse(emitter, "done", Map.of());
-                    emitter.complete();
-                    return;
-                }
-
-                // Token 预算追踪
-                totalTokens += result.getPromptTokens() + result.getCompletionTokens();
-                if (totalTokens > tokenBudget) {
-                    log.warn("[AiAgent-Stream] Token 预算超限: {} > {}, 强制终止", totalTokens, tokenBudget);
-                    String budgetMsg = "抱歉，本次对话消耗的计算资源已达上限，请分步提问以获得更好的回答。";
-                    aiAgentTraceOrchestrator.finishRequest(commandId, budgetMsg, "token_budget_exceeded", System.currentTimeMillis() - requestStartAt);
-                    emitSse(emitter, "answer", Map.of("content", budgetMsg, "commandId", commandId));
-                    emitSse(emitter, "done", Map.of());
-                    emitter.complete();
-                    return;
-                }
-
-                AiMessage assistantMessage = AiMessage.assistant(result.getContent());
-
-                if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
-                    // ── Stuck 检测 ──
-                    Set<String> iterSigs = new HashSet<>();
-                    for (AiToolCall tc : result.getToolCalls()) {
-                        iterSigs.add(toolExecHelper.buildStuckSignature(tc));
-                    }
-                    stuckSignatures.addAll(iterSigs);
-                    if (toolExecHelper.isStuck(stuckSignatures)) {
-                        log.warn("[AiAgent-Stream] Stuck 检测触发，强制终止");
-                        String stuckMsg = "抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。";
-                        aiAgentTraceOrchestrator.finishRequest(commandId, stuckMsg, "stuck_detected", System.currentTimeMillis() - requestStartAt);
-                        emitSse(emitter, "answer", Map.of("content", stuckMsg, "commandId", commandId));
-                        emitSse(emitter, "done", Map.of());
-                        emitter.complete();
-                        return;
-                    }
-
-                    assistantMessage.setTool_calls(result.getToolCalls());
-                    messages.add(assistantMessage);
-
-                    // ── 并发执行多工具调用 + Pre/Post Hooks ──
-                    // 先发送所有 tool_call 事件
-                    for (AiToolCall toolCall : result.getToolCalls()) {
-                        emitSse(emitter, "tool_call", Map.of("tool", toolCall.getFunction().getName(), "arguments", toolCall.getFunction().getArguments()));
-                    }
-                    emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在执行工具查询，请稍候…"));
-                    List<AiAgentToolExecHelper.ToolExecRecord> execRecords = toolExecHelper.executeToolsConcurrently(result.getToolCalls(), visibleToolMap, commandId, toolResultCache);
-                    for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
-                        evidenceHelper.captureTeamDispatchCard(rec.toolName, rec.rawResult, teamDispatchCards);
-                        evidenceHelper.captureBundleSplitCard(rec.toolName, rec.rawResult, bundleSplitCards);
-                        evidenceHelper.captureStepWizardCard(rec.toolName, rec.rawResult, stepWizardCards);
-                        xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, xiaoyunInsightCards);
-                        emitSse(emitter, "tool_result", Map.of(
-                                "tool", rec.toolName,
-                                "success", !rec.rawResult.startsWith("{\"error\""),
-                                "summary", AiAgentEvidenceHelper.truncateOneLine(rec.evidence, 200)));
-                        messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
-                    }
-                    allExecRecords.addAll(execRecords);
-                    // ── 埋点1（流式）：PRM 过程奖励 ──
-                    try {
-                        final int streamIter = i;
-                        for (int ri = 0; ri < execRecords.size(); ri++) {
-                            AiAgentToolExecHelper.ToolExecRecord rec = execRecords.get(ri);
-                            boolean ok = rec.rawResult != null && !rec.rawResult.startsWith("{\"error\"");
-                            processRewardOrchestrator.record(commandId, null, streamIter * 10 + ri,
-                                rec.toolName, "", rec.evidence == null ? "" : rec.evidence.length() > 500 ? rec.evidence.substring(0, 500) : rec.evidence,
-                                ok ? 1 : -1, null, "AUTO", ok ? "success" : "error",
-                                null, null, "agent_stream");
-                        }
-                    } catch (Exception _prm) { log.debug("[AiAgent-Stream] PRM埋点跳过: {}", _prm.getMessage()); }
-                    if (stateSessionId != null) { try { agentStateStore.saveCheckpoint(stateSessionId, i, messages, execRecords, (int) totalTokens); } catch (Exception e) { log.debug("[AiAgent-Stream] 检查点保存跳过: {}", e.getMessage()); } }
-                } else {
-                    // == 自反思审查 ==
-                    String revisedContent;
-                    int streamIter = i;
-                    if (shouldSkipCritic(userMessage, streamIter, allExecRecords.size())) {
-                        log.info("[AiAgent-Stream] 简单场景跳过Critic审查 (iter={}, tools={})", streamIter, allExecRecords.size());
-                        revisedContent = result.getContent();
-                    } else {
-                        emitSse(emitter, "thinking", Map.of("message", "小云正在进行最终思考核对与完善..."));
-                        revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent(), allExecRecords);
-                    }
-                    revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
-                    revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
-                    revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, stepWizardCards);
-                    revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
-
-                    // ── 数据真实性守卫：校验AI输出是否有工具数据支撑（仅记日志，不修改回复） ──
-                    String streamToolEvidence = allExecRecords.isEmpty() ? "" : allExecRecords.stream()
-                            .map(r -> r.evidence).reduce((a, b) -> a + " " + b).orElse("");
-                    DataTruthGuard.TruthCheckResult streamTruthCheck = dataTruthGuard.checkAiOutputTruth(revisedContent, streamToolEvidence);
-                    if (!streamTruthCheck.isPassed()) {
-                        log.warn("[AiAgent-Stream] 数据真实性校验未通过: {}", streamTruthCheck.getReason());
-                    }
-                    DataTruthGuard.NumericConsistencyResult streamNumCheck = dataTruthGuard.checkNumericConsistency(revisedContent, streamToolEvidence);
-                    if (!streamNumCheck.isConsistent()) {
-                        log.warn("[AiAgent-Stream] 数字一致性校验异常: {}", streamNumCheck.getMismatches());
-                    }
-                    revisedContent = dataTruthGuard.tagDataSource(revisedContent, streamTruthCheck.getDataSource());
-
-                    EntityFactChecker.FactCheckResult streamFactCheck = entityFactChecker.verifyEntities(revisedContent);
-                    if (!streamFactCheck.allVerified()) {
-                        log.warn("[AiAgent-Stream] 实体事实校验发现不存在的实体: {}", streamFactCheck.phantomEntities());
-                    }
-                    GroundedGenerationGuard.GroundingResult streamGrounding = groundedGenerationGuard.verify(revisedContent, allExecRecords);
-                    if (!streamGrounding.passed()) {
-                        log.warn("[AiAgent-Stream] 接地率检查未通过: rate={}", streamGrounding.groundingRate());
-                    }
-
-                    // 最终回答
-                    memoryHelper.saveConversationTurn(userId, tenantId, userMessage, revisedContent);
-                    aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
-                    // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
-                    memoryHelper.enhanceMemoryAsync(userId, tenantId, userMessage, revisedContent);
-                    // ── 埋点2（流式）：决策卡 + 长期记忆 ──
-                    if (!allExecRecords.isEmpty()) {
-                        try {
-                            String evidenceSummary = allExecRecords.stream()
-                                .map(r -> r.toolName + ": " + (r.evidence != null && r.evidence.length() > 200 ? r.evidence.substring(0, 200) : r.evidence))
-                                .reduce("", (a, b) -> a + "\n" + b);
-                            decisionCardOrchestrator.create(commandId, null, "agent_answer",
-                                userMessage.length() > 500 ? userMessage.substring(0, 500) : userMessage,
-                                revisedContent.length() > 1000 ? revisedContent.substring(0, 1000) : revisedContent,
-                                evidenceSummary, null, null, null, null, commandId);
-                        } catch (Exception _dc) { log.debug("[AiAgent-Stream] 决策卡埋点跳过: {}", _dc.getMessage()); }
-                        try {
-                            String memContent = "Q: " + (userMessage.length() > 200 ? userMessage.substring(0, 200) : userMessage)
-                                + "\nA: " + (revisedContent.length() > 500 ? revisedContent.substring(0, 500) : revisedContent);
-                            longTermMemoryOrchestrator.writeTenantMemory("EPISODIC", "user", userId,
-                                null, memContent, null, null, commandId);
-                        } catch (Exception _ltm) { log.debug("[AiAgent-Stream] 长期记忆埋点跳过: {}", _ltm.getMessage()); }
-                    }
-                    if (stateSessionId != null) { try { agentStateStore.completeSession(stateSessionId, revisedContent, (int) totalTokens, i); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态完成跳过: {}", e.getMessage()); } }
-                    String dedupedContent = deduplicateAnswer(revisedContent);
-                    if (allExecRecords.size() <= 2) {
-                        queryCache.put(cacheKey, new CacheEntry(dedupedContent));
-                    }
-                    emitSse(emitter, "answer", Map.of("content", dedupedContent, "commandId", commandId));
-                    // 生成上下文关联的后续建议动作
-                    try {
-                        List<FollowUpAction> followUps = followUpSuggestionEngine.generate(allExecRecords, userMessage);
-                        if (!followUps.isEmpty()) {
-                            emitSse(emitter, "follow_up_actions", Map.of("actions", followUps));
-                        }
-                    } catch (Exception ex) {
-                        log.warn("[AiAgent-Stream] 生成后续建议失败，不影响主流程", ex);
-                    }
-                    emitSse(emitter, "done", Map.of());
-                    emitter.complete();
-                    return;
-                }
-            }
-
-            aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
-            if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, "对话轮数超过限制"); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态失败跳过: {}", e.getMessage()); } }
-            emitSse(emitter, "error", Map.of("message", "对话轮数超过限制"));
-            emitSse(emitter, "done", Map.of());
-            emitter.complete();
-
-        } catch (Exception e) {
-            log.error("[AiAgent-Stream] 流式执行异常", e);
-            if (commandId != null) {
-                aiAgentTraceOrchestrator.finishRequest(commandId, null, e.getMessage(), System.currentTimeMillis() - requestStartAt);
-            }
-            if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, e.getMessage()); } catch (Exception ex) { log.debug("[AiAgent-Stream] 状态失败跳过: {}", ex.getMessage()); } }
-            try {
-                emitSse(emitter, "error", Map.of("message", "系统异常: " + e.getMessage()));
-                emitSse(emitter, "done", Map.of());
-                emitter.complete();
-            } catch (Exception ex) {
-                log.debug("[AI Agent] SSE完成异常: {}", ex.getMessage());
-                emitter.completeWithError(e);
-            }
-        }
-    }
-
-
-    public void saveCurrentConversationToMemory() {
-        String userId = UserContext.userId();
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        memoryHelper.saveCurrentConversationToMemory(userId, tenantId);
-    }
-
-    private void emitSse(SseEmitter emitter, String eventName, Map<String, Object> data) {
-        try {
-            emitter.send(SseEmitter.event()
-                    .name(eventName)
-                    .data(JSON.writeValueAsString(data)));
+            ObjectMapper mapper = new ObjectMapper();
+            emitter.send(SseEmitter.event().name(eventName).data(mapper.writeValueAsString(data)));
         } catch (Exception e) {
             log.warn("[AiAgent-Stream] 发送SSE事件失败: event={}, error={}", eventName, e.getMessage());
         }
+    }
+
+    private ScheduledExecutorService startHeartbeat(SseEmitter emitter, int intervalSeconds) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "sse-hb-" + emitter.hashCode());
+            t.setDaemon(true);
+            return t;
+        });
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                emitter.send(SseEmitter.event().comment("heartbeat " + System.currentTimeMillis()));
+            } catch (Exception e) {
+                log.debug("[AiAgent-Stream] 心跳发送失败，连接可能已断开");
+                scheduler.shutdownNow();
+            }
+        }, intervalSeconds, intervalSeconds, TimeUnit.SECONDS);
+        return scheduler;
     }
 
     private String deduplicateAnswer(String content) {
@@ -581,7 +206,7 @@ public class AiAgentOrchestrator {
         String[] paragraphs = content.split("\n\n+");
         if (paragraphs.length < 2) return content;
         StringBuilder sb = new StringBuilder();
-        Set<String> seen = new HashSet<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
         for (String p : paragraphs) {
             String trimmed = p.trim();
             if (trimmed.isEmpty()) continue;
@@ -589,11 +214,8 @@ public class AiAgentOrchestrator {
             if (normalized.length() < 10 || seen.add(normalized)) {
                 if (sb.length() > 0) sb.append("\n\n");
                 sb.append(trimmed);
-            } else {
-                log.info("[AiAgent] 去重: 移除重复段落 ({}字符)", trimmed.length());
             }
         }
         return sb.toString();
     }
-
 }

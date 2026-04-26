@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Button, Input, Space, Form, Select, Tag, Upload } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
+import { withQuery } from '@/utils/api/core';
 import { buildProductionSheetHtml } from '../../DataCenter/buildProductionSheetHtml';
 
 import { safePrint } from '@/utils/safePrint';
@@ -46,6 +48,12 @@ interface Props {
   sampleReviewComment?: string | null;
   sampleReviewer?: string | null;
   sampleReviewTime?: string | null;
+  // 样衣入库所需字段
+  completedTime?: string | null;
+  styleName?: string;
+  color?: string;
+  size?: string;
+  sampleQuantity?: number;
 }
 
 const StyleProductionTab: React.FC<Props> = ({
@@ -71,7 +79,13 @@ const StyleProductionTab: React.FC<Props> = ({
   sampleReviewComment,
   sampleReviewer,
   sampleReviewTime,
+  completedTime,
+  styleName,
+  color,
+  size,
+  sampleQuantity,
 }) => {
+  const navigate = useNavigate();
 
   // ---- 样衣审核 Modal ----
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
@@ -267,11 +281,31 @@ const StyleProductionTab: React.FC<Props> = ({
               </span>
             )}
           </div>
-          {(sampleCompleted || !!productionCompletedTime) && (
-            <Button size="small" onClick={openReviewModal}>
-              {sampleReviewStatus ? '修改审核结论' : '记录审核结论'}
-            </Button>
-          )}
+          <Space size={8}>
+            {(sampleCompleted || !!productionCompletedTime) && (
+              <Button size="small" onClick={openReviewModal}>
+                {sampleReviewStatus ? '修改审核结论' : '记录审核结论'}
+              </Button>
+            )}
+            {sampleReviewStatus === 'PASS' && !completedTime && (
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => navigate(withQuery('/warehouse/sample', {
+                  styleId: String(styleId),
+                  styleNo: styleNo || '',
+                  action: 'inbound',
+                  styleName: styleName || '',
+                  color: color || '',
+                  size: size || '',
+                  quantity: sampleQuantity != null ? String(sampleQuantity) : '',
+                  sampleType: 'development',
+                }))}
+              >
+                样衣入库
+              </Button>
+            )}
+          </Space>
         </div>
         <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-secondary)', lineHeight: '1.8', marginBottom: sampleReviewStatus ? 8 : 0 }}>
           审核通过只代表样衣确认通过，完成入库后才算样衣闭环。

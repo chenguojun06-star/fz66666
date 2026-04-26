@@ -217,6 +217,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_cutting_bundle", "bed_sub_no", "INT DEFAULT NULL COMMENT '床次子序号'");
         add("t_cutting_bundle", "split_process_name", "VARCHAR(100) DEFAULT NULL COMMENT '拆分工序名称'");
         add("t_cutting_bundle", "split_process_order", "INT DEFAULT NULL COMMENT '拆分工序序号'");
+        add("t_cutting_bundle", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
+        add("t_cutting_bundle", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
+        add("t_cutting_bundle", "operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '操作人ID'");
+        add("t_cutting_bundle", "operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名'");
+        add("t_cutting_bundle", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
 
         add("t_product_warehousing", "repair_status", "VARCHAR(30) DEFAULT NULL COMMENT '返修状态'");
         add("t_product_warehousing", "repair_operator_name", "VARCHAR(50) DEFAULT NULL COMMENT '返修操作人姓名'");
@@ -641,6 +646,123 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_wage_payment", "payment_method", "VARCHAR(20) DEFAULT NULL COMMENT '付款方式'");
         add("t_wage_payment", "payment_account_id", "VARCHAR(64) DEFAULT NULL COMMENT '付款账户ID'");
 
+        add("t_wage_settlement_feedback", "id", "VARCHAR(36) NOT NULL COMMENT '主键'");
+        add("t_wage_settlement_feedback", "settlement_id", "VARCHAR(36) DEFAULT NULL COMMENT '关联工资结算单ID'");
+        add("t_wage_settlement_feedback", "operator_id", "VARCHAR(36) DEFAULT NULL COMMENT '反馈人ID'");
+        add("t_wage_settlement_feedback", "operator_name", "VARCHAR(64) DEFAULT NULL COMMENT '反馈人姓名'");
+        add("t_wage_settlement_feedback", "feedback_type", "VARCHAR(20) NOT NULL COMMENT '反馈类型'");
+        add("t_wage_settlement_feedback", "feedback_content", "TEXT DEFAULT NULL COMMENT '反馈内容'");
+        add("t_wage_settlement_feedback", "status", "VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态'");
+        add("t_wage_settlement_feedback", "resolve_remark", "VARCHAR(500) DEFAULT NULL COMMENT '处理备注'");
+        add("t_wage_settlement_feedback", "resolver_id", "VARCHAR(36) DEFAULT NULL COMMENT '处理人ID'");
+        add("t_wage_settlement_feedback", "resolver_name", "VARCHAR(64) DEFAULT NULL COMMENT '处理人姓名'");
+        add("t_wage_settlement_feedback", "resolve_time", "DATETIME DEFAULT NULL COMMENT '处理时间'");
+        add("t_wage_settlement_feedback", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_wage_settlement_feedback", "create_time", "DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+        add("t_wage_settlement_feedback", "update_time", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
+
+        add("t_warehouse_location", "id", "VARCHAR(36) PRIMARY KEY");
+        add("t_warehouse_location", "location_code", "VARCHAR(64) NOT NULL COMMENT '库位编码'");
+        add("t_warehouse_location", "location_name", "VARCHAR(128) DEFAULT NULL COMMENT '库位名称'");
+        add("t_warehouse_location", "zone_code", "VARCHAR(32) DEFAULT NULL COMMENT '库区编码'");
+        add("t_warehouse_location", "zone_name", "VARCHAR(64) DEFAULT NULL COMMENT '库区名称'");
+        add("t_warehouse_location", "aisle_code", "VARCHAR(32) DEFAULT NULL COMMENT '通道编码'");
+        add("t_warehouse_location", "rack_code", "VARCHAR(32) DEFAULT NULL COMMENT '货架编码'");
+        add("t_warehouse_location", "level_code", "VARCHAR(16) DEFAULT NULL COMMENT '层编码'");
+        add("t_warehouse_location", "position_code", "VARCHAR(16) DEFAULT NULL COMMENT '位编码'");
+        add("t_warehouse_location", "location_type", "VARCHAR(32) DEFAULT NULL COMMENT '库位类型'");
+        add("t_warehouse_location", "warehouse_type", "VARCHAR(32) DEFAULT NULL COMMENT '仓库类型'");
+        add("t_warehouse_location", "capacity", "INT DEFAULT 0 COMMENT '容量上限'");
+        add("t_warehouse_location", "used_capacity", "INT DEFAULT 0 COMMENT '已用容量'");
+        add("t_warehouse_location", "status", "VARCHAR(16) DEFAULT 'ACTIVE' COMMENT '状态'");
+        add("t_warehouse_location", "description", "VARCHAR(256) DEFAULT NULL COMMENT '描述'");
+        add("t_warehouse_location", "tenant_id", "BIGINT NOT NULL COMMENT '租户ID'");
+        add("t_warehouse_location", "create_by", "VARCHAR(36) DEFAULT NULL COMMENT '创建人'");
+        add("t_warehouse_location", "create_time", "DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+        add("t_warehouse_location", "update_by", "VARCHAR(36) DEFAULT NULL COMMENT '更新人'");
+        add("t_warehouse_location", "update_time", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
+        add("t_warehouse_location", "delete_flag", "INT DEFAULT 0 COMMENT '删除标记'");
+
+        add("t_stock_change_log", "id", "VARCHAR(36) PRIMARY KEY");
+        add("t_stock_change_log", "change_no", "VARCHAR(64) DEFAULT NULL COMMENT '变更单号'");
+        add("t_stock_change_log", "change_type", "VARCHAR(32) NOT NULL COMMENT '变更类型'");
+        add("t_stock_change_log", "stock_type", "VARCHAR(32) NOT NULL COMMENT '库存类型'");
+        add("t_stock_change_log", "stock_id", "VARCHAR(36) DEFAULT NULL COMMENT '库存记录ID'");
+        add("t_stock_change_log", "material_code", "VARCHAR(64) DEFAULT NULL COMMENT '物料编码'");
+        add("t_stock_change_log", "style_no", "VARCHAR(64) DEFAULT NULL COMMENT '款号'");
+        add("t_stock_change_log", "color", "VARCHAR(32) DEFAULT NULL COMMENT '颜色'");
+        add("t_stock_change_log", "size", "VARCHAR(16) DEFAULT NULL COMMENT '尺码'");
+        add("t_stock_change_log", "location_code", "VARCHAR(64) DEFAULT NULL COMMENT '库位编码'");
+        add("t_stock_change_log", "before_quantity", "DECIMAL(15,2) DEFAULT NULL COMMENT '变更前数量'");
+        add("t_stock_change_log", "change_quantity", "DECIMAL(15,2) DEFAULT NULL COMMENT '变更数量'");
+        add("t_stock_change_log", "after_quantity", "DECIMAL(15,2) DEFAULT NULL COMMENT '变更后数量'");
+        add("t_stock_change_log", "unit", "VARCHAR(16) DEFAULT NULL COMMENT '单位'");
+        add("t_stock_change_log", "biz_type", "VARCHAR(32) DEFAULT NULL COMMENT '业务类型'");
+        add("t_stock_change_log", "biz_id", "VARCHAR(36) DEFAULT NULL COMMENT '业务单据ID'");
+        add("t_stock_change_log", "biz_no", "VARCHAR(64) DEFAULT NULL COMMENT '业务单号'");
+        add("t_stock_change_log", "operator_id", "VARCHAR(36) DEFAULT NULL COMMENT '操作人ID'");
+        add("t_stock_change_log", "operator_name", "VARCHAR(64) DEFAULT NULL COMMENT '操作人姓名'");
+        add("t_stock_change_log", "remark", "VARCHAR(256) DEFAULT NULL COMMENT '备注'");
+        add("t_stock_change_log", "tenant_id", "BIGINT NOT NULL COMMENT '租户ID'");
+        add("t_stock_change_log", "create_time", "DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+
+        add("t_stock_transfer", "id", "VARCHAR(36) PRIMARY KEY");
+        add("t_stock_transfer", "transfer_no", "VARCHAR(64) NOT NULL COMMENT '调拨单号'");
+        add("t_stock_transfer", "transfer_type", "VARCHAR(32) NOT NULL COMMENT '调拨类型'");
+        add("t_stock_transfer", "stock_type", "VARCHAR(32) DEFAULT NULL COMMENT '库存类型'");
+        add("t_stock_transfer", "material_code", "VARCHAR(64) DEFAULT NULL COMMENT '物料编码'");
+        add("t_stock_transfer", "style_no", "VARCHAR(64) DEFAULT NULL COMMENT '款号'");
+        add("t_stock_transfer", "color", "VARCHAR(32) DEFAULT NULL COMMENT '颜色'");
+        add("t_stock_transfer", "size", "VARCHAR(16) DEFAULT NULL COMMENT '尺码'");
+        add("t_stock_transfer", "quantity", "INT NOT NULL COMMENT '调拨数量'");
+        add("t_stock_transfer", "from_location_code", "VARCHAR(64) NOT NULL COMMENT '调出库位编码'");
+        add("t_stock_transfer", "from_location_name", "VARCHAR(128) DEFAULT NULL COMMENT '调出库位名称'");
+        add("t_stock_transfer", "to_location_code", "VARCHAR(64) NOT NULL COMMENT '调入库位编码'");
+        add("t_stock_transfer", "to_location_name", "VARCHAR(128) DEFAULT NULL COMMENT '调入库位名称'");
+        add("t_stock_transfer", "status", "VARCHAR(16) DEFAULT 'PENDING' COMMENT '状态'");
+        add("t_stock_transfer", "applicant_id", "VARCHAR(36) DEFAULT NULL COMMENT '申请人ID'");
+        add("t_stock_transfer", "applicant_name", "VARCHAR(64) DEFAULT NULL COMMENT '申请人姓名'");
+        add("t_stock_transfer", "approver_id", "VARCHAR(36) DEFAULT NULL COMMENT '审批人ID'");
+        add("t_stock_transfer", "approver_name", "VARCHAR(64) DEFAULT NULL COMMENT '审批人姓名'");
+        add("t_stock_transfer", "approve_time", "DATETIME DEFAULT NULL COMMENT '审批时间'");
+        add("t_stock_transfer", "remark", "VARCHAR(256) DEFAULT NULL COMMENT '备注'");
+        add("t_stock_transfer", "tenant_id", "BIGINT NOT NULL COMMENT '租户ID'");
+        add("t_stock_transfer", "create_by", "VARCHAR(36) DEFAULT NULL COMMENT '创建人'");
+        add("t_stock_transfer", "create_time", "DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+        add("t_stock_transfer", "update_by", "VARCHAR(36) DEFAULT NULL COMMENT '更新人'");
+        add("t_stock_transfer", "update_time", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
+        add("t_stock_transfer", "delete_flag", "INT DEFAULT 0 COMMENT '删除标记'");
+
+        add("t_finance_period", "id", "VARCHAR(36) PRIMARY KEY");
+        add("t_finance_period", "year", "INT NOT NULL COMMENT '年份'");
+        add("t_finance_period", "month", "INT NOT NULL COMMENT '月份'");
+        add("t_finance_period", "start_date", "DATE DEFAULT NULL COMMENT '开始日期'");
+        add("t_finance_period", "end_date", "DATE DEFAULT NULL COMMENT '结束日期'");
+        add("t_finance_period", "status", "VARCHAR(16) DEFAULT 'OPEN' COMMENT '状态'");
+        add("t_finance_period", "locked_by", "VARCHAR(36) DEFAULT NULL COMMENT '锁定人ID'");
+        add("t_finance_period", "locked_time", "DATETIME DEFAULT NULL COMMENT '锁定时间'");
+        add("t_finance_period", "remark", "VARCHAR(256) DEFAULT NULL COMMENT '备注'");
+        add("t_finance_period", "tenant_id", "BIGINT NOT NULL COMMENT '租户ID'");
+        add("t_finance_period", "create_by", "VARCHAR(36) DEFAULT NULL COMMENT '创建人'");
+        add("t_finance_period", "create_time", "DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+        add("t_finance_period", "update_time", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
+
+        add("t_intelligence_high_risk_audit", "id", "BIGINT NOT NULL AUTO_INCREMENT");
+        add("t_intelligence_high_risk_audit", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_intelligence_high_risk_audit", "user_id", "VARCHAR(64) DEFAULT NULL COMMENT '用户ID'");
+        add("t_intelligence_high_risk_audit", "user_name", "VARCHAR(64) DEFAULT NULL COMMENT '用户姓名'");
+        add("t_intelligence_high_risk_audit", "tool_name", "VARCHAR(64) NOT NULL COMMENT '工具名称'");
+        add("t_intelligence_high_risk_audit", "args_hash", "CHAR(64) NOT NULL COMMENT '参数哈希'");
+        add("t_intelligence_high_risk_audit", "args_preview", "VARCHAR(500) DEFAULT NULL COMMENT '参数预览'");
+        add("t_intelligence_high_risk_audit", "status", "VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT '状态'");
+        add("t_intelligence_high_risk_audit", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+        add("t_intelligence_high_risk_audit", "decided_at", "DATETIME DEFAULT NULL COMMENT '决策时间'");
+        add("t_intelligence_high_risk_audit", "executed_at", "DATETIME DEFAULT NULL COMMENT '执行时间'");
+        add("t_intelligence_high_risk_audit", "elapsed_ms", "BIGINT DEFAULT NULL COMMENT '耗时毫秒'");
+        add("t_intelligence_high_risk_audit", "success", "TINYINT(1) DEFAULT NULL COMMENT '是否成功'");
+        add("t_intelligence_high_risk_audit", "result_preview", "VARCHAR(500) DEFAULT NULL COMMENT '结果预览'");
+        add("t_intelligence_high_risk_audit", "error_message", "VARCHAR(500) DEFAULT NULL COMMENT '错误信息'");
+
         add("t_expense_reimbursement", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
         add("t_expense_reimbursement", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
         add("t_expense_reimbursement", "reimbursement_no", "VARCHAR(64) DEFAULT NULL COMMENT '报销单号'");
@@ -662,14 +784,6 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
         add("t_ec_platform_config", "callback_url", "VARCHAR(500) DEFAULT NULL COMMENT '回调地址'");
         add("t_ec_platform_config", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
-
-        add("t_production_order", "delivery_sla_days", "INT DEFAULT NULL COMMENT '交付SLA天数'");
-        add("t_production_order", "delivery_sla_date", "DATE DEFAULT NULL COMMENT '交付SLA日期'");
-        add("t_production_order", "delivery_delay_days", "INT DEFAULT NULL COMMENT '延期天数'");
-        add("t_production_order", "delivery_delay_reason", "VARCHAR(500) DEFAULT NULL COMMENT '延期原因'");
-        add("t_production_order", "workflow_status", "VARCHAR(30) DEFAULT NULL COMMENT '工作流状态'");
-        add("t_production_order", "current_stage", "VARCHAR(50) DEFAULT NULL COMMENT '当前阶段'");
-        add("t_production_order", "stage_entered_at", "DATETIME DEFAULT NULL COMMENT '进入当前阶段时间'");
 
         TABLE_FIXES.put("t_intelligence_audit_log",
             "CREATE TABLE IF NOT EXISTS `t_intelligence_audit_log` ("
@@ -1501,6 +1615,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
             repaired += ensureSettlementViewHasCompleteTime(conn, schema);
             repaired += ensureFlowStageSnapshotView(conn, schema);
+            repaired += ensureStageDoneAggView(conn, schema);
             repaired += ensureColumnType(conn, schema, "t_style_info", "size_color_config",
                     "mediumtext", "MODIFY COLUMN `size_color_config` MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'");
             repaired += ensureColumnType(conn, schema, "t_style_size", "tolerance",
@@ -1537,7 +1652,6 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
             // t_production_order: 交付SLA字段
             repaired += ensureColumn(conn, schema, "t_production_order", "is_quick_response", "TINYINT DEFAULT 0");
-            repaired += ensureColumn(conn, schema, "t_production_order", "quick_response_deadline", "DATETIME DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_production_order", "standard_delivery_days", "INT DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_production_order", "actual_delivery_days", "INT DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_production_order", "delivery_sla_status", "VARCHAR(32) DEFAULT NULL");
@@ -1752,18 +1866,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
     private int ensureFlowStageSnapshotView(Connection conn, String schema) {
         try {
-            boolean viewExists = false;
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?")) {
-                ps.setString(1, schema);
-                ps.setString(2, "v_production_order_flow_stage_snapshot");
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) viewExists = rs.getInt(1) > 0;
-                }
-            }
-            if (viewExists) return 0;
-
-            log.warn("[DbRepair] 视图 v_production_order_flow_stage_snapshot 不存在，开始创建");
+            log.info("[DbRepair] 检查/重建视图 v_production_order_flow_stage_snapshot（每次启动强制同步）");
             try (Statement stmt = conn.createStatement()) {
                 stmt.executeUpdate("CREATE OR REPLACE VIEW v_production_order_flow_stage_snapshot AS "
                         + "SELECT sr.order_id AS order_id, sr.tenant_id AS tenant_id, "
@@ -1805,11 +1908,39 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         + "SUBSTRING_INDEX(MAX(CASE WHEN sr.scan_type = 'warehouse' AND IFNULL(sr.process_code,'')<>'warehouse_rollback' THEN CONVERT(CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time),20,'0'),LPAD(UNIX_TIMESTAMP(sr.create_time),20,'0'),'|',IFNULL(sr.operator_name,'')) USING binary) END),'|',-1) AS warehousing_operator_name, "
                         + "SUM(CASE WHEN sr.scan_type = 'warehouse' AND IFNULL(sr.process_code,'')<>'warehouse_rollback' THEN IFNULL(sr.quantity,0) ELSE 0 END) AS warehousing_quantity "
                         + "FROM t_scan_record sr WHERE sr.scan_result = 'success' GROUP BY sr.order_id, sr.tenant_id");
-                log.warn("[DbRepair] 已创建缺失视图: v_production_order_flow_stage_snapshot");
+                log.info("[DbRepair] 视图 v_production_order_flow_stage_snapshot 已同步重建");
                 return 1;
             }
         } catch (Exception e) {
             log.error("[DbRepair] 创建视图 v_production_order_flow_stage_snapshot 失败: {}", e.getMessage());
+        }
+        return 0;
+    }
+
+    private int ensureStageDoneAggView(Connection conn, String schema) {
+        try {
+            log.info("[DbRepair] 检查/重建视图 v_production_order_stage_done_agg（每次启动强制同步）");
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("CREATE OR REPLACE VIEW v_production_order_stage_done_agg AS "
+                        + "SELECT t.order_id AS order_id, t.tenant_id AS tenant_id, "
+                        + "t.stage_name AS stage_name, "
+                        + "SUM(IFNULL(t.quantity, 0)) AS done_quantity, "
+                        + "MAX(t.scan_time) AS last_scan_time "
+                        + "FROM ("
+                        + "SELECT sr.order_id, sr.tenant_id, "
+                        + "COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) AS stage_name, "
+                        + "sr.quantity, sr.scan_time "
+                        + "FROM t_scan_record sr "
+                        + "WHERE sr.scan_result = 'success' AND sr.quantity > 0 "
+                        + "AND sr.scan_type IN ('production', 'cutting', 'quality', 'warehouse', 'pattern')"
+                        + ") t "
+                        + "WHERE t.stage_name IS NOT NULL AND t.stage_name <> '' "
+                        + "GROUP BY t.order_id, t.tenant_id, t.stage_name");
+                log.info("[DbRepair] 视图 v_production_order_stage_done_agg 已同步重建");
+                return 1;
+            }
+        } catch (Exception e) {
+            log.error("[DbRepair] 创建视图 v_production_order_stage_done_agg 失败: {}", e.getMessage());
         }
         return 0;
     }

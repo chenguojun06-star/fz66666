@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.PredictFinishRequest;
 import com.fashion.supplychain.intelligence.dto.PredictFinishResponse;
 import com.fashion.supplychain.intelligence.entity.IntelligencePredictionLog;
@@ -66,6 +67,8 @@ public class ProgressPredictOrchestrator {
 
         UserContext ctx = UserContext.get();
         Long tenantId = ctx != null ? ctx.getTenantId() : null;
+        TenantAssert.assertTenantContext();
+        tenantId = UserContext.tenantId();
 
         // ── 2. 动态读取真实件数（与进度球 boardStats 同源）────────────────
         int totalQty = 0;
@@ -84,7 +87,7 @@ public class ProgressPredictOrchestrator {
                 // 2b. 已完成件数：查 v_production_order_stage_done_agg
                 if (StringUtils.hasText(stageName)) {
                     List<Map<String, Object>> aggs = scanRecordMapper.selectStageDoneAgg(
-                            Collections.singletonList(orderId), com.fashion.supplychain.common.UserContext.tenantId());
+                            Collections.singletonList(orderId), tenantId);
                     if (aggs != null) {
                         for (Map<String, Object> row : aggs) {
                             String rowStage = row.get("stageName") == null

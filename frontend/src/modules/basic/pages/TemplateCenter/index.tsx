@@ -294,45 +294,6 @@ const TemplateCenter: React.FC = () => {
     }
   };
 
-  // const openView = async (row: TemplateLibrary) => {
-  //   setActiveRow(row);
-  //   setViewContent('');
-  //   setViewObj(null);
-  //   setViewOpen(true);
-  //   if (!row?.id) return;
-  //   try {
-  //     const res = await api.get<{ code: number; message: string; data: TemplateLibrary }>(`/template-library/${row.id}`);
-  //     if (res.code !== 200) {
-  //       message.error(res.message || '获取模板失败');
-  //       return;
-  //     }
-  //     const tpl: TemplateLibrary = res.data;
-  //     const content = tpl?.templateContent;
-  //
-  //     // templateContent 现在可能是对象（@JsonRawValue）或字符串
-  //     let obj: unknown = null;
-  //     if (typeof content === 'object' && content !== null) {
-  //       // 已经是对象，直接使用
-  //       obj = content;
-  //     } else {
-  //       // 是字符串，尝试解析
-  //       const raw = String(content ?? '');
-  //       try {
-  //         obj = JSON.parse(raw);
-  //       } catch {
-  //         // 解析失败，保留原始字符串
-  //         setViewContent(raw);
-  //         return;
-  //       }
-  //     }
-  //
-  //     setViewObj(obj);
-  //     setViewContent(JSON.stringify(obj, null, 2));
-  //   } catch (e: any) {
-  //     message.error(getErrorMessage(e, '获取模板失败'));
-  //   }
-  // };
-
   const renderVisualContent = () => {
     const t = String(activeRow?.templateType || '').trim().toLowerCase();
     const obj = viewObj;

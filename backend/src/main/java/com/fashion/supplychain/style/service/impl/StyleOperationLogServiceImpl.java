@@ -3,6 +3,7 @@ package com.fashion.supplychain.style.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.StyleOperationLog;
 import com.fashion.supplychain.style.mapper.StyleOperationLogMapper;
 import com.fashion.supplychain.style.service.StyleOperationLogService;
@@ -17,10 +18,11 @@ public class StyleOperationLogServiceImpl extends ServiceImpl<StyleOperationLogM
 
     @Override
     public List<StyleOperationLog> listByStyleId(Long styleId, String bizType, String action) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<StyleOperationLog> wrapper = new LambdaQueryWrapper<StyleOperationLog>()
                 .eq(StyleOperationLog::getStyleId, styleId)
-                .eq(tenantId != null, StyleOperationLog::getTenantId, tenantId)
+                .eq(StyleOperationLog::getTenantId, tenantId)
                 .orderByDesc(StyleOperationLog::getCreateTime);
         if (StringUtils.hasText(bizType)) {
             wrapper.eq(StyleOperationLog::getBizType, bizType.trim());

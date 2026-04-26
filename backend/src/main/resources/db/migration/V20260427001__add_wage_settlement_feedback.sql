@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS t_wage_settlement_feedback (
+    id VARCHAR(36) NOT NULL,
+    settlement_id VARCHAR(36) DEFAULT NULL COMMENT '关联工资结算单ID',
+    operator_id VARCHAR(36) DEFAULT NULL COMMENT '反馈人ID（工人）',
+    operator_name VARCHAR(64) DEFAULT NULL COMMENT '反馈人姓名',
+    feedback_type VARCHAR(20) NOT NULL COMMENT '反馈类型: CONFIRM=确认, OBJECTION=异议',
+    feedback_content TEXT DEFAULT NULL COMMENT '反馈内容（异议时必填）',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING=待处理, RESOLVED=已解决, REJECTED=已驳回',
+    resolve_remark VARCHAR(500) DEFAULT NULL COMMENT '处理备注',
+    resolver_id VARCHAR(36) DEFAULT NULL COMMENT '处理人ID',
+    resolver_name VARCHAR(64) DEFAULT NULL COMMENT '处理人姓名',
+    resolve_time DATETIME DEFAULT NULL COMMENT '处理时间',
+    tenant_id BIGINT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_settlement_id (settlement_id),
+    KEY idx_operator_id (operator_id),
+    KEY idx_tenant_id (tenant_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

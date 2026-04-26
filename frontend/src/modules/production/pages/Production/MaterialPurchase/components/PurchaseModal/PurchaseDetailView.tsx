@@ -62,6 +62,7 @@ interface PurchaseDetailViewProps {
   onBatchReturn: () => void;
   isSamplePurchase: boolean;
   isOrderFrozenForRecord: (record?: Record<string, unknown> | null) => boolean;
+  onWarehousePick?: (record: MaterialPurchaseType, pickQty: number) => void;
 }
 
 const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
@@ -85,6 +86,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   onBatchReturn,
   isSamplePurchase,
   isOrderFrozenForRecord,
+  onWarehousePick,
 }) => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
   const [docList, setDocList] = useState<PurchaseDocRecord[]>([]);
@@ -175,18 +177,32 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   }, [loadDocs]);
 
   useEffect(() => {
-    if (!currentPurchase?.orderNo) { setStockMap({}); return; }
-    const orderNo = String(currentPurchase.orderNo).trim();
-    if (!orderNo || orderNo === '-') { setStockMap({}); return; }
-    api.get<any>('/production/purchase/smart-receive-preview', { params: { orderNo } })
-      .then((res: any) => {
-        const materials: any[] = res?.data?.materials || res?.materials || [];
-        const map: Record<string, number> = {};
-        materials.forEach((m: any) => { if (m.purchaseId != null) map[String(m.purchaseId)] = Number(m.availableStock ?? 0); });
-        setStockMap(map);
-      })
-      .catch(() => setStockMap({}));
-  }, [currentPurchase?.orderNo]);
+    const orderNo = String(currentPurchase?.orderNo || '').trim();
+    const styleNo = String(currentPurchase?.styleNo || '').trim();
+    if (orderNo && orderNo !== '-') {
+      api.get<any>('/production/purchase/smart-receive-preview', { params: { orderNo } })
+        .then((res: any) => {
+          const materials: any[] = res?.data?.materials || res?.materials || [];
+          const map: Record<string, number> = {};
+          materials.forEach((m: any) => { if (m.purchaseId != null) map[String(m.purchaseId)] = Number(m.availableStock ?? 0); });
+          setStockMap(map);
+        })
+        .catch(() => setStockMap({}));
+      return;
+    }
+    if (styleNo && styleNo !== '-') {
+      api.get<any>('/production/purchase/smart-receive-preview', { params: { styleNo } })
+        .then((res: any) => {
+          const materials: any[] = res?.data?.materials || res?.materials || [];
+          const map: Record<string, number> = {};
+          materials.forEach((m: any) => { if (m.purchaseId != null) map[String(m.purchaseId)] = Number(m.availableStock ?? 0); });
+          setStockMap(map);
+        })
+        .catch(() => setStockMap({}));
+      return;
+    }
+    setStockMap({});
+  }, [currentPurchase?.orderNo, currentPurchase?.styleNo]);
 
   return (
     <div className="purchase-detail-view">
@@ -361,16 +377,28 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                       const status = normalizeStatus(record.status);
                       const stock = stockMap[String(record.id)];
                       const hasStock = stock != null && stock > 0;
+                      const isWarehousePending = status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING;
                       return (
                         <Space size={4}>
-                          <Button
-                            type="link"
-                            size="small"
-                            disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING}
-                            onClick={() => onReceive(record)}
-                          >
-                            {hasStock ? '出库领取' : '采购'}
-                          </Button>
+                          {isWarehousePending ? (
+                            <Tag color="blue">待仓库出库</Tag>
+                          ) : (
+                            <Button
+                              type="link"
+                              size="small"
+                              disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING}
+                              onClick={() => {
+                                if (hasStock && onWarehousePick) {
+                                  const pickQty = Math.min(stock, Number(record.purchaseQuantity || 0));
+                                  onWarehousePick(record, pickQty);
+                                } else {
+                                  onReceive(record);
+                                }
+                              }}
+                            >
+                              {hasStock ? '出库领取' : '采购'}
+                            </Button>
+                          )}
                           <Button
                             type="link"
                             size="small"
@@ -390,11 +418,11 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                           >
                             {Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认'}
                           </Button>
-                          {Number(record?.returnConfirmed || 0) === 1 && (
+                          {(Number(record?.returnConfirmed || 0) === 1 || status === MATERIAL_PURCHASE_STATUS.COMPLETED) && (
                             <Button
                               type="link"
                               size="small"
-                              disabled={frozen || !isSupervisorOrAbove}
+                              disabled={!isSupervisorOrAbove}
                               onClick={() => onReturnReset(record)}
                             >
                               退回

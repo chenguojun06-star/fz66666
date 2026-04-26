@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
 import { factoryApi, type Factory } from '@/services/system/factoryApi';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit } from '@/types/system';
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { CUTTING_STAGE_ORDER } from '@/utils/productionStage';
+import { productionOrderApi, type FactoryCapacityItem } from '@/services/production/productionApi';
 
 export type CuttingFactoryMode = 'INTERNAL' | 'EXTERNAL';
 
@@ -37,6 +40,19 @@ const createEmptyOrderLine = (): CuttingCreateOrderLine => ({
   quantity: null,
 });
 
+export interface CuttingProcessNode {
+  id: string;
+  name: string;
+  progressStage: string;
+  unitPrice: number;
+}
+
+const defaultCuttingProcessNodes: CuttingProcessNode[] = [
+  { id: '01', name: '裁剪', progressStage: '裁剪', unitPrice: 0 },
+  { id: '02', name: '整件', progressStage: '车缝', unitPrice: 0 },
+  { id: '03', name: '尾部', progressStage: '尾部', unitPrice: 0 },
+];
+
 export interface ProcessUnitPrice {
   processName: string;
   unitPrice: number | null;
@@ -49,12 +65,11 @@ interface UseCuttingCreateTaskOptions {
   fetchTasks: () => Promise<void> | void;
 }
 
-/**
- * 新建裁剪任务 Hook
- * 管理创建弹窗、款号搜索、自定义裁剪单
- */
 export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCuttingCreateTaskOptions) {
   useAuth();
+
+  // 用于防止 loadProcessNodesForStyle 异步竞态：记录最新发起的款号请求
+  const pendingStyleNoRef = useRef<string>('');
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);
@@ -71,6 +86,34 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createFactoryId, setCreateFactoryId] = useState<string>('');
   const [createFactoryOptions, setCreateFactoryOptions] = useState<Factory[]>([]);
   const [createFactoryLoading, setCreateFactoryLoading] = useState(false);
+  const [createProcessNodes, setCreateProcessNodes] = useState<CuttingProcessNode[]>([...defaultCuttingProcessNodes]);
+  const [createStyleImageUrl, setCreateStyleImageUrl] = useState<string | null>(null);
+  const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
+
+  useEffect(() => {
+    productionOrderApi.getFactoryCapacity()
+      .then((res) => {
+        if (res?.data) setFactoryCapacities(res.data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const selectedFactoryStat = useMemo(() => {
+    if (!factoryCapacities.length) return null;
+    if (createFactoryMode === 'EXTERNAL' && createFactoryId) {
+      const factory = createFactoryOptions.find(f => String(f.id || '').trim() === String(createFactoryId || '').trim());
+      if (!factory) return null;
+      return factoryCapacities.find(c => c.factoryName === factory.factoryName) ?? null;
+    }
+    if (createFactoryMode === 'INTERNAL' && createOrgUnitId) {
+      const dept = createInternalUnitOptions.find(d => String(d.id || '').trim() === String(createOrgUnitId || '').trim());
+      if (!dept) return null;
+      const deptName = dept.nodeName || dept.pathNames || '';
+      if (!deptName) return null;
+      return factoryCapacities.find(c => deptName.includes(c.factoryName) || c.factoryName.includes(deptName)) ?? null;
+    }
+    return null;
+  }, [createFactoryMode, createFactoryId, createOrgUnitId, factoryCapacities, createFactoryOptions, createInternalUnitOptions]);
 
   const fetchStyleInfoOptions = async (keyword?: string) => {
     setCreateStyleLoading(true);
@@ -130,12 +173,111 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     }
   };
 
-  /** 款号选择/输入变更时同步款名 */
+  // onChange：每次输入变化时仅更新款号显示值，不触发异步模板加载（防止竞态导致工序列表意外变更）
   const handleStyleNoChange = (value: string) => {
     const sn = String(value || '').trim();
     setCreateStyleNo(sn);
     const hit = createStyleOptions.find((x) => x.styleNo === sn);
     setCreateStyleName(String(hit?.styleName || '').trim());
+    if (!sn) {
+      // 清空时重置工序节点
+      pendingStyleNoRef.current = '';
+      setCreateProcessNodes([...defaultCuttingProcessNodes]);
+    }
+  };
+
+  // onSelect / onBlur：用户明确确认款号后才加载模板工序（避免打字过程中异步覆盖）
+  const handleStyleNoSelect = (value: string) => {
+    const sn = String(value || '').trim();
+    setCreateStyleNo(sn);
+    const hit = createStyleOptions.find((x) => x.styleNo === sn);
+    setCreateStyleName(String(hit?.styleName || '').trim());
+    if (sn) {
+      loadProcessNodesForStyle(sn);
+    } else {
+      pendingStyleNoRef.current = '';
+      setCreateProcessNodes([...defaultCuttingProcessNodes]);
+    }
+  };
+
+  const loadProcessNodesForStyle = async (styleNo: string) => {
+    // 标记本次请求的款号；若款号在等待过程中被更新，本次结果将被丢弃
+    pendingStyleNoRef.current = styleNo;
+    try {
+      const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
+      // 竞态保护：若已有更新的款号请求，丢弃本次结果
+      if (pendingStyleNoRef.current !== styleNo) return;
+      const result = res as Record<string, unknown>;
+      if (result.code !== 200) return;
+      const rows = Array.isArray(result.data) ? result.data : [];
+      if (rows.length === 0) return;
+      const nodes: CuttingProcessNode[] = rows
+        .filter((r: any) => {
+          const name = String(r?.name || r?.processName || '').trim();
+          const stage = String(r?.progressStage || '').trim();
+          return name && !['采购'].includes(stage) && !['采购'].includes(name);
+        })
+        .map((r: any, idx: number) => {
+          let stage = String(r?.progressStage || '').trim();
+          if (!stage || !CUTTING_STAGE_ORDER.includes(stage)) {
+            stage = '车缝';
+          }
+          return {
+            id: String(r?.id || r?.processCode || String(idx + 1).padStart(2, '0')).trim(),
+            name: String(r?.name || r?.processName || '').trim(),
+            progressStage: stage,
+            unitPrice: Number(r?.unitPrice || r?.price || 0) || 0,
+          };
+        });
+      if (nodes.length > 0) {
+        setCreateProcessNodes(nodes);
+      }
+    } catch {
+      if (pendingStyleNoRef.current === styleNo) {
+        setCreateProcessNodes([...defaultCuttingProcessNodes]);
+      }
+    }
+  };
+
+  const addProcessNodeToStage = (stage: string) => {
+    const targetStage = CUTTING_STAGE_ORDER.includes(stage) ? stage : '车缝';
+    const maxSort = createProcessNodes.length;
+    const nextId = String(maxSort + 1).padStart(2, '0');
+    setCreateProcessNodes((prev) => [...prev, { id: nextId, name: '', progressStage: targetStage, unitPrice: 0 }]);
+  };
+
+  const addProcessNode = () => {
+    addProcessNodeToStage('车缝');
+  };
+
+  const removeProcessNode = (index: number) => {
+    setCreateProcessNodes((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const updateProcessNode = (index: number, field: keyof CuttingProcessNode, value: string | number) => {
+    setCreateProcessNodes((prev) => prev.map((node, idx) => {
+      if (idx !== index) return node;
+      return { ...node, [field]: value };
+    }));
+  };
+
+  const buildCuttingWorkflowJson = (): string => {
+    const sorted = [...createProcessNodes].sort((a, b) => {
+      const sa = CUTTING_STAGE_ORDER.indexOf(a.progressStage || '车缝');
+      const sb = CUTTING_STAGE_ORDER.indexOf(b.progressStage || '车缝');
+      if (sa !== sb) return sa - sb;
+      return 0;
+    });
+    const nodes = sorted
+      .filter((n) => String(n.name || '').trim())
+      .map((n, idx) => ({
+        id: String(idx + 1).padStart(2, '0'),
+        name: n.name,
+        processCode: String(idx + 1).padStart(2, '0'),
+        progressStage: n.progressStage,
+        unitPrice: n.unitPrice,
+      }));
+    return JSON.stringify({ nodes });
   };
 
   const openCreateTask = () => {
@@ -147,6 +289,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     setCreateFactoryMode('INTERNAL');
     setCreateOrgUnitId('');
     setCreateFactoryId('');
+    setCreateProcessNodes([...defaultCuttingProcessNodes]);
+    setCreateStyleImageUrl(null);
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
     fetchInternalUnitOptions();
@@ -219,6 +363,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         orderDate: String(createOrderDate || '').trim() || undefined,
         deliveryDate: String(createDeliveryDate || '').trim() || undefined,
         orderLines,
+        progressWorkflowJson: buildCuttingWorkflowJson(),
+        styleImageUrl: String(createStyleImageUrl || '').trim() || undefined,
       });
       if (res.code === 200) {
         message.success('新建裁剪任务成功');
@@ -254,10 +400,15 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     createInternalUnitOptions,
     createFactoryId, setCreateFactoryId,
     createFactoryOptions, createFactoryLoading,
+    createProcessNodes, setCreateProcessNodes,
+    createStyleImageUrl, setCreateStyleImageUrl,
+    selectedFactoryStat,
+    addProcessNode, addProcessNodeToStage, removeProcessNode, updateProcessNode,
     fetchStyleInfoOptions,
     fetchFactoryOptions,
     fetchInternalUnitOptions,
     handleStyleNoChange,
+    handleStyleNoSelect,
     openCreateTask,
     handleSubmitCreateTask,
   };

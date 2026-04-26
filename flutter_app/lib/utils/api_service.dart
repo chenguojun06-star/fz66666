@@ -267,4 +267,13 @@ class ApiService extends GetxService {
 
   Future<Response> priceAdjustHistory(String orderNo) =>
       _http.get('/api/production/process-price/history', params: {'orderNo': orderNo});
+
+  Future<Response> wageSettlementFeedbackSubmit(Map<String, dynamic> data) =>
+      _http.post('/api/finance/wage-settlement-feedback/submit', data: data);
+
+  Future<Response> wageSettlementFeedbackMyList([Map<String, dynamic>? params]) =>
+      _http.post('/api/finance/wage-settlement-feedback/my-list', data: params ?? {});
+
+  Future<Response> wageSettlementFeedbackStats() =>
+      _http.get('/api/finance/wage-settlement-feedback/stats');
 }

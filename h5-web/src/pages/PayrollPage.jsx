@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { toast, formatDate, formatDateTime } from '@/utils/uiHelper';
 import { scanTypeText, orderStatusText } from '@/utils/scanHelpers';
@@ -21,6 +22,7 @@ function formatScanTime(val) {
 }
 
 export default function PayrollPage() {
+  const navigate = useNavigate();
   const [timeFilter, setTimeFilter] = useState('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -157,6 +159,13 @@ export default function PayrollPage() {
             <div className="stat-label">{item.label}</div>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <button className="ghost-button" style={{ width: '100%', fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)' }}
+          onClick={() => navigate('/payroll/feedback')}>
+          工资结算反馈 ›
+        </button>
       </div>
 
       <div className="sub-page-row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>

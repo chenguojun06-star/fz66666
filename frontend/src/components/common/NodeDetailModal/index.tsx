@@ -573,12 +573,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               </Popconfirm>
             )}
           </div>
-          <Space>
-            <Button onClick={onClose}>取消</Button>
-            <Button type="primary" loading={saving} onClick={handleSave}>
-              保存
-            </Button>
-          </Space>
         </div>
       }
       width={nodeTypeKey === 'procurement' ? '40vw' : '60vw'}

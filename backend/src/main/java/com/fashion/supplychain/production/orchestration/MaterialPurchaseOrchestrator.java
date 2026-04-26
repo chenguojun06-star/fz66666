@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.List;
@@ -95,7 +94,12 @@ public class MaterialPurchaseOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        MaterialPurchase purchase = materialPurchaseService.getById(key);
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, key)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
         if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
@@ -123,6 +127,7 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "采购任务");
         boolean ok = updateAndSync(materialPurchase);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -183,6 +188,7 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "采购任务");
         int purchaseQty = current.getPurchaseQuantity() == null ? 0 : current.getPurchaseQuantity().intValue();
         if (purchaseQty > 0 && arrivedQuantity * 100 < purchaseQty * MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK) {
             if (!StringUtils.hasText(remark)) {
@@ -451,8 +457,8 @@ public class MaterialPurchaseOrchestrator {
         return pickingHelper.smartReceiveAll(body);
     }
 
-    public Map<String, Object> previewSmartReceive(String orderNo) {
-        return pickingHelper.previewSmartReceive(orderNo);
+    public Map<String, Object> previewSmartReceive(String orderNo, String styleNo) {
+        return pickingHelper.previewSmartReceive(orderNo, styleNo);
     }
 
     @Transactional(rollbackFor = Exception.class)

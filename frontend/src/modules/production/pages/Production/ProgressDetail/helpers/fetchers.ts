@@ -54,7 +54,7 @@ export const fetchCuttingBundles = async (args: {
   try {
     const res = await productionCuttingApi.list({
       page: 1,
-      pageSize: 10000,
+      pageSize: 500,
       productionOrderId: orderId || undefined,
       productionOrderNo: orderNo || undefined,
     });

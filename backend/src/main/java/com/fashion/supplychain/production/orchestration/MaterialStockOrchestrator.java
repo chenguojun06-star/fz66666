@@ -3,7 +3,6 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
 import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
@@ -214,6 +213,7 @@ public class MaterialStockOrchestrator {
         if (stock == null || stock.getDeleteFlag() != null && stock.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("库存记录不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(stock.getTenantId(), "物料库存");
 
         materialStockService.decreaseStockById(stockId, quantity);
 

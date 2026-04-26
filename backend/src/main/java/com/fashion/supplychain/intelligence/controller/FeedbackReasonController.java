@@ -2,7 +2,6 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.mapper.KnowledgeBaseMapper;
 import com.fashion.supplychain.intelligence.orchestration.FeedbackReasonOrchestrator;

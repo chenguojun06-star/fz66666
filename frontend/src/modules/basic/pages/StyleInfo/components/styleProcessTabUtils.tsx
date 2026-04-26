@@ -13,6 +13,8 @@ import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import type { ProcessPriceHintResponse } from '@/services/intelligence/intelligenceApi';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
+import { STAGE_ORDER, computeStageSortedAndSpan } from '@/utils/productionStage';
+export { STAGE_ORDER, computeStageSortedAndSpan };
 
 // ─────────────────────────────────────────────
 // 类型定义
@@ -66,31 +68,18 @@ export const isTempId = (id: any) => {
   return s.startsWith('-');
 };
 
-export const STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
-
-// ─────────────────────────────────────────────
-// 排序与分组计算
-// ─────────────────────────────────────────────
-
 export function computeSortedDataAndStageSpan(data: StyleProcessWithSizePrice[]) {
-  const sortedData = [...data].sort((a, b) => {
-    const sa = STAGE_ORDER.indexOf(a.progressStage || '车缝');
-    const sb = STAGE_ORDER.indexOf(b.progressStage || '车缝');
-    if (sa !== sb) return sa - sb;
-    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  const { sorted, spanMap } = computeStageSortedAndSpan(data, STAGE_ORDER);
+  const sortedData = sorted.map((item, idx) => {
+    const base = { ...item };
+    const origIdx = data.indexOf(item);
+    return { item: base, origIdx };
   });
   const stageSpanMap = new Map<number, StageSpanInfo>();
-  let i = 0;
-  while (i < sortedData.length) {
-    const stage = sortedData[i].progressStage || '车缝';
-    let j = i + 1;
-    while (j < sortedData.length && (sortedData[j].progressStage || '车缝') === stage) j++;
-    const count = j - i;
-    stageSpanMap.set(i, { rowSpan: count, stage, count });
-    for (let k = i + 1; k < j; k++) stageSpanMap.set(k, { rowSpan: 0, stage, count });
-    i = j;
-  }
-  return { sortedData, stageSpanMap };
+  spanMap.forEach((info, idx) => {
+    stageSpanMap.set(idx, info);
+  });
+  return { sortedData: sorted, stageSpanMap };
 }
 
 // ─────────────────────────────────────────────

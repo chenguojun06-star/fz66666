@@ -75,6 +75,9 @@ public class FinishedProductStockTool implements AgentTool {
     public String execute(String argumentsJson) {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         try {
+            if (UserContext.factoryId() != null) {
+                return OBJECT_MAPPER.writeValueAsString(Map.of("success", false, "error", "外发工厂账号无权查看成品库存数据"));
+            }
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {
                 args = OBJECT_MAPPER.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});

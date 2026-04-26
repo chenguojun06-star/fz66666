@@ -5,18 +5,18 @@ import React, { useState, useEffect, useRef } from 'react';
 ═══════════════════════════════════════════════════ */
 
 export const risk2color = (r: string) =>
-  ({ HIGH: '#e8686a', MEDIUM: '#f7a600', LOW: '#39ff14' }[r] ?? '#39ff14');
+  ({ HIGH: '#e03030', MEDIUM: '#f7a600', LOW: '#39ff14' }[r] ?? '#39ff14');
 
 export const grade2color = (g: string) =>
-  ({ A: '#39ff14', B: '#00e5ff', C: '#f7a600', D: '#e8686a' }[g] ?? '#888');
+  ({ A: '#39ff14', B: '#00e5ff', C: '#f7a600', D: '#e03030' }[g] ?? '#888');
 
 /** 严重程度颜色 */
-export const sev2c = (s: string) => ({ critical: '#e8686a', warning: '#f7a600', normal: '#39ff14' }[s] ?? '#39ff14');
+export const sev2c = (s: string) => ({ critical: '#e03030', warning: '#f7a600', normal: '#39ff14' }[s] ?? '#39ff14');
 
 /** 交期风险强度展示 */
 export const risk2badge = (r: string) => ({
-  overdue: { label: '已逾期', color: '#e8686a' },
-  danger:  { label: '高风险', color: '#e8686a' },
+  overdue: { label: '已逾期', color: '#e03030' },
+  danger:  { label: '高风险', color: '#e03030' },
   warning: { label: '预警',   color: '#f7a600' },
   safe:    { label: '安全',   color: '#39ff14' },
 }[r] ?? { label: r, color: '#888' });

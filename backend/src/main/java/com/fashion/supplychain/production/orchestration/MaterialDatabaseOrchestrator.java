@@ -28,7 +28,12 @@ public class MaterialDatabaseOrchestrator {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("id不能为空");
         }
-        MaterialDatabase db = materialDatabaseService.getById(id.trim());
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialDatabase db = materialDatabaseService.lambdaQuery()
+                .eq(MaterialDatabase::getId, id.trim())
+                .eq(MaterialDatabase::getTenantId, tenantId)
+                .one();
         if (db == null || (db.getDeleteFlag() != null && db.getDeleteFlag() == 1)) {
             throw new NoSuchElementException("记录不存在");
         }

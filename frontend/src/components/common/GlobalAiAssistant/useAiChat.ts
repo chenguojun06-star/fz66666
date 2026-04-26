@@ -86,7 +86,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const streamAbortRef = useRef<AbortController | null>(null);
   const requestSeqRef = useRef(0);
   const historyFetchedRef = useRef(false);
-  const SSE_INACTIVITY_TIMEOUT_MS = 120_000;
+  const SSE_INACTIVITY_TIMEOUT_MS = 180_000;
 
   useEffect(() => {
     return () => { streamAbortRef.current?.abort(); };
@@ -261,6 +261,13 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
               ? `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 已处理完成，小云继续整理结果…`
               : `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 这一步没处理成功，小云正在重新组织答案…`;
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
+          } else if (event.type === 'answer_chunk') {
+            const chunk = String(event.data.chunk || '');
+            if (chunk) {
+              accumulatedText += chunk;
+              setMessages(prev => prev.map(m => m.id === aiMsgId
+                ? { ...m, text: accumulatedText } : m));
+            }
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
             const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
@@ -321,6 +328,13 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           completed = true;
           if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
           console.warn('SSE stream failed, falling back to sync:', err);
+          const isAuthError = typeof err === 'string' && (err.includes('401') || err.includes('登录已过期'));
+          if (isAuthError) {
+            setMessages(prev => prev.map(m => m.id === aiMsgId
+              ? { ...m, text: '登录已过期，请重新登录' } : m));
+            finishTyping();
+            return;
+          }
           if (streamStarted) {
             setMessages(prev => prev.map(m => m.id === aiMsgId
               ? { ...m, text: accumulatedText || '网络中断，请重试 🌧️' } : m));
@@ -352,6 +366,13 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             speak(displayAnswer || displayText);
           } catch (syncErr) {
             console.error('Sync fallback also failed:', syncErr);
+            const syncErrMsg = (syncErr as any)?.message || String(syncErr);
+            const isSyncAuthError = syncErrMsg.includes('401') || syncErrMsg.includes('登录已过期') || syncErrMsg.includes('过期');
+            if (isSyncAuthError) {
+              setMessages(prev => prev.map(m => m.id === aiMsgId
+                ? { ...m, text: '登录已过期，请重新登录' } : m));
+              return;
+            }
             let retryCount = 0;
             const maxRetries = 2;
             const retryDelay = [2000, 4000];

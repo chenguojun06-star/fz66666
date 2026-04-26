@@ -114,7 +114,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       const res = await intelligenceApi.getFactoryLeaderboard() as any;
       const ranks: FactoryRank[] = res?.data?.rankings ?? res?.rankings ?? [];
       setLeaderboard(ranks.slice(0, 6));
-    } catch { /* silent */ } finally { setLbLoading(false); }
+    } catch { message.warning('绩效榜加载失败'); } finally { setLbLoading(false); }
   }, []);
 
   useEffect(() => { void fetchLeaderboard(); }, [fetchLeaderboard]);
@@ -165,7 +165,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         setPushedFactoryIds(ids);
       }
     } catch {
-      // 查询失败不影响主流程
+      message.warning('推送状态查询失败，部分按钮状态可能不准确');
     }
   }, []);
 

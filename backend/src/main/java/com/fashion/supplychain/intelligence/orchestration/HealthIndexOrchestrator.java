@@ -154,6 +154,7 @@ public class HealthIndexOrchestrator {
         QueryWrapper<ScanRecord> total = new QueryWrapper<>();
         total.eq("tenant_id", tenantId)
              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+             .ne("scan_type", "orchestration")
              .ge("scan_time", weekAgo);
         long totalScans = scanRecordService.count(total);
         if (totalScans == 0) return 20;
@@ -161,6 +162,7 @@ public class HealthIndexOrchestrator {
         QueryWrapper<ScanRecord> success = new QueryWrapper<>();
         success.eq("tenant_id", tenantId)
                .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+               .ne("scan_type", "orchestration")
                .ge("scan_time", weekAgo)
                .eq("scan_result", "success");
         long successScans = scanRecordService.count(success);

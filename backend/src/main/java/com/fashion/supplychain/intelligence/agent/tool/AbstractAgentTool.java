@@ -2,63 +2,200 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.agent.tracker.AiOperationAudit;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
+import java.util.concurrent.*;
 
-/**
- * 工具层公共基类 — 解决 35+ AgentTool 实现中的共性样板代码。
- *
- * <ul>
- *   <li>F18: {@link #prop}/{@link #stringProp}/{@link #buildToolDef} — 属性定义简化</li>
- *   <li>F19: {@link #parseArgs}/{@link #requireString}/{@link #optionalString} — 参数解析辅助</li>
- *   <li>F20: 共享 {@code MAPPER} 实例，子类无需重复声明</li>
- *   <li>F21: {@link #execute} 模板方法 — 统一异常捕获与日志记录</li>
- *   <li>F22: {@link #successJson}/{@link #errorJson} — 统一 JSON 结果格式</li>
- * </ul>
- *
- * <p>新建工具继承此类只需实现 {@link #doExecute(String)} 和 {@link #getToolDefinition()}。
- * 现有工具可逐步迁移，直接 {@code implements AgentTool} 仍然兼容。
- */
 @Slf4j
 public abstract class AbstractAgentTool implements AgentTool {
 
     protected static final ObjectMapper MAPPER = new ObjectMapper();
 
-    // ─── F21: 统一异常捕获模板 ──────────────────────────────────
+    private static final ExecutorService TIMEOUT_EXECUTOR = new ThreadPoolExecutor(
+            4, 16, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(64),
+            r -> {
+                Thread t = new Thread(r, "agent-tool-timeout-" + System.nanoTime());
+                t.setDaemon(true);
+                return t;
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy());
+
+    @Autowired
+    private AiAgentToolAccessService accessService;
+
+    @Autowired(required = false)
+    private AiOperationAudit operationAudit;
 
     @Override
     public final String execute(String argumentsJson) throws Exception {
+        long startMs = System.currentTimeMillis();
+        String toolName = getName();
         try {
-            Long tenantId = UserContext.tenantId();
-            if (tenantId == null) {
-                log.warn("[{}] 租户上下文丢失，拒绝执行", getName());
+            try {
+                TenantAssert.assertTenantContext();
+            } catch (BusinessException e) {
+                log.warn("[{}] 租户上下文丢失: {}", toolName, e.getMessage());
                 return errorJson("租户上下文丢失，请重新登录");
             }
-            if (!new AiAgentToolAccessService().canUseTool(getName())) {
-                log.warn("[{}] 权限不足，拒绝执行: userId={}", getName(), UserContext.userId());
+            Long tenantId = UserContext.tenantId();
+            if (accessService != null && !accessService.canUseTool(toolName)) {
+                log.warn("[{}] 权限不足，拒绝执行: userId={}", toolName, UserContext.userId());
                 return errorJson("权限不足，该操作需要管理员权限");
             }
-            return doExecute(argumentsJson);
+
+            Map<String, Object> args = parseArgs(argumentsJson);
+            String validationError = validateArguments(args);
+            if (validationError != null) {
+                log.warn("[{}] 参数校验失败: {}", toolName, validationError);
+                return errorJson("参数校验失败：" + validationError);
+            }
+
+            String auditId = null;
+            if (operationAudit != null) {
+                auditId = operationAudit.recordStart(toolName, args);
+            }
+
+            int timeoutMs = resolveTimeoutMs();
+            String result;
+            if (timeoutMs > 0) {
+                result = executeWithTimeout(argumentsJson, timeoutMs, startMs);
+            } else {
+                result = doExecute(argumentsJson);
+            }
+
+            if (operationAudit != null && auditId != null) {
+                boolean success = !result.contains("\"success\":false") && !result.contains("\"error\":");
+                operationAudit.recordComplete(auditId, success, truncate(result, 200));
+            }
+
+            long elapsed = System.currentTimeMillis() - startMs;
+            log.debug("[{}] 执行完成, 耗时{}ms", toolName, elapsed);
+            return result;
         } catch (IllegalArgumentException e) {
-            log.warn("[{}] 参数错误: {}", getName(), e.getMessage());
+            log.warn("[{}] 参数错误: {}", toolName, e.getMessage());
             return errorJson("参数错误：" + e.getMessage());
         } catch (IllegalStateException e) {
-            log.warn("[{}] 业务拒绝: {}", getName(), e.getMessage());
+            log.warn("[{}] 业务拒绝: {}", toolName, e.getMessage());
             return errorJson(e.getMessage());
         } catch (Exception e) {
-            log.error("[{}] 执行异常", getName(), e);
+            log.error("[{}] 执行异常", toolName, e);
             return errorJson("执行失败：" + e.getMessage());
         }
     }
 
-    /** 子类实现具体业务逻辑，异常由 {@link #execute} 统一捕获。 */
-    protected abstract String doExecute(String argumentsJson) throws Exception;
+    private String executeWithTimeout(String argumentsJson, int timeoutMs, long startMs) throws Exception {
+        String toolName = getName();
+        // 关键：捕获调用线程的 UserContext，submit 进异步线程时手动恢复，
+        // 避免 ThreadLocal 跨线程丢失导致 TenantAssert 抛出"缺少租户上下文"。
+        final UserContext capturedCtx = UserContext.get();
+        Future<String> future = TIMEOUT_EXECUTOR.submit(() -> {
+            UserContext previous = UserContext.get();
+            try {
+                if (capturedCtx != null) {
+                    UserContext.set(capturedCtx);
+                }
+                return doExecute(argumentsJson);
+            } finally {
+                if (previous == null) {
+                    UserContext.clear();
+                } else {
+                    UserContext.set(previous);
+                }
+            }
+        });
+        try {
+            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            long elapsed = System.currentTimeMillis() - startMs;
+            log.warn("[{}] 执行超时, 耗时{}ms, 限制{}ms", toolName, elapsed, timeoutMs);
+            return errorJson("执行超时（" + timeoutMs + "ms），请稍后重试或简化查询条件");
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception ex) throw ex;
+            throw new RuntimeException(cause);
+        }
+    }
 
-    // ─── F19: 参数解析辅助 ──────────────────────────────────────
+    private int resolveTimeoutMs() {
+        AgentToolDef def = getClass().getAnnotation(AgentToolDef.class);
+        if (def != null && def.timeoutMs() > 0) {
+            return def.timeoutMs();
+        }
+        AiTool toolDef = getToolDefinition();
+        if (toolDef != null && toolDef.getFunction() != null
+                && toolDef.getFunction().getParameters() != null) {
+            return 30000;
+        }
+        return 0;
+    }
+
+    protected String validateArguments(Map<String, Object> args) {
+        AiTool toolDef = getToolDefinition();
+        if (toolDef == null || toolDef.getFunction() == null
+                || toolDef.getFunction().getParameters() == null) {
+            return null;
+        }
+        List<String> required = toolDef.getFunction().getParameters().getRequired();
+        if (required == null || required.isEmpty()) {
+            return null;
+        }
+        List<String> missing = new ArrayList<>();
+        for (String key : required) {
+            Object val = args.get(key);
+            if (val == null || (val instanceof String s && s.isBlank())) {
+                missing.add(key);
+            }
+        }
+        if (!missing.isEmpty()) {
+            return "缺少必填参数：" + String.join(", ", missing);
+        }
+        Map<String, Object> properties = toolDef.getFunction().getParameters().getProperties();
+        if (properties != null) {
+            List<String> typeErrors = new ArrayList<>();
+            for (Map.Entry<String, Object> entry : properties.entrySet()) {
+                String key = entry.getKey();
+                Object val = args.get(key);
+                if (val == null) continue;
+                if (entry.getValue() instanceof Map<?, ?> propDef) {
+                    Object typeObj = propDef.get("type");
+                    if (typeObj != null) {
+                        String expectedType = typeObj.toString();
+                        if (!checkType(val, expectedType)) {
+                            typeErrors.add(key + " 应为 " + expectedType + " 类型，实际为 " + val.getClass().getSimpleName());
+                        }
+                    }
+                }
+            }
+            if (!typeErrors.isEmpty()) {
+                return "参数类型错误：" + String.join("; ", typeErrors);
+            }
+        }
+        return null;
+    }
+
+    private boolean checkType(Object val, String expectedType) {
+        return switch (expectedType) {
+            case "string" -> val instanceof String;
+            case "integer" -> val instanceof Number;
+            case "number" -> val instanceof Number;
+            case "boolean" -> val instanceof Boolean;
+            case "array" -> val instanceof List;
+            case "object" -> val instanceof Map;
+            default -> true;
+        };
+    }
+
+    protected abstract String doExecute(String argumentsJson) throws Exception;
 
     protected Map<String, Object> parseArgs(String json) throws Exception {
         return MAPPER.readValue(json, new TypeReference<>() {});
@@ -99,8 +236,6 @@ public abstract class AbstractAgentTool implements AgentTool {
         }
     }
 
-    // ─── F22: 统一结果 JSON 格式 ─────────────────────────────────
-
     protected String successJson(String message) throws Exception {
         return MAPPER.writeValueAsString(Map.of("success", true, "message", message));
     }
@@ -121,8 +256,6 @@ public abstract class AbstractAgentTool implements AgentTool {
         }
     }
 
-    // ─── F18: 属性定义简化辅助 ───────────────────────────────────
-
     protected Map<String, Object> prop(String type, String description) {
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("type", type);
@@ -136,6 +269,11 @@ public abstract class AbstractAgentTool implements AgentTool {
 
     protected Map<String, Object> intProp(String description) {
         return prop("integer", description);
+    }
+
+    private String truncate(String s, int max) {
+        if (s == null) return "";
+        return s.length() > max ? s.substring(0, max) + "..." : s;
     }
 
     protected AiTool buildToolDef(String description,

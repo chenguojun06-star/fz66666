@@ -28,7 +28,6 @@ import java.util.Map;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.springframework.util.StringUtils;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.extern.slf4j.Slf4j;
 
@@ -981,6 +980,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                     .set(MaterialPurchase::getReturnConfirmTime, null)
                     .set(MaterialPurchase::getRemark, remark)
                     .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
+        String currentStatus = existed.getStatus() == null ? "" : existed.getStatus().trim();
+        if (MaterialConstants.STATUS_COMPLETED.equals(currentStatus)
+                || MaterialConstants.STATUS_AWAITING_CONFIRM.equals(currentStatus)) {
+            retConfirmUw.set(MaterialPurchase::getStatus, MaterialConstants.STATUS_RECEIVED);
+        }
         boolean ok = this.update(retConfirmUw);
 
         if (ok && !isOrderDrivenPurchase(existed)) {

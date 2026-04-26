@@ -29,6 +29,7 @@ import {
   AccountBookOutlined,
   DownloadOutlined,
   LineChartOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -45,7 +46,8 @@ import {
   type WagePayment,
 } from '@/services/finance/wagePaymentApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import DashboardContent from '@/modules/finance/pages/FinanceCenter/DashboardContent';
+import PaymentDashboardTab from './components/PaymentDashboardTab';
+import WageFeedbackTab from './components/WageFeedbackTab';
 import { usePaymentColumns, methodIconMap, accountTypeIconMap } from './hooks/usePaymentColumns';
 import { usePaymentData } from './hooks/usePaymentData';
 import { usePayModal } from './hooks/usePayModal';
@@ -397,7 +399,16 @@ const PaymentCenterPage: React.FC = () => {
                     <LineChartOutlined /> 数据看板
                   </span>
                 ),
-                children: <DashboardContent />,
+                children: <PaymentDashboardTab />,
+              },
+              {
+                key: 'feedback',
+                label: (
+                  <span>
+                    <MessageOutlined /> 工资结算反馈
+                  </span>
+                ),
+                children: <WageFeedbackTab />,
               },
             ]}
           />

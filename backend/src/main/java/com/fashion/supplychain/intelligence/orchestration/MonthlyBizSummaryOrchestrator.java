@@ -71,13 +71,13 @@ public class MonthlyBizSummaryOrchestrator {
         double defectRatePct = qualityTotal > 0 ? round2(defects * 100.0 / qualityTotal) : 0.0;
 
         QueryWrapper<ProductionOrder> newOrdQw = new QueryWrapper<>();
-        if (tenantId != null) newOrdQw.eq("tenant_id", tenantId);
+        newOrdQw.eq("tenant_id", tenantId);
         if (StringUtils.hasText(factoryId)) newOrdQw.eq("factory_id", factoryId);
         newOrdQw.ge("create_time", start).lt("create_time", end).eq("delete_flag", 0);
         long newOrders = productionOrderService.count(newOrdQw);
 
         QueryWrapper<ProductionOrder> doneQw = new QueryWrapper<>();
-        if (tenantId != null) doneQw.eq("tenant_id", tenantId);
+        doneQw.eq("tenant_id", tenantId);
         if (StringUtils.hasText(factoryId)) doneQw.eq("factory_id", factoryId);
         doneQw.eq("status", "COMPLETED").ge("update_time", start).lt("update_time", end).eq("delete_flag", 0);
         long completedOrders = productionOrderService.count(doneQw);
@@ -97,7 +97,7 @@ public class MonthlyBizSummaryOrchestrator {
     // ── 2. 各工厂件数 ──────────────────────────────────────────────────
     private List<Map<String, Object>> buildFactoryBreakdown(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        if (tenantId != null) qw.eq("tenant_id", tenantId);
+        qw.eq("tenant_id", tenantId);
         if (StringUtils.hasText(factoryId)) qw.eq("factory_id", factoryId);
         qw.eq("scan_type", "production").eq("scan_result", "success")
           .ge("scan_time", start).lt("scan_time", end)
@@ -141,14 +141,14 @@ public class MonthlyBizSummaryOrchestrator {
     // ── 3. 面辅料进出 ──────────────────────────────────────────────────
     private Map<String, Object> buildMaterialStats(Long tenantId, LocalDateTime start, LocalDateTime end) {
         QueryWrapper<MaterialInbound> iqw = new QueryWrapper<>();
-        if (tenantId != null) iqw.eq("tenant_id", tenantId);
+        iqw.eq("tenant_id", tenantId);
         iqw.ge("inbound_time", start).lt("inbound_time", end).select("inbound_quantity");
         List<MaterialInbound> inbounds = materialInboundService.list(iqw);
         long inboundQty = inbounds.stream()
             .mapToLong(i -> i.getInboundQuantity() == null ? 0 : i.getInboundQuantity()).sum();
 
         QueryWrapper<MaterialOutboundLog> oqw = new QueryWrapper<>();
-        if (tenantId != null) oqw.eq("tenant_id", tenantId);
+        oqw.eq("tenant_id", tenantId);
         oqw.ge("outbound_time", start).lt("outbound_time", end).eq("delete_flag", 0).select("quantity");
         List<MaterialOutboundLog> outbounds = materialOutboundLogMapper.selectList(oqw);
         long outboundQty = outbounds.stream()
@@ -166,7 +166,7 @@ public class MonthlyBizSummaryOrchestrator {
         long inboundPieces = sumScan(tenantId, factoryId, start, end, "warehouse", "success");
 
         QueryWrapper<ProductOutstock> oqw = new QueryWrapper<>();
-        if (tenantId != null) oqw.eq("tenant_id", tenantId);
+        oqw.eq("tenant_id", tenantId);
         oqw.ge("create_time", start).lt("create_time", end).select("outstock_quantity");
         long outboundPieces = productOutstockService.list(oqw).stream()
             .mapToLong(o -> o.getOutstockQuantity() == null ? 0 : o.getOutstockQuantity()).sum();
@@ -180,7 +180,7 @@ public class MonthlyBizSummaryOrchestrator {
     // ── 5. 财务汇总 ──────────────────────────────────────────────────
     private Map<String, Object> buildFinanceStats(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
         QueryWrapper<ScanRecord> cqw = new QueryWrapper<>();
-        if (tenantId != null) cqw.eq("tenant_id", tenantId);
+        cqw.eq("tenant_id", tenantId);
         if (StringUtils.hasText(factoryId)) cqw.eq("factory_id", factoryId);
         cqw.eq("scan_result", "success").isNotNull("scan_cost")
            .ge("scan_time", start).lt("scan_time", end).select("scan_cost");
@@ -189,7 +189,7 @@ public class MonthlyBizSummaryOrchestrator {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         QueryWrapper<FinishedProductSettlement> sqw = new QueryWrapper<>();
-        if (tenantId != null) sqw.eq("tenant_id", tenantId);
+        sqw.eq("tenant_id", tenantId);
         sqw.ge("update_time", start).lt("update_time", end)
            .select("profit", "style_final_price");
         List<FinishedProductSettlement> settlements = settlementService.list(sqw);
@@ -220,7 +220,7 @@ public class MonthlyBizSummaryOrchestrator {
     private long sumScan(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end,
                          String type, String result) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-        if (tenantId != null) qw.eq("tenant_id", tenantId);
+        qw.eq("tenant_id", tenantId);
         if (StringUtils.hasText(factoryId)) qw.eq("factory_id", factoryId);
         if (type != null) qw.eq("scan_type", type);
         if (result != null) qw.eq("scan_result", result);

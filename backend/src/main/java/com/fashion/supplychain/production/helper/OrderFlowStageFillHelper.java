@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.helper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.ProcessSynonymMapping;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -72,6 +73,9 @@ public class OrderFlowStageFillHelper {
             return;
         }
 
+        TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+
         List<String> orderIds = records.stream()
                 .map(r -> r == null ? null : r.getId())
                 .filter(StringUtils::hasText)
@@ -85,7 +89,7 @@ public class OrderFlowStageFillHelper {
         boolean flowSnapshotOk = false;
         List<Map<String, Object>> flowRows = null;
         try {
-            flowRows = scanRecordMapper.selectFlowStageSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+            flowRows = scanRecordMapper.selectFlowStageSnapshot(orderIds, tenantId);
             flowSnapshotOk = true;
         } catch (Exception e) {
             log.warn("Failed to query flow stage snapshot: orderIdsCount={}", orderIds.size(), e);
@@ -94,7 +98,7 @@ public class OrderFlowStageFillHelper {
         // 从 process_tracking 加载各工序实际已扫数量（与弹窗同源，修正视图匹配遗漏问题）
         Map<String, Map<String, Integer>> trackingQtyMap = new HashMap<>();
         try {
-            List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+            List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds, tenantId);
             if (trackingRows != null) {
                 for (Map<String, Object> row : trackingRows) {
                     String toid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "productionOrderId"));
@@ -119,7 +123,7 @@ public class OrderFlowStageFillHelper {
         boolean procurementSnapshotOk = false;
         List<Map<String, Object>> procurementRows = null;
         try {
-            procurementRows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+            procurementRows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, tenantId);
             procurementSnapshotOk = true;
         } catch (Exception e) {
             log.warn("Failed to query procurement snapshot: orderIdsCount={}", orderIds.size(), e);
@@ -309,7 +313,7 @@ public class OrderFlowStageFillHelper {
                 int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
                 int baseQtyForRate = orderQtyForRate > 0 ? orderQtyForRate : cuttingQtyForRate;
                 int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
-                        ? cuttingQtyForRate : 0;
+                        ? cuttingQty : 0;
                 Integer cuttingRate = computeRate(cuttingActualQty, baseQtyForRate);
                 o.setCuttingCompletionRate(cuttingRate);
 
@@ -641,7 +645,7 @@ public class OrderFlowStageFillHelper {
             int cuttingQtyForRate = o.getCuttingQuantity() == null ? cuttingQty : o.getCuttingQuantity();
             int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
             int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
-                    ? cuttingQtyForRate : 0;
+                    ? cuttingQty : 0;
             Integer cuttingRate = computeRate(cuttingActualQty, orderQtyForRate);
             o.setCuttingCompletionRate(cuttingRate);
 
@@ -815,6 +819,9 @@ public class OrderFlowStageFillHelper {
             return;
         }
 
+        TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+
         List<String> orderIds = records.stream()
                 .filter(o -> o != null && StringUtils.hasText(o.getId()))
                 .map(o -> o.getId().trim())
@@ -825,7 +832,7 @@ public class OrderFlowStageFillHelper {
         Map<String, Map<String, Object>> procByOrder = new HashMap<>();
         if (!orderIds.isEmpty()) {
             try {
-                List<Map<String, Object>> rows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+                List<Map<String, Object>> rows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, tenantId);
                 if (rows != null) {
                     for (Map<String, Object> row : rows) {
                         String oid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "orderId"));
@@ -843,7 +850,7 @@ public class OrderFlowStageFillHelper {
         Map<String, Map<String, Integer>> trackingQtyMap = new HashMap<>();
         if (!orderIds.isEmpty()) {
             try {
-                List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+                List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds, tenantId);
                 if (trackingRows != null) {
                     for (Map<String, Object> row : trackingRows) {
                         String toid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "productionOrderId"));
@@ -921,17 +928,18 @@ public class OrderFlowStageFillHelper {
             int completedQty = o.getCompletedQuantity() == null ? 0 : o.getCompletedQuantity();
             int baseQty = cuttingQty > 0 ? cuttingQty : orderQty;
 
+            Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, java.util.Collections.emptyMap());
+            Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
+
+            int cuttingScannedQty = parentQtyMap.getOrDefault("裁剪", 0);
             int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
-                    ? cuttingQty : 0;
+                    ? Math.max(cuttingScannedQty, 0) : 0;
             int cuttingRate = computeRate(cuttingActualQty, orderQty);
             o.setCuttingCompletionRate(cuttingRate);
 
             int sewBase = baseQty > 0 ? baseQty : 1;
             int wareRate = computeRate(wareQty, sewBase);
             int completedRate = computeRate(completedQty, sewBase);
-
-            Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, java.util.Collections.emptyMap());
-            Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
 
             int carSewingQty = parentQtyMap.getOrDefault("车缝", 0);
             int secondaryProcessQty = parentQtyMap.getOrDefault("二次工艺", 0);

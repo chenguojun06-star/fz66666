@@ -212,6 +212,13 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             String color = item.get("color") == null ? null : item.get("color").toString();
             String size = item.get("size") == null ? null : item.get("size").toString();
 
+            if (color != null) color = color.trim();
+            if (size != null) size = size.trim();
+
+            if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
+                throw new IllegalArgumentException("颜色和尺码不能为空，请为每个菲号指定颜色和尺码");
+            }
+
             // ✅ 新增验证：禁止包含逗号分隔的多尺码（如 "S,M,L,XL,XXL"）
             if (size != null && size.contains(",")) {
                 throw new IllegalArgumentException(

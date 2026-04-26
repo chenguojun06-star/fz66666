@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,10 +23,11 @@ public class ProductSkuController {
 
     @GetMapping("/inventory/{skuCode}")
     public Result<Integer> getInventory(@PathVariable String skuCode) {
+        TenantAssert.assertTenantContext();
         Long tid = UserContext.tenantId();
         ProductSku sku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
                 .eq(ProductSku::getSkuCode, skuCode)
-                .eq(tid != null, ProductSku::getTenantId, tid));
+                .eq(ProductSku::getTenantId, tid));
         if (sku == null) {
             return Result.fail("SKU not found");
         }
@@ -48,9 +50,10 @@ public class ProductSkuController {
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String skuCode) {
         Page<ProductSku> pageParam = new Page<>(page, pageSize);
+        TenantAssert.assertTenantContext();
         Long tid = UserContext.tenantId();
         LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
-        if (tid != null) wrapper.eq(ProductSku::getTenantId, tid);
+        wrapper.eq(ProductSku::getTenantId, tid);
 
         if (StringUtils.hasText(styleNo)) {
             wrapper.eq(ProductSku::getStyleNo, styleNo.trim());

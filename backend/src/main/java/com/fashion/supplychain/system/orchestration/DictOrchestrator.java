@@ -4,14 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.system.entity.Dict;
 import com.fashion.supplychain.system.service.DictService;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
+@Slf4j
 public class DictOrchestrator {
 
     @Autowired
@@ -42,6 +45,7 @@ public class DictOrchestrator {
     public Dict create(Dict dict) {
         normalizeDict(dict);
         validateRequiredFields(dict);
+        validateDictLabel(dict);
         validateDuplicate(dict, null);
         if (dict.getStatus() == null) {
             dict.setStatus("ENABLED");
@@ -55,6 +59,7 @@ public class DictOrchestrator {
         dict.setId(id);
         normalizeDict(dict);
         validateRequiredFields(dict);
+        validateDictLabel(dict);
         validateDuplicate(dict, id);
         dictService.updateById(dict);
         return dict;
@@ -78,7 +83,10 @@ public class DictOrchestrator {
         String normalizedType = dictType.trim().toLowerCase();
         String normalizedLabel = label.trim();
 
-        // 检查是否存在
+        if (!isValidDictLabel(normalizedLabel)) {
+            return;
+        }
+
         long count = dictService.count(new LambdaQueryWrapper<Dict>()
                 .eq(Dict::getDictType, normalizedType)
                 .eq(Dict::getDictLabel, normalizedLabel));
@@ -87,7 +95,6 @@ public class DictOrchestrator {
             Dict dict = new Dict();
             dict.setDictType(normalizedType);
             dict.setDictLabel(normalizedLabel);
-            // 自动生成编码: TYPE_HASH_TIMESTAMP
             String code = normalizedType.toUpperCase() + "_" + Math.abs(normalizedLabel.hashCode()) + "_" + System.currentTimeMillis();
             if (code.length() > 50) {
                 code = code.substring(0, 50);
@@ -95,9 +102,50 @@ public class DictOrchestrator {
             dict.setDictCode(code);
             dict.setDictValue(code);
             dict.setStatus("ENABLED");
-            dict.setSort(99); // 默认排在最后
+            dict.setSort(99);
             dictService.save(dict);
         }
+    }
+
+    private boolean isValidDictLabel(String label) {
+        if (label.length() > 50 || label.length() < 1) {
+            return false;
+        }
+        int chineseCount = 0;
+        int letterCount = 0;
+        int digitCount = 0;
+        for (char c : label.toCharArray()) {
+            if (c >= '\u4e00' && c <= '\u9fa5') {
+                chineseCount++;
+            } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+                letterCount++;
+            } else if (c >= '0' && c <= '9') {
+                digitCount++;
+            } else if (c == '-' || c == '_' || c == '/' || c == '(' || c == ')'
+                    || c == '（' || c == '）' || c == ' ' || c == '#' || c == '.') {
+                // allow common separators and punctuation
+            } else {
+                return false;
+            }
+        }
+        return (chineseCount + letterCount + digitCount) > 0;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public int cleanupInvalidLabels() {
+        List<Dict> allDicts = dictService.list();
+        List<Long> toDelete = new ArrayList<>();
+        for (Dict d : allDicts) {
+            if (!isValidDictLabel(d.getDictLabel() != null ? d.getDictLabel() : "")) {
+                toDelete.add(d.getId());
+                log.info("[DictCleanup] 删除无效字典: id={}, type={}, label={}", d.getId(), d.getDictType(), d.getDictLabel());
+            }
+        }
+        if (!toDelete.isEmpty()) {
+            dictService.removeByIds(toDelete);
+        }
+        log.info("[DictCleanup] 清理完成，共删除 {} 条无效字典", toDelete.size());
+        return toDelete.size();
     }
 
     private void normalizeDict(Dict dict) {
@@ -127,6 +175,12 @@ public class DictOrchestrator {
         }
         if (!StringUtils.hasText(dict.getDictLabel())) {
             throw new IllegalArgumentException("字典标签不能为空");
+        }
+    }
+
+    private void validateDictLabel(Dict dict) {
+        if (dict.getDictLabel() != null && !isValidDictLabel(dict.getDictLabel())) {
+            throw new IllegalArgumentException("字典标签包含无效字符: " + dict.getDictLabel());
         }
     }
 

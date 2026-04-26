@@ -7,6 +7,7 @@ import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.entity.FinishedSettlementApprovalStatus;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
+import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
@@ -15,6 +16,7 @@ import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
+import com.fashion.supplychain.finance.service.PayableService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.service.PaymentAccountService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -84,6 +87,9 @@ public class WagePaymentOrchestrator {
 
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
+
+    @Autowired
+    private PayableService payableService;
 
     private static final AtomicLong PAYMENT_SEQ = new AtomicLong(1);
 
@@ -1156,5 +1162,148 @@ public class WagePaymentOrchestrator {
         private LocalDateTime createTime;
         /** 所属月份（yyyy-MM），供前端按月聚合展示 */
         private String yearMonth;
+    }
+
+    public java.util.Map<String, Object> getDashboardStats(String startDate, String endDate) {
+        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
+        if (tenantId == null) {
+            java.util.Map<String, Object> empty = new java.util.LinkedHashMap<>();
+            empty.put("totalPaid", BigDecimal.ZERO);
+            empty.put("totalPending", BigDecimal.ZERO);
+            empty.put("totalReceived", BigDecimal.ZERO);
+            empty.put("overdueCount", 0);
+            empty.put("trendDates", java.util.Collections.emptyList());
+            empty.put("trendPaid", java.util.Collections.emptyList());
+            empty.put("trendReceived", java.util.Collections.emptyList());
+            return empty;
+        }
+
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+
+        BigDecimal totalPaid = BigDecimal.ZERO;
+        BigDecimal totalPending = BigDecimal.ZERO;
+        BigDecimal totalReceived = BigDecimal.ZERO;
+        int overdueCount = 0;
+
+        try {
+            LambdaQueryWrapper<WagePayment> paidQw = new LambdaQueryWrapper<>();
+            paidQw.eq(WagePayment::getTenantId, tenantId)
+                   .eq(WagePayment::getStatus, "success")
+                   .ge(WagePayment::getCreateTime, startDate + " 00:00:00")
+                   .le(WagePayment::getCreateTime, endDate + " 23:59:59")
+                   .last("LIMIT 5000");
+            List<WagePayment> paidPayments = wagePaymentService.list(paidQw);
+            totalPaid = paidPayments.stream()
+                    .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } catch (Exception e) {
+            log.warn("[看板] 统计已付总额失败", e);
+        }
+
+        try {
+            LambdaQueryWrapper<WagePayment> pendingQw = new LambdaQueryWrapper<>();
+            pendingQw.eq(WagePayment::getTenantId, tenantId)
+                     .eq(WagePayment::getStatus, "pending")
+                     .last("LIMIT 5000");
+            List<WagePayment> pendingPayments = wagePaymentService.list(pendingQw);
+            totalPending = pendingPayments.stream()
+                    .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } catch (Exception e) {
+            log.warn("[看板] 统计待付总额失败", e);
+        }
+
+        try {
+            LambdaQueryWrapper<WagePayment> receivedQw = new LambdaQueryWrapper<>();
+            receivedQw.eq(WagePayment::getTenantId, tenantId)
+                      .eq(WagePayment::getStatus, "received")
+                      .ge(WagePayment::getCreateTime, startDate + " 00:00:00")
+                      .le(WagePayment::getCreateTime, endDate + " 23:59:59")
+                      .last("LIMIT 5000");
+            List<WagePayment> receivedPayments = wagePaymentService.list(receivedQw);
+            totalReceived = receivedPayments.stream()
+                    .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } catch (Exception e) {
+            log.warn("[看板] 统计已收总额失败", e);
+        }
+
+        try {
+            LambdaQueryWrapper<Payable> overdueQw = new LambdaQueryWrapper<>();
+            overdueQw.eq(Payable::getTenantId, tenantId)
+                     .eq(Payable::getDeleteFlag, 0)
+                     .eq(Payable::getStatus, "OVERDUE")
+                     .last("LIMIT 5000");
+            overdueCount = (int) payableService.count(overdueQw);
+        } catch (Exception e) {
+            log.warn("[看板] 统计逾期笔数失败", e);
+        }
+
+        result.put("totalPaid", totalPaid);
+        result.put("totalPending", totalPending);
+        result.put("totalReceived", totalReceived);
+        result.put("overdueCount", overdueCount);
+
+        java.util.List<String> trendDates = new java.util.ArrayList<>();
+        java.util.List<java.math.BigDecimal> trendPaid = new java.util.ArrayList<>();
+        java.util.List<java.math.BigDecimal> trendReceived = new java.util.ArrayList<>();
+
+        try {
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            java.util.Map<String, BigDecimal> paidByDay = new java.util.LinkedHashMap<>();
+            java.util.Map<String, BigDecimal> receivedByDay = new java.util.LinkedHashMap<>();
+            for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+                String key = d.format(DateTimeFormatter.ofPattern("MM-dd"));
+                paidByDay.put(key, BigDecimal.ZERO);
+                receivedByDay.put(key, BigDecimal.ZERO);
+            }
+
+            String dayStart = start.format(DateTimeFormatter.ISO_LOCAL_DATE) + " 00:00:00";
+            String dayEnd = end.format(DateTimeFormatter.ISO_LOCAL_DATE) + " 23:59:59";
+
+            List<WagePayment> allPaidInPeriod = wagePaymentService.list(new LambdaQueryWrapper<WagePayment>()
+                    .eq(WagePayment::getTenantId, tenantId)
+                    .eq(WagePayment::getStatus, "success")
+                    .ge(WagePayment::getCreateTime, dayStart)
+                    .le(WagePayment::getCreateTime, dayEnd)
+                    .last("LIMIT 5000"));
+            for (WagePayment p : allPaidInPeriod) {
+                if (p.getCreateTime() != null) {
+                    String key = p.getCreateTime().format(DateTimeFormatter.ofPattern("MM-dd"));
+                    if (paidByDay.containsKey(key)) {
+                        paidByDay.put(key, paidByDay.get(key).add(p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO));
+                    }
+                }
+            }
+
+            List<WagePayment> allReceivedInPeriod = wagePaymentService.list(new LambdaQueryWrapper<WagePayment>()
+                    .eq(WagePayment::getTenantId, tenantId)
+                    .eq(WagePayment::getStatus, "received")
+                    .ge(WagePayment::getCreateTime, dayStart)
+                    .le(WagePayment::getCreateTime, dayEnd)
+                    .last("LIMIT 5000"));
+            for (WagePayment p : allReceivedInPeriod) {
+                if (p.getCreateTime() != null) {
+                    String key = p.getCreateTime().format(DateTimeFormatter.ofPattern("MM-dd"));
+                    if (receivedByDay.containsKey(key)) {
+                        receivedByDay.put(key, receivedByDay.get(key).add(p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO));
+                    }
+                }
+            }
+
+            trendDates.addAll(paidByDay.keySet());
+            trendPaid.addAll(paidByDay.values());
+            trendReceived.addAll(receivedByDay.values());
+        } catch (Exception e) {
+            log.warn("[看板] 生成趋势数据失败", e);
+        }
+
+        result.put("trendDates", trendDates);
+        result.put("trendPaid", trendPaid);
+        result.put("trendReceived", trendReceived);
+
+        return result;
     }
 }

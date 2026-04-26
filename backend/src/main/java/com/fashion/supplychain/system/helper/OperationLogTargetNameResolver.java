@@ -18,7 +18,6 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.system.entity.OperationLog;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 

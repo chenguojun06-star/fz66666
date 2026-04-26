@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -192,16 +193,17 @@ public class MaterialPurchaseQueryHelper {
                 .eq(MaterialPurchase::getDeleteFlag, 0);
 
         // 🔒 多租户隔离：所有账号（含非工厂）都必须按 tenantId 过滤
+        TenantAssert.assertTenantContext();
         String qFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         Long qTenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        wrapper.eq(qTenantId != null, MaterialPurchase::getTenantId, qTenantId);
+        wrapper.eq(MaterialPurchase::getTenantId, qTenantId);
 
         // 工厂账号进一步隔离：只统计该工厂的采购记录
         if (StringUtils.hasText(qFactoryId)) {
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .eq(qTenantId != null, ProductionOrder::getTenantId, qTenantId)
+                            .eq(ProductionOrder::getTenantId, qTenantId)
                             .eq(ProductionOrder::getFactoryId, qFactoryId)
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))

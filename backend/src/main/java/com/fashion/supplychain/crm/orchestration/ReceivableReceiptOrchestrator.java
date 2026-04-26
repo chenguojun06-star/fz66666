@@ -50,7 +50,7 @@ public class ReceivableReceiptOrchestrator {
         Long tenantId = UserContext.tenantId();
         return receivableReceiptLogService.list(new LambdaQueryWrapper<ReceivableReceiptLog>()
                 .eq(ReceivableReceiptLog::getDeleteFlag, 0)
-                .eq(tenantId != null, ReceivableReceiptLog::getTenantId, tenantId)
+                .eq(ReceivableReceiptLog::getTenantId, tenantId)
                 .eq(ReceivableReceiptLog::getReceivableId, receivableId)
                 .orderByDesc(ReceivableReceiptLog::getReceivedTime)
                 .orderByDesc(ReceivableReceiptLog::getCreateTime));

@@ -114,6 +114,7 @@ public class FactoryShipmentOrchestrator {
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
         if ("received".equals(fs.getReceiveStatus())) {
             return Result.fail("该发货单已收货，请勿重复操作");
         }
@@ -149,6 +150,7 @@ public class FactoryShipmentOrchestrator {
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
         if ("received".equals(fs.getReceiveStatus())) {
             return Result.fail("已收货的发货单不可删除");
         }
@@ -217,7 +219,10 @@ public class FactoryShipmentOrchestrator {
     }
 
     public Map<String, Object> getShippableInfo(String orderId) {
-        ProductionOrder order = productionOrderService.getById(orderId);
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .one();
         int cuttingTotal = 0;
         if (order != null) {
             Map<String, Object> summary = cuttingBundleService.summarize(order.getOrderNo(), orderId);

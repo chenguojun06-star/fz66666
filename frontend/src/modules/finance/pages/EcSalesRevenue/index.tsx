@@ -49,7 +49,7 @@ const EcSalesRevenue: React.FC = () => {
       const data = await ecSalesRevenueApi.summary({ platform: filters.platform });
       setSummary(data as unknown as EcRevenueSummary);
     } catch {
-      // 静默
+      message.warning('汇总数据加载失败，金额可能不准确');
     }
   }, [filters.platform]);
 

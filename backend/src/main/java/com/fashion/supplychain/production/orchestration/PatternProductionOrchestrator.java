@@ -24,7 +24,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -57,6 +56,9 @@ public class PatternProductionOrchestrator {
 
     @Autowired
     private PatternStatusHelper statusHelper;
+
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleProcessService styleProcessService;
 
     /**
      * 分页查询并丰富样板生产记录（关联款式、工序、采购数据）
@@ -498,6 +500,20 @@ public class PatternProductionOrchestrator {
             sr.setCuttingBundleNo(null);
             sr.setCreateTime(LocalDateTime.now());
             scanRecordService.saveScanRecord(sr);
+            try {
+                com.fashion.supplychain.style.entity.StyleProcess sp = styleProcessService.lambdaQuery()
+                        .eq(com.fashion.supplychain.style.entity.StyleProcess::getStyleId, pattern.getStyleId())
+                        .eq(com.fashion.supplychain.style.entity.StyleProcess::getProcessName, processLabel)
+                        .last("LIMIT 1")
+                        .one();
+                if (sp != null && sp.getPrice() != null && sp.getPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    sr.setProcessUnitPrice(sp.getPrice());
+                    sr.setScanCost(sp.getPrice().multiply(java.math.BigDecimal.valueOf(qty)));
+                    scanRecordService.updateById(sr);
+                }
+            } catch (Exception ex) {
+                log.debug("样衣ScanRecord工序单价查询失败，不影响主流程: {}", ex.getMessage());
+            }
         } catch (Exception e) {
             log.warn("样衣操作同步写入ScanRecord失败，不影响主流程: {}", e.getMessage());
         }

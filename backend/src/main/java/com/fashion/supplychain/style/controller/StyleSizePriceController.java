@@ -8,8 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
+
+import java.util.List;
 
 /**
  * 样衣多码单价配置Controller
@@ -33,10 +35,11 @@ public class StyleSizePriceController {
         if (resolvedStyleId == null) {
             return Result.success(java.util.Collections.emptyList());
         }
+        TenantAssert.assertTenantContext();
         Long tid = UserContext.tenantId();
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
         qw.eq("style_id", resolvedStyleId);
-        if (tid != null) qw.eq("tenant_id", tid);
+        qw.eq("tenant_id", tid);
         qw.orderByAsc("process_code", "size");
         List<StyleSizePrice> list = styleSizePriceService.list(qw);
         return Result.success(list);
@@ -55,10 +58,11 @@ public class StyleSizePriceController {
         if (styleId == null) {
             return Result.fail("styleId不能为空");
         }
+        TenantAssert.assertTenantContext();
         Long tid = UserContext.tenantId();
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
         qw.eq("style_id", styleId);
-        if (tid != null) qw.eq("tenant_id", tid);
+        qw.eq("tenant_id", tid);
         styleSizePriceService.remove(qw);
 
         boolean success = styleSizePriceService.saveBatch(list);

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.orchestration.ShipmentReconciliationOrchestrator;
 import com.fashion.supplychain.intelligence.agent.AiTool;
@@ -102,8 +103,11 @@ public class ShipmentReconciliationTool extends AbstractAgentTool {
     private String getDetail(Map<String, Object> args) {
         try {
             String id = requireString(args, "reconciliation_id");
+            TenantAssert.assertTenantContext();
+            Long tenantId = UserContext.tenantId();
             ShipmentReconciliation r = reconciliationOrchestrator.getById(id);
             if (r == null) return errorJson("找不到对账单: " + id);
+            if (!tenantId.equals(r.getTenantId())) return errorJson("无权访问该对账单");
 
             reconciliationOrchestrator.fillProfitInfo(r);
             Map<String, Object> detail = new LinkedHashMap<>();
@@ -142,6 +146,8 @@ public class ShipmentReconciliationTool extends AbstractAgentTool {
 
     private String getProfitStats(Map<String, Object> args) {
         try {
+            TenantAssert.assertTenantContext();
+            Long tenantId = UserContext.tenantId();
             String reconciliationId = optionalString(args, "reconciliation_id");
             String orderId = optionalString(args, "order_id");
             Map<String, Object> stats = new LinkedHashMap<>();
@@ -154,7 +160,7 @@ public class ShipmentReconciliationTool extends AbstractAgentTool {
             }
             if (reconciliationId != null) {
                 ShipmentReconciliation r = reconciliationOrchestrator.getById(reconciliationId);
-                if (r != null) {
+                if (r != null && tenantId.equals(r.getTenantId())) {
                     reconciliationOrchestrator.fillProfitInfo(r);
                     stats.put("profitAmount", r.getProfitAmount());
                     stats.put("profitMargin", r.getProfitMargin());

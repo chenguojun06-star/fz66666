@@ -369,6 +369,10 @@ public class SmartRemarkAgent {
         if (ids.isEmpty()) return Collections.emptyMap();
 
         Long tid = orders.get(0).getTenantId();
+        if (tid == null) {
+            log.warn("[SmartRemark] 订单 tenantId 为空，跳过 lastScanTime 查询");
+            return Collections.emptyMap();
+        }
         List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids, tid);
         Map<String, LocalDateTime> map = new HashMap<>();
         for (Map<String, Object> row : lastScans) {

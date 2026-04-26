@@ -7,6 +7,7 @@ import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useViewport } from '@/utils/useViewport';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import './styles.css';
 
 import dayjs from 'dayjs';
@@ -18,6 +19,14 @@ const LoginLogList: React.FC = () => {
     page: 1,
     pageSize: readPageSize(10)
   });
+
+  const [usernameInput, setUsernameInput] = useState('');
+  const debouncedUsername = useDebouncedValue(usernameInput, 300);
+  useEffect(() => {
+    if (debouncedUsername !== (queryParams.username || '')) {
+      setQueryParams((prev) => ({ ...prev, username: debouncedUsername, page: 1 }));
+    }
+  }, [debouncedUsername]);
 
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -95,7 +104,7 @@ const LoginLogList: React.FC = () => {
                 style={{ width: 200 }}
                 allowClear
                 value={String((queryParams as any)?.username || '')}
-                onChange={(e) => setQueryParams((prev) => ({ ...prev, username: e.target.value, page: 1 }))}
+                onChange={(e) => setUsernameInput(e.target.value)}
               />
               <Select
                 placeholder="登录状态"

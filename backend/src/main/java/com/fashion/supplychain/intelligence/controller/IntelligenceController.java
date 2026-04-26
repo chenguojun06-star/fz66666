@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import com.fashion.supplychain.intelligence.agent.AgentMode;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.annotation.DataTruth;
 import com.fashion.supplychain.intelligence.orchestration.*;
@@ -174,6 +175,14 @@ public class IntelligenceController {
     private final SafeAdvisorOrchestrator safeAdvisorOrchestrator;
 
     private final PendingTaskOrchestrator pendingTaskOrchestrator;
+
+    private final SkillChainExecutionOrchestrator skillChainExecutionOrchestrator;
+
+    // ── 技能链 ──
+    @GetMapping("/skill-chains")
+    public Result<?> listSkillChains() {
+        return Result.success(skillChainExecutionOrchestrator.listAvailableSkills());
+    }
 
     // ── 小云待办任务聚合 ──
     @GetMapping("/pending-tasks/my")
@@ -521,7 +530,8 @@ public class IntelligenceController {
         }
         String pageContext = body.get("pageContext");
         String conversationId = body.get("conversationId");
-        Result<String> agentResult = aiAgentOrchestrator.executeAgent(question, pageContext);
+        AgentMode agentMode = AgentMode.fromString(body.get("mode"));
+        Result<String> agentResult = aiAgentOrchestrator.executeAgent(question, pageContext, agentMode);
         String commandId = aiAgentOrchestrator.consumeLastCommandId();
         var toolRecords = aiAgentOrchestrator.consumeLastToolRecords();
         AiAdvisorChatResponse resp = aiAdvisorChatResponseOrchestrator.build(question, commandId, agentResult, toolRecords);
@@ -537,7 +547,8 @@ public class IntelligenceController {
                                           @RequestParam(required = false) String imageUrl,
                                           @RequestParam(required = false) String orderNo,
                                           @RequestParam(required = false) String processName,
-                                          @RequestParam(required = false) String stage) {
+                                          @RequestParam(required = false) String stage,
+                                          @RequestParam(required = false) String mode) {
         String userId = UserContext.userId();
         if (!RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:sse:" + userId, 30, 1)) {
             SseEmitter emitter = new SseEmitter(3000L);
@@ -568,7 +579,7 @@ public class IntelligenceController {
         Thread.startVirtualThread(() -> {
             try {
                 UserContext.set(snapshot);
-                aiAgentOrchestrator.executeAgentStreaming(question, pageContext, emitter);
+                aiAgentOrchestrator.executeAgentStreaming(question, pageContext, AgentMode.fromString(mode), emitter);
             } catch (Exception e) {
                 try {
                     emitter.send(SseEmitter.event().name("error").data("{\"message\":\"" + e.getMessage() + "\"}"));

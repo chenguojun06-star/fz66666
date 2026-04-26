@@ -58,6 +58,8 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
             "/api/production/cutting",
             "/api/production/quality",
             "/api/production/warehouse",
+            "/api/production/warehousing",
+            "/api/production/pattern",
             "/api/production/order/transfer",
             "/api/production/factory-shipment",
             "/api/production/process-tracking",

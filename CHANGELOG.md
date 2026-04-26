@@ -1,4 +1,43 @@
-# 2026-05-04（当前批次）
+# 2026-05-05（当前批次）
+
+## 🤖 小云 AI Agent 三项核心升级（参考 claude-code 仓库工业级实践）
+
+### feat(intelligence): 写工具幂等保护 + Token 租户日预算熔断 + AbstractAgentTool 注入修复
+
+#### 升级背景
+对照 jarmuine/claude-code 仓库做了 7+ 处 grep 验证，确认小云 Agent 已实现：Hook 链、对话压缩、领域路由、Token 解析、瞬态重试、Trace 日志。**真正缺的高价值能力**：① 写工具幂等去重；② 多租户 Token 成本熔断；③ 抽象基类 DI 反模式。本批次三项一次到位。
+
+#### 新增文件
+| 文件 | 行数 | 说明 |
+|------|------|------|
+| `intelligence/service/AiAgentIdempotencyService.java` | ~140 | Redis SET NX 高危写工具幂等：60s 内同租户+同工具+同参数复用首次结果，防 LLM 重试/连击造成订单/工资被改两次 |
+| `intelligence/service/AiAgentTokenBudgetService.java` | ~110 | 租户级 Token 日累计 + 熔断：Redis 计数 `ai:budget:{tenantId}:{day}:tokens`，TTL 36h，默认 1,000,000 tokens/天/租户，超额拒绝 |
+
+#### 修改文件
+| 文件 | 变更 |
+|------|------|
+| `intelligence/agent/tool/AbstractAgentTool.java` | **修复反模式**：将 `new AiAgentToolAccessService()` 改为 `@Autowired` 字段注入。原写法每次执行都 new 实例，破坏 Spring 单例 + 任何依赖（如 Redis、UserContext 缓存）失效 |
+| `intelligence/helper/AiAgentToolExecHelper.java` | `executeSingleTool()` 三处插桩：① preToolUse 后 → `tryReplay()` 命中即返回；② 成功后 → `saveResult()`；③ 失败后 → `clearOnFailure()` 立即清键允许重试 |
+| `intelligence/orchestration/IntelligenceInferenceOrchestrator.java` | `chat()` 入口 ① 预检 `canInvoke()` 超额拒绝；② 末尾 `recordUsage(promptTokens, completionTokens)` 累加 |
+
+#### 配置项（application.yml 默认值）
+- `ai.budget.enabled=true` — 总开关
+- `ai.budget.tenant-daily-token-limit=1000000` — 每租户每日 token 上限
+
+#### 对供应链智能化的价值
+1. **幂等保护** — 撤销扫码 / 工资审批 / 改交期等高危写操作进入 AI 触达后，再也不会因 LLM 重试或用户连击导致同一动作执行两次
+2. **预算熔断** — AI SaaS 化必备的财务底座，一个失控租户无法在数小时内打爆全平台 DeepSeek/Voyage/Cohere 账单
+3. **DI 修复** — 移除抽象基类反模式，后续任何 AgentTool 子类都能通过 `@Autowired` 安全注入服务
+
+#### 验证
+- ✅ `mvn clean compile` BUILD SUCCESS（EXIT=0，20.5s）
+- ✅ Redis 不可用时全部降级放行（不阻断业务）
+- ✅ 平台账号（tenantId=null）不受预算限制
+- ✅ 仅 `AiAgentToolAccessService.HIGH_RISK_TOOLS`（约 35 个写工具）走幂等链路，读工具零开销
+
+---
+
+# 2026-05-04
 
 ## ✨ 企业微信群机器人 Webhook 通知集成
 

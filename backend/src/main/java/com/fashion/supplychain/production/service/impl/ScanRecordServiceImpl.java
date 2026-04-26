@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
@@ -15,7 +16,6 @@ import com.fashion.supplychain.production.service.ScanRecordService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import lombok.RequiredArgsConstructor;
@@ -245,7 +245,9 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
 
         @Override
         public Map<String, Object> getPersonalStats(String operatorId, String scanType, String period) {
-                return baseMapper.selectPersonalStats(operatorId, scanType, period, com.fashion.supplychain.common.UserContext.tenantId());
+                TenantAssert.assertTenantContext();
+                Long tenantId = UserContext.tenantId();
+                return baseMapper.selectPersonalStats(operatorId, scanType, period, tenantId);
         }
 
         @Override

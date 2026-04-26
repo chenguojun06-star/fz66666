@@ -270,6 +270,7 @@ public class FactoryCapacityOrchestrator {
             LocalDateTime thirtyDaysAgo = now.minusDays(30);
             QueryWrapper<ScanRecord> scanQw = new QueryWrapper<>();
             scanQw.in("order_id", orderToFactory.keySet())
+                  .ne("scan_type", "orchestration")
                   .eq("scan_result", "success")
                   .ge("scan_time", thirtyDaysAgo)
                   .select("operator_id", "quantity", "scan_time", "order_id");

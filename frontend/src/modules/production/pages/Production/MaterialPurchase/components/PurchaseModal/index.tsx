@@ -51,6 +51,7 @@ interface PurchaseModalProps {
   onSaveCreate: () => void;
   onSavePreview: () => void;
   isOrderFrozenForRecord: (record?: Record<string, unknown> | null) => boolean;
+  onWarehousePick?: (record: MaterialPurchaseType, pickQty: number) => void;
 }
 
 const PurchaseModal: React.FC<PurchaseModalProps> = ({
@@ -90,6 +91,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onSaveCreate,
   onSavePreview,
   isOrderFrozenForRecord,
+  onWarehousePick,
 }) => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
 
@@ -217,6 +219,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           onBatchReturn={onBatchReturn}
           isSamplePurchase={isSamplePurchase}
           isOrderFrozenForRecord={isOrderFrozenForRecord}
+          onWarehousePick={onWarehousePick}
         />
       ) : (
         <PurchaseCreateForm form={form} />

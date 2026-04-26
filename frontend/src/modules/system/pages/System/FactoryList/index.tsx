@@ -8,6 +8,7 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } from '@/types/system';
 import api, { type ApiResult } from '@/utils/api';
 import { useModal } from '@/hooks';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
@@ -70,6 +71,18 @@ const FactoryList: React.FC = () => {
     page: 1,
     pageSize: readPageSize(DEFAULT_PAGE_SIZE)
   });
+
+  const [factoryCodeInput, setFactoryCodeInput] = useState('');
+  const [factoryNameInput, setFactoryNameInput] = useState('');
+  const debouncedFactoryCode = useDebouncedValue(factoryCodeInput, 300);
+  const debouncedFactoryName = useDebouncedValue(factoryNameInput, 300);
+  useEffect(() => {
+    const codeChanged = debouncedFactoryCode !== (queryParams.factoryCode || '');
+    const nameChanged = debouncedFactoryName !== (queryParams.factoryName || '');
+    if (codeChanged || nameChanged) {
+      setQueryParams((prev) => ({ ...prev, factoryCode: debouncedFactoryCode, factoryName: debouncedFactoryName, page: 1 }));
+    }
+  }, [debouncedFactoryCode, debouncedFactoryName]);
 
   const [factoryList, setFactoryList] = useState<FactoryType[]>([]);
   const [total, setTotal] = useState(0);
@@ -617,14 +630,14 @@ const FactoryList: React.FC = () => {
                           style={{ width: 180 }}
                           allowClear
                           value={String((queryParams as any)?.factoryCode || '')}
-                          onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryCode: e.target.value, page: 1 }))}
+                          onChange={(e) => setFactoryCodeInput(e.target.value)}
                         />
                         <Input
                           placeholder="供应商名称"
                           style={{ width: 220 }}
                           allowClear
                           value={String((queryParams as any)?.factoryName || '')}
-                          onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryName: e.target.value, page: 1 }))}
+                          onChange={(e) => setFactoryNameInput(e.target.value)}
                         />
                         <Select
                           placeholder="状态"

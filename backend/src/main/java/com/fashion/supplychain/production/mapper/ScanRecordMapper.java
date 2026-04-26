@@ -58,9 +58,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  v.warehousing_quantity AS warehousingQuantity",
                         "FROM v_production_order_flow_stage_snapshot v",
                         "WHERE v.order_id IN",
-                        "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
-                        // fix: 用 <if> 替代 (#{tenantId} IS NULL OR ...) 避免 tenantId=null 时 JDBC 类型推断失败
-                        "<if test='tenantId != null'>AND v.tenant_id = #{tenantId}</if>",
+                        "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id,jdbcType=VARCHAR}</foreach>",
+                        "AND v.tenant_id = #{tenantId,jdbcType=BIGINT}",
                         "</script>"
         })
         List<Map<String, Object>> selectFlowStageSnapshot(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
@@ -74,9 +73,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  v.last_scan_time AS lastScanTime",
                         "FROM v_production_order_stage_done_agg v",
                         "WHERE v.order_id IN",
-                        "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
-                        // fix: 用 <if> 替代 (#{tenantId} IS NULL OR ...) 避免 tenantId=null 时 JDBC 类型推断失败
-                        "<if test='tenantId != null'>AND v.tenant_id = #{tenantId}</if>",
+                        "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id,jdbcType=VARCHAR}</foreach>",
+                        "AND v.tenant_id = #{tenantId,jdbcType=BIGINT}",
                         "</script>"
         })
         List<Map<String, Object>> selectStageDoneAgg(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
@@ -93,8 +91,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  AND sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
                         "  AND sr.factory_id IS NULL",
-                        // fix: 用 <if> 替代 IS NULL OR 模式，避免 tenantId=null 时 JDBC 绑定失败
-                        "<if test='tenantId != null'>AND sr.tenant_id = #{tenantId}</if>",
+                        "AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
                         "<choose>",
                         "  <when test='period != null and period == \"month\"'>",
                         /* 用范围查询替代 YEAR()/MONTH() 函数，允许走 operator_id+scan_time 联合索引 */
@@ -143,8 +140,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "WHERE sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
                         "  AND sr.factory_id IS NULL",
-                        // fix: 用 <if> 替代 IS NULL OR 模式，避免 tenantId=null 时 JDBC 绑定失败
-                        "<if test='tenantId != null'>AND sr.tenant_id = #{tenantId}</if>",
+                        "AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
                         /* 与 selectPersonalStats 保持一致：排除已取消/已删除订单的扫码记录 */
                         "  AND NOT EXISTS (",
                         "    SELECT 1 FROM t_production_order po",
@@ -253,10 +249,9 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                 "SELECT sr.order_id AS orderId, MAX(sr.scan_time) AS lastScanTime",
                 "FROM t_scan_record sr",
                 "WHERE sr.order_id IN",
-                "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
+                "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id,jdbcType=VARCHAR}</foreach>",
                 "  AND sr.scan_result='success'",
-                // fix: 用 <if> 替代 IS NULL OR 模式，避免 tenantId=null 时 JDBC 绑定失败
-                "<if test='tenantId != null'>AND sr.tenant_id = #{tenantId}</if>",
+                "AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
                 "GROUP BY sr.order_id",
                 "</script>"
         })

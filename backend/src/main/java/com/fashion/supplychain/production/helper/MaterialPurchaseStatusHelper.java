@@ -558,6 +558,11 @@ public class MaterialPurchaseStatusHelper {
           .set(MaterialPurchase::getReceiverId, null)
           .set(MaterialPurchase::getReceiverName, null)
           .set(MaterialPurchase::getReceivedTime, null)
+          .set(MaterialPurchase::getReturnConfirmed, 0)
+          .set(MaterialPurchase::getReturnQuantity, null)
+          .set(MaterialPurchase::getReturnConfirmerId, null)
+          .set(MaterialPurchase::getReturnConfirmerName, null)
+          .set(MaterialPurchase::getReturnConfirmTime, null)
           .set(MaterialPurchase::getRemark, newRemark)
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
         materialPurchaseService.update(uw);

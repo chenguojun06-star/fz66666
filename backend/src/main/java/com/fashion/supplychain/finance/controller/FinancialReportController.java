@@ -40,4 +40,11 @@ public class FinancialReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return Result.success(financialReportOrchestrator.generateCashFlow(startDate, endDate));
     }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/aging-analysis")
+    public Result<Map<String, Object>> agingAnalysis(
+            @RequestParam(required = false, defaultValue = "RECEIVABLE") String type) {
+        return Result.success(financialReportOrchestrator.generateAgingAnalysis(type));
+    }
 }

@@ -107,6 +107,7 @@ public class EcommerceOrderTool extends AbstractAgentTool {
         Long tenantId = UserContext.tenantId();
         List<EcommerceOrder> all = ecommerceOrderService.lambdaQuery()
                 .eq(EcommerceOrder::getTenantId, tenantId)
+                .last("LIMIT 5000")
                 .list();
         long total = all.size();
         BigDecimal totalAmount = all.stream().map(EcommerceOrder::getTotalAmount).filter(a -> a != null).reduce(BigDecimal.ZERO, BigDecimal::add);

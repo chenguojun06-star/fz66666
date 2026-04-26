@@ -19,10 +19,10 @@ import ResizableTable from '@/components/common/ResizableTable';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
+import { STAGE_ORDER } from '@/utils/productionStage';
 import type { ProcessStepRow, ProcessTableData } from '../../utils/templateUtils';
 import { normalizeProcessSteps } from '../../utils/templateUtils';
 
-const STAGE_ORDER = ['采购', '裁剪', '车缝', '二次工艺', '尾部', '入库'];
 const EDITOR_FONT_SIZE = 12;
 
 interface ProcessInlineTableProps {

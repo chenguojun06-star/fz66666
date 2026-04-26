@@ -18,6 +18,7 @@ import type { ApiResult } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import type { ColumnsType } from 'antd/es/table';
 import WashLabelBatchPrintModal, { WashLabelItem } from './components/WashLabelBatchPrintModal';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 const { Option } = Select;
 
@@ -93,6 +94,8 @@ const WashLabelPage: React.FC = () => {
   const [searchOrderNo, setSearchOrderNo] = useState('');
   const [searchStyleNo, setSearchStyleNo] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const debouncedOrderNo = useDebouncedValue(searchOrderNo, 300);
+  const debouncedStyleNo = useDebouncedValue(searchStyleNo, 300);
 
   /** 缓存 styleId → 款式标签字段（含成分/套装成分/洗护说明/U码/ISO护理码） */
   const styleCache = useRef<StyleLabelCache>({});
@@ -142,8 +145,8 @@ const WashLabelPage: React.FC = () => {
       const res = await productionOrderApi.list({
         page,
         pageSize,
-        orderNo: searchOrderNo.trim() || undefined,
-        styleNo: searchStyleNo.trim() || undefined,
+        orderNo: debouncedOrderNo.trim() || undefined,
+        styleNo: debouncedStyleNo.trim() || undefined,
         status: statusFilter || undefined,
       } as any);
       const raw = res as ApiResult<any>;
@@ -157,7 +160,7 @@ const WashLabelPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, searchOrderNo, searchStyleNo, statusFilter, fetchStyleInfoForOrders, message]);
+  }, [page, debouncedOrderNo, debouncedStyleNo, statusFilter, fetchStyleInfoForOrders, message]);
 
   useEffect(() => { void fetchOrders(); }, [fetchOrders]);
 

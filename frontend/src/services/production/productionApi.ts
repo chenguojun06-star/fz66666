@@ -91,13 +91,6 @@ export const productionScanApi = {
   undo: (payload: { recordId: string }) => api.post<{ code: number; message: string; data: { success: boolean; message: string } }>('/production/scan/undo', payload),
 };
 
-export const productionWarehousingApi = {
-  rollbackByBundle: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/warehousing/rollback-by-bundle', payload),
-};
-
-// Intelligence API 已迁移至独立模块，请直接从以下路径导入：
-//   import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-
 // ─── ⌘K 全局搜索 ─────────────────────────────────────────────
 
 export interface GlobalSearchOrderItem {
@@ -212,7 +205,6 @@ export default {
   productionOrderApi,
   productionCuttingApi,
   productionScanApi,
-  productionWarehousingApi,
   materialPurchaseApi,
   processParentMappingApi,
   qualityAiApi,

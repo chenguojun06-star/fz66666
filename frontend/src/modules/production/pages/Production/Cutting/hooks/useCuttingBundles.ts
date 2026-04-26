@@ -94,6 +94,7 @@ export function useCuttingBundles({
 
   // 纸样用量（来自款式 BOM sizeUsageMap，按码 m/件）
   const [entrySizeUsageMap, setEntrySizeUsageMap] = useState<Record<string, number>>({});
+  const [entryFabricUsageRows, setEntryFabricUsageRows] = useState<Array<{ materialName: string; materialType: string; sizeUsageMap: Record<string, number> }>>([]);
   const entryBomReqSeq = useRef(0);
 
   // 订单明细
@@ -193,7 +194,9 @@ export function useCuttingBundles({
   };
 
   // 生成菲号
-  const handleGenerate = async () => {
+  // overrideRows: 可选入参，用于绕过 React setState 异步问题（CuttingRatioPanel 点确认时直接传入最新行数据，
+  // 避免依赖 setBundlesInput 后的下一次 render 闭包，否则会读到旧的初始 bundlesInput 导致误报「请至少录入一行有效的颜色/尺码/数量」）
+  const handleGenerate = async (overrideRows?: CuttingBundleRow[]) => {
     if (generateLoading) return;
     let resolvedOrderId = orderId;
     if (!activeTask) {
@@ -206,7 +209,8 @@ export function useCuttingBundles({
     }
     if (!(await ensureOrderUnlockedById(resolvedOrderId))) return;
 
-    const validItems = bundlesInput
+    const sourceRows = overrideRows && overrideRows.length > 0 ? overrideRows : bundlesInput;
+    const validItems = sourceRows
       .map((x) => ({
         color: String(x.color || '').trim(),
         size: String(x.size || '').trim(),
@@ -400,28 +404,50 @@ export function useCuttingBundles({
     void api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?${bomQuery}`)
       .then((res) => {
         if (seq !== entryBomReqSeq.current) return;
-        if (res.code !== 200) { setEntrySizeUsageMap({}); return; }
+        if (res.code !== 200) { setEntrySizeUsageMap({}); setEntryFabricUsageRows([]); return; }
         const boms = res.data || [];
-        // 取第一个面料类型中含有 sizeUsageMap 的 BOM 记录
         const fabricBom = boms.find(
           (b) => String(b?.materialType || '').startsWith('fabric') && b?.sizeUsageMap
         );
-        if (!fabricBom?.sizeUsageMap) { setEntrySizeUsageMap({}); return; }
-        try {
-          const raw = typeof fabricBom.sizeUsageMap === 'string'
-            ? JSON.parse(fabricBom.sizeUsageMap as string)
-            : fabricBom.sizeUsageMap;
-          const clean: Record<string, number> = {};
-          for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-            const n = Number(v);
-            if (!isNaN(n) && n > 0) clean[k] = n;
+        if (!fabricBom?.sizeUsageMap) { setEntrySizeUsageMap({}); } else {
+          try {
+            const raw = typeof fabricBom.sizeUsageMap === 'string'
+              ? JSON.parse(fabricBom.sizeUsageMap as string)
+              : fabricBom.sizeUsageMap;
+            const clean: Record<string, number> = {};
+            for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+              const n = Number(v);
+              if (!isNaN(n) && n > 0) clean[k] = n;
+            }
+            setEntrySizeUsageMap(clean);
+          } catch {
+            setEntrySizeUsageMap({});
           }
-          setEntrySizeUsageMap(clean);
-        } catch {
-          setEntrySizeUsageMap({});
         }
+        const fabricRows: Array<{ materialName: string; materialType: string; sizeUsageMap: Record<string, number> }> = [];
+        for (const b of boms) {
+          if (!b?.sizeUsageMap) continue;
+          const mt = String(b?.materialType || '').trim();
+          if (!mt.startsWith('fabric') && !mt.includes('rib') && !mt.includes('螺纹') && !mt.includes('罗纹')) continue;
+          try {
+            const raw = typeof b.sizeUsageMap === 'string' ? JSON.parse(b.sizeUsageMap as string) : b.sizeUsageMap;
+            const clean: Record<string, number> = {};
+            for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+              const n = Number(v);
+              if (!isNaN(n) && n > 0) clean[k] = n;
+            }
+            if (Object.keys(clean).length > 0) {
+              fabricRows.push({
+                materialName: String(b?.materialName || b?.materialCode || mt),
+                materialType: mt,
+                sizeUsageMap: clean,
+              });
+            }
+          } catch { /* skip */ }
+        }
+        setEntryFabricUsageRows(fabricRows);
       })
-      .catch(() => { if (seq === entryBomReqSeq.current) setEntrySizeUsageMap({}); });
+      .catch(() => { if (seq === entryBomReqSeq.current) { setEntrySizeUsageMap({}); setEntryFabricUsageRows([]); } });
   }, [isEntryPage, (activeTask as unknown as any)?.styleId]);
 
   // 加载面辅料采购
@@ -546,7 +572,7 @@ export function useCuttingBundles({
     entryOrderDetailLoading, entryColorText, entrySizeItems, entryOrderLines,
     // 纸样用量
     entrySizeUsageMap,
-    // 主面料已到货量（m），由采购记录汇总
+    entryFabricUsageRows,
     entryMainFabricArrived: entryPurchases
       .filter((p: any) => String((p as any)?.materialType || '').startsWith('fabric'))
       .reduce((sum: number, p: any) => sum + (Number((p as any)?.returnConfirmed || 0) === 1

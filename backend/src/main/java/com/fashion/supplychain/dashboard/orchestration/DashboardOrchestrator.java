@@ -707,6 +707,7 @@ public class DashboardOrchestrator {
                     aqw.eq("tenant_id", com.fashion.supplychain.common.UserContext.tenantId())
                        .in("factory_id", factoryIds)
                        .eq("scan_result", "success")
+                       .ne("scan_type", "orchestration")
                        .ge("scan_time", now.minusDays(30))
                        .select("DISTINCT operator_id");
                     fActiveWorkers = (int) scanRecordService.list(aqw).stream()

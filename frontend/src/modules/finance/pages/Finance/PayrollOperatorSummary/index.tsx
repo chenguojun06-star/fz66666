@@ -48,8 +48,6 @@ const PayrollOperatorSummary: React.FC = () => {
     // ── 内部工厂订单汇总 Tab 数据 ──────────────────────────────────────────
     const [internalOrders, setInternalOrders] = useState<any[]>([]);
     const [internalOrdersLoading, setInternalOrdersLoading] = useState(false);
-    const [internalOrderAuditedKeys, setInternalOrderAuditedKeys] = useState<Set<string>>(new Set());
-    const [internalOrderSelectedKeys, setInternalOrderSelectedKeys] = useState<string[]>([]);
     const internalOrderFetched = useRef(false);
 
     const fetchInternalOrders = useCallback(async () => {
@@ -75,56 +73,6 @@ const PayrollOperatorSummary: React.FC = () => {
             void fetchInternalOrders();
         }
     }, [activeTab, fetchInternalOrders]);
-
-    const handleBatchAuditInternalOrders = () => {
-        const keys = internalOrderSelectedKeys.filter(k => !internalOrderAuditedKeys.has(k));
-        if (keys.length === 0) {
-            message.warning('请选择未审核的订单');
-            return;
-        }
-        setInternalOrderAuditedKeys(prev => new Set([...prev, ...keys]));
-        setInternalOrderSelectedKeys([]);
-        message.success(`已批量审核 ${keys.length} 个订单`);
-    };
-
-    const handleBatchFinalPushInternalOrders = async () => {
-        if (internalOrderSelectedKeys.length === 0) {
-            message.warning('请选择要终审的订单');
-            return;
-        }
-        try {
-            let pushedCount = 0;
-            for (const key of internalOrderSelectedKeys) {
-                const record = internalOrders.find((r: any) => String(r.orderNo || r.orderId || '') === key);
-                if (!record || !internalOrderAuditedKeys.has(key)) continue;
-                const orderStatus = String(record.status || '').toLowerCase();
-                if (orderStatus !== 'completed' && orderStatus !== 'closed') {
-                    continue;
-                }
-                try {
-                    await api.post('/finance/wage-payment/create-payable', {
-                        bizType: 'ORDER_SETTLEMENT',
-                        bizId: record.orderId || record.orderNo,
-                        payeeName: record.factoryName || '内部工厂',
-                        amount: Number(record.totalAmount || 0),
-                        description: `工厂订单结算：${record.orderNo || ''}`,
-                    });
-                    pushedCount++;
-                } catch (err: unknown) {
-                    const errMsg = err instanceof Error ? err.message : '推送失败';
-                    console.warn(`订单 ${record.orderNo} 终审推送失败:`, errMsg);
-                }
-            }
-            if (pushedCount > 0) {
-                message.success(`已终审并推送 ${pushedCount} 个订单到收付款中心`);
-            } else {
-                message.warning('没有可推送的订单（可能订单未关单或属于内部工厂）');
-            }
-            setInternalOrderSelectedKeys([]);
-        } catch (error: unknown) {
-            message.error(error instanceof Error ? error.message : '批量终审失败');
-        }
-    };
 
     const internalOrderColumns = [
         { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
@@ -964,12 +912,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                     <Card size="small" className="mb-sm">
                                         <Space wrap>
                                             <span style={{ color: 'var(--neutral-text-secondary)' }}>内部工厂订单 {internalOrders.length}</span>
-                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>已审核 {internalOrderAuditedKeys.size}</span>
                                             <Button size="small" onClick={fetchInternalOrders} loading={internalOrdersLoading}>刷新</Button>
-                                            <Button size="small" type="primary" onClick={handleBatchAuditInternalOrders}
-                                                disabled={internalOrderSelectedKeys.length === 0}>批量审核</Button>
-                                            <Button size="small" onClick={handleBatchFinalPushInternalOrders}
-                                                disabled={internalOrderSelectedKeys.length === 0}>批量终审推送</Button>
                                         </Space>
                                     </Card>
                                     <ResizableTable
@@ -980,13 +923,6 @@ const PayrollOperatorSummary: React.FC = () => {
                                         loading={internalOrdersLoading}
                                         size="small"
                                         pagination={{ defaultPageSize: readPageSize(50), showSizeChanger: true, showTotal: (t: number) => `共 ${t} 条` }}
-                                        rowSelection={{
-                                            selectedRowKeys: internalOrderSelectedKeys,
-                                            onChange: (keys: React.Key[]) => setInternalOrderSelectedKeys(keys as string[]),
-                                            getCheckboxProps: (record: any) => ({
-                                                disabled: internalOrderAuditedKeys.has(String(record.orderNo || record.orderId || '')),
-                                            }),
-                                        }}
                                         sticky
                                         scroll={{ x: 1700 }}
                                     />

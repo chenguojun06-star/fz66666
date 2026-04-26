@@ -167,6 +167,10 @@ public class FinishedProductSettlementController {
         // 构建查询条件
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
 
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        wrapper.eq(FinishedProductSettlement::getTenantId, tenantId);
+
         if (StringUtils.isNotBlank(orderNo)) {
             wrapper.like(FinishedProductSettlement::getOrderNo, orderNo);
         }

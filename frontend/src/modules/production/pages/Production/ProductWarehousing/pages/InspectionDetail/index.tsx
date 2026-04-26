@@ -143,26 +143,24 @@ const InspectionDetail: React.FC = () => {
     try {
       const res = await api.get<{
         code: number; data: { records: WarehousingType[]; total: number };
-      }>('/production/warehousing/list', { params: { page: 1, pageSize: 10000, orderId } });
+      }>('/production/warehousing/list', { params: { page: 1, pageSize: 500, orderId } });
       if (res.code === 200) {
         setQcRecords((res.data?.records || []) as WarehousingDetailRecord[]);
       }
-    } catch { /* ignore */ } finally { setRecordsLoading(false); }
+    } catch { message.warning('质检记录加载失败'); } finally { setRecordsLoading(false); }
 
-    // 订单明细
     setOrderDetailLoading(true);
     try {
       const detail = await fetchProductionOrderDetail(orderId, { acceptAnyData: true });
       setOrderDetail((detail || null) as unknown as ProductionOrder | null);
-    } catch { setOrderDetail(null); } finally { setOrderDetailLoading(false); }
+    } catch { setOrderDetail(null); message.warning('订单详情加载失败'); } finally { setOrderDetailLoading(false); }
 
-    // 菲号裁剪
     try {
       const res = await api.get<{
         code: number; data: { records: CuttingBundleRow[]; total: number };
-      }>('/production/cutting/list', { params: { page: 1, pageSize: 10000, orderId } });
+      }>('/production/cutting/list', { params: { page: 1, pageSize: 500, orderId } });
       if (res.code === 200) setBundles((res.data?.records || []) as CuttingBundleRow[]);
-    } catch { /* ignore */ }
+    } catch { message.warning('裁剪数据加载失败'); }
   }, [orderId]);
 
   useEffect(() => { fetchBriefing(); }, [fetchBriefing]);
@@ -173,7 +171,7 @@ const InspectionDetail: React.FC = () => {
     setAiLoading(true);
     qualityAiApi.getSuggestion(orderId)
       .then((res: ApiResult) => { setAiSuggestion(res?.data ?? null); })
-      .catch(() => {})
+      .catch(() => { message.warning('AI质检建议加载失败'); })
       .finally(() => setAiLoading(false));
   }, [orderId]);
 

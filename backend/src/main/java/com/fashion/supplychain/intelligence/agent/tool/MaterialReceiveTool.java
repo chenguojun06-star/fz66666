@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -58,9 +59,7 @@ public class MaterialReceiveTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
-        if (UserContext.tenantId() == null) {
-            return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
-        }
+        TenantAssert.assertTenantContext();
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));
         if (MANAGER_ONLY_ACTIONS.contains(action) && !toolAccessService.hasManagerAccess()) {
@@ -86,7 +85,8 @@ public class MaterialReceiveTool implements AgentTool {
 
     private String previewSmartReceive(Map<String, Object> args) throws Exception {
         String orderNo = required(args, "orderNo");
-        Object result = materialPurchaseOrchestrator.previewSmartReceive(orderNo);
+        String styleNo = args.get("styleNo") != null ? String.valueOf(args.get("styleNo")) : null;
+        Object result = materialPurchaseOrchestrator.previewSmartReceive(orderNo, styleNo);
         return ok("已返回该订单的智能收货预览", Map.of("orderNo", orderNo, "result", result));
     }
 

@@ -444,8 +444,6 @@ export const StyleAttachmentsButton: React.FC<{
   modalTitle?: string;
   /** 仅展示指定业务类型 */
   bizTypes?: string[];
-  /** @deprecated 已废弃，不再使用 */
-  onlyGradingPattern?: boolean;
   /** 仅显示使用中的最新纸样（隐藏归档历史版本） */
   onlyActive?: boolean;
   /** 模态框关闭时的回调 */

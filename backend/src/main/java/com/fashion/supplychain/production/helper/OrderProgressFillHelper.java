@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.helper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
@@ -48,6 +49,9 @@ public class OrderProgressFillHelper {
             return;
         }
 
+        TenantAssert.assertTenantContext();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+
         List<String> orderIds = records.stream()
                 .map(r -> r == null ? null : r.getId())
                 .filter(StringUtils::hasText)
@@ -61,7 +65,7 @@ public class OrderProgressFillHelper {
         Map<String, LinkedHashMap<String, Long>> doneByOrder = new HashMap<>();
         boolean doneAggOk = false;
         try {
-            List<Map<String, Object>> rows = scanRecordMapper.selectStageDoneAgg(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+            List<Map<String, Object>> rows = scanRecordMapper.selectStageDoneAgg(orderIds, tenantId);
             Map<String, List<Object[]>> tmp = new HashMap<>();
             if (rows != null) {
                 for (Map<String, Object> row : rows) {

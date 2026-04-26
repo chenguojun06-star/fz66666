@@ -15,6 +15,8 @@ import '../pages/warehouse/warehouse_binding.dart';
 import '../pages/warehouse/warehouse_page.dart';
 import '../pages/payroll/payroll_binding.dart';
 import '../pages/payroll/payroll_page.dart';
+import '../pages/payroll/feedback/wage_feedback_page.dart';
+import '../pages/payroll/feedback/wage_feedback_controller.dart';
 import '../pages/scan_history/scan_history_binding.dart';
 import '../pages/scan_history/scan_history_page.dart';
 import '../pages/scan_pattern/scan_pattern_binding.dart';
@@ -56,6 +58,7 @@ class AppRoutes {
   static const procurement = '/procurement';
   static const warehouse = '/warehouse';
   static const payroll = '/payroll';
+  static const wageFeedback = '/payroll/feedback';
   static const scanHistory = '/scan/history';
   static const scanPattern = '/scan/pattern';
   static const scanRescan = '/scan/rescan';
@@ -82,6 +85,7 @@ class AppPages {
     GetPage(name: AppRoutes.procurement, page: () => const ProcurementPage(), binding: ProcurementBinding()),
     GetPage(name: AppRoutes.warehouse, page: () => const WarehousePage(), binding: WarehouseBinding()),
     GetPage(name: AppRoutes.payroll, page: () => const PayrollPage(), binding: PayrollBinding()),
+    GetPage(name: AppRoutes.wageFeedback, page: () => const WageFeedbackPage(), binding: BindingsBuilder(() { Get.lazyPut(() => WageFeedbackController()); })),
     GetPage(name: AppRoutes.scanHistory, page: () => const ScanHistoryPage(), binding: ScanHistoryBinding()),
     GetPage(name: AppRoutes.scanPattern, page: () => const ScanPatternPage(), binding: ScanPatternBinding()),
     GetPage(name: AppRoutes.scanRescan, page: () => const ScanRescanPage(), binding: ScanRescanBinding()),

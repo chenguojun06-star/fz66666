@@ -38,7 +38,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
       items={[
         { label: '活跃工厂',  value: `${pulse?.activeFactories ?? '—'} 家`, color: '#39ff14' },
         { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
-        { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e8686a' : '#39ff14' },
+        { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14' },
         ...(ranking?.rankings?.slice(0, 3).map((r, i) => ({
           label: ([' ', ' ', ' '][i] ?? '') + r.factoryName,
           value: `${r.totalScore} 分`,
@@ -69,7 +69,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
         ? pulse.stagnantFactories.slice(0, 5).map(f => ({
             label: f.factoryName,
             value: `停滞 ${Math.floor(f.minutesSilent / 60)}h ${Math.round(f.minutesSilent % 60)}m`,
-            color: '#e8686a',
+            color: '#e03030',
           }))
         : [{ label: '状态', value: currentKpiMetrics.productionOrderCount > 0 && currentKpiMetrics.activeFactories === 0
             ? '无工厂活跃，生产可能停滞' : '所有工厂正常运转',

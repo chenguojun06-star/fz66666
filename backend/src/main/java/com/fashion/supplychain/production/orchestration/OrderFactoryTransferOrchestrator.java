@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -86,6 +87,7 @@ public class OrderFactoryTransferOrchestrator {
                                         Integer transferQuantity,
                                         List<Map<String, Object>> colorSizeLines,
                                         String reason) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String operator = UserContext.username();
 
@@ -194,6 +196,7 @@ public class OrderFactoryTransferOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> undo(String orderNo, String reason) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String operator = UserContext.username();
 
@@ -433,20 +436,17 @@ public class OrderFactoryTransferOrchestrator {
     }
 
     private void transferScanRecords(String orderId, String newFactoryId, Long tenantId) {
-        try {
-            List<ScanRecord> records = scanRecordService.lambdaQuery()
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getTenantId, tenantId)
-                    .list();
-            if (records.isEmpty()) return;
-            for (ScanRecord sr : records) {
-                sr.setFactoryId(newFactoryId);
-            }
-            scanRecordService.updateBatchById(records);
-            log.info("[转厂] 已更新 {} 条扫码记录的factoryId → {}", records.size(), newFactoryId);
-        } catch (Exception e) {
-            log.warn("[转厂] 更新扫码记录factoryId失败（不影响转厂主流程）: {}", e.getMessage());
+        List<ScanRecord> records = scanRecordService.lambdaQuery()
+                .eq(ScanRecord::getOrderId, orderId)
+                .eq(ScanRecord::getTenantId, tenantId)
+                .ne(ScanRecord::getScanType, "orchestration")
+                .list();
+        if (records.isEmpty()) return;
+        for (ScanRecord sr : records) {
+            sr.setFactoryId(newFactoryId);
         }
+        scanRecordService.updateBatchById(records);
+        log.info("[转厂] 已更新 {} 条扫码记录的factoryId → {}", records.size(), newFactoryId);
     }
 
     private String safeStr(Object s) {

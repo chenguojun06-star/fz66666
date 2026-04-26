@@ -143,6 +143,10 @@ const AppRoutes: React.FC = () => {
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const routeFallback = <XiaoyunPageLoader message="小云正在展开页面内容…" inline />;
 
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   // ⌘K / Ctrl+K 全局搜索快捷键
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -230,12 +234,12 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.payrollOperatorSummary} element={<RouteErrorBoundary pageName="工资汇总"><Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeCenter} element={<RouteErrorBoundary pageName="财务中心"><Suspense fallback={routeFallback}><FinanceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.expenseReimbursement} element={<RouteErrorBoundary pageName="报销管理"><Suspense fallback={routeFallback}><ExpenseReimbursement /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.wagePayment} element={<RouteErrorBoundary pageName="工资发放"><Suspense fallback={routeFallback}><WagePayment /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.wagePayment} element={<RouteErrorBoundary pageName="收付款中心"><Suspense fallback={routeFallback}><WagePayment /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecSalesRevenue} element={<RouteErrorBoundary pageName="电商销售"><Suspense fallback={routeFallback}><EcSalesRevenue /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeTaxExport} element={<RouteErrorBoundary pageName="税务导出"><Suspense fallback={routeFallback}><TaxExport /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crm} element={<RouteErrorBoundary pageName="CRM"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><ReceivableList /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><SelectionCenter /></RouteErrorBoundary>} />
+          <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><Suspense fallback={routeFallback}><SelectionCenter /></Suspense></RouteErrorBoundary>} />
 
           <Route path={paths.materialInventory} element={<RouteErrorBoundary pageName="物料库存"><Suspense fallback={routeFallback}><MaterialInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.materialDatabase} element={<RouteErrorBoundary pageName="物料库"><Suspense fallback={routeFallback}><MaterialDatabase /></Suspense></RouteErrorBoundary>} />

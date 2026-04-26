@@ -41,9 +41,6 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private FinanceTableMigrator financeMigrator;
 
-    @Autowired
-    private ViewMigrator viewMigrator;
-
     @Override
     public void run(String... args) throws Exception {
         log.info("Checking database initialization...");
@@ -67,9 +64,6 @@ public class DataInitializer implements CommandLineRunner {
 
         // 5. 财务/仓储表（采购、面辅料库、对账、入库、出库）
         financeMigrator.initialize();
-
-        // 6. 生产视图
-        viewMigrator.initialize();
 
         log.info("Database initialization completed.");
     }

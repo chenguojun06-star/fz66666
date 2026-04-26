@@ -73,7 +73,8 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
     if (!enabled || !word || word.trim() === '') return;
 
     const trimmedWord = normalizeWord(word);
-    if (trimmedWord.length > 50) return; // 拦截超长乱码或粘贴段落，防止数据库 varchar(100) 溢出报错
+    if (trimmedWord.length > 50) return;
+    if (!isValidDictLabel(trimmedWord)) return;
 
     try {
       // 检查是否已存在
@@ -168,6 +169,20 @@ function generateDictCode(label: string, dictType: string): string {
 
 function normalizeWord(input?: string): string {
   return (input || '').replace(/\s+/g, ' ').trim();
+}
+
+function isValidDictLabel(label: string): boolean {
+  if (label.length > 50 || label.length < 1) return false;
+  let validCount = 0;
+  for (const c of label) {
+    const code = c.charCodeAt(0);
+    if ((code >= 0x4e00 && code <= 0x9fa5) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+      validCount++;
+    } else if (!/[-_/\s()（）#.]/.test(c)) {
+      return false;
+    }
+  }
+  return validCount > 0;
 }
 
 /**

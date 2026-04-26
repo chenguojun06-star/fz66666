@@ -22,6 +22,7 @@ const ScanResultPage = lazy(() => import('@/pages/ScanResultPage'));
 const ScanConfirmPage = lazy(() => import('@/pages/ScanConfirmPage'));
 const ScanQualityPage = lazy(() => import('@/pages/ScanQualityPage'));
 const PayrollPage = lazy(() => import('@/pages/PayrollPage'));
+const WageFeedbackPage = lazy(() => import('@/pages/WageFeedbackPage'));
 const UserApprovalPage = lazy(() => import('@/pages/UserApprovalPage'));
 const ChangePasswordPage = lazy(() => import('@/pages/ChangePasswordPage'));
 const FeedbackPage = lazy(() => import('@/pages/FeedbackPage'));
@@ -115,6 +116,7 @@ export default function App() {
                       <Route path="/scan/confirm" element={<ScanConfirmPage />} />
                       <Route path="/scan/quality" element={<ScanQualityPage />} />
                       <Route path="/payroll/payroll" element={<PayrollPage />} />
+                      <Route path="/payroll/feedback" element={<WageFeedbackPage />} />
                       <Route path="/admin/user-approval" element={<UserApprovalPage />} />
                       <Route path="/admin/change-password" element={<ChangePasswordPage />} />
                       <Route path="/admin/feedback" element={<FeedbackPage />} />

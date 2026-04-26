@@ -220,6 +220,7 @@ public class ProductionOrderController {
         if (source == null) {
             return Result.fail("源订单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(source.getTenantId(), "生产订单");
         ProductionOrder copy = new ProductionOrder();
         copy.setStyleNo(source.getStyleNo());
         copy.setStyleName(source.getStyleName());

@@ -342,15 +342,15 @@ public class MaterialPurchasePickingHelper {
      * 智能领取预览（不执行，仅查询库存状态）
      * 返回该订单所有物料采购任务的需求数量、仓库可用数量和当前状态，供前端显示表格
      */
-    public Map<String, Object> previewSmartReceive(String orderNo) {
-        if (!StringUtils.hasText(orderNo)) {
-            throw new IllegalArgumentException("订单号不能为空");
+    public Map<String, Object> previewSmartReceive(String orderNo, String styleNo) {
+        boolean byOrderNo = StringUtils.hasText(orderNo) && !"-".equals(orderNo.trim());
+        boolean byStyleNo = !byOrderNo && StringUtils.hasText(styleNo) && !"-".equals(styleNo.trim());
+        if (!byOrderNo && !byStyleNo) {
+            throw new IllegalArgumentException("订单号或款号不能同时为空");
         }
 
-        // 1. 查询订单的所有采购任务（不限状态，让前端看到全貌）
-        // 显式指定字段，规避云端 t_material_purchase 新增列未迁移导致的 Unknown column 500
-        List<MaterialPurchase> allPurchases = materialPurchaseService.lambdaQuery()
-            .select(
+        LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
+        purchaseWrapper.select(
                 MaterialPurchase::getId,
                 MaterialPurchase::getMaterialCode,
                 MaterialPurchase::getMaterialName,
@@ -360,11 +360,19 @@ public class MaterialPurchasePickingHelper {
                 MaterialPurchase::getPurchaseQuantity,
                 MaterialPurchase::getStatus,
                 MaterialPurchase::getUnit,
-                MaterialPurchase::getArrivedQuantity
-            )
-            .eq(MaterialPurchase::getOrderNo, orderNo.trim())
-            .eq(MaterialPurchase::getDeleteFlag, 0)
-            .list();
+                MaterialPurchase::getArrivedQuantity,
+                MaterialPurchase::getSourceType,
+                MaterialPurchase::getOrderNo,
+                MaterialPurchase::getStyleNo
+        );
+        if (byOrderNo) {
+            purchaseWrapper.eq(MaterialPurchase::getOrderNo, orderNo.trim());
+        } else {
+            purchaseWrapper.eq(MaterialPurchase::getStyleNo, styleNo.trim())
+                    .eq(MaterialPurchase::getSourceType, "sample");
+        }
+        purchaseWrapper.eq(MaterialPurchase::getDeleteFlag, 0);
+        List<MaterialPurchase> allPurchases = materialPurchaseService.list(purchaseWrapper);
 
         List<Map<String, Object>> items = new ArrayList<>();
         int pendingCount = 0;
@@ -422,20 +430,23 @@ public class MaterialPurchasePickingHelper {
         }
 
         // 2. 查询已有的出库单
-        // 显式指定字段，规避云端 t_material_picking 新增列未迁移导致的 Unknown column 500
-        List<MaterialPicking> existingPickings = materialPickingService.lambdaQuery()
-            .select(
+        LambdaQueryWrapper<MaterialPicking> pickingWrapper = new LambdaQueryWrapper<>();
+        pickingWrapper.select(
                 MaterialPicking::getId,
                 MaterialPicking::getPickingNo,
                 MaterialPicking::getStatus,
                 MaterialPicking::getPickerName,
                 MaterialPicking::getPickTime,
                 MaterialPicking::getRemark
-            )
-            .eq(MaterialPicking::getOrderNo, orderNo.trim())
-            .eq(MaterialPicking::getDeleteFlag, 0)
-            .orderByDesc(MaterialPicking::getCreateTime)
-            .list();
+        );
+        if (byOrderNo) {
+            pickingWrapper.eq(MaterialPicking::getOrderNo, orderNo.trim());
+        } else {
+            pickingWrapper.eq(MaterialPicking::getStyleNo, styleNo.trim());
+        }
+        pickingWrapper.eq(MaterialPicking::getDeleteFlag, 0)
+                .orderByDesc(MaterialPicking::getCreateTime);
+        List<MaterialPicking> existingPickings = materialPickingService.list(pickingWrapper);
 
         List<Map<String, Object>> pickingRecords = new ArrayList<>();
         for (MaterialPicking picking : existingPickings) {
@@ -453,7 +464,9 @@ public class MaterialPurchasePickingHelper {
         }
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("orderNo", orderNo.trim());
+        result.put("orderNo", byOrderNo ? orderNo.trim() : "");
+        result.put("styleNo", byStyleNo ? styleNo.trim() : "");
+        result.put("sourceType", byStyleNo ? "sample" : "bulk");
         result.put("materials", items);
         result.put("pickingRecords", pickingRecords);
         result.put("totalRequired", items.stream().mapToInt(i -> (int) i.get("requiredQty")).sum());
@@ -609,6 +622,7 @@ public class MaterialPurchasePickingHelper {
         if (picking == null || (picking.getDeleteFlag() != null && picking.getDeleteFlag() != 0)) {
             throw new java.util.NoSuchElementException("出库单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(picking.getTenantId(), "领料出库单");
         if (!"pending".equalsIgnoreCase(picking.getStatus())) {
             throw new IllegalStateException("该出库单状态不是待出库，当前状态: " + picking.getStatus());
         }
@@ -719,6 +733,7 @@ public class MaterialPurchasePickingHelper {
         if (picking == null || picking.getDeleteFlag() != null && picking.getDeleteFlag() == 1) {
             throw new NoSuchElementException("出库单不存在或已被删除");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(picking.getTenantId(), "领料出库单");
         if ("cancelled".equals(picking.getStatus())) {
             throw new IllegalStateException("出库单已撤销，不可重复操作");
         }

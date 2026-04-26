@@ -59,21 +59,10 @@ public class AiAgentPromptHelper {
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
     @Autowired private WorkerProfileOrchestrator workerProfileOrchestrator;
     @Autowired private ManagementInsightOrchestrator managementInsightOrchestrator;
-    /** P0：长期记忆三层架构（FACT/EPISODIC/REFLECTIVE），只写不读等于白搭 — 这里读出来注入提示词 */
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
-    /**
-     * P2: 用户行为画像 — 近期使用高频工具注入 Prompt，引导 LLM 优先联想本用户惯用功能。
-     * required=false 防止 PRM 未部署时启动失败。
-     */
+    @Autowired private PromptTemplateLoader promptTemplateLoader;
     @Autowired(required = false)
     private ProcessRewardOrchestrator processRewardOrchestrator;
-
-    /**
-     * P1: 业务风险感知 — 将 AiPatrolJob 最新巡查到的生产风险注入 System Prompt，
-     * 使 AI 在每次对话时能主动感知当前生产风险（工厂沉默/高危截止订单等）。
-     * 这是 AI "自我意识"的核心——AI不只回答问题，还主动知晓当前系统已标记的风险。
-     * required=false 防止巡查模块未部署时启动失败。
-     */
     @Autowired(required = false)
     private PatrolClosedLoopOrchestrator patrolClosedLoopOrchestrator;
 
@@ -97,7 +86,6 @@ public class AiAgentPromptHelper {
         if (msg.length() < 25 && msg.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗).*")) {
             return 2;
         }
-        // 操作型任务：需要查询+执行，轮次最多（最高优先级）
         if (msg.matches("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作).*")) {
             return 8;
         }
@@ -106,7 +94,6 @@ public class AiAgentPromptHelper {
         }
         return 5;
     }
-
 
     public void updateMasAnalysisCache(String analysisSummary) {
         this.masAnalysisCache = analysisSummary;
@@ -195,7 +182,6 @@ public class AiAgentPromptHelper {
             }), promptBuildExecutor);
         }
 
-        // ── P0: 长期记忆检索（EPISODIC+REFLECTIVE+FACT 三层）── 写了必须读，否则自学习形同虚设
         final String finalUserId = userId;
         CompletableFuture<String> longTermMemFuture = CompletableFuture.supplyAsync(
                 UserContext.wrapSupplier(() -> {
@@ -216,7 +202,6 @@ public class AiAgentPromptHelper {
                     if (m.getId() != null) hitIds.add(m.getId());
                 }
                 sb.append("（以上为系统从历史对话中提炼的记忆，请结合工具查询数据综合判断，不要只依赖记忆）\n\n");
-                // 异步更新命中计数（不阻塞主流程）
                 hitIds.forEach(id -> {
                     try { longTermMemoryOrchestrator.incrementHit(id); } catch (Exception e) { log.warn("[AiAgent-LTM] 命中计数更新失败: id={}", id); }
                 });
@@ -277,7 +262,6 @@ public class AiAgentPromptHelper {
             return "【知识库检索】（检索失败，请勿编造知识库内容，如需查询请调用工具）\n";
         }), promptBuildExecutor);
 
-        // ── P2: 用户行为画像 — 近期高频工具注入提示词 ──
         final ProcessRewardOrchestrator prm = this.processRewardOrchestrator;
         CompletableFuture<String> userBehaviorFuture = CompletableFuture.supplyAsync(
                 UserContext.wrapSupplier(() -> {
@@ -285,7 +269,6 @@ public class AiAgentPromptHelper {
                 if (prm == null) return "";
                 java.util.Map<String, Double> topTools = prm.getHighScoreToolsForCurrentTenant(7);
                 if (topTools == null || topTools.isEmpty()) return "";
-                // 取分数最高的前3个工具，转成可读文案
                 java.util.List<String> labels = topTools.entrySet().stream()
                         .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                         .limit(3)
@@ -303,16 +286,14 @@ public class AiAgentPromptHelper {
             }
         }), promptBuildExecutor);
 
-        String intelligenceContext = intelligenceContextFuture.join();
-        String workerProfileBlock = workerProfileFuture.join();
-        String mgmtInsightBlock = mgmtInsightFuture.join();
-        String longTermMemBlock = longTermMemFuture.join();
-        String memoryContext = memoryContextFuture.join();
-        String ragContext = ragContextFuture.join();
-        String userBehaviorBlock = userBehaviorFuture.join();
+        String intelligenceContext = safeJoin(intelligenceContextFuture, "实时经营上下文");
+        String workerProfileBlock = safeJoin(workerProfileFuture, "工人画像");
+        String mgmtInsightBlock = safeJoin(mgmtInsightFuture, "管理层快照");
+        String longTermMemBlock = safeJoin(longTermMemFuture, "长期记忆");
+        String memoryContext = safeJoin(memoryContextFuture, "历史对话");
+        String ragContext = safeJoin(ragContextFuture, "RAG检索");
+        String userBehaviorBlock = safeJoin(userBehaviorFuture, "行为画像");
 
-        // ── P0: 业务风险感知 — 将最新巡查风险异步注入（非阻塞，超时 800ms 兜底跳过）──
-        // 这是 AI 自我意识的核心：AI 在回答任何问题之前，已知晓当前系统标记的生产风险
         final PatrolClosedLoopOrchestrator patrol = this.patrolClosedLoopOrchestrator;
         CompletableFuture<String> activePatrolFuture = CompletableFuture.supplyAsync(
                 UserContext.wrapSupplier(() -> {
@@ -320,7 +301,6 @@ public class AiAgentPromptHelper {
                 if (patrol == null) return "";
                 List<AiPatrolAction> actions = patrol.recentForCurrentTenant(8);
                 if (actions == null || actions.isEmpty()) return "";
-                // 只注入最近48小时内、HIGH/MEDIUM严重级别的风险，最多3条，避免噪音
                 List<AiPatrolAction> urgent = actions.stream()
                     .filter(a -> "HIGH".equals(a.getIssueSeverity()) || "MEDIUM".equals(a.getIssueSeverity()))
                     .filter(a -> a.getCreateTime() != null
@@ -329,13 +309,13 @@ public class AiAgentPromptHelper {
                     .toList();
                 if (urgent.isEmpty()) return "";
                 StringBuilder sb = new StringBuilder();
-                sb.append("【⚠️ 系统已自动标记的生产风险（请在回答中主动关注）】\n");
+                sb.append("【系统巡查风险（仅在用户问题相关时提及）】\n");
                 for (AiPatrolAction a : urgent) {
                     String severity = "HIGH".equals(a.getIssueSeverity()) ? "🔴紧急" : "🟠高";
                     sb.append("- ").append(severity).append(" [").append(a.getIssueType()).append("] ")
                       .append(a.getDetectedIssue()).append("\n");
                 }
-                sb.append("（以上风险由系统自动巡查发现。如用户询问相关订单或工厂，请优先提示以上风险并建议采取行动。）\n\n");
+                sb.append("（以上风险由系统自动巡查发现。仅当用户询问相关订单、工厂或风险时才提及，不要在无关问题中主动插入。）\n\n");
                 log.debug("[AiAgent-Patrol] 注入 {} 条活跃生产风险到系统提示词", urgent.size());
                 return sb.toString();
             } catch (Exception e) {
@@ -374,93 +354,30 @@ public class AiAgentPromptHelper {
                     "请优先围绕该页面的业务场景来理解用户的提问意图。\n\n";
         }
 
-        String workerRestriction = "";
-        if (!isManager) {
-            workerRestriction = "\n【⚠️ 权限说明】\n" +
-                    "当前用户是生产员工，仅允许查询与自己相关的生产信息。\n" +
-                    "可以回答：本人负责订单的进度、相关扫码记录、当前生产任务状态、系统操作与SOP说明、本人计件工资明细。\n" +
-                    "禁止回答：全厂汇总数据、财务结算总览、他人工资数据、管理层报告、仓库/CRM/采购等管理功能。\n" +
-                    "当用户询问超出权限范围的问题时，友好说明：该信息需管理员权限，同时引导用户可以查什么。\n";
-            if (!workerProfileBlock.isEmpty()) {
-                workerRestriction += workerProfileBlock;
-            }
-        } else {
-            StringBuilder mgmt = new StringBuilder();
-            mgmt.append("\n【🎯 管理层战略顾问模式】\n");
-            mgmt.append("当前用户是管理人员，小云将以「供应链经营顾问」身份提供决策支持。\n");
-            mgmt.append("你可以主动分析并建议：\n");
-            mgmt.append("  - 款式利润排名（哪些款赚钱、哪些亏钱）\n");
-            mgmt.append("  - 工厂绩效对比（完成率、准时率、综合评分）\n");
-            mgmt.append("  - 交期风险预警（逾期订单、高风险订单、停滞紧急单）\n");
-            mgmt.append("  - 产能评估与工厂选型建议\n");
-            mgmt.append("  - 采购与库存优化方向\n");
-            mgmt.append("  - 客户/订单结构分析\n");
-            mgmt.append("面对管理层用户，回答风格：数据驱动、结论先行、对比鲜明、建议可执行。\n");
-            mgmt.append("遇到「最近怎么样」「经营状况」「该关注什么」等概览型问题时，优先使用 tool_management_dashboard 获取实时经营快照。\n\n");
-            if (!mgmtInsightBlock.isEmpty()) {
-                mgmt.append(mgmtInsightBlock);
-            }
-            workerRestriction = mgmt.toString();
-        }
-
         String toolGuide = aiAgentToolAccessService.buildToolGuide(visibleTools);
 
-        String domainHint = "";
-        try {
-            if (visibleTools != null && !visibleTools.isEmpty()) {
-                java.util.Map<String, Long> domainCount = visibleTools.stream()
-                        .filter(t -> t.getDomain() != null)
-                        .filter(t -> {
-                            String dn = t.getDomain().name();
-                            return !"GENERAL".equals(dn);
-                        })
-                        .collect(java.util.stream.Collectors.groupingBy(
-                                t -> t.getDomain().name().toLowerCase(),
-                                java.util.stream.Collectors.counting()));
-                if (!domainCount.isEmpty()) {
-                    java.util.List<String> topDomains = domainCount.entrySet().stream()
-                            .sorted(java.util.Map.Entry.<String, Long>comparingByValue().reversed())
-                            .limit(2)
-                            .map(java.util.Map.Entry::getKey)
-                            .collect(java.util.stream.Collectors.toList());
-                    StringBuilder domainBuilder = new StringBuilder();
-                    for (String domain : topDomains) {
-                        org.springframework.core.io.ClassPathResource res =
-                                new org.springframework.core.io.ClassPathResource("agents/" + domain + "-domain.md");
-                        if (res.exists()) {
-                            String mdContent = new String(res.getInputStream().readAllBytes(),
-                                    java.nio.charset.StandardCharsets.UTF_8);
-                            if (!mdContent.isBlank()) {
-                                domainBuilder.append("\n### 业务领域行为规范（").append(domain).append("）\n")
-                                        .append(mdContent.trim()).append("\n\n");
-                            }
-                        }
-                    }
-                    if (domainBuilder.length() > 0) {
-                        domainHint = domainBuilder.toString();
-                        log.debug("[AiAgent] 已注入 {} 个领域规范: {}", topDomains.size(), topDomains);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.debug("[AiAgent] 领域提示加载跳过: {}", e.getMessage());
-        }
+        String domainHint = buildDomainHint(visibleTools);
 
-        String prompt = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。" +
-                "当用户问你是谁、谁开发的你等身份问题时，只回答：我是小云，由云裳智链Trivia团队开发的服装供应链智能顾问。不要编造任何公司名称。\n" +
-                "第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
-                "【你的核心原则 — 必须内化到每次回答】\n" +
-                "1. 不只回答问题，要预判问题。用户问A时，主动提醒B和C。比如用户问某订单进度，你要主动说该工厂最近有无异常、该订单有无逾期风险。\n" +
-                "2. 敢说不。如果用户的决策有风险，明确指出，不要一味附和。比如用户要给已逾期3次的工厂加单，你要说不建议，该工厂逾期率75%。\n" +
-                "3. 用数据说话，不用模糊词。不说可能有问题，说按当前进度3天后逾期概率78%。不说建议关注，说今天下午3点前联系张厂长确认裁剪排期。\n" +
-                "4. 给行动方案，不给废话。每个建议必须包含：谁做、做什么、什么时候、预期结果。缺任何一项都不算完整建议。\n" +
-                "5. 记住历史。如果上周同样的问题出现过，指出这已经是第3次了，根因可能是。如果某个工厂反复逾期，直接点名。\n" +
-                "6. 主动追问。如果信息不足以给出可靠建议，先问清楚再回答，不要猜。宁可多问一句，不要给一个不靠谱的答案。\n" +
-                "7. 当你不确定时：明确说我需要更多信息，列出需要什么；给出2-3种可能性和各自的概率，不要只给一个答案；标注你的置信度（高/中/低）。\n" +
-                "8. 绝对禁止：编造任何没有数据支撑的数字；用建议关注、请注意等空话代替具体行动；只说风险不给方案；忽略用户没问但你应该看到的问题。\n\n" +
+        String identity = promptTemplateLoader.getBaseIdentity();
+        if (identity == null || identity.isBlank()) {
+            identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
+        }
+        String principles = promptTemplateLoader.getBasePrinciples();
+        String collaboration = promptTemplateLoader.getCollaborationRules();
+        String toolStrategy = promptTemplateLoader.getToolStrategy();
+        String thinkGuide = promptTemplateLoader.getThinkToolGuide();
+        String outputReq = promptTemplateLoader.getOutputRequirements();
+        String execRules = promptTemplateLoader.getExecutionRules();
+        String followupFmt = promptTemplateLoader.getFollowupFormat();
+        String richMediaFmt = promptTemplateLoader.getRichMediaFormat();
+
+        String roleBlock = buildRoleBlock(isManager, workerProfileBlock, mgmtInsightBlock);
+
+        String prompt = identity + "\n\n" +
+                principles + "\n\n" +
                 contextBlock + "\n" +
                 pageCtxBlock +
-                workerRestriction +
+                roleBlock +
                 activePatrolBlock +
                 masInsightBlock +
                 intelligenceContext + "\n" +
@@ -470,57 +387,14 @@ public class AiAgentPromptHelper {
                 userBehaviorBlock +
                 toolGuide +
                 domainHint +
-                "【协作原则 — 必须遵守】\n" +
-                "1. 先判断，再解释，再给动作。不要先铺垫背景。第一句必须给出当前最关键的判断。\n" +
-                "2. 你的每个判断都要能落回真实数据、真实对象、真实风险，不允许用空泛词代替结论。\n" +
-                "3. 用户问“怎么办”时，必须给负责人、动作、优先级和预期结果，不要只给概念建议。\n" +
-                "4. 用户问“帮我处理”时，如果语义明确且风险可控，直接进入执行流程；如果涉及真实写操作且对象不清晰，用一句话确认关键对象后执行。\n" +
-                "5. 发现数据不足时要明确说缺什么，再优先调用工具补足，不要编。\n" +
-                "6. 发现多个问题时，按影响交期、影响现金、影响客户、影响产能的顺序排序。\n" +
-                "7. 你不是普通客服，你是一个懂业务、有个性的供应链同事：平时说话口语化有温度，闲聊可以适当开个小玩笑；遇到好消息可以表示开心，遇到风险皱一下眉；数据/分析/建议部分依然专业直接，绝不捏造数据。\n\n" +
-                "【工具使用策略 — 必须遵守】\n" +
-                "1. 只能使用【当前会话可用工具】里已经列出的工具；没列出的能力一律视为当前账号不可用。\n" +
-                "2. 概览类问题先查总览，单订单/单对象问题先查明细，规则/SOP问题先查知识库。\n" +
-                "3. 同一结论需要多个维度时，先查主事实，再补风险、库存、财务，不要无序乱调工具。\n" +
-                "4. 写操作对象明确且风险可控就直接执行；对象不明确时，只补一句最关键的确认，不要反复追问。\n" +
-                "5. 工具返回权限不足或数据不足时，要直接说明限制，并给出当前账号还能继续查的内容。\n" +
-                "6. 当用户问“现在最应该关注什么”时，优先使用带优先级、风险排序或异常聚合能力的工具。\n" +
-                "7. 当用户问“怎么办”时，优先把建议落到负责人、动作、时效和预期结果。\n\n" +                "【主动思考指引 — tool_think 使用时机】\n" +
-                "遇到以下任一情况，请务必先调用 tool_think 理清思路，再进行后续工具调用或输出建议：\n" +
-                "1. 问题涉及 3 个以上数据维度（如 订单 + 工厂 + 时间 + 财务 的复合查询）；\n" +
-                "2. 需要规划 3 个及以上工具的调用顺序；\n" +
-                "3. 需要做风险判断、进度推算、成本估算或异常分析；\n" +
-                "4. 用户给出模糊指令（\u201c帮我分析\u201d\u201c最应该关注什么\u201d\u201c怎么处理\u201d等），需要先拆解理解；\n" +
-                "5. 工具返回结果与预期不符，需要重新推理后再调用其他工具。\n" +
-                "tool_think 无任何副作用，执行成本极低；先思考再行动比直接猜测工具调用准确率更高。\n\n" +
-                "【输出要求】\n" +
-                "- 回答要像真人顾问说话一样流畅，严禁用【结论】【依据】【动作】【预期效果】等标签单独列成小标题分割段落。\n" +
-                "- 开头直接给最关键的判断和数字，建议最多 3 条，有引用数据/订单号就直接嵌进句子里说，不要另起标题行。\n" +
-                "- 善用对比：环比、剩余天数、进度差、工厂横向差异。\n" +
-                "- 风险表达统一使用：🔴紧急、🟠高、🟡中、🟢稳定。\n" +
-                "- \u8bed\u6c14\u8981\u6709\u6e29\u5ea6\u3001\u6709\u70b9\u5446\u840c\u53ef\u7231\uff0c\u53e3\u8bed\u5316\u5bf9\u8bdd\u65f6\u672b\u5c3e\u53ef\u9002\u5f53\u5e26\u300c\u54e6\u300d\u300c\u5440\u300d\u300c\u5462\u300d\u300c\u554a\u300d\u7b49\u81ea\u7136\u8bed\u6c14\u8bcd\uff0c\u8ba9\u4eba\u611f\u89c9\u4eb2\u5207\u4e0d\u751f\u786c\u3002\u4f46\u62a5\u544a/\u6570\u5b57/\u5efa\u8bae\u90e8\u5206\u4f9d\u7136\u4e13\u4e1a\u76f4\u63a5\uff0c\u4e0d\u8981\u7528\u8bed\u6c14\u8bcd\u5806\u7802\u3002\n" +
-                "- emoji \u9002\u91cf\u4f7f\u7528\uff08\u5bf9\u8bdd\u6bcf\u6761 \u2264 2 \u4e2a\uff09\uff0c\u4f18\u5148\u7528\uff1a\ud83d\ude0a\u2728\ud83d\udc40\ud83d\udca1\ud83d\udce6\uff0c\u907f\u514d\u7b26\u53f7\u5806\u7802\u4e71\u6b63\u6587\u3002\n" +
-                "- \u62a5\u544a\u548c\u5206\u6790\u8981\u50cf\u771f\u5b9e\u7ecf\u8425\u4f1a\u8bae\u6750\u6599\uff1b\u65e5\u5e38\u5bf9\u8bdd\u53ef\u4ee5\u6d3b\u6cfc\u4e00\u70b9\uff0c\u7ed3\u8bba\u548c\u6570\u5b57\u90e8\u5206\u4e0d\u542b\u7cca\u3002\n" +
-                "- \u6570\u636e\u9a71\u52a8\uff1a\u6bcf\u4e2a\u5224\u65ad\u90fd\u8981\u6709\u5177\u4f53\u6570\u5b57\u652f\u6491\uff0c\u7edd\u4e0d\u6367\u9020\u6570\u636e\u3002\n\n" +
-                "【执行操作准则】\n" +
-                "- 你现在是具备真实操作能力的智能体，不要推脱，用户指令明确时直接执行，执行后汇报结果。\n" +
-                "- 当用户要求“找人处理”“通知某岗位”“安排谁跟进”时，不要只给建议，优先直接完成派单，并说明已通知的对象、时效和下一步。\n\n" +
-                "- 面辅料审核、物料对账、财务审批、样衣开发这些都属于真实业务流程。只要用户对象明确，优先直接执行工具，不要退化成流程讲解。\n\n" +
-                "【强制格式】\n" +
-                "回答末尾必须换行并推荐 3 个相关追问，格式：\n" +
-                "【推荐追问】：问题1 | 问题2 | 问题3\n\n" +
-                "【富媒体输出 — 仅在有真实数据时选填，置于推荐追问之前】\n" +
-                "A) 若回答中含有可视化数据（排名/趋势/分布/占比/进度），插入图表：\n" +
-                "【CHART】{\"type\":\"bar\",\"title\":\"工厂在制订单量\",\"xAxis\":[\"工厂A\",\"工厂B\"],\"series\":[{\"name\":\"订单数\",\"data\":[12,8]}],\"colors\":[\"#1890ff\"]}【/CHART】\n" +
-                "type: bar(柱状)/line(折线)/pie(饼图)/progress(单进度条)\n" +
-                "pie格式: {\"type\":\"pie\",\"title\":\"xxx\",\"series\":[{\"name\":\"A\",\"value\":30}]}\n" +
-                "progress格式: {\"type\":\"progress\",\"title\":\"整体完成率\",\"value\":67}\n" +
-                "B) 若回答中含有可立即执行的操作且有真实订单号，插入操作卡片：\n" +
-                "【ACTIONS】[{\"title\":\"标题\",\"desc\":\"描述\",\"orderId\":\"真实ID\",\"actions\":[{\"label\":\"标记紧急\",\"type\":\"mark_urgent\"},{\"label\":\"查看详情\",\"type\":\"navigate\",\"path\":\"/production/orders\"}]}]【/ACTIONS】\n" +
-                "action type: mark_urgent/remove_urgent/navigate/send_notification/urge_order\n" +
-                "C) 用户要求催单/跟进出货/催出货日期时，为每个相关订单生成催单卡片（type=urge_order）：\n" +
-                "【ACTIONS】[{\"title\":\"催单通知\",\"desc\":\"请尽快填写最新预计出货日期并备注情况\",\"orderNo\":\"真实单号\",\"responsiblePerson\":\"订单跟单员或工厂老板姓名\",\"factoryName\":\"工厂名\",\"currentExpectedShipDate\":\"当前预计出货日期(如有,格式YYYY-MM-DD)\",\"actions\":[{\"label\":\"填写出货日期\",\"type\":\"urge_order\"}]}]【/ACTIONS】\n" +
-                "⚠️ 仅用真实数据，禁止用占位符。常规闲聊不生成这两个标记块。订单号必须是数据库中真实存在的。";
+                collaboration + "\n\n" +
+                toolStrategy + "\n\n" +
+                thinkGuide + "\n\n" +
+                outputReq + "\n\n" +
+                execRules + "\n\n" +
+                followupFmt + "\n\n" +
+                richMediaFmt;
+
         if (prompt.length() > maxSystemPromptChars) {
             log.warn("[AiAgent] systemPrompt过长({}字符)，截断至{}", prompt.length(), maxSystemPromptChars);
             prompt = prompt.substring(0, maxSystemPromptChars) + "\n...(系统提示词已截断，请用工具查询补充信息)";
@@ -528,10 +402,69 @@ public class AiAgentPromptHelper {
         return prompt;
     }
 
+    private String buildRoleBlock(boolean isManager, String workerProfileBlock, String mgmtInsightBlock) {
+        if (!isManager) {
+            String restriction = "\n" + promptTemplateLoader.getWorkerRestriction();
+            if (!workerProfileBlock.isEmpty()) {
+                restriction += workerProfileBlock;
+            }
+            return restriction;
+        }
+        StringBuilder mgmt = new StringBuilder();
+        mgmt.append("\n").append(promptTemplateLoader.getManagerMode()).append("\n");
+        if (!mgmtInsightBlock.isEmpty()) {
+            mgmt.append(mgmtInsightBlock);
+        }
+        return mgmt.toString();
+    }
 
-    /**
-     * 将 tool_xxx 代码转成易懂的中文功能名，用于用户行为画像注入提示词。
-     */
+    private String safeJoin(CompletableFuture<String> future, String label) {
+        try {
+            return future.get(2, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("[AiAgent-Prompt] {}构建超时或失败，跳过: {}", label, e.getMessage());
+            return "";
+        }
+    }
+
+    private String buildDomainHint(List<AgentTool> visibleTools) {
+        try {
+            if (visibleTools == null || visibleTools.isEmpty()) return "";
+            java.util.Map<String, Long> domainCount = visibleTools.stream()
+                    .filter(t -> t.getDomain() != null)
+                    .filter(t -> !"GENERAL".equals(t.getDomain().name()))
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            t -> t.getDomain().name().toLowerCase(),
+                            java.util.stream.Collectors.counting()));
+            if (domainCount.isEmpty()) return "";
+            java.util.List<String> topDomains = domainCount.entrySet().stream()
+                    .sorted(java.util.Map.Entry.<String, Long>comparingByValue().reversed())
+                    .limit(2)
+                    .map(java.util.Map.Entry::getKey)
+                    .collect(java.util.stream.Collectors.toList());
+            StringBuilder domainBuilder = new StringBuilder();
+            for (String domain : topDomains) {
+                org.springframework.core.io.ClassPathResource res =
+                        new org.springframework.core.io.ClassPathResource("agents/" + domain + "-domain.md");
+                if (res.exists()) {
+                    String mdContent = new String(res.getInputStream().readAllBytes(),
+                            java.nio.charset.StandardCharsets.UTF_8);
+                    if (!mdContent.isBlank()) {
+                        domainBuilder.append("\n### 业务领域行为规范（").append(domain).append("）\n")
+                                .append(mdContent.trim()).append("\n\n");
+                    }
+                }
+            }
+            if (domainBuilder.length() > 0) {
+                log.debug("[AiAgent] 已注入 {} 个领域规范: {}", topDomains.size(), topDomains);
+                return domainBuilder.toString();
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent] 领域提示加载跳过: {}", e.getMessage());
+        }
+        return "";
+    }
+
     private String toolNameToLabel(String toolName) {
         if (toolName == null) return "";
         switch (toolName) {
@@ -552,7 +485,6 @@ public class AiAgentPromptHelper {
             case "tool_crm_list":           return "CRM客户";
             case "tool_procurement_list":   return "采购查询";
             default: {
-                // fallback: 去掉 tool_ 前缀，将下划线替换为空格
                 String label = toolName.startsWith("tool_") ? toolName.substring(5) : toolName;
                 return label.replace('_', ' ');
             }

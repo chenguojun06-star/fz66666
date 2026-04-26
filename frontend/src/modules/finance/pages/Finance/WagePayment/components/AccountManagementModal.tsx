@@ -95,9 +95,8 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
         <div style={{ textAlign: 'center', color: '#999', padding: 32 }}>暂无收款账户，请点击"添加账户"</div>
       )}
 
-      {accountDetailOpen && (
-        <Card title={editingAccount ? '编辑账户' : '添加账户'} size="small" style={{ marginTop: 16 }}>
-          <Form form={accountForm} layout="vertical" requiredMark="optional">
+      <Card title={editingAccount ? '编辑账户' : '添加账户'} size="small" style={{ marginTop: 16, display: accountDetailOpen ? undefined : 'none' }}>
+        <Form form={accountForm} layout="vertical" requiredMark="optional">
             <Form.Item label="账户类型" name="accountType" rules={[{ required: true, message: '请选择' }]}>
               <Select options={ACCOUNT_TYPE_OPTIONS} placeholder="选择账户类型" />
             </Form.Item>
@@ -151,7 +150,6 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
             </Space>
           </Form>
         </Card>
-      )}
     </div>
   </ResizableModal>
 );

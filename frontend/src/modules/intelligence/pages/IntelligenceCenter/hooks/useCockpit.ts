@@ -6,7 +6,6 @@ import type {
   LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
-  IntelligenceBrainSnapshotResponse, ActionCenterResponse,
 } from '@/services/intelligence/intelligenceApi';
 import type { ApiResult } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
@@ -24,8 +23,6 @@ export interface CockpitData {
   shortage:     MaterialShortageResult | null;
   healing:      SelfHealingResponse | null;
   bottleneck:   FactoryBottleneckItem[] | null;
-  brain:        IntelligenceBrainSnapshotResponse | null;
-  actionCenter: ActionCenterResponse | null;
   orders:       ProductionOrder[];
   factoryCapacity: FactoryCapacityItem[];
   productionStats: ProductionOrderStats | null;
@@ -36,8 +33,7 @@ export interface CockpitData {
 const INITIAL: CockpitData = {
   pulse: null, health: null, notify: null, workers: null,
   heatmap: null, ranking: null, shortage: null, healing: null,
-  bottleneck: null, brain: null, actionCenter: null,
-  orders: [], factoryCapacity: [], productionStats: null, loading: true, ts: 0,
+  bottleneck: null, orders: [], factoryCapacity: [], productionStats: null, loading: true, ts: 0,
 };
 
 export function useCockpit() {
@@ -50,7 +46,7 @@ export function useCockpit() {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap, rProductionStats] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rFactoryCap, rProductionStats] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
@@ -59,8 +55,6 @@ export function useCockpit() {
         intelligenceApi.runSelfHealing(),
         intelligenceApi.getFactoryBottleneck(),
         productionOrderApi.list({ page: 1, pageSize: 500, excludeTerminal: true }),
-        intelligenceApi.getBrainSnapshot(),
-        intelligenceApi.getActionCenter(),
         productionOrderApi.getFactoryCapacity(),
         productionOrderApi.stats(),
       ]);
@@ -78,7 +72,7 @@ export function useCockpit() {
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
-      bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
+      bottleneck: v(rBottleneck),
       orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped', 'archived', 'closed'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,
       productionStats: productionStatsResult,

@@ -161,6 +161,10 @@ public class AiPatrolOrchestrator {
     // ─── 2. 停滞订单 ─────────────────────────────────────────────────────────
 
     private int scanStagnantOrders(Long tenantId) {
+        if (tenantId == null) {
+            log.warn("[AI巡检] tenantId 为空，跳过停滞订单扫描");
+            return 0;
+        }
         // 拉最多50条进行中订单，然后批量查最后扫码时间
         List<ProductionOrder> inProg = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)

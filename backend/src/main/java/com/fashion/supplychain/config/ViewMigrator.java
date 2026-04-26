@@ -2,6 +2,9 @@ package com.fashion.supplychain.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -12,16 +15,18 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * 视图迁移器
- * 负责: v_production_order_flow_stage_snapshot / v_production_order_stage_done_agg / v_production_order_procurement_snapshot
- */
 @Component
+@Order(5)
 @Slf4j
-public class ViewMigrator {
+public class ViewMigrator implements ApplicationRunner {
 
     @Autowired
     private DatabaseMigrationHelper dbHelper;
+
+    @Override
+    public void run(ApplicationArguments args) {
+        initialize();
+    }
 
     public void initialize() {
         ensureProductionViews();

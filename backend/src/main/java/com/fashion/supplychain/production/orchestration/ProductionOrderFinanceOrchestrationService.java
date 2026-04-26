@@ -6,6 +6,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.common.ParamUtils;
@@ -264,11 +265,12 @@ public class ProductionOrderFinanceOrchestrationService {
 
         int cuttingQty = 0;
         try {
+            TenantAssert.assertTenantContext();
             Long tid = com.fashion.supplychain.common.UserContext.tenantId();
             QueryWrapper<CuttingBundle> qw = new QueryWrapper<CuttingBundle>()
                     .select("COALESCE(SUM(quantity), 0) as totalQuantity")
                     .eq("production_order_id", oid);
-            if (tid != null) qw.eq("tenant_id", tid);
+            qw.eq("tenant_id", tid);
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
                 Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");

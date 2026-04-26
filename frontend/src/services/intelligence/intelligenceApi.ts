@@ -366,6 +366,14 @@ export const intelligenceApi = {
       signal: ctrl.signal,
     })
       .then(async (res) => {
+        if (res.status === 401) {
+          try { localStorage.removeItem('authToken'); localStorage.removeItem('userId'); } catch { /* ignore */ }
+          const w = window as any;
+          if (typeof w.__appAuthLogoutNavigate === 'function') w.__appAuthLogoutNavigate();
+          else window.location.href = '/login';
+          onError('登录已过期，请重新登录');
+          return;
+        }
         if (!res.ok || !res.body) {
           onError(`HTTP ${res.status}`);
           return;

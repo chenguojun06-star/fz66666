@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.service.MaterialPickingService;
@@ -25,6 +26,9 @@ public class MaterialPickingTool extends AbstractAgentTool {
 
     @Autowired
     private MaterialPickingService materialPickingService;
+
+    @Autowired
+    private AiAgentToolAccessService toolAccessService;
 
     @Override
     public String getName() {
@@ -76,6 +80,9 @@ public class MaterialPickingTool extends AbstractAgentTool {
                 yield successJson("查询领料明细成功", Map.of("items", items, "total", items.size()));
             }
             case "create" -> {
+                if (!toolAccessService.hasManagerAccess()) {
+                    yield errorJson("创建领料单需要管理员权限");
+                }
                 String materialName = requireString(args, "materialName");
                 Integer quantity = optionalInt(args, "quantity");
                 String orderNo = optionalString(args, "orderNo");

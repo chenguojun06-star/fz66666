@@ -23,8 +23,6 @@ import {
 } from '@ant-design/icons';
 import './styles.css';
 
-// import type { DialogMode } from './hooks/useOrganizationModals'; // 暂时不用
-
 const ownerTypeOptions = [
   { value: 'NONE', label: '通用部门' },
   { value: 'INTERNAL', label: '内部' },

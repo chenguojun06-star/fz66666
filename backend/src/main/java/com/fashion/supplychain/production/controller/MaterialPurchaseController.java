@@ -201,8 +201,10 @@ public class MaterialPurchaseController {
      * 返回每个待采购物料的需求数量、仓库可用数量、已有出库记录
      */
     @GetMapping("/smart-receive-preview")
-    public Result<?> smartReceivePreview(@RequestParam String orderNo) {
-        return Result.success(materialPurchaseOrchestrator.previewSmartReceive(orderNo));
+    public Result<?> smartReceivePreview(
+            @RequestParam(required = false) String orderNo,
+            @RequestParam(required = false) String styleNo) {
+        return Result.success(materialPurchaseOrchestrator.previewSmartReceive(orderNo, styleNo));
     }
 
     /**

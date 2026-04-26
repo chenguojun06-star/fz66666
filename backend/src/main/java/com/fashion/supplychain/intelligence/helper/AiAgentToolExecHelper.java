@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
+import com.fashion.supplychain.intelligence.service.AiAgentIdempotencyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -36,6 +37,7 @@ public class AiAgentToolExecHelper {
     @Autowired private AiAgentEvidenceHelper evidenceHelper;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
     @Autowired private AiAgentMetricsService metricsService;
+    @Autowired private AiAgentIdempotencyService idempotencyService;
     @Autowired private List<AgentTool> registeredTools;
     @Autowired(required = false) private List<ToolExecutionHook> toolHooks;
 
@@ -194,6 +196,16 @@ public class AiAgentToolExecHelper {
             }
         }
 
+        // ── 写工具幂等保护：60s 内同租户同工具同参数复用首次结果 ──
+        // 防止 LLM 重试 / 网络抖动 / 用户连击造成订单被改两次、工资被审两次等真实事故
+        java.util.Optional<String> replayed = idempotencyService.tryReplay(toolName, arguments);
+        if (replayed.isPresent()) {
+            String replayResult = replayed.get();
+            long elapsed = System.currentTimeMillis() - start;
+            return new ToolExecRecord(toolCallId, toolName, arguments, replayResult,
+                    evidenceHelper.buildToolEvidenceMessage(toolName, replayResult), elapsed);
+        }
+
         AgentTool tool = visibleToolMap.get(toolName);
         if (tool != null) {
             try {
@@ -220,6 +232,13 @@ public class AiAgentToolExecHelper {
         }
 
         long elapsed = System.currentTimeMillis() - start;
+
+        // ── 写工具幂等收尾：成功回写结果，失败立即清键允许重试 ──
+        if (success) {
+            idempotencyService.saveResult(toolName, arguments, rawResult);
+        } else {
+            idempotencyService.clearOnFailure(toolName, arguments);
+        }
 
         if (toolHooks != null) {
             for (ToolExecutionHook hook : toolHooks) {

@@ -1,0 +1,75 @@
+<view class="page">
+  <view class="header">
+    <text class="title">工资结算反馈</text>
+    <view class="add-btn" hover-class="add-btn-hover" bindtap="openForm">+ 提交反馈</view>
+  </view>
+
+  <view class="filter-bar">
+    <picker mode="selector" range="{{['全部','待处理','已解决','已驳回']}}" range-key="" value="{{statusFilter}}" bindchange="onStatusFilterChange">
+      <view class="filter-picker">
+        <text>{{statusFilter === '' ? '全部状态' : statusFilter === 'PENDING' ? '待处理' : statusFilter === 'RESOLVED' ? '已解决' : '已驳回'}}</text>
+        <text class="arrow">▼</text>
+      </view>
+    </picker>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+
+  <view wx:if="{{!loading && feedbackList.length === 0}}" class="empty">
+    <text>暂无反馈记录</text>
+  </view>
+
+  <view wx:for="{{feedbackList}}" wx:key="id" class="feedback-item">
+    <view class="item-header">
+      <text class="type-tag" style="background: {{item.typeColor}}20; color: {{item.typeColor}};">{{item.typeText}}</text>
+      <text class="status-tag" style="color: {{item.statusTextColor}};">{{item.statusText}}</text>
+    </view>
+    <view class="item-body">
+      <text class="settlement-id">结算单: {{item.settlementId}}</text>
+      <text wx:if="{{item.feedbackContent}}" class="content">{{item.feedbackContent}}</text>
+    </view>
+    <view wx:if="{{item.resolveRemark}}" class="resolve-info">
+      <text class="resolve-label">处理结果:</text>
+      <text class="resolve-remark">{{item.resolveRemark}}</text>
+      <text wx:if="{{item.resolverName}}" class="resolver">处理人: {{item.resolverName}}</text>
+    </view>
+    <view class="item-footer">
+      <text class="time">{{item.createTimeText}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{showForm}}" class="modal-mask" bindtap="closeForm">
+    <view class="modal-content" catchtap="">
+      <view class="modal-title">提交工资结算反馈</view>
+
+      <view class="form-group">
+        <text class="form-label">结算单ID</text>
+        <input class="form-input" placeholder="请输入结算单ID" value="{{settlementId}}" bindinput="onSettlementIdInput" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">反馈类型</text>
+        <radio-group class="radio-group" bindchange="onFeedbackTypeChange">
+          <label class="radio-item">
+            <radio value="CONFIRM" checked="{{feedbackType === 'CONFIRM'}}" color="#1677ff" />
+            <text>确认无误</text>
+          </label>
+          <label class="radio-item">
+            <radio value="OBJECTION" checked="{{feedbackType === 'OBJECTION'}}" color="#faad14" />
+            <text>提出异议</text>
+          </label>
+        </radio-group>
+      </view>
+
+      <view wx:if="{{feedbackType === 'OBJECTION'}}" class="form-group">
+        <text class="form-label">异议内容</text>
+        <textarea class="form-textarea" placeholder="请描述您的问题，如：数量不对、金额有误等" value="{{feedbackContent}}" bindinput="onFeedbackContentInput" maxlength="500" />
+      </view>
+
+      <view class="form-actions">
+        <view class="btn-cancel" hover-class="btn-hover" bindtap="closeForm">取消</view>
+        <view class="btn-submit" hover-class="btn-hover" bindtap="submitFeedback">{{submitting ? '提交中...' : '提交'}}</view>
+      </view>
+    </view>
+  </view>
+</view>

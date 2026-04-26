@@ -1,5 +1,5 @@
 SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_cutting_task' AND COLUMN_NAME='order_qr_code')=0,
-    'ALTER TABLE `t_cutting_task` ADD COLUMN `order_qr_code` VARCHAR(200) DEFAULT NULL COMMENT ''订单二维码''',
+    'ALTER TABLE `t_cutting_task` ADD COLUMN `order_qr_code` VARCHAR(200) DEFAULT NULL',
     'SELECT 1');
 PREPARE stmt FROM @s;
 EXECUTE stmt;

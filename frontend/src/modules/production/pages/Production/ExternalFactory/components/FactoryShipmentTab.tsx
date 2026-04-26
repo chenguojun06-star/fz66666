@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Form, Input, InputNumber, Radio, Space, Tag, Descriptions } from 'antd';
+import { App, Button, Form, Input, InputNumber, Popconfirm, Radio, Space, Tag, Descriptions } from 'antd';
 import { SendOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -284,9 +284,12 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
           }] : []),
           ...(isPending ? [{
             key: 'delete',
-            label: '删除',
+            label: (
+              <Popconfirm title="确认删除此发货记录？" onConfirm={() => handleDelete(record)} okText="删除" cancelText="取消" okButtonProps={{ danger: true }}>
+                <span style={{ color: '#ff4d4f' }}>删除</span>
+              </Popconfirm>
+            ),
             danger: true,
-            onClick: () => handleDelete(record),
           }] : []),
         ];
         if (actions.length === 0) return <Tag color="green">已完成</Tag>;

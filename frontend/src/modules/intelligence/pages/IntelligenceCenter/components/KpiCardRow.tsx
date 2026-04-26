@@ -46,16 +46,16 @@ const KpiCardRow: React.FC<any> = ({
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={factoryPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className={`c-card c-kpi c-kpi-hoverable ${currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? 'c-kpi-danger' : ''}`}>
             <div className="c-kpi-label">
-              <LiveDot size={7} color={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? '#e8686a' : undefined} />
+              <LiveDot size={7} color={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? '#e03030' : undefined} />
               活跃工厂
             </div>
-            <div className="c-kpi-val" style={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? { color: '#e8686a' } : { color: '#39ff14' }}>
+            <div className="c-kpi-val" style={currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0 ? { color: '#e03030' } : { color: '#39ff14' }}>
               <AnimatedNum val={pulse?.activeFactories ?? '—'} />
             </div>
             <div className="c-kpi-unit">家</div>
             <div className="c-kpi-sub">
               {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
-                ? <span style={{ color: '#e8686a' }}> 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
+                ? <span style={{ color: '#e03030' }}> 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
                 : <>员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</>}
             </div>
             <div className="c-kpi-delta-row">
@@ -97,10 +97,10 @@ const KpiCardRow: React.FC<any> = ({
           <Popover overlayClassName="cockpit-kpi-pop" placement="bottom" content={stagnantPop} mouseEnterDelay={0.15} mouseLeaveDelay={0.1} getPopupContainer={() => rootRef.current || document.body}>
           <div className={`c-card c-kpi c-kpi-hoverable ${(pulse?.stagnantFactories?.length ?? 0) > 0 ? 'c-kpi-danger' : ''}`}>
             <div className="c-kpi-label">
-              <LiveDot size={7} color={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e8686a' : '#39ff14'} />
+              <LiveDot size={7} color={(pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14'} />
               停工预警
             </div>
-            <div className="c-kpi-val" style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e8686a' : '#39ff14' }}>
+            <div className="c-kpi-val" style={{ color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#e03030' : '#39ff14' }}>
               <AnimatedNum val={pulse?.stagnantFactories?.length ?? 0} />
             </div>
             <div className="c-kpi-unit">家停滞</div>

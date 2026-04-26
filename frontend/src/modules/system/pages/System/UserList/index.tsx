@@ -17,6 +17,7 @@ import tenantService from '@/services/tenantService';
 import { LOG_COLUMNS } from './userListUtils';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import './styles.css';
 
@@ -46,6 +47,14 @@ const UserList: React.FC = () => {
     toggleUserStatus, applyRoleToUser, handleSubmit, savePerms,
     loadPermTreeAndChecked,
   } = useUserListData({ user, isSuperAdmin, isTenantOwner, form, userModal, logModal, navigate });
+
+  const [usernameInput, setUsernameInput] = useState(queryParams.username || '');
+  const debouncedUsername = useDebouncedValue(usernameInput, 300);
+  React.useEffect(() => {
+    if (debouncedUsername !== (queryParams.username || '')) {
+      setQueryParams((prev: any) => ({ ...prev, username: debouncedUsername, page: 1 }));
+    }
+  }, [debouncedUsername]);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
   const [accountModalOpen, setAccountModalOpen] = useState(false);
@@ -105,8 +114,8 @@ const UserList: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
               <Space wrap size={12}>
                 <Input
-                  value={queryParams.username || ''}
-                  onChange={(e) => setQueryParams({ ...queryParams, username: e.target.value, page: 1 })}
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
                   placeholder="搜索用户名/姓名"
                   allowClear
                   style={{ width: 220 }}

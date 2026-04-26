@@ -69,7 +69,7 @@ export const useWarehousingForm = (
   const fetchOrderOptions = async () => {
     setOrderOptionsLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: ProductionOrder[]; total: number }; message?: string }>('/production/order/list', { params: { page: 1, pageSize: 5000 } });
+      const res = await api.get<{ code: number; data: { records: ProductionOrder[]; total: number }; message?: string }>('/production/order/list', { params: { page: 1, pageSize: 500 } });
       if (res.code === 200) {
         setOrderOptions(res.data.records || []);
       } else {
@@ -92,7 +92,7 @@ export const useWarehousingForm = (
     }
     try {
       const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
-        params: { page: 1, pageSize: 10000, orderNo: on },
+        params: { page: 1, pageSize: 500, orderNo: on },
       });
       if (res.code === 200) {
         setBundles((res.data?.records || []) as CuttingBundleRow[]);
@@ -112,7 +112,7 @@ export const useWarehousingForm = (
     }
     try {
       const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
-        params: { page: 1, pageSize: 10000, orderId: oid },
+        params: { page: 1, pageSize: 500, orderId: oid },
       });
       if (res.code === 200) {
         const records = (res.data?.records || []) as any[];
@@ -175,7 +175,7 @@ export const useWarehousingForm = (
       const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
         params: {
           page: 1,
-          pageSize: 10000,
+          pageSize: 500,
           orderId: oid,
           cuttingBundleQrCode: qr,
         },
@@ -260,7 +260,7 @@ export const useWarehousingForm = (
         const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
           params: {
             page: 1,
-            pageSize: 10000,
+            pageSize: 500,
             ...(warehousingNo ? { warehousingNo } : {}),
             ...(!warehousingNo && orderId ? { orderId } : {}),
           },

@@ -205,49 +205,28 @@ const GlobalAiAssistant: React.FC = () => {
         // @ts-ignore
         const actualData = res?.code === 200 ? res.data : (res?.data || res);
         if (actualData) {
-          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0, topPriorityOrder } = actualData;
+          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0 } = actualData;
           let newMood: XiaoyunCloudMood = 'normal';
           let greeting = INITIAL_MSG.text;
-          const seed = overdueOrderCount * 17 + highRiskOrderCount * 11 + todayScanCount;
+          const hour = new Date().getHours();
+          const timeGreet = hour >= 0 && hour < 6 ? '夜深了还在忙呀🌙'
+            : hour >= 6 && hour < 12 ? '早上好☀️'
+            : hour >= 12 && hour < 14 ? '中午好🍱'
+            : hour >= 14 && hour < 18 ? '下午好🌤️'
+            : '晚上好🌸';
 
           if (overdueOrderCount >= 5 || highRiskOrderCount >= 3) {
             newMood = 'urgent';
-            const topHint = topPriorityOrder ? `最紧急：${topPriorityOrder.orderNo}（${topPriorityOrder.daysLeft < 0 ? '已逾期' + Math.abs(topPriorityOrder.daysLeft) + '天' : '剩' + topPriorityOrder.daysLeft + '天'}，进度${topPriorityOrder.progress}%）` : '';
-            greeting = choose(seed, [
-              `现在有 ${overdueOrderCount + highRiskOrderCount} 个高优先级风险。${topHint}\n我可以先按影响面帮你排处理顺序。`,
-              `当前高优先级风险共 ${overdueOrderCount + highRiskOrderCount} 个。${topHint}\n建议先收口最急的几单，我可以直接给出处理次序。`,
-              `风险已经堆到 ${overdueOrderCount + highRiskOrderCount} 项。${topHint}\n你可以让我先把"先做什么"排出来。`,
-            ]);
+            greeting = `${timeGreet} 我是小云～有什么需要帮忙的，直接问我就好！`;
           } else if (overdueOrderCount > 0 || highRiskOrderCount > 0) {
             newMood = 'curious';
-            const topHint = topPriorityOrder ? `\n📌 ${topPriorityOrder.orderNo}（${topPriorityOrder.styleNo || ''}）${topPriorityOrder.daysLeft < 0 ? '已逾期' + Math.abs(topPriorityOrder.daysLeft) + '天' : '还剩' + topPriorityOrder.daysLeft + '天'}，进度${topPriorityOrder.progress}%` : '';
-            greeting = choose(seed + 3, [
-              `当前有 ${overdueOrderCount + highRiskOrderCount} 个待关注事项。${topHint}\n我可以继续往下拆：为什么慢、先动哪里。`,
-              `现在有 ${overdueOrderCount + highRiskOrderCount} 项需要盯。${topHint}\n你可以让我直接给出优先处理顺序。`,
-              `这会儿要关注的事项有 ${overdueOrderCount + highRiskOrderCount} 个。${topHint}\n我可以帮你把根因和动作排清楚。`,
-            ]);
+            greeting = `${timeGreet} 我是小云～订单、生产、仓库的问题都可以问我哦！`;
           } else if (todayScanCount > 100) {
             newMood = 'success';
-            greeting = choose(seed + 5, [
-              '今天节奏挺稳的呢 ✨ 继续帮你盯效率、风险和成本波动好不好～',
-              '今天运行状态不错哦！要不要让我再做一轮隐患巡检看看？',
-              '今天盘面挺好的～ 下一步可以看看效率和成本有没有小伏击！',
-            ]);
+            greeting = `${timeGreet} 我是小云～今天运行挺稳的，有什么想了解的随时说！`;
           } else {
             newMood = 'normal';
-            greeting = choose(seed + 7, [
-              '你好呀！我是小云 🌤️ 有什么可以帮你的吗？随时问风险、订单进度都行哦！',
-              '嘉～ 我是小云！想问风险、瓶颈还是交付进度？直接说就好啊！',
-              '你好呀！我是小云 ☁️ 可以让我帮你看风险、瓶颈和交付影响～',
-            ]);
-            const hour = new Date().getHours();
-            if (hour >= 0 && hour < 6) {
-               greeting = '夜猫子！🌙 还在工作呀～ 让我帮你把夜间异常和明早要做的事整理一下吧！';
-            } else if (hour >= 12 && hour <= 14) {
-               greeting = '午休时间搶个手～ 🍱 要不要先快速过一遍上半天的数据？';
-            } else if (hour >= 19) {
-               greeting = '辛苦啊！🌸 到收尾阶段了，让我帮你整理今晚要盯的订单和明天计划～';
-            }
+            greeting = `${timeGreet} 我是小云～有什么可以帮你的，尽管问！`;
           }
           setMood(newMood);
           setMessages([{ ...INITIAL_MSG, text: greeting }]);
@@ -255,7 +234,7 @@ const GlobalAiAssistant: React.FC = () => {
       } catch (err) {
         console.error('Failed to fetch system mood', err);
         setMood('normal');
-        setMessages([{ ...INITIAL_MSG, text: '实时数据暂时没取到，但不要紧～随时问我都行哦！' }]);
+        setMessages([{ ...INITIAL_MSG, text: '你好呀～我是小云，有什么可以帮你的吗？' }]);
       }
     };
     fetchStatus();

@@ -157,8 +157,8 @@ public class OrderEditTool implements AgentTool {
         }
 
         if (args.containsKey("factoryName")) {
-            order.setFactoryName((String) args.get("factoryName"));
-            updatedFields.add("工厂名称");
+            log.warn("[OrderEdit] factoryName修改已禁用，请使用tool_order_factory_transfer走转厂流程");
+            return MAPPER.writeValueAsString(Map.of("success", false, "error", "工厂名称修改请使用转厂工具(tool_order_factory_transfer)，直接修改会导致factoryId与factoryName不一致"));
         }
 
         if (args.containsKey("company")) {

@@ -155,6 +155,26 @@ public class AiAgentEvidenceHelper {
         }
     }
 
+    public void captureReportPreviewCard(String toolName, String toolResult, List<JsonNode> reportPreviewCards) {
+        if (!"tool_smart_report".equals(toolName) || toolResult == null || toolResult.isBlank()) {
+            return;
+        }
+        try {
+            int startIdx = toolResult.indexOf("【REPORT_PREVIEW】");
+            int endIdx = toolResult.indexOf("【/REPORT_PREVIEW】");
+            if (startIdx < 0 || endIdx < 0 || endIdx <= startIdx) {
+                return;
+            }
+            String previewJson = toolResult.substring(startIdx + "【REPORT_PREVIEW】".length(), endIdx).trim();
+            JsonNode previewNode = JSON.readTree(previewJson);
+            if (previewNode != null && previewNode.isObject() && previewNode.has("kpis")) {
+                reportPreviewCards.add(previewNode);
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent] 解析报告预览卡失败: {}", e.getMessage());
+        }
+    }
+
     public String appendBundleSplitCards(String content, List<JsonNode> bundleSplitCards) {
         if (bundleSplitCards == null || bundleSplitCards.isEmpty()) {
             return content;
@@ -177,6 +197,20 @@ public class AiAgentEvidenceHelper {
             return (content == null ? "" : content) + "\n\n【STEP_WIZARD】" + json + "【/STEP_WIZARD】";
         } catch (Exception e) {
             log.debug("[AiAgent] 拼接步骤引导卡失败: {}", e.getMessage());
+            return content;
+        }
+    }
+
+    public String appendReportPreviewCards(String content, List<JsonNode> reportPreviewCards) {
+        if (reportPreviewCards == null || reportPreviewCards.isEmpty()) {
+            return content;
+        }
+        try {
+            JsonNode first = reportPreviewCards.get(0);
+            String json = JSON.writeValueAsString(first);
+            return (content == null ? "" : content) + "\n\n【REPORT_PREVIEW】" + json + "【/REPORT_PREVIEW】";
+        } catch (Exception e) {
+            log.debug("[AiAgent] 拼接报告预览卡失败: {}", e.getMessage());
             return content;
         }
     }

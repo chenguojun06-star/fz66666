@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
@@ -51,10 +52,11 @@ public class MaterialPurchaseOrchestratorHelper {
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         Long ctxTenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (StringUtils.hasText(ctxFactoryId)) {
+            TenantAssert.assertTenantContext();
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .eq(ctxTenantId != null, ProductionOrder::getTenantId, ctxTenantId)
+                            .eq(ProductionOrder::getTenantId, ctxTenantId)
                             .eq(ProductionOrder::getFactoryId, ctxFactoryId)
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))

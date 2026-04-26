@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Card, Input, Form, InputNumber, Tooltip, Upload, Button, message } from 'antd';
-import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined } from '@ant-design/icons';
+import React, { useState, useCallback } from 'react';
+import { Card, Input, Form, InputNumber, Tooltip, Upload, Button, message, Modal } from 'antd';
+import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -17,6 +17,7 @@ import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 import { formatMaterialQuantity } from './utils';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
+import api from '@/utils/api';
 
 const MaterialPurchase: React.FC = () => {
   const {
@@ -62,6 +63,47 @@ const MaterialPurchase: React.FC = () => {
   const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
+
+  const handleWarehousePickFromDetail = useCallback(async (record: MaterialPurchaseType, pickQty: number) => {
+    const purchaseId = String(record?.id || '').trim();
+    if (!purchaseId) { message.error('采购任务缺少ID'); return; }
+    const receiverName = String(user?.name || user?.username || '').trim();
+    const receiverId = String(user?.id || '').trim();
+    Modal.confirm({
+      width: '30vw',
+      title: `确认仓库领取 - ${record.materialName || record.materialCode}`,
+      icon: <ShopOutlined style={{ color: 'var(--color-primary)' }} />,
+      content: (
+        <div>
+          <p>物料：<strong>{record.materialName || record.materialCode}</strong> {record.color ? `(${record.color})` : ''}</p>
+          <p>需求数量：<strong>{record.purchaseQuantity}</strong></p>
+          <p>仓库领取数量：<strong style={{ color: 'var(--color-primary)' }}>{pickQty}</strong></p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>领取后将创建出库单，等待仓库确认出库</p>
+        </div>
+      ),
+      okText: '确认领取',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
+            purchaseId,
+            pickQty,
+            receiverId,
+            receiverName,
+          });
+          if (res.code === 200) {
+            message.success(`${record.materialName || record.materialCode} 已提交出库申请，等待仓库确认`);
+            fetchMaterialPurchaseList();
+            reloadCurrentDetail();
+          } else {
+            message.error(res.message || '领取失败');
+          }
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '领取失败');
+        }
+      },
+    });
+  }, [user, fetchMaterialPurchaseList, reloadCurrentDetail]);
 
   return (
     <>
@@ -220,6 +262,7 @@ const MaterialPurchase: React.FC = () => {
           onSaveCreate={handleSubmit}
           onSavePreview={handleSavePreview}
           isOrderFrozenForRecord={isOrderFrozenForRecord}
+          onWarehousePick={handleWarehousePickFromDetail}
         />
         <MaterialQualityIssueModal
           open={qualityIssueOpen}

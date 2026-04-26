@@ -67,6 +67,7 @@ public class PatternDiscoveryTool implements AgentTool {
             int lookbackDays = args.path("lookbackDays").asInt(30);
 
             if ("discover".equals(action)) {
+                TenantAssert.assertTenantContext();
                 List<PatternDiscovery> patterns = patternOrchestrator.discoverPatterns(lookbackDays);
                 List<Map<String, Object>> items = new ArrayList<>();
                 for (PatternDiscovery p : patterns) {

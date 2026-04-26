@@ -352,6 +352,14 @@ public class WagePaymentController {
         return Result.success();
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/wage-payments/dashboard-stats")
+    public Result<java.util.Map<String, Object>> dashboardStats(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        return Result.success(wagePaymentOrchestrator.getDashboardStats(startDate, endDate));
+    }
+
     // ============================================================
     // 四、请求DTO
     // ============================================================

@@ -1,3 +1,37 @@
+export const STAGE_ORDER: string[] = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+export const CUTTING_STAGE_ORDER: string[] = ['裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+export interface StageSpanInfo {
+  rowSpan: number;
+  stage: string;
+  count: number;
+}
+
+export function computeStageSortedAndSpan<T extends { progressStage?: string }>(
+  items: T[],
+  stageOrder: readonly string[] = STAGE_ORDER,
+): { sorted: T[]; spanMap: Map<number, StageSpanInfo> } {
+  const sorted = [...items].sort((a, b) => {
+    const sa = stageOrder.indexOf(a.progressStage || '车缝');
+    const sb = stageOrder.indexOf(b.progressStage || '车缝');
+    if (sa !== sb) return sa - sb;
+    return 0;
+  });
+  const spanMap = new Map<number, StageSpanInfo>();
+  let i = 0;
+  while (i < sorted.length) {
+    const stage = sorted[i].progressStage || '车缝';
+    let j = i + 1;
+    while (j < sorted.length && (sorted[j].progressStage || '车缝') === stage) j++;
+    const count = j - i;
+    spanMap.set(i, { rowSpan: count, stage, count });
+    for (let k = i + 1; k < j; k++) spanMap.set(k, { rowSpan: 0, stage, count });
+    i = j;
+  }
+  return { sorted, spanMap };
+}
+
 export const stageAliasMap: Record<string, string[]> = {
   procurement: ['采购', '物料', '备料'],
   cutting: ['裁剪', '裁床', '剪裁', '开裁'],

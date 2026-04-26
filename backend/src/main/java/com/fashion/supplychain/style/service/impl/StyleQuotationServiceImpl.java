@@ -11,7 +11,6 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 

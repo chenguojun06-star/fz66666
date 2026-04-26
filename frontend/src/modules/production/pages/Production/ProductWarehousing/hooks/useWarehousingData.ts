@@ -67,7 +67,7 @@ export function useWarehousingData(options: UseWarehousingDataOptions): UseWareh
     try {
       const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>(
         '/production/cutting/list',
-        { params: { page: 1, pageSize: 10000, orderNo: on } },
+        { params: { page: 1, pageSize: 500, orderNo: on } },
       );
       setBundles(res.code === 200 ? ((res.data?.records || []) as CuttingBundleRow[]) : []);
     } catch {
@@ -115,7 +115,7 @@ export function useWarehousingData(options: UseWarehousingDataOptions): UseWareh
           data: { records: WarehousingType[]; total: number };
           message?: string;
         }>('/production/warehousing/list', {
-          params: { page: 1, pageSize: 10000, warehousingNo: whNo },
+          params: { page: 1, pageSize: 500, warehousingNo: whNo },
         });
         if (res.code !== 200) throw new Error(res.message || '获取质检入库详情失败');
 
@@ -185,7 +185,7 @@ export function useWarehousingData(options: UseWarehousingDataOptions): UseWareh
               code: number;
               data: { records: WarehousingType[]; total: number };
             }>('/production/warehousing/list', {
-              params: { page: 1, pageSize: 10000, orderId: resolvedOrderId },
+              params: { page: 1, pageSize: 500, orderId: resolvedOrderId },
             });
             if (!cancelled) {
               const list = (whRes?.data?.records || []) as WarehousingDetailRecord[];

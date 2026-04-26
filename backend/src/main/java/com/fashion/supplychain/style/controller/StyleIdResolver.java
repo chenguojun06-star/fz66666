@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.controller;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,10 +28,11 @@ public class StyleIdResolver {
             }
         }
         if (resolvedStyleId == null && StringUtils.hasText(styleNo)) {
+            TenantAssert.assertTenantContext();
             Long currentTenantId = UserContext.tenantId();
             StyleInfo style = staticStyleInfoService.lambdaQuery()
                     .eq(StyleInfo::getStyleNo, styleNo.trim())
-                    .eq(currentTenantId != null, StyleInfo::getTenantId, currentTenantId)
+                    .eq(StyleInfo::getTenantId, currentTenantId)
                     .orderByDesc(StyleInfo::getId)
                     .last("limit 1")
                     .one();

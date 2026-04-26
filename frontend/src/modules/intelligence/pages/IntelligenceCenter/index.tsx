@@ -8,11 +8,8 @@ import {
 } from '@ant-design/icons';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { useAuth } from '@/utils/AuthContext';
-import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
 import CollapseChevron from './CollapseChevron';
-import AgentMeetingCard from './AgentMeetingCard';
-import BrainActionGrid from './BrainActionGrid';
 
 import {
   risk2color, LiveDot, Sparkline,
@@ -21,22 +18,18 @@ import {
 import { OrderScrollPanel, AutoScrollBox, BottleneckRow } from './components/OrderScrollPanel';
 import { useCockpit } from './hooks/useCockpit';
 import GlobalSearchModal from './components/GlobalSearchModal';
-import MonthlyBizSummary from './MonthlyBizSummary';
 import KpiCardRow from './components/KpiCardRow';
 import ProductionOrdersCard from './components/ProductionOrdersCard';
 import FactoryOverviewCard from './components/FactoryOverviewCard';
 import OverdueRiskCard from './components/OverdueRiskCard';
-import WhatIfSimPanel from './WhatIfSimPanel';
 import AgentGraphPanel from '../../components/AgentGraphPanel';
 import ABTestStatsPanel from '../../components/ABTestStatsPanel';
 import StageCapsulePanel from './components/StageCapsulePanel';
 import { useKpiMetrics } from './hooks/useKpiMetrics';
 import { useKpiPopovers } from './KpiPopoverContent';
 import { useRepairAction } from './hooks/useRepairAction';
-import { useAgentMeeting } from './hooks/useAgentMeeting';
 import { useTodayBrief } from './hooks/useTodayBrief';
 import { usePanelCollapse } from './hooks/usePanelCollapse';
-import { useTaskExecution } from './hooks/useTaskExecution';
 import { paths } from '@/routeConfig';
 import './styles.css';
 
@@ -45,36 +38,25 @@ const IntelligenceCenter: React.FC = () => {
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
-  const { isSuperAdmin, isTenantOwner, user } = useAuth();
+  const { isSuperAdmin } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
 
-  /* ── 自愈一键修复 ── */
   const { repairing, repairResult, handleRepair } = useRepairAction(reload);
-  /* ── Agent 例会 ── */
-  const { meetingTopic, setMeetingTopic, holdingMeeting, meetingResult, meetingHistory, holdMeeting } = useAgentMeeting();
-  /* ── 今日日报 ── */
   const todayBrief = useTodayBrief();
-  /* ── 主面板折叠/展开 ── */
   const { collapsedPanels, toggleCollapse } = usePanelCollapse();
-  /* ── 任务执行 ── */
-  const { executingTask, executeTaskResult, handleExecuteTask } = useTaskExecution(reload);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
 
-  /* URL ?q= 参数：从生产页「问AI分析」或「催→AI」跳转时自动预填问题 */
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const q = searchParams.get('q');
     if (q) {
-      // useSearchParams 已自动解码，无需再 decodeURIComponent（否则含 % 字符会 URIError）
-      // setInlineQuery(q); // removed AI panel
-      setSearchParams({}, { replace: true }); // 消费后清除 URL 参数，避免刷新重复触发
+      setSearchParams({}, { replace: true });
     }
   }, []);
 
-  /* ⌘K / Ctrl+K：打开全局搜索 */
   useEffect(() => {
     const handleSearchKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -86,7 +68,6 @@ const IntelligenceCenter: React.FC = () => {
     return () => window.removeEventListener('keydown', handleSearchKey);
   }, []);
 
-  /* 全屏：监听 Esc 等原生退出事件，同步状态 */
   useEffect(() => {
     const fsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', fsChange);
@@ -103,7 +84,6 @@ const IntelligenceCenter: React.FC = () => {
     }
   };
 
-  /* 秒计时：倒计时 + 时钟 */
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setNow(new Date());
@@ -114,9 +94,8 @@ const IntelligenceCenter: React.FC = () => {
 
   const handleReload = () => { reload(); setCountdown(30); };
 
-  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck: _bottleneck, orders, brain, actionCenter, factoryCapacity } = data;
+  const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck: _bottleneck, orders, factoryCapacity } = data;
 
-  /* ── KPI 指标（委托给 useKpiMetrics） ── */
   const {
     kpiFlash, kpiDelta, kpiHistory: _kpiHistory, currentKpiMetrics, factoryCapMap,
     formatDeltaText, renderDeltaBadge, getKpiTrend,
@@ -124,21 +103,17 @@ const IntelligenceCenter: React.FC = () => {
     alertCount: _alertCount, healWarnCount: _healWarnCount, totalWarn, tickerItems, handleTickerClick,
   } = useKpiMetrics(data);
 
-  /* 格式化时钟 */
   const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
   const dateStr = now.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' });
 
-  /* ── KPI Popover 内容（委托给 useKpiPopovers） ── */
   const { scanPop, factoryPop, healthPop, stagnantPop, shortagePop, notifyPop } = useKpiPopovers({ data, currentKpiMetrics, now });
 
-  /* ── useMemo: 热力图 O(1) 查找 Map ── */
   const heatmapCellMap = useMemo(() => {
     const m = new Map<string, (typeof heatmap.cells)[number]>();
     (heatmap?.cells || []).forEach(c => m.set(`${c.process}|${c.factory}`, c));
     return m;
   }, [heatmap?.cells]);
 
-  /* ── useMemo: 工厂产能汇总 ── */
   const factoryCapTotals = useMemo(() => ({
     totalOrders: (factoryCapacity || []).reduce((s: number, f: any) => s + f.totalOrders, 0),
     totalQuantity: (factoryCapacity || []).reduce((s: number, f: any) => s + f.totalQuantity, 0),
@@ -148,11 +123,7 @@ const IntelligenceCenter: React.FC = () => {
     <>
       <div className={`cockpit-root${isFullscreen ? ' cockpit-fullscreen' : ''}`} ref={rootRef}>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   顶栏  标题 · 时钟 · 系统状态 · 刷新      ║
-            ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-header">
-          {/* 左：LIVE + 标题 */}
           <div className="cockpit-header-left">
             <LiveDot size={10} />
             <span className="cockpit-badge-live">LIVE</span>
@@ -161,13 +132,11 @@ const IntelligenceCenter: React.FC = () => {
             <span className="cockpit-subtitle">全链路实时指挥 · AI 决策引擎</span>
           </div>
 
-          {/* 中：实时时钟 */}
           <div className="cockpit-clock">
             <span className="cockpit-time">{timeStr}</span>
             <span className="cockpit-date">{dateStr}</span>
           </div>
 
-          {/* 右：告警数 + 系统状态 + 刷新 */}
           <div className="cockpit-header-right">
             {totalWarn > 0
               ? <span className="cockpit-alert-badge">
@@ -203,12 +172,10 @@ const IntelligenceCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* 刷新倒计时进度条：从 100% 线性消耗到 0%，reload 后复位 */}
         <div className="cockpit-refresh-bar">
           <div className="cockpit-refresh-bar-fill" style={{ width: `${(countdown / 30) * 100}%` }} />
         </div>
 
-        {/* 紧急预警跑马灯：逾期 & 高风险订单滚动提示（有数据时才渲染） */}
         {tickerItems.length > 0 && (
           <div className="cockpit-ticker">
             <span className="cockpit-ticker-label"> 紧急预警</span>
@@ -232,27 +199,17 @@ const IntelligenceCenter: React.FC = () => {
         )}
 
         <KpiCardRow kpiFlash={kpiFlash} collapsedPanels={collapsedPanels} toggleCollapse={toggleCollapse} rootRef={rootRef} scanPop={scanPop} factoryPop={factoryPop} healthPop={healthPop} stagnantPop={stagnantPop} shortagePop={shortagePop} notifyPop={notifyPop} currentKpiMetrics={currentKpiMetrics} pulse={pulse} health={health} healing={healing} shortage={shortage} notify={notify} kpiDelta={kpiDelta} formatDeltaText={formatDeltaText} renderDeltaBadge={renderDeltaBadge} getKpiTrend={getKpiTrend} />
-        {/* ╔══════════════════════════════════════════════╗
-            ║   补充 KPI：生产中订单数 + 工厂全景         ║
-            ╚══════════════════════════════════════════════╝ */}
+
         <div className="cockpit-grid-2">
-
           <ProductionOrdersCard currentKpiMetrics={currentKpiMetrics} orderStats={orderStats} todayBrief={todayBrief} overdueRisk={overdueRisk} kpiDelta={kpiDelta} collapsedPanels={collapsedPanels} toggleCollapse={toggleCollapse} renderDeltaBadge={renderDeltaBadge} navigate={navigate} />
-
           <FactoryOverviewCard currentKpiMetrics={currentKpiMetrics} pulse={pulse} factoryCapacity={factoryCapacity} factoryCapMap={factoryCapMap} factoryCapTotals={factoryCapTotals} kpiDelta={kpiDelta} collapsedPanels={collapsedPanels} toggleCollapse={toggleCollapse} renderDeltaBadge={renderDeltaBadge} />
-
         </div>
 
         <div style={{ padding: '0 20px 10px' }}>
           <StageCapsulePanel orders={orders} />
         </div>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   第二行：实时生产脉搏(左) + 人效实时动态(右) ║
-            ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
-
-          {/* 实时生产脉搏 */}
           <div className="c-card c-scanline-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('pulse')}>
               <LiveDot />
@@ -267,7 +224,6 @@ const IntelligenceCenter: React.FC = () => {
                 {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
               </div>
             </div>
-            {/* 各工厂活跃状态 — 动态展示哪个工厂在扫码 */}
             {(pulse?.factoryActivity?.length ?? 0) > 0 ? (
               <div className="c-factory-activity-list">
                 {pulse!.factoryActivity.map(f => {
@@ -275,9 +231,9 @@ const IntelligenceCenter: React.FC = () => {
                   const timeStr = mins < 1 ? '刚刚' : mins < 60 ? `${mins}分钟前` : `${Math.floor(mins/60)}h${mins%60}m前`;
                   return (
                     <div key={f.factoryName} className={`c-factory-activity-row${f.active ? '' : ' inactive'}`}>
-                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e8686a' }} />
+                      <span className="c-fa-dot" style={{ background: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e03030' }} />
                       <span className="c-fa-name">{f.factoryName}</span>
-                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e8686a' }}>{timeStr}</span>
+                      <span className="c-fa-time" style={{ color: f.active ? '#39ff14' : mins < 90 ? '#f7a600' : '#e03030' }}>{timeStr}</span>
                       <span className="c-fa-qty">{f.todayQty.toLocaleString()}<em>件</em></span>
                     </div>
                   );
@@ -289,7 +245,6 @@ const IntelligenceCenter: React.FC = () => {
                 今日暂无扫码记录
               </div>
             )}
-            {/* WebSocket 驱动的实时扫码事件流，有扫码时自动出现 */}
             <LiveScanFeed
               minMinutesSinceLastScan={minFactorySilentMinutes}
               currentScanRatePerHour={Number(pulse?.scanRatePerHour) || 0}
@@ -297,7 +252,6 @@ const IntelligenceCenter: React.FC = () => {
             </div>
           </div>
 
-          {/* 人效实时动态 */}
           <div className="c-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('workers')}>
               <LiveDot size={7} />
@@ -324,7 +278,7 @@ const IntelligenceCenter: React.FC = () => {
                         const grd = w.overallScore >= 85 ? { g: 'A', c: '#39ff14' }
                           : w.overallScore >= 70 ? { g: 'B', c: '#00e5ff' }
                           : w.overallScore >= 55 ? { g: 'C', c: '#f7a600' }
-                          : { g: 'D', c: '#e8686a' };
+                          : { g: 'D', c: '#e03030' };
                         return (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 10 }}>{grd.g}</b>
@@ -339,22 +293,14 @@ const IntelligenceCenter: React.FC = () => {
             </table>
             </div>
           </div>
-
         </div>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   第三行：活跃订单实时滚动 + 工厂工序卡点 + 逾期&延期风险订单 ║
-            ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-3">
-
-          {/* 活跃订单实时滚动面板（左侧） */}
           <OrderScrollPanel
             orders={orders}
             collapsed={collapsedPanels['activeOrders']}
             onToggle={() => toggleCollapse('activeOrders')}
           />
-
-          {/* 工厂卡点分析 */}
           <div className="c-card c-breathe-cyan">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('bottleneck')}>
               <LiveDot size={7} color="#00e5ff" />
@@ -370,17 +316,10 @@ const IntelligenceCenter: React.FC = () => {
             </AutoScrollBox>
             </div>
           </div>
-
           <OverdueRiskCard overdueRisk={overdueRisk} collapsedPanels={collapsedPanels} toggleCollapse={toggleCollapse} />
-
         </div>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   监控：面料缺口 + 缺陷热力图                ║
-            ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-5-7">
-
-          {/* 面料缺口预警 */}
           <div className="c-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('shortage')}>
               <LiveDot color={(shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14'} />
@@ -398,7 +337,7 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-shortage-qty">缺&nbsp;{item.shortageQuantity}&nbsp;{item.unit}</span>
                   <span style={{
                     marginLeft: 'auto', fontSize: 10, flexShrink: 0, fontWeight: 600,
-                    color: item.riskLevel === 'HIGH' ? '#e8686a' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
+                    color: item.riskLevel === 'HIGH' ? '#e03030' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
                   }}>
                     {item.riskLevel === 'HIGH' ? ' 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
                   </span>
@@ -414,10 +353,9 @@ const IntelligenceCenter: React.FC = () => {
             </div>
           </div>
 
-          {/* 缺陷热力图 */}
           <div className="c-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('heatmap')}>
-              <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? '#e8686a' : '#39ff14'} />
+              <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? '#e03030' : '#39ff14'} />
               质量缺陷热力图
               {heatmap && (
                 <span className="c-card-badge red-badge">
@@ -430,8 +368,8 @@ const IntelligenceCenter: React.FC = () => {
             {heatmap?.cells?.length ? (
               <>
                 <div className="c-heatmap-meta">
-                  风险工序：<b style={{ color: '#e8686a' }}>{heatmap.worstProcess}</b>
-                  &nbsp;·&nbsp;风险工厂：<b style={{ color: '#e8686a' }}>{heatmap.worstFactory}</b>
+                  风险工序：<b style={{ color: '#e03030' }}>{heatmap.worstProcess}</b>
+                  &nbsp;·&nbsp;风险工厂：<b style={{ color: '#e03030' }}>{heatmap.worstFactory}</b>
                 </div>
                 <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${(heatmap.factories || []).length}, 1fr)` }}>
                   <div />
@@ -448,7 +386,7 @@ const IntelligenceCenter: React.FC = () => {
                         const alpha = cell ? Math.min(cell.intensity, 0.9) : 0;
                         return (
                           <div key={fac} className="c-heat-cell"
-                            style={{ background: `rgba(255,65,54,${alpha})`, color: alpha > 0.45 ? '#fff' : '#aaa' }}>
+                            style={{ background: `rgba(224,48,48,${alpha})`, color: alpha > 0.45 ? '#fff' : '#aaa' }}>
                             {cell?.defectCount || ''}
                           </div>
                         );
@@ -460,15 +398,9 @@ const IntelligenceCenter: React.FC = () => {
             ) : <div className="c-empty">暂无缺陷数据</div>}
             </div>
           </div>
-
         </div>
 
-        {/* ╔══════════════════════════════════════════════╗
-            ║   系统异常自愈诊断(左) + 工厂绩效排行榜(右)  ║
-            ╚══════════════════════════════════════════════╝ */}
         <div className="cockpit-grid-2">
-
-          {/* 异常自愈诊断 */}
           <div className="c-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('healing')}>
               <LiveDot size={7} color={healing && healing.healthScore < 80 ? '#d48806' : '#73d13d'} />
@@ -502,7 +434,6 @@ const IntelligenceCenter: React.FC = () => {
                 </div>
               ))
             ) : <div className="c-empty">暂无诊断数据</div>}
-            {/* 一键修复按钮 */}
             {healing && healing.needManual > 0 && (
               <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <button
@@ -526,7 +457,6 @@ const IntelligenceCenter: React.FC = () => {
             </div>
           </div>
 
-          {/* 工厂绩效排行 */}
           <div className="c-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('ranking')}>
               <LiveDot size={7} color="#ffd700" />
@@ -551,129 +481,37 @@ const IntelligenceCenter: React.FC = () => {
             ) : <div className="c-empty">暂无排行数据</div>}
             </div>
           </div>
-
         </div>
 
-        <AgentMeetingCard
-          meetingTopic={meetingTopic}
-          setMeetingTopic={setMeetingTopic}
-          holdingMeeting={holdingMeeting}
-          holdMeeting={holdMeeting}
-          meetingResult={meetingResult}
-          meetingHistory={meetingHistory}
-          collapsedPanels={collapsedPanels}
-          toggleCollapse={toggleCollapse}
-        />
-
-        <BrainActionGrid
-          brain={brain}
-          actionCenter={actionCenter}
-          collapsedPanels={collapsedPanels}
-          toggleCollapse={toggleCollapse}
-          executingTask={executingTask}
-          executeTaskResult={executeTaskResult}
-          handleExecuteTask={handleExecuteTask}
-          navigate={navigate}
-        />
-
-        {/* ╔════════════════════════════════════════════╗
-            ║ 底部：利润/完工双引擎(左) + AI智能顾问(右)  ║
-            ╚════════════════════════════════════════════╝ */}
-        <div style={{ padding: '0 24px 4px' }}>
-          <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('profit')}>
-            <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 600 }}> 订单利润估算 &amp; 完工预测</span>
-            <span className="c-card-badge purple-badge" style={{ marginLeft: 8 }}>AI 双引擎分析</span>
-            <CollapseChevron panelKey="profit" collapsed={!!collapsedPanels['profit']} />
-          </div>
-        </div>
-        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['profit'] ? 0 : 2000, transition: 'max-height 0.3s ease' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0, padding: '0 24px 28px', alignItems: 'stretch' }}>
-          {/* 左：利润估算&完工预测 */}
-          <div style={{ paddingRight: 6 }}>
-            <ProfitDeliveryPanel />
-          </div>
-
-        </div>
-        </div>
-
-        {/* 多代理图分析 + A/B测试统计：仅超管可见（平台运营工具，非租户业务数据） */}
         {isSuperAdmin && (
           <>
-        {/* ╔════════════════════════════════════════════════╗
-            ║  Hybrid Graph MAS v4.0 — 多代理自治分析      ║
-            ╚════════════════════════════════════════════════╝ */}
-        <div style={{ padding: '0 24px 4px' }}>
-          <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('graphmas')}>
-            <span style={{ fontSize: 13, color: '#c084fc', fontWeight: 600 }}> 多代理图分析（Graph MAS）</span>
-            <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(192,132,252,0.15)', color: '#c084fc' }}>
-              Plan · Act · Reflect v4.0
-            </span>
-            <CollapseChevron panelKey="graphmas" collapsed={!!collapsedPanels['graphmas']} />
-          </div>
-        </div>
-        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['graphmas'] ? 0 : 600, transition: 'max-height 0.3s ease' }}>
-          <div style={{ padding: '0 24px 20px' }}>
-            <AgentGraphPanel />
-          </div>
-        </div>
-
-        {/* ╔════════════════════════════════════════════════╗
-            ║ A/B 测试统计（模型/场景对比）                  ║
-            ╚════════════════════════════════════════════════╝ */}
-        <div style={{ padding: '0 24px 4px' }}>
-          <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('abtest')}>
-            <span style={{ fontSize: 13, color: '#38bdf8', fontWeight: 600 }}> A/B 测试统计</span>
-            <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
-              Scene Comparison
-            </span>
-            <CollapseChevron panelKey="abtest" collapsed={!!collapsedPanels['abtest']} />
-          </div>
-        </div>
-        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['abtest'] ? 0 : 400, transition: 'max-height 0.3s ease' }}>
-          <div style={{ padding: '0 24px 20px' }}>
-            <ABTestStatsPanel />
-          </div>
-        </div>
-          </>
-        )}
-
-        {/* ╔════════════════════════════════════════════╝
-            ║ 推演仿真（WhatIf）— 所有租户用户可见        ║
-            ╚════════════════════════════════════════════╝ */}
-        <div style={{ padding: '0 24px 4px' }}>
-          <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('whatif')}>
-            <span style={{ fontSize: 13, color: '#fb923c', fontWeight: 600 }}> 推演仿真（What-If）</span>
-            <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(251,146,60,0.15)', color: '#fb923c' }}>场景推演</span>
-            <CollapseChevron panelKey="whatif" collapsed={!!collapsedPanels['whatif']} />
-          </div>
-        </div>
-        <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['whatif'] ? 0 : 800, transition: 'max-height 0.3s ease' }}>
-          <div style={{ padding: '0 24px 20px' }}>
-            <WhatIfSimPanel />
-          </div>
-        </div>
-
-        {/* ╔════════════════════════════════════════════╝
-            ║ 月度经营汇总（仅超管可见）                  ║
-            ╚════════════════════════════════════════════╝ */}
-        {(isSuperAdmin || isTenantOwner || (user?.permissions ?? []).includes('INTELLIGENCE_MONTHLY_VIEW')) && (
-          <>
             <div style={{ padding: '0 24px 4px' }}>
-              <div
-                className="c-card-title"
-                style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }}
-                onClick={() => toggleCollapse('monthly')}
-              >
-                <span style={{ fontSize: 13, color: '#34d399', fontWeight: 600 }}> 月度经营汇总</span>
-                <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
-                  全维度报告
+              <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('graphmas')}>
+                <span style={{ fontSize: 13, color: '#c084fc', fontWeight: 600 }}> 多代理图分析（Graph MAS）</span>
+                <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(192,132,252,0.15)', color: '#c084fc' }}>
+                  Plan · Act · Reflect v4.0
                 </span>
-                <CollapseChevron panelKey="monthly" collapsed={!!collapsedPanels['monthly']} />
+                <CollapseChevron panelKey="graphmas" collapsed={!!collapsedPanels['graphmas']} />
               </div>
             </div>
-            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['monthly'] ? 0 : 3000, transition: 'max-height 0.4s ease' }}>
-              <div style={{ padding: '0 24px 28px' }}>
-                <MonthlyBizSummary />
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['graphmas'] ? 0 : 600, transition: 'max-height 0.3s ease' }}>
+              <div style={{ padding: '0 24px 20px' }}>
+                <AgentGraphPanel />
+              </div>
+            </div>
+
+            <div style={{ padding: '0 24px 4px' }}>
+              <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('abtest')}>
+                <span style={{ fontSize: 13, color: '#38bdf8', fontWeight: 600 }}> A/B 测试统计</span>
+                <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
+                  Scene Comparison
+                </span>
+                <CollapseChevron panelKey="abtest" collapsed={!!collapsedPanels['abtest']} />
+              </div>
+            </div>
+            <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['abtest'] ? 0 : 400, transition: 'max-height 0.3s ease' }}>
+              <div style={{ padding: '0 24px 20px' }}>
+                <ABTestStatsPanel />
               </div>
             </div>
           </>
@@ -681,7 +519,6 @@ const IntelligenceCenter: React.FC = () => {
 
       </div>
 
-      {/* ⌘K 全局搜索弹窗 */}
       <GlobalSearchModal open={showSearch} onClose={() => setShowSearch(false)} />
 
     </>

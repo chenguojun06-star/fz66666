@@ -25,7 +25,9 @@ public class AiAgentToolAdvisor {
 
     static {
         INTENT_TOOL_MAP.put("query_progress", compileAll(
-                "进度", "跟进", "查询进度", "做到哪了", "完成多少", "扫码记录", "工序进度"));
+                "进度", "跟进", "查询进度", "做到哪了", "完成多少", "扫码记录", "工序进度",
+                "出货", "多久", "什么时候", "菲号进度", "几个人", "几个工人", "还要多久",
+                "能出货吗", "预计完成", "交期", "生产进度", "订单进度", "做到哪"));
         INTENT_TOOL_MAP.put("query_payroll", compileAll(
                 "工资", "计件", "薪资", "结算金额", "我的工资", "多少钱"));
         INTENT_TOOL_MAP.put("query_stock", compileAll(
@@ -89,7 +91,7 @@ public class AiAgentToolAdvisor {
             Map.entry("action_picking", List.of("tool_material_picking", "tool_material_calculation", "tool_think")),
             Map.entry("analysis_report", List.of("tool_smart_report", "tool_management_dashboard", "tool_think")),
             Map.entry("analysis_deep", List.of("tool_deep_analysis", "tool_root_cause_analysis", "tool_pattern_discovery", "tool_think")),
-            Map.entry("analysis_whatif", List.of("tool_whatif", "tool_scenario_simulator", "tool_simulate_new_order", "tool_think")),
+            Map.entry("analysis_whatif", List.of("tool_whatif", "tool_simulate_new_order", "tool_think")),
             Map.entry("analysis_overview", List.of("tool_system_overview", "tool_management_dashboard", "tool_think")),
             Map.entry("knowledge_search", List.of("tool_knowledge_search", "tool_think")),
             Map.entry("action_create_order", List.of("tool_create_production_order", "tool_query_style_info", "tool_think")),

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -26,7 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -252,9 +250,10 @@ public class TemplateQueryHelper {
         }
         Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
 
+        TenantAssert.assertTenantContext();
         Long tid = UserContext.tenantId();
         List<StyleInfo> styleInfos = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
-                .eq(tid != null, StyleInfo::getTenantId, tid)
+                .eq(StyleInfo::getTenantId, tid)
                 .like(StringUtils.hasText(keywordText), StyleInfo::getStyleNo, keywordText)
                 .orderByDesc(StyleInfo::getUpdateTime)
                 .orderByDesc(StyleInfo::getCreateTime)

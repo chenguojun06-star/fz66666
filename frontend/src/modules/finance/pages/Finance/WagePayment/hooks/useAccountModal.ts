@@ -30,7 +30,9 @@ export function useAccountModal({ msg, reportSmartError, showSmartErrorNotice, s
 
   useEffect(() => {
     if (!accountDetailOpen) {
-      accountForm.resetFields();
+      if (accountModalOpen) {
+        accountForm.resetFields();
+      }
       setQrFileList([]);
       return;
     }

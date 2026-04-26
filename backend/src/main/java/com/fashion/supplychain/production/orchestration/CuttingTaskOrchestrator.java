@@ -242,6 +242,7 @@ public class CuttingTaskOrchestrator {
         String factoryId = getTrimmedText(body, "factoryId");
         String factoryName = getTrimmedText(body, "factoryName");
         String orgUnitId = getTrimmedText(body, "orgUnitId");
+        String styleImageUrl = getTrimmedText(body, "styleImageUrl");
         LocalDateTime requestedOrderDate = parseDate(body, "orderDate", false);
         LocalDateTime requestedDeliveryDate = parseDate(body, "deliveryDate", true);
         List<Map<String, Object>> requestedOrderLines = resolveRequestedOrderLines(body);
@@ -302,6 +303,13 @@ public class CuttingTaskOrchestrator {
         String resolvedStyleName = style != null && StringUtils.hasText(style.getStyleName())
             ? style.getStyleName() : styleNo;
 
+        if (StringUtils.hasText(styleImageUrl) && style != null) {
+            if (!StringUtils.hasText(style.getCover())) {
+                style.setCover(styleImageUrl);
+                styleInfoService.updateById(style);
+            }
+        }
+
         // 生成 CUT 前缀订单号基础（若用户未提供）
         String baseOrderNo = StringUtils.hasText(orderNo)
                 ? orderNo
@@ -310,7 +318,13 @@ public class CuttingTaskOrchestrator {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
 
-        String progressWorkflowJson = buildProgressWorkflowJson(styleNo);
+        String progressWorkflowJson = getTrimmedText(body, "progressWorkflowJson");
+        if (!StringUtils.hasText(progressWorkflowJson)) {
+            progressWorkflowJson = buildProgressWorkflowJson(styleNo);
+        }
+        if (!StringUtils.hasText(progressWorkflowJson)) {
+            progressWorkflowJson = buildCuttingDefaultWorkflowJson();
+        }
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
 
         // ── 创建单一 ProductionOrder，包含所有颜色/尺码 ────────────
@@ -523,12 +537,14 @@ public class CuttingTaskOrchestrator {
             }
 
             Map<String, Object> node = new java.util.LinkedHashMap<>();
-            node.put("name", processName);
 
             String processCode = item.get("id") == null ? null : String.valueOf(item.get("id")).trim();
             if (StringUtils.hasText(processCode)) {
+                node.put("id", processCode);
                 node.put("processCode", processCode);
             }
+
+            node.put("name", processName);
 
             String progressStage = item.get("progressStage") == null ? null : String.valueOf(item.get("progressStage")).trim();
             if (StringUtils.hasText(progressStage)) {
@@ -560,6 +576,32 @@ public class CuttingTaskOrchestrator {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(workflow);
         } catch (Exception ex) {
             log.warn("构建 progressWorkflowJson 失败", ex);
+            return null;
+        }
+    }
+
+    private String buildCuttingDefaultWorkflowJson() {
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        String[][] defaults = {
+            {"01", "裁剪", "裁剪"},
+            {"02", "整件", "车缝"},
+            {"03", "尾部", "尾部"}
+        };
+        for (String[] d : defaults) {
+            Map<String, Object> node = new java.util.LinkedHashMap<>();
+            node.put("id", d[0]);
+            node.put("name", d[1]);
+            node.put("processCode", d[0]);
+            node.put("progressStage", d[2]);
+            node.put("unitPrice", BigDecimal.ZERO);
+            nodes.add(node);
+        }
+        Map<String, Object> workflow = new java.util.LinkedHashMap<>();
+        workflow.put("nodes", nodes);
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(workflow);
+        } catch (Exception ex) {
+            log.warn("构建裁剪默认工序模板失败", ex);
             return null;
         }
     }

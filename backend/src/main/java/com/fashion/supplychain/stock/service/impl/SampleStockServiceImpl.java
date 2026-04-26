@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.service.PatternProductionService;
@@ -204,11 +205,12 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void loan(SampleLoan loan) {
+        TenantAssert.assertTenantContext();
         Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
 
         SampleStock stock = this.lambdaQuery()
                 .eq(SampleStock::getId, loan.getSampleStockId())
-                .eq(currentTenantId != null, SampleStock::getTenantId, currentTenantId)
+                .eq(SampleStock::getTenantId, currentTenantId)
                 .one();
         if (stock == null) {
             throw new IllegalArgumentException("样衣库存不存在");
@@ -267,10 +269,11 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void returnSample(String loanId, Integer returnQuantity, String remark) {
+        TenantAssert.assertTenantContext();
         Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
         SampleLoan loan = sampleLoanMapper.selectOne(new LambdaQueryWrapper<SampleLoan>()
                 .eq(SampleLoan::getId, loanId)
-                .eq(currentTenantId != null, SampleLoan::getTenantId, currentTenantId));
+                .eq(SampleLoan::getTenantId, currentTenantId));
         if (loan == null) {
             throw new IllegalArgumentException("借出记录不存在");
         }
@@ -304,7 +307,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
 
         SampleStock returnStock = this.lambdaQuery()
                 .eq(SampleStock::getId, loan.getSampleStockId())
-                .eq(currentTenantId != null, SampleStock::getTenantId, currentTenantId)
+                .eq(SampleStock::getTenantId, currentTenantId)
                 .one();
         if (returnStock != null) {
             PatternProduction returnPattern = findPatternForStock(returnStock);

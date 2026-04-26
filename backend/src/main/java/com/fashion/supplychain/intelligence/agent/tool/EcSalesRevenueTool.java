@@ -93,6 +93,7 @@ public class EcSalesRevenueTool extends AbstractAgentTool {
         Long tenantId = UserContext.tenantId();
         List<EcSalesRevenue> all = ecSalesRevenueService.lambdaQuery()
                 .eq(EcSalesRevenue::getTenantId, tenantId)
+                .last("LIMIT 5000")
                 .list();
         long total = all.size();
         BigDecimal totalAmount = all.stream().map(EcSalesRevenue::getTotalAmount).filter(a -> a != null).reduce(BigDecimal.ZERO, BigDecimal::add);

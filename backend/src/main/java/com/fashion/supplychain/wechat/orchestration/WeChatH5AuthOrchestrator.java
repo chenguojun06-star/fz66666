@@ -4,7 +4,6 @@ import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.UserService;
-import com.fashion.supplychain.wechat.client.WeChatMiniProgramClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

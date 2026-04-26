@@ -57,7 +57,23 @@ export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
  */
 export function autoCollectDictEntry(dictType: string, label: string): void {
   if (!dictType || !label || !label.trim()) return;
+  const trimmed = label.trim();
+  if (!isValidDictLabel(trimmed)) return;
   api
-    .post('/system/dict/auto-collect', null, { params: { dictType, label: label.trim() } })
+    .post('/system/dict/auto-collect', null, { params: { dictType, label: trimmed } })
     .catch(() => { /* 静默失败，不影响用户操作 */ });
+}
+
+function isValidDictLabel(label: string): boolean {
+  if (label.length > 50 || label.length < 1) return false;
+  let validCount = 0;
+  for (const c of label) {
+    const code = c.charCodeAt(0);
+    if ((code >= 0x4e00 && code <= 0x9fa5) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+      validCount++;
+    } else if (!/[-_/\s()（）#.]/.test(c)) {
+      return false;
+    }
+  }
+  return validCount > 0;
 }

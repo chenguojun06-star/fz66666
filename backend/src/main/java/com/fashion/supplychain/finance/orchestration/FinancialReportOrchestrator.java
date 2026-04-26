@@ -1,8 +1,9 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.crm.entity.Receivable;
+import com.fashion.supplychain.crm.service.ReceivableService;
 import com.fashion.supplychain.finance.entity.*;
 import com.fashion.supplychain.finance.service.*;
 import lombok.extern.slf4j.Slf4j;
@@ -240,5 +241,96 @@ public class FinancialReportOrchestrator {
         return list.stream()
                 .map(i -> i.getTaxAmount() != null ? i.getTaxAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Autowired
+    private ReceivableService receivableService;
+
+    public Map<String, Object> generateAgingAnalysis(String type) {
+        assertNotFactoryAccount();
+        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
+        if (tenantId == null) {
+            Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("reportType", "AGING_ANALYSIS");
+            empty.put("type", type);
+            empty.put("asOfDate", LocalDate.now().toString());
+            empty.put("buckets", Collections.emptyList());
+            empty.put("totalAmount", BigDecimal.ZERO);
+            return empty;
+        }
+        LocalDate today = LocalDate.now();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("reportType", "AGING_ANALYSIS");
+        result.put("type", type);
+        result.put("asOfDate", today.toString());
+
+        int[][] bucketRanges = {{0, 30}, {31, 60}, {61, 90}, {91, 180}, {181, 99999}};
+        String[] bucketLabels = {"0-30天", "31-60天", "61-90天", "91-180天", "180天以上"};
+
+        List<Map<String, Object>> agingBuckets = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        if ("RECEIVABLE".equals(type)) {
+            List<Receivable> receivables = receivableService.list(new LambdaQueryWrapper<Receivable>()
+                    .eq(Receivable::getDeleteFlag, 0)
+                    .ne(Receivable::getStatus, "PAID")
+                    .eq(Receivable::getTenantId, tenantId)
+                    .last("LIMIT 5000"));
+
+            for (int i = 0; i < bucketRanges.length; i++) {
+                BigDecimal bucketAmount = BigDecimal.ZERO;
+                int bucketCount = 0;
+                for (Receivable r : receivables) {
+                    if (r.getDueDate() == null) continue;
+                    long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(r.getDueDate(), today);
+                    if (daysOverdue < 0) continue;
+                    if (daysOverdue >= bucketRanges[i][0] && daysOverdue <= bucketRanges[i][1]) {
+                        BigDecimal remaining = (r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
+                                .subtract(r.getReceivedAmount() != null ? r.getReceivedAmount() : BigDecimal.ZERO);
+                        bucketAmount = bucketAmount.add(remaining);
+                        bucketCount++;
+                    }
+                }
+                totalAmount = totalAmount.add(bucketAmount);
+                Map<String, Object> bucketMap = new LinkedHashMap<>();
+                bucketMap.put("range", bucketLabels[i]);
+                bucketMap.put("amount", bucketAmount);
+                bucketMap.put("count", bucketCount);
+                agingBuckets.add(bucketMap);
+            }
+        } else {
+            List<Payable> payables = payableService.list(new LambdaQueryWrapper<Payable>()
+                    .eq(Payable::getDeleteFlag, 0)
+                    .ne(Payable::getStatus, "PAID")
+                    .eq(Payable::getTenantId, tenantId)
+                    .last("LIMIT 5000"));
+
+            for (int i = 0; i < bucketRanges.length; i++) {
+                BigDecimal bucketAmount = BigDecimal.ZERO;
+                int bucketCount = 0;
+                for (Payable p : payables) {
+                    if (p.getDueDate() == null) continue;
+                    long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(p.getDueDate(), today);
+                    if (daysOverdue < 0) continue;
+                    if (daysOverdue >= bucketRanges[i][0] && daysOverdue <= bucketRanges[i][1]) {
+                        BigDecimal remaining = (p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                                .subtract(p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO);
+                        bucketAmount = bucketAmount.add(remaining);
+                        bucketCount++;
+                    }
+                }
+                totalAmount = totalAmount.add(bucketAmount);
+                Map<String, Object> bucketMap = new LinkedHashMap<>();
+                bucketMap.put("range", bucketLabels[i]);
+                bucketMap.put("amount", bucketAmount);
+                bucketMap.put("count", bucketCount);
+                agingBuckets.add(bucketMap);
+            }
+        }
+
+        result.put("buckets", agingBuckets);
+        result.put("totalAmount", totalAmount);
+        return result;
     }
 }

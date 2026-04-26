@@ -117,6 +117,7 @@ public class InventoryCheckTool extends AbstractAgentTool {
         List<InventoryCheck> all = inventoryCheckService.lambdaQuery()
                 .eq(InventoryCheck::getTenantId, tenantId)
                 .eq(InventoryCheck::getDeleteFlag, 0)
+                .last("LIMIT 5000")
                 .list();
         long total = all.size();
         long confirmed = all.stream().filter(c -> "confirmed".equals(c.getStatus())).count();

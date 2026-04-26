@@ -215,7 +215,7 @@ export const useProductWarehousing = () => {
     }
     try {
       const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
-        params: { page: 1, pageSize: 10000, orderNo: on },
+        params: { page: 1, pageSize: 500, orderNo: on },
       });
       if (res.code === 200) {
         setBundles((res.data?.records || []) as CuttingBundleRow[]);
@@ -288,7 +288,7 @@ export const useProductWarehousing = () => {
       const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number }; message?: string }>('/production/warehousing/list', {
         params: {
           page: 1,
-          pageSize: 10000,
+          pageSize: 500,
           ...(whNo ? { warehousingNo: whNo } : {}),
           ...(!whNo && oid ? { orderId: oid } : {}),
         },

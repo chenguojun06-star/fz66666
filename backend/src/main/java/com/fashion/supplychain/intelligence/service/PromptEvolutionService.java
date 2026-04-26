@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.service;
 
-import com.fashion.supplychain.intelligence.service.SelfEvolutionEngine.EvolutionProposal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;

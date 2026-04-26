@@ -1,9 +1,9 @@
 SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_production_order' AND COLUMN_NAME='customer_id')=0,
-    'ALTER TABLE `t_production_order` ADD COLUMN `customer_id` VARCHAR(64) NULL COMMENT \'CRM客户ID\'',
+    'ALTER TABLE `t_production_order` ADD COLUMN `customer_id` VARCHAR(64) NULL',
     'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_production_order' AND COLUMN_NAME='customer_name')=0,
-    'ALTER TABLE `t_production_order` ADD COLUMN `customer_name` VARCHAR(100) NULL COMMENT \'CRM客户名称快照\'',
+    'ALTER TABLE `t_production_order` ADD COLUMN `customer_name` VARCHAR(100) NULL',
     'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

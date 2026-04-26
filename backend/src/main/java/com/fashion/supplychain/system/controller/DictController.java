@@ -66,4 +66,11 @@ public class DictController {
         dictOrchestrator.autoCollect(dictType, label);
         return Result.success(null);
     }
+
+    @PostMapping("/cleanup-invalid")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<?> cleanupInvalid() {
+        int count = dictOrchestrator.cleanupInvalidLabels();
+        return Result.success("清理完成，共删除 " + count + " 条无效字典");
+    }
 }
