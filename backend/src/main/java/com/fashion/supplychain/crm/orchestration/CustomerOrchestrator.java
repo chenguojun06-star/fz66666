@@ -107,31 +107,21 @@ public class CustomerOrchestrator {
 
     public Map<String, Object> getStats() {
         Long tenantId = currentTenantId();
-        LambdaQueryWrapper<Customer> base = new LambdaQueryWrapper<Customer>()
+        List<Customer> all = customerService.lambdaQuery()
                 .eq(Customer::getDeleteFlag, 0)
-                .eq(Customer::getTenantId, tenantId);
+                .eq(Customer::getTenantId, tenantId)
+                .select(Customer::getCustomerLevel, Customer::getStatus, Customer::getCreateTime)
+                .last("LIMIT 5000")
+                .list();
 
-        long total = customerService.count(base);
-
+        long total = all.size();
         LocalDateTime startOfMonth = LocalDateTime.now()
                 .withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
-        long newThisMonth = customerService.count(
-                new LambdaQueryWrapper<Customer>()
-                        .eq(Customer::getDeleteFlag, 0)
-                        .eq(Customer::getTenantId, tenantId)
-                        .ge(Customer::getCreateTime, startOfMonth));
-
-        long vip = customerService.count(
-                new LambdaQueryWrapper<Customer>()
-                        .eq(Customer::getDeleteFlag, 0)
-                        .eq(Customer::getCustomerLevel, "VIP")
-                        .eq(Customer::getTenantId, tenantId));
-
-        long activeCount = customerService.count(
-                new LambdaQueryWrapper<Customer>()
-                        .eq(Customer::getDeleteFlag, 0)
-                        .eq(Customer::getStatus, "ACTIVE")
-                        .eq(Customer::getTenantId, tenantId));
+        long newThisMonth = all.stream()
+                .filter(c -> c.getCreateTime() != null && c.getCreateTime().isAfter(startOfMonth))
+                .count();
+        long vip = all.stream().filter(c -> "VIP".equals(c.getCustomerLevel())).count();
+        long activeCount = all.stream().filter(c -> "ACTIVE".equals(c.getStatus())).count();
 
         long linkedOrderCount = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()

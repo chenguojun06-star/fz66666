@@ -90,21 +90,7 @@ const CustomerFilterSelect: React.FC<{
   value: string;
   onChange: (value: string) => void;
 }> = ({ value, onChange }) => {
-  const [customers, setCustomers] = useState<{ id: string; companyName: string }[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const resp = await customerApi.list({ pageSize: 500, status: 'ACTIVE' });
-        if (!cancelled && resp.data?.records) {
-          setCustomers(resp.data.records.map((c: any) => ({ id: c.id, companyName: c.companyName })));
-        }
-      } catch (_e) {
-        console.warn('[CustomerFilterSelect] 加载客户列表失败:', _e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const { customers } = useCustomerOptions();
   return (
     <Select
       value={value || ''}
