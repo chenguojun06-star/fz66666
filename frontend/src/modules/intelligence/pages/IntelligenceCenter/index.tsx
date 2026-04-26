@@ -48,6 +48,8 @@ const IntelligenceCenter: React.FC = () => {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
+  const nowRef   = useRef(new Date());
+  const countdownRef = useRef(30);
 
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
@@ -86,8 +88,17 @@ const IntelligenceCenter: React.FC = () => {
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
-      setNow(new Date());
-      setCountdown(c => { if (c <= 1) { reload(); return 30; } return c - 1; });
+      nowRef.current = new Date();
+      countdownRef.current -= 1;
+      if (countdownRef.current <= 0) {
+        reload();
+        countdownRef.current = 30;
+        setNow(new Date());
+        setCountdown(30);
+      } else if (countdownRef.current % 5 === 0) {
+        setNow(new Date());
+      }
+      setCountdown(countdownRef.current);
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [reload]);

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Col, Descriptions, Form, Input, Modal, Progress, Row, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import {
   ArrowRightOutlined, CheckCircleOutlined, DollarOutlined,
   LinkOutlined, LockOutlined, PlusOutlined,
@@ -225,6 +226,7 @@ const CustomerManagement: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 300);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: readPageSize(20) });
   const [stats, setStats] = useState({ total: 0, activeCount: 0, newThisMonth: 0, vip: 0 });
@@ -238,7 +240,7 @@ const CustomerManagement: React.FC = () => {
   const [drawerReceivableLoading, setDrawerReceivableLoading] = useState(false);
   const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
 
-  const fetchList = useCallback(async (page = pagination.current, kw = keyword, st = statusFilter) => {
+  const fetchList = useCallback(async (page = pagination.current, kw = debouncedKeyword, st = statusFilter) => {
     setLoading(true);
     try {
       const res: ApiResult = await customerApi.list({ page, pageSize: pagination.pageSize, keyword: kw, status: st });
@@ -250,7 +252,7 @@ const CustomerManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.pageSize, keyword, statusFilter]);
+  }, [pagination.pageSize, debouncedKeyword, statusFilter]);
 
   const fetchStats = useCallback(async () => {
     try {

@@ -251,7 +251,7 @@ const AgentActivityPanel: React.FC = () => {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setTick((v) => v + 1), 500);
+    const t = setInterval(() => setTick((v) => v + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -263,7 +263,7 @@ const AgentActivityPanel: React.FC = () => {
       setAgents(agentsData as AgentInfo[]);
       setIsLive(agentsData.length > 0);
       setAlerts(alertsData as AlertInfo[]);
-    } catch (e) { console.warn('AgentActivity fetch error:', e); }
+    } catch { /* silent */ }
   }, []);
 
   useEffect(() => { void fetchData(); const t = setInterval(() => void fetchData(), 15000); return () => clearInterval(t); }, [fetchData]);
@@ -272,7 +272,7 @@ const AgentActivityPanel: React.FC = () => {
   const criticalAlerts = useMemo(() => alerts.filter((a) => a.level === 'critical').length, [alerts]);
   const selectedAgent = useMemo(() => agents.find((a) => a.id === selectedId), [agents, selectedId]);
   const [clock, setClock] = useState(dayjs().format('HH:mm:ss'));
-  useEffect(() => { const t = setInterval(() => setClock(dayjs().format('HH:mm:ss')), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => setClock(dayjs().format('HH:mm:ss')), 5000); return () => clearInterval(t); }, []);
 
   const filteredDepts = deptFilter ? [deptFilter] : Object.keys(DEPT_CONFIG);
 

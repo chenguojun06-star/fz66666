@@ -192,12 +192,12 @@ const AppRoutes: React.FC = () => {
       <Routes location={backgroundLocation || location}>
         <Route path="/" element={<RootRedirect />} />
         <Route path={paths.login} element={<LoginGate />} />
-        <Route path="/register" element={<Register />} />
+        <Route path={paths.register} element={<Register />} />
 
         <Route element={<PrivateRoute />}>
           <Route path={paths.dashboard} element={<RouteErrorBoundary pageName="仪表盘"><Suspense fallback={routeFallback}><Dashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.styleInfoList} element={<RouteErrorBoundary pageName="款号列表"><Suspense fallback={routeFallback}><StyleInfoList /></Suspense></RouteErrorBoundary>} />
-          <Route path="/style-info/new" element={<RouteErrorBoundary pageName="新建款号"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.styleInfoNew} element={<RouteErrorBoundary pageName="新建款号"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.styleInfoDetail} element={<RouteErrorBoundary pageName="款号详情"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.productionList} element={<RouteErrorBoundary pageName="生产订单"><Suspense fallback={routeFallback}><ProductionList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cutting} element={<RouteErrorBoundary pageName="裁床管理"><Suspense fallback={routeFallback}><CuttingManagement /></Suspense></RouteErrorBoundary>} />

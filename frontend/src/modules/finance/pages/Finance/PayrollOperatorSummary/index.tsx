@@ -4,6 +4,7 @@ import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 import api, { unwrapApiData } from '@/utils/api';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
@@ -28,6 +29,7 @@ const PayrollOperatorSummary: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = usePersistentState<string>('payroll-operator-active-tab', 'detail');
     const [keyword, setKeyword] = useState('');
+    const debouncedKeyword = useDebouncedValue(keyword, 200);
     const [scanType, setScanType] = useState<string | undefined>(undefined);
     const [includeSettled, setIncludeSettled] = useState(true);
     const [dateRange, setDateRange] = useState<any>(null);
@@ -246,7 +248,7 @@ const PayrollOperatorSummary: React.FC = () => {
 
     // 统一搜索关键词过滤（订单号 / 款号 / 人员 / 工序）
     const filteredRows = useMemo(() => {
-        const kw = keyword.trim().toLowerCase();
+        const kw = debouncedKeyword.trim().toLowerCase();
         if (!kw) return sortedRows;
         return sortedRows.filter((r: any) =>
             String(r.orderNo || '').toLowerCase().includes(kw) ||
@@ -254,7 +256,7 @@ const PayrollOperatorSummary: React.FC = () => {
             String(r.operatorName || '').toLowerCase().includes(kw) ||
             String(r.processName || '').toLowerCase().includes(kw)
         );
-    }, [sortedRows, keyword]);
+    }, [sortedRows, debouncedKeyword]);
 
     // 工资汇总数据：仅聚合已审核的明细行
     const summaryRows = useMemo(() => {

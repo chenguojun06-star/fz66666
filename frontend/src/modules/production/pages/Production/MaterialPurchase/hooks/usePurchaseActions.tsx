@@ -3,7 +3,7 @@
  * ~230 lines (target ≤ 300)
  * NOTE: .tsx 扩展名因 receivePurchaseTask 中包含 JSX (Modal.confirm content)
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Form, Modal } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { ShopOutlined } from '@ant-design/icons';
@@ -111,10 +111,13 @@ export function usePurchaseActions({
   };
 
   // returnConfirm form init
+  const returnConfirmFormRef = useRef(returnConfirmForm);
+  returnConfirmFormRef.current = returnConfirmForm;
+  const returnConfirmDataKey = JSON.stringify(returnConfirmModal.data);
   useEffect(() => {
     if (!returnConfirmModal.visible) { setReturnEvidenceFiles([]); return; }
     const list = (returnConfirmModal.data || []).filter((t) => String(t?.id || '').trim());
-    returnConfirmForm.setFieldsValue({
+    returnConfirmFormRef.current.setFieldsValue({
       items: list.map((t) => ({
         purchaseId: String(t.id),
         materialName: t.materialName,
@@ -123,13 +126,15 @@ export function usePurchaseActions({
         returnQuantity: Number(t.returnQuantity || 0) || (Number(t.arrivedQuantity || 0) || Number(t.purchaseQuantity || 0) || 0),
       })),
     });
-  }, [returnConfirmForm, returnConfirmModal.visible, returnConfirmModal.data]);
+  }, [returnConfirmModal.visible, returnConfirmDataKey]);
 
   // returnReset form init
+  const returnResetFormRef = useRef(returnResetForm);
+  returnResetFormRef.current = returnResetForm;
   useEffect(() => {
     if (!returnResetModal.visible) return;
-    returnResetForm.setFieldsValue({ reason: '' });
-  }, [returnResetForm, returnResetModal.visible]);
+    returnResetFormRef.current.setFieldsValue({ reason: '' });
+  }, [returnResetModal.visible]);
 
   const submitReturnConfirm = async () => {
     try {

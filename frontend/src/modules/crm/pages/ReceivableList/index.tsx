@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import {
   CheckCircleOutlined, DollarOutlined, ExclamationCircleOutlined,
   PlusOutlined, WarningOutlined,
@@ -277,8 +278,10 @@ const ReceivableList: React.FC = () => {
   const [stats, setStats] = useState<ReceivableStats>({ totalPending: 0, totalOverdue: 0, overdueCount: 0, newThisMonth: 0 });
   const [statusFilter, setStatusFilter] = useState('');
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 300);
   const [sourceBizType, setSourceBizType] = useState('');
   const [sourceBizNo, setSourceBizNo] = useState('');
+  const debouncedSourceBizNo = useDebouncedValue(sourceBizNo, 300);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [createOpen, setCreateOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -289,9 +292,9 @@ const ReceivableList: React.FC = () => {
   const fetchList = useCallback(async (
     page = pagination.current,
     st = statusFilter,
-    kw = keyword,
+    kw = debouncedKeyword,
     bizType = sourceBizType,
-    bizNo = sourceBizNo,
+    bizNo = debouncedSourceBizNo,
   ) => {
     setLoading(true);
     try {
@@ -311,7 +314,7 @@ const ReceivableList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [keyword, pagination.pageSize, sourceBizNo, sourceBizType, statusFilter]);
+  }, [debouncedKeyword, pagination.pageSize, debouncedSourceBizNo, sourceBizType, statusFilter]);
 
   const fetchStats = useCallback(async () => {
     try {

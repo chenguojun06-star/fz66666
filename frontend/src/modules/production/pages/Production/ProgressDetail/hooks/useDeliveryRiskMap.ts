@@ -62,13 +62,15 @@ export const useDeliveryRiskMap = (
       .then((res) => {
         const raw = res as ApiResult<{ items?: DeliveryRiskItem[] }>;
         const items = raw?.data?.items ?? (raw as any)?.items ?? [];
-        const map = new Map<string, DeliveryRiskItem>();
-        (items as DeliveryRiskItem[]).forEach((item) => {
-          if (item.orderNo) map.set(item.orderNo, item);
-        });
-        _cachedMap = map;
-        _cacheExpiry = Date.now() + CACHE_TTL_MS;
-        if (mountedRef.current) setRiskMap(map);
+        setTimeout(() => {
+          const map = new Map<string, DeliveryRiskItem>();
+          (items as DeliveryRiskItem[]).forEach((item) => {
+            if (item.orderNo) map.set(item.orderNo, item);
+          });
+          _cachedMap = map;
+          _cacheExpiry = Date.now() + CACHE_TTL_MS;
+          if (mountedRef.current) setRiskMap(map);
+        }, 0);
       })
       .catch(() => {
         // 静默失败，不影响主流程

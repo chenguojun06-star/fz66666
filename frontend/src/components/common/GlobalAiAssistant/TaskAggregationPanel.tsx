@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { CloseOutlined, RightOutlined, MessageOutlined } from '@ant-design/icons';
 import type { PendingTaskDTO } from '@/services/intelligence/intelligenceApi';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import styles from './TaskAggregationPanel.module.css';
 
 interface TaskAggregationPanelProps {
@@ -28,6 +29,7 @@ const MODULE_LABELS: Record<string, string> = {
 const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onClose, onNavigate, onBackToChat }) => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const debouncedSearchKeyword = useDebouncedValue(searchKeyword, 200);
 
   const groupedTasks = useMemo(() => {
     const groups: Record<string, { label: string; icon: string; tasks: PendingTaskDTO[] }> = {};
@@ -51,8 +53,8 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
     if (activeFilter !== 'all' && activeFilter !== '__high__') {
       result = result.filter(t => t.taskType === activeFilter);
     }
-    if (searchKeyword.trim()) {
-      const kw = searchKeyword.trim().toLowerCase();
+    if (debouncedSearchKeyword.trim()) {
+      const kw = debouncedSearchKeyword.trim().toLowerCase();
       result = result.filter(t =>
         t.title.toLowerCase().includes(kw) ||
         t.description.toLowerCase().includes(kw) ||
@@ -68,7 +70,7 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
       return true;
     });
     return result;
-  }, [tasks, activeFilter, searchKeyword]);
+  }, [tasks, activeFilter, debouncedSearchKeyword]);
 
   const filteredGroups = useMemo(() => {
     const groups: Record<string, { label: string; icon: string; tasks: PendingTaskDTO[] }> = {};

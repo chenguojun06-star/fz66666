@@ -46,20 +46,19 @@ export function useCockpit() {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rFactoryCap, rProductionStats] =
+
+    const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
+      r.status === 'fulfilled' ? ((r.value as any)?.data ?? (r.value as T)) : null;
+
+    const [rPulse, rHealth, rNotify, rWorkers, rOrders, rFactoryCap, rProductionStats] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
-        intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
-        intelligenceApi.getMaterialShortage(),
-        intelligenceApi.runSelfHealing(),
-        intelligenceApi.getFactoryBottleneck(),
         productionOrderApi.list({ page: 1, pageSize: 500, excludeTerminal: true }),
         productionOrderApi.getFactoryCapacity(),
         productionOrderApi.stats(),
       ]);
-    const v = <T,>(r: PromiseSettledResult<{ code: number; data: T } | T>): T | null =>
-      r.status === 'fulfilled' ? ((r.value as any)?.data ?? (r.value as T)) : null;
+
     const orderResult: ProductionOrder[] = rOrders.status === 'fulfilled'
       ? ((rOrders.value as any)?.data?.records ?? (rOrders.value as any)?.records ?? [])
       : [];
@@ -69,16 +68,31 @@ export function useCockpit() {
     const productionStatsResult: ProductionOrderStats | null = rProductionStats.status === 'fulfilled'
       ? (((rProductionStats.value as any)?.data ?? null) as ProductionOrderStats | null)
       : null;
+
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
-      heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
-      bottleneck: v(rBottleneck),
+      heatmap: null, ranking: null, shortage: null, healing: null,
+      bottleneck: null,
       orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped', 'archived', 'closed'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,
       productionStats: productionStatsResult,
       loading: false, ts: Date.now(),
     });
     loadingRef.current = false;
+
+    const [rHeatmap, rRanking, rShortage, rHealing, rBottleneck] =
+      await Promise.allSettled([
+        intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
+        intelligenceApi.getMaterialShortage(),
+        intelligenceApi.runSelfHealing(),
+        intelligenceApi.getFactoryBottleneck(),
+      ]);
+
+    setData(prev => ({
+      ...prev,
+      heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage),
+      healing: v(rHealing), bottleneck: v(rBottleneck),
+    }));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -96,7 +110,7 @@ export function useCockpit() {
   const pulseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    pulseIntervalRef.current = setInterval(fetchPulseOnly, 10_000);
+    pulseIntervalRef.current = setInterval(fetchPulseOnly, 15_000);
     return () => {
       if (pulseIntervalRef.current) {
         clearInterval(pulseIntervalRef.current);
@@ -120,11 +134,13 @@ export function useCockpit() {
       if (qty > 0) {
         setData(prev => {
           if (!prev.pulse) return prev;
-          return { ...prev, pulse: { ...prev.pulse, todayScanQty: prev.pulse.todayScanQty + qty } };
+          const newQty = prev.pulse.todayScanQty + qty;
+          if (newQty === prev.pulse.todayScanQty) return prev;
+          return { ...prev, pulse: { ...prev.pulse, todayScanQty: newQty } };
         });
       }
       if (wsDebounceRef.current) clearTimeout(wsDebounceRef.current);
-      wsDebounceRef.current = setTimeout(() => fetchPulseOnly(), 2000);
+      wsDebounceRef.current = setTimeout(() => fetchPulseOnly(), 3000);
     });
   }, [subscribe, fetchPulseOnly]);
 
@@ -135,20 +151,22 @@ export function useCockpit() {
     minuteIntervalRef.current = setInterval(() => {
       setData(prev => {
         if (!prev.pulse) return prev;
+        const updatedFactory = (prev.pulse.factoryActivity ?? []).map(f => ({
+          ...f,
+          minutesSinceLastScan: f.minutesSinceLastScan + 1,
+          active: (f.minutesSinceLastScan + 1) < 30,
+        }));
+        const updatedStagnant = (prev.pulse.stagnantFactories ?? []).map(sf => ({
+          ...sf,
+          minutesSilent: sf.minutesSilent + 1,
+        }));
+        const changed =
+          updatedFactory.some((f, i) => f.minutesSinceLastScan !== prev.pulse!.factoryActivity?.[i]?.minutesSinceLastScan) ||
+          updatedStagnant.some((sf, i) => sf.minutesSilent !== prev.pulse!.stagnantFactories?.[i]?.minutesSilent);
+        if (!changed) return prev;
         return {
           ...prev,
-          pulse: {
-            ...prev.pulse,
-            factoryActivity: (prev.pulse.factoryActivity ?? []).map(f => ({
-              ...f,
-              minutesSinceLastScan: f.minutesSinceLastScan + 1,
-              active: (f.minutesSinceLastScan + 1) < 30,
-            })),
-            stagnantFactories: (prev.pulse.stagnantFactories ?? []).map(sf => ({
-              ...sf,
-              minutesSilent: sf.minutesSilent + 1,
-            })),
-          },
+          pulse: { ...prev.pulse, factoryActivity: updatedFactory, stagnantFactories: updatedStagnant },
         };
       });
     }, 60_000);

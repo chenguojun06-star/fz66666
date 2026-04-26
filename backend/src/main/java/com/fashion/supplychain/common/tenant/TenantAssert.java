@@ -233,4 +233,55 @@ public class TenantAssert {
             return entity;
         }
     }
+
+    /**
+     * 带租户校验的实体获取（严格模式）：如果实体不属于当前租户，抛出异常。
+     * 适用于写操作前必须确认实体归属的场景。
+     *
+     * @param entity     通过 getById 获取的实体
+     * @param entityDesc 实体描述
+     * @param <T>        实体类型
+     * @return 实体（保证属于当前租户）
+     * @throws BusinessException 实体为null或不属于当前租户
+     */
+    public static <T> T getAndValidateStrict(T entity, String entityDesc) {
+        if (entity == null) {
+            throw new BusinessException("操作失败：" + entityDesc + "不存在");
+        }
+        try {
+            Long entityTenantId = (Long) entity.getClass().getMethod("getTenantId").invoke(entity);
+            assertBelongsToCurrentTenant(entityTenantId, entityDesc);
+            return entity;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[租户安全] 实体租户校验失败(严格): entity={}, error={}", entityDesc, e.getMessage());
+            return entity;
+        }
+    }
+
+    /**
+     * 校验实体的 deleteFlag，如果已软删除则抛出异常
+     *
+     * @param entity     实体
+     * @param entityDesc 实体描述
+     * @param <T>        实体类型（必须有 getDeleteFlag() 方法）
+     * @return 实体本身
+     */
+    public static <T> T validateNotDeleted(T entity, String entityDesc) {
+        if (entity == null) {
+            return null;
+        }
+        try {
+            Object deleteFlag = entity.getClass().getMethod("getDeleteFlag").invoke(entity);
+            if (deleteFlag instanceof Integer && ((Integer) deleteFlag) == 1) {
+                throw new BusinessException("操作失败：" + entityDesc + "已被删除");
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            // 实体可能没有 deleteFlag 字段，忽略
+        }
+        return entity;
+    }
 }

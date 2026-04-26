@@ -244,12 +244,13 @@ const StyleInfoDetailPage: React.FC = () => {
     };
   }, [currentStyle?.id, currentStyle?.styleNo, coverRefreshToken]);
 
+  const colorImageMapKey = JSON.stringify(colorImageMap);
   useEffect(() => {
     setSizeColorMatrixRows((prev) => prev.map((row) => ({
       ...row,
       imageUrl: colorImageMap[row.color] || row.imageUrl,
     })));
-  }, [colorImageMap]);
+  }, [colorImageMapKey]);
 
   useEffect(() => {
     const normalized = [...matrixSizes, '', '', '', '', ''];

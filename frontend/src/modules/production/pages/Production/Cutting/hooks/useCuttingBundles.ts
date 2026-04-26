@@ -337,9 +337,10 @@ export function useCuttingBundles({
     try { window.localStorage.setItem(BUNDLES_PAGE_SIZE_KEY, String(queryParams.pageSize)); } catch { /* ignore */ }
   }, [queryParams.pageSize]);
 
+  const queryParamsKey = JSON.stringify(queryParams);
   useEffect(() => {
     fetchBundles();
-  }, [queryParams, activeTask?.productionOrderNo]);
+  }, [queryParamsKey, activeTask?.productionOrderNo]);
 
   // 全量菲号汇总：用 /summary 端点（全量聚合，无分页 500 上限限制）计算剩余裁剪量
   useEffect(() => {

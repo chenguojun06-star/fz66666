@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, Form, Input, Button, Space, App, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -130,10 +130,13 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   }, [showSmartErrorNotice]);
 
   // 获取工厂汇总数据
+  const formRef = useRef(form);
+  formRef.current = form;
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const values = form.getFieldsValue();
+      const values = formRef.current.getFieldsValue();
       const params: Record<string, string> = {};
       if (values.factoryName?.trim()) params.factoryName = values.factoryName.trim();
       if (values.status?.trim()) params.status = values.status.trim();
@@ -153,7 +156,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     } finally {
       setLoading(false);
     }
-  }, [form, message]);
+  }, [message]);
 
   /** 加载已推送到收付款中心的工厂ID（防重复推送） */
   const loadPushedFactories = useCallback(async () => {

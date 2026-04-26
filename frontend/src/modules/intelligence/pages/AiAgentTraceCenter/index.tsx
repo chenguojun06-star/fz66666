@@ -8,6 +8,7 @@ import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/p
 import PageLayout from '@/components/common/PageLayout';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import { paths } from '../../../../routeConfig';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import AgentActivityPanel from './AgentActivityPanel';
 
 type TraceRow = {
@@ -104,8 +105,10 @@ const AiAgentTraceCenter: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<TraceRow[]>([]);
   const [keyword, setKeyword] = useState(searchParams.get('commandId') || '');
+  const debouncedKeyword = useDebouncedValue(keyword, 200);
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [executorKeyword, setExecutorKeyword] = useState('');
+  const debouncedExecutorKeyword = useDebouncedValue(executorKeyword, 200);
   const [toolName, setToolName] = useState<string | undefined>(undefined);
   const [failedOnly, setFailedOnly] = useState(false);
   const [timeRange, setTimeRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
@@ -122,7 +125,7 @@ const AiAgentTraceCenter: React.FC = () => {
         limit: 50,
         toolName,
         status: failedOnly ? 'FAILED' : status,
-        executorKeyword: executorKeyword || undefined,
+        executorKeyword: debouncedExecutorKeyword || undefined,
         startTime: timeRange?.[0] ? timeRange[0].toISOString() : undefined,
         endTime: timeRange?.[1] ? timeRange[1].toISOString() : undefined,
       }) as unknown as { code?: number; data?: TraceRow[] };
@@ -131,7 +134,7 @@ const AiAgentTraceCenter: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [executorKeyword, failedOnly, status, timeRange, toolName]);
+  }, [debouncedExecutorKeyword, failedOnly, status, timeRange, toolName]);
 
   const openDetail = useCallback(async (commandId?: string) => {
     if (!commandId) return;
@@ -163,10 +166,10 @@ const AiAgentTraceCenter: React.FC = () => {
   })), [rows]);
 
   const filteredRows = useMemo(() => rows.filter((item) => {
-    if (!keyword.trim()) return true;
-    const q = keyword.trim().toLowerCase();
+    if (!debouncedKeyword.trim()) return true;
+    const q = debouncedKeyword.trim().toLowerCase();
     return [item.commandId, item.reason, item.resultData, item.createdAt, item.remark, item.targetId, item.executorId].some((value) => String(value || '').toLowerCase().includes(q));
-  }), [rows, keyword]);
+  }), [rows, debouncedKeyword]);
 
   return (
     <>
