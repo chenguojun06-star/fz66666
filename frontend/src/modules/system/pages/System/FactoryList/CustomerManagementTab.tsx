@@ -8,6 +8,7 @@ import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
 import { DEFAULT_PAGE_SIZE, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import { customerApi, type Customer, type CustomerListParams } from '@/services/crm/customerApi';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 type DialogMode = 'create' | 'edit' | 'view';
 
@@ -55,6 +56,13 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
     status: '',
     customerLevel: '',
   });
+  const [keywordInput, setKeywordInput] = useState('');
+  const debouncedKeyword = useDebouncedValue(keywordInput, 300);
+  useEffect(() => {
+    if (debouncedKeyword !== (queryParams.keyword || '')) {
+      setQueryParams((prev) => ({ ...prev, keyword: debouncedKeyword, page: 1 }));
+    }
+  }, [debouncedKeyword]);
 
   const fetchCustomers = useCallback(async () => {
     if (!active) return;
@@ -253,7 +261,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
               style={{ width: 240 }}
               allowClear
               value={queryParams.keyword || ''}
-              onChange={(e) => setQueryParams((prev) => ({ ...prev, keyword: e.target.value, page: 1 }))}
+              onChange={(e) => setKeywordInput(e.target.value)}
             />
             <Select
               placeholder="客户标签"

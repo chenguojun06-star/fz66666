@@ -34,6 +34,7 @@ const WageFeedbackTab: React.FC = () => {
     } catch {
       setList([]);
       setStats({});
+      message.warning('工资反馈数据加载失败');
     } finally {
       setLoading(false);
     }

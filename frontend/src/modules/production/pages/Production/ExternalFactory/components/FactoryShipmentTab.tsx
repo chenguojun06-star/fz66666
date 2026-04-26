@@ -81,7 +81,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
         setOrderList(records);
       }
     } catch {
-      // 非关键错误，静默处理
+      message.warning('订单列表加载失败，发货时可能无法选择订单');
     } finally {
       setOrderLoading(false);
     }
@@ -106,6 +106,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       }
     } catch {
       setShippableInfo(null);
+      message.warning('可发货信息查询失败');
     } finally {
       setShippableLoading(false);
     }
@@ -305,7 +306,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
           <Tag color="blue">共 {total} 条记录</Tag>
         </Space>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchShipments}>刷新</Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchShipments} loading={loading}>刷新</Button>
           <Button type="primary" icon={<SendOutlined />} onClick={handleOpenShip}>
             新建发货
           </Button>

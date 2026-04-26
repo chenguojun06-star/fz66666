@@ -57,7 +57,7 @@ const BillSummaryTab: React.FC = () => {
       const res: any = await billAggregationApi.getStats(query.billType || undefined);
       setStats(res?.data ?? res ?? {});
     } catch {
-      // stats 加载失败不阻塞主流程
+      msg.warning('账单统计加载失败，数据可能不完整');
     }
   }, [query.billType]);
 

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AutoComplete, Spin } from 'antd';
 import type { AutoCompleteProps } from 'antd';
 import { customerApi, type Customer } from '@/services/crm/customerApi';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 interface CustomerSelectProps extends Omit<AutoCompleteProps, 'options' | 'onChange'> {
   value?: string;
@@ -28,6 +29,9 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
 }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const debouncedSearch = useDebouncedValue(searchText, 300);
+  const initialFetched = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -35,7 +39,11 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
     const fetchCustomers = async () => {
       setLoading(true);
       try {
-        const response = await customerApi.list({ pageSize: 1000, status: 'ACTIVE' });
+        const params: Record<string, unknown> = { pageSize: 50, status: 'ACTIVE' };
+        if (debouncedSearch.trim()) {
+          params.keyword = debouncedSearch.trim();
+        }
+        const response = await customerApi.list(params as any);
         if (mounted && (response as any)?.data?.records) {
           setCustomers((response as any).data.records);
         }
@@ -49,6 +57,12 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
     fetchCustomers();
 
     return () => { mounted = false; };
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (!initialFetched.current) {
+      initialFetched.current = true;
+    }
   }, []);
 
   const options = useMemo(() => {
@@ -71,6 +85,7 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
   };
 
   const handleChange = (changedValue: string) => {
+    setSearchText(changedValue);
     onChange?.(changedValue, undefined);
   };
 

@@ -13,6 +13,7 @@ import type { PatternRevision } from '@/types/patternRevision';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
 import dayjs from 'dayjs';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -262,6 +263,17 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
   const { user } = useAuth();
 
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({ page: 1, pageSize: readPageSize(10), onlyCompleted: true, ...(styleNo ? { styleNoExact: styleNo } : {}) });
+  const [styleNoInput, setStyleNoInput] = useState('');
+  const [styleNameInput, setStyleNameInput] = useState('');
+  const debouncedStyleNo = useDebouncedValue(styleNoInput, 300);
+  const debouncedStyleName = useDebouncedValue(styleNameInput, 300);
+  useEffect(() => {
+    const noChanged = debouncedStyleNo !== (queryParams.styleNo || '');
+    const nameChanged = debouncedStyleName !== (queryParams.styleName || '');
+    if (noChanged || nameChanged) {
+      setQueryParams(prev => ({ ...prev, styleNo: debouncedStyleNo, styleName: debouncedStyleName, page: 1 }));
+    }
+  }, [debouncedStyleNo, debouncedStyleName]);
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -782,8 +794,8 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
       <Card size="small" className="filter-card" style={{ marginBottom: 16 }}>
         <StandardToolbar
           left={<Space wrap>
-            <Input placeholder="款号" style={{ width: 180 }} onChange={(e) => setQueryParams(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))} />
-            <Input placeholder="款名" style={{ width: 220 }} onChange={(e) => setQueryParams(prev => ({ ...prev, styleName: e.target.value, page: 1 }))} />
+            <Input placeholder="款号" style={{ width: 180 }} value={styleNoInput} onChange={(e) => setStyleNoInput(e.target.value)} />
+            <Input placeholder="款名" style={{ width: 220 }} value={styleNameInput} onChange={(e) => setStyleNameInput(e.target.value)} />
           </Space>}
           right={<Button onClick={() => fetchStyles()} loading={loading}>刷新</Button>}
         />

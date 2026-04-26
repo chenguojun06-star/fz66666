@@ -147,8 +147,7 @@ const TemplateCenter: React.FC = () => {
         .filter(Boolean) as Array<{ value: string; label: string }>;
       setStyleNoOptions(next);
     } catch {
-      // Intentionally empty
-      // 忽略错误
+      message.warning('款号搜索失败，请手动输入');
     } finally {
       if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
     }
@@ -813,7 +812,7 @@ const TemplateCenter: React.FC = () => {
                     从款号生成模板
                   </Button>
                 )}
-                <Button type="primary" onClick={() => fetchList({ page: 1 })}>
+                <Button type="primary" onClick={() => fetchList({ page: 1 })} loading={loading}>
                   刷新
                 </Button>
                 {!isFactoryUser && (

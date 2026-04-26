@@ -472,8 +472,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       </Form.Item>
       <Form.Item>
         <Space>
-          <Button type="primary" htmlType="submit">查询</Button>
-          <Button onClick={() => { form.resetFields(); fetchData(); }}>重置</Button>
+          <Button type="primary" htmlType="submit" loading={loading}>查询</Button>
+          <Button onClick={() => { form.resetFields(); fetchData(); }} disabled={loading}>重置</Button>
         </Space>
       </Form.Item>
     </Form>

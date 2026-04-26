@@ -23,7 +23,6 @@ import emojiStyles from './EmojiPicker.module.css';
 import msgStyles from './MessageBubble.module.css';
 import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
 import { INITIAL_MSG, EMOJI_GROUPS, getPageSuggestions } from './constants';
-import { choose } from './helpers';
 import { useAiChat } from './useAiChat';
 import { stopAllSpeech } from './speechUtils';
 import { useDragSnap } from './useDragSnap';

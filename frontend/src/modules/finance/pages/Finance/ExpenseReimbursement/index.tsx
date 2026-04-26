@@ -13,6 +13,7 @@ import {
   UploadOutlined, PictureOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import dayjs from 'dayjs';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ModalField, ModalFieldRow } from '@/components/common/ModalContentLayout';
@@ -62,6 +63,7 @@ const ExpenseReimbursementPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
   const [filterType, setFilterType] = useState<string | undefined>();
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 300);
 
   // ── 表单弹窗状态 ──
   const [formOpen, setFormOpen] = useState(false);
@@ -110,7 +112,7 @@ const ExpenseReimbursementPage: React.FC = () => {
       }
       if (filterStatus) params.status = filterStatus;
       if (filterType) params.expenseType = filterType;
-      if (keyword.trim()) params.keyword = keyword.trim();
+      if (debouncedKeyword.trim()) params.keyword = debouncedKeyword.trim();
 
       const res = await expenseReimbursementApi.getList(params);
       if (res.code === 200 && res.data) {
@@ -137,7 +139,7 @@ const ExpenseReimbursementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filterStatus, filterType, keyword, viewMode, user?.id, message]);
+  }, [page, pageSize, filterStatus, filterType, debouncedKeyword, viewMode, user?.id, message]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
 

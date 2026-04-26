@@ -70,11 +70,6 @@ export const isTempId = (id: any) => {
 
 export function computeSortedDataAndStageSpan(data: StyleProcessWithSizePrice[]) {
   const { sorted, spanMap } = computeStageSortedAndSpan(data, STAGE_ORDER);
-  const sortedData = sorted.map((item, idx) => {
-    const base = { ...item };
-    const origIdx = data.indexOf(item);
-    return { item: base, origIdx };
-  });
   const stageSpanMap = new Map<number, StageSpanInfo>();
   spanMap.forEach((info, idx) => {
     stageSpanMap.set(idx, info);

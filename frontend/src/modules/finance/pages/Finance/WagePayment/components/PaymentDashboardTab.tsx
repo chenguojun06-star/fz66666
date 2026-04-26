@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
-import { Card, Row, Col, Statistic, Spin, DatePicker, Table, Typography } from 'antd';
+import { Card, Row, Col, Statistic, Spin, DatePicker, Table, Typography, App } from 'antd';
 import {
   WarningOutlined,
   CheckCircleOutlined,
@@ -22,6 +22,7 @@ interface AgingBucket {
 }
 
 const PaymentDashboard: React.FC = () => {
+  const { message } = App.useApp();
   const [range, setRange] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(30, 'day'),
     dayjs(),
@@ -49,6 +50,7 @@ const PaymentDashboard: React.FC = () => {
     } catch {
       setStats({});
       setAgingData([]);
+      message.warning('付款仪表板数据加载失败');
     } finally {
       setLoading(false);
     }

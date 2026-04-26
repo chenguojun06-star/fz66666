@@ -8,13 +8,11 @@ import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import { CUTTING_STAGE_ORDER, computeStageSortedAndSpan } from '@/utils/productionStage';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
-import type { CuttingCreateTaskState, CuttingProcessNode } from '../hooks';
+import type { CuttingCreateTaskState } from '../hooks';
 
 interface Props {
   createTask: CuttingCreateTaskState;
 }
-
-const CUTTING_STAGE_OPTIONS = CUTTING_STAGE_ORDER.map((s) => ({ label: s, value: s }));
 
 const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   const { sorted, spanMap } = computeStageSortedAndSpan(createTask.createProcessNodes, CUTTING_STAGE_ORDER);
