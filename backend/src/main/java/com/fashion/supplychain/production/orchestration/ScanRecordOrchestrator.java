@@ -1,7 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -10,20 +9,17 @@ import com.fashion.supplychain.common.util.QrCodeSigner;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.ScanRecordPermissionHelper;
-import com.fashion.supplychain.production.entity.CuttingTask;
+import com.fashion.supplychain.production.helper.ScanUndoHelper;
+import com.fashion.supplychain.production.helper.ScanRescanHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
-import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import org.springframework.util.StringUtils;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.fashion.supplychain.production.executor.QualityScanExecutor;
 import com.fashion.supplychain.production.executor.WarehouseScanExecutor;
@@ -44,93 +39,37 @@ import com.fashion.supplychain.production.helper.UnitPriceResolver;
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
 import com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrchestrator;
 import com.fashion.supplychain.common.lock.DistributedLockService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 
-/**
- * 扫码记录编排器
- * 职责：扫码业务编排（生产/质检/入库）、撤销/退回重扫、事务管理
- *
- * 辅助类：
- * - ProcessStageDetector（工序识别）
- * - DuplicateScanPreventer（防重复）
- * - InventoryValidator（库存验证）
- * - ScanRecordQueryHelper（查询操作）
- * - UnitPriceResolver（单价解析）
- *
- * 执行器：
- * - QualityScanExecutor / WarehouseScanExecutor / ProductionScanExecutor
- */
 @Service
 @Slf4j
 public class ScanRecordOrchestrator {
 
-    @Autowired
-    private ScanRecordService scanRecordService;
+    private static final Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse");
+    private static final Set<String> ADMIN_ROLE_KEYWORDS = Set.of("admin", "ADMIN", "manager", "supervisor", "主管", "管理员");
 
-    @Autowired
-    private ProductionProcessTrackingService processTrackingService;
-
-    @Autowired
-    private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private CuttingBundleService cuttingBundleService;
-
-    @Autowired
-    private CuttingTaskService cuttingTaskService;
-
-    @Autowired
-    private ProductWarehousingOrchestrator productWarehousingOrchestrator;
-
-    @Autowired
-    private ProductWarehousingService productWarehousingService;
-
-    @Autowired
-    private DuplicateScanPreventer duplicateScanPreventer;
-
-    @Autowired
-    private ScanRecordPermissionHelper scanRecordPermissionHelper;
-
-    @Autowired
-    private ScanRecordQueryHelper scanRecordQueryHelper;
-
-    @Autowired
-    private UnitPriceResolver unitPriceResolver;
-
-    @Autowired
-    private QualityScanExecutor qualityScanExecutor;
-
-    @Autowired
-    private WarehouseScanExecutor warehouseScanExecutor;
-
-    @Autowired
-    private ProductionScanExecutor productionScanExecutor;
-
-    @Autowired
-    private QrCodeSigner qrCodeSigner;
-
-    @Autowired
-    private SmartNotificationOrchestrator smartNotificationOrchestrator;
-
-    @Autowired
-    private ScanRecordEnrichHelper scanRecordEnrichHelper;
-
-    @Autowired
-    private DistributedLockService distributedLockService;
-
-    @Autowired
-    private TransactionTemplate transactionTemplate;
-
-    @Autowired
-    private WebSocketService webSocketService;
-
-    @Autowired
-    private ProductWarehousingHelper warehousingHelper;
+    @Autowired private ScanRecordService scanRecordService;
+    @Autowired private ProductionOrderService productionOrderService;
+    @Autowired private CuttingBundleService cuttingBundleService;
+    @Autowired private ProductWarehousingService productWarehousingService;
+    @Autowired private DuplicateScanPreventer duplicateScanPreventer;
+    @Autowired private ScanRecordPermissionHelper scanRecordPermissionHelper;
+    @Autowired private ScanRecordQueryHelper scanRecordQueryHelper;
+    @Autowired private UnitPriceResolver unitPriceResolver;
+    @Autowired private QualityScanExecutor qualityScanExecutor;
+    @Autowired private WarehouseScanExecutor warehouseScanExecutor;
+    @Autowired private ProductionScanExecutor productionScanExecutor;
+    @Autowired private QrCodeSigner qrCodeSigner;
+    @Autowired private SmartNotificationOrchestrator smartNotificationOrchestrator;
+    @Autowired private ScanRecordEnrichHelper scanRecordEnrichHelper;
+    @Autowired private DistributedLockService distributedLockService;
+    @Autowired private TransactionTemplate transactionTemplate;
+    @Autowired private ProductWarehousingHelper warehousingHelper;
+    @Autowired private ScanUndoHelper scanUndoHelper;
+    @Autowired private ScanRescanHelper scanRescanHelper;
 
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
-
         String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
         String lockKey = "scan:" + (orderNo != null ? orderNo : "unknown");
         return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
@@ -146,633 +85,125 @@ public class ScanRecordOrchestrator {
     }
 
     private Map<String, Object> doExecute(Map<String, Object> safeParams) {
-        String operatorId = safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId"));
-        String operatorName = safeParams.get("operatorName") == null ? null
-                : String.valueOf(safeParams.get("operatorName"));
+        resolveOperatorInfo(safeParams);
+        String scanCode = verifyQrCodeSignature(safeParams);
+        String scanType = validateAndNormalizeScanType(safeParams);
 
-        // ★ 兼容小程序：小程序发送 workerId/workerName 而非 operatorId/operatorName
-        if (!hasText(operatorId) && safeParams.get("workerId") != null) {
-            operatorId = String.valueOf(safeParams.get("workerId"));
-        }
-        if (!hasText(operatorName) && safeParams.get("workerName") != null) {
-            operatorName = String.valueOf(safeParams.get("workerName"));
-        }
-
-        UserContext ctx = UserContext.get();
-        String ctxUserId = ctx == null ? null : ctx.getUserId();
-        String ctxUsername = ctx == null ? null : ctx.getUsername();
-        if (hasText(ctxUserId) && hasText(ctxUsername)) {
-            operatorId = ctxUserId;
-            operatorName = ctxUsername;
-        }
-        // 无论来源如何，确保 safeParams 中有 operatorId/operatorName 供下游使用
-        safeParams.put("operatorId", operatorId);
-        safeParams.put("operatorName", operatorName);
-
-        String scanCode = safeParams.get("scanCode") == null ? null : String.valueOf(safeParams.get("scanCode"));
-
-        // 二维码 HMAC 签名验证（防伪造）
-        if (hasText(scanCode)) {
-            QrCodeSigner.VerifyResult sigResult = qrCodeSigner.verify(scanCode);
-            if (sigResult.isInvalid()) {
-                throw new IllegalArgumentException(sigResult.getMessage());
-            }
-            // ★ 关键修复：剥离 |SIG-... 后缀，避免 getByQrCode() 因带签名字符串而找不到DB记录
-            if (sigResult.getContent() != null && !sigResult.getContent().equals(scanCode)) {
-                log.info("[ScanExec] scanCode已剥离SIG签名: 原长度={}, 剥离后长度={}",
-                        scanCode.length(), sigResult.getContent().length());
-                scanCode = sigResult.getContent();
-                safeParams.put("scanCode", scanCode);
-            }
-        }
-
-        String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
-        String orderId = safeParams.get("orderId") == null ? null : String.valueOf(safeParams.get("orderId"));
-        String styleNo = safeParams.get("styleNo") == null ? null : String.valueOf(safeParams.get("styleNo"));
-
-        boolean unitPriceOnly = isTruthy(safeParams.get("unitPriceOnly"))
-                || isTruthy(safeParams.get("priceOnly"))
-                || isTruthy(safeParams.get("queryPriceOnly"));
-
-        if (unitPriceOnly) {
-            if ((!hasText(scanCode) && !hasText(orderNo) && !hasText(orderId) && !hasText(styleNo))) {
-                throw new IllegalArgumentException("参数错误");
-            }
-            return resolveUnitPrice(safeParams);
-        }
-
-        if (!hasText(operatorId) || !hasText(operatorName)
-                || (!hasText(scanCode) && !hasText(orderNo) && !hasText(orderId))) {
-            log.warn("[ScanExec] 参数校验失败: operatorId={}, operatorName={}, scanCode={}, orderNo={}, orderId={}, source={}",
-                    operatorId, operatorName,
-                    hasText(scanCode) ? scanCode.substring(0, Math.min(20, scanCode.length())) : "null",
-                    orderNo, orderId, safeParams.get("source"));
-            if (!hasText(operatorId) || !hasText(operatorName)) {
-                throw new IllegalArgumentException("参数错误：缺少操作人信息，请重新登录后再试");
-            }
-            throw new IllegalArgumentException("参数错误：缺少扫码内容或订单信息");
-        }
-
-        // 关键参数日志（方便云端排查）
-        log.info("[ScanExec] 收到扫码请求: scanCode={}, orderNo={}, bundleNo={}, scanType={}, quantity={}, operator={}",
-                scanCode, orderNo,
-                safeParams.get("bundleNo"),
-                safeParams.get("scanType"),
-                safeParams.get("quantity"),
-                operatorId);
-
-        String requestId = TextUtils.safeText(safeParams.get("requestId"));
-        if (!hasText(requestId)) {
-            requestId = duplicateScanPreventer.generateRequestId();
-            safeParams.put("requestId", requestId);
-        }
-        duplicateScanPreventer.validateRequestId(requestId);
-
-        ScanRecord existed = duplicateScanPreventer.findByRequestId(requestId);
-        if (existed != null) {
-            Map<String, Object> dup = new HashMap<>();
-            dup.put("message", "已扫码忽略");
-            return dup;
-        }
-
-        String scanType = TextUtils.safeText(safeParams.get("scanType"));
-        if (!hasText(scanType)) {
-            scanType = "production";
-        }
-        scanType = scanType.trim().toLowerCase();
-        if (scanType.length() > 20) {
-            throw new IllegalArgumentException("scanType过长（最多20字符）");
-        }
-
-        boolean autoProcess = false;
+        boolean autoProcess = "sewing".equals(scanType) || "procurement".equals(scanType);
         Integer qty = NumberUtils.toInt(safeParams.get("quantity"));
-        if ("sewing".equals(scanType) || "procurement".equals(scanType)) {
-            scanType = "production";
-            autoProcess = true;
-        }
 
-        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse");
-        if (!ALLOWED_SCAN_TYPES.contains(scanType)) {
-            throw new IllegalArgumentException("不支持的扫码类型: " + scanType);
-        }
-
-        Integer qtyParam = NumberUtils.toInt(safeParams.get("quantity"));
-        if (qtyParam != null && qtyParam <= 0) {
-            throw new IllegalArgumentException("扫码数量必须大于0");
-        }
-
-        // ★ 统一终态校验：在路由到各执行器之前拦截终态订单
-        String checkOrderId = TextUtils.safeText(safeParams.get("orderId"));
-        String checkOrderNo = TextUtils.safeText(safeParams.get("orderNo"));
-        ProductionOrder preCheckOrder = scanRecordPermissionHelper.findScopedOrder(checkOrderId, checkOrderNo);
-        if (preCheckOrder != null && scanRecordPermissionHelper.isTerminalOrderStatus(preCheckOrder.getStatus())) {
-            throw new IllegalStateException("订单已终态(" + preCheckOrder.getStatus() + ")，无法继续扫码");
-        }
-
-        // 质检扫码路由
         if ("quality".equals(scanType)) {
-            Map<String, Object> r = executeQualityScan(safeParams, requestId, operatorId, operatorName, ctx);
+            Map<String, Object> r = executeQualityScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
+                    String.valueOf(safeParams.get("operatorId")), String.valueOf(safeParams.get("operatorName")), UserContext.get());
             tryNotifyNextStage(safeParams, r);
             appendBundleStatusHints(safeParams, r);
             return r;
         }
 
-        // 入库扫码路由
         if ("warehouse".equals(scanType)) {
-            Map<String, Object> r = executeWarehouseScan(safeParams, requestId, operatorId, operatorName);
+            Map<String, Object> r = executeWarehouseScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
+                    String.valueOf(safeParams.get("operatorId")), String.valueOf(safeParams.get("operatorName")));
             tryNotifyNextStage(safeParams, r);
             appendBundleStatusHints(safeParams, r);
             return r;
         }
 
-        Map<String, Object> r = executeProductionScan(safeParams, requestId, operatorId, operatorName, scanType, qty, autoProcess, ctx);
+        Map<String, Object> r = executeProductionScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
+                String.valueOf(safeParams.get("operatorId")), String.valueOf(safeParams.get("operatorName")), scanType, qty, autoProcess, UserContext.get());
         tryNotifyNextStage(safeParams, r);
         appendBundleStatusHints(safeParams, r);
         return r;
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> undo(Map<String, Object> params) {
-        TenantAssert.assertTenantContext();
-        Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
-
-        String orderNo = TextUtils.safeText(safeParams.get("orderNo"));
-        String orderId = TextUtils.safeText(safeParams.get("orderId"));
-        String lockKey = "scan:" + (hasText(orderNo) ? orderNo : (hasText(orderId) ? orderId : "undo"));
-        Map<String, Object> result = distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
-            return doUndo(safeParams);
-        });
-
-        try {
-            String on = hasText(orderNo) ? orderNo : TextUtils.safeText(safeParams.get("_resolvedOrderNo"));
-            String undoOperatorId = com.fashion.supplychain.common.UserContext.userId();
-            String undoOperatorName = com.fashion.supplychain.common.UserContext.username();
-            String undoProcessName = TextUtils.safeText(safeParams.get("processName"));
-            String undoBundleNo = TextUtils.safeText(safeParams.get("bundleNo"));
-            if (hasText(undoOperatorId)) {
-                webSocketService.notifyScanUndo(undoOperatorId, on, TextUtils.safeText(safeParams.get("scanType")),
-                        undoOperatorName, undoProcessName, undoBundleNo);
-            }
-            webSocketService.notifyDataChanged(undoOperatorId, "ScanRecord", null, "delete");
-            if (hasText(on)) {
-                try {
-                    String oid = TextUtils.safeText(safeParams.get("orderId"));
-                    if (!hasText(oid)) {
-                        oid = TextUtils.safeText(safeParams.get("_resolvedOrderId"));
-                    }
-                    if (hasText(oid)) {
-                        com.fashion.supplychain.production.entity.ProductionOrder po = productionOrderService.getById(oid);
-                        int curProgress = po != null && po.getProductionProgress() != null ? po.getProductionProgress() : 0;
-                        webSocketService.notifyOrderProgressChanged(undoOperatorId, on, curProgress, "撤销");
-                    } else {
-                        webSocketService.notifyOrderProgressChanged(undoOperatorId, on, 0, "撤销");
-                    }
-                } catch (Exception e) {
-                    log.warn("[ScanRecordOrchestrator] 进度查询失败，降级通知: orderNo={}", on, e);
-                    webSocketService.notifyOrderProgressChanged(undoOperatorId, on, 0, "撤销");
-                }
-            }
-        } catch (Exception wsEx) {
-            log.warn("[Undo] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
-        }
-
-        return result;
-    }
-
-    private Map<String, Object> doUndo(Map<String, Object> safeParams) {
-
-        String recordId = TextUtils.safeText(safeParams.get("recordId"));
-        String requestId = TextUtils.safeText(safeParams.get("requestId"));
-        String scanCode = TextUtils.safeText(safeParams.get("scanCode"));
-        String scanType = TextUtils.safeText(safeParams.get("scanType"));
-        String progressStage = TextUtils.safeText(safeParams.get("progressStage"));
-        String processCode = TextUtils.safeText(safeParams.get("processCode"));
-        Integer qtyParam = NumberUtils.toInt(safeParams.get("quantity"));
-
-        if (!hasText(recordId) && !hasText(requestId) && !hasText(scanCode)) {
-            throw new IllegalArgumentException("参数错误");
-        }
-
-        ScanRecord target = null;
-        // 优先通过 recordId 直接查找（小程序即时撤销 / PC端撤回）
-        if (hasText(recordId)) {
-            Long tenantId = UserContext.tenantId();
-            target = scanRecordService.lambdaQuery()
-                    .eq(ScanRecord::getId, recordId)
-                    .eq(ScanRecord::getTenantId, tenantId)
-                    .one();
-        }
-        if (target == null && hasText(requestId)) {
-            target = duplicateScanPreventer.findByRequestId(requestId);
-        }
-        if (target == null && hasText(scanCode)) {
-            UserContext ctx = UserContext.get();
-            String operatorId = ctx == null ? null : ctx.getUserId();
-            Long tenantId = UserContext.tenantId();
-            LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getScanResult, "success")
-                    .eq(ScanRecord::getScanCode, scanCode)
-                    .ne(ScanRecord::getScanType, "orchestration")
-                    .orderByDesc(ScanRecord::getScanTime)
-                    .orderByDesc(ScanRecord::getCreateTime)
-                    .last("limit 1");
-            qw.eq(ScanRecord::getTenantId, tenantId);
-            if (hasText(scanType)) {
-                qw.eq(ScanRecord::getScanType, scanType);
-            }
-            if (hasText(operatorId)) {
-                qw.eq(ScanRecord::getOperatorId, operatorId);
-            }
-            if (hasText(progressStage)) {
-                qw.eq(ScanRecord::getProgressStage, progressStage);
-            }
-            if (hasText(processCode)) {
-                qw.eq(ScanRecord::getProcessCode, processCode);
-            }
-            try {
-                target = scanRecordService.getOne(qw);
-            } catch (Exception e) {
-                log.warn("[ScanRecordOrchestrator] 查询扫码记录失败: recordId={}", recordId, e);
-                target = null;
-            }
-        }
-
-        if (target == null) {
-            String st = hasText(scanType) ? scanType.trim().toLowerCase() : "";
-            if ("warehouse".equals(st)) {
-                throw new IllegalStateException("入库记录不支持直接撤回，请先走出库，再重新入库");
-            }
-            if ("quality".equals(st) && hasText(scanCode)
-                    && qtyParam != null && qtyParam > 0) {
-                // 检查订单是否已完成
-                String fallbackOrderId = TextUtils.safeText(safeParams.get("orderId"));
-                if (hasText(fallbackOrderId)) {
-                    ProductionOrder fallbackOrder = scanRecordPermissionHelper.findScopedOrder(fallbackOrderId, null);
-                    if (fallbackOrder == null) {
-                        throw new AccessDeniedException("无权操作该订单");
-                    }
-                    if (fallbackOrder != null && scanRecordPermissionHelper.isTerminalOrderStatus(fallbackOrder.getStatus())) {
-                        throw new IllegalStateException("订单已关闭或完成，无法撤回扫码记录");
-                }
-                }
-                Map<String, Object> body = new HashMap<>();
-                body.put("orderId", fallbackOrderId);
-                body.put("cuttingBundleQrCode", scanCode);
-                body.put("rollbackQuantity", qtyParam);
-                body.put("rollbackRemark", "撤销扫码");
-                boolean ok = productWarehousingOrchestrator.rollbackByBundle(body);
-                Map<String, Object> resp = new HashMap<>();
-                resp.put("success", ok);
-                resp.put("message", "已撤销");
-                return resp;
-            }
-            throw new IllegalStateException("未找到可撤销记录");
-        }
-
-        scanRecordPermissionHelper.assertUndoRecordPermission(target);
-
-        if (!"success".equalsIgnoreCase(target.getScanResult())) {
-            throw new IllegalStateException("记录已失效");
-        }
-
-        // 工资已结算的扫码记录禁止撤回
-        if (StringUtils.hasText(target.getPayrollSettlementId())) {
-            throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
-        }
-
-        // 下一生产环节已有成功记录则禁止撤回
-        String nextStageType = scanRecordEnrichHelper.getNextStageScanType(target.getScanType());
-        if (hasText(nextStageType) && hasText(target.getCuttingBundleId())) {
-            long nextCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, target.getOrderId())
-                    .eq(ScanRecord::getCuttingBundleId, target.getCuttingBundleId())
-                    .eq(ScanRecord::getScanType, nextStageType)
-                    .eq(ScanRecord::getScanResult, "success"));
-            if (nextCount > 0) {
-                throw new IllegalStateException("下一生产环节已完成扫码，无法撤回当前记录");
-            }
-        }
-
-        // 裁剪完成后普通人员不能撤回，仅管理员可撤回
-        String undoScanType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase() : "";
-        boolean isCuttingScan = "cutting".equals(undoScanType)
-                || "裁剪".equals(hasText(target.getProgressStage()) ? target.getProgressStage().trim() : "");
-        if (isCuttingScan) {
-            UserContext cutCtx = UserContext.get();
-            String cutRole = cutCtx == null ? null : cutCtx.getRole();
-            boolean cutIsAdmin = cutRole != null && (cutRole.contains("admin") || cutRole.contains("ADMIN") || cutRole.contains("manager")
-                    || cutRole.contains("supervisor") || cutRole.contains("主管") || cutRole.contains("管理员"));
-            if (!cutIsAdmin) {
-                String cutOrderId = TextUtils.safeText(target.getOrderId());
-                if (hasText(cutOrderId)) {
-                    CuttingTask cuttingTask = cuttingTaskService.getOne(new LambdaQueryWrapper<CuttingTask>()
-                            .eq(CuttingTask::getProductionOrderId, cutOrderId)
-                            .last("limit 1"));
-                    if (cuttingTask != null && "bundled".equalsIgnoreCase(cuttingTask.getStatus())) {
-                        throw new IllegalStateException("裁剪已完成分扎，普通人员无法撤回，请联系管理员处理");
-                    }
-                }
-            }
-        }
-
-        // 时间限制：管理员5小时，普通用户30分钟
-        LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
-        if (scanTime != null) {
-            UserContext timeCtx = UserContext.get();
-            String timeRole = timeCtx == null ? null : timeCtx.getRole();
-            boolean isAdmin = timeRole != null && (timeRole.contains("admin") || timeRole.contains("ADMIN") || timeRole.contains("manager")
-                    || timeRole.contains("supervisor") || timeRole.contains("主管") || timeRole.contains("管理员"));
-            boolean undoExpired = isAdmin
-                    ? scanTime.plusHours(5).isBefore(LocalDateTime.now())
-                    : scanTime.plusMinutes(30).isBefore(LocalDateTime.now());
-            if (undoExpired) {
-                throw new IllegalStateException(isAdmin
-                        ? "只能撤回5小时内的扫码记录（管理员权限）"
-                        : "只能撤回30分钟内的扫码记录，如需撤回请联系管理员");
-            }
-        }
-
-        // 已完成订单禁止撤回
-        String orderId = TextUtils.safeText(target.getOrderId());
-        if (hasText(orderId)) {
-            ProductionOrder order = scanRecordPermissionHelper.findScopedOrder(orderId, null);
-            if (order == null) {
-                throw new AccessDeniedException("无权操作该订单");
-            }
-            if (scanRecordPermissionHelper.isTerminalOrderStatus(order.getStatus())) {
-                throw new IllegalStateException("订单已关闭或完成，无法撤回扫码记录");
-            }
-        }
-
-        String targetType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase()
-                : (hasText(scanType) ? scanType.trim().toLowerCase() : "");
-        if ("warehouse".equals(targetType)) {
-            throw new IllegalStateException("入库记录不支持直接撤回，请先走出库，再重新入库");
-        }
-        boolean warehousingLike = "warehouse".equals(targetType) || "quality".equals(targetType)
-                || "quality_warehousing".equalsIgnoreCase(target.getProcessCode());
-
-        if (warehousingLike) {
-            String qr = hasText(target.getCuttingBundleQrCode()) ? target.getCuttingBundleQrCode()
-                    : (hasText(target.getScanCode()) ? target.getScanCode() : scanCode);
-            int qty = target.getQuantity() == null ? 0 : target.getQuantity();
-            if (qty <= 0 && qtyParam != null) {
-                qty = qtyParam;
-            }
-            if (!hasText(qr) || qty <= 0) {
-                throw new IllegalArgumentException("撤销参数错误");
-            }
-            Map<String, Object> body = new HashMap<>();
-            body.put("orderId", target.getOrderId());
-            body.put("cuttingBundleQrCode", qr);
-            body.put("rollbackQuantity", qty);
-            body.put("rollbackRemark", "撤销扫码");
-            boolean ok = productWarehousingOrchestrator.rollbackByBundle(body);
-
-            // 同步重置工序跟踪记录（撤回就应还原为待扫码）
-            resetTrackingByScanRecord(target.getId());
-
-            // 删除扫码记录（彻底清除，允许重新扫码）
-            scanRecordService.removeById(target.getId());
-            log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
-
-            String oid = TextUtils.safeText(target.getOrderId());
-            if (hasText(oid)) {
-                productionOrderService.recomputeProgressAsync(oid);
-            }
-
-            Map<String, Object> resp = new HashMap<>();
-            resp.put("success", ok);
-            resp.put("message", "已撤销");
-            return resp;
-        }
-
-        // 同步重置工序跟踪记录（撤回就应还原为待扫码）
-        resetTrackingByScanRecord(target.getId());
-
-        // 删除扫码记录（彻底清除，允许重新扫码）
-        scanRecordService.removeById(target.getId());
-        log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
-
-        String oid = TextUtils.safeText(target.getOrderId());
-        if (hasText(oid)) {
-            productionOrderService.recomputeProgressAsync(oid);
-        }
-
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("success", true);
-        resp.put("message", "已撤销");
-        return resp;
-    }
-
-    /**
-     * 退回重扫 - 仅允许退回1小时内的、当前用户的、成功的扫码记录
-     * 小程序"退回重扫"功能调用此方法
-     *
-     * @param params { recordId: 扫码记录ID }
-     * @return { success: true, message: "退回成功" }
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> rescan(Map<String, Object> params) {
-        TenantAssert.assertTenantContext(); // 重新扫码必须有租户上下文
-        Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
-        String recordId = TextUtils.safeText(safeParams.get("recordId"));
-        if (!hasText(recordId)) {
-            throw new IllegalArgumentException("记录ID不能为空");
-        }
-
-        // 先查出记录获取orderId用于锁key
-        Long tenantId = UserContext.tenantId();
-        ScanRecord preCheck = scanRecordService.lambdaQuery()
-                .eq(ScanRecord::getId, recordId)
-                .eq(ScanRecord::getTenantId, tenantId)
-                .one();
-        if (preCheck == null) {
-            throw new IllegalStateException("未找到扫码记录");
-        }
-        String rescanOrderId = TextUtils.safeText(preCheck.getOrderId());
-        String lockKey = "scan:" + (hasText(rescanOrderId) ? rescanOrderId : ("rescan:" + recordId));
-        return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
-            return doRescan(safeParams, recordId);
-        });
-    }
-
-    private Map<String, Object> doRescan(Map<String, Object> safeParams, String recordId) {
-
-        // 查找扫码记录
-        Long rescanTenantId = UserContext.tenantId();
-        ScanRecord target = scanRecordService.lambdaQuery()
-                .eq(ScanRecord::getId, recordId)
-                .eq(ScanRecord::getTenantId, rescanTenantId)
-                .one();
-        if (target == null) {
-            throw new IllegalStateException("未找到扫码记录");
-        }
-
-        // 校验是否属于当前用户
+    private void resolveOperatorInfo(Map<String, Object> safeParams) {
+        String operatorId = safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId"));
+        String operatorName = safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName"));
+        if (!hasText(operatorId) && safeParams.get("workerId") != null) operatorId = String.valueOf(safeParams.get("workerId"));
+        if (!hasText(operatorName) && safeParams.get("workerName") != null) operatorName = String.valueOf(safeParams.get("workerName"));
         UserContext ctx = UserContext.get();
-        String currentUserId = ctx == null ? null : ctx.getUserId();
-        if (!hasText(currentUserId) || !currentUserId.equals(target.getOperatorId())) {
-            throw new AccessDeniedException("只能退回自己的扫码记录");
-        }
-
-        // 校验记录状态
-        if (!"success".equalsIgnoreCase(target.getScanResult()) && !"qualified".equalsIgnoreCase(target.getScanResult())) {
-            throw new IllegalStateException("只能退回成功的扫码记录");
-        }
-
-        // 工资已结算的扫码记录禁止退回重扫
-        if (StringUtils.hasText(target.getPayrollSettlementId())) {
-            throw new IllegalStateException("该扫码记录已参与工资结算，无法退回重扫");
-        }
-
-        // 下一生产环节已有成功记录则禁止退回重扫
-        String rescanNextStageType = scanRecordEnrichHelper.getNextStageScanType(target.getScanType());
-        if (hasText(rescanNextStageType) && hasText(target.getCuttingBundleId())) {
-            long rescanNextCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, target.getOrderId())
-                    .eq(ScanRecord::getCuttingBundleId, target.getCuttingBundleId())
-                    .eq(ScanRecord::getScanType, rescanNextStageType)
-                    .eq(ScanRecord::getScanResult, "success"));
-            if (rescanNextCount > 0) {
-                throw new IllegalStateException("下一生产环节已完成扫码，无法退回重扫当前记录");
-            }
-        }
-
-        // 校验30分钟时间限制
-        LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
-        if (scanTime != null && scanTime.plusMinutes(30).isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("只能退回30分钟内的扫码记录");
-        }
-
-        // 已完成订单禁止退回重扫
-        String rescanOrderId = TextUtils.safeText(target.getOrderId());
-        if (hasText(rescanOrderId)) {
-            ProductionOrder rescanOrder = scanRecordPermissionHelper.findScopedOrder(rescanOrderId, null);
-            if (rescanOrder != null && scanRecordPermissionHelper.isTerminalOrderStatus(rescanOrder.getStatus())) {
-                throw new IllegalStateException("订单已关闭或完成，无法退回重扫");
-            }
-        }
-
-        // 判断是否为入库类型扫码，需要同时回滚入库记录
-        String scanType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase() : "";
-        boolean isWarehouseType = "warehouse".equals(scanType) || "quality".equals(scanType)
-                || "quality_warehousing".equalsIgnoreCase(target.getProcessCode());
-
-        if (isWarehouseType) {
-            // 回滚入库记录
-            String qr = hasText(target.getCuttingBundleQrCode()) ? target.getCuttingBundleQrCode()
-                    : target.getScanCode();
-            int qty = target.getQuantity() != null ? target.getQuantity() : 0;
-            if (hasText(qr) && qty > 0) {
-                try {
-                    Map<String, Object> body = new HashMap<>();
-                    body.put("orderId", target.getOrderId());
-                    body.put("cuttingBundleQrCode", qr);
-                    body.put("rollbackQuantity", qty);
-                    body.put("rollbackRemark", "退回重扫");
-                    productWarehousingOrchestrator.rollbackByBundle(body);
-                } catch (Exception e) {
-                    log.error("[rescan] 入库回滚失败: recordId={}", recordId, e);
-                    throw new IllegalStateException("入库回滚失败，无法退回重扫: " + e.getMessage(), e);
-                }
-            }
-        }
-
-        // 判断是否为裁剪类型扫码（CUTTING_BUNDLED 记录），需要回滚裁剪菲号和任务状态
-        String reqId = hasText(target.getRequestId()) ? target.getRequestId().trim() : "";
-        boolean isCuttingBundled = reqId.startsWith("CUTTING_BUNDLED:");
-        boolean isCuttingType = "cutting".equals(scanType)
-                || "裁剪".equals(hasText(target.getProgressStage()) ? target.getProgressStage().trim() : "");
-
-        if (isCuttingBundled || isCuttingType) {
-            String oid = TextUtils.safeText(target.getOrderId());
-            if (hasText(oid)) {
-                try {
-                    cuttingBundleService.remove(new LambdaQueryWrapper<CuttingBundle>()
-                            .eq(CuttingBundle::getProductionOrderId, oid));
-                    log.info("[rescan] 已删除裁剪菲号(整批): orderId={}", oid);
-
-                    // 将裁剪任务状态从 bundled 退回到 received（保留领取人信息）
-                    CuttingTask cuttingTask = cuttingTaskService.getOne(new LambdaQueryWrapper<CuttingTask>()
-                            .eq(CuttingTask::getProductionOrderId, oid)
-                            .last("limit 1"));
-                    if (cuttingTask != null && "bundled".equalsIgnoreCase(cuttingTask.getStatus())) {
-                        // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
-                        LambdaUpdateWrapper<CuttingTask> cTaskUw = new LambdaUpdateWrapper<>();
-                        cTaskUw.eq(CuttingTask::getId, cuttingTask.getId())
-                               .set(CuttingTask::getStatus, "received")
-                               .set(CuttingTask::getBundledTime, null)
-                               .set(CuttingTask::getUpdateTime, LocalDateTime.now());
-                        cuttingTaskService.update(cTaskUw);
-                        log.info("[rescan] 裁剪任务状态已退回到received: taskId={}, orderId={}", cuttingTask.getId(), oid);
-                    }
-                } catch (Exception e) {
-                    log.warn("[rescan] 裁剪数据回滚失败，继续撤销扫码记录: recordId={}, error={}", recordId, e.getMessage());
-                }
-            }
-        }
-
-        // 同步重置工序跟踪记录（退回重扫就应还原为待扫码）
-        resetTrackingByScanRecord(target.getId());
-
-        // 删除扫码记录（彻底清除，允许重新扫码）
-        scanRecordService.removeById(target.getId());
-        log.info("[rescan] 已删除扫码记录: recordId={}", target.getId());
-
-        // 异步重算订单进度
-        String orderId = TextUtils.safeText(target.getOrderId());
-        if (hasText(orderId)) {
-            productionOrderService.recomputeProgressAsync(orderId);
-        }
-
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("success", true);
-        resp.put("message", "退回成功，可重新扫码");
-        return resp;
+        String ctxUserId = ctx == null ? null : ctx.getUserId();
+        String ctxUsername = ctx == null ? null : ctx.getUsername();
+        if (hasText(ctxUserId) && hasText(ctxUsername)) { operatorId = ctxUserId; operatorName = ctxUsername; }
+        safeParams.put("operatorId", operatorId);
+        safeParams.put("operatorName", operatorName);
     }
 
-    /**
-     * 执行质检扫码（委托给QualityScanExecutor）
-     * 已迁移逻辑：领取/验收/确认/返修流程
-     */
+    private String verifyQrCodeSignature(Map<String, Object> safeParams) {
+        String scanCode = safeParams.get("scanCode") == null ? null : String.valueOf(safeParams.get("scanCode"));
+        if (hasText(scanCode)) {
+            QrCodeSigner.VerifyResult sigResult = qrCodeSigner.verify(scanCode);
+            if (sigResult.isInvalid()) throw new IllegalArgumentException(sigResult.getMessage());
+            if (sigResult.getContent() != null && !sigResult.getContent().equals(scanCode)) {
+                scanCode = sigResult.getContent();
+                safeParams.put("scanCode", scanCode);
+            }
+        }
+        return scanCode;
+    }
+
+    private String validateAndNormalizeScanType(Map<String, Object> safeParams) {
+        String operatorId = safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId"));
+        String operatorName = safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName"));
+        String scanCode = safeParams.get("scanCode") == null ? null : String.valueOf(safeParams.get("scanCode"));
+        String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
+        String orderId = safeParams.get("orderId") == null ? null : String.valueOf(safeParams.get("orderId"));
+
+        if (!hasText(operatorId) || !hasText(operatorName) || (!hasText(scanCode) && !hasText(orderNo) && !hasText(orderId))) {
+            if (!hasText(operatorId) || !hasText(operatorName)) throw new IllegalArgumentException("参数错误：缺少操作人信息，请重新登录后再试");
+            throw new IllegalArgumentException("参数错误：缺少扫码内容或订单信息");
+        }
+
+        String requestId = TextUtils.safeText(safeParams.get("requestId"));
+        if (!hasText(requestId)) { requestId = duplicateScanPreventer.generateRequestId(); safeParams.put("requestId", requestId); }
+        duplicateScanPreventer.validateRequestId(requestId);
+        ScanRecord existed = duplicateScanPreventer.findByRequestId(requestId);
+        if (existed != null) throw new IllegalStateException("DUPLICATE_IGNORE");
+
+        String scanType = TextUtils.safeText(safeParams.get("scanType"));
+        if (!hasText(scanType)) scanType = "production";
+        scanType = scanType.trim().toLowerCase();
+        if ("sewing".equals(scanType) || "procurement".equals(scanType)) scanType = "production";
+        if (!ALLOWED_SCAN_TYPES.contains(scanType)) throw new IllegalArgumentException("不支持的扫码类型: " + scanType);
+
+        Integer qtyParam = NumberUtils.toInt(safeParams.get("quantity"));
+        if (qtyParam != null && qtyParam <= 0) throw new IllegalArgumentException("扫码数量必须大于0");
+
+        String checkOrderId = TextUtils.safeText(safeParams.get("orderId"));
+        String checkOrderNo = TextUtils.safeText(safeParams.get("orderNo"));
+        ProductionOrder preCheckOrder = scanRecordPermissionHelper.findScopedOrder(checkOrderId, checkOrderNo);
+        if (preCheckOrder != null && scanRecordPermissionHelper.isTerminalOrderStatus(preCheckOrder.getStatus()))
+            throw new IllegalStateException("订单已终态(" + preCheckOrder.getStatus() + ")，无法继续扫码");
+
+        return scanType;
+    }
+
+    public Map<String, Object> undo(Map<String, Object> params) {
+        return scanUndoHelper.undo(params);
+    }
+
+    public Map<String, Object> rescan(Map<String, Object> params) {
+        return scanRescanHelper.rescan(params);
+    }
+
     private Map<String, Object> executeQualityScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName, UserContext ctx) {
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         final CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
-
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
-        if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) {
-            orderId = bundle.getProductionOrderId().trim();
-        }
-
+        if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) orderId = bundle.getProductionOrderId().trim();
         ProductionOrder order = resolveOrder(orderId, orderNo);
-        if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) {
-            order = resolveOrder(null, scanCode);
-        }
-        // 质检不做工厂归属校验：租户任何工人都可质检任何订单
+        if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
-
-        return qualityScanExecutor.execute(
-                params, requestId, operatorId, operatorName, finalOrder,
-                (unused) -> resolveColor(params, bundle, finalOrder),
-                (unused) -> resolveSize(params, bundle, finalOrder)
-        );
+        return qualityScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
+                (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
     }
 
-    /**
-     * 执行仓库入库扫码（委托给WarehouseScanExecutor）
-     * 已迁移逻辑：成品入库/次品阻止
-     */
     private Map<String, Object> executeWarehouseScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName) {
-        // 解析基础参数
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
-
-        // U编码模式：跳过菲号逻辑，直接走SKU入库
         String scanMode = TextUtils.safeText(params.get("scanMode"));
         if ("ucode".equals(scanMode)) {
             ProductionOrder order = resolveOrder(orderId, orderNo);
@@ -780,51 +211,29 @@ public class ScanRecordOrchestrator {
             validateOrderBelonging(order, ctx);
             return warehouseScanExecutor.executeUCode(params, requestId, operatorId, operatorName, order);
         }
-
         final CuttingBundle bundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
-        if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) {
-            orderId = bundle.getProductionOrderId().trim();
-        }
-
+        if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) orderId = bundle.getProductionOrderId().trim();
         ProductionOrder order = resolveOrder(orderId, orderNo);
-        if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) {
-            order = resolveOrder(null, scanCode);
-        }
+        if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
-
         UserContext ctx = UserContext.get();
         validateOrderBelonging(finalOrder, ctx);
-
-        // 委托给Executor执行
-        return warehouseScanExecutor.execute(
-                params, requestId, operatorId, operatorName, finalOrder,
-                (unused) -> resolveColor(params, bundle, finalOrder),
-                (unused) -> resolveSize(params, bundle, finalOrder)
-        );
+        return warehouseScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
+                (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
     }
 
-    /**
-     * 执行生产扫码（委托给ProductionScanExecutor）
-     * 已迁移逻辑：裁剪/车缝/大烫等生产工序
-     */
     private Map<String, Object> executeProductionScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName, String scanType, Integer quantity, boolean autoProcess, UserContext ctx) {
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         ProductionOrder order = resolveOrder(orderId, orderNo);
-        if (order == null && hasText(scanCode)) {
-            order = resolveOrder(null, scanCode);
-        }
+        if (order == null && hasText(scanCode)) order = resolveOrder(null, scanCode);
         validateOrderBelonging(order, ctx);
         final ProductionOrder resolvedOrder = order;
-        return productionScanExecutor.execute(
-                params, requestId, operatorId, operatorName, scanType,
-                quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")),
-                autoProcess,
-                (unused) -> resolveColor(params, null, resolvedOrder),
-                (unused) -> resolveSize(params, null, resolvedOrder)
-        );
+        return productionScanExecutor.execute(params, requestId, operatorId, operatorName, scanType,
+                quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")), autoProcess,
+                (unused) -> resolveColor(params, null, resolvedOrder), (unused) -> resolveSize(params, null, resolvedOrder));
     }
 
     private ProductionOrder resolveOrder(String orderId, String orderNo) {
@@ -835,106 +244,62 @@ public class ScanRecordOrchestrator {
                             ProductionOrder::getFactoryId, ProductionOrder::getFactoryType, ProductionOrder::getStatus,
                             ProductionOrder::getStyleId, ProductionOrder::getStyleNo, ProductionOrder::getStyleName,
                             ProductionOrder::getColor, ProductionOrder::getSize, ProductionOrder::getTenantId)
-                    .eq(ProductionOrder::getId, oid)
-                    .last("limit 1"));
-            if (o == null || o.getDeleteFlag() == null || o.getDeleteFlag() != 0) {
-                return null;
-            }
+                    .eq(ProductionOrder::getId, oid).last("limit 1"));
+            if (o == null || o.getDeleteFlag() == null || o.getDeleteFlag() != 0) return null;
             return o;
         }
-
         String on = hasText(orderNo) ? orderNo.trim() : null;
-        if (!hasText(on)) {
-            return null;
-        }
+        if (!hasText(on)) return null;
         return productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getDeleteFlag,
                         ProductionOrder::getFactoryId, ProductionOrder::getFactoryType, ProductionOrder::getStatus,
                         ProductionOrder::getStyleId, ProductionOrder::getStyleNo, ProductionOrder::getStyleName,
                         ProductionOrder::getColor, ProductionOrder::getSize, ProductionOrder::getTenantId)
-                .eq(ProductionOrder::getOrderNo, on)
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .last("limit 1"));
+                .eq(ProductionOrder::getOrderNo, on).eq(ProductionOrder::getDeleteFlag, 0).last("limit 1"));
     }
 
     private void validateOrderBelonging(ProductionOrder order, UserContext ctx) {
-        if (order == null || ctx == null) {
-            return;
-        }
-        String role = ctx.getRole();
-        boolean isAdmin = role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager")
-                || role.contains("supervisor") || role.contains("主管") || role.contains("管理员"));
-        if (isAdmin) {
-            return;
-        }
+        if (order == null || ctx == null) return;
+        if (isAdminRole(ctx)) return;
         String userFactoryId = ctx.getFactoryId();
         String orderFactoryId = order.getFactoryId();
         String orderFactoryType = order.getFactoryType();
         boolean isInternalUser = !StringUtils.hasText(userFactoryId);
         boolean isExternalOrder = "EXTERNAL".equalsIgnoreCase(orderFactoryType);
-        boolean isInternalOrder = !isExternalOrder;
-        if (isInternalUser && isInternalOrder) {
-            return;
-        }
-        if (isInternalUser && isExternalOrder) {
-            throw new AccessDeniedException("内部员工无法扫码外发订单，请确认订单归属");
-        }
+        if (isInternalUser && !isExternalOrder) return;
+        if (isInternalUser && isExternalOrder) throw new AccessDeniedException("内部员工无法扫码外发订单，请确认订单归属");
         if (!isInternalUser && isExternalOrder) {
-            if (userFactoryId != null && userFactoryId.equals(orderFactoryId)) {
-                return;
-            }
+            if (userFactoryId != null && userFactoryId.equals(orderFactoryId)) return;
             throw new AccessDeniedException("无法扫码其他工厂的外发订单，请确认订单归属");
         }
-        if (!isInternalUser && isInternalOrder) {
-            throw new AccessDeniedException("外发工厂无法扫码内部订单，请确认订单归属");
-        }
+        if (!isInternalUser && !isExternalOrder) throw new AccessDeniedException("外发工厂无法扫码内部订单，请确认订单归属");
+    }
+
+    private boolean isAdminRole(UserContext ctx) {
+        if (ctx == null) return false;
+        String role = ctx.getRole();
+        if (role == null) return false;
+        for (String keyword : ADMIN_ROLE_KEYWORDS) { if (role.contains(keyword)) return true; }
+        return false;
     }
 
     private String resolveColor(Map<String, Object> params, CuttingBundle bundle, ProductionOrder order) {
         String v = TextUtils.safeText(params == null ? null : params.get("color"));
-        if (hasText(v)) {
-            return v;
-        }
+        if (hasText(v)) return v;
         String b = bundle == null ? null : TextUtils.safeText(bundle.getColor());
-        if (hasText(b)) {
-            return b;
-        }
+        if (hasText(b)) return b;
         return order == null ? null : TextUtils.safeText(order.getColor());
     }
 
     private String resolveSize(Map<String, Object> params, CuttingBundle bundle, ProductionOrder order) {
         String v = TextUtils.safeText(params == null ? null : params.get("size"));
-        if (hasText(v)) {
-            return v;
-        }
+        if (hasText(v)) return v;
         String b = bundle == null ? null : TextUtils.safeText(bundle.getSize());
-        if (hasText(b)) {
-            return b;
-        }
+        if (hasText(b)) return b;
         return order == null ? null : TextUtils.safeText(order.getSize());
     }
 
-    private boolean isTruthy(Object v) {
-        if (v == null) {
-            return false;
-        }
-        if (v instanceof Boolean boolean1) {
-            return boolean1;
-        }
-        if (v instanceof Number number) {
-            return number.intValue() != 0;
-        }
-        String s = String.valueOf(v).trim();
-        if (!hasText(s)) {
-            return false;
-        }
-        String t = s.toLowerCase();
-        return "1".equals(t) || "true".equals(t) || "y".equals(t) || "yes".equals(t) || "on".equals(t);
-    }
-
-    public Map<String, Object> resolveUnitPrice(Map<String, Object> params) {
-        return unitPriceResolver.resolveUnitPrice(params);
-    }
+    public Map<String, Object> resolveUnitPrice(Map<String, Object> params) { return unitPriceResolver.resolveUnitPrice(params); }
 
     public IPage<ScanRecord> list(Map<String, Object> params) {
         IPage<ScanRecord> page = scanRecordQueryHelper.list(params);
@@ -942,8 +307,6 @@ public class ScanRecordOrchestrator {
         scanRecordEnrichHelper.markHasNextStageScan(page.getRecords());
         return page;
     }
-
-
 
     public IPage<ScanRecord> getByOrderId(String orderId, int page, int pageSize) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getByOrderId(orderId, page, pageSize);
@@ -968,159 +331,67 @@ public class ScanRecordOrchestrator {
 
     public IPage<ScanRecord> getMyHistory(int page, int pageSize, String scanType, String startTime, String endTime,
             String orderNo, String bundleNo, String workerName, String operatorName) {
-        IPage<ScanRecord> result = scanRecordQueryHelper.getMyHistory(page, pageSize, scanType, startTime, endTime,
-                orderNo, bundleNo, workerName, operatorName);
+        IPage<ScanRecord> result = scanRecordQueryHelper.getMyHistory(page, pageSize, scanType, startTime, endTime, orderNo, bundleNo, workerName, operatorName);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
-        // 为每条记录注氨1「下一生产环节是否已扫码」，用于预防展示错误的「退回」按鈕
         scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
         return result;
     }
 
-    public List<ScanRecord> getMyQualityTasks() {
-        return scanRecordQueryHelper.getMyQualityTasks();
-    }
-
-    public Map<String, Object> getPersonalStats(String scanType) {
-        return getPersonalStats(scanType, null);
-    }
-
-    public Map<String, Object> getPersonalStats(String scanType, String period) {
-        return scanRecordQueryHelper.getPersonalStats(scanType, period);
-    }
+    public List<ScanRecord> getMyQualityTasks() { return scanRecordQueryHelper.getMyQualityTasks(); }
+    public Map<String, Object> getPersonalStats(String scanType) { return getPersonalStats(scanType, null); }
+    public Map<String, Object> getPersonalStats(String scanType, String period) { return scanRecordQueryHelper.getPersonalStats(scanType, period); }
 
     public Map<String, Object> cleanup(String from) {
-        if (!UserContext.isTopAdmin()) {
-            throw new AccessDeniedException("无权限操作");
-        }
+        if (!UserContext.isTopAdmin()) throw new AccessDeniedException("无权限操作");
         log.warn("[Cleanup] cleanup 功能已禁用");
         return Collections.emptyMap();
     }
 
     public Map<String, Object> deleteFullLinkByOrderId(String orderId) {
-        if (!UserContext.isTopAdmin()) {
-            throw new AccessDeniedException("无权限操作");
-        }
+        if (!UserContext.isTopAdmin()) throw new AccessDeniedException("无权限操作");
         String key = orderId == null ? null : orderId.trim();
-        if (!hasText(key)) {
-            throw new IllegalArgumentException("参数错误");
-        }
+        if (!hasText(key)) throw new IllegalArgumentException("参数错误");
         log.warn("[Cleanup] deleteFullLink 功能已禁用");
         return Collections.emptyMap();
     }
 
-    private boolean hasText(String value) {
-        return value != null && !value.trim().isEmpty();
-    }
-
-    /**
-     * 撤回/退回重扫后，把关联的 ProcessTracking 状态还原为 pending。
-     * 两端（手机+PC）撤回走同一条 undo/rescan 路径，此方法统一处理联动。
-     *
-     * @param scanRecordId 被撤回的扫码记录 ID
-     */
-    private void resetTrackingByScanRecord(String scanRecordId) {
-        if (!hasText(scanRecordId)) return;
-        try {
-            ProductionProcessTracking tracking = processTrackingService.getOne(
-                    new LambdaQueryWrapper<ProductionProcessTracking>()
-                            .eq(ProductionProcessTracking::getScanRecordId, scanRecordId)
-                            .last("LIMIT 1"),
-                    false);
-            if (tracking == null) return;
-            // 已结算的记录不能重置（保护财务数据）
-            if (Boolean.TRUE.equals(tracking.getIsSettled())) {
-                log.warn("[resetTracking] 该工序跟踪记录已结算，跳过重置: trackingId={}", tracking.getId());
-                return;
-            }
-            // ⚠️ 必须用 LambdaUpdateWrapper 显式 SET NULL
-            // updateById 默认跳过 null 字段（MyBatis-Plus NOT_NULL 策略），
-            // 直接 set null 不会真正清空数据库字段，导致撤回后扫码时间/操作人仍残留显示。
-            LambdaUpdateWrapper<ProductionProcessTracking> uw =
-                    new LambdaUpdateWrapper<>();
-            uw.eq(ProductionProcessTracking::getId, tracking.getId())
-              .set(ProductionProcessTracking::getScanStatus, "pending")
-              .set(ProductionProcessTracking::getScanTime, null)
-              .set(ProductionProcessTracking::getScanRecordId, null)
-              .set(ProductionProcessTracking::getOperatorId, null)
-              .set(ProductionProcessTracking::getOperatorName, null)
-              .set(ProductionProcessTracking::getSettlementAmount, null);
-            processTrackingService.update(uw);
-            log.info("[resetTracking] 工序跟踪已还原为 pending: trackingId={}, 菲号={}, 工序={}",
-                    tracking.getId(), tracking.getBundleNo(), tracking.getProcessName());
-        } catch (Exception e) {
-            log.error("[resetTracking] 重置失败（不影响主流程）: scanRecordId={}", scanRecordId, e);
-        }
-    }
-
-
-
     private void tryNotifyNextStage(Map<String, Object> params, Map<String, Object> result) {
         try {
             if (result == null || !Boolean.TRUE.equals(result.get("success"))) return;
-            com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
+            UserContext ctx = UserContext.get();
             Long tenantId = ctx != null ? ctx.getTenantId() : null;
             if (tenantId == null) return;
             String orderNo = TextUtils.safeText(params.get("orderNo"));
             if (!hasText(orderNo)) orderNo = TextUtils.safeText(params.get("orderId"));
             String stage = TextUtils.safeText(params.get("progressStage"));
             if (!hasText(stage)) stage = TextUtils.safeText(params.get("scanType"));
-            smartNotificationOrchestrator.notifyTeam(
-                "next_stage",
-                String.format("工序 %s 完成扫码 — %s",
-                    hasText(stage) ? stage : "生产扫码",
-                    hasText(orderNo) ? orderNo : ""),
-                "扫码成功，可安排下道工序接单",
-                tenantId
-            );
-        } catch (Exception e) {
-            log.warn("[ScanNotify] 工序推进推送失败，不阻断业务: {}", e.getMessage());
-        }
+            smartNotificationOrchestrator.notifyTeam("next_stage",
+                String.format("工序 %s 完成扫码 — %s", hasText(stage) ? stage : "生产扫码", hasText(orderNo) ? orderNo : ""),
+                "扫码成功，可安排下道工序接单", tenantId);
+        } catch (Exception e) { log.warn("[ScanNotify] 工序推进推送失败，不阻断业务: {}", e.getMessage()); }
     }
 
     private void appendBundleStatusHints(Map<String, Object> params, Map<String, Object> result) {
         if (result == null) return;
         try {
-            String bundleId = null;
-            String orderId = null;
+            String bundleId = null; String orderId = null;
             Object bundleObj = result.get("cuttingBundle");
-            if (bundleObj instanceof CuttingBundle) {
-                CuttingBundle b = (CuttingBundle) bundleObj;
-                bundleId = b.getId();
-            }
-            if (!hasText(bundleId)) {
-                bundleId = TextUtils.safeText(params.get("cuttingBundleId"));
-            }
+            if (bundleObj instanceof CuttingBundle) bundleId = ((CuttingBundle) bundleObj).getId();
+            if (!hasText(bundleId)) bundleId = TextUtils.safeText(params.get("cuttingBundleId"));
             Object orderObj = result.get("orderInfo");
-            if (orderObj instanceof Map) {
-                orderId = TextUtils.safeText(((Map<?, ?>) orderObj).get("id"));
-            }
-            if (!hasText(orderId)) {
-                orderId = TextUtils.safeText(params.get("orderId"));
-            }
+            if (orderObj instanceof Map) orderId = TextUtils.safeText(((Map<?, ?>) orderObj).get("id"));
+            if (!hasText(orderId)) orderId = TextUtils.safeText(params.get("orderId"));
             if (!hasText(bundleId) || !hasText(orderId)) return;
-
             List<ScanRecord> records = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getCuttingBundleId, bundleId)
-                    .eq(ScanRecord::getScanResult, "success")
-                    .ne(ScanRecord::getScanType, "orchestration")
-                    .orderByAsc(ScanRecord::getCreateTime));
-
-            List<ProductWarehousing> whRecords = productWarehousingService.list(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                            .eq(ProductWarehousing::getOrderId, orderId)
-                            .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                            .eq(ProductWarehousing::getDeleteFlag, 0)
-                            .orderByAsc(ProductWarehousing::getCreateTime));
-
+                    .eq(ScanRecord::getOrderId, orderId).eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanResult, "success").ne(ScanRecord::getScanType, "orchestration").orderByAsc(ScanRecord::getCreateTime));
+            List<ProductWarehousing> whRecords = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getOrderId, orderId).eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                    .eq(ProductWarehousing::getDeleteFlag, 0).orderByAsc(ProductWarehousing::getCreateTime));
             List<String> hints = warehousingHelper.buildBundleStageHints(records, whRecords);
-
-            if (!hints.isEmpty()) {
-                result.put("bundleStatusHints", hints);
-                result.put("bundleStatusText", String.join(" → ", hints));
-            }
-        } catch (Exception e) {
-            log.debug("[ScanHints] 菲号状态提示生成失败（不阻断）: {}", e.getMessage());
-        }
+            if (!hints.isEmpty()) { result.put("bundleStatusHints", hints); result.put("bundleStatusText", String.join(" → ", hints)); }
+        } catch (Exception e) { log.debug("[ScanHints] 菲号状态提示生成失败（不阻断）: {}", e.getMessage()); }
     }
+
+    private boolean hasText(String value) { return value != null && !value.trim().isEmpty(); }
 }

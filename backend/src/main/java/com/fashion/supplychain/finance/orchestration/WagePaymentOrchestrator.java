@@ -3,103 +3,40 @@ package com.fashion.supplychain.finance.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.finance.entity.BillAggregation;
-import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
-import com.fashion.supplychain.finance.entity.FinishedSettlementApprovalStatus;
-import com.fashion.supplychain.finance.entity.MaterialReconciliation;
-import com.fashion.supplychain.finance.entity.Payable;
-import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
-import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.entity.WagePayment;
-import com.fashion.supplychain.finance.service.BillAggregationService;
-import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
-import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
-import com.fashion.supplychain.finance.service.MaterialReconciliationService;
-import com.fashion.supplychain.finance.service.PayableService;
-import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.service.PaymentAccountService;
-import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
-/**
- * 工资支付编排器
- *
- * 职责：
- * 1. 收款账户管理（员工/工厂绑定银行卡、微信、支付宝二维码）
- * 2. 工资支付流程编排（选择支付方式 → 创建支付 → 通知收款方）
- * 3. 支付状态流转（pending → processing → success/failed）
- * 4. WebSocket实时通知（支付发起/支付成功通知收款方）
- *
- * 架构原则：
- * - 遵循 Controller → Orchestrator → Service → Mapper 四层架构
- * - 事务边界在此层管理
- * - 租户隔离在此层校验
- */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class WagePaymentOrchestrator {
 
-    @Autowired
-    private PaymentAccountService paymentAccountService;
-
-    @Autowired
-    private WagePaymentService wagePaymentService;
-
-    @Autowired
-    private WebSocketService webSocketService;
-
-    @Autowired
-    private MaterialReconciliationService materialReconciliationService;
-
-    @Autowired
-    private ExpenseReimbursementService expenseReimbursementService;
-
-    @Autowired
-    private BillAggregationService billAggregationService;
-
-    @Autowired
-    private PayrollSettlementService payrollSettlementService;
-
-    @Autowired
-    private FinishedSettlementApprovalStatusService finishedSettlementApprovalStatusService;
-
-    @Autowired
-    private ShipmentReconciliationService shipmentReconciliationService;
-
-    @Autowired
-    private PayableService payableService;
+    private final PaymentAccountService paymentAccountService;
+    private final WagePaymentService wagePaymentService;
+    private final WebSocketService webSocketService;
+    private final WagePaymentCallbackHelper callbackHelper;
+    private final PayableAggregationHelper payableAggregationHelper;
+    private final WagePaymentDashboardHelper dashboardHelper;
 
     private static final AtomicLong PAYMENT_SEQ = new AtomicLong(1);
 
-    // ============================================================
-    // 一、收款账户管理
-    // ============================================================
-
-    /**
-     * 查询指定对象的所有收款账户
-     */
     public List<PaymentAccount> listAccounts(String ownerType, String ownerId) {
         TenantAssert.assertTenantContext();
         Long tenantId = TenantAssert.requireTenantId();
@@ -115,9 +52,6 @@ public class WagePaymentOrchestrator {
         );
     }
 
-    /**
-     * 添加或更新收款账户
-     */
     @Transactional(rollbackFor = Exception.class)
     public PaymentAccount saveAccount(PaymentAccount account) {
         TenantAssert.assertTenantContext();
@@ -126,7 +60,6 @@ public class WagePaymentOrchestrator {
         account.setTenantId(tenantId);
         account.setCreateBy(UserContext.userId());
 
-        // 如果设为默认，先取消该所有者的其他默认
         if (account.getIsDefault() != null && account.getIsDefault() == 1) {
             paymentAccountService.update(
                 new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<PaymentAccount>()
@@ -137,7 +70,6 @@ public class WagePaymentOrchestrator {
             );
         }
 
-        // 如果是第一个账户，自动设为默认
         long existCount = paymentAccountService.count(
             new LambdaQueryWrapper<PaymentAccount>()
                 .eq(PaymentAccount::getOwnerType, account.getOwnerType())
@@ -159,9 +91,6 @@ public class WagePaymentOrchestrator {
         return account;
     }
 
-    /**
-     * 删除收款账户（逻辑删除）
-     */
     @Transactional(rollbackFor = Exception.class)
     public void removeAccount(String accountId) {
         TenantAssert.assertTenantContext();
@@ -178,28 +107,11 @@ public class WagePaymentOrchestrator {
         log.info("[工资支付] 停用收款账户: id={}", accountId);
     }
 
-    // ============================================================
-    // 二、工资支付流程编排
-    // ============================================================
-
-    /**
-     * 发起工资支付
-     *
-     * 流程：
-     * 1. 校验收款方和账户
-     * 2. 生成支付单号
-     * 3. 创建支付记录
-     * 4. 通知收款方（WebSocket）
-     *
-     * @param request 支付请求
-     * @return 支付记录
-     */
     @Transactional(rollbackFor = Exception.class)
     public WagePayment initiatePayment(WagePaymentRequest request) {
         TenantAssert.assertTenantContext();
         Long tenantId = TenantAssert.requireTenantId();
 
-        // 1. 构建支付记录
         WagePayment payment = new WagePayment();
         payment.setPaymentNo(generatePaymentNo());
         payment.setPayeeType(request.getPayeeType());
@@ -217,14 +129,11 @@ public class WagePaymentOrchestrator {
         payment.setOperatorName(UserContext.username());
         payment.setTenantId(tenantId);
 
-        // 2. 根据支付方式设置初始状态
         if ("OFFLINE".equals(request.getPaymentMethod())) {
-            // 线下支付 → 直接标记为已支付
             payment.setStatus("success");
             payment.setPaymentTime(LocalDateTime.now());
             payment.setNotifyStatus("pending");
         } else {
-            // 线上支付 → 待支付状态
             payment.setStatus("pending");
             payment.setNotifyStatus("pending");
         }
@@ -237,15 +146,11 @@ public class WagePaymentOrchestrator {
                  payment.getPaymentNo(), payment.getPayeeName(),
                  payment.getPaymentMethod(), payment.getAmount());
 
-        // 3. 发送WebSocket通知
         notifyPaymentCreated(payment);
 
         return payment;
     }
 
-    /**
-     * 确认线下支付（上传凭证）
-     */
     @Transactional(rollbackFor = Exception.class)
     public WagePayment confirmOfflinePayment(String paymentId, String proofUrl, String remark) {
         TenantAssert.assertTenantContext();
@@ -254,7 +159,7 @@ public class WagePaymentOrchestrator {
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(payment.getTenantId(), "支付记录");
+        TenantAssert.assertBelongsToCurrentTenant(payment.getTenantId(), "支付记录");
 
         payment.setStatus("success");
         payment.setPaymentTime(LocalDateTime.now());
@@ -267,15 +172,11 @@ public class WagePaymentOrchestrator {
         wagePaymentService.updateById(payment);
         log.info("[工资支付] 确认线下支付: id={}, no={}", paymentId, payment.getPaymentNo());
 
-        // 通知收款方
         notifyPaymentSuccess(payment);
 
         return payment;
     }
 
-    /**
-     * 收款方确认收款
-     */
     @Transactional(rollbackFor = Exception.class)
     public WagePayment confirmReceived(String paymentId) {
         TenantAssert.assertTenantContext();
@@ -296,9 +197,6 @@ public class WagePaymentOrchestrator {
         return payment;
     }
 
-    /**
-     * 取消支付
-     */
     @Transactional(rollbackFor = Exception.class)
     public WagePayment cancelPayment(String paymentId, String reason) {
         TenantAssert.assertTenantContext();
@@ -323,10 +221,6 @@ public class WagePaymentOrchestrator {
         return payment;
     }
 
-    /**
-     * 退回已付款项（主管及以上权限）
-     * 将已支付成功的记录退回，并回写上游单据状态
-     */
     @Transactional(rollbackFor = Exception.class)
     public WagePayment refundPayment(String paymentId, String reason) {
         TenantAssert.assertTenantContext();
@@ -352,120 +246,11 @@ public class WagePaymentOrchestrator {
         log.info("[工资支付] 退回已付款项: id={}, no={}, reason={}, operator={}",
                  paymentId, payment.getPaymentNo(), reason, UserContext.username());
 
-        callbackRefundUpstream(payment);
+        callbackHelper.callbackRefundUpstream(payment);
 
         return payment;
     }
 
-    /**
-     * 退回时回写上游单据状态
-     */
-    private void callbackRefundUpstream(WagePayment payment) {
-        if (payment == null || payment.getBizType() == null || payment.getBizId() == null) {
-            return;
-        }
-        try {
-            switch (payment.getBizType()) {
-                case "RECONCILIATION":
-                    MaterialReconciliation recon = materialReconciliationService.lambdaQuery()
-                            .eq(MaterialReconciliation::getId, payment.getBizId())
-                            .eq(MaterialReconciliation::getTenantId, payment.getTenantId())
-                            .one();
-                    if (recon != null && "paid".equals(recon.getStatus())) {
-                        recon.setStatus("approved");
-                        recon.setPaidAt(null);
-                        recon.setRemark((recon.getRemark() != null ? recon.getRemark() + "\n" : "")
-                                + "【付款退回】" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                        recon.setUpdateBy(UserContext.username());
-                        recon.setUpdateTime(LocalDateTime.now());
-                        materialReconciliationService.updateById(recon);
-                        log.info("[工资支付] 退回回写物料对账: id={}, status=paid->approved", payment.getBizId());
-                    }
-                    break;
-
-                case "REIMBURSEMENT":
-                    ExpenseReimbursement reimb = expenseReimbursementService.lambdaQuery()
-                            .eq(ExpenseReimbursement::getId, payment.getBizId())
-                            .eq(ExpenseReimbursement::getTenantId, payment.getTenantId())
-                            .one();
-                    if (reimb != null && "paid".equals(reimb.getStatus())) {
-                        reimb.setStatus("approved");
-                        reimb.setPaymentTime(null);
-                        reimb.setPaymentBy(null);
-                        reimb.setApprovalRemark("【付款退回】" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                        reimb.setUpdateBy(UserContext.username());
-                        reimb.setUpdateTime(LocalDateTime.now());
-                        expenseReimbursementService.updateById(reimb);
-                        log.info("[工资支付] 退回回写费用报销: id={}, status=paid->approved", payment.getBizId());
-                    }
-                    break;
-
-                case "PAYROLL_SETTLEMENT":
-                    PayrollSettlement psRefund = payrollSettlementService.lambdaQuery()
-                            .eq(PayrollSettlement::getId, payment.getBizId())
-                            .eq(PayrollSettlement::getTenantId, payment.getTenantId())
-                            .one();
-                    if (psRefund != null && "paid".equals(psRefund.getStatus())) {
-                        PayrollSettlement psPatch = new PayrollSettlement();
-                        psPatch.setId(psRefund.getId());
-                        psPatch.setStatus("approved");
-                        psPatch.setUpdateTime(LocalDateTime.now());
-                        payrollSettlementService.updateById(psPatch);
-                        log.info("[工资支付] 退回回写工资结算: id={}, paid->approved", payment.getBizId());
-                    }
-                    break;
-
-                case "ORDER_SETTLEMENT":
-                    FinishedSettlementApprovalStatus approvalRefund = finishedSettlementApprovalStatusService.lambdaQuery()
-                            .eq(FinishedSettlementApprovalStatus::getSettlementId, payment.getBizId())
-                            .eq(FinishedSettlementApprovalStatus::getStatus, "paid")
-                            .last("LIMIT 1")
-                            .one();
-                    if (approvalRefund != null) {
-                        FinishedSettlementApprovalStatus patchRefund = new FinishedSettlementApprovalStatus();
-                        patchRefund.setSettlementId(approvalRefund.getSettlementId());
-                        patchRefund.setStatus("approved");
-                        patchRefund.setUpdateTime(LocalDateTime.now());
-                        finishedSettlementApprovalStatusService.updateById(patchRefund);
-                        log.info("[工资支付] 退回回写成品结算审批: settlementId={}, paid->approved", payment.getBizId());
-                    }
-                    break;
-
-                default:
-                    log.warn("[工资支付] 退回: 未知业务类型 {}", payment.getBizType());
-            }
-
-            if (billAggregationService != null) {
-                BillAggregation bill = billAggregationService.lambdaQuery()
-                        .eq(BillAggregation::getSourceType, payment.getBizType())
-                        .eq(BillAggregation::getSourceId, payment.getBizId())
-                        .eq(BillAggregation::getDeleteFlag, 0)
-                        .last("LIMIT 1")
-                        .one();
-                if (bill != null && "SETTLED".equals(bill.getStatus())) {
-                    bill.setStatus("CONFIRMED");
-                    bill.setSettledAmount(BigDecimal.ZERO);
-                    bill.setSettledAt(null);
-                    bill.setSettledById(null);
-                    bill.setSettledByName(null);
-                    bill.setRemark((bill.getRemark() != null ? bill.getRemark() + " | " : "")
-                            + "付款退回，状态回退至CONFIRMED");
-                    billAggregationService.updateById(bill);
-                    log.info("[工资支付] 退回回写账单汇总: billNo={}, SETTLED->CONFIRMED", bill.getBillNo());
-                }
-            }
-        } catch (Exception e) {
-            log.error("[工资支付] 退回回写上游失败: bizType={}, bizId={}", payment.getBizType(), payment.getBizId(), e);
-        }
-    }
-
-    // ============================================================
-    // 三、查询
-    // ============================================================
-
-    /**
-     * 查询支付记录列表
-     */
     public List<WagePayment> listPayments(WagePaymentQuery query) {
         TenantAssert.assertTenantContext();
         Long tenantId = TenantAssert.requireTenantId();
@@ -482,7 +267,6 @@ public class WagePaymentOrchestrator {
             .le(query.getEndTime() != null, WagePayment::getCreateTime, query.getEndTime())
             .orderByDesc(WagePayment::getCreateTime);
 
-        // 工厂账户/仅看自己 → 只能查看自己的支付记录
         String dataScope = UserContext.getDataScope();
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()
                 || "own".equals(dataScope) || "self".equals(dataScope)) {
@@ -498,9 +282,6 @@ public class WagePaymentOrchestrator {
         return wagePaymentService.list(wrapper);
     }
 
-    /**
-     * 获取支付详情（含收款账户信息）
-     */
     public WagePaymentDetailDTO getPaymentDetail(String paymentId) {
         TenantAssert.assertTenantContext();
 
@@ -521,9 +302,45 @@ public class WagePaymentOrchestrator {
             .build();
     }
 
-    // ============================================================
-    // 四、WebSocket 通知
-    // ============================================================
+    public List<PayableItemDTO> listPendingPayables(String bizType) {
+        return payableAggregationHelper.listPendingPayables(bizType);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public WagePayment createPendingPayable(WagePaymentRequest request) {
+        return payableAggregationHelper.createPendingPayable(request);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void rejectPayable(String paymentId, String bizType, String bizId, String reason) {
+        payableAggregationHelper.rejectPayable(paymentId, bizType, bizId, reason);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public WagePayment initiatePaymentWithCallback(WagePaymentRequest request) {
+        WagePayment payment = initiatePayment(request);
+
+        if ("success".equals(payment.getStatus()) && request.getBizType() != null && request.getBizId() != null) {
+            callbackHelper.callbackPaidUpstream(request.getBizType(), request.getBizId());
+        }
+
+        return payment;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public WagePayment confirmOfflineWithCallback(String paymentId, String proofUrl, String remark) {
+        WagePayment payment = confirmOfflinePayment(paymentId, proofUrl, remark);
+
+        if ("success".equals(payment.getStatus()) && payment.getBizType() != null && payment.getBizId() != null) {
+            callbackHelper.callbackPaidUpstream(payment.getBizType(), payment.getBizId());
+        }
+
+        return payment;
+    }
+
+    public java.util.Map<String, Object> getDashboardStats(String startDate, String endDate) {
+        return dashboardHelper.getDashboardStats(startDate, endDate);
+    }
 
     private void notifyPaymentCreated(WagePayment payment) {
         try {
@@ -564,570 +381,26 @@ public class WagePaymentOrchestrator {
         }
     }
 
-    // ============================================================
-    // 五、辅助方法
-    // ============================================================
-
     private String generatePaymentNo() {
         String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         long seq = PAYMENT_SEQ.getAndIncrement();
         return String.format("WP%s%06d", datePart, seq);
     }
 
-    // ============================================================
-    // 六、聚合待付款数据（统一付款中心核心）
-    // ============================================================
-
-    /**
-     * 获取所有待付款的应付单据（已审批未付款）
-     * 聚合三个来源：物料对账、费用报销（工资审批数据来自内存，前端直传）
-     */
-    public List<PayableItemDTO> listPendingPayables(String bizType) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = TenantAssert.requireTenantId();
-        List<PayableItemDTO> items = new ArrayList<>();
-
-        // 1. 物料对账（工厂对账）- status = 'approved'
-        if (bizType == null || "RECONCILIATION".equals(bizType)) {
-            List<MaterialReconciliation> recons = materialReconciliationService.list(
-                new LambdaQueryWrapper<MaterialReconciliation>()
-                    .eq(MaterialReconciliation::getTenantId, tenantId)
-                    .eq(MaterialReconciliation::getStatus, "approved")
-                    .eq(MaterialReconciliation::getDeleteFlag, 0)
-                    .orderByDesc(MaterialReconciliation::getCreateTime)
-                    .last("LIMIT 5000")
-            );
-            for (MaterialReconciliation r : recons) {
-                items.add(PayableItemDTO.builder()
-                    .bizType("RECONCILIATION")
-                    .bizId(r.getId())
-                    .bizNo(r.getReconciliationNo())
-                    .payeeType("FACTORY")
-                    .payeeId(r.getSupplierId())
-                    .payeeName(r.getSupplierName())
-                    .amount(r.getFinalAmount() != null ? r.getFinalAmount() : r.getTotalAmount())
-                    .paidAmount(r.getPaidAmount())
-                    .description("物料对账 - " + r.getMaterialName())
-                    .sourceStatus(r.getStatus())
-                    .createTime(r.getCreateTime())
-                    .yearMonth(r.getCreateTime() != null ? r.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
-                    .build());
-            }
-        }
-
-        // 2. 费用报销 - status = 'approved'
-        if (bizType == null || "REIMBURSEMENT".equals(bizType)) {
-            List<ExpenseReimbursement> reimbs = expenseReimbursementService.list(
-                new LambdaQueryWrapper<ExpenseReimbursement>()
-                    .eq(ExpenseReimbursement::getTenantId, tenantId)
-                    .eq(ExpenseReimbursement::getStatus, "approved")
-                    .eq(ExpenseReimbursement::getDeleteFlag, 0)
-                    .orderByDesc(ExpenseReimbursement::getCreateTime)
-                    .last("LIMIT 5000")
-            );
-            for (ExpenseReimbursement e : reimbs) {
-                items.add(PayableItemDTO.builder()
-                    .bizType("REIMBURSEMENT")
-                    .bizId(e.getId())
-                    .bizNo(e.getReimbursementNo())
-                    .payeeType("WORKER")
-                    .payeeId(String.valueOf(e.getApplicantId()))
-                    .payeeName(e.getApplicantName())
-                    .amount(e.getAmount())
-                    .paidAmount(BigDecimal.ZERO)
-                    .description(e.getTitle() + " - " + e.getExpenseType())
-                    .sourceStatus(e.getStatus())
-                    .createTime(e.getCreateTime())
-                    .yearMonth(e.getCreateTime() != null ? e.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
-                    .build());
-            }
-        }
-
-        // 3. 工资结算（PAYROLL_SETTLEMENT）：查询已创建的待付款记录
-        if (bizType == null || "PAYROLL_SETTLEMENT".equals(bizType)) {
-            try {
-                LambdaQueryWrapper<WagePayment> psWrapper = new LambdaQueryWrapper<>();
-                psWrapper.eq(WagePayment::getBizType, "PAYROLL_SETTLEMENT")
-                         .eq(WagePayment::getStatus, "pending")
-                         .eq(WagePayment::getTenantId, tenantId)
-                         .last("LIMIT 5000");
-                List<WagePayment> psPayments = wagePaymentService.list(psWrapper);
-                for (WagePayment wp : psPayments) {
-                    items.add(PayableItemDTO.builder()
-                        .bizType("PAYROLL_SETTLEMENT")
-                        .bizId(wp.getBizId())
-                        .bizNo(wp.getPaymentNo())
-                        .payeeName(wp.getPayeeName())
-                        .payeeType("PERSON")
-                        .amount(wp.getAmount())
-                        .sourceStatus("pending")
-                        .description(wp.getPaymentRemark())
-                        .createTime(wp.getCreateTime())
-                        .yearMonth(wp.getCreateTime() != null ? wp.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
-                        .build());
-                }
-            } catch (Exception e) {
-                log.warn("[付款中心] 查询工资结算待付款失败", e);
-            }
-        }
-
-        // 4. 工厂订单结算（ORDER_SETTLEMENT）：查询已创建的待付款记录
-        if (bizType == null || "ORDER_SETTLEMENT".equals(bizType)) {
-            try {
-                LambdaQueryWrapper<WagePayment> osWrapper = new LambdaQueryWrapper<>();
-                osWrapper.eq(WagePayment::getBizType, "ORDER_SETTLEMENT")
-                         .eq(WagePayment::getStatus, "pending")
-                         .eq(WagePayment::getTenantId, tenantId)
-                         .last("LIMIT 5000");
-                List<WagePayment> osPayments = wagePaymentService.list(osWrapper);
-                for (WagePayment wp : osPayments) {
-                    items.add(PayableItemDTO.builder()
-                        .bizType("ORDER_SETTLEMENT")
-                        .bizId(wp.getBizId())
-                        .bizNo(wp.getPaymentNo())
-                        .payeeName(wp.getPayeeName())
-                        .payeeType("FACTORY")
-                        .amount(wp.getAmount())
-                        .sourceStatus("pending")
-                        .description(wp.getPaymentRemark())
-                        .createTime(wp.getCreateTime())
-                        .yearMonth(wp.getCreateTime() != null ? wp.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM")) : null)
-                        .build());
-                }
-            } catch (Exception e) {
-                log.warn("[付款中心] 查询工厂订单结算待付款失败", e);
-            }
-        }
-
-        // 5. 账单汇总（BillAggregation）已确认账单 — 按对方+月份聚合
-        // 去重：排除已在1-4部分直接查原始单据出现的来源
-        if (bizType == null || "BILL_RECEIVABLE".equals(bizType) || "BILL_PAYABLE".equals(bizType)) {
-            try {
-                Set<String> existingSources = new HashSet<>();
-                for (PayableItemDTO existing : items) {
-                    if (existing.getBizId() != null && existing.getBizType() != null) {
-                        existingSources.add(existing.getBizType() + ":" + existing.getBizId());
-                    }
-                }
-
-                LambdaQueryWrapper<BillAggregation> billWrapper = new LambdaQueryWrapper<BillAggregation>()
-                    .eq(BillAggregation::getTenantId, tenantId)
-                    .eq(BillAggregation::getStatus, "CONFIRMED")
-                    .eq(BillAggregation::getDeleteFlag, 0)
-                    .eq("BILL_RECEIVABLE".equals(bizType), BillAggregation::getBillType, "RECEIVABLE")
-                    .eq("BILL_PAYABLE".equals(bizType), BillAggregation::getBillType, "PAYABLE")
-                    .orderByDesc(BillAggregation::getCreateTime)
-                    .last("LIMIT 5000");
-                List<BillAggregation> confirmedBills = billAggregationService.list(billWrapper);
-                // 聚合：相同对方 + 账单类型 + 结算月份 → 合并为一条
-                Map<String, List<BillAggregation>> grouped = confirmedBills.stream().collect(
-                    Collectors.groupingBy(b ->
-                        String.valueOf(b.getBillType()) + "|" +
-                        String.valueOf(b.getCounterpartyType()) + "|" +
-                        String.valueOf(b.getCounterpartyId()) + "|" +
-                        (b.getSettlementMonth() != null ? b.getSettlementMonth() : "")
-                    )
-                );
-                for (Map.Entry<String, List<BillAggregation>> entry : grouped.entrySet()) {
-                    List<BillAggregation> group = entry.getValue();
-                    List<BillAggregation> dedupedGroup = group.stream()
-                        .filter(b -> !existingSources.contains(b.getSourceType() + ":" + b.getSourceId()))
-                        .collect(Collectors.toList());
-                    if (dedupedGroup.isEmpty()) continue;
-                    BillAggregation first = dedupedGroup.get(0);
-                    BigDecimal totalAmount = dedupedGroup.stream()
-                        .map(b -> b.getAmount() != null ? b.getAmount() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    BigDecimal settledAmt = dedupedGroup.stream()
-                        .map(b -> b.getSettledAmount() != null ? b.getSettledAmount() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    String aggBizType = "RECEIVABLE".equals(first.getBillType()) ? "BILL_RECEIVABLE" : "BILL_PAYABLE";
-                    String payeeTypeStr = "RECEIVABLE".equals(first.getBillType()) ? "CUSTOMER" : "FACTORY";
-                    String billDesc = ("RECEIVABLE".equals(first.getBillType()) ? "应收账款" : "应付账款")
-                        + " - " + dedupedGroup.size() + "笔";
-                    items.add(PayableItemDTO.builder()
-                        .bizType(aggBizType)
-                        .bizId(first.getCounterpartyId() + "_" + first.getSettlementMonth())
-                        .bizNo(group.size() + "笔账单")
-                        .payeeType(payeeTypeStr)
-                        .payeeId(first.getCounterpartyId())
-                        .payeeName(first.getCounterpartyName())
-                        .amount(totalAmount)
-                        .paidAmount(settledAmt)
-                        .description(billDesc)
-                        .sourceStatus("CONFIRMED")
-                        .createTime(first.getCreateTime())
-                        .yearMonth(first.getSettlementMonth())
-                        .build());
-                }
-            } catch (Exception e) {
-                log.warn("[付款中心] 查询账单汇总待收付款失败", e);
-            }
-        }
-
-        return items;
-    }
-
-    /**
-     * 创建待付款记录（工厂订单结算/工资结算审核后调用）
-     * 状态为 pending，等待在付款中心手动支付
-     * 幂等保护：相同 bizType + bizId 只允许一条有效记录（pending/processing/success）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public WagePayment createPendingPayable(WagePaymentRequest request) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = TenantAssert.requireTenantId();
-
-        String bizType = request.getBizType() != null ? request.getBizType() : "ORDER_SETTLEMENT";
-        String bizId = request.getBizId();
-
-        // 幂等检查：同一 bizType + bizId 是否已有有效记录（pending/processing/success 均视为已存在）
-        if (bizId != null) {
-            WagePayment existing = wagePaymentService.getOne(
-                new LambdaQueryWrapper<WagePayment>()
-                    .eq(WagePayment::getBizType, bizType)
-                    .eq(WagePayment::getBizId, bizId)
-                    .notIn(WagePayment::getStatus, "cancelled", "rejected", "failed")
-                    .eq(WagePayment::getTenantId, tenantId)
-                    .last("LIMIT 1")
-            );
-            if (existing != null) {
-                log.info("[付款中心] 已存在有效付款记录(status={})，跳过重复创建: bizType={}, bizId={}",
-                         existing.getStatus(), bizType, bizId);
-                return existing;
-            }
-        }
-
-        WagePayment payment = new WagePayment();
-        payment.setPaymentNo(generatePaymentNo());
-        payment.setPayeeType(request.getPayeeType() != null ? request.getPayeeType() : "FACTORY");
-        payment.setPayeeId(request.getPayeeId());
-        payment.setPayeeName(request.getPayeeName());
-        payment.setAmount(request.getAmount());
-        payment.setCurrency("CNY");
-        payment.setBizType(bizType);
-        payment.setBizId(bizId);
-        payment.setPaymentRemark(request.getRemark());
-        payment.setOperatorId(UserContext.userId());
-        payment.setOperatorName(UserContext.username());
-        payment.setTenantId(tenantId);
-        payment.setStatus("pending");
-        payment.setPaymentMethod("OFFLINE"); // 默认线下支付，后续在付款中心可变更
-        payment.setNotifyStatus("none");
-        payment.setCreateTime(LocalDateTime.now());
-        payment.setUpdateTime(LocalDateTime.now());
-
-        wagePaymentService.save(payment);
-        log.info("[付款中心] 创建待付款记录: no={}, payee={}, bizType={}, amount={}",
-                 payment.getPaymentNo(), payment.getPayeeName(),
-                 payment.getBizType(), payment.getAmount());
-
-        return payment;
-    }
-
-    /**
-     * 驳回待付款记录 — 付款中心驳回
-     * 将 pending 记录改为 rejected，并回写上游模块状态
-     *
-     * @param paymentId WagePayment 记录ID（PAYROLL_SETTLEMENT / ORDER_SETTLEMENT 的自有记录）
-     * @param bizType   业务类型（RECONCILIATION / REIMBURSEMENT / PAYROLL_SETTLEMENT / ORDER_SETTLEMENT）
-     * @param bizId     上游业务ID
-     * @param reason    驳回原因
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public void rejectPayable(String paymentId, String bizType, String bizId, String reason) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = TenantAssert.requireTenantId();
-
-        // 对于 PAYROLL_SETTLEMENT / ORDER_SETTLEMENT：有自己的 WagePayment 记录
-        if ("PAYROLL_SETTLEMENT".equals(bizType) || "ORDER_SETTLEMENT".equals(bizType)) {
-            if (paymentId != null) {
-                WagePayment wp = wagePaymentService.getById(paymentId);
-                if (wp != null) {
-                    TenantAssert.assertBelongsToCurrentTenant(wp.getTenantId(), "待付款记录");
-                    wp.setStatus("rejected");
-                    wp.setPaymentRemark("【驳回】" + (reason != null ? reason : ""));
-                    wp.setUpdateTime(LocalDateTime.now());
-                    wagePaymentService.updateById(wp);
-                    log.info("[付款中心] 驳回待付款: id={}, bizType={}, bizId={}", paymentId, bizType, bizId);
-                }
-            } else if (bizId != null) {
-                // 按 bizType + bizId 查找 pending 记录并驳回
-                WagePayment wp = wagePaymentService.getOne(
-                    new LambdaQueryWrapper<WagePayment>()
-                        .eq(WagePayment::getBizType, bizType)
-                        .eq(WagePayment::getBizId, bizId)
-                        .eq(WagePayment::getStatus, "pending")
-                        .eq(WagePayment::getTenantId, tenantId)
-                        .last("LIMIT 1")
-                );
-                if (wp != null) {
-                    wp.setStatus("rejected");
-                    wp.setPaymentRemark("【驳回】" + (reason != null ? reason : ""));
-                    wp.setUpdateTime(LocalDateTime.now());
-                    wagePaymentService.updateById(wp);
-                    log.info("[付款中心] 驳回待付款(按bizId): bizType={}, bizId={}", bizType, bizId);
-                }
-            }
-
-            // 驳回后回写上游审批状态
-            try {
-                if ("PAYROLL_SETTLEMENT".equals(bizType) && bizId != null) {
-                    PayrollSettlement ps = payrollSettlementService.lambdaQuery()
-                            .eq(PayrollSettlement::getId, bizId)
-                            .eq(PayrollSettlement::getTenantId, tenantId)
-                            .one();
-                    if (ps != null && "approved".equals(ps.getStatus())) {
-                        PayrollSettlement psPatch = new PayrollSettlement();
-                        psPatch.setId(ps.getId());
-                        psPatch.setStatus("rejected");
-                        psPatch.setUpdateTime(LocalDateTime.now());
-                        payrollSettlementService.updateById(psPatch);
-                        log.info("[付款中心] 驳回回写工资结算: id={}, approved->rejected", bizId);
-                    }
-                } else if ("ORDER_SETTLEMENT".equals(bizType) && bizId != null) {
-                    FinishedSettlementApprovalStatus approval = finishedSettlementApprovalStatusService.lambdaQuery()
-                            .eq(FinishedSettlementApprovalStatus::getSettlementId, bizId)
-                            .eq(FinishedSettlementApprovalStatus::getStatus, "approved")
-                            .last("LIMIT 1")
-                            .one();
-                    if (approval != null) {
-                        FinishedSettlementApprovalStatus patch = new FinishedSettlementApprovalStatus();
-                        patch.setSettlementId(approval.getSettlementId());
-                        patch.setStatus("rejected");
-                        patch.setUpdateTime(LocalDateTime.now());
-                        finishedSettlementApprovalStatusService.updateById(patch);
-                        log.info("[付款中心] 驳回回写成品结算审批: settlementId={}, approved->rejected", bizId);
-                    }
-                }
-            } catch (Exception e) {
-                log.error("[付款中心] 驳回回写上游失败: bizType={}, bizId={}", bizType, bizId, e);
-            }
-
-            return;
-        }
-
-        // 对于 RECONCILIATION / REIMBURSEMENT：直接回写上游状态
-        callbackRejectUpstream(bizType, bizId, reason);
-    }
-
-    /**
-     * 驳回时回写上游单据状态
-     */
-    private void callbackRejectUpstream(String bizType, String bizId, String reason) {
-        try {
-            switch (bizType) {
-                case "RECONCILIATION":
-                    MaterialReconciliation recon = materialReconciliationService.getById(bizId);
-                    if (recon != null && "approved".equals(recon.getStatus())) {
-                        recon.setStatus("rejected");
-                        recon.setRemark("【付款驳回】" + (reason != null ? reason : ""));
-                        recon.setUpdateBy(UserContext.username());
-                        recon.setUpdateTime(LocalDateTime.now());
-                        materialReconciliationService.updateById(recon);
-                        log.info("[付款中心] 驳回物料对账: id={}", bizId);
-                    }
-                    break;
-
-                case "REIMBURSEMENT":
-                    ExpenseReimbursement reimb = expenseReimbursementService.getById(bizId);
-                    if (reimb != null && "approved".equals(reimb.getStatus())) {
-                        reimb.setStatus("rejected");
-                        reimb.setApprovalRemark("【付款驳回】" + (reason != null ? reason : ""));
-                        reimb.setUpdateBy(UserContext.username());
-                        reimb.setUpdateTime(LocalDateTime.now());
-                        expenseReimbursementService.updateById(reimb);
-                        log.info("[付款中心] 驳回费用报销: id={}", bizId);
-                    }
-                    break;
-
-                default:
-                    log.warn("[付款中心] 驳回: 未知业务类型 {}", bizType);
-            }
-        } catch (Exception e) {
-            log.error("[付款中心] 驳回回写上游失败: bizType={}, bizId={}", bizType, bizId, e);
-        }
-    }
-
-    /**
-     * 发起支付并回写上游状态
-     *
-     * 统一入口：创建支付记录 + 回写上游单据状态为 paid
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public WagePayment initiatePaymentWithCallback(WagePaymentRequest request) {
-        // 1. 创建支付记录
-        WagePayment payment = initiatePayment(request);
-
-        // 2. 支付成功后回写上游状态
-        if ("success".equals(payment.getStatus()) && request.getBizType() != null && request.getBizId() != null) {
-            callbackUpstream(request.getBizType(), request.getBizId());
-        }
-
-        return payment;
-    }
-
-    /**
-     * 确认线下支付并回写上游
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public WagePayment confirmOfflineWithCallback(String paymentId, String proofUrl, String remark) {
-        WagePayment payment = confirmOfflinePayment(paymentId, proofUrl, remark);
-
-        // 回写上游状态
-        if ("success".equals(payment.getStatus()) && payment.getBizType() != null && payment.getBizId() != null) {
-            callbackUpstream(payment.getBizType(), payment.getBizId());
-        }
-
-        return payment;
-    }
-
-    /**
-     * 回写上游单据状态为 paid
-     */
-    private void callbackUpstream(String bizType, String bizId) {
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        try {
-            switch (bizType) {
-                case "RECONCILIATION":
-                    MaterialReconciliation recon = materialReconciliationService.lambdaQuery()
-                            .eq(MaterialReconciliation::getId, bizId)
-                            .eq(MaterialReconciliation::getTenantId, tenantId)
-                            .one();
-                    if (recon != null && "approved".equals(recon.getStatus())) {
-                        recon.setStatus("paid");
-                        recon.setPaidAt(LocalDateTime.now());
-                        recon.setUpdateBy(UserContext.username());
-                        recon.setUpdateTime(LocalDateTime.now());
-                        materialReconciliationService.updateById(recon);
-                        log.info("[付款中心] 回写物料对账为paid: id={}, no={}", bizId, recon.getReconciliationNo());
-                    }
-                    break;
-
-                case "REIMBURSEMENT":
-                    ExpenseReimbursement reimb = expenseReimbursementService.lambdaQuery()
-                            .eq(ExpenseReimbursement::getId, bizId)
-                            .eq(ExpenseReimbursement::getTenantId, tenantId)
-                            .one();
-                    if (reimb != null && "approved".equals(reimb.getStatus())) {
-                        reimb.setStatus("paid");
-                        reimb.setPaymentTime(LocalDateTime.now());
-                        reimb.setPaymentBy(UserContext.username());
-                        reimb.setUpdateBy(UserContext.username());
-                        reimb.setUpdateTime(LocalDateTime.now());
-                        expenseReimbursementService.updateById(reimb);
-                        log.info("[付款中心] 回写费用报销为paid: id={}, no={}", bizId, reimb.getReimbursementNo());
-                    }
-                    break;
-
-                case "PAYROLL":
-                case "PAYROLL_SETTLEMENT":
-                    PayrollSettlement ps = payrollSettlementService.lambdaQuery()
-                            .eq(PayrollSettlement::getId, bizId)
-                            .eq(PayrollSettlement::getTenantId, tenantId)
-                            .one();
-                    if (ps != null && "approved".equals(ps.getStatus())) {
-                        PayrollSettlement psPatch = new PayrollSettlement();
-                        psPatch.setId(ps.getId());
-                        psPatch.setStatus("paid");
-                        psPatch.setUpdateTime(LocalDateTime.now());
-                        payrollSettlementService.updateById(psPatch);
-                        log.info("[付款中心] 回写工资结算为paid: id={}", bizId);
-                    }
-                    break;
-
-                case "ORDER_SETTLEMENT":
-                    FinishedSettlementApprovalStatus approval = finishedSettlementApprovalStatusService.lambdaQuery()
-                            .eq(FinishedSettlementApprovalStatus::getSettlementId, bizId)
-                            .eq(FinishedSettlementApprovalStatus::getStatus, "approved")
-                            .last("LIMIT 1")
-                            .one();
-                    if (approval != null) {
-                        FinishedSettlementApprovalStatus approvalPatch = new FinishedSettlementApprovalStatus();
-                        approvalPatch.setSettlementId(approval.getSettlementId());
-                        approvalPatch.setStatus("paid");
-                        approvalPatch.setUpdateTime(LocalDateTime.now());
-                        finishedSettlementApprovalStatusService.updateById(approvalPatch);
-                        log.info("[付款中心] 回写成品结算审批为paid: settlementId={}", bizId);
-                    }
-                    break;
-
-                case "SHIPMENT_RECONCILIATION":
-                    ShipmentReconciliation sr = shipmentReconciliationService.lambdaQuery()
-                            .eq(ShipmentReconciliation::getId, bizId)
-                            .eq(ShipmentReconciliation::getTenantId, tenantId)
-                            .one();
-                    if (sr != null && "approved".equals(sr.getStatus())) {
-                        ShipmentReconciliation srPatch = new ShipmentReconciliation();
-                        srPatch.setId(sr.getId());
-                        srPatch.setStatus("paid");
-                        srPatch.setUpdateTime(LocalDateTime.now());
-                        shipmentReconciliationService.updateById(srPatch);
-                        log.info("[付款中心] 回写出货对账为paid: id={}", bizId);
-                    }
-                    break;
-
-                default:
-                    log.warn("[付款中心] 未知业务类型: bizType={}", bizType);
-            }
-
-            if (billAggregationService != null) {
-                BillAggregation bill = billAggregationService.lambdaQuery()
-                        .eq(BillAggregation::getSourceType, bizType)
-                        .eq(BillAggregation::getSourceId, bizId)
-                        .eq(BillAggregation::getDeleteFlag, 0)
-                        .last("LIMIT 1")
-                        .one();
-                if (bill != null) {
-                    BigDecimal settled = bill.getSettledAmount() != null ? bill.getSettledAmount() : BigDecimal.ZERO;
-                    BigDecimal billAmt = bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO;
-                    String newStatus = settled.compareTo(billAmt) >= 0 ? "SETTLED" : "SETTLING";
-                    if ("PENDING".equals(bill.getStatus()) || "CONFIRMED".equals(bill.getStatus())) {
-                        newStatus = settled.compareTo(billAmt) >= 0 ? "SETTLED" : "SETTLING";
-                    }
-                    bill.setStatus(newStatus);
-                    bill.setSettledAmount(billAmt);
-                    bill.setSettledAt(LocalDateTime.now());
-                    bill.setSettledById(UserContext.userId());
-                    bill.setSettledByName(UserContext.username());
-                    bill.setUpdateTime(LocalDateTime.now());
-                    billAggregationService.updateById(bill);
-                    log.info("[付款中心] 联动账单汇总: billNo={}, ->{}", bill.getBillNo(), newStatus);
-                }
-            }
-        } catch (Exception e) {
-            log.error("[付款中心] 回写上游状态失败: bizType={}, bizId={}", bizType, bizId, e);
-        }
-    }
-
-    // ============================================================
-    // 七、内部DTO
-    // ============================================================
-
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class WagePaymentRequest {
-        /** 收款方类型: WORKER / FACTORY */
         private String payeeType;
-        /** 收款方ID */
         private String payeeId;
-        /** 收款方名称 */
         private String payeeName;
-        /** 选择的收款账户ID（线上支付时必填） */
         private String paymentAccountId;
-        /** 支付方式: OFFLINE / BANK / WECHAT / ALIPAY */
         private String paymentMethod;
-        /** 支付金额 */
         private BigDecimal amount;
-        /** 业务类型: PAYROLL / RECONCILIATION / REIMBURSEMENT */
         private String bizType;
-        /** 关联业务ID */
         private String bizId;
-        /** 关联业务单号 */
         private String bizNo;
-        /** 备注 */
         private String remark;
     }
 
@@ -1155,180 +428,22 @@ public class WagePaymentOrchestrator {
         private PaymentAccount account;
     }
 
-    /**
-     * 待付款项目DTO — 统一付款中心用
-     */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class PayableItemDTO {
-        /** 业务类型: PAYROLL / RECONCILIATION / REIMBURSEMENT */
         private String bizType;
-        /** 上游单据ID */
         private String bizId;
-        /** 上游单据编号 */
         private String bizNo;
-        /** 收款方类型: WORKER / FACTORY */
         private String payeeType;
-        /** 收款方ID */
         private String payeeId;
-        /** 收款方名称 */
         private String payeeName;
-        /** 应付金额 */
         private BigDecimal amount;
-        /** 已付金额 */
         private BigDecimal paidAmount;
-        /** 描述信息 */
         private String description;
-        /** 上游单据状态 */
         private String sourceStatus;
-        /** 创建时间 */
         private LocalDateTime createTime;
-        /** 所属月份（yyyy-MM），供前端按月聚合展示 */
         private String yearMonth;
-    }
-
-    public java.util.Map<String, Object> getDashboardStats(String startDate, String endDate) {
-        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
-        if (tenantId == null) {
-            java.util.Map<String, Object> empty = new java.util.LinkedHashMap<>();
-            empty.put("totalPaid", BigDecimal.ZERO);
-            empty.put("totalPending", BigDecimal.ZERO);
-            empty.put("totalReceived", BigDecimal.ZERO);
-            empty.put("overdueCount", 0);
-            empty.put("trendDates", java.util.Collections.emptyList());
-            empty.put("trendPaid", java.util.Collections.emptyList());
-            empty.put("trendReceived", java.util.Collections.emptyList());
-            return empty;
-        }
-
-        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-
-        BigDecimal totalPaid = BigDecimal.ZERO;
-        BigDecimal totalPending = BigDecimal.ZERO;
-        BigDecimal totalReceived = BigDecimal.ZERO;
-        int overdueCount = 0;
-
-        try {
-            LambdaQueryWrapper<WagePayment> paidQw = new LambdaQueryWrapper<>();
-            paidQw.eq(WagePayment::getTenantId, tenantId)
-                   .eq(WagePayment::getStatus, "success")
-                   .ge(WagePayment::getCreateTime, startDate + " 00:00:00")
-                   .le(WagePayment::getCreateTime, endDate + " 23:59:59")
-                   .last("LIMIT 5000");
-            List<WagePayment> paidPayments = wagePaymentService.list(paidQw);
-            totalPaid = paidPayments.stream()
-                    .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        } catch (Exception e) {
-            log.warn("[看板] 统计已付总额失败", e);
-        }
-
-        try {
-            LambdaQueryWrapper<WagePayment> pendingQw = new LambdaQueryWrapper<>();
-            pendingQw.eq(WagePayment::getTenantId, tenantId)
-                     .eq(WagePayment::getStatus, "pending")
-                     .last("LIMIT 5000");
-            List<WagePayment> pendingPayments = wagePaymentService.list(pendingQw);
-            totalPending = pendingPayments.stream()
-                    .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        } catch (Exception e) {
-            log.warn("[看板] 统计待付总额失败", e);
-        }
-
-        try {
-            LambdaQueryWrapper<WagePayment> receivedQw = new LambdaQueryWrapper<>();
-            receivedQw.eq(WagePayment::getTenantId, tenantId)
-                      .eq(WagePayment::getStatus, "received")
-                      .ge(WagePayment::getCreateTime, startDate + " 00:00:00")
-                      .le(WagePayment::getCreateTime, endDate + " 23:59:59")
-                      .last("LIMIT 5000");
-            List<WagePayment> receivedPayments = wagePaymentService.list(receivedQw);
-            totalReceived = receivedPayments.stream()
-                    .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        } catch (Exception e) {
-            log.warn("[看板] 统计已收总额失败", e);
-        }
-
-        try {
-            LambdaQueryWrapper<Payable> overdueQw = new LambdaQueryWrapper<>();
-            overdueQw.eq(Payable::getTenantId, tenantId)
-                     .eq(Payable::getDeleteFlag, 0)
-                     .eq(Payable::getStatus, "OVERDUE")
-                     .last("LIMIT 5000");
-            overdueCount = (int) payableService.count(overdueQw);
-        } catch (Exception e) {
-            log.warn("[看板] 统计逾期笔数失败", e);
-        }
-
-        result.put("totalPaid", totalPaid);
-        result.put("totalPending", totalPending);
-        result.put("totalReceived", totalReceived);
-        result.put("overdueCount", overdueCount);
-
-        java.util.List<String> trendDates = new java.util.ArrayList<>();
-        java.util.List<java.math.BigDecimal> trendPaid = new java.util.ArrayList<>();
-        java.util.List<java.math.BigDecimal> trendReceived = new java.util.ArrayList<>();
-
-        try {
-            LocalDate start = LocalDate.parse(startDate);
-            LocalDate end = LocalDate.parse(endDate);
-
-            java.util.Map<String, BigDecimal> paidByDay = new java.util.LinkedHashMap<>();
-            java.util.Map<String, BigDecimal> receivedByDay = new java.util.LinkedHashMap<>();
-            for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-                String key = d.format(DateTimeFormatter.ofPattern("MM-dd"));
-                paidByDay.put(key, BigDecimal.ZERO);
-                receivedByDay.put(key, BigDecimal.ZERO);
-            }
-
-            String dayStart = start.format(DateTimeFormatter.ISO_LOCAL_DATE) + " 00:00:00";
-            String dayEnd = end.format(DateTimeFormatter.ISO_LOCAL_DATE) + " 23:59:59";
-
-            List<WagePayment> allPaidInPeriod = wagePaymentService.list(new LambdaQueryWrapper<WagePayment>()
-                    .eq(WagePayment::getTenantId, tenantId)
-                    .eq(WagePayment::getStatus, "success")
-                    .ge(WagePayment::getCreateTime, dayStart)
-                    .le(WagePayment::getCreateTime, dayEnd)
-                    .last("LIMIT 5000"));
-            for (WagePayment p : allPaidInPeriod) {
-                if (p.getCreateTime() != null) {
-                    String key = p.getCreateTime().format(DateTimeFormatter.ofPattern("MM-dd"));
-                    if (paidByDay.containsKey(key)) {
-                        paidByDay.put(key, paidByDay.get(key).add(p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO));
-                    }
-                }
-            }
-
-            List<WagePayment> allReceivedInPeriod = wagePaymentService.list(new LambdaQueryWrapper<WagePayment>()
-                    .eq(WagePayment::getTenantId, tenantId)
-                    .eq(WagePayment::getStatus, "received")
-                    .ge(WagePayment::getCreateTime, dayStart)
-                    .le(WagePayment::getCreateTime, dayEnd)
-                    .last("LIMIT 5000"));
-            for (WagePayment p : allReceivedInPeriod) {
-                if (p.getCreateTime() != null) {
-                    String key = p.getCreateTime().format(DateTimeFormatter.ofPattern("MM-dd"));
-                    if (receivedByDay.containsKey(key)) {
-                        receivedByDay.put(key, receivedByDay.get(key).add(p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO));
-                    }
-                }
-            }
-
-            trendDates.addAll(paidByDay.keySet());
-            trendPaid.addAll(paidByDay.values());
-            trendReceived.addAll(receivedByDay.values());
-        } catch (Exception e) {
-            log.warn("[看板] 生成趋势数据失败", e);
-        }
-
-        result.put("trendDates", trendDates);
-        result.put("trendPaid", trendPaid);
-        result.put("trendReceived", trendReceived);
-
-        return result;
     }
 }

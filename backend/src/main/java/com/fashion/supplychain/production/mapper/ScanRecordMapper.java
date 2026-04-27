@@ -91,6 +91,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  AND sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
                         "  AND sr.factory_id IS NULL",
+                        "  AND sr.scan_type != 'orchestration'",
                         "AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
                         "<choose>",
                         "  <when test='period != null and period == \"month\"'>",
@@ -140,6 +141,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "WHERE sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
                         "  AND sr.factory_id IS NULL",
+                        "  AND sr.scan_type != 'orchestration'",
                         "AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
                         /* 与 selectPersonalStats 保持一致：排除已取消/已删除订单的扫码记录 */
                         "  AND NOT EXISTS (",
@@ -234,6 +236,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  WHERE cutting_bundle_id IS NOT NULL",
                         "    AND cutting_bundle_id != ''",
                         "    AND scan_result = 'success'",
+                        "    AND scan_type != 'orchestration'",
                         // fix: jdbcType=BIGINT 告知 JDBC tenantId=null 时的类型，避免参数绑定失败
                         "    AND tenant_id = #{tenantId,jdbcType=BIGINT}",
                         "  GROUP BY cutting_bundle_id, tenant_id",
@@ -251,6 +254,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                 "WHERE sr.order_id IN",
                 "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id,jdbcType=VARCHAR}</foreach>",
                 "  AND sr.scan_result='success'",
+                "  AND sr.scan_type != 'orchestration'",
                 "AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
                 "GROUP BY sr.order_id",
                 "</script>"
@@ -266,6 +270,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                 "  COALESCE(SUM(COALESCE(NULLIF(sr.total_amount,0), NULLIF(sr.scan_cost,0), sr.unit_price*sr.quantity, 0)), 0) AS totalAmount " +
                 "FROM t_scan_record sr " +
                 "WHERE sr.tenant_id=#{tenantId} AND sr.scan_result='success' AND sr.quantity>0 " +
+                "  AND sr.scan_type != 'orchestration' " +
                 "  AND sr.scan_time >= #{startTime} AND sr.scan_time < #{endTime} " +
                 "  AND NOT EXISTS (SELECT 1 FROM t_production_order po " +
                 "    WHERE po.id=sr.order_id AND (po.status='cancelled' OR po.delete_flag=1)) " +

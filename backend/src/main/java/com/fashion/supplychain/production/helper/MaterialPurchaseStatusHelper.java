@@ -73,7 +73,7 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalArgumentException("领取人ID或姓名不能为空");
         }
 
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase purchase = getPurchaseWithTenant(purchaseId);
         if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
@@ -111,7 +111,7 @@ public class MaterialPurchaseStatusHelper {
                 StringUtils.hasText(rname) ? rname : null);
         if (!ok) {
             // 再次检查最新状态
-            MaterialPurchase latest = materialPurchaseService.getById(purchaseId);
+            MaterialPurchase latest = getPurchaseWithTenant(purchaseId);
             if (latest != null) {
                 String latestReceiverName = helper.safe(latest.getReceiverName());
                 String latestReceiverId = helper.safe(latest.getReceiverId());
@@ -128,7 +128,7 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalStateException("领取失败");
         }
 
-        MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase updated = getPurchaseWithTenant(purchaseId);
         if (updated == null) {
             throw new IllegalStateException("领取失败");
         }
@@ -321,7 +321,7 @@ public class MaterialPurchaseStatusHelper {
         // 优先全字段查询；若schema仍有缺列则降级到原始字段查询，并手动填充业务字段
         MaterialPurchase updated;
         try {
-            updated = materialPurchaseService.getById(purchaseId);
+            updated = getPurchaseWithTenant(purchaseId);
         } catch (Exception e) {
             log.warn("[returnConfirm] 全字段查询失败(schema漂移)，降级安全查询: {}", e.getMessage());
             updated = materialPurchaseService.getOne(
@@ -461,7 +461,7 @@ public class MaterialPurchaseStatusHelper {
         }
 
         try {
-            MaterialPurchase current = materialPurchaseService.getById(purchaseId);
+            MaterialPurchase current = getPurchaseWithTenant(purchaseId);
             if (current != null && StringUtils.hasText(current.getOrderId())) {
                 helper.ensureOrderStatusProduction(current.getOrderId());
                 helper.recomputeAndUpdateMaterialArrivalRate(current.getOrderId(), productionOrderOrchestrator);
@@ -481,7 +481,7 @@ public class MaterialPurchaseStatusHelper {
 
         MaterialPurchase updated;
         try {
-            updated = materialPurchaseService.getById(purchaseId);
+            updated = getPurchaseWithTenant(purchaseId);
         } catch (Exception e) {
             log.warn("[resetReturnConfirm] 全字段查询失败(schema漂移)，降级安全查询: {}", e.getMessage());
             updated = materialPurchaseService.getOne(
@@ -525,7 +525,7 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalArgumentException("撤回原因不能为空");
         }
 
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase purchase = getPurchaseWithTenant(purchaseId);
         if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() == 1)) {
             throw new NoSuchElementException("采购单不存在或已删除");
         }
@@ -610,7 +610,7 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalArgumentException("采购单ID不能为空");
         }
 
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase purchase = getPurchaseWithTenant(purchaseId);
         if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() == 1)) {
             throw new NoSuchElementException("采购单不存在或已删除");
         }
@@ -631,7 +631,7 @@ public class MaterialPurchaseStatusHelper {
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
         materialPurchaseService.update(uw);
 
-        MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase updated = getPurchaseWithTenant(purchaseId);
         if (updated != null) {
             syncAfterPurchaseChanged(updated);
             tryMarkOrderProcurementComplete(updated);
@@ -727,7 +727,7 @@ public class MaterialPurchaseStatusHelper {
         if (!ok) {
             return false;
         }
-        MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase updated = getPurchaseWithTenant(purchaseId);
         if (updated != null) {
             syncAfterPurchaseChanged(updated);
         }
@@ -824,5 +824,12 @@ public class MaterialPurchaseStatusHelper {
                     purchase.getId(), purchase.getOrderId(), e);
             return false;
         }
+    }
+
+    private MaterialPurchase getPurchaseWithTenant(String purchaseId) {
+        return materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, purchaseId)
+                .eq(MaterialPurchase::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .one();
     }
 }

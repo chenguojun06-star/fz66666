@@ -119,22 +119,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'styleNo',
       key: 'styleNo',
       width: 120,
-      render: (v: any, record: MaterialPurchaseType) => {
+      render: (v: any) => {
         const styleNo = String(v || '').trim();
-        const orderNo = String((record as any).orderNo || '').trim();
-        return (
-          <a
-            onClick={() => {
-              if (styleNo) {
-                const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
-                navigate(`/production/material/${styleNo}${qs}`);
-              }
-            }}
-            style={{ cursor: 'pointer', color: 'var(--primary-color)' }}
-          >
-            {styleNo || '-'}
-          </a>
-        );
+        return <span>{styleNo || '-'}</span>;
       },
     },
     {
@@ -204,6 +191,29 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'purchaseNo',
       width: 140,
       ellipsis: true,
+      render: (v: string, record: MaterialPurchaseType) => {
+        const styleNo = String(record.styleNo || '').trim();
+        const orderNo = String((record as any).orderNo || '').trim();
+        const purchaseNo = String(record.purchaseNo || v || '').trim();
+        if (!v || v === '-') return '-';
+        return (
+          <a
+            onClick={() => {
+              if (styleNo) {
+                // 有款号：按款号+订单号跳转
+                const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
+                navigate(`/production/material/${encodeURIComponent(styleNo)}${qs}`);
+              } else if (purchaseNo) {
+                // 无款号（如仓库独立采购单）：按采购单号跳转
+                navigate(`/production/material/_?purchaseNo=${encodeURIComponent(purchaseNo)}`);
+              }
+            }}
+            style={{ color: 'var(--color-primary)', cursor: 'pointer' }}
+          >
+            {v}
+          </a>
+        );
+      },
     },
     {
       title: '物料类型',

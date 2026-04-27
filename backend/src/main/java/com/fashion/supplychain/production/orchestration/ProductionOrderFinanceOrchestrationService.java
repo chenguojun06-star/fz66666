@@ -152,6 +152,7 @@ public class ProductionOrderFinanceOrchestrationService {
         if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
             throw new NoSuchElementException("订单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equals(st)) throw new IllegalArgumentException("订单已完成");
         return order;

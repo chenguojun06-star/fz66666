@@ -103,7 +103,8 @@ public class TenantController {
                                                       @RequestBody(required = false) Map<String, Object> params) {
         Object raw = params != null ? params.get("enabledModules") : null;
         String enabledModules = raw != null ? raw.toString() : null;
-        return Result.success(tenantOrchestrator.updateTenantEnabledModules(id, enabledModules));
+        tenantOrchestrator.updateTenantEnabledModules(id, enabledModules);
+        return Result.success(true);
     }
 
     /**

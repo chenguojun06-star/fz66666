@@ -4,8 +4,8 @@
 }
 
 .panel {
-  width: 560px;
-  height: 760px;
+  width: 100%;
+  height: 100%;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 12px 32px rgba(0, 83, 204, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -18,11 +18,24 @@
 }
 
 .panelHeader {
-  height: 64px;
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae0ff 100%);
+  height: 90px;
+  background: #1f5fcb;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.avatarContainer {
+  width: 60px;
+  height: 60px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+  margin-right: 16px;
   flex-shrink: 0;
 }
 
@@ -39,20 +52,20 @@
 }
 
 .panelTitle {
-  font-size: 17px;
-  font-weight: 700;
-  color: #003a8c;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
 }
 
 .panelSubtitle {
-  font-size: 13px;
-  color: #096dd9;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .panelBackBtn {
   background: none;
   border: none;
-  color: #69c0ff;
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 4px;
@@ -64,14 +77,14 @@
 }
 
 .panelBackBtn:hover {
-  color: #0050b3;
-  background: rgba(0, 80, 179, 0.08);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .panelCloseBtn {
   background: none;
   border: none;
-  color: #69c0ff;
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 4px;
@@ -79,8 +92,8 @@
 }
 
 .panelCloseBtn:hover {
-  color: #0050b3;
-  background: rgba(0, 80, 179, 0.08);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .searchRow {

@@ -68,12 +68,26 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
         long page = ParamUtils.getPageLong(safeParams);
         long pageSize = ParamUtils.getPageSizeLong(safeParams);
+        Long tenantId = TenantAssert.requireTenantId();
 
+        LambdaQueryWrapper<MaterialPurchase> wrapper = buildQueryWrapper(safeParams, tenantId);
+        IPage<MaterialPurchase> pageResult = baseMapper.selectPage(new Page<>(page, pageSize), wrapper);
+
+        List<MaterialPurchase> records = pageResult == null ? null : pageResult.getRecords();
+        if (records != null && !records.isEmpty()) {
+            repairRecords(records);
+            enrichFactoryInfo(records);
+            enrichFromMaterialDatabase(records);
+        }
+        return pageResult;
+    }
+
+    private LambdaQueryWrapper<MaterialPurchase> buildQueryWrapper(Map<String, Object> safeParams, Long tenantId) {
         String purchaseNo = (String) safeParams.getOrDefault("purchaseNo", "");
         String materialCode = (String) safeParams.getOrDefault("materialCode", "");
         String materialName = (String) safeParams.getOrDefault("materialName", "");
-        String supplier = (String) safeParams.getOrDefault("supplier", "");
         String supplierName = (String) safeParams.getOrDefault("supplierName", "");
+        String supplier = (String) safeParams.getOrDefault("supplier", "");
         String status = (String) safeParams.getOrDefault("status", "");
         String orderNo = (String) safeParams.getOrDefault("orderNo", "");
         String styleNo = (String) safeParams.getOrDefault("styleNo", "");
@@ -84,47 +98,49 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String receiverId = (String) safeParams.getOrDefault("receiverId", "");
         String receiverName = (String) safeParams.getOrDefault("receiverName", "");
 
-        Long tenantId = TenantAssert.requireTenantId();
+        LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .eq(MaterialPurchase::getTenantId, tenantId);
 
-        final List<String> keywordMatchedOrderIds = StringUtils.hasText(orderNo)
-            ? productionOrderService.list(
+        applyKeywordSearch(wrapper, orderNo, tenantId);
+        applyBasicFilters(wrapper, purchaseNo, materialCode, materialName, styleNo, status, receiverId, receiverName, orderNo);
+        applySourceTypeFilter(wrapper, sourceType);
+        applyMaterialTypeFilter(wrapper, materialType);
+        applySupplierFilter(wrapper, supplierName, supplier);
+        excludeScrappedOrders(wrapper, tenantId);
+        applyFactoryFilters(wrapper, tenantId, factoryType, factoryName);
+        applyFactoryOrderIds(wrapper, safeParams);
+
+        return wrapper;
+    }
+
+    private void applyKeywordSearch(LambdaQueryWrapper<MaterialPurchase> wrapper, String orderNo, Long tenantId) {
+        if (!StringUtils.hasText(orderNo)) return;
+        String keyword = orderNo.trim();
+        List<String> matchedOrderIds = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                     .select(ProductionOrder::getId)
                     .eq(ProductionOrder::getTenantId, tenantId)
-                    .and(w -> w.like(ProductionOrder::getFactoryName, orderNo.trim())
-                        .or().like(ProductionOrder::getOrderNo, orderNo.trim())
-                        .or().like(ProductionOrder::getStyleNo, orderNo.trim()))
-                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
-                        .or().eq(ProductionOrder::getDeleteFlag, 0))
+                    .and(w -> w.like(ProductionOrder::getFactoryName, keyword)
+                        .or().like(ProductionOrder::getOrderNo, keyword)
+                        .or().like(ProductionOrder::getStyleNo, keyword))
+                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
                     .ne(ProductionOrder::getStatus, "scrapped"))
-                .stream()
-                .map(ProductionOrder::getId)
-                .filter(StringUtils::hasText)
-                .collect(Collectors.toList())
-            : java.util.Collections.emptyList();
+                .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
 
-        Page<MaterialPurchase> pageInfo = new Page<>(page, pageSize);
-        LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
-                .eq(MaterialPurchase::getDeleteFlag, 0);
+        wrapper.and(w -> {
+            w.like(MaterialPurchase::getOrderNo, keyword)
+                    .or().like(MaterialPurchase::getPurchaseNo, keyword)
+                    .or().like(MaterialPurchase::getMaterialCode, keyword)
+                    .or().like(MaterialPurchase::getMaterialName, keyword)
+                    .or().like(MaterialPurchase::getSupplierName, keyword);
+            if (!matchedOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, matchedOrderIds);
+        });
+    }
 
-        wrapper.eq(MaterialPurchase::getTenantId, tenantId);
-
-        // orderNo作为通用搜索关键词，支持订单号/采购单号/物料编码/物料名称的or查询
-        if (StringUtils.hasText(orderNo)) {
-            String keyword = orderNo.trim();
-            wrapper.and(w -> {
-                w.like(MaterialPurchase::getOrderNo, keyword)
-                        .or().like(MaterialPurchase::getPurchaseNo, keyword)
-                        .or().like(MaterialPurchase::getMaterialCode, keyword)
-                        .or().like(MaterialPurchase::getMaterialName, keyword)
-                        .or().like(MaterialPurchase::getSupplierName, keyword);
-                if (!keywordMatchedOrderIds.isEmpty()) {
-                    w.or().in(MaterialPurchase::getOrderId, keywordMatchedOrderIds);
-                }
-            });
-        }
-
-        // 独立搜索字段（用于高级筛选）
+    private void applyBasicFilters(LambdaQueryWrapper<MaterialPurchase> wrapper,
+            String purchaseNo, String materialCode, String materialName, String styleNo,
+            String status, String receiverId, String receiverName, String orderNo) {
         wrapper.like(StringUtils.hasText(purchaseNo) && !StringUtils.hasText(orderNo), MaterialPurchase::getPurchaseNo, purchaseNo)
                 .like(StringUtils.hasText(materialCode) && !StringUtils.hasText(orderNo), MaterialPurchase::getMaterialCode, materialCode)
                 .like(StringUtils.hasText(materialName) && !StringUtils.hasText(orderNo), MaterialPurchase::getMaterialName, materialName)
@@ -132,196 +148,143 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .eq(StringUtils.hasText(receiverId), MaterialPurchase::getReceiverId, receiverId)
                 .like(StringUtils.hasText(receiverName), MaterialPurchase::getReceiverName, receiverName)
                 .and(StringUtils.hasText(status), w -> {
-                    if ("partial".equals(status)) {
-                        w.in(MaterialPurchase::getStatus, "partial", "partial_arrival");
-                    } else {
-                        w.eq(MaterialPurchase::getStatus, status);
-                    }
+                    if ("partial".equals(status)) w.in(MaterialPurchase::getStatus, "partial", "partial_arrival");
+                    else w.eq(MaterialPurchase::getStatus, status);
                 })
                 .orderByDesc(MaterialPurchase::getCreateTime);
+    }
 
-        // sourceType筛选：batch同时匹配batch、stock和manual（均为非订单采购）
-        if (StringUtils.hasText(sourceType)) {
-            if ("batch".equals(sourceType)) {
-                wrapper.in(MaterialPurchase::getSourceType, "batch", "stock", "manual");
-            } else {
-                wrapper.eq(MaterialPurchase::getSourceType, sourceType);
-            }
+    private void applySourceTypeFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String sourceType) {
+        if (!StringUtils.hasText(sourceType)) return;
+        if ("batch".equals(sourceType)) wrapper.in(MaterialPurchase::getSourceType, "batch", "stock", "manual");
+        else wrapper.eq(MaterialPurchase::getSourceType, sourceType);
+    }
+
+    private void applyMaterialTypeFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String materialType) {
+        if (!StringUtils.hasText(materialType)) return;
+        String mt = materialType.trim();
+        if (MaterialConstants.TYPE_FABRIC.equals(mt) || MaterialConstants.TYPE_LINING.equals(mt) || MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
+            wrapper.and(w -> {
+                w.likeRight(MaterialPurchase::getMaterialType, mt);
+                if (MaterialConstants.TYPE_FABRIC.equals(mt)) w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_FABRIC_CN);
+                else if (MaterialConstants.TYPE_LINING.equals(mt)) w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_LINING_CN);
+                else if (MaterialConstants.TYPE_ACCESSORY.equals(mt)) w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_ACCESSORY_CN);
+            });
+        } else {
+            wrapper.eq(MaterialPurchase::getMaterialType, mt);
         }
+    }
 
-        if (StringUtils.hasText(materialType)) {
-            String mt = materialType.trim();
-            if (MaterialConstants.TYPE_FABRIC.equals(mt) || MaterialConstants.TYPE_LINING.equals(mt)
-                    || MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
-                wrapper.and(w -> {
-                    w.likeRight(MaterialPurchase::getMaterialType, mt);
-                    if (MaterialConstants.TYPE_FABRIC.equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_FABRIC_CN);
-                    } else if (MaterialConstants.TYPE_LINING.equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_LINING_CN);
-                    } else if (MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_ACCESSORY_CN);
-                    }
-                });
-            } else {
-                wrapper.eq(MaterialPurchase::getMaterialType, mt);
-            }
-        }
+    private void applySupplierFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String supplierName, String supplier) {
+        if (StringUtils.hasText(supplierName)) wrapper.like(MaterialPurchase::getSupplierName, supplierName);
+        else if (StringUtils.hasText(supplier)) wrapper.like(MaterialPurchase::getSupplierName, supplier);
+    }
 
-        if (StringUtils.hasText(supplierName)) {
-            wrapper.like(MaterialPurchase::getSupplierName, supplierName);
-        } else if (StringUtils.hasText(supplier)) {
-            wrapper.like(MaterialPurchase::getSupplierName, supplier);
-        }
-
-        // 只有"我的订单"允许显示报废订单，采购页默认必须排除报废订单关联记录。
-        // 【性能优化】用预加载 ID 列表取代 NOT IN(SELECT...) 关联子查询，消除全表扫描（慢查询 1.4-2.5s 根因）
+    private void excludeScrappedOrders(LambdaQueryWrapper<MaterialPurchase> wrapper, Long tenantId) {
         List<String> scrappedOrderIds = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .select(ProductionOrder::getId)
                         .eq(ProductionOrder::getTenantId, tenantId)
-                        .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1)
-                                .or().eq(ProductionOrder::getStatus, "scrapped")))
-                .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
-                .collect(Collectors.toList());
+                        .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1).or().eq(ProductionOrder::getStatus, "scrapped")))
+                .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
         if (!scrappedOrderIds.isEmpty()) {
-            wrapper.and(w -> w.isNull(MaterialPurchase::getOrderId)
-                    .or().eq(MaterialPurchase::getOrderId, "")
-                    .or().notIn(MaterialPurchase::getOrderId, scrappedOrderIds));
+            wrapper.and(w -> w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "").or().notIn(MaterialPurchase::getOrderId, scrappedOrderIds));
         }
-        // scrappedOrderIds 为空时无需过滤（本租户无报废/删除订单，所有记录均有效）
+    }
 
-        // factoryType 过滤：预加载匹配订单 ID，替代 IN(SELECT...) 关联子查询
-        // 无 order_id 的记录（batch/stock/manual）不受此过滤影响
+    private void applyFactoryFilters(LambdaQueryWrapper<MaterialPurchase> wrapper, Long tenantId, String factoryType, String factoryName) {
         if (StringUtils.hasText(factoryType)) {
             List<String> ftOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
-                            .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .select(ProductionOrder::getId).eq(ProductionOrder::getTenantId, tenantId)
                             .eq(ProductionOrder::getFactoryType, factoryType.trim().toUpperCase())
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
                             .ne(ProductionOrder::getStatus, "scrapped"))
-                    .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
-                    .collect(Collectors.toList());
-            wrapper.and(w -> {
-                w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "");
-                if (!ftOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, ftOrderIds);
-            });
+                    .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
+            wrapper.and(w -> { w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, ""); if (!ftOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, ftOrderIds); });
         }
         if (StringUtils.hasText(factoryName)) {
             List<String> fnOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
-                            .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .select(ProductionOrder::getId).eq(ProductionOrder::getTenantId, tenantId)
                             .like(ProductionOrder::getFactoryName, factoryName.trim())
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
                             .ne(ProductionOrder::getStatus, "scrapped"))
-                    .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
-                    .collect(Collectors.toList());
-            wrapper.and(w -> {
-                w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "");
-                if (!fnOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, fnOrderIds);
-            });
+                    .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
+            wrapper.and(w -> { w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, ""); if (!fnOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, fnOrderIds); });
         }
-        // 工厂账号隔离（由 MaterialPurchaseOrchestratorHelper 注入 _factoryOrderIds）
-        @SuppressWarnings("unchecked")
+    }
+
+    @SuppressWarnings("unchecked")
+    private void applyFactoryOrderIds(LambdaQueryWrapper<MaterialPurchase> wrapper, Map<String, Object> safeParams) {
         List<String> factoryOrderIds = (List<String>) safeParams.get("_factoryOrderIds");
-        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
-            wrapper.in(MaterialPurchase::getOrderId, factoryOrderIds);
-        }
+        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) wrapper.in(MaterialPurchase::getOrderId, factoryOrderIds);
+    }
 
-        IPage<MaterialPurchase> pageResult = baseMapper.selectPage(pageInfo, wrapper);
-
-        List<MaterialPurchase> records = pageResult == null ? null : pageResult.getRecords();
-        if (records != null && !records.isEmpty()) {
-            for (MaterialPurchase record : records) {
-                if (record == null || !StringUtils.hasText(record.getId())) {
-                    continue;
-                }
-                String beforeStatus = record.getStatus();
-
-                serviceHelper.ensureSnapshot(record);
-
-                if (record.getReturnConfirmed() != null && record.getReturnConfirmed() == 1) {
-                    Integer beforeArrivedQuantity = record.getArrivedQuantity();
-                    int arrived = beforeArrivedQuantity == null ? 0 : beforeArrivedQuantity;
-                    int rq = record.getReturnQuantity() == null ? 0 : record.getReturnQuantity();
-                    if (arrived != rq) {
-                        record.setArrivedQuantity(rq);
-
-                        if (record.getUnitPrice() != null) {
-                            record.setTotalAmount(record.getUnitPrice().multiply(BigDecimal.valueOf(rq)));
-                        }
-
-                        int pq = record.getPurchaseQuantity() == null ? 0 : record.getPurchaseQuantity().intValue();
-                        String s = beforeStatus == null ? "" : beforeStatus.trim();
-                        record.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(s, rq, pq));
-                    }
-                }
-
-                MaterialPurchaseHelper.repairReceiverFromRemark(record);
-
-            }
-        }
-
-        // 关联查询订单信息，填充生产方名称和类型
-        List<MaterialPurchase> records2 = pageResult.getRecords();
-        List<String> orderIdsForFactory = records2.stream()
-                .map(MaterialPurchase::getOrderId)
-                .filter(StringUtils::hasText)
-                .distinct()
-                .collect(Collectors.toList());
-        if (!orderIdsForFactory.isEmpty()) {
-            List<ProductionOrder> factoryOrders = productionOrderService.list(
-                    new LambdaQueryWrapper<ProductionOrder>()
-                            .in(ProductionOrder::getId, orderIdsForFactory)
-                            .select(ProductionOrder::getId, ProductionOrder::getFactoryName, ProductionOrder::getFactoryType)
-            );
-            Map<String, ProductionOrder> factoryOrderMap = factoryOrders.stream()
-                    .filter(o -> o != null && StringUtils.hasText(o.getId()))
-                    .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
-            for (MaterialPurchase record : records2) {
-                String oid = record.getOrderId();
-                if (StringUtils.hasText(oid) && factoryOrderMap.containsKey(oid.trim())) {
-                    ProductionOrder order = factoryOrderMap.get(oid.trim());
-                    record.setFactoryName(order.getFactoryName());
-                    record.setFactoryType(order.getFactoryType());
+    private void repairRecords(List<MaterialPurchase> records) {
+        for (MaterialPurchase record : records) {
+            if (record == null || !StringUtils.hasText(record.getId())) continue;
+            serviceHelper.ensureSnapshot(record);
+            if (record.getReturnConfirmed() != null && record.getReturnConfirmed() == 1) {
+                Integer beforeArrivedQuantity = record.getArrivedQuantity();
+                int arrived = beforeArrivedQuantity == null ? 0 : beforeArrivedQuantity;
+                int rq = record.getReturnQuantity() == null ? 0 : record.getReturnQuantity();
+                if (arrived != rq) {
+                    record.setArrivedQuantity(rq);
+                    if (record.getUnitPrice() != null) record.setTotalAmount(record.getUnitPrice().multiply(BigDecimal.valueOf(rq)));
+                    int pq = record.getPurchaseQuantity() == null ? 0 : record.getPurchaseQuantity().intValue();
+                    String s = record.getStatus() == null ? "" : record.getStatus().trim();
+                    record.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(s, rq, pq));
                 }
             }
+            MaterialPurchaseHelper.repairReceiverFromRemark(record);
         }
+    }
 
-        // 从物料资料库补全缺失属性（fabricWidth / fabricWeight / fabricComposition / supplierName / unitPrice 等）
-        List<String> matCodes = records2.stream()
-                .map(MaterialPurchase::getMaterialCode)
-                .filter(StringUtils::hasText)
-                .distinct()
-                .collect(Collectors.toList());
-        if (!matCodes.isEmpty()) {
-            Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
-                    new LambdaQueryWrapper<MaterialDatabase>()
-                            .in(MaterialDatabase::getMaterialCode, matCodes)
-                            .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode,
-                                    MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
-                                    MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
-                                    MaterialDatabase::getUnitPrice, MaterialDatabase::getColor,
-                                    MaterialDatabase::getSpecifications))
-                    .stream()
-                    .filter(d -> d != null && StringUtils.hasText(d.getMaterialCode()))
-                    .collect(Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
-            for (MaterialPurchase record : records2) {
-                MaterialDatabase db = dbMap.get(record.getMaterialCode());
-                if (db == null) continue;
-                if (!StringUtils.hasText(record.getFabricWidth())) record.setFabricWidth(db.getFabricWidth());
-                if (!StringUtils.hasText(record.getFabricWeight())) record.setFabricWeight(db.getFabricWeight());
-                if (!StringUtils.hasText(record.getFabricComposition())) record.setFabricComposition(db.getFabricComposition());
-                if (!StringUtils.hasText(record.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) record.setSupplierName(db.getSupplierName());
-                if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
-                if (!StringUtils.hasText(record.getColor()) && StringUtils.hasText(db.getColor())) record.setColor(db.getColor());
-                if (!StringUtils.hasText(record.getSpecifications()) && StringUtils.hasText(db.getSpecifications())) record.setSpecifications(db.getSpecifications());
+    private void enrichFactoryInfo(List<MaterialPurchase> records) {
+        List<String> orderIds = records.stream()
+                .map(MaterialPurchase::getOrderId).filter(StringUtils::hasText).distinct().collect(Collectors.toList());
+        if (orderIds.isEmpty()) return;
+        Map<String, ProductionOrder> factoryOrderMap = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .in(ProductionOrder::getId, orderIds)
+                        .select(ProductionOrder::getId, ProductionOrder::getFactoryName, ProductionOrder::getFactoryType))
+                .stream().filter(o -> o != null && StringUtils.hasText(o.getId()))
+                .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+        for (MaterialPurchase record : records) {
+            String oid = record.getOrderId();
+            if (StringUtils.hasText(oid) && factoryOrderMap.containsKey(oid.trim())) {
+                ProductionOrder order = factoryOrderMap.get(oid.trim());
+                record.setFactoryName(order.getFactoryName());
+                record.setFactoryType(order.getFactoryType());
             }
         }
+    }
 
-        return pageResult;
+    private void enrichFromMaterialDatabase(List<MaterialPurchase> records) {
+        List<String> matCodes = records.stream()
+                .map(MaterialPurchase::getMaterialCode).filter(StringUtils::hasText).distinct().collect(Collectors.toList());
+        if (matCodes.isEmpty()) return;
+        Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
+                new LambdaQueryWrapper<MaterialDatabase>()
+                        .in(MaterialDatabase::getMaterialCode, matCodes)
+                        .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode,
+                                MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
+                                MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
+                                MaterialDatabase::getUnitPrice, MaterialDatabase::getColor, MaterialDatabase::getSpecifications))
+                .stream().filter(d -> d != null && StringUtils.hasText(d.getMaterialCode()))
+                .collect(Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
+        for (MaterialPurchase record : records) {
+            MaterialDatabase db = dbMap.get(record.getMaterialCode());
+            if (db == null) continue;
+            if (!StringUtils.hasText(record.getFabricWidth())) record.setFabricWidth(db.getFabricWidth());
+            if (!StringUtils.hasText(record.getFabricWeight())) record.setFabricWeight(db.getFabricWeight());
+            if (!StringUtils.hasText(record.getFabricComposition())) record.setFabricComposition(db.getFabricComposition());
+            if (!StringUtils.hasText(record.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) record.setSupplierName(db.getSupplierName());
+            if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
+            if (!StringUtils.hasText(record.getColor()) && StringUtils.hasText(db.getColor())) record.setColor(db.getColor());
+            if (!StringUtils.hasText(record.getSpecifications()) && StringUtils.hasText(db.getSpecifications())) record.setSpecifications(db.getSpecifications());
+        }
     }
 
     @Override
@@ -617,43 +580,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateArrivedQuantity(String id, Integer arrivedQuantity, String remark) {
-        // 查询物料采购记录
-        // 注意：在同一事务中，getById 可能返回缓存对象。如果 updateById 未能刷新缓存，或者对象是同一个引用，
-        // 这里的 oldArrived 可能已经是上次 updateArrivedQuantity 设置的新值。
-        // 但 updateArrivedQuantity 调用了 updateById，应该会更新数据库。
-
-        // 问题在于：
-        // 1. 测试用例第一次调用 updateArrivedQuantity(..., 50, ...)
-        // -> getById: arrived=0
-        // -> setArrived(50)
-        // -> updateById(...) -> 提交到 DB (或 flush 到 session)
-        // -> materialPurchase 对象引用被修改为 arrived=50
-
-        // 2. 测试用例第二次调用 updateArrivedQuantity(..., 80, ...)
-        // -> getById: 如果 MyBatis 一级缓存生效，且是同一个 SqlSession，它可能返回同一个 materialPurchase 引用
-        // (arrived=50)
-        // -> oldArrived = 50
-        // -> delta = 80 - 50 = 30
-        // -> setArrived(80)
-        // -> updateById(...)
-        // -> stock +30 -> stock = 50 + 30 = 80. 正确。
-
-        // 3. 测试用例第三次调用 updateArrivedQuantity(..., 70, ...)
-        // -> getById: 拿到引用 (arrived=80)
-        // -> oldArrived = 80
-        // -> delta = 70 - 80 = -10
-        // -> setArrived(70)
-        // -> updateById(...)
-        // -> stock -10 -> stock = 80 - 10 = 70. 正确。
-
-        // 那么为什么测试失败，显示 stock=80 呢？
-        // 说明第三步没有扣减库存。
-        // 可能原因：
-        // A. delta 计算错误 (oldArrived 不对)
-        // B. increaseStock 没有执行
-        // C. increaseStock 执行了但没生效
-
-        // 让我们加点日志
         MaterialPurchase materialPurchase = this.getById(id);
         if (materialPurchase == null) {
             return false;
@@ -665,59 +591,61 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         log.info("updateArrivedQuantity: id={}, old={}, new={}, delta={}", id, oldArrived, newArrived, delta);
 
-        // 如果没有变化，直接返回true
         if (delta == 0 && !StringUtils.hasText(remark)) {
             return true;
         }
 
-        // 更新到货数量
-        materialPurchase.setArrivedQuantity(newArrived);
-        materialPurchase.setUpdateTime(LocalDateTime.now());
+        applyArrivedQuantityUpdate(materialPurchase, newArrived, remark);
+        syncStockOnArrivedChange(materialPurchase, delta);
+
+        return this.updateById(materialPurchase);
+    }
+
+    private void applyArrivedQuantityUpdate(MaterialPurchase mp, int newArrived, String remark) {
+        mp.setArrivedQuantity(newArrived);
+        mp.setUpdateTime(LocalDateTime.now());
 
         if (StringUtils.hasText(remark)) {
-            String current = materialPurchase.getRemark() == null ? "" : materialPurchase.getRemark().trim();
+            String current = mp.getRemark() == null ? "" : mp.getRemark().trim();
             String next = remark.trim();
             if (StringUtils.hasText(current)) {
                 if (!current.contains(next)) {
-                    materialPurchase.setRemark(current + "；" + next);
+                    mp.setRemark(current + "；" + next);
                 }
             } else {
-                materialPurchase.setRemark(next);
+                mp.setRemark(next);
             }
         }
 
-        if (materialPurchase.getUnitPrice() != null) {
-            materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(newArrived)));
+        if (mp.getUnitPrice() != null) {
+            mp.setTotalAmount(mp.getUnitPrice().multiply(BigDecimal.valueOf(newArrived)));
         }
 
-        String currentStatus = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
+        String currentStatus = mp.getStatus() == null ? "" : mp.getStatus().trim();
         if (!"cancelled".equals(currentStatus)) {
-            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
-                    : materialPurchase.getPurchaseQuantity().intValue();
+            int purchaseQty = mp.getPurchaseQuantity() == null ? 0 : mp.getPurchaseQuantity().intValue();
             String nextStatus = MaterialPurchaseHelper.resolveStatusByArrived(currentStatus, newArrived, purchaseQty);
-            materialPurchase.setStatus(nextStatus);
-            if ("completed".equalsIgnoreCase(nextStatus) && materialPurchase.getActualArrivalDate() == null) {
-                materialPurchase.setActualArrivalDate(LocalDateTime.now());
+            mp.setStatus(nextStatus);
+            if ("completed".equalsIgnoreCase(nextStatus) && mp.getActualArrivalDate() == null) {
+                mp.setActualArrivalDate(LocalDateTime.now());
             }
         }
 
-        // 确保 unit 字段有值，避免插入失败
-        if (!StringUtils.hasText(materialPurchase.getUnit())) {
-            materialPurchase.setUnit("-");
+        if (!StringUtils.hasText(mp.getUnit())) {
+            mp.setUnit("-");
         }
+    }
 
-        // 同步库存（生产订单驱动的采购不写入独立进销存）
-        if (delta != 0 && !isOrderDrivenPurchase(materialPurchase)) {
-            try {
-                materialStockService.increaseStock(materialPurchase, delta);
-            } catch (Exception e) {
-                log.warn("Failed to sync material stock: purchaseId={}, delta={}, error={}", id, delta, e.getMessage());
-                throw new RuntimeException("库存同步失败", e);
-            }
+    private void syncStockOnArrivedChange(MaterialPurchase mp, int delta) {
+        if (delta == 0 || isOrderDrivenPurchase(mp)) {
+            return;
         }
-
-        // 更新物料采购记录
-        return this.updateById(materialPurchase);
+        try {
+            materialStockService.increaseStock(mp, delta);
+        } catch (Exception e) {
+            log.warn("Failed to sync material stock: purchaseId={}, delta={}, error={}", mp.getId(), delta, e.getMessage());
+            throw new RuntimeException("库存同步失败", e);
+        }
     }
 
     @Override
@@ -820,6 +748,22 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             log.warn("confirmReturnPurchase: purchaseId为空");
             return false;
         }
+        MaterialPurchase existed = loadPurchaseForReturn(purchaseId);
+        if (existed == null) return false;
+
+        validateReturnQuantity(existed, returnQuantity, purchaseId);
+
+        String who = StringUtils.hasText(confirmerName) ? confirmerName.trim()
+                : (StringUtils.hasText(confirmerId) ? confirmerId.trim() : "");
+        if (!StringUtils.hasText(who)) who = "未命名";
+
+        MaterialPurchase patch = buildReturnPatch(existed, confirmerId, confirmerName, returnQuantity, who);
+        syncStockOnReturnConfirm(existed, returnQuantity, purchaseId);
+
+        return persistReturnPatch(purchaseId, patch, existed, returnQuantity, confirmerId, confirmerName, who);
+    }
+
+    private MaterialPurchase loadPurchaseForReturn(String purchaseId) {
         MaterialPurchase existed = this.getOne(
                 new LambdaQueryWrapper<MaterialPurchase>()
                         .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
@@ -834,100 +778,99 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                         .eq(MaterialPurchase::getId, purchaseId));
         if (existed == null) {
             log.warn("confirmReturnPurchase: 采购记录不存在, purchaseId={}", purchaseId);
-            return false;
+            return null;
         }
         if (existed.getDeleteFlag() != null && existed.getDeleteFlag() != 0) {
             log.warn("confirmReturnPurchase: 记录已删除, purchaseId={}", purchaseId);
-            return false;
+            return null;
         }
-
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
         if (MaterialConstants.STATUS_CANCELLED.equals(status)) {
             log.warn("confirmReturnPurchase: 采购已取消, purchaseId={}", purchaseId);
-            return false;
+            return null;
         }
+        return existed;
+    }
 
+    private void validateReturnQuantity(MaterialPurchase existed, Integer returnQuantity, String purchaseId) {
         if (returnQuantity == null) {
-            log.warn("confirmReturnPurchase: returnQuantity为null, purchaseId={}", purchaseId);
-            return false;
+            throw new IllegalArgumentException("returnQuantity不能为null");
         }
         int rq = returnQuantity;
         if (rq < 0) {
-            log.warn("confirmReturnPurchase: returnQuantity为负数, purchaseId={}, rq={}", purchaseId, rq);
-            return false;
+            throw new IllegalArgumentException("returnQuantity不能为负数");
         }
         int purchaseQty = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity().intValue();
         int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
         int max = arrivedQty > 0 ? arrivedQty : purchaseQty;
-        // 数量 ≤ 10 的面料/辅料（按米/克计量），不限制回料数量上限，与 Orchestrator 保持一致
         if (max > 10 && rq > max) {
-            log.warn("confirmReturnPurchase: 回料数量超限, purchaseId={}, rq={}, max={}, arrivedQty={}, purchaseQty={}",
-                    purchaseId, rq, max, arrivedQty, purchaseQty);
-            return false;
+            throw new IllegalArgumentException("回料数量超限: rq=" + rq + ", max=" + max);
         }
+    }
 
-        String who = StringUtils.hasText(confirmerName) ? confirmerName.trim()
-                : (StringUtils.hasText(confirmerId) ? confirmerId.trim() : "");
-        if (!StringUtils.hasText(who)) {
-            who = "未命名";
-        }
-
+    private MaterialPurchase buildReturnPatch(MaterialPurchase existed, String confirmerId, String confirmerName,
+            Integer returnQuantity, String who) {
+        int rq = returnQuantity;
         String remark = existed.getRemark() == null ? "" : existed.getRemark().trim();
+        BigDecimal unitPrice = existed.getUnitPrice() == null ? BigDecimal.ZERO : existed.getUnitPrice();
+        String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
 
         MaterialPurchase patch = new MaterialPurchase();
-        patch.setId(purchaseId);
+        patch.setId(existed.getId());
         patch.setReturnConfirmed(1);
         patch.setReturnQuantity(rq);
-
-        // ★ 保留原始到货数量，不再覆盖arrivedQuantity
-        // 旧逻辑 patch.setArrivedQuantity(rq) 会覆盖原始到货数量，导致财务审计无法追溯
-        // 回料数量独立记录在 returnQuantity 字段，arrivedQuantity 保持原始值
-        BigDecimal unitPrice = existed.getUnitPrice() == null ? BigDecimal.ZERO : existed.getUnitPrice();
         patch.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(rq)));
-
-        String newStatus = rq > 0 ? MaterialConstants.STATUS_AWAITING_CONFIRM : status;
-        patch.setStatus(newStatus);
-
+        patch.setStatus(rq > 0 ? MaterialConstants.STATUS_AWAITING_CONFIRM : status);
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);
         patch.setReturnConfirmerName(StringUtils.hasText(confirmerName) ? confirmerName.trim() : who);
         patch.setReturnConfirmTime(LocalDateTime.now());
         patch.setRemark(remark);
         patch.setUpdateTime(LocalDateTime.now());
+        return patch;
+    }
 
-        // 同步库存：回料确认时增加库存，生产订单驱动的采购不写入独立进销存
+    private void syncStockOnReturnConfirm(MaterialPurchase existed, Integer returnQuantity, String purchaseId) {
+        int rq = returnQuantity;
+        int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
         int delta = rq - arrivedQty;
-        if (delta != 0 && !isOrderDrivenPurchase(existed)) {
-            try {
-                materialStockService.increaseStock(existed, delta);
-                log.info("confirmReturnPurchase: 库存同步成功, purchaseId={}, delta={}", purchaseId, delta);
-            } catch (Exception e) {
-                log.warn("confirmReturnPurchase: 库存同步失败(非致命), purchaseId={}, delta={}, error={}", purchaseId, delta, e.getMessage());
-                // 不阻断主流程 — 与 syncAfterPurchaseChanged 保持一致，库存同步失败不影响回料确认业务
-            }
+        if (delta == 0 || isOrderDrivenPurchase(existed)) return;
+        try {
+            materialStockService.increaseStock(existed, delta);
+            log.info("confirmReturnPurchase: 库存同步成功, purchaseId={}, delta={}", purchaseId, delta);
+        } catch (Exception e) {
+            log.warn("confirmReturnPurchase: 库存同步失败(非致命), purchaseId={}, delta={}, error={}", purchaseId, delta, e.getMessage());
         }
+    }
 
+    private boolean persistReturnPatch(String purchaseId, MaterialPurchase patch, MaterialPurchase existed,
+            Integer returnQuantity, String confirmerId, String confirmerName, String who) {
         try {
             return this.updateById(patch);
         } catch (Exception e) {
             log.warn("[confirmReturnPurchase] updateById失败(可能schema缺列)，降级LambdaUpdate: {}", e.getMessage());
-            try {
-                this.lambdaUpdate()
-                        .eq(MaterialPurchase::getId, purchaseId)
-                        .set(MaterialPurchase::getReturnConfirmed, 1)
-                        .set(MaterialPurchase::getReturnQuantity, rq)
-                        .set(MaterialPurchase::getTotalAmount, unitPrice.multiply(BigDecimal.valueOf(rq)))
-                        .set(MaterialPurchase::getStatus, newStatus)
-                        .set(MaterialPurchase::getReturnConfirmerId, StringUtils.hasText(confirmerId) ? confirmerId.trim() : null)
-                        .set(MaterialPurchase::getReturnConfirmerName, StringUtils.hasText(confirmerName) ? confirmerName.trim() : who)
-                        .set(MaterialPurchase::getReturnConfirmTime, LocalDateTime.now())
-                        .set(MaterialPurchase::getRemark, remark)
-                        .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
-                        .update();
-                return true;
-            } catch (Exception e2) {
-                log.error("[confirmReturnPurchase] LambdaUpdate也失败: {}", e2.getMessage());
-                return false;
-            }
+            return fallbackUpdateReturn(purchaseId, returnQuantity, existed.getUnitPrice(), patch.getStatus(), confirmerId, confirmerName, who, patch.getRemark());
+        }
+    }
+
+    private boolean fallbackUpdateReturn(String purchaseId, int rq, BigDecimal unitPrice, String newStatus,
+            String confirmerId, String confirmerName, String who, String remark) {
+        try {
+            this.lambdaUpdate()
+                    .eq(MaterialPurchase::getId, purchaseId)
+                    .set(MaterialPurchase::getReturnConfirmed, 1)
+                    .set(MaterialPurchase::getReturnQuantity, rq)
+                    .set(MaterialPurchase::getTotalAmount, unitPrice.multiply(BigDecimal.valueOf(rq)))
+                    .set(MaterialPurchase::getStatus, newStatus)
+                    .set(MaterialPurchase::getReturnConfirmerId, StringUtils.hasText(confirmerId) ? confirmerId.trim() : null)
+                    .set(MaterialPurchase::getReturnConfirmerName, StringUtils.hasText(confirmerName) ? confirmerName.trim() : who)
+                    .set(MaterialPurchase::getReturnConfirmTime, LocalDateTime.now())
+                    .set(MaterialPurchase::getRemark, remark)
+                    .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
+                    .update();
+            return true;
+        } catch (Exception e2) {
+            log.error("[confirmReturnPurchase] LambdaUpdate也失败: {}", e2.getMessage());
+            return false;
         }
     }
 

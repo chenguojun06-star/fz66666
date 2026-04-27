@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.PatternProduction;
@@ -749,13 +750,11 @@ public class StyleInfoOrchestrator {
      */
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment) {
-        StyleInfo style = styleInfoService.lambdaQuery()
-                .eq(StyleInfo::getId, id)
-                .eq(StyleInfo::getTenantId, UserContext.tenantId())
-                .one();
+        StyleInfo style = styleInfoService.getById(id);
         if (style == null) {
             throw new RuntimeException("款式不存在：" + id);
         }
+        TenantAssert.assertBelongsToCurrentTenant(style.getTenantId(), "款式");
         style.setSampleReviewStatus(reviewStatus);
         style.setSampleReviewComment(reviewComment);
         style.setSampleReviewer(UserContext.username());

@@ -1,12 +1,11 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.intelligence.orchestration.report.ReportDataCollector;
+import com.fashion.supplychain.intelligence.orchestration.report.ReportFormatHelper;
+import com.fashion.supplychain.intelligence.orchestration.report.ReportStyleKit;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -19,100 +18,29 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * 专业运营报告生成器 — 生成可直接用于管理层汇报的 Excel 报告
- * 支持日报/周报/月报，包含执行摘要、KPI、生产进度、工厂排名、风险清单、成本分析
- */
 @Slf4j
 @Service
 public class ProfessionalReportOrchestrator {
 
     @Autowired
-    private ProductionOrderService productionOrderService;
-    @Autowired
-    private ScanRecordService scanRecordService;
+    private ReportDataCollector dataCollector;
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    /**
-     * 生成专业报告 Excel 文件
-     */
     public byte[] generateReport(String reportType, LocalDate baseDate) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        String factoryId = UserContext.factoryId();
-        if (baseDate == null) baseDate = LocalDate.now();
-
-        // 权限范围：管理层看全局，普通跟单员只看自己的订单
-        boolean isManager = UserContext.canViewAll();
-        String currentUserId = UserContext.userId();
-        String currentUsername = UserContext.username();
-        String scopeLabel = isManager ? "全局数据（所有订单）" :
-                "个人数据（跟单员：" + (currentUsername != null ? currentUsername : currentUserId) + "）";
-
-        // 计算时间范围
-        TimeRange range = calcTimeRange(reportType, baseDate);
-
-        // 权限上下文：非管理层则限定到当前用户
-        String scopeUserId = isManager ? null : currentUserId;
-        String scopeUsername = isManager ? null : currentUsername;
-
-        // --- AI 智能兜底：针对测试环境，如果选择"今日"但没有扫码/订单数据，自动回溯到最近有数据的一天 ---
-        if (baseDate.equals(LocalDate.now())) {
-            TimeRange probe = calcTimeRange(reportType, baseDate);
-            String probeUser = isManager ? null : currentUserId;
-            // 检查当前区间是否有扫码记录或订单
-            long todayScans = countScans(tenantId, probe.start(), probe.end(), probeUser, factoryId);
-            long todayOrders = countNewOrders(tenantId, probe.start(), probe.end(), probeUser, scopeUsername, factoryId);
-
-            if (todayScans == 0 && todayOrders == 0) {
-                LocalDate fallbackDate = null;
-
-                QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> sq = new QueryWrapper<>();
-                sq.eq("tenant_id", tenantId);
-                if (probeUser != null) sq.eq("operator_id", probeUser);
-                if (factoryId != null && !factoryId.isBlank()) sq.eq("factory_id", factoryId);
-                sq.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
-                com.fashion.supplychain.production.entity.ScanRecord latestScan = scanRecordService.getOne(sq);
-                if (latestScan != null && latestScan.getScanTime() != null) {
-                    fallbackDate = latestScan.getScanTime().toLocalDate();
-                }
-
-                QueryWrapper<ProductionOrder> oq = baseOrderQuery(tenantId, probeUser, scopeUsername, factoryId);
-                oq.orderByDesc("create_time").last("LIMIT 1").select("create_time");
-                ProductionOrder latestOrder = productionOrderService.getOne(oq);
-                if (latestOrder != null && latestOrder.getCreateTime() != null) {
-                    LocalDate orderDate = latestOrder.getCreateTime().toLocalDate();
-                    if (fallbackDate == null || orderDate.isAfter(fallbackDate)) {
-                        fallbackDate = orderDate;
-                    }
-                }
-
-                if (fallbackDate != null) {
-                    baseDate = fallbackDate;
-                    log.info("[ProfessionalReport] 智能报表兜底：{}今日无数据，自动回溯至最近有效日期 {}", reportType, baseDate);
-                }
-            }
-        }
-
-        // 计算时间范围
-        range = calcTimeRange(reportType, baseDate);
-
+        ReportDataCollector.ReportContext ctx = dataCollector.resolveContext(reportType, baseDate);
+        String scopeLabel = ctx.isManager() ? "全局数据（所有订单）" :
+                "个人数据（跟单员：" + (ctx.scopeUsername() != null ? ctx.scopeUsername() : ctx.scopeUserId()) + "）";
 
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
-            StyleKit kit = new StyleKit(wb);
+            ReportStyleKit kit = new ReportStyleKit(wb);
 
-            buildCoverSheet(wb, kit, reportType, range, scopeLabel);
-            buildKpiSheet(wb, kit, tenantId, range, scopeUserId, scopeUsername, factoryId);
-            buildFactorySheet(wb, kit, tenantId, range, scopeUserId, scopeUsername, factoryId);
-            buildRiskSheet(wb, kit, tenantId, scopeUserId, scopeUsername, factoryId);
-            buildCostSheet(wb, kit, tenantId, range, scopeUserId, factoryId);
+            buildCoverSheet(wb, kit, reportType, ctx.range(), scopeLabel);
+            buildKpiSheet(wb, kit, ctx);
+            buildFactorySheet(wb, kit, ctx);
+            buildRiskSheet(wb, kit, ctx);
+            buildCostSheet(wb, kit, ctx);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             wb.write(out);
@@ -123,10 +51,29 @@ public class ProfessionalReportOrchestrator {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  Sheet 1: 封面
-    // ═══════════════════════════════════════════════════════════
-    private void buildCoverSheet(XSSFWorkbook wb, StyleKit kit, String reportType, TimeRange range, String scopeLabel) {
+    public Map<String, Object> generateReportSummary(String reportType, LocalDate baseDate) {
+        ReportDataCollector.ReportContext ctx = dataCollector.resolveContext(reportType, baseDate);
+        ReportFormatHelper.TimeRange range = ctx.range();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("reportType", reportType);
+        result.put("typeLabel", "daily".equals(reportType) ? "日报" : "weekly".equals(reportType) ? "周报" : "月报");
+        result.put("rangeLabel", range.label());
+        result.put("baseDate", ctx.baseDate().format(ReportFormatHelper.DATE_FMT));
+        result.put("scope", ctx.isManager() ? "全局数据" : "个人数据（" + (ctx.scopeUsername() != null ? ctx.scopeUsername() : "本人") + "）");
+
+        result.put("kpis", buildSummaryKpis(ctx));
+        result.put("scanTypes", buildSummaryScanTypes(ctx));
+        result.put("orderStatus", buildSummaryOrderStatus(ctx));
+        result.put("factoryRanking", buildSummaryFactoryRanking(ctx));
+        result.put("riskSummary", buildSummaryRisk(ctx));
+        result.put("costSummary", buildSummaryCost(ctx));
+
+        return result;
+    }
+
+    private void buildCoverSheet(XSSFWorkbook wb, ReportStyleKit kit, String reportType,
+                                  ReportFormatHelper.TimeRange range, String scopeLabel) {
         Sheet sheet = wb.createSheet("报告封面");
         sheet.setColumnWidth(0, 15000);
         sheet.setDefaultRowHeight((short) 500);
@@ -148,8 +95,8 @@ public class ProfessionalReportOrchestrator {
 
         row += 2;
         String[][] info = {
-                {"报告周期", range.label},
-                {"生成时间", LocalDateTime.now().format(DATETIME_FMT)},
+                {"报告周期", range.label()},
+                {"生成时间", LocalDateTime.now().format(ReportFormatHelper.DATETIME_FMT)},
                 {"报告人", UserContext.username() != null ? UserContext.username() : "系统自动生成"},
                 {"数据范围", scopeLabel},
                 {"数据来源", "云裳智链生产管理系统（实时数据）"},
@@ -163,11 +110,7 @@ public class ProfessionalReportOrchestrator {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  Sheet 2: 核心 KPI 概览
-    // ═══════════════════════════════════════════════════════════
-    private void buildKpiSheet(XSSFWorkbook wb, StyleKit kit, Long tenantId, TimeRange range,
-                               String scopeUserId, String scopeUsername, String factoryId) {
+    private void buildKpiSheet(XSSFWorkbook wb, ReportStyleKit kit, ReportDataCollector.ReportContext ctx) {
         Sheet sheet = wb.createSheet("核心KPI");
         sheet.setColumnWidth(0, 8000);
         sheet.setColumnWidth(1, 5000);
@@ -175,8 +118,8 @@ public class ProfessionalReportOrchestrator {
         sheet.setColumnWidth(3, 5000);
 
         int rowIdx = 0;
+        ReportFormatHelper.TimeRange range = ctx.range();
 
-        // 标题
         Row r = sheet.createRow(rowIdx++);
         Cell c = r.createCell(0);
         c.setCellValue("一、核心经营指标概览");
@@ -184,7 +127,6 @@ public class ProfessionalReportOrchestrator {
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 3));
         r.setHeight((short) 600);
 
-        // 表头
         rowIdx++;
         r = sheet.createRow(rowIdx++);
         String[] kpiHeaders = {"指标", "本期", "上期", "环比变化"};
@@ -194,19 +136,18 @@ public class ProfessionalReportOrchestrator {
             c.setCellStyle(kit.headerStyle);
         }
 
-        // 数据（按权限范围过滤）
-        long curScanCount = countScans(tenantId, range.start, range.end, scopeUserId, factoryId);
-        long prevScanCount = countScans(tenantId, range.prevStart, range.prevEnd, scopeUserId, factoryId);
-        long curScanQty = sumScanQty(tenantId, range.start, range.end, scopeUserId, factoryId);
-        long prevScanQty = sumScanQty(tenantId, range.prevStart, range.prevEnd, scopeUserId, factoryId);
-        long curNewOrders = countNewOrders(tenantId, range.start, range.end, scopeUserId, scopeUsername, factoryId);
-        long prevNewOrders = countNewOrders(tenantId, range.prevStart, range.prevEnd, scopeUserId, scopeUsername, factoryId);
-        long curCompleted = countCompletedOrders(tenantId, range.start, range.end, scopeUserId, scopeUsername, factoryId);
+        long curScanCount = dataCollector.countScans(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.factoryId());
+        long prevScanCount = dataCollector.countScans(ctx.tenantId(), range.prevStart(), range.prevEnd(), ctx.scopeUserId(), ctx.factoryId());
+        long curScanQty = dataCollector.sumScanQty(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.factoryId());
+        long prevScanQty = dataCollector.sumScanQty(ctx.tenantId(), range.prevStart(), range.prevEnd(), ctx.scopeUserId(), ctx.factoryId());
+        long curNewOrders = dataCollector.countNewOrders(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        long prevNewOrders = dataCollector.countNewOrders(ctx.tenantId(), range.prevStart(), range.prevEnd(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        long curCompleted = dataCollector.countCompletedOrders(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
 
         String[][] kpiData = {
-                {"扫码次数", String.valueOf(curScanCount), String.valueOf(prevScanCount), changeStr(curScanCount, prevScanCount)},
-                {"扫码件数", String.valueOf(curScanQty), String.valueOf(prevScanQty), changeStr(curScanQty, prevScanQty)},
-                {"新建订单数", String.valueOf(curNewOrders), String.valueOf(prevNewOrders), changeStr(curNewOrders, prevNewOrders)},
+                {"扫码次数", String.valueOf(curScanCount), String.valueOf(prevScanCount), ReportFormatHelper.changeStr(curScanCount, prevScanCount)},
+                {"扫码件数", String.valueOf(curScanQty), String.valueOf(prevScanQty), ReportFormatHelper.changeStr(curScanQty, prevScanQty)},
+                {"新建订单数", String.valueOf(curNewOrders), String.valueOf(prevNewOrders), ReportFormatHelper.changeStr(curNewOrders, prevNewOrders)},
                 {"完成订单数", String.valueOf(curCompleted), "-", "-"},
         };
 
@@ -219,10 +160,15 @@ public class ProfessionalReportOrchestrator {
             }
         }
 
-        // 扫码类型分布小表
+        rowIdx = appendScanTypeDistribution(sheet, kit, ctx, rowIdx);
+        rowIdx = appendOrderStatusDistribution(sheet, kit, ctx, rowIdx);
+    }
+
+    private int appendScanTypeDistribution(Sheet sheet, ReportStyleKit kit, ReportDataCollector.ReportContext ctx, int rowIdx) {
+        ReportFormatHelper.TimeRange range = ctx.range();
         rowIdx += 2;
-        r = sheet.createRow(rowIdx++);
-        c = r.createCell(0);
+        Row r = sheet.createRow(rowIdx++);
+        Cell c = r.createCell(0);
         c.setCellValue("二、扫码类型分布");
         c.setCellStyle(kit.sectionStyle);
         sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 3));
@@ -238,7 +184,7 @@ public class ProfessionalReportOrchestrator {
 
         Map<String, Long> byType = new LinkedHashMap<>();
         for (String type : new String[]{"production", "quality", "warehouse"}) {
-            byType.put(type, countScansByType(tenantId, range.start, range.end, type, scopeUserId, factoryId));
+            byType.put(type, dataCollector.countScansByType(ctx.tenantId(), range.start(), range.end(), type, ctx.scopeUserId(), ctx.factoryId()));
         }
         long totalByType = byType.values().stream().mapToLong(Long::longValue).sum();
         Map<String, String> typeLabels = Map.of("production", "生产扫码", "quality", "质检扫码", "warehouse", "入库扫码");
@@ -253,20 +199,23 @@ public class ProfessionalReportOrchestrator {
                 r.getCell(i).setCellStyle(i == 0 ? kit.labelStyle : kit.dataStyle);
             }
         }
+        return rowIdx;
+    }
 
-        // 订单状态分布
+    private int appendOrderStatusDistribution(Sheet sheet, ReportStyleKit kit, ReportDataCollector.ReportContext ctx, int rowIdx) {
         rowIdx += 2;
-        r = sheet.createRow(rowIdx++);
-        c = r.createCell(0);
+        Row r = sheet.createRow(rowIdx++);
+        Cell c = r.createCell(0);
         c.setCellValue("三、订单状态分布（当前）");
         c.setCellStyle(kit.sectionStyle);
         sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 3));
 
         rowIdx++;
         r = sheet.createRow(rowIdx++);
-        for (int i = 0; i < new String[]{"状态", "数量", "", ""}.length; i++) {
+        String[] headers = {"状态", "数量", "", ""};
+        for (int i = 0; i < headers.length; i++) {
             c = r.createCell(i);
-            c.setCellValue(new String[]{"状态", "数量", "", ""}[i]);
+            c.setCellValue(headers[i]);
             c.setCellStyle(kit.headerStyle);
         }
 
@@ -280,18 +229,15 @@ public class ProfessionalReportOrchestrator {
             r = sheet.createRow(rowIdx++);
             r.createCell(0).setCellValue(entry.getValue());
             r.getCell(0).setCellStyle(kit.labelStyle);
-            long cnt = countOrdersByStatus(tenantId, entry.getKey(), scopeUserId, scopeUsername, factoryId);
+            long cnt = dataCollector.countOrdersByStatus(ctx.tenantId(), entry.getKey(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
             c = r.createCell(1);
             c.setCellValue(cnt);
             c.setCellStyle(kit.dataStyle);
         }
+        return rowIdx;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  Sheet 3: 工厂效率排名
-    // ═══════════════════════════════════════════════════════════
-    private void buildFactorySheet(XSSFWorkbook wb, StyleKit kit, Long tenantId, TimeRange range,
-                                   String scopeUserId, String scopeUsername, String factoryId) {
+    private void buildFactorySheet(XSSFWorkbook wb, ReportStyleKit kit, ReportDataCollector.ReportContext ctx) {
         Sheet sheet = wb.createSheet("工厂效率排名");
         sheet.setColumnWidth(0, 3000);
         sheet.setColumnWidth(1, 8000);
@@ -315,14 +261,16 @@ public class ProfessionalReportOrchestrator {
             c.setCellStyle(kit.headerStyle);
         }
 
-        List<FactoryRank> rankings = buildFactoryRankings(tenantId, range.start, range.end, scopeUserId, scopeUsername, factoryId);
+        List<ReportFormatHelper.FactoryRank> rankings = dataCollector.buildFactoryRankings(
+                ctx.tenantId(), ctx.range().start(), ctx.range().end(),
+                ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
         int rank = 1;
-        for (FactoryRank fr : rankings) {
+        for (ReportFormatHelper.FactoryRank fr : rankings) {
             r = sheet.createRow(rowIdx++);
             r.createCell(0).setCellValue(rank++);
-            r.createCell(1).setCellValue(fr.name);
-            r.createCell(2).setCellValue(fr.scanCount);
-            r.createCell(3).setCellValue(fr.scanQty);
+            r.createCell(1).setCellValue(fr.name());
+            r.createCell(2).setCellValue(fr.scanCount());
+            r.createCell(3).setCellValue(fr.scanQty());
             for (int i = 0; i < 4; i++) {
                 r.getCell(i).setCellStyle(i <= 1 ? kit.labelStyle : kit.dataStyle);
             }
@@ -337,11 +285,7 @@ public class ProfessionalReportOrchestrator {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  Sheet 4: 风险清单
-    // ═══════════════════════════════════════════════════════════
-    private void buildRiskSheet(XSSFWorkbook wb, StyleKit kit, Long tenantId,
-                                String scopeUserId, String scopeUsername, String factoryId) {
+    private void buildRiskSheet(XSSFWorkbook wb, ReportStyleKit kit, ReportDataCollector.ReportContext ctx) {
         Sheet sheet = wb.createSheet("风险预警");
         sheet.setColumnWidth(0, 5000);
         sheet.setColumnWidth(1, 5000);
@@ -352,18 +296,19 @@ public class ProfessionalReportOrchestrator {
 
         int rowIdx = 0;
 
-        // 风险概览
-        r(sheet, rowIdx, kit.sectionStyle, "风险概览");
-        sheet.addMergedRegion(new CellRangeAddress(rowIdx, rowIdx, 0, 5));
-        sheet.getRow(rowIdx).setHeight((short) 600);
-        rowIdx += 2;
-
-        // 逾期订单
-        List<ProductionOrder> overdue = getOverdueOrders(tenantId, scopeUserId, scopeUsername, factoryId);
-        List<ProductionOrder> highRisk = getHighRiskOrders(tenantId, scopeUserId, scopeUsername, factoryId);
-        long stagnant = countStagnantOrders(tenantId, scopeUserId, scopeUsername, factoryId);
-
         Row r = sheet.createRow(rowIdx++);
+        Cell c = r.createCell(0);
+        c.setCellValue("风险概览");
+        c.setCellStyle(kit.sectionStyle);
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
+        r.setHeight((short) 600);
+        rowIdx++;
+
+        List<ProductionOrder> overdue = dataCollector.getOverdueOrders(ctx.tenantId(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        List<ProductionOrder> highRisk = dataCollector.getHighRiskOrders(ctx.tenantId(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        long stagnant = dataCollector.countStagnantOrders(ctx.tenantId(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+
+        r = sheet.createRow(rowIdx++);
         r.createCell(0).setCellValue("指标");
         r.createCell(1).setCellValue("数量");
         r.getCell(0).setCellStyle(kit.headerStyle);
@@ -382,64 +327,43 @@ public class ProfessionalReportOrchestrator {
             r.getCell(1).setCellStyle(kit.warnStyle);
         }
 
-        // 逾期订单明细
-        if (!overdue.isEmpty()) {
-            rowIdx += 2;
-            r(sheet, rowIdx, kit.sectionStyle, "逾期订单明细（Top 10）");
-            sheet.addMergedRegion(new CellRangeAddress(rowIdx, rowIdx, 0, 5));
-            rowIdx += 2;
-
-            r = sheet.createRow(rowIdx++);
-            String[] riskHeaders = {"订单号", "款式", "工厂", "数量", "进度", "交期"};
-            for (int i = 0; i < riskHeaders.length; i++) {
-                r.createCell(i).setCellValue(riskHeaders[i]);
-                r.getCell(i).setCellStyle(kit.headerStyle);
-            }
-
-            for (ProductionOrder o : overdue.stream().limit(10).toList()) {
-                r = sheet.createRow(rowIdx++);
-                r.createCell(0).setCellValue(nullSafe(o.getOrderNo()));
-                r.createCell(1).setCellValue(nullSafe(o.getStyleName()));
-                r.createCell(2).setCellValue(nullSafe(o.getFactoryName()));
-                r.createCell(3).setCellValue(o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
-                r.createCell(4).setCellValue((o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
-                r.createCell(5).setCellValue(o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().format(DATE_FMT) : "未设置");
-                for (int i = 0; i < 6; i++) r.getCell(i).setCellStyle(kit.dataStyle);
-            }
-        }
-
-        // 高风险订单明细
-        if (!highRisk.isEmpty()) {
-            rowIdx += 2;
-            r(sheet, rowIdx, kit.sectionStyle, "高风险订单明细（7天内到期，进度<50%）");
-            sheet.addMergedRegion(new CellRangeAddress(rowIdx, rowIdx, 0, 5));
-            rowIdx += 2;
-
-            r = sheet.createRow(rowIdx++);
-            String[] hrHeaders = {"订单号", "款式", "工厂", "数量", "进度", "交期"};
-            for (int i = 0; i < hrHeaders.length; i++) {
-                r.createCell(i).setCellValue(hrHeaders[i]);
-                r.getCell(i).setCellStyle(kit.headerStyle);
-            }
-
-            for (ProductionOrder o : highRisk.stream().limit(10).toList()) {
-                r = sheet.createRow(rowIdx++);
-                r.createCell(0).setCellValue(nullSafe(o.getOrderNo()));
-                r.createCell(1).setCellValue(nullSafe(o.getStyleName()));
-                r.createCell(2).setCellValue(nullSafe(o.getFactoryName()));
-                r.createCell(3).setCellValue(o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
-                r.createCell(4).setCellValue((o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
-                r.createCell(5).setCellValue(o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().format(DATE_FMT) : "未设置");
-                for (int i = 0; i < 6; i++) r.getCell(i).setCellStyle(kit.dataStyle);
-            }
-        }
+        rowIdx = appendOrderDetailTable(sheet, kit, overdue, "逾期订单明细（Top 10）", rowIdx);
+        rowIdx = appendOrderDetailTable(sheet, kit, highRisk, "高风险订单明细（7天内到期，进度<50%）", rowIdx);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  Sheet 5: 成本分析
-    // ═══════════════════════════════════════════════════════════
-    private void buildCostSheet(XSSFWorkbook wb, StyleKit kit, Long tenantId, TimeRange range,
-                                String scopeUserId, String factoryId) {
+    private int appendOrderDetailTable(Sheet sheet, ReportStyleKit kit, List<ProductionOrder> orders,
+                                        String title, int rowIdx) {
+        if (orders.isEmpty()) return rowIdx;
+
+        rowIdx += 2;
+        Row r = sheet.createRow(rowIdx++);
+        Cell c = r.createCell(0);
+        c.setCellValue(title);
+        c.setCellStyle(kit.sectionStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 5));
+        rowIdx++;
+
+        r = sheet.createRow(rowIdx++);
+        String[] riskHeaders = {"订单号", "款式", "工厂", "数量", "进度", "交期"};
+        for (int i = 0; i < riskHeaders.length; i++) {
+            r.createCell(i).setCellValue(riskHeaders[i]);
+            r.getCell(i).setCellStyle(kit.headerStyle);
+        }
+
+        for (ProductionOrder o : orders.stream().limit(10).toList()) {
+            r = sheet.createRow(rowIdx++);
+            r.createCell(0).setCellValue(ReportFormatHelper.nullSafe(o.getOrderNo()));
+            r.createCell(1).setCellValue(ReportFormatHelper.nullSafe(o.getStyleName()));
+            r.createCell(2).setCellValue(ReportFormatHelper.nullSafe(o.getFactoryName()));
+            r.createCell(3).setCellValue(o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
+            r.createCell(4).setCellValue((o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
+            r.createCell(5).setCellValue(o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().format(ReportFormatHelper.DATE_FMT) : "未设置");
+            for (int i = 0; i < 6; i++) r.getCell(i).setCellStyle(kit.dataStyle);
+        }
+        return rowIdx;
+    }
+
+    private void buildCostSheet(XSSFWorkbook wb, ReportStyleKit kit, ReportDataCollector.ReportContext ctx) {
         Sheet sheet = wb.createSheet("成本分析");
         sheet.setColumnWidth(0, 8000);
         sheet.setColumnWidth(1, 6000);
@@ -453,15 +377,10 @@ public class ProfessionalReportOrchestrator {
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
         r.setHeight((short) 600);
 
-        // 汇总
         rowIdx++;
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
-        q.ge("scan_time", range.start).le("scan_time", range.end);
-        List<ScanRecord> scans = scanRecordService.list(q);
-
-        BigDecimal totalCost = scans.stream()
-                .map(s -> s.getScanCost() != null ? s.getScanCost() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<ScanRecord> scans = dataCollector.getScansInRange(
+                ctx.tenantId(), ctx.range().start(), ctx.range().end(), ctx.scopeUserId(), ctx.factoryId());
+        BigDecimal totalCost = dataCollector.sumScanCost(scans);
 
         r = sheet.createRow(rowIdx++);
         r.createCell(0).setCellValue("总加工成本（元）");
@@ -475,10 +394,14 @@ public class ProfessionalReportOrchestrator {
         r.getCell(0).setCellStyle(kit.labelStyle);
         r.getCell(1).setCellStyle(kit.dataStyle);
 
-        // 按工序分组
+        rowIdx = appendCostByStage(sheet, kit, scans, totalCost, rowIdx);
+    }
+
+    private int appendCostByStage(Sheet sheet, ReportStyleKit kit, List<ScanRecord> scans,
+                                   BigDecimal totalCost, int rowIdx) {
         rowIdx += 2;
-        r = sheet.createRow(rowIdx++);
-        c = r.createCell(0);
+        Row r = sheet.createRow(rowIdx++);
+        Cell c = r.createCell(0);
         c.setCellValue("按工序阶段分布");
         c.setCellStyle(kit.sectionStyle);
         sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 2));
@@ -509,265 +432,35 @@ public class ProfessionalReportOrchestrator {
                     row.createCell(2).setCellValue(pct);
                     for (int i = 0; i < 3; i++) row.getCell(i).setCellStyle(kit.dataStyle);
                 });
+        return rowIdx;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  数据查询辅助方法
-    // ═══════════════════════════════════════════════════════════
-
-    private long countScans(Long tenantId, LocalDateTime start, LocalDateTime end, String scopeUserId, String factoryId) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
-        q.ge("scan_time", start).le("scan_time", end);
-        return scanRecordService.count(q);
-    }
-
-    private long sumScanQty(Long tenantId, LocalDateTime start, LocalDateTime end, String scopeUserId, String factoryId) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
-        q.ge("scan_time", start).le("scan_time", end);
-        return scanRecordService.list(q).stream()
-                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0).sum();
-    }
-
-    private long countScansByType(Long tenantId, LocalDateTime start, LocalDateTime end, String type, String scopeUserId, String factoryId) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
-        q.eq("scan_type", type).ge("scan_time", start).le("scan_time", end);
-        return scanRecordService.count(q);
-    }
-
-    private long countNewOrders(Long tenantId, LocalDateTime start, LocalDateTime end,
-                                String scopeUserId, String scopeUsername, String factoryId) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
-        q.ge("create_time", start).le("create_time", end);
-        return productionOrderService.count(q);
-    }
-
-    private long countCompletedOrders(Long tenantId, LocalDateTime start, LocalDateTime end,
-                                      String scopeUserId, String scopeUsername, String factoryId) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
-        q.eq("status", "completed").ge("update_time", start).le("update_time", end);
-        return productionOrderService.count(q);
-    }
-
-    private long countOrdersByStatus(Long tenantId, String status, String scopeUserId, String scopeUsername, String factoryId) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
-        q.eq("status", status);
-        return productionOrderService.count(q);
-    }
-
-    private List<ProductionOrder> getOverdueOrders(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
-        q.notIn("status", "completed", "cancelled", "scrapped", "closed", "archived")
-                .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
-        return productionOrderService.list(q);
-    }
-
-    private List<ProductionOrder> getHighRiskOrders(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
-        q.eq("status", "production").isNotNull("planned_end_date")
-                .le("planned_end_date", LocalDateTime.now().plusDays(7))
-                .ge("planned_end_date", LocalDateTime.now());
-        return productionOrderService.list(q).stream()
-                .filter(o -> o.getProductionProgress() == null || o.getProductionProgress() < 50)
-                .toList();
-    }
-
-    private long countStagnantOrders(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
-        QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername, factoryId);
-        q.eq("status", "production")
-                .and(w -> w.isNull("production_progress").or().eq("production_progress", 0));
-        return productionOrderService.count(q);
-    }
-
-    private List<FactoryRank> buildFactoryRankings(Long tenantId, LocalDateTime start, LocalDateTime end,
-                                                   String scopeUserId, String scopeUsername, String factoryId) {
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
-        q.ge("scan_time", start).le("scan_time", end);
-        List<ScanRecord> scans = scanRecordService.list(q);
-
-        Map<String, long[]> factoryMap = new LinkedHashMap<>();
-        for (ScanRecord scan : scans) {
-            String fid = scan.getFactoryId();
-            if (fid == null || fid.isBlank()) {
-                fid = "UNKNOWN_FACTORY";
-            }
-            factoryMap.computeIfAbsent(fid, k -> new long[2]);
-            factoryMap.get(fid)[0]++;
-            factoryMap.get(fid)[1] += scan.getQuantity() != null ? scan.getQuantity() : 0;
-        }
-
-        Map<String, String> factoryNames = new HashMap<>();
-        if (!factoryMap.isEmpty()) {
-            QueryWrapper<ProductionOrder> fq = baseOrderQuery(tenantId, null, null, factoryId);
-            fq.in("factory_id", factoryMap.keySet()).select("factory_id", "factory_name").groupBy("factory_id", "factory_name");
-            for (ProductionOrder fo : productionOrderService.list(fq)) {
-                if (fo.getFactoryId() != null && fo.getFactoryName() != null) {
-                    factoryNames.put(fo.getFactoryId(), fo.getFactoryName());
-                }
-            }
-        }
-
-        return factoryMap.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue()[1], a.getValue()[1]))
-                .limit(10)
-                .map(e -> new FactoryRank(
-                        factoryNames.getOrDefault(e.getKey(), "未知"),
-                        e.getValue()[0], e.getValue()[1]))
-                .toList();
-    }
-
-    private QueryWrapper<ScanRecord> baseScanQuery(Long tenantId, String scopeUserId, String factoryId) {
-        TenantAssert.assertTenantContext();
-        QueryWrapper<ScanRecord> q = new QueryWrapper<>();
-        q.eq("scan_result", "success");
-        q.eq("tenant_id", tenantId);
-        q.ne("scan_type", "orchestration");
-        if (scopeUserId != null) q.eq("operator_id", scopeUserId);
-        if (factoryId != null && !factoryId.isBlank()) q.eq("factory_id", factoryId);
-        return q;
-    }
-
-    private QueryWrapper<ProductionOrder> baseOrderQuery(Long tenantId, String scopeUserId, String scopeUsername, String factoryId) {
-        TenantAssert.assertTenantContext();
-        QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
-        q.eq("delete_flag", 0);
-        q.eq("tenant_id", tenantId);
-        if (factoryId != null && !factoryId.isBlank()) q.eq("factory_id", factoryId);
-        if (scopeUserId != null || scopeUsername != null) {
-            q.and(w -> {
-                if (scopeUsername != null) w.eq("merchandiser", scopeUsername);
-                if (scopeUsername != null && scopeUserId != null) w.or();
-                if (scopeUserId != null) w.eq("created_by_id", scopeUserId);
-            });
-        }
-        return q;
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    //  工具方法
-    // ═══════════════════════════════════════════════════════════
-
-    private void r(Sheet sheet, int rowIdx, CellStyle style, String text) {
-        Row row = sheet.createRow(rowIdx);
-        Cell cell = row.createCell(0);
-        cell.setCellValue(text);
-        cell.setCellStyle(style);
-        row.setHeight((short) 600);
-    }
-
-    private String changeStr(long cur, long prev) {
-        if (prev == 0) return cur > 0 ? "+∞" : "持平";
-        double pct = ((double) (cur - prev) / prev) * 100;
-        return (pct >= 0 ? "+" : "") + String.format("%.1f%%", pct);
-    }
-
-    private String nullSafe(String s) {
-        return s != null ? s : "";
-    }
-
-    private TimeRange calcTimeRange(String reportType, LocalDate baseDate) {
-        LocalDateTime start, end, prevStart, prevEnd;
-        String label;
-        switch (reportType) {
-            case "weekly":
-                LocalDate monday = baseDate.minusDays(baseDate.getDayOfWeek().getValue() - 1);
-                start = LocalDateTime.of(monday, LocalTime.MIN);
-                end = LocalDateTime.of(monday.plusDays(6), LocalTime.MAX);
-                prevStart = start.minusWeeks(1);
-                prevEnd = end.minusWeeks(1);
-                label = monday.format(DATE_FMT) + " ~ " + monday.plusDays(6).format(DATE_FMT);
-                break;
-            case "monthly":
-                LocalDate first = baseDate.withDayOfMonth(1);
-                start = LocalDateTime.of(first, LocalTime.MIN);
-                end = LocalDateTime.of(first.plusMonths(1).minusDays(1), LocalTime.MAX);
-                prevStart = start.minusMonths(1);
-                prevEnd = end.minusMonths(1);
-                label = first.format(DATE_FMT) + " ~ " + first.plusMonths(1).minusDays(1).format(DATE_FMT);
-                break;
-            default:
-                start = LocalDateTime.of(baseDate, LocalTime.MIN);
-                end = LocalDateTime.of(baseDate, LocalTime.MAX);
-                prevStart = start.minusDays(1);
-                prevEnd = end.minusDays(1);
-                label = baseDate.format(DATE_FMT);
-        }
-        return new TimeRange(start, end, prevStart, prevEnd, label);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    //  报告 JSON 摘要 — 供前端 AI 助手卡片展示使用（与 Excel 同源数据）
-    // ═══════════════════════════════════════════════════════════
-
-    /**
-     * 生成专业报告的 JSON 摘要（不生成 Excel），用于前端在 AI 助手卡片内直接预览。
-     * 保留 download 接口生成 Excel 的能力不变，本方法只输出结构化数据。
-     */
-    public Map<String, Object> generateReportSummary(String reportType, LocalDate baseDate) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        String factoryId = UserContext.factoryId();
-        if (baseDate == null) baseDate = LocalDate.now();
-
-        boolean isManager = UserContext.canViewAll();
-        String currentUserId = UserContext.userId();
-        String currentUsername = UserContext.username();
-        String scopeUserId = isManager ? null : currentUserId;
-        String scopeUsername = isManager ? null : currentUsername;
-
-        TimeRange range = calcTimeRange(reportType, baseDate);
-
-        // 智能兜底：今日无数据 → 回溯到最近有数据的一天
-        if (baseDate.equals(LocalDate.now())) {
-            long todayScans = countScans(tenantId, range.start(), range.end(), scopeUserId, factoryId);
-            long todayOrders = countNewOrders(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
-            if (todayScans == 0 && todayOrders == 0) {
-                LocalDate fallbackDate = null;
-                QueryWrapper<ScanRecord> sq = new QueryWrapper<>();
-                sq.eq("tenant_id", tenantId);
-                if (scopeUserId != null) sq.eq("operator_id", scopeUserId);
-                if (factoryId != null && !factoryId.isBlank()) sq.eq("factory_id", factoryId);
-                sq.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
-                ScanRecord latestScan = scanRecordService.getOne(sq);
-                if (latestScan != null && latestScan.getScanTime() != null) {
-                    fallbackDate = latestScan.getScanTime().toLocalDate();
-                }
-                if (fallbackDate != null) {
-                    baseDate = fallbackDate;
-                    range = calcTimeRange(reportType, baseDate);
-                }
-            }
-        }
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("reportType", reportType);
-        result.put("typeLabel", "daily".equals(reportType) ? "日报" : "weekly".equals(reportType) ? "周报" : "月报");
-        result.put("rangeLabel", range.label());
-        result.put("baseDate", baseDate.format(DATE_FMT));
-        result.put("scope", isManager ? "全局数据" : "个人数据（" + (currentUsername != null ? currentUsername : "本人") + "）");
-
-        // KPI
-        long curScanCount = countScans(tenantId, range.start(), range.end(), scopeUserId, factoryId);
-        long prevScanCount = countScans(tenantId, range.prevStart(), range.prevEnd(), scopeUserId, factoryId);
-        long curScanQty = sumScanQty(tenantId, range.start(), range.end(), scopeUserId, factoryId);
-        long prevScanQty = sumScanQty(tenantId, range.prevStart(), range.prevEnd(), scopeUserId, factoryId);
-        long curNewOrders = countNewOrders(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
-        long prevNewOrders = countNewOrders(tenantId, range.prevStart(), range.prevEnd(), scopeUserId, scopeUsername, factoryId);
-        long curCompleted = countCompletedOrders(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
+    private List<Map<String, Object>> buildSummaryKpis(ReportDataCollector.ReportContext ctx) {
+        ReportFormatHelper.TimeRange range = ctx.range();
+        long curScanCount = dataCollector.countScans(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.factoryId());
+        long prevScanCount = dataCollector.countScans(ctx.tenantId(), range.prevStart(), range.prevEnd(), ctx.scopeUserId(), ctx.factoryId());
+        long curScanQty = dataCollector.sumScanQty(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.factoryId());
+        long prevScanQty = dataCollector.sumScanQty(ctx.tenantId(), range.prevStart(), range.prevEnd(), ctx.scopeUserId(), ctx.factoryId());
+        long curNewOrders = dataCollector.countNewOrders(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        long prevNewOrders = dataCollector.countNewOrders(ctx.tenantId(), range.prevStart(), range.prevEnd(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        long curCompleted = dataCollector.countCompletedOrders(ctx.tenantId(), range.start(), range.end(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
 
         List<Map<String, Object>> kpis = new ArrayList<>();
-        kpis.add(buildKpi("扫码次数", curScanCount, prevScanCount, "次"));
-        kpis.add(buildKpi("扫码件数", curScanQty, prevScanQty, "件"));
-        kpis.add(buildKpi("新建订单", curNewOrders, prevNewOrders, "张"));
-        kpis.add(buildKpi("完成订单", curCompleted, -1, "张"));
-        result.put("kpis", kpis);
+        kpis.add(ReportFormatHelper.buildKpi("扫码次数", curScanCount, prevScanCount, "次"));
+        kpis.add(ReportFormatHelper.buildKpi("扫码件数", curScanQty, prevScanQty, "件"));
+        kpis.add(ReportFormatHelper.buildKpi("新建订单", curNewOrders, prevNewOrders, "张"));
+        kpis.add(ReportFormatHelper.buildKpi("完成订单", curCompleted, -1, "张"));
+        return kpis;
+    }
 
-        // 扫码类型分布
+    private List<Map<String, Object>> buildSummaryScanTypes(ReportDataCollector.ReportContext ctx) {
+        ReportFormatHelper.TimeRange range = ctx.range();
         List<Map<String, Object>> scanTypes = new ArrayList<>();
         long totalByType = 0;
         Map<String, Long> typeCounts = new LinkedHashMap<>();
         Map<String, String> typeLabels = Map.of("production", "生产扫码", "quality", "质检扫码", "warehouse", "入库扫码");
         for (String type : new String[]{"production", "quality", "warehouse"}) {
-            long cnt = countScansByType(tenantId, range.start(), range.end(), type, scopeUserId, factoryId);
+            long cnt = dataCollector.countScansByType(ctx.tenantId(), range.start(), range.end(), type, ctx.scopeUserId(), ctx.factoryId());
             typeCounts.put(type, cnt);
             totalByType += cnt;
         }
@@ -778,9 +471,10 @@ public class ProfessionalReportOrchestrator {
             item.put("percent", totalByType > 0 ? Math.round(e.getValue() * 1000.0 / totalByType) / 10.0 : 0.0);
             scanTypes.add(item);
         }
-        result.put("scanTypes", scanTypes);
+        return scanTypes;
+    }
 
-        // 订单状态分布
+    private List<Map<String, Object>> buildSummaryOrderStatus(ReportDataCollector.ReportContext ctx) {
         Map<String, String> statusLabels = new LinkedHashMap<>();
         statusLabels.put("PENDING", "待开始");
         statusLabels.put("IN_PROGRESS", "进行中");
@@ -790,16 +484,19 @@ public class ProfessionalReportOrchestrator {
         for (Map.Entry<String, String> e : statusLabels.entrySet()) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("name", e.getValue());
-            item.put("count", countOrdersByStatus(tenantId, e.getKey(), scopeUserId, scopeUsername, factoryId));
+            item.put("count", dataCollector.countOrdersByStatus(ctx.tenantId(), e.getKey(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId()));
             statusList.add(item);
         }
-        result.put("orderStatus", statusList);
+        return statusList;
+    }
 
-        // 工厂排名 Top 5
-        List<FactoryRank> rankings = buildFactoryRankings(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
+    private List<Map<String, Object>> buildSummaryFactoryRanking(ReportDataCollector.ReportContext ctx) {
+        List<ReportFormatHelper.FactoryRank> rankings = dataCollector.buildFactoryRankings(
+                ctx.tenantId(), ctx.range().start(), ctx.range().end(),
+                ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
         List<Map<String, Object>> factoryList = new ArrayList<>();
         int rank = 1;
-        for (FactoryRank fr : rankings.stream().limit(5).toList()) {
+        for (ReportFormatHelper.FactoryRank fr : rankings.stream().limit(5).toList()) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("rank", rank++);
             item.put("name", fr.name());
@@ -807,169 +504,36 @@ public class ProfessionalReportOrchestrator {
             item.put("scanQty", fr.scanQty());
             factoryList.add(item);
         }
-        result.put("factoryRanking", factoryList);
+        return factoryList;
+    }
 
-        // 风险概览
-        List<ProductionOrder> overdue = getOverdueOrders(tenantId, scopeUserId, scopeUsername, factoryId);
-        List<ProductionOrder> highRisk = getHighRiskOrders(tenantId, scopeUserId, scopeUsername, factoryId);
-        long stagnant = countStagnantOrders(tenantId, scopeUserId, scopeUsername, factoryId);
+    private Map<String, Object> buildSummaryRisk(ReportDataCollector.ReportContext ctx) {
+        List<ProductionOrder> overdue = dataCollector.getOverdueOrders(ctx.tenantId(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        List<ProductionOrder> highRisk = dataCollector.getHighRiskOrders(ctx.tenantId(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
+        long stagnant = dataCollector.countStagnantOrders(ctx.tenantId(), ctx.scopeUserId(), ctx.scopeUsername(), ctx.factoryId());
 
         Map<String, Object> riskSummary = new LinkedHashMap<>();
         riskSummary.put("overdueCount", overdue.size());
         riskSummary.put("highRiskCount", highRisk.size());
         riskSummary.put("stagnantCount", stagnant);
-        result.put("riskSummary", riskSummary);
 
-        result.put("overdueOrders", overdue.stream().limit(5).map(this::orderToMap).toList());
-        result.put("highRiskOrders", highRisk.stream().limit(5).map(this::orderToMap).toList());
+        riskSummary.put("overdueOrders", overdue.stream().limit(5).map(o ->
+                ReportFormatHelper.orderToMap(o, o.getOrderNo(), o.getStyleNo(),
+                        o.getStatus(), o.getFactoryName())).toList());
+        riskSummary.put("highRiskOrders", highRisk.stream().limit(5).map(o ->
+                ReportFormatHelper.orderToMap(o, o.getOrderNo(), o.getStyleNo(),
+                        o.getStatus(), o.getFactoryName())).toList());
 
-        // 成本汇总
-        QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, scopeUserId, factoryId);
-        q.ge("scan_time", range.start()).le("scan_time", range.end());
-        List<ScanRecord> scans = scanRecordService.list(q);
-        BigDecimal totalCost = scans.stream()
-                .map(s -> s.getScanCost() != null ? s.getScanCost() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return riskSummary;
+    }
+
+    private Map<String, Object> buildSummaryCost(ReportDataCollector.ReportContext ctx) {
+        List<ScanRecord> scans = dataCollector.getScansInRange(
+                ctx.tenantId(), ctx.range().start(), ctx.range().end(), ctx.scopeUserId(), ctx.factoryId());
+        BigDecimal totalCost = dataCollector.sumScanCost(scans);
         Map<String, Object> costSummary = new LinkedHashMap<>();
         costSummary.put("totalCost", totalCost.setScale(2, RoundingMode.HALF_UP).toString());
         costSummary.put("scanCount", scans.size());
-        result.put("costSummary", costSummary);
-
-        return result;
-    }
-
-    private Map<String, Object> buildKpi(String name, long current, long previous, String unit) {
-        Map<String, Object> kpi = new LinkedHashMap<>();
-        kpi.put("name", name);
-        kpi.put("current", current);
-        kpi.put("unit", unit);
-        if (previous >= 0) {
-            kpi.put("previous", previous);
-            kpi.put("change", changeStr(current, previous));
-        } else {
-            kpi.put("previous", null);
-            kpi.put("change", null);
-        }
-        return kpi;
-    }
-
-    private Map<String, Object> orderToMap(ProductionOrder o) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("orderNo", nullSafe(o.getOrderNo()));
-        m.put("styleName", nullSafe(o.getStyleName()));
-        m.put("factoryName", nullSafe(o.getFactoryName()));
-        m.put("quantity", o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
-        m.put("progress", o.getProductionProgress() != null ? o.getProductionProgress() : 0);
-        m.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().format(DATE_FMT) : null);
-        return m;
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    //  内部类
-    // ═══════════════════════════════════════════════════════════
-
-    private record TimeRange(LocalDateTime start, LocalDateTime end,
-                             LocalDateTime prevStart, LocalDateTime prevEnd, String label) {}
-
-    private record FactoryRank(String name, long scanCount, long scanQty) {}
-
-    /**
-     * Excel 样式工具箱 — 统一管理所有单元格样式
-     */
-    private static class StyleKit {
-        final CellStyle titleStyle;
-        final CellStyle subtitleStyle;
-        final CellStyle sectionStyle;
-        final CellStyle headerStyle;
-        final CellStyle labelStyle;
-        final CellStyle dataStyle;
-        final CellStyle infoStyle;
-        final CellStyle warnStyle;
-
-        StyleKit(Workbook wb) {
-            // 报告大标题
-            titleStyle = wb.createCellStyle();
-            Font titleFont = wb.createFont();
-            titleFont.setBold(true);
-            titleFont.setFontHeightInPoints((short) 22);
-            titleFont.setColor(IndexedColors.DARK_BLUE.getIndex());
-            titleStyle.setFont(titleFont);
-
-            // 副标题
-            subtitleStyle = wb.createCellStyle();
-            Font subFont = wb.createFont();
-            subFont.setBold(true);
-            subFont.setFontHeightInPoints((short) 16);
-            subFont.setColor(IndexedColors.GREY_80_PERCENT.getIndex());
-            subtitleStyle.setFont(subFont);
-
-            // 章节标题
-            sectionStyle = wb.createCellStyle();
-            Font secFont = wb.createFont();
-            secFont.setBold(true);
-            secFont.setFontHeightInPoints((short) 13);
-            secFont.setColor(IndexedColors.DARK_BLUE.getIndex());
-            sectionStyle.setFont(secFont);
-            sectionStyle.setBorderBottom(BorderStyle.MEDIUM);
-            sectionStyle.setBottomBorderColor(IndexedColors.DARK_BLUE.getIndex());
-
-            // 表头
-            headerStyle = wb.createCellStyle();
-            Font headerFont = wb.createFont();
-            headerFont.setBold(true);
-            headerFont.setFontHeightInPoints((short) 11);
-            headerFont.setColor(IndexedColors.WHITE.getIndex());
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            headerStyle.setBorderBottom(BorderStyle.THIN);
-            headerStyle.setBorderTop(BorderStyle.THIN);
-            headerStyle.setBorderLeft(BorderStyle.THIN);
-            headerStyle.setBorderRight(BorderStyle.THIN);
-            headerStyle.setAlignment(HorizontalAlignment.CENTER);
-
-            // 标签列
-            labelStyle = wb.createCellStyle();
-            Font labelFont = wb.createFont();
-            labelFont.setFontHeightInPoints((short) 11);
-            labelStyle.setFont(labelFont);
-            labelStyle.setBorderBottom(BorderStyle.THIN);
-            labelStyle.setBorderTop(BorderStyle.THIN);
-            labelStyle.setBorderLeft(BorderStyle.THIN);
-            labelStyle.setBorderRight(BorderStyle.THIN);
-            labelStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-            labelStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            // 数据列
-            dataStyle = wb.createCellStyle();
-            Font dataFont = wb.createFont();
-            dataFont.setFontHeightInPoints((short) 11);
-            dataStyle.setFont(dataFont);
-            dataStyle.setBorderBottom(BorderStyle.THIN);
-            dataStyle.setBorderTop(BorderStyle.THIN);
-            dataStyle.setBorderLeft(BorderStyle.THIN);
-            dataStyle.setBorderRight(BorderStyle.THIN);
-            dataStyle.setAlignment(HorizontalAlignment.CENTER);
-
-            // 信息文本
-            infoStyle = wb.createCellStyle();
-            Font infoFont = wb.createFont();
-            infoFont.setFontHeightInPoints((short) 11);
-            infoFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
-            infoStyle.setFont(infoFont);
-
-            // 警告值
-            warnStyle = wb.createCellStyle();
-            Font warnFont = wb.createFont();
-            warnFont.setBold(true);
-            warnFont.setFontHeightInPoints((short) 12);
-            warnFont.setColor(IndexedColors.RED.getIndex());
-            warnStyle.setFont(warnFont);
-            warnStyle.setBorderBottom(BorderStyle.THIN);
-            warnStyle.setBorderTop(BorderStyle.THIN);
-            warnStyle.setBorderLeft(BorderStyle.THIN);
-            warnStyle.setBorderRight(BorderStyle.THIN);
-            warnStyle.setAlignment(HorizontalAlignment.CENTER);
-        }
+        return costSummary;
     }
 }

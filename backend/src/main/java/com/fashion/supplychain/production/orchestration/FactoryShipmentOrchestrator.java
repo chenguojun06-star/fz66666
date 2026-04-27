@@ -50,6 +50,7 @@ public class FactoryShipmentOrchestrator {
         if (order == null) {
             return Result.fail("订单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(order.getFactoryId())) {
             return Result.fail("无权操作其他工厂的订单");

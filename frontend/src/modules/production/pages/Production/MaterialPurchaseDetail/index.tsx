@@ -49,9 +49,12 @@ const getStatusConfig = (status?: string) => {
 };
 
 const MaterialPurchaseDetail: React.FC = () => {
-  const { styleNo } = useParams<{ styleNo: string }>();
+  const { styleNo: styleNoParam } = useParams<{ styleNo: string }>();
   const [searchParams] = useSearchParams();
   const orderNo = searchParams.get('orderNo') || '';
+  const purchaseNoParam = searchParams.get('purchaseNo') || '';
+  // styleNo='_' 表示无款号的仓库独立采购单，用 purchaseNo 查询
+  const styleNo = styleNoParam === '_' ? '' : (styleNoParam || '');
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const { user } = useAuth();
@@ -84,33 +87,34 @@ const MaterialPurchaseDetail: React.FC = () => {
 
   // 加载订单和采购单数据
   const loadData = async () => {
-    if (!styleNo) return;
+    // 至少需要 styleNo 或 purchaseNo 之一才能加载
+    if (!styleNo && !purchaseNoParam) return;
 
     setLoading(true);
     try {
-      // 加载订单信息（订单可能已删除，优雅处理404）
-      try {
-        // 款号对应的订单可能有多个，只取第一个作为展示
-        const orderRes = await api.get('/production/order/list', {
-          params: { styleNo, page: 1, pageSize: 1 }
-        });
-        const orderResult = orderRes as any;
-        const orders = (orderResult?.data as any)?.records || [];
-        if (orders.length > 0) {
-          setOrder(orders[0]);
-        } else {
+      // 仅在有 styleNo 时尝试加载订单信息（仓库独立采购单无款号，跳过）
+      if (styleNo) {
+        try {
+          // 款号对应的订单可能有多个，只取第一个作为展示
+          const orderRes = await api.get('/production/order/list', {
+            params: { styleNo, page: 1, pageSize: 1 }
+          });
+          const orderResult = orderRes as any;
+          const orders = (orderResult?.data as any)?.records || [];
+          setOrder(orders.length > 0 ? orders[0] : null);
+        } catch {
           setOrder(null);
         }
-      } catch (orderError: unknown) {
-        // 订单已删除或不存在，设置为null但继续加载采购列表
-        // 订单不存在或已删除
+      } else {
         setOrder(null);
       }
 
-      // 若从特定订单跳入（带 orderNo 参数），则精确过滤该订单的采购记录；否则展示款号全部
-      const purchaseQueryParams: Record<string, any> = orderNo
-        ? { orderNo, page: 1, pageSize: 1000 }
-        : { styleNo, page: 1, pageSize: 1000 };
+      // 查询优先级：purchaseNo > orderNo > styleNo
+      const purchaseQueryParams: Record<string, any> = purchaseNoParam
+        ? { purchaseNo: purchaseNoParam, page: 1, pageSize: 1000 }
+        : orderNo
+          ? { orderNo, page: 1, pageSize: 1000 }
+          : { styleNo, page: 1, pageSize: 1000 };
       const purchaseRes = await api.get('/production/purchase/list', {
         params: purchaseQueryParams
       });
@@ -139,7 +143,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   const headerColor = String(order?.color ?? (purchaseList[0] as any)?.color ?? '').trim();
   useEffect(() => {
     loadData();
-  }, [styleNo]);
+  }, [styleNo, purchaseNoParam]);
 
   // 打开确认回料完成对话框
   const handleOpenConfirm = () => {

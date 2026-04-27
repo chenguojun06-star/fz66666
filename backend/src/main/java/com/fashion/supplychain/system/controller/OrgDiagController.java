@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,6 +20,7 @@ public class OrgDiagController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/org")
     public Result<Map<String, Object>> diagnoseOrg() {
         Map<String, Object> result = new HashMap<>();

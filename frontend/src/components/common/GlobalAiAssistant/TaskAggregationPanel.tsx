@@ -105,7 +105,9 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
     <div className={styles.panel}>
       <div className={styles.panelHeader}>
         <div className={styles.panelHeaderLeft}>
-          <XiaoyunCloudAvatar size={28} active mood={highCount > 0 ? 'urgent' : 'normal'} />
+          <div className={styles.avatarContainer}>
+            <XiaoyunCloudAvatar size={40} active mood={highCount > 0 ? 'urgent' : 'normal'} />
+          </div>
           <div className={styles.panelHeaderText}>
             <div className={styles.panelTitle}>全域待办任务</div>
             <div className={styles.panelSubtitle}>

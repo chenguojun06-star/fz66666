@@ -126,66 +126,79 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("订单已终态(" + orderStatus + ")，无法继续入库");
         }
 
-        // isDefectiveReentry 已在方法入口处解析（方法顶部）
         if (isDefectiveReentry) {
-            // ── 返修完成申报：不直接入库，记录"修好了"让质检重检 ──
-            // 不做 validateQualityConfirmBeforeWarehousing（返修申报不是正式入库）
-            validateDefectiveReentryQty(order.getId(), bundle, qty);
-
-            // 保存返修申报记录（不更新 SKU 库存，不更新订单完成数量）
-            try {
-                productWarehousingService.saveRepairReturnDeclaration(
-                        bundle, order, qty, "返修完成", operatorId, operatorName, warehouse);
-            } catch (IllegalArgumentException | IllegalStateException e) {
-                throw e; // 业务验证异常透传
-            } catch (Exception e) {
-                // DuplicateKeyException 已在 saveRepairReturnDeclaration 内部捕获，
-                // 此处捕获其他意外异常，防止 500
-                log.warn("返修申报保存失败（不阻断流程）: orderId={}, bundle={}, error={}",
-                        order.getId(), bundle.getBundleNo(), e.getMessage(), e);
-            }
-            // 返修申报成功后直接返回，等待质检重检
-            try {
-                productionOrderService.recomputeProgressFromRecords(order.getId());
-            } catch (Exception e) {
-                log.warn("返修申报后进度重算失败(不阻断): orderNo={}", order.getOrderNo(), e);
-            }
-            Map<String, Object> repairResult = new HashMap<>();
-            repairResult.put("success", true);
-            repairResult.put("message", "返修完成申报成功，请通知质检员进行重新验收");
-            repairResult.put("bundleStatus", "repaired_waiting_qc");
-            repairResult.put("nextScanType", "quality");
-            repairResult.put("nextStageHint", "下一环节: quality");
-            return repairResult;
-        } else {
-            // 正常入库：检查是否有次品待返修阻止
-            if (warehousingHelper.isBundleBlockedForWarehousing(bundle.getStatus())) {
-                // ★ 如果所有次品都是报废（无返修池），不阻止入库，合格品可直接入库
-                int repairPool = warehousingHelper.calcRepairBreakdown(order.getId(), bundle.getId(), null)[0];
-                if (repairPool > 0) {
-                    throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
-                }
-                // repairPool == 0 → 仅有报废记录，不阻止
-            }
-            // ★ 验证单个菲号累计入库数量不超过菲号裁剪数量
-            validateBundleWarehousingQuantity(bundle, qty);
-            // ★ 生产前置校验：该菲号必须有生产扫码记录，且尾部子工序全部完成才能入库
-            validateProductionPrerequisite(order, bundle);
-            // ★ 质检前置校验：必须有质检验收记录（quality_receive + confirmTime 不为空）才能入库
-            validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
-            // 验证数量不超过订单/裁剪总量
-            InventoryValidator.QuantityCheckResult qr =
-                inventoryValidator.checkOverQuantity(order, "warehouse", "入库", qty, bundle);
-            if (qr.isExceeded()) {
-                Map<String, Object> overResult = attemptOverQuantityApproval(
-                    qr, params, requestId, operatorId, operatorName,
-                    order, bundle, qty, warehouse, colorResolver, sizeResolver);
-                if (overResult != null) return overResult;
-                log.info("[OverQty] 管理员/无审批链，直接放行: orderId={}", order.getId());
-            }
+            return handleDefectiveReentry(order, bundle, qty, operatorId, operatorName, warehouse);
         }
+        Map<String, Object> overResult = validateNormalWarehouseIn(
+                order, bundle, qty, warehouse, params, requestId, operatorId, operatorName, colorResolver, sizeResolver);
+        if (overResult != null) return overResult;
 
         // 创建入库记录（正常入库路径）
+        ProductWarehousing w = saveWarehousingRecord(order, bundle, qty, warehouse, operatorId, operatorName);
+        ScanRecord sr = saveWarehouseScanRecord(params, requestId, operatorId, operatorName,
+                order, bundle, qty, warehouse, colorResolver, sizeResolver);
+        updateProcessTrackingForWarehouse(bundle, order, operatorId, operatorName, sr);
+        Map<String, Object> result = buildResult(bundle, order, sr);
+        notifyWarehouseScanSuccess(operatorId, operatorName, order, bundle, w, sr);
+        return result;
+    }
+
+    private Map<String, Object> handleDefectiveReentry(ProductionOrder order, CuttingBundle bundle,
+                                                        int qty, String operatorId, String operatorName,
+                                                        String warehouse) {
+        validateDefectiveReentryQty(order.getId(), bundle, qty);
+        try {
+            productWarehousingService.saveRepairReturnDeclaration(
+                    bundle, order, qty, "返修完成", operatorId, operatorName, warehouse);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("返修申报保存失败（不阻断流程）: orderId={}, bundle={}, error={}",
+                    order.getId(), bundle.getBundleNo(), e.getMessage(), e);
+        }
+        try {
+            productionOrderService.recomputeProgressFromRecords(order.getId());
+        } catch (Exception e) {
+            log.warn("返修申报后进度重算失败(不阻断): orderNo={}", order.getOrderNo(), e);
+        }
+        Map<String, Object> repairResult = new HashMap<>();
+        repairResult.put("success", true);
+        repairResult.put("message", "返修完成申报成功，请通知质检员进行重新验收");
+        repairResult.put("bundleStatus", "repaired_waiting_qc");
+        repairResult.put("nextScanType", "quality");
+        repairResult.put("nextStageHint", "下一环节: quality");
+        return repairResult;
+    }
+
+    private Map<String, Object> validateNormalWarehouseIn(ProductionOrder order, CuttingBundle bundle, int qty,
+                                            String warehouse, Map<String, Object> params, String requestId,
+                                            String operatorId, String operatorName,
+                                            java.util.function.Function<String, String> colorResolver,
+                                            java.util.function.Function<String, String> sizeResolver) {
+        if (warehousingHelper.isBundleBlockedForWarehousing(bundle.getStatus())) {
+            int repairPool = warehousingHelper.calcRepairBreakdown(order.getId(), bundle.getId(), null)[0];
+            if (repairPool > 0) {
+                throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
+            }
+        }
+        validateBundleWarehousingQuantity(bundle, qty);
+        validateProductionPrerequisite(order, bundle);
+        validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
+        InventoryValidator.QuantityCheckResult qr =
+            inventoryValidator.checkOverQuantity(order, "warehouse", "入库", qty, bundle);
+        if (qr.isExceeded()) {
+            Map<String, Object> overResult = attemptOverQuantityApproval(
+                qr, params, requestId, operatorId, operatorName,
+                order, bundle, qty, warehouse, colorResolver, sizeResolver);
+            if (overResult != null) return overResult;
+            log.info("[OverQty] 管理员/无审批链，直接放行: orderId={}", order.getId());
+        }
+        return null;
+    }
+
+    private ProductWarehousing saveWarehousingRecord(ProductionOrder order, CuttingBundle bundle,
+                                                      int qty, String warehouse,
+                                                      String operatorId, String operatorName) {
         ProductWarehousing w = new ProductWarehousing();
         w.setOrderId(order.getId());
         w.setWarehousingType("scan");
@@ -195,7 +208,6 @@ public class WarehouseScanExecutor {
         w.setUnqualifiedQuantity(0);
         w.setQualityStatus("qualified");
         w.setCuttingBundleQrCode(bundle.getQrCode());
-        // 填充操作人信息
         if (StringUtils.hasText(operatorId)) {
             w.setWarehousingOperatorId(operatorId);
             w.setReceiverId(operatorId);
@@ -207,27 +219,22 @@ public class WarehouseScanExecutor {
             w.setQualityOperatorName(operatorName);
         }
         w.setTenantId(order.getTenantId());
-
         try {
             boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
             if (!ok) {
                 throw new IllegalStateException("入库失败");
             }
         } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
-            // 业务验证异常，直接透传（GlobalExceptionHandler → 400/404）
             throw e;
         } catch (DataAccessException dae) {
             log.error("[WarehouseScan] 入库记录写入DB失败 orderId={}, bundle={}: {}",
                     order.getId(), bundle.getBundleNo(), dae.getMessage(), dae);
             throw new IllegalStateException("入库记录保存失败，请联系管理员（DB错误：" + dae.getMessage() + "）");
         } catch (Exception e) {
-            // ★ 兜底：防止任何意外异常逃逸到 GlobalExceptionHandler 的通用 Exception 处理器（500）
             log.error("[WarehouseScan] 入库操作意外异常 orderId={}, bundle={}: {}",
                     order.getId(), bundle.getBundleNo(), e.getMessage(), e);
             throw new IllegalStateException("入库操作失败：" + e.getMessage());
         }
-
-        // 重新计算订单进度
         try {
             if (productionOrderService != null) {
                 productionOrderService.recomputeProgressFromRecords(order.getId());
@@ -235,10 +242,15 @@ public class WarehouseScanExecutor {
         } catch (Exception e) {
             log.error("重新计算订单进度失败: orderId={}", order.getId(), e);
         }
+        return w;
+    }
 
-        // 始终创建入库类型扫码记录（progressStage="入库"），确保进度球正确统计
-        // saveWarehousingAndUpdateOrder 内部会创建质检阶段记录（WAREHOUSING:xxx, progressStage="质检"），
-        // 但 warehousingType="scan" 时不会创建入库阶段记录，这里手动补充
+    private ScanRecord saveWarehouseScanRecord(Map<String, Object> params, String requestId,
+                                                String operatorId, String operatorName,
+                                                ProductionOrder order, CuttingBundle bundle,
+                                                int qty, String warehouse,
+                                                java.util.function.Function<String, String> colorResolver,
+                                                java.util.function.Function<String, String> sizeResolver) {
         ScanRecord sr = buildWarehouseRecord(params, requestId, operatorId, operatorName, order, bundle, qty, warehouse,
                                              colorResolver, sizeResolver);
         try {
@@ -259,46 +271,39 @@ public class WarehouseScanExecutor {
                     requestId, dbEx.getClass().getSimpleName(), dbEx.getMessage(), dbEx);
             throw new IllegalStateException("入库扫码记录保存失败，请重试: " + dbEx.getMessage());
         }
+        return sr;
+    }
 
-        // ★ SKU库存已由 saveWarehousingAndUpdateOrder 内部 helper.updateSkuStock() 更新，此处不再重复调用
-        // 之前重复调用 productSkuService.updateStock() 导致库存双倍增加，已修复
-
-        // 更新工序跟踪记录（工序跟踪表以节点名"入库"作为 processCode 初始化）
-        if (bundle != null && hasText(bundle.getId())) {
-            try {
-                boolean trackingUpdated = processTrackingOrchestrator.updateScanRecord(
-                    bundle.getId(),
-                    "入库",     // 工序跟踪表的 processCode = 节点名 "入库"
-                    operatorId,
-                    operatorName,
-                    sr.getId()
-                );
-                if (trackingUpdated) {
-                    log.info("入库工序跟踪记录更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
-                } else {
-                    log.info("入库工序跟踪记录未找到，尝试追加初始化并重试更新: bundleId={}, orderId={}", bundle.getId(), order.getId());
-                    try {
-                        processTrackingOrchestrator.appendProcessTracking(order.getId(), List.of(bundle));
-                        boolean retryUpdated = processTrackingOrchestrator.updateScanRecord(
-                                bundle.getId(),
-                                "入库",
-                                operatorId,
-                                operatorName,
-                                sr.getId());
-                        if (retryUpdated) {
-                            log.info("入库工序跟踪记录重试更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
-                        }
-                    } catch (Exception createEx) {
-                        log.warn("追加并更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
-                                bundle.getId(), order.getId(), createEx.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                // 工序跟踪更新失败不应阻断入库操作（ProductWarehousing 已提交）
-                log.warn("更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, msg={}", bundle.getId(), e.getMessage());
-            }
+    private void updateProcessTrackingForWarehouse(CuttingBundle bundle, ProductionOrder order,
+                                                    String operatorId, String operatorName, ScanRecord sr) {
+        if (bundle == null || !hasText(bundle.getId())) {
+            return;
         }
+        try {
+            boolean trackingUpdated = processTrackingOrchestrator.updateScanRecord(
+                bundle.getId(), "入库", operatorId, operatorName, sr.getId());
+            if (trackingUpdated) {
+                log.info("入库工序跟踪记录更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
+            } else {
+                log.info("入库工序跟踪记录未找到，尝试追加初始化并重试更新: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                try {
+                    processTrackingOrchestrator.appendProcessTracking(order.getId(), List.of(bundle));
+                    boolean retryUpdated = processTrackingOrchestrator.updateScanRecord(
+                            bundle.getId(), "入库", operatorId, operatorName, sr.getId());
+                    if (retryUpdated) {
+                        log.info("入库工序跟踪记录重试更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                    }
+                } catch (Exception createEx) {
+                    log.warn("追加并更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
+                            bundle.getId(), order.getId(), createEx.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, msg={}", bundle.getId(), e.getMessage());
+        }
+    }
 
+    private Map<String, Object> buildResult(CuttingBundle bundle, ProductionOrder order, ScanRecord sr) {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         String whBundleNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
@@ -306,7 +311,12 @@ public class WarehouseScanExecutor {
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
+        return result;
+    }
 
+    private void notifyWarehouseScanSuccess(String operatorId, String operatorName,
+                                             ProductionOrder order, CuttingBundle bundle,
+                                             ProductWarehousing w, ScanRecord sr) {
         try {
             String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
             String wh = w.getWarehouse() != null ? w.getWarehouse() : "";
@@ -324,10 +334,7 @@ public class WarehouseScanExecutor {
         } catch (Exception wsEx) {
             log.warn("[WarehouseScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
         }
-
-        return result;
     }
-
 
     /**
      * ★ 验证单个菲号累计入库数量不超过菲号裁剪数量

@@ -351,7 +351,7 @@ public class ProductWarehousingRepairHelper {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");
         }
-        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        CuttingBundle bundle = getBundleWithTenant(bundleId);
         if (bundle == null) {
             throw new IllegalArgumentException("菲号不存在: " + bundleId);
         }
@@ -374,7 +374,7 @@ public class ProductWarehousingRepairHelper {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");
         }
-        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        CuttingBundle bundle = getBundleWithTenant(bundleId);
         if (bundle == null) throw new IllegalArgumentException("菲号不存在: " + bundleId);
         if (!"unqualified".equals(bundle.getStatus())) {
             throw new IllegalStateException("当前状态不是次品待返修（当前：" + bundle.getStatus() + "）");
@@ -390,7 +390,7 @@ public class ProductWarehousingRepairHelper {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");
         }
-        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        CuttingBundle bundle = getBundleWithTenant(bundleId);
         if (bundle == null) throw new IllegalArgumentException("菲号不存在: " + bundleId);
         String st = bundle.getStatus() == null ? "" : bundle.getStatus().trim();
         if (!"unqualified".equals(st) && !"repairing".equalsIgnoreCase(getRepairStatusByBundle(bundleId))) {
@@ -409,7 +409,7 @@ public class ProductWarehousingRepairHelper {
         if (!StringUtils.hasText(bundleId)) {
             throw new IllegalArgumentException("bundleId 不能为空");
         }
-        CuttingBundle bundle = cuttingBundleService.getById(bundleId.trim());
+        CuttingBundle bundle = getBundleWithTenant(bundleId);
         if (bundle == null) throw new IllegalArgumentException("菲号不存在: " + bundleId);
         if (!"unqualified".equals(bundle.getStatus())) {
             throw new IllegalStateException("当前状态不是次品待返修，无法报废（当前：" + bundle.getStatus() + "）");

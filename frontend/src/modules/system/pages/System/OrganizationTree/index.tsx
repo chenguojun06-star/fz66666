@@ -22,6 +22,8 @@ import {
   SnippetsOutlined, UserAddOutlined, UserOutlined,
 } from '@ant-design/icons';
 import './styles.css';
+import TemplateInitModal from './TemplateInitModal';
+import AssignMemberModal from './AssignMemberModal';
 
 const ownerTypeOptions = [
   { value: 'NONE', label: '通用部门' },
@@ -502,94 +504,20 @@ const OrganizationTreePage: React.FC = () => {
         </Form>
       </ResizableModal>
 
-      {/* 分配成员弹窗（竖向布局 + 批量勾选） */}
-      <ResizableModal
-        open={assignModal.open}
-        title={`为「${assignModal.node?.unitName || ''}」添加成员`}
-        onCancel={() => { setAssignModal({ open: false, node: null }); setBatchSelectedIds([]); }}
-        footer={null}
-        width="40vw"
-        initialHeight={580}
-      >
-        <div style={{ padding: '8px 0' }}>
-          <Input.Search
-            placeholder="搜索姓名或账号"
-            allowClear
-            value={assignSearch}
-            onChange={(e) => setAssignSearch(e.target.value)}
-            style={{ marginBottom: 12 }}
-          />
-          {filteredAssignableUsers.length === 0 ? (
-            <Empty description="暂无用户（该租户下尚无活跃账号）" style={{ padding: '32px 0' }} />
-          ) : (
-            <ResizableTable<User>
-              size="small"
-              rowKey={(r) => String(r.id)}
-              dataSource={filteredAssignableUsers}
-              scroll={{ y: 300 }}
-              pagination={false}
-              rowSelection={{
-                type: 'checkbox',
-                selectedRowKeys: batchSelectedIds,
-                onChange: (keys) => setBatchSelectedIds(keys as string[]),
-                getCheckboxProps: (r) => ({ disabled: currentNodeMemberIds.has(String(r.id)) }),
-              }}
-              columns={[
-                {
-                  title: '用户',
-                  render: (_: unknown, r: User) => {
-                    const alreadyIn = currentNodeMemberIds.has(String(r.id));
-                    return (
-                      <Space size={6}>
-                        <Avatar size={28} icon={<UserOutlined />}
-                          style={{ backgroundColor: alreadyIn ? '#ccc' : '#1677ff', flexShrink: 0 }} />
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{r.name || r.username}</div>
-                          <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
-                            {r.username}
-                            {!alreadyIn && r.orgUnitId && (
-                              <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>
-                                已在: {unitNameMap[String(r.orgUnitId)] || '其他组织'}
-                              </Tag>
-                            )}
-                          </div>
-                        </div>
-                      </Space>
-                    );
-                  },
-                },
-                { title: '手机号', dataIndex: 'phone', width: 110, render: (v: string) => v || '—' },
-                {
-                  title: '状态', width: 72,
-                  render: (_: unknown, r: User) => currentNodeMemberIds.has(String(r.id))
-                    ? <Tag color="success" style={{ fontSize: 11 }}>已添加</Tag>
-                    : null,
-                },
-              ]}
-            />
-          )}
-          {/* 底部批量确认区 */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0',
-          }}>
-            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 13 }}>
-              {batchSelectedIds.length > 0 ? `已勾选 ${batchSelectedIds.length} 人` : '勾选后批量添加'}
-            </span>
-            <Space>
-              <Button onClick={() => { setAssignModal({ open: false, node: null }); setBatchSelectedIds([]); }}>取消</Button>
-              <Button
-                type="primary"
-                disabled={batchSelectedIds.length === 0}
-                loading={batchAssignLoading}
-                onClick={handleBatchAssign}
-              >
-                确认添加{batchSelectedIds.length > 0 ? ` (${batchSelectedIds.length} 人)` : ''}
-              </Button>
-            </Space>
-          </div>
-        </div>
-      </ResizableModal>
+      {/* 分配成员弹窗 */}
+      <AssignMemberModal
+        assignModal={assignModal}
+        setAssignModal={setAssignModal}
+        assignSearch={assignSearch}
+        setAssignSearch={setAssignSearch}
+        filteredAssignableUsers={filteredAssignableUsers}
+        batchSelectedIds={batchSelectedIds}
+        setBatchSelectedIds={setBatchSelectedIds}
+        currentNodeMemberIds={currentNodeMemberIds}
+        unitNameMap={unitNameMap}
+        batchAssignLoading={batchAssignLoading}
+        handleBatchAssign={handleBatchAssign}
+      />
 
       {/* 外发工厂注册二维码弹窗 */}
       <ResizableModal
@@ -633,116 +561,13 @@ const OrganizationTreePage: React.FC = () => {
       </ResizableModal>
 
       {/* 模板初始化弹窗 */}
-      <ResizableModal
-        open={tplModal.open}
-        title="从模板创建组织架构"
-        onCancel={() => setTplModal({ open: false, type: null, rootName: '' })}
-        onOk={handleInitTemplate}
-        confirmLoading={tplLoading}
-        okText="立即创建"
-        cancelText="取消"
-        width="40vw"
-        initialHeight={500}
-      >
-        <div style={{ padding: '16px 0' }}>
-          <div style={{ marginBottom: 12, fontWeight: 500 }}>第一步：选择模板类型</div>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-            {(
-              [
-                {
-                  type: 'FACTORY' as const,
-                  icon: '',
-                  label: '工厂 / 车间',
-                  desc: '适合外发工厂、合作供应商',
-                  children: ['车间一', '车间二', '车间三'],
-                },
-                {
-                  type: 'INTERNAL' as const,
-                  icon: '',
-                  label: '公司内部',
-                  desc: '适合公司内部管理部门',
-                  children: ['生产部门', '财务部门', '行政部门'],
-                },
-              ]
-            ).map((tpl) => (
-              <div
-                key={tpl.type}
-                onClick={() => setTplModal((prev) => ({ ...prev, type: tpl.type }))}
-                style={{
-                  flex: 1,
-                  border: `2px solid ${tplModal.type === tpl.type ? 'var(--primary-color, #1677ff)' : '#d9d9d9'}`,
-                  borderRadius: 8,
-                  padding: '14px 16px',
-                  cursor: 'pointer',
-                  background: tplModal.type === tpl.type ? '#f0f5ff' : '#fafafa',
-                  transition: 'border-color .2s, background .2s',
-                }}
-              >
-                <div style={{ fontSize: 28, marginBottom: 6 }}>{tpl.icon}</div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>{tpl.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', marginBottom: 10 }}>
-                  {tpl.desc}
-                </div>
-                <div style={{ fontSize: 12 }}>
-                  {tpl.children.map((c) => (
-                    <Tag key={c} style={{ marginBottom: 4 }}>{c}</Tag>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginBottom: 8, fontWeight: 500 }}>第二步：输入根节点名称</div>
-          <Input
-            placeholder={
-              tplModal.type === 'FACTORY'
-                ? '例如：嘉兴市合作工厂'
-                : '例如：公司生产中心'
-            }
-            value={tplModal.rootName}
-            maxLength={40}
-            allowClear
-            onChange={(e) => setTplModal((prev) => ({ ...prev, rootName: e.target.value }))}
-            style={{ marginBottom: 16 }}
-          />
-
-          {tplModal.type === 'FACTORY' && (
-            <>
-              <div style={{ marginBottom: 8, fontWeight: 500 }}>第三步：关联现有工厂（可选）</div>
-              <Select
-                allowClear
-                placeholder="选择已有工厂，可跳过"
-                value={tplModal.factoryId}
-                onChange={(v) => setTplModal((prev) => ({ ...prev, factoryId: v }))}
-                options={factories.map((f) => ({
-                  value: f.id,
-                  label: f.factoryName + (f.contactPerson ? ' · ' + f.contactPerson : ''),
-                }))}
-                style={{ width: '100%', marginBottom: 16 }}
-              />
-            </>
-          )}
-
-          {tplModal.type && (
-            <div style={{ background: '#f8f9fa', borderRadius: 6, padding: '12px 16px', fontSize: 13 }}>
-              <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
-                创建预览
-              </div>
-              <div style={{ marginBottom: 4 }}>
-                 <strong>{tplModal.rootName || '(待填写)'}</strong>
-              </div>
-              {(tplModal.type === 'FACTORY'
-                ? ['车间一', '车间二', '车间三']
-                : ['生产部门', '财务部门', '行政部门']
-              ).map((c) => (
-                <div key={c} style={{ paddingLeft: 20, color: 'var(--neutral-text-secondary)', lineHeight: 1.8 }}>
-                  └ {c}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </ResizableModal>
+      <TemplateInitModal
+        tplModal={tplModal}
+        setTplModal={setTplModal}
+        handleInitTemplate={handleInitTemplate}
+        tplLoading={tplLoading}
+        factories={factories}
+      />
 
       {/* 成员资料 mini 弹窗 */}
       <SmallModal

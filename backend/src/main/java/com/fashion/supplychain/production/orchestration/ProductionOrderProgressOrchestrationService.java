@@ -74,6 +74,7 @@ public class ProductionOrderProgressOrchestrationService {
         if (existed == null || existed.getDeleteFlag() == null || existed.getDeleteFlag() != 0) {
             throw new NoSuchElementException("生产订单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(existed.getTenantId(), "生产订单");
 
         int currentProgress = existed.getProductionProgress() == null ? 0 : existed.getProductionProgress();
         int p = scanRecordDomainService.clampPercent(progress == null ? 0 : progress);

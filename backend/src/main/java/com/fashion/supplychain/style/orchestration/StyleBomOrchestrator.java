@@ -132,6 +132,7 @@ public class StyleBomOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "BOM记录");
         if (styleBom.getStyleId() == null) {
             styleBom.setStyleId(current.getStyleId());
         }
@@ -158,6 +159,9 @@ public class StyleBomOrchestrator {
     public boolean delete(String id) {
         // 先获取 styleId 再删除，以便清缓存 + 重算报价
         StyleBom current = styleBomService.getById(id);
+        if (current != null) {
+            com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "BOM记录");
+        }
         Long styleId = current != null ? current.getStyleId() : null;
 
         boolean ok = styleBomService.removeById(id);

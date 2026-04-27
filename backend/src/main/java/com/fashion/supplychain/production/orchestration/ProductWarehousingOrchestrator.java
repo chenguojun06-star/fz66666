@@ -13,14 +13,12 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.ProductWarehousingQueryHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingPostActionHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.production.util.SpcCalculator;
 import com.fashion.supplychain.style.service.ProductSkuService;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,9 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import com.fashion.supplychain.system.entity.OrderRemark;
-import com.fashion.supplychain.system.service.OrderRemarkService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 
 @Service
 @Slf4j
@@ -45,16 +40,10 @@ public class ProductWarehousingOrchestrator {
     private ProductionOrderService productionOrderService;
 
     @Autowired
-    private ProductionOrderOrchestrator productionOrderOrchestrator;
-
-    @Autowired
     private CuttingBundleService cuttingBundleService;
 
     @Autowired
     private ScanRecordService scanRecordService;
-
-    @Autowired
-    private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
     @Autowired
     private ProductSkuService productSkuService;
@@ -69,48 +58,24 @@ public class ProductWarehousingOrchestrator {
     private ProductWarehousingRollbackHelper rollbackHelper;
 
     @Autowired
-    private OrderRemarkService orderRemarkService;
-
-    @Autowired
-    private com.fashion.supplychain.integration.openapi.service.WebhookPushService webhookPushService;
-
-    @Autowired
-    private WebSocketService webSocketService;
+    private ProductWarehousingPostActionHelper postActionHelper;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         return queryHelper.list(params);
     }
 
-    /**
-     * 获取质检入库统计数据
-     */
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
         return queryHelper.getStatusStats(params);
     }
 
-
-    /**
-     * 查询各状态的待处理菲号列表
-     * @param status pendingQc(待质检) | pendingPackaging(待包装) | pendingWarehouse(待入库)
-     */
     public List<Map<String, Object>> listPendingBundles(String status) {
         return queryHelper.listPendingBundles(status);
     }
 
-    /**
-     * 查询指定订单下各菲号的扫码就绪状态
-     * 返回：qcReadyQrs（已完成车缝、尚未质检的菲号二维码列表）
-     *       warehouseReadyQrs（已质检、尚未入库的菲号二维码列表）
-     * 前端用于控制质检/入库页面中哪些菲号可选
-     */
     public Map<String, Object> getBundleReadiness(String orderId) {
         return queryHelper.getBundleReadiness(orderId);
     }
 
-    /**
-     * 质检简报：返回订单的关键信息、款式BOM、尺寸规格、质检注意事项
-     * 供质检详情页右侧面板使用
-     */
     public Map<String, Object> getQualityBriefing(String orderId) {
         return queryHelper.getQualityBriefing(orderId);
     }
@@ -162,44 +127,49 @@ public class ProductWarehousingOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean save(ProductWarehousing productWarehousing) {
-        TenantAssert.assertTenantContext(); // 入库必须有租户上下文
+        TenantAssert.assertTenantContext();
         if (productWarehousing == null) {
             throw new IllegalArgumentException("参数错误");
         }
 
-        // 如果没有orderId但有orderNo，自动查找orderId
+        resolveOrderAndBundle(productWarehousing);
+        fillOperatorFromContext(productWarehousing);
+        normalizeAndValidateDefectInfo(productWarehousing);
+        validateBundleNotAlreadyQualityChecked(productWarehousing);
+        validateProductionPrerequisiteForWarehousing(
+                productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId());
+
+        executeSaveWarehousing(productWarehousing);
+
         String orderId = StringUtils.hasText(productWarehousing.getOrderId())
-                ? productWarehousing.getOrderId().trim()
-                : null;
-        String orderNo = StringUtils.hasText(productWarehousing.getOrderNo())
-                ? productWarehousing.getOrderNo().trim()
-                : null;
+                ? productWarehousing.getOrderId().trim() : null;
+        postActionHelper.triggerPostSaveActions(orderId, productWarehousing);
+
+        return true;
+    }
+
+    private void resolveOrderAndBundle(ProductWarehousing w) {
+        String orderId = StringUtils.hasText(w.getOrderId()) ? w.getOrderId().trim() : null;
+        String orderNo = StringUtils.hasText(w.getOrderNo()) ? w.getOrderNo().trim() : null;
 
         if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
             ProductionOrder order = productionOrderService.getByOrderNo(orderNo);
             if (order == null || !StringUtils.hasText(order.getId())) {
                 throw new IllegalArgumentException("订单不存在: " + orderNo);
             }
-            productWarehousing.setOrderId(order.getId());
+            w.setOrderId(order.getId());
             orderId = order.getId();
         }
 
-        // 如果没有cuttingBundleId，尝试通过qrCode或bundleNo查找
-        String bundleId = StringUtils.hasText(productWarehousing.getCuttingBundleId())
-                ? productWarehousing.getCuttingBundleId().trim()
-                : null;
-        String bundleQrCode = StringUtils.hasText(productWarehousing.getCuttingBundleQrCode())
-                ? productWarehousing.getCuttingBundleQrCode().trim()
-                : null;
-        Integer bundleNo = productWarehousing.getCuttingBundleNo();
+        String bundleId = StringUtils.hasText(w.getCuttingBundleId()) ? w.getCuttingBundleId().trim() : null;
+        String bundleQrCode = StringUtils.hasText(w.getCuttingBundleQrCode()) ? w.getCuttingBundleQrCode().trim() : null;
+        Integer bundleNo = w.getCuttingBundleNo();
 
         if (!StringUtils.hasText(bundleId)) {
             CuttingBundle bundle = null;
-            // 方式1：通过二维码查找
             if (StringUtils.hasText(bundleQrCode)) {
                 bundle = cuttingBundleService.getByQrCode(bundleQrCode);
             }
-            // 方式2：通过订单号+菲号序号查找
             if (bundle == null && StringUtils.hasText(orderNo) && bundleNo != null && bundleNo > 0) {
                 bundle = cuttingBundleService.lambdaQuery()
                         .eq(CuttingBundle::getProductionOrderNo, orderNo)
@@ -208,145 +178,67 @@ public class ProductWarehousingOrchestrator {
                         .one();
             }
             if (bundle != null && StringUtils.hasText(bundle.getId())) {
-                productWarehousing.setCuttingBundleId(bundle.getId());
-                // 同步填充其他菲号信息
+                w.setCuttingBundleId(bundle.getId());
                 if (!StringUtils.hasText(bundleQrCode)) {
-                    productWarehousing.setCuttingBundleQrCode(bundle.getQrCode());
+                    w.setCuttingBundleQrCode(bundle.getQrCode());
                 }
                 if (bundleNo == null || bundleNo <= 0) {
-                    productWarehousing.setCuttingBundleNo(bundle.getBundleNo());
+                    w.setCuttingBundleNo(bundle.getBundleNo());
                 }
             }
         }
+    }
 
-        fillOperatorFromContext(productWarehousing);
-
-        normalizeAndValidateDefectInfo(productWarehousing);
-
-        // ★ 菲号已质检拦截：手机端已做质检的菲号，PC端不能再做质检入库，只能做入库操作
-        validateBundleNotAlreadyQualityChecked(productWarehousing);
-
-        // ★ 生产前置校验：菲号必须有生产扫码记录才能入库
-        validateProductionPrerequisiteForWarehousing(
-                productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId());
-
+    private void executeSaveWarehousing(ProductWarehousing w) {
         boolean ok;
         try {
-            ok = productWarehousingService.saveWarehousingAndUpdateOrder(productWarehousing);
+            ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
         } catch (org.springframework.transaction.UnexpectedRollbackException ure) {
             log.error("save: UnexpectedRollbackException caught — inner REQUIRES_NEW transaction rolled back, " +
                     "propagating as business error: orderId={}, bundleId={}",
-                    productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId(), ure);
+                    w.getOrderId(), w.getCuttingBundleId(), ure);
             throw new IllegalStateException("入库操作失败，请稍后重试（事务冲突）");
         } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
             throw e;
         } catch (Exception e) {
             log.error("save: unexpected exception from saveWarehousingAndUpdateOrder: orderId={}, bundleId={}",
-                    productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId(), e);
+                    w.getOrderId(), w.getCuttingBundleId(), e);
             throw new IllegalStateException("入库操作失败：" + e.getMessage());
         }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
-
-        // ★ 成品SKU库存已由 ServiceImpl.saveWarehousingAndUpdateOrderInternal 内部更新，此处不再重复调用
-
-        orderId = StringUtils.hasText(productWarehousing.getOrderId()) ? productWarehousing.getOrderId().trim()
-                : null;
-        if (StringUtils.hasText(orderId)) {
-            try {
-                productionOrderOrchestrator.ensureFinanceRecordsForOrder(orderId);
-            } catch (Exception e) {
-                log.warn("Failed to ensure finance records after warehousing save: orderId={}, warehousingId={}",
-                        orderId,
-                        productWarehousing == null ? null : productWarehousing.getId(),
-                        e);
-            }
-            try {
-                productionOrderService.recomputeProgressFromRecords(orderId);
-            } catch (Exception ex) {
-                log.warn("save: recomputeProgress失败（不阻断入库）: orderId={}, error={}", orderId, ex.getMessage());
-            }
-
-            try {
-                computeAndPersistSpcForOrder(orderId);
-            } catch (Exception ex) {
-                log.warn("[SPC] 入库后Cpk计算失败（不阻断入库）: orderId={}, error={}", orderId, ex.getMessage());
-            }
-        }
-
-        try {
-            String whOrderNo = productWarehousing.getOrderNo() != null ? productWarehousing.getOrderNo() : "";
-            String bNo = productWarehousing.getCuttingBundleNo() != null ? String.valueOf(productWarehousing.getCuttingBundleNo()) : "";
-            String opName = productWarehousing.getWarehousingOperatorName() != null ? productWarehousing.getWarehousingOperatorName() : "";
-            int qty = productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0;
-            String processLabel = qty > 0 && (productWarehousing.getUnqualifiedQuantity() == null || productWarehousing.getUnqualifiedQuantity() <= 0)
-                    ? "质检入库" : "质检记录";
-            String whOperatorId = productWarehousing.getWarehousingOperatorId() != null ? productWarehousing.getWarehousingOperatorId() : "";
-            if (StringUtils.hasText(whOperatorId)) {
-                webSocketService.notifyProcessStageCompleted(whOperatorId, whOrderNo, processLabel, opName, bNo, "", "", qty);
-            }
-        } catch (Exception e) {
-            log.debug("save: 工序通知推送失败(不阻断): orderId={}", orderId, e);
-        }
-
-        // 自动写入系统备注：质检入库节点
-        try {
-            if (StringUtils.hasText(productWarehousing.getOrderNo())) {
-                int qualified = productWarehousing.getQualifiedQuantity() != null
-                        ? productWarehousing.getQualifiedQuantity() : 0;
-                int unqualified = productWarehousing.getUnqualifiedQuantity() != null
-                        ? productWarehousing.getUnqualifiedQuantity() : 0;
-                OrderRemark sysRemark = new OrderRemark();
-                sysRemark.setTargetType("order");
-                sysRemark.setTargetNo(productWarehousing.getOrderNo());
-                sysRemark.setAuthorId("system");
-                sysRemark.setAuthorName("系统");
-                sysRemark.setAuthorRole("质检");
-                sysRemark.setContent("质检入库完成，合格 " + qualified + " 件"
-                        + (unqualified > 0 ? "，不合格 " + unqualified + " 件" : ""));
-                sysRemark.setTenantId(UserContext.tenantId());
-                sysRemark.setCreateTime(LocalDateTime.now());
-                sysRemark.setDeleteFlag(0);
-                orderRemarkService.save(sysRemark);
-            }
-        } catch (Exception e) {
-            log.warn("自动写入质检入库备注失败，不影响主流程", e);
-        }
-
-        try {
-            if (webhookPushService != null && StringUtils.hasText(productWarehousing.getOrderNo())) {
-                int qualified = productWarehousing.getQualifiedQuantity() != null
-                        ? productWarehousing.getQualifiedQuantity() : 0;
-                int unqualified = productWarehousing.getUnqualifiedQuantity() != null
-                        ? productWarehousing.getUnqualifiedQuantity() : 0;
-                webhookPushService.pushQualityResult(
-                        productWarehousing.getOrderNo(),
-                        "质检入库",
-                        qualified,
-                        unqualified,
-                        Map.of("warehouse", productWarehousing.getWarehouse() != null ? productWarehousing.getWarehouse() : "",
-                               "warehousingNo", productWarehousing.getWarehousingNo() != null ? productWarehousing.getWarehousingNo() : ""));
-            }
-        } catch (Exception e) {
-            log.warn("[Webhook] 质检结果推送失败，不影响主流程: {}", e.getMessage());
-        }
-
-        return true;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean batchSave(Map<String, Object> body) {
-        TenantAssert.assertTenantContext(); // 批量入库必须有租户上下文
-        String orderId = body == null ? null : (String) body.get("orderId");
-        String warehouse = body == null ? null : (String) body.get("warehouse");
-        String warehousingType = body == null ? null : (String) body.get("warehousingType");
-        Object itemsRaw = body == null ? null : body.get("items");
+        TenantAssert.assertTenantContext();
+        String oid = resolveBatchOrderId(body);
+        List<ProductWarehousing> list = parseBatchItems(body, oid);
 
+        validateBatchPrerequisites(oid, list);
+        list.forEach(this::fillOperatorFromContext);
+
+        executeBatchSaveWarehousing(list);
+
+        postActionHelper.triggerPostBatchSaveActions(oid, list.size());
+        return true;
+    }
+
+    private String resolveBatchOrderId(Map<String, Object> body) {
+        String orderId = body == null ? null : (String) body.get("orderId");
         String oid = orderId == null ? null : StringUtils.trimWhitespace(orderId);
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("订单ID不能为空");
         }
+        return oid;
+    }
+
+    private List<ProductWarehousing> parseBatchItems(Map<String, Object> body, String oid) {
+        String warehouse = body == null ? null : (String) body.get("warehouse");
+        String warehousingType = body == null ? null : (String) body.get("warehousingType");
+        Object itemsRaw = body == null ? null : body.get("items");
+
         if (!(itemsRaw instanceof List)) {
             throw new IllegalArgumentException("入库明细不能为空");
         }
@@ -382,10 +274,11 @@ public class ProductWarehousingOrchestrator {
         if (list.isEmpty()) {
             throw new IllegalArgumentException("入库明细不能为空");
         }
+        return list;
+    }
 
-        // ★ 生产前置校验：批量入库前，检查每个菲号是否都有生产扫码记录
+    private void validateBatchPrerequisites(String oid, List<ProductWarehousing> list) {
         for (ProductWarehousing w : list) {
-            // 通过二维码查找菲号ID
             String bundleId = w.getCuttingBundleId();
             if (!StringUtils.hasText(bundleId) && StringUtils.hasText(w.getCuttingBundleQrCode())) {
                 CuttingBundle b = cuttingBundleService.getByQrCode(w.getCuttingBundleQrCode());
@@ -395,51 +288,24 @@ public class ProductWarehousingOrchestrator {
             }
             validateProductionPrerequisiteForWarehousing(oid, bundleId);
         }
+    }
 
-        list.forEach(this::fillOperatorFromContext);
-
+    private void executeBatchSaveWarehousing(List<ProductWarehousing> list) {
         boolean ok;
         try {
             ok = productWarehousingService.saveBatchWarehousingAndUpdateOrder(list);
         } catch (org.springframework.transaction.UnexpectedRollbackException ure) {
-            log.error("batchSave: UnexpectedRollbackException caught: orderId={}", oid, ure);
+            log.error("batchSave: UnexpectedRollbackException caught", ure);
             throw new IllegalStateException("批量入库操作失败，请稍后重试（事务冲突）");
         } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
             throw e;
         } catch (Exception e) {
-            log.error("batchSave: unexpected exception: orderId={}", oid, e);
+            log.error("batchSave: unexpected exception", e);
             throw new IllegalStateException("批量入库操作失败：" + e.getMessage());
         }
         if (!ok) {
             throw new IllegalStateException("批量入库失败");
         }
-
-        // ★ 成品SKU库存已由 ServiceImpl.saveWarehousingAndUpdateOrderInternal 内部更新，此处不再重复调用
-
-        try {
-            productionOrderOrchestrator.ensureFinanceRecordsForOrder(oid);
-        } catch (Exception e) {
-            log.warn("Failed to ensure finance records after warehousing batch save: orderId={}, itemsCount={}",
-                    oid,
-                    list == null ? 0 : list.size(),
-                    e);
-            scanRecordDomainService.insertOrchestrationFailure(
-                    oid,
-                    null,
-                    null,
-                    null,
-                    "ensureFinanceRecords",
-                    e == null ? "ensureFinanceRecords failed" : ("ensureFinanceRecords failed: " + e.getMessage()),
-                    LocalDateTime.now());
-        }
-        try {
-            productionOrderService.recomputeProgressFromRecords(oid);
-        } catch (Exception ex) {
-            log.warn("create: recomputeProgress失败: orderId={}, error={}", oid, ex.getMessage());
-        }
-
-        // 已禁用系统自动完成
-        return true;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -451,54 +317,32 @@ public class ProductWarehousingOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("入库记录不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "入库记录");
+        TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "入库记录");
         normalizeAndValidateDefectInfo(productWarehousing);
+
+        executeUpdateWarehousing(productWarehousing);
+
+        String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
+        postActionHelper.triggerPostUpdateActions(orderId, productWarehousing.getId());
+        return true;
+    }
+
+    private void executeUpdateWarehousing(ProductWarehousing w) {
         boolean ok;
         try {
-            ok = productWarehousingService.updateWarehousingAndUpdateOrder(productWarehousing);
+            ok = productWarehousingService.updateWarehousingAndUpdateOrder(w);
         } catch (org.springframework.transaction.UnexpectedRollbackException ure) {
-            log.error("update: UnexpectedRollbackException caught: warehousingId={}", productWarehousing.getId(), ure);
+            log.error("update: UnexpectedRollbackException caught: warehousingId={}", w.getId(), ure);
             throw new IllegalStateException("更新入库操作失败，请稍后重试（事务冲突）");
         } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
             throw e;
         } catch (Exception e) {
-            log.error("update: unexpected exception: warehousingId={}", productWarehousing.getId(), e);
+            log.error("update: unexpected exception: warehousingId={}", w.getId(), e);
             throw new IllegalStateException("更新入库操作失败：" + e.getMessage());
         }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
-
-        // ★ 成品SKU库存已由 ServiceImpl.updateWarehousingAndUpdateOrder 内部处理差量更新，此处不再重复调用
-
-        String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
-        if (StringUtils.hasText(orderId)) {
-            try {
-                productionOrderOrchestrator.ensureFinanceRecordsForOrder(orderId);
-            } catch (Exception e) {
-                log.warn("Failed to ensure finance records after warehousing update: orderId={}, warehousingId={}",
-                        orderId,
-                        productWarehousing == null ? null : productWarehousing.getId(),
-                        e);
-                scanRecordDomainService.insertOrchestrationFailure(
-                        orderId,
-                        null,
-                        null,
-                        null,
-                        "ensureFinanceRecords",
-                        e == null ? "ensureFinanceRecords failed"
-                                : ("ensureFinanceRecords failed: " + e.getMessage()),
-                        LocalDateTime.now());
-            }
-            try {
-                productionOrderService.recomputeProgressFromRecords(orderId);
-            } catch (Exception ex) {
-                log.warn("update: recomputeProgress失败: orderId={}, error={}", orderId, ex.getMessage());
-            }
-
-            // 已禁用系统自动完成
-        }
-        return true;
     }
 
     private void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
@@ -513,7 +357,6 @@ public class ProductWarehousingOrchestrator {
             color = bundle.getColor();
             size = bundle.getSize();
         } else if (StringUtils.hasText(w.getCuttingBundleId())) {
-            // bundle 对象未传入，通过 bundleId 加载
             try {
                 CuttingBundle b = cuttingBundleService.getById(w.getCuttingBundleId());
                 if (b != null) {
@@ -524,7 +367,6 @@ public class ProductWarehousingOrchestrator {
                 log.warn("ProductWarehousingOrchestrator.updateSkuStock 加载菲号异常: bundleId={}", w.getCuttingBundleId(), e);
             }
         }
-        // QrCode 兜底：bundleId 加载失败（为空或查不到）时，尝试通过 QrCode 加载菲号
         if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
             if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
                 try {
@@ -538,8 +380,6 @@ public class ProductWarehousingOrchestrator {
                 }
             }
         }
-        // ⚠️ 不再使用 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
-        // 用于多码情景会写入错误的 SKU 条目
 
         if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
             String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
@@ -560,80 +400,43 @@ public class ProductWarehousingOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("入库记录不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "入库记录");
+        TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "入库记录");
 
         String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
 
-        if (current.getQualifiedQuantity() != null && current.getQualifiedQuantity() > 0) {
-            CuttingBundle bundleForDelete = null;
-            if (StringUtils.hasText(current.getCuttingBundleId())) {
-                try {
-                    bundleForDelete = cuttingBundleService.getById(current.getCuttingBundleId());
-                } catch (Exception e) {
-                    log.warn("ProductWarehousingOrchestrator.delete 加载菲号异常: bundleId={}", current.getCuttingBundleId(), e);
-                }
-            }
-            if (bundleForDelete == null && StringUtils.hasText(current.getCuttingBundleQrCode())) {
-                try {
-                    bundleForDelete = cuttingBundleService.getByQrCode(current.getCuttingBundleQrCode().trim());
-                } catch (Exception e) {
-                    log.debug("[SKUStock删除] QrCode fallback failed: bundleQrCode={}", current.getCuttingBundleQrCode());
-                }
-            }
-            if (bundleForDelete != null) {
-                updateSkuStock(current, null, bundleForDelete, -current.getQualifiedQuantity());
-            } else {
-                log.error("[SKUStock删除] 无法加载菲号，SKU库存无法自动恢复，需人工修复: warehousingId={}, bundleId={}, bundleQrCode={}",
-                        key, current.getCuttingBundleId(), current.getCuttingBundleQrCode());
-            }
-        }
+        restoreSkuStockOnDelete(current);
+        productWarehousingService.removeById(key);
 
-        boolean ok = productWarehousingService.removeById(key);
-
-        if (StringUtils.hasText(orderId)) {
-            try {
-                int qualifiedSum = productWarehousingService.sumQualifiedByOrderId(orderId);
-                ProductionOrder orderPatch = new ProductionOrder();
-                orderPatch.setId(orderId);
-                orderPatch.setCompletedQuantity(qualifiedSum);
-                orderPatch.setUpdateTime(LocalDateTime.now());
-                productionOrderService.updateById(orderPatch);
-            } catch (Exception e) {
-                log.warn(
-                        "Failed to update production order completed quantity after warehousing delete: orderId={}, warehousingId={}",
-                        orderId,
-                        key,
-                        e);
-            }
-
-            try {
-                productionOrderOrchestrator.ensureFinanceRecordsForOrder(orderId);
-            } catch (Exception e) {
-                log.warn("Failed to ensure finance records after warehousing delete: orderId={}, warehousingId={}",
-                        orderId,
-                        key,
-                        e);
-                scanRecordDomainService.insertOrchestrationFailure(
-                        orderId,
-                        null,
-                        null,
-                        null,
-                        "ensureFinanceRecords",
-                        e == null ? "ensureFinanceRecords failed"
-                                : ("ensureFinanceRecords failed: " + e.getMessage()),
-                        LocalDateTime.now());
-            }
-
-            try {
-                productionOrderService.recomputeProgressFromRecords(orderId);
-            } catch (Exception e) {
-                log.warn("Failed to recompute progress after warehousing delete: orderId={}, warehousingId={}",
-                        orderId,
-                        key,
-                        e);
-            }
-        }
+        postActionHelper.updateOrderCompletedQuantity(orderId);
+        postActionHelper.triggerPostDeleteActions(orderId, key);
         return true;
+    }
+
+    private void restoreSkuStockOnDelete(ProductWarehousing current) {
+        if (current.getQualifiedQuantity() == null || current.getQualifiedQuantity() <= 0) {
+            return;
+        }
+        CuttingBundle bundleForDelete = null;
+        if (StringUtils.hasText(current.getCuttingBundleId())) {
+            try {
+                bundleForDelete = cuttingBundleService.getById(current.getCuttingBundleId());
+            } catch (Exception e) {
+                log.warn("ProductWarehousingOrchestrator.delete 加载菲号异常: bundleId={}", current.getCuttingBundleId(), e);
+            }
+        }
+        if (bundleForDelete == null && StringUtils.hasText(current.getCuttingBundleQrCode())) {
+            try {
+                bundleForDelete = cuttingBundleService.getByQrCode(current.getCuttingBundleQrCode().trim());
+            } catch (Exception e) {
+                log.debug("[SKUStock删除] QrCode fallback failed: bundleQrCode={}", current.getCuttingBundleQrCode());
+            }
+        }
+        if (bundleForDelete != null) {
+            updateSkuStock(current, null, bundleForDelete, -current.getQualifiedQuantity());
+        } else {
+            log.error("[SKUStock删除] 无法加载菲号，SKU库存无法自动恢复，需人工修复: warehousingId={}, bundleId={}, bundleQrCode={}",
+                    current.getId(), current.getCuttingBundleId(), current.getCuttingBundleQrCode());
+        }
     }
 
     public Map<String, Object> repairStats(Map<String, Object> params) {
@@ -649,13 +452,6 @@ public class ProductWarehousingOrchestrator {
         return rollbackHelper.rollbackByBundle(body);
     }
 
-    /**
-     * 验证质检前置条件：该菲号必须有生产扫码记录才能进行质检入库
-     * 业务规则：车缝等生产工序完成 → 质检（合格/不合格）→ 包装 → 入库
-     * PC端质检入库接口（save/batchSave）使用此校验，不检查包装（包装在质检之后）
-     * ⚠️ 小程序仓库扫码入库使用 WarehouseScanExecutor.validateProductionPrerequisite，
-     *    那里才需要检查包装完成。两个校验职责不同，请勿混淆。
-     */
     private void validateProductionPrerequisiteForWarehousing(String orderId, String bundleId) {
         if (!StringUtils.hasText(orderId) || !StringUtils.hasText(bundleId)) {
             return;
@@ -716,23 +512,22 @@ public class ProductWarehousingOrchestrator {
         return repairHelper.listPendingRepairTasks(tenantId);
     }
 
-
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public boolean markBundleRepaired(String bundleId) {
         return repairHelper.markBundleRepaired(bundleId);
     }
 
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public void startBundleRepair(String bundleId, String operatorName) {
         repairHelper.startBundleRepair(bundleId, operatorName);
     }
 
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public void completeBundleRepair(String bundleId) {
         repairHelper.completeBundleRepair(bundleId);
     }
 
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public void scrapBundle(String bundleId) {
         repairHelper.scrapBundle(bundleId);
     }
@@ -753,39 +548,5 @@ public class ProductWarehousingOrchestrator {
             w.setReceiverId(userId);
             w.setReceiverName(username);
         }
-    }
-
-    private void computeAndPersistSpcForOrder(String orderId) {
-        List<ProductWarehousing> records = productWarehousingService.lambdaQuery()
-                .select(ProductWarehousing::getId, ProductWarehousing::getQualifiedQuantity,
-                        ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getAqlLevel)
-                .eq(ProductWarehousing::getOrderId, orderId)
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .last("LIMIT 200")
-                .list();
-        if (records == null || records.size() < 2) return;
-
-        List<Double> defectRates = new ArrayList<>();
-        for (ProductWarehousing w : records) {
-            int total = (w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
-                      + (w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0);
-            if (total > 0) {
-                int defective = w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0;
-                defectRates.add((double) defective / total * 100);
-            }
-        }
-        if (defectRates.size() < 2) return;
-
-        java.math.BigDecimal cpk = SpcCalculator.calcCpk(defectRates, 5.0, 0.0);
-        java.math.BigDecimal ppk = SpcCalculator.calcPpk(defectRates, 5.0, 0.0);
-
-        productWarehousingService.lambdaUpdate()
-                .eq(ProductWarehousing::getOrderId, orderId)
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .set(ProductWarehousing::getCpk, cpk)
-                .set(ProductWarehousing::getPpk, ppk)
-                .update();
-
-        log.info("[SPC] orderId={}, records={}, cpk={}, ppk={}", orderId, records.size(), cpk, ppk);
     }
 }

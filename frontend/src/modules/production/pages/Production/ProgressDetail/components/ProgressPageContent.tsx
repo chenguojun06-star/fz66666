@@ -14,7 +14,6 @@ import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import type { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import ProgressRowList from './ProgressRowList';
 import ProgressAlerts from './ProgressAlerts';
-import MaterialShortageAlert from './MaterialShortageAlert';
 import SmartOrderHoverCard from './SmartOrderHoverCard';
 import { FilterSearchSection, FilterRightSection, EmbeddedFilterBar } from './ProgressFilterBar';
 
@@ -137,10 +136,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   }), [activeStatFilter, globalStats, handleStatClick]);
 
   const alerts = (
-    <>
-      <ProgressAlerts showSmartErrorNotice={showSmartErrorNotice} smartError={smartError} onFixError={onFixError} bottleneckBannerVisible={bottleneckBannerVisible} bottleneckItems={bottleneckItems} setBottleneckBannerVisible={setBottleneckBannerVisible} bottleneckLoading={bottleneckLoading} />
-      <MaterialShortageAlert />
-    </>
+    <ProgressAlerts showSmartErrorNotice={showSmartErrorNotice} smartError={smartError} onFixError={onFixError} bottleneckBannerVisible={bottleneckBannerVisible} bottleneckItems={bottleneckItems} setBottleneckBannerVisible={setBottleneckBannerVisible} bottleneckLoading={bottleneckLoading} />
   );
 
   const paginationConfig = {

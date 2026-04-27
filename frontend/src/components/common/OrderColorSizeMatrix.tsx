@@ -15,12 +15,12 @@ interface OrderColorSizeMatrixProps {
   fontSize?: number;
 }
 
-interface OrderColorSizeMatrixModelRow {
+export interface OrderColorSizeMatrixModelRow {
   label: string;
   quantityMap: Map<string, number>;
 }
 
-interface OrderColorSizeMatrixModel {
+export interface OrderColorSizeMatrixModel {
   sizes: string[];
   rows: OrderColorSizeMatrixModelRow[];
   total: number;
