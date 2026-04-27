@@ -1,6 +1,5 @@
-import React, { useMemo } from 'react';
-import { Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Button, Card, Col, Form, Input, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -32,10 +31,10 @@ const FactoryList: React.FC = () => {
 
   const {
     form, factoryModal, logModal, remarkModalState, setRemarkModalState, remarkLoading,
-    dialogMode, managementTab, setManagementTab, activeTab, setActiveTab,
-    queryParams, setQueryParams, factoryCodeInput, setFactoryCodeInput, factoryNameInput, setFactoryNameInput,
+    dialogMode, managementTab, activeTab,
+    queryParams, setQueryParams, setFactoryCodeInput, setFactoryNameInput,
     factoryList, total, loading, smartError, showSmartErrorNotice, submitLoading,
-    logLoading, logRecords, logTitle, departmentOptions, userOptions,
+    logLoading, logRecords, logTitle, departmentOptions,
     accountModalOpen, setAccountModalOpen, accountFactory, setAccountFactory,
     supplierUserModalOpen, setSupplierUserModalOpen, supplierUserFactory, setSupplierUserFactory,
     scorecardMap, scorecardLoading, loadScorecardOnce,

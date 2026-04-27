@@ -25,11 +25,11 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
   onSynced,
 }: SyncProcessPriceModalProps) {
   const {
-    matchedScope, templateId, styleInputVal, styleNoOptions, selectedStyleNo,
+    matchedScope, styleInputVal,
     data, loadingTemplate, editMode, saving, syncing, sizes, imageUrls,
-    imageUploading, newSizeName, addSizePopoverOpen, isBusy, readyForScope,
+    imageUploading, newSizeName, addSizePopoverOpen, readyForScope,
     setStyleInputVal, setNewSizeName, setAddSizePopoverOpen, setImageUrls,
-    scheduleStyleSearch, handleSelectStyle, handleUploadImage,
+    scheduleStyleSearch, handleUploadImage,
     enterEdit, exitEdit, handleAdd, handleDelete,
     updateField, updateSizePrice, handleAddSize, handleRemoveSize,
     saveAll, syncToOrders, saveAndSync: hookSaveAndSync, handleClose,

@@ -3,7 +3,7 @@ import { Popover } from 'antd';
 import { ProductionOrder } from '@/types/production';
 import { getProcessesByNodeFromOrder } from '../ProgressDetail/utils';
 import StagePopoverContent from './StagePopoverContent';
-import type { SmartStage, StageStatus } from './types';
+import type { SmartStage } from './types';
 
 interface StageNodeProps {
   stage: SmartStage;

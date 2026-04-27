@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { toNumberSafe } from '@/utils/api';
 import {
   MatrixCell,
@@ -99,7 +99,6 @@ export function useStyleSizeDerived({
         cells: nextCells,
       };
     })));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, linkedSizeColumns]);
 
   return { displayRows, groupNameOptions };

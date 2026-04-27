@@ -1,6 +1,7 @@
 import React from 'react';
 import { PROCESS_STAGE_DEFS, classifyNodeStage } from './processStageUtils';
 import ProcessStageGroup from './ProcessStageGroup';
+import InfoItem from './InfoItem';
 import type { ProductionOrder } from '@/types/production';
 
 interface NormalProcessDetailPanelProps {
@@ -28,7 +29,7 @@ const NormalProcessDetailPanel: React.FC<NormalProcessDetailPanelProps> = ({
   cuttingSizeItems,
   onNavigateToPayroll,
 }) => {
-  const { workflowNodes, groupedProcesses, stagesToShow, totalPrice } = buildWorkflowData(
+  const { groupedProcesses, stagesToShow, totalPrice } = buildWorkflowData(
     templateNodesList, templatePriceMap, processType,
   );
   const cuttingQty = record.cuttingQuantity || record.orderQuantity || 0;
@@ -221,13 +222,6 @@ const CuttingSizeDetail: React.FC<{ items: Array<{ size: string; quantity: numbe
     <span style={{ color: 'var(--color-success)', fontWeight: 700, marginLeft: 4 }}>
       总计: {items.reduce((sum, item) => sum + item.quantity, 0)}
     </span>
-  </div>
-);
-
-const InfoItem: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
-  <div>
-    <span style={{ color: 'var(--color-text-secondary)' }}>{label}：</span>
-    <span style={{ fontWeight: 600, color: '#111827' }}>{value || '-'}</span>
   </div>
 );
 

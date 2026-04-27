@@ -83,7 +83,6 @@ export function useMaterialInventoryList() {
     if (pagination.pagination.pageSize < 20) pagination.setPageSize(20);
   }, [pagination, pagination.pagination.pageSize]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void fetchData(); }, [
     pagination.pagination.current, pagination.pagination.pageSize, searchText, selectedType, dateRange,
   ]);

@@ -11,8 +11,6 @@ import { StyleInfo } from '@/types/style';
 import { getErrorMessage } from '../../TemplateCenter/utils/templateUtils';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
-import { useDebouncedValue } from '@/hooks/usePerformance';
-import { readPageSize } from '@/utils/pageSizeStore';
 import { PatternSummary } from './pattern/PatternSummary';
 import { PatternEditorForm } from './pattern/PatternEditorForm';
 import { AttachmentThumb } from './pattern/AttachmentThumb';

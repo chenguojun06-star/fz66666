@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Button, Input, InputNumber, Select } from 'antd';
 import dayjs from 'dayjs';
 import { formatProcessDisplayName } from '@/utils/productionStage';
-import type { NodeOperationData, OperatorSummary } from './types';
+import type { NodeOperationData } from './types';
 
 const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD') : '-');
 

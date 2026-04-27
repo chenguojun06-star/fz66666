@@ -177,7 +177,7 @@ const ProcurementStatus: React.FC<{
   status: any;
   orderNo?: string;
   onNavigate: (processName: string) => void;
-}> = ({ status, orderNo, onNavigate }) => (
+}> = ({ status, onNavigate }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
     {status.completed ? (
       <>

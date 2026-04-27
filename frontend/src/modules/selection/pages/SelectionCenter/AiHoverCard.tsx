@@ -1,7 +1,7 @@
 import React from 'react';
 import { Row, Col, Tag, Space, Tooltip, Divider, Progress, Typography } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
-import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
+import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH } from '@/components/common/DecisionInsightCard';
 import type { Candidate, CandidateReviewItem } from './selectionCenterUtils';
 import { STATUS_MAP, getScoreMeta, buildCandidateInsight } from './selectionCenterUtils';
 

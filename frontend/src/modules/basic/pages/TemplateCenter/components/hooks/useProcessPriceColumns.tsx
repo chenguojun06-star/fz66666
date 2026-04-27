@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { InputNumber, Modal, Select } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
-import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { toNumberSafe } from '@/utils/api';

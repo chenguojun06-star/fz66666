@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, Card, Form, Tabs } from 'antd';
 import { useLocation } from 'react-router-dom';
-import dayjs from 'dayjs';
 import PageLayout from '@/components/common/PageLayout';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';

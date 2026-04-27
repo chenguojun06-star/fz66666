@@ -9,7 +9,6 @@ import {
   BundleRepairStats,
 } from '../../../types';
 import {
-  isBundleBlockedForWarehousing,
   parseUrlsValue,
   computeBundleRepairStats,
   toUploadFileList,

@@ -3,7 +3,6 @@ import { App, Form } from 'antd';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import type { PatternRevision } from '@/types/patternRevision';
-import { getErrorMessage } from '../../../TemplateCenter/utils/templateUtils';
 import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
 import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
