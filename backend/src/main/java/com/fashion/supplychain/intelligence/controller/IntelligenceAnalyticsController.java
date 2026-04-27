@@ -158,9 +158,9 @@ public class IntelligenceAnalyticsController {
 
     @GetMapping("/delivery-date-suggestion")
     public Result<DeliveryDateSuggestionResponse> deliveryDateSuggestion(
-            @RequestParam String styleNo,
-            @RequestParam int quantity) {
-        return Result.success(deliveryDateSuggestionOrchestrator.suggest(styleNo, quantity));
+            @RequestParam(value = "factoryName", required = false) String factoryName,
+            @RequestParam(value = "orderQuantity", defaultValue = "0") int orderQuantity) {
+        return Result.success(deliveryDateSuggestionOrchestrator.suggest(factoryName, orderQuantity));
     }
 
     @GetMapping("/process-template")
