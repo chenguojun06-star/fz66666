@@ -181,165 +181,195 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         Long readableTenantId = resolveReadableTenantId();
         boolean tenantScopedRead = isTenantScopedRead();
 
+        StyleIdentifiers ids = collectStyleIdentifiers(records);
+        if (ids.styleIds.isEmpty() && ids.styleNos.isEmpty()) {
+            return;
+        }
+
+        ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
+        if (productionOrderService == null) {
+            return;
+        }
+
+        OrderCountData countData = queryOrderCounts(productionOrderService, ids, readableTenantId, tenantScopedRead);
+        OrderTimeData timeData = queryLatestOrderTimes(productionOrderService, ids, readableTenantId, tenantScopedRead);
+        applyOrderCounts(records, countData, timeData);
+    }
+
+    private static class StyleIdentifiers {
         List<String> styleIds = new ArrayList<>();
         Set<String> styleNos = new HashSet<>();
+    }
+
+    private static class OrderCountData {
+        Map<String, Integer> countByStyleId = new HashMap<>();
+        Map<String, Integer> countByStyleNo = new HashMap<>();
+        Map<String, Integer> quantityByStyleId = new HashMap<>();
+        Map<String, Integer> quantityByStyleNo = new HashMap<>();
+    }
+
+    private static class OrderTimeData {
+        Map<String, LocalDateTime> latestOrderTimeByStyleId = new HashMap<>();
+        Map<String, LocalDateTime> latestOrderTimeByStyleNo = new HashMap<>();
+        Map<String, String> latestOrderCreatorByStyleId = new HashMap<>();
+        Map<String, String> latestOrderCreatorByStyleNo = new HashMap<>();
+    }
+
+    private StyleIdentifiers collectStyleIdentifiers(List<StyleInfo> records) {
+        StyleIdentifiers ids = new StyleIdentifiers();
         for (StyleInfo s : records) {
             if (s == null) {
                 continue;
             }
             if (s.getId() != null) {
-                styleIds.add(String.valueOf(s.getId()));
+                ids.styleIds.add(String.valueOf(s.getId()));
             }
             if (StringUtils.hasText(s.getStyleNo())) {
-                styleNos.add(s.getStyleNo().trim());
+                ids.styleNos.add(s.getStyleNo().trim());
             }
         }
+        return ids;
+    }
 
-        Map<String, Integer> countByStyleId = new HashMap<>();
-        Map<String, Integer> countByStyleNo = new HashMap<>();
-        Map<String, Integer> quantityByStyleId = new HashMap<>();
-        Map<String, Integer> quantityByStyleNo = new HashMap<>();
-        Map<String, LocalDateTime> latestOrderTimeByStyleId = new HashMap<>();
-        Map<String, LocalDateTime> latestOrderTimeByStyleNo = new HashMap<>();
-        Map<String, String> latestOrderCreatorByStyleId = new HashMap<>();
-        Map<String, String> latestOrderCreatorByStyleNo = new HashMap<>();
+    private OrderCountData queryOrderCounts(ProductionOrderService productionOrderService,
+            StyleIdentifiers ids, Long readableTenantId, boolean tenantScopedRead) {
+        OrderCountData data = new OrderCountData();
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+        qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt", "COALESCE(SUM(order_quantity), 0) as totalQty")
+                .eq(tenantScopedRead, "tenant_id", readableTenantId)
+                .and(w -> {
+                    boolean hasPrev = false;
+                    if (!ids.styleIds.isEmpty()) {
+                        w.in("style_id", ids.styleIds);
+                        hasPrev = true;
+                    }
+                    if (!ids.styleNos.isEmpty()) {
+                        if (hasPrev) {
+                            w.or();
+                        }
+                        w.in("style_no", ids.styleNos);
+                    }
+                })
+                .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
+                .groupBy("style_id", "style_no");
 
-        if (!styleIds.isEmpty() || !styleNos.isEmpty()) {
-            ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
-            if (productionOrderService == null) {
-                return;
+        List<Map<String, Object>> rows = productionOrderService.listMaps(qw);
+        for (Map<String, Object> r : rows) {
+            if (r == null) {
+                continue;
             }
+            String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
+            String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
+            int cnt;
+            int totalQty;
+            try {
+                cnt = r.get("cnt") == null ? 0 : Integer.parseInt(String.valueOf(r.get("cnt")));
+                totalQty = r.get("totalQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("totalQty")));
+            } catch (Exception e) {
+                cnt = 0;
+                totalQty = 0;
+            }
+            if (cnt <= 0) {
+                continue;
+            }
+            if (StringUtils.hasText(sid)) {
+                data.countByStyleId.put(sid, cnt);
+                data.quantityByStyleId.put(sid, totalQty);
+            }
+            if (StringUtils.hasText(sno)) {
+                data.countByStyleNo.put(sno, cnt);
+                data.quantityByStyleNo.put(sno, totalQty);
+            }
+        }
+        return data;
+    }
 
-            QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-            qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt", "COALESCE(SUM(order_quantity), 0) as totalQty")
+    private OrderTimeData queryLatestOrderTimes(ProductionOrderService productionOrderService,
+            StyleIdentifiers ids, Long readableTenantId, boolean tenantScopedRead) {
+        OrderTimeData data = new OrderTimeData();
+        QueryWrapper<ProductionOrder> timeQw = new QueryWrapper<>();
+        timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime",
+                     "(SELECT created_by_name FROM t_production_order po2 WHERE " +
+                     "(po2.style_id = t_production_order.style_id OR po2.style_no = t_production_order.style_no) " +
+                    (tenantScopedRead ? ("AND po2.tenant_id = " + readableTenantId + " ") : "") +
+                     "AND (po2.delete_flag IS NULL OR po2.delete_flag = 0) " +
+                     "ORDER BY po2.create_time DESC LIMIT 1) as latestCreator")
                     .eq(tenantScopedRead, "tenant_id", readableTenantId)
                     .and(w -> {
                         boolean hasPrev = false;
-                        if (!styleIds.isEmpty()) {
-                            w.in("style_id", styleIds);
+                        if (!ids.styleIds.isEmpty()) {
+                            w.in("style_id", ids.styleIds);
                             hasPrev = true;
                         }
-                        if (!styleNos.isEmpty()) {
+                        if (!ids.styleNos.isEmpty()) {
                             if (hasPrev) {
                                 w.or();
                             }
-                            w.in("style_no", styleNos);
+                            w.in("style_no", ids.styleNos);
                         }
                     })
                     .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
                     .groupBy("style_id", "style_no");
 
-            List<Map<String, Object>> rows = productionOrderService.listMaps(qw);
-            for (Map<String, Object> r : rows) {
-                if (r == null) {
-                    continue;
-                }
-                String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
-                String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
-                int cnt;
-                int totalQty;
-                try {
-                    cnt = r.get("cnt") == null ? 0 : Integer.parseInt(String.valueOf(r.get("cnt")));
-                    totalQty = r.get("totalQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("totalQty")));
-                } catch (Exception e) {
-                    cnt = 0;
-                    totalQty = 0;
-                }
-                if (cnt <= 0) {
-                    continue;
-                }
+        List<Map<String, Object>> timeRows = productionOrderService.listMaps(timeQw);
+        for (Map<String, Object> r : timeRows) {
+            if (r == null) {
+                continue;
+            }
+            String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
+            String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
+            Object latestTimeObj = r.get("latestTime");
+            LocalDateTime latestTime = null;
+            if (latestTimeObj instanceof LocalDateTime) {
+                latestTime = (LocalDateTime) latestTimeObj;
+            } else if (latestTimeObj instanceof java.sql.Timestamp) {
+                latestTime = ((java.sql.Timestamp) latestTimeObj).toLocalDateTime();
+            } else if (latestTimeObj instanceof java.util.Date) {
+                latestTime = ((java.util.Date) latestTimeObj).toInstant()
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+            }
+            String latestCreator = r.get("latestCreator") == null ? null : String.valueOf(r.get("latestCreator")).trim();
+
+            if (latestTime != null) {
                 if (StringUtils.hasText(sid)) {
-                    countByStyleId.put(sid, cnt);
-                    quantityByStyleId.put(sid, totalQty);
+                    data.latestOrderTimeByStyleId.put(sid, latestTime);
+                    if (StringUtils.hasText(latestCreator)) {
+                        data.latestOrderCreatorByStyleId.put(sid, latestCreator);
+                    }
                 }
                 if (StringUtils.hasText(sno)) {
-                    countByStyleNo.put(sno, cnt);
-                    quantityByStyleNo.put(sno, totalQty);
-                }
-            }
-
-            // 查询最近下单时间和下单人
-            QueryWrapper<ProductionOrder> timeQw = new QueryWrapper<>();
-            timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime",
-                         "(SELECT created_by_name FROM t_production_order po2 WHERE " +
-                         "(po2.style_id = t_production_order.style_id OR po2.style_no = t_production_order.style_no) " +
-                        (tenantScopedRead ? ("AND po2.tenant_id = " + readableTenantId + " ") : "") +
-                         "AND (po2.delete_flag IS NULL OR po2.delete_flag = 0) " +
-                         "ORDER BY po2.create_time DESC LIMIT 1) as latestCreator")
-                    .eq(tenantScopedRead, "tenant_id", readableTenantId)
-                    .and(w -> {
-                        boolean hasPrev = false;
-                        if (!styleIds.isEmpty()) {
-                            w.in("style_id", styleIds);
-                            hasPrev = true;
-                        }
-                        if (!styleNos.isEmpty()) {
-                            if (hasPrev) {
-                                w.or();
-                            }
-                            w.in("style_no", styleNos);
-                        }
-                    })
-                    .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
-                    .groupBy("style_id", "style_no");
-
-            List<Map<String, Object>> timeRows = productionOrderService.listMaps(timeQw);
-            for (Map<String, Object> r : timeRows) {
-                if (r == null) {
-                    continue;
-                }
-                String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
-                String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
-                Object latestTimeObj = r.get("latestTime");
-                LocalDateTime latestTime = null;
-                if (latestTimeObj instanceof LocalDateTime) {
-                    latestTime = (LocalDateTime) latestTimeObj;
-                } else if (latestTimeObj instanceof java.sql.Timestamp) {
-                    latestTime = ((java.sql.Timestamp) latestTimeObj).toLocalDateTime();
-                } else if (latestTimeObj instanceof java.util.Date) {
-                    latestTime = ((java.util.Date) latestTimeObj).toInstant()
-                            .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
-                }
-                String latestCreator = r.get("latestCreator") == null ? null : String.valueOf(r.get("latestCreator")).trim();
-
-                if (latestTime != null) {
-                    if (StringUtils.hasText(sid)) {
-                        latestOrderTimeByStyleId.put(sid, latestTime);
-                        if (StringUtils.hasText(latestCreator)) {
-                            latestOrderCreatorByStyleId.put(sid, latestCreator);
-                        }
-                    }
-                    if (StringUtils.hasText(sno)) {
-                        latestOrderTimeByStyleNo.put(sno, latestTime);
-                        if (StringUtils.hasText(latestCreator)) {
-                            latestOrderCreatorByStyleNo.put(sno, latestCreator);
-                        }
+                    data.latestOrderTimeByStyleNo.put(sno, latestTime);
+                    if (StringUtils.hasText(latestCreator)) {
+                        data.latestOrderCreatorByStyleNo.put(sno, latestCreator);
                     }
                 }
             }
         }
+        return data;
+    }
 
+    private void applyOrderCounts(List<StyleInfo> records, OrderCountData countData, OrderTimeData timeData) {
         for (StyleInfo s : records) {
             if (s == null) {
                 continue;
             }
             String idKey = s.getId() == null ? null : String.valueOf(s.getId());
-            Integer byId = StringUtils.hasText(idKey) ? countByStyleId.get(idKey) : null;
+            Integer byId = StringUtils.hasText(idKey) ? countData.countByStyleId.get(idKey) : null;
             if (byId != null && byId > 0) {
                 s.setOrderCount(byId);
-                s.setTotalOrderQuantity(quantityByStyleId.get(idKey));
+                s.setTotalOrderQuantity(countData.quantityByStyleId.get(idKey));
                 if (StringUtils.hasText(idKey)) {
-                    s.setLatestOrderTime(latestOrderTimeByStyleId.get(idKey));
-                    s.setLatestOrderCreator(latestOrderCreatorByStyleId.get(idKey));
+                    s.setLatestOrderTime(timeData.latestOrderTimeByStyleId.get(idKey));
+                    s.setLatestOrderCreator(timeData.latestOrderCreatorByStyleId.get(idKey));
                 }
                 continue;
             }
             String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
-            s.setOrderCount(StringUtils.hasText(sno) ? countByStyleNo.getOrDefault(sno, 0) : 0);
-            s.setTotalOrderQuantity(StringUtils.hasText(sno) ? quantityByStyleNo.getOrDefault(sno, 0) : 0);
+            s.setOrderCount(StringUtils.hasText(sno) ? countData.countByStyleNo.getOrDefault(sno, 0) : 0);
+            s.setTotalOrderQuantity(StringUtils.hasText(sno) ? countData.quantityByStyleNo.getOrDefault(sno, 0) : 0);
             if (StringUtils.hasText(sno)) {
-                s.setLatestOrderTime(latestOrderTimeByStyleNo.get(sno));
-                s.setLatestOrderCreator(latestOrderCreatorByStyleNo.get(sno));
+                s.setLatestOrderTime(timeData.latestOrderTimeByStyleNo.get(sno));
+                s.setLatestOrderCreator(timeData.latestOrderCreatorByStyleNo.get(sno));
             }
         }
     }
@@ -561,164 +591,188 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             }
         }
 
-        Map<Long, StyleOperationLog> latestMaintenance = new HashMap<>();
-        Map<String, PatternProduction> latestPatternByStyleKey = new HashMap<>();
-        Set<String> stockedStyleKeys = new HashSet<>();
-        if (!ids.isEmpty()) {
-            List<StyleOperationLog> logs = styleOperationLogService.lambdaQuery()
-                    .in(StyleOperationLog::getStyleId, ids)
-                    .eq(tenantScopedRead, StyleOperationLog::getTenantId, readableTenantId)
-                    .eq(StyleOperationLog::getBizType, "maintenance")
-                    .orderByDesc(StyleOperationLog::getCreateTime)
-                    .list();
-            for (StyleOperationLog log : logs) {
-                if (log == null || log.getStyleId() == null) {
-                    continue;
-                }
-                if (!latestMaintenance.containsKey(log.getStyleId())) {
-                    latestMaintenance.put(log.getStyleId(), log);
-                }
-            }
-
-            List<String> styleIdStrings = ids.stream().map(String::valueOf).toList();
-            List<PatternProduction> patterns = patternProductionService.lambdaQuery()
-                    .in(PatternProduction::getStyleId, styleIdStrings)
-                    .eq(tenantScopedRead, PatternProduction::getTenantId, readableTenantId)
-                    .eq(PatternProduction::getDeleteFlag, 0)
-                    .orderByDesc(PatternProduction::getUpdateTime)
-                    .orderByDesc(PatternProduction::getCreateTime)
-                    .list();
-            for (PatternProduction pattern : patterns) {
-                if (pattern == null || !StringUtils.hasText(pattern.getStyleId())) {
-                    continue;
-                }
-                try {
-                    Long styleId = Long.valueOf(pattern.getStyleId().trim());
-                    String key = buildStyleColorKey(styleId, pattern.getColor());
-                    if (!latestPatternByStyleKey.containsKey(key)) {
-                        latestPatternByStyleKey.put(key, pattern);
-                    }
-                } catch (Exception e) {
-                    log.warn("StyleInfoServiceImpl.fillProgressFields styleId解析异常: styleId={}", pattern.getStyleId(), e);
-                }
-            }
-
-            List<String> styleIdStringsForStock = ids.stream().map(String::valueOf).toList();
-            List<String> styleNosForStock = records.stream()
-                    .map(StyleInfo::getStyleNo)
-                    .filter(StringUtils::hasText)
-                    .toList();
-            List<SampleStock> stocks = sampleStockMapper.selectList(new QueryWrapper<SampleStock>()
-                    .and(wrapper -> wrapper.in("style_id", styleIdStringsForStock)
-                            .or()
-                            .in(!styleNosForStock.isEmpty(), "style_no", styleNosForStock))
-                    .eq(tenantScopedRead, "tenant_id", readableTenantId)
-                    .eq("sample_type", "development")
-                    .eq("delete_flag", 0));
-            for (SampleStock stock : stocks) {
-                if (stock == null) {
-                    continue;
-                }
-                if (StringUtils.hasText(stock.getStyleId())) {
-                    try {
-                        Long styleId = Long.valueOf(stock.getStyleId().trim());
-                        stockedStyleKeys.add(buildStyleColorKey(styleId, stock.getColor()));
-                    } catch (Exception e) {
-                        log.warn("StyleInfoServiceImpl.fillProgressFields stock styleId解析异常: styleId={}", stock.getStyleId(), e);
-                    }
-                } else if (StringUtils.hasText(stock.getStyleNo())) {
-                    for (StyleInfo style : records) {
-                        if (style != null && StringUtils.hasText(style.getStyleNo()) && stock.getStyleNo().trim().equalsIgnoreCase(style.getStyleNo().trim()) && style.getId() != null) {
-                            stockedStyleKeys.add(buildStyleColorKey(style.getId(), stock.getColor()));
-                        }
-                    }
-                }
-            }
-        }
+        Map<Long, StyleOperationLog> latestMaintenance = loadMaintenanceLogs(ids, readableTenantId, tenantScopedRead);
+        Map<String, PatternProduction> latestPatternByStyleKey = loadPatternProductions(ids, readableTenantId, tenantScopedRead);
+        Set<String> stockedStyleKeys = loadSampleStocks(ids, records, readableTenantId, tenantScopedRead);
 
         for (StyleInfo style : records) {
             if (style == null) {
                 continue;
             }
-
             StyleOperationLog m = style.getId() != null ? latestMaintenance.get(style.getId()) : null;
-            PatternProduction latestPattern = style.getId() != null
-                    ? latestPatternByStyleKey.get(buildStyleColorKey(style.getId(), style.getColor()))
-                    : null;
-            if (latestPattern == null && style.getId() != null) {
-                for (Map.Entry<String, PatternProduction> entry : latestPatternByStyleKey.entrySet()) {
-                    if (entry.getKey().startsWith(style.getId() + "|")) {
-                        latestPattern = entry.getValue();
-                        break;
-                    }
-                }
-            }
             style.setMaintenanceTime(m != null ? m.getCreateTime() : null);
             style.setMaintenanceMan(m != null ? m.getOperator() : null);
             style.setMaintenanceRemark(m != null ? m.getRemark() : null);
-            String latestPatternStatus = latestPattern != null ? latestPattern.getStatus() : null;
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))
-                    && style.getId() != null
-                    && stockedStyleKeys.contains(buildStyleColorKey(style.getId(), style.getColor()))) {
-                latestPatternStatus = "COMPLETED";
+
+            String latestPatternStatus = resolveLatestPatternStatus(style, latestPatternByStyleKey, stockedStyleKeys);
+            style.setLatestPatternStatus(latestPatternStatus);
+
+            assignProgressNode(style);
+        }
+    }
+
+    private Map<Long, StyleOperationLog> loadMaintenanceLogs(Set<Long> ids, Long readableTenantId, boolean tenantScopedRead) {
+        Map<Long, StyleOperationLog> latestMaintenance = new HashMap<>();
+        if (ids.isEmpty()) {
+            return latestMaintenance;
+        }
+        List<StyleOperationLog> logs = styleOperationLogService.lambdaQuery()
+                .in(StyleOperationLog::getStyleId, ids)
+                .eq(tenantScopedRead, StyleOperationLog::getTenantId, readableTenantId)
+                .eq(StyleOperationLog::getBizType, "maintenance")
+                .orderByDesc(StyleOperationLog::getCreateTime)
+                .list();
+        for (StyleOperationLog log : logs) {
+            if (log == null || log.getStyleId() == null) {
+                continue;
             }
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))
-                    && style.getId() != null) {
-                for (String stockKey : stockedStyleKeys) {
-                    if (stockKey.startsWith(style.getId() + "|")) {
-                        latestPatternStatus = "COMPLETED";
-                        break;
+            if (!latestMaintenance.containsKey(log.getStyleId())) {
+                latestMaintenance.put(log.getStyleId(), log);
+            }
+        }
+        return latestMaintenance;
+    }
+
+    private Map<String, PatternProduction> loadPatternProductions(Set<Long> ids, Long readableTenantId, boolean tenantScopedRead) {
+        Map<String, PatternProduction> latestPatternByStyleKey = new HashMap<>();
+        if (ids.isEmpty()) {
+            return latestPatternByStyleKey;
+        }
+        List<String> styleIdStrings = ids.stream().map(String::valueOf).toList();
+        List<PatternProduction> patterns = patternProductionService.lambdaQuery()
+                .in(PatternProduction::getStyleId, styleIdStrings)
+                .eq(tenantScopedRead, PatternProduction::getTenantId, readableTenantId)
+                .eq(PatternProduction::getDeleteFlag, 0)
+                .orderByDesc(PatternProduction::getUpdateTime)
+                .orderByDesc(PatternProduction::getCreateTime)
+                .list();
+        for (PatternProduction pattern : patterns) {
+            if (pattern == null || !StringUtils.hasText(pattern.getStyleId())) {
+                continue;
+            }
+            try {
+                Long styleId = Long.valueOf(pattern.getStyleId().trim());
+                String key = buildStyleColorKey(styleId, pattern.getColor());
+                if (!latestPatternByStyleKey.containsKey(key)) {
+                    latestPatternByStyleKey.put(key, pattern);
+                }
+            } catch (Exception e) {
+                log.warn("StyleInfoServiceImpl.loadPatternProductions styleId解析异常: styleId={}", pattern.getStyleId(), e);
+            }
+        }
+        return latestPatternByStyleKey;
+    }
+
+    private Set<String> loadSampleStocks(Set<Long> ids, List<StyleInfo> records, Long readableTenantId, boolean tenantScopedRead) {
+        Set<String> stockedStyleKeys = new HashSet<>();
+        if (ids.isEmpty()) {
+            return stockedStyleKeys;
+        }
+        List<String> styleIdStringsForStock = ids.stream().map(String::valueOf).toList();
+        List<String> styleNosForStock = records.stream()
+                .map(StyleInfo::getStyleNo)
+                .filter(StringUtils::hasText)
+                .toList();
+        List<SampleStock> stocks = sampleStockMapper.selectList(new QueryWrapper<SampleStock>()
+                .and(wrapper -> wrapper.in("style_id", styleIdStringsForStock)
+                        .or()
+                        .in(!styleNosForStock.isEmpty(), "style_no", styleNosForStock))
+                .eq(tenantScopedRead, "tenant_id", readableTenantId)
+                .eq("sample_type", "development")
+                .eq("delete_flag", 0));
+        for (SampleStock stock : stocks) {
+            if (stock == null) {
+                continue;
+            }
+            if (StringUtils.hasText(stock.getStyleId())) {
+                try {
+                    Long styleId = Long.valueOf(stock.getStyleId().trim());
+                    stockedStyleKeys.add(buildStyleColorKey(styleId, stock.getColor()));
+                } catch (Exception e) {
+                    log.warn("StyleInfoServiceImpl.loadSampleStocks stock styleId解析异常: styleId={}", stock.getStyleId(), e);
+                }
+            } else if (StringUtils.hasText(stock.getStyleNo())) {
+                for (StyleInfo style : records) {
+                    if (style != null && StringUtils.hasText(style.getStyleNo()) && stock.getStyleNo().trim().equalsIgnoreCase(style.getStyleNo().trim()) && style.getId() != null) {
+                        stockedStyleKeys.add(buildStyleColorKey(style.getId(), stock.getColor()));
                     }
                 }
             }
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))) {
-                String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim().toUpperCase() : "";
-                if ("COMPLETED".equals(sampleStatus)) {
-                    latestPatternStatus = "COMPLETED";
+        }
+        return stockedStyleKeys;
+    }
+
+    private String resolveLatestPatternStatus(StyleInfo style, Map<String, PatternProduction> latestPatternByStyleKey, Set<String> stockedStyleKeys) {
+        PatternProduction latestPattern = style.getId() != null
+                ? latestPatternByStyleKey.get(buildStyleColorKey(style.getId(), style.getColor()))
+                : null;
+        if (latestPattern == null && style.getId() != null) {
+            for (Map.Entry<String, PatternProduction> entry : latestPatternByStyleKey.entrySet()) {
+                if (entry.getKey().startsWith(style.getId() + "|")) {
+                    latestPattern = entry.getValue();
+                    break;
                 }
             }
-            style.setLatestPatternStatus(latestPatternStatus);
-
-            String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";
-            String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim() : "";
-
-            style.setLatestOrderNo(null);
-            style.setLatestOrderStatus(null);
-            style.setLatestProductionProgress(null);
-
-            if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
-                style.setProgressNode("开发样报废");
-                style.setCompletedTime(null);
-                continue;
-            }
-
-            if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
-                style.setProgressNode("样衣完成");
-                style.setCompletedTime(style.getSampleCompletedTime());
-                continue;
-            }
-
-            if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
-                style.setProgressNode("样衣制作中");
-                style.setCompletedTime(null);
-                continue;
-            }
-
-            if ("COMPLETED".equalsIgnoreCase(patternStatus)) {
-                style.setProgressNode("纸样完成");
-                style.setCompletedTime(style.getPatternCompletedTime());
-                continue;
-            }
-
-            if ("IN_PROGRESS".equalsIgnoreCase(patternStatus)) {
-                style.setProgressNode("纸样开发中");
-                style.setCompletedTime(null);
-                continue;
-            }
-
-            style.setProgressNode("未开始");
-            style.setCompletedTime(null);
         }
+        String latestPatternStatus = latestPattern != null ? latestPattern.getStatus() : null;
+        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))
+                && style.getId() != null
+                && stockedStyleKeys.contains(buildStyleColorKey(style.getId(), style.getColor()))) {
+            latestPatternStatus = "COMPLETED";
+        }
+        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))
+                && style.getId() != null) {
+            for (String stockKey : stockedStyleKeys) {
+                if (stockKey.startsWith(style.getId() + "|")) {
+                    latestPatternStatus = "COMPLETED";
+                    break;
+                }
+            }
+        }
+        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))) {
+            String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim().toUpperCase() : "";
+            if ("COMPLETED".equals(sampleStatus)) {
+                latestPatternStatus = "COMPLETED";
+            }
+        }
+        return latestPatternStatus;
+    }
+
+    private void assignProgressNode(StyleInfo style) {
+        String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";
+        String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim() : "";
+
+        style.setLatestOrderNo(null);
+        style.setLatestOrderStatus(null);
+        style.setLatestProductionProgress(null);
+
+        if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
+            style.setProgressNode("开发样报废");
+            style.setCompletedTime(null);
+            return;
+        }
+        if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
+            style.setProgressNode("样衣完成");
+            style.setCompletedTime(style.getSampleCompletedTime());
+            return;
+        }
+        if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
+            style.setProgressNode("样衣制作中");
+            style.setCompletedTime(null);
+            return;
+        }
+        if ("COMPLETED".equalsIgnoreCase(patternStatus)) {
+            style.setProgressNode("纸样完成");
+            style.setCompletedTime(style.getPatternCompletedTime());
+            return;
+        }
+        if ("IN_PROGRESS".equalsIgnoreCase(patternStatus)) {
+            style.setProgressNode("纸样开发中");
+            style.setCompletedTime(null);
+            return;
+        }
+        style.setProgressNode("未开始");
+        style.setCompletedTime(null);
     }
 
     private String buildStyleColorKey(Long styleId, String color) {

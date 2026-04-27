@@ -153,7 +153,7 @@ public class StyleQuotationServiceImpl extends ServiceImpl<StyleQuotationMapper,
                 }
             }
         } catch (Exception e) {
-            // 忽略异常，返回已处理的结果
+            LOG.warn("[StyleQuotation] 解析报价单价失败: {}", e.getMessage());
         }
 
         return out;

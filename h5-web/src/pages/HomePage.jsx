@@ -96,7 +96,7 @@ export default function HomePage() {
       if (item.permission === 'dashboard') return canSeeDashboard();
       return hasFeaturePermission(item.permission);
     });
-  }, []);
+  }, [user]);
 
 
   return (

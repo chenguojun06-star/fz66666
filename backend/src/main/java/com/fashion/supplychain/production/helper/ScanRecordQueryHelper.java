@@ -226,8 +226,9 @@ public class ScanRecordQueryHelper {
                 ProductionOrder order = productionOrderService.lambdaQuery()
                         .select(ProductionOrder::getId, ProductionOrder::getDeleteFlag, ProductionOrder::getStatus)
                         .eq(ProductionOrder::getId, orderId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
                         .one();
-                if (order == null || order.getDeleteFlag() == 1) {
+                if (order == null) {
                     continue;
                 }
                 String orderStatus = order.getStatus();

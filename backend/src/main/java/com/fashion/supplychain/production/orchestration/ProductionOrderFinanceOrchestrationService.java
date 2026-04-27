@@ -115,75 +115,83 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
+        assertCompletePermission();
+        String oid = assertValidOrderId(id);
+        ProductionOrder order = loadOrderForComplete(oid);
+        int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+        if (orderQty <= 0) throw new IllegalStateException("订单数量异常，无法结单");
+
+        BigDecimal tp = normalizeTolerance(tolerancePercent);
+        long qualifiedSum = sumQualifiedWarehousing(oid);
+        if (qualifiedSum <= 0) throw new IllegalStateException("该订单合格入库数量为0，无法结单");
+
+        assertPackagingComplete(oid, qualifiedSum);
+        assertQuantityWithinTolerance(qualifiedSum, orderQty, tp);
+
+        markOrderCompleted(oid, qualifiedSum, order.getStatus());
+        pushCompletionWebhook(order, qualifiedSum, orderQty);
+        backfillPredictionLogs(oid);
+        triggerPayrollSettlementGeneration(oid);
+        return true;
+    }
+
+    private void assertCompletePermission() {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限完成订单，需要主管及以上权限");
         }
+    }
 
+    private String assertValidOrderId(String id) {
         String oid = StringUtils.hasText(id) ? id.trim() : null;
-        if (!StringUtils.hasText(oid)) {
-            throw new IllegalArgumentException("订单ID不能为空");
-        }
+        if (!StringUtils.hasText(oid)) throw new IllegalArgumentException("订单ID不能为空");
+        return oid;
+    }
 
+    private ProductionOrder loadOrderForComplete(String oid) {
         ProductionOrder order = productionOrderService.getById(oid);
         if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
             throw new NoSuchElementException("订单不存在");
         }
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equals(st)) {
-            return true;
-        }
+        if ("completed".equals(st)) throw new IllegalArgumentException("订单已完成");
+        return order;
+    }
 
-        int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
-        if (orderQty <= 0) {
-            throw new IllegalStateException("订单数量异常，无法结单");
-        }
+    private BigDecimal normalizeTolerance(BigDecimal tolerancePercent) {
+        BigDecimal tp = tolerancePercent != null ? tolerancePercent : new BigDecimal("0.10");
+        if (tp.compareTo(new BigDecimal("0.05")) < 0) tp = new BigDecimal("0.05");
+        if (tp.compareTo(new BigDecimal("0.10")) > 0) tp = new BigDecimal("0.10");
+        return tp;
+    }
 
-        BigDecimal tp = tolerancePercent;
-        if (tp == null) {
-            tp = new BigDecimal("0.10");
-        }
-        if (tp.compareTo(new BigDecimal("0.05")) < 0) {
-            tp = new BigDecimal("0.05");
-        }
-        if (tp.compareTo(new BigDecimal("0.10")) > 0) {
-            tp = new BigDecimal("0.10");
-        }
-
+    private long sumQualifiedWarehousing(String orderId) {
         List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getOrderId, oid)
+                .eq(ProductWarehousing::getOrderId, orderId)
                 .eq(ProductWarehousing::getDeleteFlag, 0));
-        if (list == null || list.isEmpty()) {
-            throw new IllegalStateException("该订单暂无入库记录，无法结单");
-        }
-
-        long qualifiedSum = 0;
+        if (list == null || list.isEmpty()) throw new IllegalStateException("该订单暂无入库记录，无法结单");
+        long sum = 0;
         for (ProductWarehousing w : list) {
-            if (w == null) {
-                continue;
-            }
+            if (w == null) continue;
             int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
-            if (q > 0) {
-                qualifiedSum += q;
-            }
+            if (q > 0) sum += q;
         }
+        return sum;
+    }
 
-        if (qualifiedSum <= 0) {
-            throw new IllegalStateException("该订单合格入库数量为0，无法结单");
-        }
+    private void assertPackagingComplete(String orderId, long qualifiedSum) {
+        long packagingDone = scanRecordDomainService.computePackagingDoneQuantity(orderId);
+        if (packagingDone < qualifiedSum) throw new IllegalStateException("请先完成包装后再入库结单");
+    }
 
-        long packagingDone = 0;
-        packagingDone = scanRecordDomainService.computePackagingDoneQuantity(oid);
-
-        if (packagingDone < qualifiedSum) {
-            throw new IllegalStateException("请先完成包装后再入库结单");
-        }
-
+    private void assertQuantityWithinTolerance(long qualifiedSum, int orderQty, BigDecimal tp) {
         long diff = Math.abs(qualifiedSum - (long) orderQty);
         BigDecimal allowDiff = tp.multiply(BigDecimal.valueOf(orderQty)).setScale(0, RoundingMode.CEILING);
         if (BigDecimal.valueOf(diff).compareTo(allowDiff) > 0) {
             throw new IllegalStateException("入库数量与订单数量差异超出允许范围");
         }
+    }
 
+    private void markOrderCompleted(String oid, long qualifiedSum, String previousStatus) {
         LocalDateTime now = LocalDateTime.now();
         boolean ok = productionOrderService.lambdaUpdate()
                 .eq(ProductionOrder::getId, oid)
@@ -193,37 +201,31 @@ public class ProductionOrderFinanceOrchestrationService {
                 .set(ProductionOrder::getActualEndDate, now)
                 .set(ProductionOrder::getUpdateTime, now)
                 .update();
-        if (!ok) {
-            throw new IllegalStateException("操作失败");
-        }
+        if (!ok) throw new IllegalStateException("操作失败");
+    }
 
-        // 异步推送订单状态变更给已对接客户
-        if (webhookPushService != null && order.getOrderNo() != null) {
-            try {
-                webhookPushService.pushOrderStatusChange(
-                    order.getOrderNo(), st, "completed",
-                    Map.of("completedQuantity", qualifiedSum, "orderQuantity", orderQty)
-                );
-            } catch (Exception e) {
-                log.warn("Webhook推送订单完成状态失败: orderNo={}", order.getOrderNo(), e);
+    private void pushCompletionWebhook(ProductionOrder order, long qualifiedSum, int orderQty) {
+        if (webhookPushService == null || order.getOrderNo() == null) return;
+        try {
+            String prevStatus = order.getStatus() == null ? "" : order.getStatus().trim();
+            webhookPushService.pushOrderStatusChange(
+                order.getOrderNo(), prevStatus, "completed",
+                Map.of("completedQuantity", qualifiedSum, "orderQuantity", orderQty));
+        } catch (Exception e) {
+            log.warn("Webhook推送订单完成状态失败: orderNo={}", order.getOrderNo(), e);
+        }
+    }
+
+    private void backfillPredictionLogs(String oid) {
+        if (intelligencePredictionLogMapper == null) return;
+        try {
+            int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, LocalDateTime.now(), UserContext.tenantId());
+            if (backfilled > 0) {
+                log.info("[智能回填] 订单 {} 完成（completeProduction），回填 {} 条预测记录", oid, backfilled);
             }
+        } catch (Exception ex) {
+            log.warn("[智能回填] 回填失败，不影响关单流程: orderId={}", oid, ex);
         }
-
-        // 【智能学习】订单完成时回填预测记录，自动闭合数据飞轮
-        if (intelligencePredictionLogMapper != null) {
-            try {
-                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now, com.fashion.supplychain.common.UserContext.tenantId());
-                if (backfilled > 0) {
-                    log.info("[智能回填] 订单 {} 完成（completeProduction），回填 {} 条预测记录", oid, backfilled);
-                }
-            } catch (Exception ex) {
-                log.warn("[智能回填] 回填失败，不影响关单流程: orderId={}", oid, ex);
-            }
-        }
-
-        triggerPayrollSettlementGeneration(oid);
-
-        return true;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -833,6 +835,7 @@ public class ProductionOrderFinanceOrchestrationService {
                 .and(w -> w.gt(ProductionOrder::getCompletedQuantity, 0).or().eq(ProductionOrder::getStatus,
                         "completed"))
                 .orderByDesc(ProductionOrder::getUpdateTime)
+                .last("LIMIT 5000")
                 .list();
         if (orders == null || orders.isEmpty()) {
             return 0;

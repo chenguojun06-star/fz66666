@@ -138,6 +138,7 @@ public class TrackingPriceSyncHelper {
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .ne(ProductionOrder::getStatus, "completed")
                 .isNotNull(ProductionOrder::getStyleNo)
+                .last("LIMIT 5000")
                 .list();
 
         int totalOrders = 0, updatedOrders = 0, totalRecordsUpdated = 0, errorCount = 0;
@@ -180,6 +181,7 @@ public class TrackingPriceSyncHelper {
                 .isNotNull(ProductionOrder::getProgressWorkflowJson)
                 .ne(ProductionOrder::getProgressWorkflowJson, "")
                 .isNotNull(ProductionOrder::getStyleNo)
+                .last("LIMIT 5000")
                 .list();
 
         if (orders.isEmpty()) {
@@ -258,6 +260,7 @@ public class TrackingPriceSyncHelper {
                 .eq(ProductWarehousing::getOrderId, oid)
                 .eq(ProductWarehousing::getDeleteFlag, 0)
                 .eq(ProductWarehousing::getQualityStatus, "qualified")
+                .last("LIMIT 5000")
                 .list();
 
         int repaired = 0, skipped = 0;
@@ -473,8 +476,13 @@ public class TrackingPriceSyncHelper {
             String newCode = codeMap.get(tracking.getProcessName());
             boolean codeChanged = false;
             if (StringUtils.hasText(newCode) && !newCode.equals(tracking.getProcessCode())) {
-                tracking.setProcessCode(newCode);
-                codeChanged = true;
+                if (!StringUtils.hasText(tracking.getProcessCode()) || tracking.getProcessCode().equals(tracking.getProcessName())) {
+                    tracking.setProcessCode(newCode);
+                    codeChanged = true;
+                } else {
+                    log.debug("[TrackingPriceSync] 保留已有模板编号: trackingId={}, processCode={}, newCode={}",
+                            tracking.getId(), tracking.getProcessCode(), newCode);
+                }
             }
 
             if (priceChanged || codeChanged) {

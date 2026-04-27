@@ -69,30 +69,50 @@ public class DailyBriefOrchestrator {
         Map<String, Object> brief = new LinkedHashMap<>();
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
-        DateTimeFormatter cnDate = DateTimeFormatter.ofPattern("yyyy年MM月dd日");
-        brief.put("date", today.format(cnDate));
+        brief.put("date", today.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日")));
 
-        // ① 昨日入库
+        collectYesterdayStats(brief, yesterday);
+        collectTodayAndWeekStats(brief, today);
+
+        long overdueCount = dashboardQueryService.countOverdueOrders();
+        brief.put("overdueOrderCount", (int) overdueCount);
+        List<ProductionOrder> overdueOrders = dashboardQueryService.listOverdueOrders(60);
+
+        List<ProductionOrder> highRisk = collectHighRiskOrders(today);
+        brief.put("highRiskOrderCount", highRisk.size());
+
+        buildTopPriorityAndPending(brief, today, highRisk);
+
+        List<BriefDecisionCard> decisionCards = dailyBriefDecisionOrchestrator.buildDecisionCards(
+            today, overdueCount, briefGetScanCount(brief), briefGetYdCount(brief),
+            briefGetYdQty(brief), highRisk, overdueOrders);
+        brief.put("decisionCards", decisionCards);
+
+        buildSuggestions(brief, today, overdueCount, highRisk);
+        brief.put("trendData", buildTrendData(today));
+        return brief;
+    }
+
+    private void collectYesterdayStats(Map<String, Object> brief, LocalDate yesterday) {
         LocalDateTime ydStart = yesterday.atStartOfDay();
-        LocalDateTime ydEnd   = yesterday.atTime(LocalTime.MAX);
+        LocalDateTime ydEnd = yesterday.atTime(LocalTime.MAX);
         long ydCount = dashboardQueryService.countWarehousingBetween(ydStart, ydEnd);
-        long ydQty   = dashboardQueryService.sumWarehousingQuantityBetween(ydStart, ydEnd);
+        long ydQty = dashboardQueryService.sumWarehousingQuantityBetween(ydStart, ydEnd);
         brief.put("yesterdayWarehousingCount", (int) ydCount);
         brief.put("yesterdayWarehousingQuantity", (int) ydQty);
+    }
 
-        // ② 今日扫码 + 近7天扫码
+    private void collectTodayAndWeekStats(Map<String, Object> brief, LocalDate today) {
         LocalDateTime tdStart = today.atStartOfDay();
-        LocalDateTime tdEnd   = today.atTime(LocalTime.MAX);
+        LocalDateTime tdEnd = today.atTime(LocalTime.MAX);
         long todayScan = dashboardQueryService.countScansBetween(tdStart, tdEnd);
         brief.put("todayScanCount", (int) todayScan);
         LocalDateTime week7Start = today.minusDays(7).atStartOfDay();
         long weekScan = dashboardQueryService.countScansBetween(week7Start, tdEnd);
         brief.put("weekScanCount", (int) weekScan);
-        // 近7天入库
         long weekWh = dashboardQueryService.countWarehousingBetween(week7Start, tdEnd);
         brief.put("weekWarehousingCount", (int) weekWh);
 
-        // ③ 今日下单数 / 今日入库数 / 今日出库数
         long todayOrders = dashboardQueryService.countProductionOrdersBetween(tdStart, tdEnd);
         brief.put("todayOrderCount", (int) todayOrders);
         long todayOrderQty = dashboardQueryService.sumOrderQuantityBetween(tdStart, tdEnd);
@@ -105,19 +125,13 @@ public class DailyBriefOrchestrator {
         brief.put("todayOutboundCount", (int) todayOutbound);
         long todayOutboundQty = dashboardQueryService.sumOutstockQuantityBetween(tdStart, tdEnd);
         brief.put("todayOutboundQuantity", (int) todayOutboundQty);
+    }
 
-        // ④ 逾期订单数 + 拉取逾期订单明细（用于决策卡工厂分布展示）
-        long overdueCount = dashboardQueryService.countOverdueOrders();
-        brief.put("overdueOrderCount", (int) overdueCount);
-        List<com.fashion.supplychain.production.entity.ProductionOrder> overdueOrders =
-            dashboardQueryService.listOverdueOrders(60);
-
-        // ④ 高风险订单（进行中 + 7天内到期但【尚未逾期】 + 进度 < 50%）
-        // 注意：已逾期订单已在 overdueOrderCount 中计数，此处排除避免双重计数
-        String briefFactoryId = UserContext.factoryId(); // 🔒 工厂账号只看自己工厂的订单
+    private List<ProductionOrder> collectHighRiskOrders(LocalDate today) {
+        String briefFactoryId = UserContext.factoryId();
         LocalDateTime nowTime = today.atStartOfDay();
         LocalDateTime deadline = today.plusDays(7).atTime(LocalTime.MAX);
-        List<ProductionOrder> highRisk = productionOrderService.list(
+        return productionOrderService.list(
             new LambdaQueryWrapper<ProductionOrder>()
                 .select(
                     ProductionOrder::getId,
@@ -130,19 +144,19 @@ public class DailyBriefOrchestrator {
                     ProductionOrder::getMerchandiser
                 )
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(ProductionOrder::getTenantId, UserContext.tenantId())  // 🔒 租户隔离
-                .eq(org.springframework.util.StringUtils.hasText(briefFactoryId), ProductionOrder::getFactoryId, briefFactoryId)  // 🔒 工厂隔离
+                .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                .eq(org.springframework.util.StringUtils.hasText(briefFactoryId), ProductionOrder::getFactoryId, briefFactoryId)
                 .eq(ProductionOrder::getStatus, "production")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
-                .ge(ProductionOrder::getPlannedEndDate, nowTime)   // 未逾期（今天之后）
-                .le(ProductionOrder::getPlannedEndDate, deadline)   // 7天内到期
+                .ge(ProductionOrder::getPlannedEndDate, nowTime)
+                .le(ProductionOrder::getPlannedEndDate, deadline)
         ).stream()
             .filter(o -> o.getProductionProgress() == null || o.getProductionProgress() < 50)
             .sorted(Comparator.comparing(ProductionOrder::getPlannedEndDate))
             .collect(Collectors.toList());
-        brief.put("highRiskOrderCount", highRisk.size());
+    }
 
-        // ⑤ 首要关注订单（最近到期的高风险单）
+    private void buildTopPriorityAndPending(Map<String, Object> brief, LocalDate today, List<ProductionOrder> highRisk) {
         if (!highRisk.isEmpty()) {
             ProductionOrder top = highRisk.get(0);
             Map<String, Object> topOrder = new LinkedHashMap<>();
@@ -154,8 +168,6 @@ public class DailyBriefOrchestrator {
             topOrder.put("daysLeft", (int) daysLeft);
             brief.put("topPriorityOrder", topOrder);
         }
-
-        // ⑤+ 待办事项详情（前端小云助手展示具体订单内容）
         List<Map<String, Object>> pendingItems = highRisk.stream()
             .limit(3)
             .map(o -> {
@@ -169,19 +181,9 @@ public class DailyBriefOrchestrator {
             })
             .collect(Collectors.toList());
         brief.put("pendingItems", pendingItems);
+    }
 
-        List<BriefDecisionCard> decisionCards = dailyBriefDecisionOrchestrator.buildDecisionCards(
-            today,
-            overdueCount,
-            todayScan,
-            ydCount,
-            ydQty,
-            highRisk,
-            overdueOrders
-        );
-        brief.put("decisionCards", decisionCards);
-
-        // ⑥ 智能建议文案
+    private void buildSuggestions(Map<String, Object> brief, LocalDate today, long overdueCount, List<ProductionOrder> highRisk) {
         List<String> suggestions = new ArrayList<>();
         if (overdueCount > 0) {
             suggestions.add("🚨 有 " + overdueCount + " 张订单已逾期，请立即跟进工厂");
@@ -195,45 +197,58 @@ public class DailyBriefOrchestrator {
         if (suggestions.isEmpty()) {
             suggestions.add("✅ 整体生产状态良好，暂无高风险订单");
         }
-
-        // ⑥+ AI增强建议：Key 已配置时调用 DeepSeek 替换规则文案，失败则无缝降级
-        if (aiAdvisorService != null && aiAdvisorService.isEnabled()) {
-            try {
-                StringBuilder ctx = new StringBuilder();
-                ctx.append("逾期").append(overdueCount).append("张");
-                if (!highRisk.isEmpty()) {
-                    ProductionOrder top = highRisk.get(0);
-                    long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
-                    ctx.append("，高风险").append(highRisk.size()).append("张，最紧急：")
-                       .append(top.getOrderNo())
-                       .append("（进度").append(top.getProductionProgress() == null ? 0 : top.getProductionProgress())
-                       .append("%，还剩").append(daysLeft).append("天）");
-                }
-                ctx.append("，今日扫码").append(todayScan).append("次")
-                   .append("，昨日入库").append(ydCount).append("单/").append(ydQty).append("件");
-                     String aiText = getTimedDailyAdvice(ctx.toString());
-                if (aiText != null && !aiText.isBlank()) {
-                    List<String> aiList = Arrays.stream(aiText.split("\n"))
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .collect(Collectors.toList());
-                    if (!aiList.isEmpty()) {
-                        suggestions.clear();
-                        suggestions.addAll(aiList);
-                        brief.put("suggestionsSource", "ai");
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("[DailyBrief] AI建议生成失败，降级使用规则建议: {}", e.getMessage());
-            }
-        }
-
+        enhanceWithAiSuggestions(brief, today, overdueCount, highRisk, suggestions);
         brief.put("suggestions", suggestions);
+    }
 
-        // ⑦ 7日趋势数据（扫码/入库/下单）— 前端折线图使用
-        brief.put("trendData", buildTrendData(today));
+    private void enhanceWithAiSuggestions(Map<String, Object> brief, LocalDate today,
+            long overdueCount, List<ProductionOrder> highRisk, List<String> suggestions) {
+        if (aiAdvisorService == null || !aiAdvisorService.isEnabled()) {
+            return;
+        }
+        try {
+            StringBuilder ctx = new StringBuilder();
+            ctx.append("逾期").append(overdueCount).append("张");
+            if (!highRisk.isEmpty()) {
+                ProductionOrder top = highRisk.get(0);
+                long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
+                ctx.append("，高风险").append(highRisk.size()).append("张，最紧急：")
+                   .append(top.getOrderNo())
+                   .append("（进度").append(top.getProductionProgress() == null ? 0 : top.getProductionProgress())
+                   .append("%，还剩").append(daysLeft).append("天）");
+            }
+            ctx.append("，今日扫码").append(briefGetScanCount(brief)).append("次")
+               .append("，昨日入库").append(briefGetYdCount(brief)).append("单/").append(briefGetYdQty(brief)).append("件");
+            String aiText = getTimedDailyAdvice(ctx.toString());
+            if (aiText != null && !aiText.isBlank()) {
+                List<String> aiList = Arrays.stream(aiText.split("\n"))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toList());
+                if (!aiList.isEmpty()) {
+                    suggestions.clear();
+                    suggestions.addAll(aiList);
+                    brief.put("suggestionsSource", "ai");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[DailyBrief] AI建议生成失败，降级使用规则建议: {}", e.getMessage());
+        }
+    }
 
-        return brief;
+    private int briefGetScanCount(Map<String, Object> brief) {
+        Object v = brief.get("todayScanCount");
+        return v instanceof Integer ? (Integer) v : 0;
+    }
+
+    private int briefGetYdCount(Map<String, Object> brief) {
+        Object v = brief.get("yesterdayWarehousingCount");
+        return v instanceof Integer ? (Integer) v : 0;
+    }
+
+    private int briefGetYdQty(Map<String, Object> brief) {
+        Object v = brief.get("yesterdayWarehousingQuantity");
+        return v instanceof Integer ? (Integer) v : 0;
     }
 
     /**

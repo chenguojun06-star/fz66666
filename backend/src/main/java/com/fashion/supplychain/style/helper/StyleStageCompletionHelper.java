@@ -3,6 +3,7 @@ package com.fashion.supplychain.style.helper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.stock.entity.SampleStock;
@@ -50,7 +51,7 @@ public class StyleStageCompletionHelper {
     // ==================== Size Stage ====================
 
     public boolean startSize(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -78,7 +79,7 @@ public class StyleStageCompletionHelper {
      * 完成尺寸表配置
      */
     public boolean completeSize(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -110,7 +111,7 @@ public class StyleStageCompletionHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -134,7 +135,7 @@ public class StyleStageCompletionHelper {
     // ==================== BOM Stage ====================
 
     public boolean startBom(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -159,7 +160,7 @@ public class StyleStageCompletionHelper {
     }
 
     public boolean completeBom(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -197,7 +198,7 @@ public class StyleStageCompletionHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -221,7 +222,7 @@ public class StyleStageCompletionHelper {
     // ==================== Process Stage ====================
 
     public boolean startProcess(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -246,7 +247,7 @@ public class StyleStageCompletionHelper {
     }
 
     public boolean completeProcess(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -272,7 +273,7 @@ public class StyleStageCompletionHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -296,7 +297,7 @@ public class StyleStageCompletionHelper {
     // ==================== SizePrice Stage ====================
 
     public boolean startSizePrice(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -319,7 +320,7 @@ public class StyleStageCompletionHelper {
     }
 
     public boolean completeSizePrice(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -343,7 +344,7 @@ public class StyleStageCompletionHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -367,7 +368,7 @@ public class StyleStageCompletionHelper {
     // ==================== Secondary Stage ====================
 
     public boolean startSecondary(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -392,7 +393,7 @@ public class StyleStageCompletionHelper {
     }
 
     public boolean completeSecondary(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -435,7 +436,7 @@ public class StyleStageCompletionHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -457,7 +458,7 @@ public class StyleStageCompletionHelper {
     }
 
     public boolean skipSecondary(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenantCheck(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -564,5 +565,14 @@ public class StyleStageCompletionHelper {
     private boolean isCompleted(String status) {
         String s = String.valueOf(status == null ? "" : status).trim();
         return "COMPLETED".equalsIgnoreCase(s);
+    }
+
+    private StyleInfo getStyleWithTenantCheck(Long id) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .one();
     }
 }

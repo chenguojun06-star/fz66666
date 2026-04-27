@@ -85,34 +85,6 @@ public class StyleInfoOrchestrator {
      * 实时计算款式的开发成本（BOM用料成本 + 工序成本 + 二次工艺成本）
      * 不依赖可能过期的报价单快照数据
      */
-    private BigDecimal computeLiveDevCost(Long styleId) {
-        // BOM成本：优先用 total_price，否则用 usage_amount*(1+loss_rate/100)*unit_price
-        List<StyleBom> bomItems = styleBomService.listByStyleId(styleId);
-        double materialTotal = bomItems.stream().mapToDouble(bom -> {
-            BigDecimal tp = bom.getTotalPrice();
-            if (tp != null) return tp.doubleValue();
-            double usage = bom.getUsageAmount() != null ? bom.getUsageAmount().doubleValue() : 0.0;
-            double loss  = bom.getLossRate()    != null ? bom.getLossRate().doubleValue()    : 0.0;
-            double up    = bom.getUnitPrice()   != null ? bom.getUnitPrice().doubleValue()   : 0.0;
-            return usage * (1.0 + loss / 100.0) * up;
-        }).sum();
-
-        // 工序成本：所有工序单价之和
-        List<StyleProcess> processes = styleProcessService.listByStyleId(styleId);
-        double processTotal = processes.stream()
-                .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
-                .sum();
-
-        // 二次工艺成本：从 t_secondary_process 实时查询（total_price 已包含数量）
-        List<SecondaryProcess> secondaryList = secondaryProcessService.listByStyleId(styleId);
-        double otherTotal = secondaryList.stream()
-                .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
-                .sum();
-
-        return BigDecimal.valueOf(materialTotal + processTotal + otherTotal)
-                .setScale(2, java.math.RoundingMode.HALF_UP);
-    }
-
     public IPage<StyleInfo> list(Map<String, Object> params) {
         IPage<StyleInfo> page = styleInfoService.queryPage(params);
         styleSelectionSourceHelper.fillSelectionSourceAndCoverFallback(page.getRecords());
@@ -307,7 +279,10 @@ public class StyleInfoOrchestrator {
         validateStyleInfo(styleInfo);
         try {
             if (styleInfo.getId() != null) {
-                StyleInfo existing = styleInfoService.getById(styleInfo.getId());
+                StyleInfo existing = styleInfoService.lambdaQuery()
+                        .eq(StyleInfo::getId, styleInfo.getId())
+                        .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                        .one();
                 ensureNotScrapped(existing);
             }
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
@@ -441,7 +416,10 @@ public class StyleInfoOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public Object deleteWithApproval(Long id, String reason) {
-        StyleInfo style = styleInfoService.getById(id);
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                .one();
         if (style == null) {
             throw new NoSuchElementException("款式不存在");
         }
@@ -461,7 +439,10 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean scrap(Long id, String reason) {
-        StyleInfo style = styleInfoService.getById(id);
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                .one();
         if (style == null) {
             throw new NoSuchElementException("款式不存在");
         }
@@ -768,7 +749,10 @@ public class StyleInfoOrchestrator {
      */
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment) {
-        StyleInfo style = styleInfoService.getById(id);
+        StyleInfo style = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                .one();
         if (style == null) {
             throw new RuntimeException("款式不存在：" + id);
         }

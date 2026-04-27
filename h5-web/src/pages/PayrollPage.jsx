@@ -62,7 +62,8 @@ export default function PayrollPage() {
 
   const loadData = async (sd, ed) => {
     if (loading) return;
-    const s = sd || startDate, e = ed || endDate;
+    const s = sd, e = ed;
+    if (!s || !e) return;
     setLoading(true);
     try {
       const res = await api.finance.payrollSummary({

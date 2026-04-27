@@ -92,12 +92,14 @@ export interface MaterialReconQueryParams {
   supplierName?: string;
   materialCode?: string;
   status?: string;
-  sourceType?: string; // 采购来源筛选: order=批采, sample=样衣
+  sourceType?: string;
   startDate?: string;
   endDate?: string;
   page: number;
   pageSize: number;
 }
+
+export type MaterialReconType = MaterialReconciliation;
 
 export interface ShipmentReconQueryParams {
   reconciliationNo?: string;

@@ -1098,19 +1098,6 @@ public class MaterialPurchasePickingHelper {
         return snapshot;
     }
 
-    private String resolveWarehouseLocation(List<MaterialPickingItem> items) {
-        return items.stream()
-                .map(MaterialPickingItem::getMaterialStockId)
-                .filter(StringUtils::hasText)
-                .map(materialStockService::getById)
-                .filter(Objects::nonNull)
-                .map(MaterialStock::getLocation)
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .distinct()
-                .collect(Collectors.joining("、"));
-    }
-
     private void applyMaterialDeductionForExternalFactory(
             MaterialPicking picking,
             MaterialPurchase purchase,

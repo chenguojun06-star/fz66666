@@ -135,6 +135,7 @@ public class ProductionOrderWorkflowHelper {
         if (order == null) {
             order = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getOrderNo, oid)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
                     .last("LIMIT 1")
                     .one();
             if (order != null) {

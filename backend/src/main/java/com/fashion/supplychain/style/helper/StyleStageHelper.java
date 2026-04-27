@@ -32,7 +32,7 @@ public class StyleStageHelper {
 
 
     public StyleInfo updateProductionRequirements(Long id, Map<String, Object> body) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -81,7 +81,7 @@ public class StyleStageHelper {
             throw new AccessDeniedException("无权限操作");
         }
 
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -117,7 +117,7 @@ public class StyleStageHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -165,7 +165,7 @@ public class StyleStageHelper {
     }
 
     public boolean startProductionStage(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -185,7 +185,7 @@ public class StyleStageHelper {
     }
 
     public boolean completeProductionStage(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -207,7 +207,7 @@ public class StyleStageHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -230,7 +230,7 @@ public class StyleStageHelper {
     // ==================== Pattern Stage ====================
 
     public boolean startPattern(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -275,7 +275,7 @@ public class StyleStageHelper {
     }
 
     public boolean completePattern(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -307,7 +307,7 @@ public class StyleStageHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -348,7 +348,7 @@ public class StyleStageHelper {
     // ==================== Sample Stage ====================
 
     public boolean startSample(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -372,7 +372,7 @@ public class StyleStageHelper {
     }
 
     public boolean updateSampleProgress(Long id, Map<String, Object> body) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -407,7 +407,7 @@ public class StyleStageHelper {
     }
 
     public boolean completeSample(Long id) {
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -469,7 +469,7 @@ public class StyleStageHelper {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
         }
-        StyleInfo current = styleInfoService.getById(id);
+        StyleInfo current = getStyleWithTenant(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
@@ -506,5 +506,12 @@ public class StyleStageHelper {
     private boolean isCompleted(String status) {
         String s = String.valueOf(status == null ? "" : status).trim();
         return "COMPLETED".equalsIgnoreCase(s);
+    }
+
+    private StyleInfo getStyleWithTenant(Long id) {
+        return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, id)
+                .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                .one();
     }
 }

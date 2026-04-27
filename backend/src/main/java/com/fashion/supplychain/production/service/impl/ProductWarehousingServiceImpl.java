@@ -61,7 +61,6 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         Map<String, Object> safeParams = params == null ? new java.util.HashMap<>() : params;
         Integer page = ParamUtils.getPage(safeParams);
         Integer pageSize = ParamUtils.getPageSize(safeParams);
-
         Page<ProductWarehousing> pageInfo = new Page<>(page, pageSize);
 
         String warehousingNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "warehousingNo"));
@@ -71,63 +70,56 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         String warehouse = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "warehouse"));
         String qualityStatus = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "qualityStatus"));
         String cuttingBundleId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleId"));
-        String cuttingBundleQrCode = ParamUtils
-                .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleQrCode"));
+        String cuttingBundleQrCode = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleQrCode"));
         String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
         String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
 
-        // 关键词搜索支持订单号/款号/工厂名：通过生产订单表先命中订单ID
-        final List<String> keywordMatchedOrderIds = StringUtils.hasText(warehousingNo)
-            ? productionOrderService.list(
+        List<String> keywordMatchedOrderIds = resolveKeywordMatchedOrderIds(warehousingNo);
+        LambdaQueryWrapper<ProductWarehousing> wrapper = buildWarehousingQueryWrapper(
+                orderId, orderNo, styleNo, warehouse, qualityStatus, cuttingBundleId, cuttingBundleQrCode, warehousingNo, keywordMatchedOrderIds);
+        List<String> scopedOrderIds = resolveScopedOrderIds(safeParams, parentOrgUnitId, factoryType);
+
+        if (scopedOrderIds != null) {
+            if (scopedOrderIds.isEmpty()) return new Page<>(page, pageSize, 0);
+            wrapper.in(ProductWarehousing::getOrderId, scopedOrderIds);
+        }
+        return baseMapper.selectPage(pageInfo, wrapper);
+    }
+
+    private List<String> resolveKeywordMatchedOrderIds(String warehousingNo) {
+        if (!StringUtils.hasText(warehousingNo)) return java.util.Collections.emptyList();
+        return productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                     .select(ProductionOrder::getId)
                     .and(w -> w.like(ProductionOrder::getOrderNo, warehousingNo)
                         .or().like(ProductionOrder::getStyleNo, warehousingNo)
                         .or().like(ProductionOrder::getFactoryName, warehousingNo))
-                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag)
-                        .or().eq(ProductionOrder::getDeleteFlag, 0)))
-                .stream()
-                .map(ProductionOrder::getId)
-                .filter(StringUtils::hasText)
-                .toList()
-            : java.util.Collections.emptyList();
+                    .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0)))
+                .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).toList();
+    }
 
+    private LambdaQueryWrapper<ProductWarehousing> buildWarehousingQueryWrapper(
+            String orderId, String orderNo, String styleNo, String warehouse, String qualityStatus,
+            String cuttingBundleId, String cuttingBundleQrCode, String warehousingNo, List<String> keywordMatchedOrderIds) {
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
-            .select(
-                ProductWarehousing::getId,
-                ProductWarehousing::getWarehousingNo,
-                ProductWarehousing::getOrderId,
-                ProductWarehousing::getOrderNo,
-                ProductWarehousing::getStyleId,
-                ProductWarehousing::getStyleNo,
-                ProductWarehousing::getStyleName,
-                ProductWarehousing::getWarehousingQuantity,
-                ProductWarehousing::getQualifiedQuantity,
-                ProductWarehousing::getUnqualifiedQuantity,
-                ProductWarehousing::getWarehousingType,
-                ProductWarehousing::getWarehouse,
-                ProductWarehousing::getWarehousingStartTime,
-                ProductWarehousing::getWarehousingEndTime,
-                ProductWarehousing::getWarehousingOperatorId,
-                ProductWarehousing::getWarehousingOperatorName,
-                ProductWarehousing::getQualityStatus,
-                ProductWarehousing::getCuttingBundleId,
-                ProductWarehousing::getCuttingBundleNo,
-                ProductWarehousing::getCuttingBundleQrCode,
-                ProductWarehousing::getUnqualifiedImageUrls,
-                ProductWarehousing::getDefectCategory,
-                ProductWarehousing::getDefectRemark,
-                ProductWarehousing::getRepairRemark,
-                ProductWarehousing::getReceiverId,
-                ProductWarehousing::getReceiverName,
-                ProductWarehousing::getReceivedTime,
-                ProductWarehousing::getInspectionStatus,
-                ProductWarehousing::getCreateTime,
-                ProductWarehousing::getUpdateTime,
-                ProductWarehousing::getDeleteFlag,
-                ProductWarehousing::getQualityOperatorId,
-                ProductWarehousing::getQualityOperatorName,
-                ProductWarehousing::getTenantId)
+                .select(
+                    ProductWarehousing::getId, ProductWarehousing::getWarehousingNo,
+                    ProductWarehousing::getOrderId, ProductWarehousing::getOrderNo,
+                    ProductWarehousing::getStyleId, ProductWarehousing::getStyleNo, ProductWarehousing::getStyleName,
+                    ProductWarehousing::getWarehousingQuantity, ProductWarehousing::getQualifiedQuantity,
+                    ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getWarehousingType,
+                    ProductWarehousing::getWarehouse, ProductWarehousing::getWarehousingStartTime,
+                    ProductWarehousing::getWarehousingEndTime, ProductWarehousing::getWarehousingOperatorId,
+                    ProductWarehousing::getWarehousingOperatorName, ProductWarehousing::getQualityStatus,
+                    ProductWarehousing::getCuttingBundleId, ProductWarehousing::getCuttingBundleNo,
+                    ProductWarehousing::getCuttingBundleQrCode, ProductWarehousing::getUnqualifiedImageUrls,
+                    ProductWarehousing::getDefectCategory, ProductWarehousing::getDefectRemark,
+                    ProductWarehousing::getRepairRemark, ProductWarehousing::getReceiverId,
+                    ProductWarehousing::getReceiverName, ProductWarehousing::getReceivedTime,
+                    ProductWarehousing::getInspectionStatus, ProductWarehousing::getCreateTime,
+                    ProductWarehousing::getUpdateTime, ProductWarehousing::getDeleteFlag,
+                    ProductWarehousing::getQualityOperatorId, ProductWarehousing::getQualityOperatorName,
+                    ProductWarehousing::getTenantId)
                 .eq(ProductWarehousing::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(orderId), ProductWarehousing::getOrderId, orderId)
                 .like(StringUtils.hasText(orderNo), ProductWarehousing::getOrderNo, orderNo)
@@ -135,10 +127,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 .eq(StringUtils.hasText(warehouse), ProductWarehousing::getWarehouse, warehouse)
                 .eq(StringUtils.hasText(qualityStatus), ProductWarehousing::getQualityStatus, qualityStatus)
                 .eq(StringUtils.hasText(cuttingBundleId), ProductWarehousing::getCuttingBundleId, cuttingBundleId)
-                .eq(StringUtils.hasText(cuttingBundleQrCode), ProductWarehousing::getCuttingBundleQrCode,
-                        cuttingBundleQrCode)
+                .eq(StringUtils.hasText(cuttingBundleQrCode), ProductWarehousing::getCuttingBundleQrCode, cuttingBundleQrCode)
                 .orderByDesc(ProductWarehousing::getCreateTime);
-
         if (StringUtils.hasText(warehousingNo)) {
             wrapper.and(w -> {
                 w.like(ProductWarehousing::getWarehousingNo, warehousingNo);
@@ -147,12 +137,13 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 }
             });
         }
+        return wrapper;
+    }
 
-        // 工厂账号隔离（由 ProductWarehousingOrchestrator 注入 _factoryOrderIds）
+    private List<String> resolveScopedOrderIds(Map<String, Object> safeParams, String parentOrgUnitId, String factoryType) {
         @SuppressWarnings("unchecked")
         List<String> factoryOrderIds = (List<String>) safeParams.get("_factoryOrderIds");
         List<String> scopedOrderIds = factoryOrderIds != null ? new java.util.ArrayList<>(factoryOrderIds) : null;
-
         if (StringUtils.hasText(parentOrgUnitId) || StringUtils.hasText(factoryType)) {
             List<String> matchedOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
@@ -167,15 +158,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 scopedOrderIds.retainAll(matchedOrderIds);
             }
         }
-
-        if (scopedOrderIds != null) {
-            if (scopedOrderIds.isEmpty()) {
-                return new Page<>(page, pageSize, 0);
-            }
-            wrapper.in(ProductWarehousing::getOrderId, scopedOrderIds);
-        }
-
-        return baseMapper.selectPage(pageInfo, wrapper);
+        return scopedOrderIds;
     }
 
     private boolean saveWarehousingAndUpdateOrderInternal(ProductWarehousing productWarehousing,
@@ -498,7 +481,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     @Transactional(rollbackFor = Exception.class)
     public boolean updateWarehousingAndUpdateOrder(ProductWarehousing productWarehousing) {
         // 查询原入库记录
-        ProductWarehousing oldWarehousing = this.getById(productWarehousing.getId());
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        ProductWarehousing oldWarehousing = this.lambdaQuery()
+                .eq(ProductWarehousing::getId, productWarehousing.getId())
+                .eq(ProductWarehousing::getTenantId, tenantId)
+                .one();
         if (oldWarehousing == null) {
             return false;
         }

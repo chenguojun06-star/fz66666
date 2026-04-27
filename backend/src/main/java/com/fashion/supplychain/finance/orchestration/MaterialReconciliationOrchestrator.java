@@ -417,6 +417,7 @@ public class MaterialReconciliationOrchestrator {
                 .gt(MaterialPurchase::getArrivedQuantity, 0)
                 .ne(MaterialPurchase::getStatus, "cancelled")
                 .orderByDesc(MaterialPurchase::getUpdateTime)
+                .last("LIMIT 5000")
                 .list();
         if (list == null || list.isEmpty()) {
             return 0;

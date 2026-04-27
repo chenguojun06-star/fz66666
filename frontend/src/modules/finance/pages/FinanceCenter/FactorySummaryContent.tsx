@@ -665,7 +665,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         visible={printModalVisible}
         onClose={() => setPrintModalVisible(false)}
         factoryData={getPrintData()}
-        dateRange={getDateRange()}
+        dateRange={printModalVisible ? getDateRange() : ['-', '-']}
       />
     </div>
   );

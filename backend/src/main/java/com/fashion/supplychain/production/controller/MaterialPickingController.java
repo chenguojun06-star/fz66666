@@ -192,11 +192,14 @@ public class MaterialPickingController {
      */
     @PostMapping("/{id}/cancel-pending")
     public Result<Void> cancelPending(@PathVariable String id) {
-        MaterialPicking picking = materialPickingService.getById(id);
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        MaterialPicking picking = materialPickingService.lambdaQuery()
+                .eq(MaterialPicking::getId, id)
+                .eq(MaterialPicking::getTenantId, tenantId)
+                .one();
         if (picking == null) {
             throw new java.util.NoSuchElementException("领料单不存在");
         }
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (tenantId != null && !tenantId.equals(picking.getTenantId())) {
             throw new IllegalStateException("无权操作此领料单");
         }

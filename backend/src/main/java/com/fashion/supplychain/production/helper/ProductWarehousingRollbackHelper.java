@@ -161,12 +161,15 @@ public class ProductWarehousingRollbackHelper {
                                 : ("ensureFinanceRecords failed: " + e.getMessage()),
                         LocalDateTime.now());
             }
-            productionOrderService.recomputeProgressFromRecords(oid);
+            try {
+                productionOrderService.recomputeProgressFromRecords(oid);
+            } catch (Exception e) {
+                log.warn("[入库回退] 进度重算失败（不影响回退结果）: orderId={}", oid, e);
+            }
         }
         return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
     private boolean rollbackQualifiedByBundleQrCode(String orderId, String cuttingBundleQrCode,
             Integer rollbackQuantity,
             String rollbackRemark) {

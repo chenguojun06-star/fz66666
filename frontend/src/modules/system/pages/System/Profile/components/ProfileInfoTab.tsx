@@ -488,6 +488,8 @@ const ProfileInfoTab: React.FC = () => {
                             <span style={{ fontWeight: 600, fontSize: 15 }}>修改密码</span>
                         </div>
                         <Form form={pwdForm} layout="vertical" requiredMark={false}>
+                            {/* Hidden username field for browser password manager accessibility */}
+                            <input type="text" name="username" autoComplete="username" defaultValue={user?.username ?? ''} style={{ display: 'none' }} readOnly aria-hidden="true" />
                             <Form.Item label="原密码" name="oldPassword" rules={[{ required: true, message: '请输入原密码' }]}>
                                 <Input.Password id="oldPassword" placeholder="请输入当前密码" autoComplete="current-password" />
                             </Form.Item>

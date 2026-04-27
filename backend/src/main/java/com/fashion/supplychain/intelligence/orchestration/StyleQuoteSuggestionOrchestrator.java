@@ -127,8 +127,8 @@ public class StyleQuoteSuggestionOrchestrator {
                     resp.setSuggestedPrice(total.multiply(DEFAULT_MARGIN).setScale(2, RoundingMode.HALF_UP));
                     return;
                 }
-            } catch (NumberFormatException ignored) {
-                // styleId 非数字，跳过
+            } catch (NumberFormatException e) {
+                log.debug("[StyleQuote] styleId非数字，跳过: {}", e.getMessage());
             }
         }
 

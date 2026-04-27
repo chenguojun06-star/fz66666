@@ -280,7 +280,7 @@ public class TenantAssert {
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            // 实体可能没有 deleteFlag 字段，忽略
+            log.debug("[TenantAssert] deleteFlag检查跳过(实体可能无此字段): {}", e.getMessage());
         }
         return entity;
     }

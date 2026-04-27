@@ -112,6 +112,7 @@ public class OrderEditTool implements AgentTool {
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getId, orderId.trim())
                 .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .one();
         if (order == null) {
             return MAPPER.writeValueAsString(Map.of("error", "订单不存在或无权访问"));

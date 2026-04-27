@@ -84,6 +84,7 @@ public class ReceivableOrchestrator {
         return receivableService.lambdaQuery()
                 .eq(Receivable::getId, id)
                 .eq(Receivable::getTenantId, tenantId)
+                .eq(Receivable::getDeleteFlag, 0)
                 .one();
     }
 
@@ -254,7 +255,11 @@ public class ReceivableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Receivable markReceived(String id, BigDecimal paymentAmount, String remark) {
         TenantAssert.assertTenantContext();
-        Receivable r = receivableService.getById(id);
+        Long tenantId = UserContext.tenantId();
+        Receivable r = receivableService.lambdaQuery()
+                .eq(Receivable::getId, id)
+                .eq(Receivable::getTenantId, tenantId)
+                .one();
         if (r == null) throw new RuntimeException("应收单不存在");
         if ("PAID".equals(r.getStatus())) throw new RuntimeException("该应收单已结清，无法重复收款");
 
@@ -279,7 +284,10 @@ public class ReceivableOrchestrator {
         if (receivable == null || !StringUtils.hasText(receivable.getBillAggregationId())) {
             return;
         }
-        BillAggregation bill = billAggregationService.getById(receivable.getBillAggregationId());
+        BillAggregation bill = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getId, receivable.getBillAggregationId())
+                .eq(BillAggregation::getTenantId, receivable.getTenantId())
+                .one();
         if (bill == null || bill.getDeleteFlag() == null || bill.getDeleteFlag() != 0) {
             return;
         }

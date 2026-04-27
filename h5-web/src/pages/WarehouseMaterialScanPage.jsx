@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api';
 import { toast } from '@/utils/uiHelper';
+import { getUserInfo } from '@/utils/storage';
 import wx from '@/adapters/wx';
 
 export default function WarehouseMaterialScanPage() {
@@ -26,7 +27,7 @@ export default function WarehouseMaterialScanPage() {
         const code = String(res.result || '').trim();
         if (/^MR\d{13}$/.test(code)) { setRollCode(code); setRollInfo(null); setErrorMsg(''); setSuccessMsg(''); queryRoll(code); }
         else toast.error('不是料卷二维码');
-      }).catch((e) => console.error('WarehouseMaterialScan error:', e));
+      }).catch(() => {});
     } else {
       toast.info('请在微信中使用扫码功能');
     }
@@ -35,8 +36,13 @@ export default function WarehouseMaterialScanPage() {
   const queryRoll = async (code) => {
     setLoading(true); setErrorMsg(''); setSuccessMsg(''); setRollInfo(null);
     try {
-      const info = await api.materialRoll.scan({ scanCode: code });
-      setRollInfo(info);
+      const userInfo = getUserInfo() || {};
+      const info = await api.materialRoll.scan({
+        rollCode: code, action: 'query',
+        operatorId: userInfo.userId || '', operatorName: userInfo.name || userInfo.username || '',
+      });
+      const data = info?.data || info;
+      setRollInfo(data);
     } catch (e) { setErrorMsg(e.message || '查询失败'); } finally { setLoading(false); }
   };
 
@@ -45,8 +51,13 @@ export default function WarehouseMaterialScanPage() {
     if (rollInfo.currentStatus !== 'IN_STOCK') { toast.error('该料卷不在库，无法发料'); return; }
     setSubmitting(true); setErrorMsg(''); setSuccessMsg('');
     try {
-      const result = await api.production.executeScan({ scanCode: rollCode, scanType: 'material_roll', action: 'issue', cuttingOrderNo });
-      const msg = result?.message || '发料成功！';
+      const userInfo = getUserInfo() || {};
+      const result = await api.materialRoll.scan({
+        rollCode, action: 'issue', cuttingOrderNo,
+        operatorId: userInfo.userId || '', operatorName: userInfo.name || userInfo.username || '',
+      });
+      const data = result?.data || result;
+      const msg = data?.message || '发料成功！';
       setSuccessMsg(msg);
       toast.success(msg);
       setRollInfo({ ...rollInfo, currentStatus: 'ISSUED' });
@@ -62,8 +73,13 @@ export default function WarehouseMaterialScanPage() {
     if (rollInfo.currentStatus !== 'ISSUED') { toast.error('该料卷尚未发料，无需退回'); return; }
     setSubmitting(true); setErrorMsg(''); setSuccessMsg('');
     try {
-      const result = await api.production.executeScan({ scanCode: rollCode, scanType: 'material_roll', action: 'return' });
-      const msg = result?.message || '退回成功！';
+      const userInfo = getUserInfo() || {};
+      const result = await api.materialRoll.scan({
+        rollCode, action: 'return',
+        operatorId: userInfo.userId || '', operatorName: userInfo.name || userInfo.username || '',
+      });
+      const data = result?.data || result;
+      const msg = data?.message || '退回成功！';
       setSuccessMsg(msg);
       toast.success(msg);
       setRollInfo({ ...rollInfo, currentStatus: 'IN_STOCK' });

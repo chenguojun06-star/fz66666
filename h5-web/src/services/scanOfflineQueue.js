@@ -113,6 +113,7 @@ class ScanOfflineQueue {
             scanType: item.scanType,
             quantity: item.quantity,
             processCode: item.processCode,
+            processName: item.processName,
             orderId: item.orderId,
             bundleNo: item.bundleNo,
             requestId: item.requestId || `offline_${item.id}_${Date.now()}`,

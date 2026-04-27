@@ -19,7 +19,6 @@ import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { useCustomerOptions } from '@/hooks/useCustomerOptions';
-import type { PaginatedResponse } from '@/types/api';
 import api, {
   parseProductionOrderLines,
   isApiSuccess,
@@ -33,23 +32,15 @@ import dayjs from 'dayjs';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
-import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
-import { getDynamicParentMapping, setDynamicParentMapping } from '../ProgressDetail/utils';
-import { processParentMappingApi } from '@/services/production/productionApi';
-import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
-import { useStagnantDetection } from '../ProgressDetail/hooks/useStagnantDetection';
 import ExportButton from '@/components/common/ExportButton';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
-import type { ProgressNode } from '../ProgressDetail/types';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useModal } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
-import { usePersistentSort } from '@/hooks/usePersistentSort';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
@@ -67,24 +58,11 @@ import {
   useOrderFocus,
   useAnomalyDetection,
 } from './hooks';
+import { useProductionListData } from './hooks/useProductionListData';
 import { safeString } from './utils';
 import TransferOrderModal from './TransferOrderModal';
 import AnomalyBanner from './AnomalyBanner';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
-import { useProductionSmartQueue } from '../useProductionSmartQueue';
-
-const LIST_VIEW_MODE_STORAGE_KEY = 'production_list_view_mode';
-
-// 悬停卡预加载用的默认工序节点（与 SmartOrderHoverCard STAGES_DEF 对应）
-const DEFAULT_HOVER_NODES: ProgressNode[] = [
-  { id: '采购', name: '采购' },
-  { id: '裁剪', name: '裁剪' },
-  { id: '车缝', name: '车缝' },
-  { id: '质检', name: '质检' },
-  { id: '入库', name: '入库' },
-];
 
 const CustomerFilterSelect: React.FC<{
   value: string;
@@ -128,114 +106,28 @@ const ProductionList: React.FC = () => {
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
 
     // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
-    const orderFocusRef = useRef<{ triggerOrderFocus: (...args: any[]) => void; clearSmartFocus: () => void } | null>(null);
-    const { clearAllBoardCache, boardStatsByOrder: _boardStatsByOrder, boardTimesByOrder, boardStatsLoadingByOrder: _boardStatsLoadingByOrder, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder, boardStatsByOrderRef, boardStatsLoadingByOrderRef, calcCardProgress } = useCardProgress();
     const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
     const { labelPrintOpen, closeLabelPrint, labelPrintOrder, labelPrintStyle, handlePrintLabel } = useLabelPrint();
 
-  // ===== 查询参数 =====
-  // 跨页跳转精准定位：组件 mount 时就从 URL 读取 orderNo，避免初始 fetch 与 URL params effect 之间的竞态条件
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>(() => {
-    const initSearch = new URLSearchParams(window.location.search);
-    const initOrderNo = initSearch.get('orderNo') || '';
-    return {
-      page: 1, pageSize: readPageSize(DEFAULT_PAGE_SIZE), includeScrapped: true, excludeTerminal: false,
-      ...(initOrderNo ? { keyword: initOrderNo } : {}),
-    };
-  });
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const { sortField, sortOrder, handleSort } = usePersistentSort<string, 'asc' | 'desc'>({
-    storageKey: 'production-list',
-    defaultField: 'createTime',
-    defaultOrder: 'desc',
-  });
-  // ===== 数据状态 =====
-  const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [_selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [viewMode, setViewModeState] = useState<'list' | 'card' | 'smart'>(
-    () => (localStorage.getItem(LIST_VIEW_MODE_STORAGE_KEY) as 'list' | 'card' | 'smart') || 'list'
-  );
-  const setViewMode = (mode: 'list' | 'card' | 'smart') => {
-    localStorage.setItem(LIST_VIEW_MODE_STORAGE_KEY, mode);
-    setViewModeState(mode);
-    // 无论切到哪个视图，都只重置页码，pageSize 由用户自己选择（不强制覆盖）
-    setQueryParams(prev => ({ ...prev, page: 1 }));
-  };
-  const [showDelayedOnly, setShowDelayedOnly] = useState(false);
-  const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
-  const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
-
-  // AI 交期风险数据（背景静默加载，不阻塞表格渲染）
-  const hasActiveOrders = useMemo(() => productionList.some(o => o.status !== 'completed'), [productionList]);
-  const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-
-  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-
-  // 停滞检测：返回 Map<orderId, stagnantDays>，与生产进度页保持一致
-  const stagnantOrderIds = useStagnantDetection(productionList, boardTimesByOrder);
-
+  // ===== 数据层 Hook（状态 + 数据获取 + Effects） =====
   const {
-    smartActionItems,
-    smartQueueOrders,
-  } = useProductionSmartQueue({
-    orders: productionList,
-    deliveryRiskMap,
-    stagnantOrderIds,
-    smartQueueFilter,
-    setSmartQueueFilter,
-      triggerOrderFocus: (...args: any[]) => orderFocusRef.current?.triggerOrderFocus(...args),
-      clearFocus: () => orderFocusRef.current?.clearSmartFocus(),
-  });
-
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({
-      title,
-      reason,
-      code,
-      actionText: '刷新重试',
-    });
-  };
+    queryParams, setQueryParams, dateRange, setDateRange,
+    sortField, sortOrder, handleSort,
+    productionList, setProductionList, selectedRowKeys, setSelectedRowKeys,
+    _selectedRows, setSelectedRows, loading, total,
+    viewMode, setViewMode,
+    showDelayedOnly, setShowDelayedOnly, activeStatFilter, setActiveStatFilter,
+    smartQueueFilter, setSmartQueueFilter,
+    smartError, showSmartErrorNotice, reportSmartError,
+    orderFocusRef, calcCardProgress,
+    deliveryRiskMap, stagnantOrderIds, smartActionItems, smartQueueOrders,
+    fetchProductionList, sortedProductionList, urlFocusApplied,
+    wsRefreshRef,
+  } = useProductionListData();
 
   // ===== 提取的 Hooks =====
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
   const { globalStats } = useProductionStats(queryParams);
-
-  // 获取生产订单列表
-  const fetchProductionList = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get<PaginatedResponse<ProductionOrder>>(
-        '/production/order/list',
-        { params: queryParams }
-      );
-      if (isApiSuccess(response)) {
-        setProductionList(response.data.records || []);
-        setTotal(response.data.total || 0);
-        clearAllBoardCache();
-        clearBoardStatsTimestamps();
-        if (showSmartErrorNotice) setSmartError(null);
-      } else {
-        const errMessage =
-          typeof response === 'object' && response !== null && 'message' in response
-            ? String((response as any).message) || '获取生产订单列表失败'
-            : '获取生产订单列表失败';
-        reportSmartError('生产订单加载失败', errMessage, 'PROD_LIST_LOAD_FAILED');
-        message.error(
-          errMessage
-        );
-      }
-    } catch (error) {
-      reportSmartError('生产订单加载失败', '网络异常或服务不可用，请稍后重试', 'PROD_LIST_LOAD_EXCEPTION');
-      message.error('获取生产订单列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 依赖 fetchProductionList 的 Hooks
   const {
@@ -275,165 +167,9 @@ const ProductionList: React.FC = () => {
     renderCompletionTimeTag,
   } = useProgressTracking(productionList);
 
-  // ===== Effects =====
-  // 挂载时懒加载动态工序父级映射（供二次工艺等子工序识别父级用，全局只请求一次）
-  useEffect(() => {
-    if (!getDynamicParentMapping()) {
-      processParentMappingApi.list().then((res: any) => {
-        const data = res?.data?.data ?? res?.data ?? {};
-        if (data && typeof data === 'object') setDynamicParentMapping(data);
-      }).catch((err) => { console.warn('[ProcessParentMapping] 加载动态映射失败:', err); });
-    }
-  }, []);
-
-  useEffect(() => {
-    setSelectedRowKeys([]);
-    setSelectedRows([]);
-    fetchProductionList();
-  }, [queryParams]);
-
-  // 每次重新切回该页面（浏览器 Tab 或 SPA 菜单）时静默刷新
-  useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        fetchProductionList();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, []);
-
-  // 预加载悬停卡 boardStats（与生产进度页保持一致：前20条）
-  useEffect(() => {
-    if (!productionList.length) return;
-    const queue = productionList.slice(0, Math.min(20, productionList.length));
-    let cancelled = false;
-    const run = async () => {
-      for (const o of queue) {
-        if (cancelled) return;
-        await ensureBoardStatsForOrder({
-          order: o,
-          nodes: DEFAULT_HOVER_NODES,
-          boardStatsByOrder: boardStatsByOrderRef.current,
-          boardStatsLoadingByOrder: boardStatsLoadingByOrderRef.current,
-          mergeBoardStatsForOrder,
-          mergeBoardTimesForOrder,
-          setBoardLoadingForOrder,
-          mergeProcessDataForOrder,
-        });
-      }
-    };
-    void run();
-    return () => { cancelled = true; };
-  // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免无限循环
-  }, [productionList, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder]);
-
-  // URL 参数解析
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const styleNo = (params.get('styleNo') || '').trim();
-    const orderNo = (params.get('orderNo') || '').trim();
-    if (styleNo || orderNo) {
-      setQueryParams((prev) => {
-        const newKeyword = orderNo || (prev.keyword || '');
-        const newStyleNo = styleNo || (prev.styleNo || '');
-        // 值与当前完全一致时返回同一引用，避免触发多余的 fetch（常见于跨页 mount 时 URL 已预读场景）
-        if (newKeyword === (prev.keyword || '') && newStyleNo === (prev.styleNo || '')) {
-          return prev;
-        }
-        return { ...prev, page: 1, styleNo: newStyleNo || undefined, keyword: newKeyword };
-      });
-    }
-    // URL filter 参数 → 激活对应智能队列筛选（如 ?filter=overdue 触发逾期筛选）
-    const filterParam = (params.get('filter') || '').trim();
-    if (['overdue', 'urgent', 'behind', 'stagnant'].includes(filterParam)) {
-      setSmartQueueFilter(filterParam as 'overdue' | 'urgent' | 'behind' | 'stagnant');
-    }
-    // URL factoryName 参数 → 按工厂过滤（来自仪表盘延期订单分布点击跳转）
-    const factoryNameParam = (params.get('factoryName') || '').trim();
-    if (factoryNameParam) {
-      setQueryParams((prev) => {
-        if ((prev.factoryName || '') === factoryNameParam) return prev;
-        return { ...prev, factoryName: factoryNameParam, page: 1 };
-      });
-    }
-  }, [location.search]);
-
-  // 实时同步：30秒自动轮询更新数据
-  useSync(
-    'production-orders',
-    async () => {
-      try {
-        const response = await api.get<PaginatedResponse<ProductionOrder>>(
-          '/production/order/list',
-          { params: queryParams }
-        );
-        if (isApiSuccess(response)) return response.data.records || [];
-        return [];
-      } catch {
-        return [];
-      }
-    },
-    (newData, oldData) => {
-      if (oldData !== null) {
-        setProductionList(newData);
-      }
-    },
-    {
-      interval: 30000,
-      enabled: !loading && !quickEditModal.visible,
-      pauseOnHidden: true,
-      onError: (error) => {
-        console.error('[实时同步] 错误', error);
-      }
-    }
-  );
-
-  // WebSocket进度变更即时刷新
-  const wsRefreshRef = useRef(0);
-  useEffect(() => {
-    const handleProgressChanged = () => {
-      wsRefreshRef.current += 1;
-      fetchProductionList();
-    };
-    window.addEventListener('order:progress:changed', handleProgressChanged);
-    return () => window.removeEventListener('order:progress:changed', handleProgressChanged);
-  }, [fetchProductionList]);
-
-  // 排序：终态订单（关单/报废/完成）始终排到最后，智能条筛选结果也走同一套共享逻辑
-  const sortedProductionList = useMemo(() => {
-    const filtered = [...smartQueueOrders];
-    filtered.sort((a: any, b: any) => {
-      const aClose = isOrderTerminal(a) ? 1 : 0;
-      const bClose = isOrderTerminal(b) ? 1 : 0;
-      if (aClose !== bClose) return aClose - bClose;
-      if (sortField === 'createTime') {
-        const aTime = a[sortField] ? new Date(a[sortField]).getTime() : 0;
-        const bTime = b[sortField] ? new Date(b[sortField]).getTime() : 0;
-        return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
-      }
-      return 0;
-    });
-    return filtered;
-  }, [smartQueueOrders, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
-
   // ===== useOrderFocus: 聚焦/滚动/高亮逻辑 =====
   const { focusedOrderId, pendingScrollOrderId: _pendingScrollOrderId, getOrderDomKey, triggerOrderFocus, clearSmartFocus, scrollToFocusedOrder: _scrollToFocusedOrder } = useOrderFocus(viewMode, sortedProductionList);
   orderFocusRef.current = { triggerOrderFocus, clearSmartFocus };
-
-  // 跨页跳转精准聚焦：URL 含 orderNo 且列表首次加载完成后，自动滚动高亮目标订单
-  // 仅触发一次（urlFocusApplied ref 保护），避免后续定时刷新反复高亮
-  const urlFocusApplied = useRef(false);
-  useEffect(() => {
-    if (urlFocusApplied.current || productionList.length === 0) return;
-    const orderNo = (new URLSearchParams(window.location.search).get('orderNo') || '').trim();
-    if (!orderNo) return;
-    const targetOrder = productionList.find((o) => String(o.orderNo || '').trim() === orderNo);
-    if (targetOrder) {
-      urlFocusApplied.current = true;
-      triggerOrderFocus(targetOrder);
-    }
-  }, [productionList, triggerOrderFocus]);
 
   // ===== useAnomalyDetection: 异常检测横幅 =====
   const { anomalyItems, anomalyBannerVisible, setAnomalyBannerVisible, fetchAnomalies, handleAnomalyClick } = useAnomalyDetection({

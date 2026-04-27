@@ -5,7 +5,7 @@
 SET @s = IF(
     (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
      WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_warehousing' AND COLUMN_NAME='inspection_type')=0,
-    'ALTER TABLE `t_product_warehousing` ADD COLUMN `inspection_type` VARCHAR(32) DEFAULT 'FQC' AFTER `scan_mode`',
+    'ALTER TABLE `t_product_warehousing` ADD COLUMN `inspection_type` VARCHAR(32) DEFAULT NULL AFTER `scan_mode`',
     'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 

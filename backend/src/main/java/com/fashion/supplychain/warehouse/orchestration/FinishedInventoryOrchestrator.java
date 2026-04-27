@@ -1,6 +1,7 @@
 package com.fashion.supplychain.warehouse.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -66,7 +67,6 @@ public class FinishedInventoryOrchestrator {
      * 分页查询成品库存
      */
     public IPage<FinishedInventoryDTO> getFinishedInventoryPage(Map<String, Object> params) {
-        // 解析分页参数
         int page = Integer.parseInt(params.getOrDefault("page", "1").toString());
         int pageSize = Integer.parseInt(params.getOrDefault("pageSize", "20").toString());
         String orderNo = (String) params.get("orderNo");
@@ -76,14 +76,38 @@ public class FinishedInventoryOrchestrator {
         String parentOrgUnitId = params.get("parentOrgUnitId") == null ? null : String.valueOf(params.get("parentOrgUnitId")).trim();
         String factoryType = params.get("factoryType") == null ? null : String.valueOf(params.get("factoryType")).trim();
 
-        // 查询SKU表（有库存的）
+        IPage<ProductSku> skuPageResult = querySkuPage(page, pageSize, styleNo);
+        if (skuPageResult.getRecords().isEmpty()) {
+            return new Page<>(page, pageSize);
+        }
+        InventoryLookupContext ctx = buildLookupContext(skuPageResult);
+        List<FinishedInventoryDTO> dtoList = buildFilteredDTOs(
+                skuPageResult, ctx, orderNo, parentOrgUnitId, factoryType, warehouseLocation, keyword);
+        Page<FinishedInventoryDTO> resultPage = new Page<>(page, pageSize, dtoList.size());
+        resultPage.setRecords(dtoList);
+        return resultPage;
+    }
+
+    private static class InventoryLookupContext {
+        Map<Long, StyleInfo> styleInfoMap = new HashMap<>();
+        Map<Long, String> attachCoverByStyleId = new HashMap<>();
+        Map<String, ProductWarehousing> warehousingMap = new HashMap<>();
+        Map<String, String> latestOperatorByStyleId = new HashMap<>();
+        Map<String, String> latestWarehouseByStyleId = new HashMap<>();
+        Map<String, ProductionOrder> orderById = new HashMap<>();
+        Map<String, ProductionOrder> orderByNo = new HashMap<>();
+        Map<String, ProductOutstock> latestOutstockByStyleId = new HashMap<>();
+        Map<String, ProductOutstock> latestOutstockByStyleNo = new HashMap<>();
+        Map<String, Integer> totalInboundQtyMap = new HashMap<>();
+        Map<String, List<ProductSku>> styleSkuMap = new HashMap<>();
+    }
+
+    private IPage<ProductSku> querySkuPage(int page, int pageSize, String styleNo) {
         Long tid = UserContext.tenantId();
         Page<ProductSku> skuPage = new Page<>(page, pageSize);
         LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
         wrapper.gt(ProductSku::getStockQuantity, 0);
         wrapper.eq(ProductSku::getTenantId, tid);
-
-        // 工厂账号隔离：仅展示本工厂订单关联的款号库存
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
             List<String> factoryStyleNos = productionOrderService.lambdaQuery()
@@ -95,147 +119,144 @@ public class FinishedInventoryOrchestrator {
                     .map(ProductionOrder::getStyleNo)
                     .filter(StringUtils::hasText)
                     .distinct()
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
             if (factoryStyleNos.isEmpty()) {
-                // 该工厂无订单，返回空页
                 return new Page<>(page, pageSize);
             }
             wrapper.in(ProductSku::getStyleNo, factoryStyleNos);
         }
-
         if (StringUtils.hasText(styleNo)) {
             wrapper.like(ProductSku::getStyleNo, styleNo.trim());
         }
-
         wrapper.orderByDesc(ProductSku::getUpdateTime);
-        IPage<ProductSku> skuPageResult = productSkuService.page(skuPage, wrapper);
+        return productSkuService.page(skuPage, wrapper);
+    }
 
-        // 收集 styleId 列表
+    private InventoryLookupContext buildLookupContext(IPage<ProductSku> skuPageResult) {
+        InventoryLookupContext ctx = new InventoryLookupContext();
         List<Long> styleIds = skuPageResult.getRecords().stream()
                 .map(ProductSku::getStyleId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
-
         List<String> styleNos = skuPageResult.getRecords().stream()
-            .map(ProductSku::getStyleNo)
-            .filter(StringUtils::hasText)
-            .distinct()
-            .collect(Collectors.toList());
+                .map(ProductSku::getStyleNo)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        batchLoadStyleInfoAndCovers(ctx, styleIds);
+        batchLoadWarehousingRecords(ctx, styleIds);
+        batchLoadProductionOrders(ctx);
+        batchLoadOutstockRecords(ctx, styleIds, styleNos);
+        computeTotalInboundQty(ctx, styleIds);
+        ctx.styleSkuMap = skuPageResult.getRecords().stream()
+                .collect(Collectors.groupingBy(ProductSku::getStyleNo));
+        return ctx;
+    }
 
-        // 批量查询款式信息（获取 styleName, cover 图片）
-        Map<Long, StyleInfo> styleInfoMap = new HashMap<>();
-        if (!styleIds.isEmpty()) {
-            List<StyleInfo> styleInfoList = styleInfoService.listByIds(styleIds);
-            styleInfoMap = styleInfoList.stream()
-                    .collect(Collectors.toMap(StyleInfo::getId, s -> s, (a, b) -> a));
+    private void batchLoadStyleInfoAndCovers(InventoryLookupContext ctx, List<Long> styleIds) {
+        if (styleIds.isEmpty()) {
+            return;
         }
+        List<StyleInfo> styleInfoList = styleInfoService.listByIds(styleIds);
+        ctx.styleInfoMap = styleInfoList.stream()
+                .collect(Collectors.toMap(StyleInfo::getId, s -> s, (a, b) -> a));
+        List<Long> noCoverIds = ctx.styleInfoMap.values().stream()
+                .filter(s -> !StringUtils.hasText(s.getCover()))
+                .map(StyleInfo::getId)
+                .collect(Collectors.toList());
+        if (noCoverIds.isEmpty()) {
+            return;
+        }
+        try {
+            List<StyleAttachment> attachments = styleAttachmentService.list(
+                    new LambdaQueryWrapper<StyleAttachment>()
+                            .in(StyleAttachment::getStyleId, noCoverIds.stream()
+                                    .map(String::valueOf).collect(Collectors.toList()))
+                            .like(StyleAttachment::getFileType, "image")
+                            .eq(StyleAttachment::getStatus, "active")
+                            .orderByAsc(StyleAttachment::getCreateTime));
+            if (attachments != null) {
+                for (StyleAttachment a : attachments) {
+                    if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
+                    try {
+                        Long sid = Long.valueOf(a.getStyleId());
+                        ctx.attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
+                    } catch (NumberFormatException e) {
+                        log.debug("styleId解析失败: {}", a.getStyleId());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("[FinishedInventory] 查询款式附件失败（t_style_attachment 可能缺列），跳过封面填充: {}", e.getMessage());
+        }
+    }
 
-        // 第二级兜底：对 cover 为空的款式，从 t_style_attachment 取第一张图
-        Map<Long, String> attachCoverByStyleId = new HashMap<>();
-        if (!styleInfoMap.isEmpty()) {
-            List<Long> noCoverIds = styleInfoMap.values().stream()
-                    .filter(s -> !StringUtils.hasText(s.getCover()))
-                    .map(StyleInfo::getId)
-                    .collect(Collectors.toList());
-            if (!noCoverIds.isEmpty()) {
-                try {
-                    List<StyleAttachment> attachments = styleAttachmentService.list(
-                            new LambdaQueryWrapper<StyleAttachment>()
-                                    .in(StyleAttachment::getStyleId, noCoverIds.stream()
-                                            .map(String::valueOf).collect(Collectors.toList()))
-                                    .like(StyleAttachment::getFileType, "image")
-                                    .eq(StyleAttachment::getStatus, "active")
-                                    .orderByAsc(StyleAttachment::getCreateTime));
-                    if (attachments != null) {
-                        for (StyleAttachment a : attachments) {
-                            if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
-                            try {
-                                Long sid = Long.valueOf(a.getStyleId());
-                                attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
-                            } catch (NumberFormatException e) {
-                                log.debug("styleId解析失败: {}", a.getStyleId());
+    private void batchLoadWarehousingRecords(InventoryLookupContext ctx, List<Long> styleIds) {
+        if (styleIds.isEmpty()) {
+            return;
+        }
+        List<ProductWarehousing> warehousingList = productWarehousingMapper.selectList(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                    .select(
+                        ProductWarehousing::getStyleId,
+                        ProductWarehousing::getOrderId,
+                        ProductWarehousing::getOrderNo,
+                        ProductWarehousing::getStyleName,
+                        ProductWarehousing::getWarehouse,
+                        ProductWarehousing::getWarehousingEndTime,
+                        ProductWarehousing::getWarehousingNo,
+                        ProductWarehousing::getWarehousingOperatorName,
+                        ProductWarehousing::getQualityOperatorName,
+                        ProductWarehousing::getQualifiedQuantity,
+                        ProductWarehousing::getDeleteFlag)
+                        .in(ProductWarehousing::getStyleId,
+                                styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+                        .orderByDesc(ProductWarehousing::getWarehousingEndTime)
+        );
+        ctx.warehousingMap = warehousingList.stream()
+                .collect(Collectors.toMap(
+                        ProductWarehousing::getStyleId,
+                        w -> w,
+                        (existing, replacement) -> {
+                            if (existing.getWarehousingEndTime() != null
+                                    && replacement.getWarehousingEndTime() != null) {
+                                return existing.getWarehousingEndTime()
+                                        .isAfter(replacement.getWarehousingEndTime())
+                                        ? existing : replacement;
                             }
+                            return existing.getWarehousingEndTime() != null ? existing : replacement;
                         }
-                    }
-                } catch (Exception e) {
-                    log.error("[FinishedInventory] 查询款式附件失败（t_style_attachment 可能缺列），跳过封面填充: {}", e.getMessage());
+                ));
+        for (ProductWarehousing warehousing : warehousingList) {
+            if (warehousing == null || !StringUtils.hasText(warehousing.getStyleId())) {
+                continue;
+            }
+            String styleId = warehousing.getStyleId();
+            if (!ctx.latestOperatorByStyleId.containsKey(styleId)) {
+                String operatorName = StringUtils.hasText(warehousing.getWarehousingOperatorName())
+                        ? warehousing.getWarehousingOperatorName()
+                        : warehousing.getQualityOperatorName();
+                if (StringUtils.hasText(operatorName)) {
+                    ctx.latestOperatorByStyleId.put(styleId, operatorName);
                 }
             }
-        }
-
-        // 批量查询入库记录（按 styleId 分组，取最新一条）
-        // 注意：t_product_warehousing 没有 color/size 列，只能按 styleId 匹配
-        Map<String, ProductWarehousing> warehousingMap = new HashMap<>();
-        Map<String, String> latestOperatorByStyleId = new HashMap<>();
-        Map<String, String> latestWarehouseByStyleId = new HashMap<>();
-        if (!styleIds.isEmpty()) {
-            List<ProductWarehousing> warehousingList = productWarehousingMapper.selectList(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                        .select(
-                            ProductWarehousing::getStyleId,
-                            ProductWarehousing::getOrderId,
-                            ProductWarehousing::getOrderNo,
-                            ProductWarehousing::getStyleName,
-                            ProductWarehousing::getWarehouse,
-                            ProductWarehousing::getWarehousingEndTime,
-                            ProductWarehousing::getWarehousingNo,
-                            ProductWarehousing::getWarehousingOperatorName,
-                            ProductWarehousing::getQualityOperatorName,
-                            ProductWarehousing::getQualifiedQuantity,
-                            ProductWarehousing::getDeleteFlag)
-                            .in(ProductWarehousing::getStyleId,
-                                    styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
-                            .eq(ProductWarehousing::getDeleteFlag, 0)
-                            .orderByDesc(ProductWarehousing::getWarehousingEndTime)
-            );
-
-            // 按 styleId 分组，取最新的一条
-            warehousingMap = warehousingList.stream()
-                    .collect(Collectors.toMap(
-                            ProductWarehousing::getStyleId,
-                            w -> w,
-                            (existing, replacement) -> {
-                                if (existing.getWarehousingEndTime() != null
-                                        && replacement.getWarehousingEndTime() != null) {
-                                    return existing.getWarehousingEndTime()
-                                            .isAfter(replacement.getWarehousingEndTime())
-                                            ? existing : replacement;
-                                }
-                                return existing.getWarehousingEndTime() != null ? existing : replacement;
-                            }
-                    ));
-
-            // 提取每个 styleId 的“最新非空操作人/库位”用于兜底，避免页面显示 '-'
-            for (ProductWarehousing warehousing : warehousingList) {
-                if (warehousing == null || !StringUtils.hasText(warehousing.getStyleId())) {
-                    continue;
-                }
-                String styleId = warehousing.getStyleId();
-                if (!latestOperatorByStyleId.containsKey(styleId)) {
-                    String operatorName = StringUtils.hasText(warehousing.getWarehousingOperatorName())
-                            ? warehousing.getWarehousingOperatorName()
-                            : warehousing.getQualityOperatorName();
-                    if (StringUtils.hasText(operatorName)) {
-                        latestOperatorByStyleId.put(styleId, operatorName);
-                    }
-                }
-                if (!latestWarehouseByStyleId.containsKey(styleId)
-                        && StringUtils.hasText(warehousing.getWarehouse())) {
-                    latestWarehouseByStyleId.put(styleId, warehousing.getWarehouse());
-                }
-                if (latestOperatorByStyleId.containsKey(styleId)
-                        && latestWarehouseByStyleId.containsKey(styleId)) {
-                    continue;
-                }
+            if (!ctx.latestWarehouseByStyleId.containsKey(styleId)
+                    && StringUtils.hasText(warehousing.getWarehouse())) {
+                ctx.latestWarehouseByStyleId.put(styleId, warehousing.getWarehouse());
+            }
+            if (ctx.latestOperatorByStyleId.containsKey(styleId)
+                    && ctx.latestWarehouseByStyleId.containsKey(styleId)) {
+                continue;
             }
         }
+    }
 
-        Map<String, ProductionOrder> orderById = new HashMap<>();
-        Map<String, ProductionOrder> orderByNo = new HashMap<>();
+    private void batchLoadProductionOrders(InventoryLookupContext ctx) {
         Set<String> orderIds = new HashSet<>();
         Set<String> orderNos = new HashSet<>();
-        warehousingMap.values().forEach(item -> {
+        ctx.warehousingMap.values().forEach(item -> {
             if (item != null && StringUtils.hasText(item.getOrderId())) {
                 orderIds.add(item.getOrderId());
             }
@@ -243,28 +264,29 @@ public class FinishedInventoryOrchestrator {
                 orderNos.add(item.getOrderNo());
             }
         });
-        styleInfoMap.values().forEach(item -> {
+        ctx.styleInfoMap.values().forEach(item -> {
             if (item != null && StringUtils.hasText(item.getOrderNo())) {
                 orderNos.add(item.getOrderNo());
             }
         });
         if (!orderIds.isEmpty()) {
             loadProductionOrdersByIdsSafely(orderIds, "finished-inventory-listByIds").forEach(order -> {
-                orderById.put(order.getId(), order);
+                ctx.orderById.put(order.getId(), order);
                 if (StringUtils.hasText(order.getOrderNo())) {
-                    orderByNo.put(order.getOrderNo(), order);
+                    ctx.orderByNo.put(order.getOrderNo(), order);
                 }
             });
         }
         if (!orderNos.isEmpty()) {
             loadProductionOrdersByNosSafely(orderNos, "finished-inventory-listByOrderNo").forEach(order -> {
                 if (StringUtils.hasText(order.getOrderNo())) {
-                    orderByNo.put(order.getOrderNo(), order);
+                    ctx.orderByNo.put(order.getOrderNo(), order);
                 }
             });
         }
+    }
 
-        Map<String, ProductOutstock> latestOutstockByStyleId = new HashMap<>();
+    private void batchLoadOutstockRecords(InventoryLookupContext ctx, List<Long> styleIds, List<String> styleNos) {
         if (!styleIds.isEmpty()) {
             try {
                 productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
@@ -274,15 +296,13 @@ public class FinishedInventoryOrchestrator {
                                 .orderByDesc(ProductOutstock::getCreateTime))
                         .forEach(outstock -> {
                             if (outstock != null && StringUtils.hasText(outstock.getStyleId())) {
-                                latestOutstockByStyleId.putIfAbsent(outstock.getStyleId(), outstock);
+                                ctx.latestOutstockByStyleId.putIfAbsent(outstock.getStyleId(), outstock);
                             }
                         });
             } catch (Exception e) {
                 log.error("[FinishedInventory] 查询出库记录(byStyleId)失败（t_product_outstock 可能不存在），跳过: {}", e.getMessage());
             }
         }
-
-        Map<String, ProductOutstock> latestOutstockByStyleNo = new HashMap<>();
         if (!styleNos.isEmpty()) {
             try {
                 productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
@@ -291,192 +311,161 @@ public class FinishedInventoryOrchestrator {
                                 .orderByDesc(ProductOutstock::getCreateTime))
                         .forEach(outstock -> {
                             if (outstock != null && StringUtils.hasText(outstock.getStyleNo())) {
-                                latestOutstockByStyleNo.putIfAbsent(outstock.getStyleNo(), outstock);
+                                ctx.latestOutstockByStyleNo.putIfAbsent(outstock.getStyleNo(), outstock);
                             }
                         });
             } catch (Exception e) {
                 log.error("[FinishedInventory] 查询出库记录(byStyleNo)失败（t_product_outstock 可能不存在），跳过: {}", e.getMessage());
             }
         }
+    }
 
-        // 统计每个 styleId 的总入库数量
-        Map<String, Integer> totalInboundQtyMap = new HashMap<>();
-        if (!styleIds.isEmpty()) {
-            List<ProductWarehousing> allWarehousing = productWarehousingMapper.selectList(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                        .select(
-                            ProductWarehousing::getStyleId,
-                            ProductWarehousing::getQualifiedQuantity,
-                            ProductWarehousing::getDeleteFlag)
-                            .in(ProductWarehousing::getStyleId,
-                                    styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
-                            .eq(ProductWarehousing::getDeleteFlag, 0)
-            );
-            allWarehousing.forEach(w -> {
-                int qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
-                totalInboundQtyMap.merge(w.getStyleId(), qty, Integer::sum);
-            });
+    private void computeTotalInboundQty(InventoryLookupContext ctx, List<Long> styleIds) {
+        if (styleIds.isEmpty()) {
+            return;
         }
+        List<ProductWarehousing> allWarehousing = productWarehousingMapper.selectList(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                    .select(
+                        ProductWarehousing::getStyleId,
+                        ProductWarehousing::getQualifiedQuantity,
+                        ProductWarehousing::getDeleteFlag)
+                        .in(ProductWarehousing::getStyleId,
+                                styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+        );
+        allWarehousing.forEach(w -> {
+            int qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
+            ctx.totalInboundQtyMap.merge(w.getStyleId(), qty, Integer::sum);
+        });
+    }
 
-        // 按款号分组，获取颜色尺码列表
-        Map<String, List<ProductSku>> styleSkuMap = skuPageResult.getRecords().stream()
-                .collect(Collectors.groupingBy(ProductSku::getStyleNo));
-
-        // 组装DTO
+    private List<FinishedInventoryDTO> buildFilteredDTOs(
+            IPage<ProductSku> skuPageResult, InventoryLookupContext ctx,
+            String orderNo, String parentOrgUnitId, String factoryType,
+            String warehouseLocation, String keyword) {
         List<FinishedInventoryDTO> dtoList = new ArrayList<>();
         for (ProductSku sku : skuPageResult.getRecords()) {
-            FinishedInventoryDTO dto = new FinishedInventoryDTO();
-
-            // 基础SKU信息
-            dto.setId(sku.getSkuCode());
-            dto.setSku(sku.getSkuCode());
-            dto.setStyleId(sku.getStyleId() != null ? sku.getStyleId().toString() : null);
-            dto.setStyleNo(sku.getStyleNo());
-            dto.setColor(sku.getColor());
-            dto.setSize(sku.getSize());
-            dto.setAvailableQty(sku.getStockQuantity() != null ? sku.getStockQuantity() : 0);
-            dto.setLockedQty(0);
-            dto.setDefectQty(0);
-            dto.setCostPrice(sku.getCostPrice());     // 成本价
-            dto.setSalesPrice(sku.getSalesPrice());   // 销售价
-
-            // 从款式信息补充 styleName, styleImage
-            if (sku.getStyleId() != null) {
-                StyleInfo styleInfo = styleInfoMap.get(sku.getStyleId());
-                if (styleInfo != null) {
-                    dto.setStyleName(styleInfo.getStyleName());
-                    String cover = styleInfo.getCover();
-                    dto.setStyleImage(StringUtils.hasText(cover) ? cover
-                            : attachCoverByStyleId.get(sku.getStyleId()));
-                    // 如果款式表有订单号也取出来
-                    if (StringUtils.hasText(styleInfo.getOrderNo())) {
-                        dto.setOrderNo(styleInfo.getOrderNo());
-                    }
-                }
-            }
-
-            // 从入库记录补充信息（按 styleId 匹配）
-            String styleIdStr = dto.getStyleId();
-            ProductWarehousing warehousing = warehousingMap.get(styleIdStr);
-            if (warehousing != null) {
-                dto.setOrderId(warehousing.getOrderId());
-                // 优先使用入库记录的订单号
-                if (StringUtils.hasText(warehousing.getOrderNo())) {
-                    dto.setOrderNo(warehousing.getOrderNo());
-                }
-                // 如果款式信息没有名称，用入库记录的
-                if (!StringUtils.hasText(dto.getStyleName())) {
-                    dto.setStyleName(warehousing.getStyleName());
-                }
-                dto.setWarehouseLocation(warehousing.getWarehouse());
-                dto.setLastInboundDate(warehousing.getWarehousingEndTime());
-                dto.setQualityInspectionNo(warehousing.getWarehousingNo());
-                String latestInboundBy = StringUtils.hasText(warehousing.getWarehousingOperatorName())
-                        ? warehousing.getWarehousingOperatorName()
-                        : warehousing.getQualityOperatorName();
-                dto.setLastInboundBy(latestInboundBy);
-                // 本次入库件数（最新入库记录的 qualified_quantity，非历史累计）
-                dto.setLastInboundQty(warehousing.getQualifiedQuantity());
-            }
-
-            ProductionOrder relatedOrder = StringUtils.hasText(dto.getOrderId())
-                    ? orderById.get(dto.getOrderId())
-                    : orderByNo.get(dto.getOrderNo());
-            if (relatedOrder == null && StringUtils.hasText(dto.getOrderNo())) {
-                relatedOrder = orderByNo.get(dto.getOrderNo());
-            }
-            if (relatedOrder != null) {
-                dto.setFactoryName(relatedOrder.getFactoryName());
-                dto.setFactoryType(relatedOrder.getFactoryType());
-                dto.setOrgUnitId(relatedOrder.getOrgUnitId());
-                dto.setParentOrgUnitId(relatedOrder.getParentOrgUnitId());
-                dto.setParentOrgUnitName(relatedOrder.getParentOrgUnitName());
-                dto.setOrgPath(relatedOrder.getOrgPath());
-            }
-
-            // 兜底：若最新记录缺少操作人/库位，回填“最新非空值”
-            if (!StringUtils.hasText(dto.getLastInboundBy())) {
-                dto.setLastInboundBy(latestOperatorByStyleId.get(styleIdStr));
-            }
-            if (!StringUtils.hasText(dto.getWarehouseLocation())) {
-                dto.setWarehouseLocation(latestWarehouseByStyleId.get(styleIdStr));
-            }
-
-            ProductOutstock latestOutstock = StringUtils.hasText(styleIdStr)
-                    ? latestOutstockByStyleId.get(styleIdStr)
-                    : null;
-            if (latestOutstock == null && StringUtils.hasText(dto.getStyleNo())) {
-                latestOutstock = latestOutstockByStyleNo.get(dto.getStyleNo());
-            }
-            if (latestOutstock != null) {
-                dto.setLastOutboundDate(latestOutstock.getCreateTime());
-                dto.setLastOutstockNo(latestOutstock.getOutstockNo());
-                dto.setLastOutboundBy(StringUtils.hasText(latestOutstock.getOperatorName())
-                        ? latestOutstock.getOperatorName()
-                        : latestOutstock.getCreatorName());
-            }
-
-            // 入库总量：以 t_product_warehousing 实际记录之和为准（入库记录是源头数据，SKU 库存是派生台账）
-            Integer totalInbound = totalInboundQtyMap.get(styleIdStr);
-            int inboundQty = totalInbound != null ? totalInbound : 0;
-            dto.setTotalInboundQty(inboundQty);
-
-            // 获取该款式的所有颜色和尺码
-            List<ProductSku> styleSKUs = styleSkuMap.get(sku.getStyleNo());
-            if (styleSKUs != null) {
-                dto.setColors(styleSKUs.stream()
-                        .map(ProductSku::getColor)
-                        .filter(StringUtils::hasText)
-                        .distinct()
-                        .collect(Collectors.toList()));
-                dto.setSizes(styleSKUs.stream()
-                        .map(ProductSku::getSize)
-                        .filter(StringUtils::hasText)
-                        .distinct()
-                        .collect(Collectors.toList()));
-            }
-
-            // 应用过滤条件
-            boolean match = true;
-            if (StringUtils.hasText(orderNo) && (dto.getOrderNo() == null || !dto.getOrderNo().contains(orderNo))) {
-                match = false;
-            }
-            if (StringUtils.hasText(parentOrgUnitId) && !parentOrgUnitId.equals(dto.getParentOrgUnitId())) {
-                match = false;
-            }
-            if (StringUtils.hasText(factoryType) && !factoryType.equalsIgnoreCase(dto.getFactoryType())) {
-                match = false;
-            }
-            if (StringUtils.hasText(warehouseLocation) && (dto.getWarehouseLocation() == null || !dto.getWarehouseLocation().contains(warehouseLocation))) {
-                match = false;
-            }
-            if (StringUtils.hasText(keyword)) {
-                String factoryTypeLabel = "INTERNAL".equalsIgnoreCase(dto.getFactoryType()) ? "内部" : "EXTERNAL".equalsIgnoreCase(dto.getFactoryType()) ? "外部" : "";
-                String combined = String.join(" ",
-                        Optional.ofNullable(dto.getOrderNo()).orElse(""),
-                        Optional.ofNullable(dto.getStyleNo()).orElse(""),
-                        Optional.ofNullable(dto.getStyleName()).orElse(""),
-                        Optional.ofNullable(dto.getSku()).orElse(""),
-                        Optional.ofNullable(dto.getFactoryName()).orElse(""),
-                        Optional.ofNullable(dto.getParentOrgUnitName()).orElse(""),
-                        Optional.ofNullable(dto.getOrgPath()).orElse(""),
-                        factoryTypeLabel
-                ).toLowerCase(Locale.ROOT);
-                if (!combined.contains(keyword.toLowerCase(Locale.ROOT))) {
-                    match = false;
-                }
-            }
-
-            if (match) {
+            FinishedInventoryDTO dto = buildSingleDTO(sku, ctx);
+            if (matchesFilter(dto, orderNo, parentOrgUnitId, factoryType, warehouseLocation, keyword)) {
                 dtoList.add(dto);
             }
         }
-
-        // 构建分页结果
-        Page<FinishedInventoryDTO> resultPage = new Page<>(page, pageSize, dtoList.size());
-        resultPage.setRecords(dtoList);
-        return resultPage;
+        return dtoList;
     }
+
+    private FinishedInventoryDTO buildSingleDTO(ProductSku sku, InventoryLookupContext ctx) {
+        FinishedInventoryDTO dto = new FinishedInventoryDTO();
+        dto.setId(sku.getSkuCode());
+        dto.setSku(sku.getSkuCode());
+        dto.setStyleId(sku.getStyleId() != null ? sku.getStyleId().toString() : null);
+        dto.setStyleNo(sku.getStyleNo());
+        dto.setColor(sku.getColor());
+        dto.setSize(sku.getSize());
+        dto.setAvailableQty(sku.getStockQuantity() != null ? sku.getStockQuantity() : 0);
+        dto.setLockedQty(0);
+        dto.setDefectQty(0);
+        dto.setCostPrice(sku.getCostPrice());
+        dto.setSalesPrice(sku.getSalesPrice());
+        if (sku.getStyleId() != null) {
+            StyleInfo si = ctx.styleInfoMap.get(sku.getStyleId());
+            if (si != null) {
+                dto.setStyleName(si.getStyleName());
+                dto.setStyleImage(StringUtils.hasText(si.getCover()) ? si.getCover()
+                        : ctx.attachCoverByStyleId.get(sku.getStyleId()));
+                if (StringUtils.hasText(si.getOrderNo())) {
+                    dto.setOrderNo(si.getOrderNo());
+                }
+            }
+        }
+        String styleIdStr = dto.getStyleId();
+        ProductWarehousing wh = ctx.warehousingMap.get(styleIdStr);
+        if (wh != null) {
+            dto.setOrderId(wh.getOrderId());
+            if (StringUtils.hasText(wh.getOrderNo())) dto.setOrderNo(wh.getOrderNo());
+            if (!StringUtils.hasText(dto.getStyleName())) dto.setStyleName(wh.getStyleName());
+            dto.setWarehouseLocation(wh.getWarehouse());
+            dto.setLastInboundDate(wh.getWarehousingEndTime());
+            dto.setQualityInspectionNo(wh.getWarehousingNo());
+            dto.setLastInboundBy(StringUtils.hasText(wh.getWarehousingOperatorName())
+                    ? wh.getWarehousingOperatorName() : wh.getQualityOperatorName());
+            dto.setLastInboundQty(wh.getQualifiedQuantity());
+        }
+        ProductionOrder order = StringUtils.hasText(dto.getOrderId())
+                ? ctx.orderById.get(dto.getOrderId()) : ctx.orderByNo.get(dto.getOrderNo());
+        if (order == null && StringUtils.hasText(dto.getOrderNo())) {
+            order = ctx.orderByNo.get(dto.getOrderNo());
+        }
+        if (order != null) {
+            dto.setFactoryName(order.getFactoryName());
+            dto.setFactoryType(order.getFactoryType());
+            dto.setOrgUnitId(order.getOrgUnitId());
+            dto.setParentOrgUnitId(order.getParentOrgUnitId());
+            dto.setParentOrgUnitName(order.getParentOrgUnitName());
+            dto.setOrgPath(order.getOrgPath());
+        }
+        if (!StringUtils.hasText(dto.getLastInboundBy())) {
+            dto.setLastInboundBy(ctx.latestOperatorByStyleId.get(styleIdStr));
+        }
+        if (!StringUtils.hasText(dto.getWarehouseLocation())) {
+            dto.setWarehouseLocation(ctx.latestWarehouseByStyleId.get(styleIdStr));
+        }
+        ProductOutstock os = StringUtils.hasText(styleIdStr)
+                ? ctx.latestOutstockByStyleId.get(styleIdStr) : null;
+        if (os == null && StringUtils.hasText(dto.getStyleNo())) {
+            os = ctx.latestOutstockByStyleNo.get(dto.getStyleNo());
+        }
+        if (os != null) {
+            dto.setLastOutboundDate(os.getCreateTime());
+            dto.setLastOutstockNo(os.getOutstockNo());
+            dto.setLastOutboundBy(StringUtils.hasText(os.getOperatorName())
+                    ? os.getOperatorName() : os.getCreatorName());
+        }
+        Integer totalInbound = ctx.totalInboundQtyMap.get(styleIdStr);
+        dto.setTotalInboundQty(totalInbound != null ? totalInbound : 0);
+        List<ProductSku> styleSKUs = ctx.styleSkuMap.get(sku.getStyleNo());
+        if (styleSKUs != null) {
+            dto.setColors(styleSKUs.stream().map(ProductSku::getColor)
+                    .filter(StringUtils::hasText).distinct().collect(Collectors.toList()));
+            dto.setSizes(styleSKUs.stream().map(ProductSku::getSize)
+                    .filter(StringUtils::hasText).distinct().collect(Collectors.toList()));
+        }
+        return dto;
+    }
+
+    private boolean matchesFilter(FinishedInventoryDTO dto, String orderNo,
+            String parentOrgUnitId, String factoryType, String warehouseLocation, String keyword) {
+        if (StringUtils.hasText(orderNo) && (dto.getOrderNo() == null || !dto.getOrderNo().contains(orderNo))) {
+            return false;
+        }
+        if (StringUtils.hasText(parentOrgUnitId) && !parentOrgUnitId.equals(dto.getParentOrgUnitId())) {
+            return false;
+        }
+        if (StringUtils.hasText(factoryType) && !factoryType.equalsIgnoreCase(dto.getFactoryType())) {
+            return false;
+        }
+        if (StringUtils.hasText(warehouseLocation) && (dto.getWarehouseLocation() == null || !dto.getWarehouseLocation().contains(warehouseLocation))) {
+            return false;
+        }
+        if (StringUtils.hasText(keyword)) {
+            String factoryTypeLabel = "INTERNAL".equalsIgnoreCase(dto.getFactoryType()) ? "内部" : "EXTERNAL".equalsIgnoreCase(dto.getFactoryType()) ? "外部" : "";
+            String combined = String.join(" ",
+                    Optional.ofNullable(dto.getOrderNo()).orElse(""),
+                    Optional.ofNullable(dto.getStyleNo()).orElse(""),
+                    Optional.ofNullable(dto.getStyleName()).orElse(""),
+                    Optional.ofNullable(dto.getSku()).orElse(""),
+                    Optional.ofNullable(dto.getFactoryName()).orElse(""),
+                    Optional.ofNullable(dto.getParentOrgUnitName()).orElse(""),
+                    Optional.ofNullable(dto.getOrgPath()).orElse(""),
+                    factoryTypeLabel
+            ).toLowerCase(Locale.ROOT);
+            if (!combined.contains(keyword.toLowerCase(Locale.ROOT))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     private List<ProductionOrder> loadProductionOrdersByIdsSafely(Set<String> orderIds, String scene) {
         if (orderIds == null || orderIds.isEmpty()) {
@@ -684,7 +673,7 @@ public class FinishedInventoryOrchestrator {
         int page = Integer.parseInt(params.getOrDefault("page", "1").toString());
         int pageSize = Integer.parseInt(params.getOrDefault("pageSize", "20").toString());
         Long tenantId = UserContext.tenantId();
-        if (tenantId == null) log.warn("[租户隔离] 出库记录查询租户上下文为空");
+        TenantAssert.assertTenantContext();
 
         LambdaQueryWrapper<ProductOutstock> wrapper = new LambdaQueryWrapper<ProductOutstock>()
                 .eq(ProductOutstock::getTenantId, tenantId)

@@ -52,11 +52,11 @@ public class MaterialPurchaseStatusHelper {
     private final MaterialPickingService materialPickingService;
 
 
-    private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
+    private final com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
 
-    private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
+    private final com.fashion.supplychain.production.service.MaterialStockService materialStockService;
 
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+    private final com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
@@ -407,6 +407,7 @@ public class MaterialPurchaseStatusHelper {
         return result;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public MaterialPurchase resetReturnConfirm(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));

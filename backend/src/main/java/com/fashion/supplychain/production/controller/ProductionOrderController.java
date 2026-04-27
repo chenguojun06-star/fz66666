@@ -132,7 +132,7 @@ public class ProductionOrderController {
                         return Result.success(pageResult);
                     }
                 } catch (java.util.NoSuchElementException e) {
-                    // 订单不存在，继续走分页查询
+                    log.debug("[Order] 精确查询订单不存在: orderNo={}", orderNo);
                 } catch (Exception e) {
                     log.error("精确查询订单异常: orderNo={}", orderNo, e);
                     throw e;

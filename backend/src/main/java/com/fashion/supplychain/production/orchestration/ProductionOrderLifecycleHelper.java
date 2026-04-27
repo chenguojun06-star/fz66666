@@ -170,6 +170,7 @@ public class ProductionOrderLifecycleHelper {
                 .eq(MaterialPurchase::getOrderId, oid)
                 .eq(MaterialPurchase::getDeleteFlag, 0)
                 .eq(MaterialPurchase::getStatus, "pending")
+                .last("LIMIT 5000")
                 .list();
         if (!pendingList.isEmpty()) {
             materialPurchaseService.lambdaUpdate()

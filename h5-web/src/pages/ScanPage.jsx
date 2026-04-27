@@ -254,7 +254,7 @@ export default function ScanPage() {
           toast.success(stageTip);
           setStats((prev) => prev ? { ...prev, scanCount: prev.scanCount + 1, totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1) } : { scanCount: 1, orderCount: 0, totalQuantity: Number(data.quantity) || 1, totalAmount: 0 });
         }
-        wx.vibrateShort();
+        try { wx.vibrateShort({ type: 'light' }); } catch (_) {}
         loadTodayHistory();
       }
     } catch (err) {

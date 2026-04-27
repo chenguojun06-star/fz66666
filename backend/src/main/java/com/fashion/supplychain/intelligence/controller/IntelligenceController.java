@@ -18,6 +18,7 @@ import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -195,6 +196,7 @@ public class IntelligenceController {
         return Result.success(pendingTaskOrchestrator.getMyPendingTaskSummary());
     }
 
+    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.OrphanDataDetector orphanDataDetector;
 
     @PreAuthorize("isAuthenticated()")

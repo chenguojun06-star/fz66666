@@ -135,7 +135,8 @@ public class WarehouseLocationOrchestrator {
                 .eq(WarehouseLocation::getDeleteFlag, 0)
                 .eq(WarehouseLocation::getStatus, "ACTIVE")
                 .eq(StringUtils.isNotBlank(warehouseType), WarehouseLocation::getWarehouseType, warehouseType)
-                .orderByAsc(WarehouseLocation::getLocationCode));
+                .orderByAsc(WarehouseLocation::getLocationCode)
+                .last("LIMIT 5000"));
         return Result.success(list);
     }
 }

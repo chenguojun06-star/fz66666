@@ -70,6 +70,7 @@ public class InternalMaintenanceController {
                     .eq(ProductionOrder::getDeleteFlag, 0)
                     .isNotNull(ProductionOrder::getProgressWorkflowJson)
                     .ne(ProductionOrder::getProgressWorkflowJson, "")
+                    .last("LIMIT 5000")
                     .list();
 
             if (orders.isEmpty()) {
@@ -166,6 +167,7 @@ public class InternalMaintenanceController {
         if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
             ProductionOrder order = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                    .eq(ProductionOrder::getDeleteFlag, 0)
                     .last("LIMIT 1")
                     .one();
 
@@ -302,6 +304,7 @@ public class InternalMaintenanceController {
         try {
             List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getDeleteFlag, 0)
+                    .last("LIMIT 5000")
                     .list();
 
             int successCount = 0, errorCount = 0, totalRecords = 0;
@@ -334,7 +337,9 @@ public class InternalMaintenanceController {
     public Result<?> recalculateSkuStock() {
         log.warn("开始重新计算SKU库存（管理员维护操作 - 修复双重更新bug）");
         try {
-            List<ProductSku> allSkus = productSkuService.list();
+            List<ProductSku> allSkus = productSkuService.lambdaQuery()
+                    .last("LIMIT 5000")
+                    .list();
             int fixed = 0;
             int unchanged = 0;
             List<Map<String, Object>> details = new ArrayList<>();
@@ -346,6 +351,7 @@ public class InternalMaintenanceController {
                         .eq(ProductWarehousing::getDeleteFlag, 0)
                         .eq(ProductWarehousing::getColor, sku.getColor())
                         .eq(ProductWarehousing::getSize, sku.getSize())
+                        .last("LIMIT 5000")
                         .list();
                 for (ProductWarehousing pw : inboundRecords) {
                     if (pw.getQualifiedQuantity() != null && pw.getQualifiedQuantity() > 0) {

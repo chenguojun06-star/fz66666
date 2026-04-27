@@ -658,8 +658,8 @@ public class WarehouseScanExecutor {
                 try {
                     int v = Integer.parseInt(trimmed.substring("defectQty=".length()).trim());
                     if (v > 0) return v;
-                } catch (NumberFormatException ignore) {
-                    // 解析失败时使用 fallback
+                } catch (NumberFormatException e) {
+                    log.debug("[WarehouseScan] defectQty解析失败: {}", e.getMessage());
                 }
             }
         }

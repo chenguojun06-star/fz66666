@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '@/api';
 import { isManagerLevel } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
@@ -52,6 +53,10 @@ function describeTool(name) {
 }
 
 export default function AiAssistantPage() {
+  const [searchParams] = useSearchParams();
+  const urlOrderNo = searchParams.get('orderNo') || '';
+  const urlProcessName = searchParams.get('processName') || '';
+  const urlStage = searchParams.get('stage') || '';
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -145,7 +150,7 @@ export default function AiAssistantPage() {
 
     try {
       await aiStream.startStream(
-        { question: text, pageContext: chatContext, conversationId, imageUrl },
+        { question: text, pageContext: chatContext, conversationId, imageUrl, orderNo: urlOrderNo, processName: urlProcessName, stage: urlStage },
         {
           onEvent: (event) => {
             if (event.type === 'thinking') setStreamingTool('小云正在整理思路…');

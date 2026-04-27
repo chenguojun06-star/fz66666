@@ -186,7 +186,7 @@ public class PatternStatusHelper {
         if (!StringUtils.hasText(styleIdStr)) return;
         try {
             Long styleId = Long.parseLong(styleIdStr);
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            StyleInfo styleInfo = getStyleWithTenant(styleId);
             if (styleInfo != null) {
                 boolean updated = false;
 
@@ -222,7 +222,7 @@ public class PatternStatusHelper {
         if (!StringUtils.hasText(styleIdStr)) return;
         try {
             Long styleId = Long.parseLong(styleIdStr);
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            StyleInfo styleInfo = getStyleWithTenant(styleId);
             if (styleInfo == null) return;
 
             boolean updated = false;
@@ -267,7 +267,7 @@ public class PatternStatusHelper {
         if (!StringUtils.hasText(record.getStyleId())) return;
         try {
             Long styleId = Long.parseLong(record.getStyleId());
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            StyleInfo styleInfo = getStyleWithTenant(styleId);
             if (styleInfo != null) {
                 String currentUser = UserContext.username();
                 LocalDateTime now = LocalDateTime.now();
@@ -296,7 +296,7 @@ public class PatternStatusHelper {
 
         try {
             Long styleId = Long.parseLong(pattern.getStyleId());
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            StyleInfo styleInfo = getStyleWithTenant(styleId);
             if (styleInfo == null) {
                 return;
             }
@@ -353,7 +353,7 @@ public class PatternStatusHelper {
             if (styleId == null) {
                 return;
             }
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
+            StyleInfo styleInfo = getStyleWithTenant(styleId);
             if (styleInfo == null) {
                 return;
             }
@@ -696,5 +696,12 @@ public class PatternStatusHelper {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private StyleInfo getStyleWithTenant(Long styleId) {
+        return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .one();
     }
 }

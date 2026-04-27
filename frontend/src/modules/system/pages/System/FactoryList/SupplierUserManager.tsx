@@ -170,7 +170,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
         onCancel={onClose}
         footer={null}
         width={900}
-        destroyOnClose
+        destroyOnHidden
       >
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: '#888' }}>供应商通过 H5 页面「供应商登录」入口登录，账号由管理员创建和管理</span>
@@ -194,7 +194,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
         onOk={handleCreate}
         okText="创建"
         confirmLoading={createLoading}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={createForm} layout="vertical">
           <Form.Item name="username" label="用户名" rules={[

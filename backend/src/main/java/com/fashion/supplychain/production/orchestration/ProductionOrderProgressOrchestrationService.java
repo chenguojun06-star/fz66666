@@ -256,7 +256,7 @@ public class ProductionOrderProgressOrchestrationService {
                     // In ensureBaseStageRecordsIfAbsent, qty was calculated from rate. If rate=0, qty=0.
                     // So yes, records with qty=0 were created.
                 } catch (Exception e) {
-                    // ignore
+                    log.warn("[Progress] 阶段记录创建失败: orderId={}, err={}", oid, e.getMessage());
                 }
             }
 

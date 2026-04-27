@@ -486,20 +486,6 @@ public class CuttingTaskOrchestrator {
         return normalized;
     }
 
-    private String summarizeLineField(List<Map<String, Object>> orderLines, String field, String fallbackWhenMultiple) {
-        Set<String> values = orderLines.stream()
-                .map(line -> String.valueOf(line.get(field)).trim())
-                .filter(StringUtils::hasText)
-                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
-        if (values.isEmpty()) {
-            return null;
-        }
-        if (values.size() == 1) {
-            return values.iterator().next();
-        }
-        return fallbackWhenMultiple;
-    }
-
     private String buildOrderDetailsJson(List<Map<String, Object>> orderLines) {
         try {
             return objectMapper.writeValueAsString(orderLines);
@@ -792,28 +778,6 @@ public class CuttingTaskOrchestrator {
         if (!updated) {
             throw new IllegalStateException("退回成功但更新订单报废状态失败");
         }
-    }
-
-    private String buildQrCode(String orderNo, String styleNo, String color, String size, int quantity, int bundleNo) {
-        StringBuilder sb = new StringBuilder();
-        if (StringUtils.hasText(orderNo)) {
-            sb.append(orderNo);
-        }
-        sb.append("-");
-        if (StringUtils.hasText(styleNo)) {
-            sb.append(styleNo);
-        }
-        sb.append("-");
-        if (StringUtils.hasText(color)) {
-            sb.append(color);
-        }
-        sb.append("-");
-        if (StringUtils.hasText(size)) {
-            sb.append(size);
-        }
-        sb.append("-").append(Math.max(quantity, 0));
-        sb.append("-").append(bundleNo);
-        return sb.toString();
     }
 
     /**

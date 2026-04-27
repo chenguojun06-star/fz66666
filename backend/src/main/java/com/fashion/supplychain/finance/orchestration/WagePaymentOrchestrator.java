@@ -367,7 +367,10 @@ public class WagePaymentOrchestrator {
         try {
             switch (payment.getBizType()) {
                 case "RECONCILIATION":
-                    MaterialReconciliation recon = materialReconciliationService.getById(payment.getBizId());
+                    MaterialReconciliation recon = materialReconciliationService.lambdaQuery()
+                            .eq(MaterialReconciliation::getId, payment.getBizId())
+                            .eq(MaterialReconciliation::getTenantId, payment.getTenantId())
+                            .one();
                     if (recon != null && "paid".equals(recon.getStatus())) {
                         recon.setStatus("approved");
                         recon.setPaidAt(null);
@@ -381,7 +384,10 @@ public class WagePaymentOrchestrator {
                     break;
 
                 case "REIMBURSEMENT":
-                    ExpenseReimbursement reimb = expenseReimbursementService.getById(payment.getBizId());
+                    ExpenseReimbursement reimb = expenseReimbursementService.lambdaQuery()
+                            .eq(ExpenseReimbursement::getId, payment.getBizId())
+                            .eq(ExpenseReimbursement::getTenantId, payment.getTenantId())
+                            .one();
                     if (reimb != null && "paid".equals(reimb.getStatus())) {
                         reimb.setStatus("approved");
                         reimb.setPaymentTime(null);
@@ -395,7 +401,10 @@ public class WagePaymentOrchestrator {
                     break;
 
                 case "PAYROLL_SETTLEMENT":
-                    PayrollSettlement psRefund = payrollSettlementService.getById(payment.getBizId());
+                    PayrollSettlement psRefund = payrollSettlementService.lambdaQuery()
+                            .eq(PayrollSettlement::getId, payment.getBizId())
+                            .eq(PayrollSettlement::getTenantId, payment.getTenantId())
+                            .one();
                     if (psRefund != null && "paid".equals(psRefund.getStatus())) {
                         PayrollSettlement psPatch = new PayrollSettlement();
                         psPatch.setId(psRefund.getId());
@@ -864,7 +873,10 @@ public class WagePaymentOrchestrator {
             // 驳回后回写上游审批状态
             try {
                 if ("PAYROLL_SETTLEMENT".equals(bizType) && bizId != null) {
-                    PayrollSettlement ps = payrollSettlementService.getById(bizId);
+                    PayrollSettlement ps = payrollSettlementService.lambdaQuery()
+                            .eq(PayrollSettlement::getId, bizId)
+                            .eq(PayrollSettlement::getTenantId, tenantId)
+                            .one();
                     if (ps != null && "approved".equals(ps.getStatus())) {
                         PayrollSettlement psPatch = new PayrollSettlement();
                         psPatch.setId(ps.getId());
@@ -974,10 +986,14 @@ public class WagePaymentOrchestrator {
      * 回写上游单据状态为 paid
      */
     private void callbackUpstream(String bizType, String bizId) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         try {
             switch (bizType) {
                 case "RECONCILIATION":
-                    MaterialReconciliation recon = materialReconciliationService.getById(bizId);
+                    MaterialReconciliation recon = materialReconciliationService.lambdaQuery()
+                            .eq(MaterialReconciliation::getId, bizId)
+                            .eq(MaterialReconciliation::getTenantId, tenantId)
+                            .one();
                     if (recon != null && "approved".equals(recon.getStatus())) {
                         recon.setStatus("paid");
                         recon.setPaidAt(LocalDateTime.now());
@@ -989,7 +1005,10 @@ public class WagePaymentOrchestrator {
                     break;
 
                 case "REIMBURSEMENT":
-                    ExpenseReimbursement reimb = expenseReimbursementService.getById(bizId);
+                    ExpenseReimbursement reimb = expenseReimbursementService.lambdaQuery()
+                            .eq(ExpenseReimbursement::getId, bizId)
+                            .eq(ExpenseReimbursement::getTenantId, tenantId)
+                            .one();
                     if (reimb != null && "approved".equals(reimb.getStatus())) {
                         reimb.setStatus("paid");
                         reimb.setPaymentTime(LocalDateTime.now());
@@ -1003,7 +1022,10 @@ public class WagePaymentOrchestrator {
 
                 case "PAYROLL":
                 case "PAYROLL_SETTLEMENT":
-                    PayrollSettlement ps = payrollSettlementService.getById(bizId);
+                    PayrollSettlement ps = payrollSettlementService.lambdaQuery()
+                            .eq(PayrollSettlement::getId, bizId)
+                            .eq(PayrollSettlement::getTenantId, tenantId)
+                            .one();
                     if (ps != null && "approved".equals(ps.getStatus())) {
                         PayrollSettlement psPatch = new PayrollSettlement();
                         psPatch.setId(ps.getId());
@@ -1031,7 +1053,10 @@ public class WagePaymentOrchestrator {
                     break;
 
                 case "SHIPMENT_RECONCILIATION":
-                    ShipmentReconciliation sr = shipmentReconciliationService.getById(bizId);
+                    ShipmentReconciliation sr = shipmentReconciliationService.lambdaQuery()
+                            .eq(ShipmentReconciliation::getId, bizId)
+                            .eq(ShipmentReconciliation::getTenantId, tenantId)
+                            .one();
                     if (sr != null && "approved".equals(sr.getStatus())) {
                         ShipmentReconciliation srPatch = new ShipmentReconciliation();
                         srPatch.setId(sr.getId());

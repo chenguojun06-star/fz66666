@@ -159,14 +159,14 @@ public class CommonController {
         try {
             contentType = Files.probeContentType(filePath);
         } catch (IOException e) {
-            // ignore
+            log.debug("[Common] 文件类型探测失败: {}", e.getMessage());
         }
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         if (contentType != null && !contentType.trim().isEmpty()) {
             try {
                 mediaType = MediaType.parseMediaType(contentType);
             } catch (Exception e) {
-                // ignore
+                log.debug("[Common] MediaType解析失败: {}", e.getMessage());
             }
         }
 

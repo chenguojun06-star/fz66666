@@ -106,7 +106,7 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public String receivePattern(String id, Map<String, Object> params) {
-        PatternProduction record = patternProductionService.getById(id);
+        PatternProduction record = getPatternWithTenant(id);
         if (record == null || record.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("记录不存在");
         }
@@ -144,7 +144,7 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public String updateProgress(String id, Map<String, Integer> progressNodes) {
-        PatternProduction record = patternProductionService.getById(id);
+        PatternProduction record = getPatternWithTenant(id);
         if (record == null || record.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("记录不存在");
         }
@@ -176,7 +176,7 @@ public class PatternProductionOrchestrator {
         if (!StringUtils.hasText(patternId)) {
             throw new IllegalArgumentException("样板生产ID不能为空");
         }
-        PatternProduction pattern = patternProductionService.getById(patternId);
+        PatternProduction pattern = getPatternWithTenant(patternId);
         if (pattern == null || pattern.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
@@ -236,34 +236,54 @@ public class PatternProductionOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> submitScan(String patternId, String operationType, String operatorRole, String remark,
                                           Integer quantity, String warehouseCode, BigDecimal unitPrice) {
-        if (!StringUtils.hasText(patternId)) {
-            throw new IllegalArgumentException("样板生产ID不能为空");
-        }
-        if (!StringUtils.hasText(operationType)) {
-            throw new IllegalArgumentException("操作类型不能为空");
-        }
-
-        PatternProduction pattern = patternProductionService.getById(patternId);
-        if (pattern == null || pattern.getDeleteFlag() == 1) {
-            throw new IllegalArgumentException("样板生产记录不存在");
-        }
-
+        assertSubmitScanParams(patternId, operationType);
+        PatternProduction pattern = loadPatternForScan(patternId);
         statusHelper.validateWarehouseOperationFlow(patternId, operationType);
 
         String operatorId = UserContext.userId();
         String operatorName = UserContext.username();
+        updatePatternQuantityIfNeeded(pattern, quantity, operatorName);
 
-        if (quantity != null && quantity > 0
-                && (pattern.getQuantity() == null || pattern.getQuantity() <= 0)) {
+        PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName, operatorRole, remark, warehouseCode);
+        patternScanRecordService.save(scanRecord);
+
+        syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice);
+        statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
+
+        if ("COMPLETE".equals(operationType.trim()) || "WAREHOUSE_IN".equals(operationType.trim())) {
+            statusHelper.syncStyleInfoSampleStage(pattern);
+        }
+
+        stockHelper.syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
+        statusHelper.syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
+
+        return buildSubmitScanResult(scanRecord, patternId, pattern, operationType, operatorName, warehouseCode);
+    }
+
+    private void assertSubmitScanParams(String patternId, String operationType) {
+        if (!StringUtils.hasText(patternId)) throw new IllegalArgumentException("样板生产ID不能为空");
+        if (!StringUtils.hasText(operationType)) throw new IllegalArgumentException("操作类型不能为空");
+    }
+
+    private PatternProduction loadPatternForScan(String patternId) {
+        PatternProduction pattern = getPatternWithTenant(patternId);
+        if (pattern == null || pattern.getDeleteFlag() == 1) throw new IllegalArgumentException("样板生产记录不存在");
+        return pattern;
+    }
+
+    private void updatePatternQuantityIfNeeded(PatternProduction pattern, Integer quantity, String operatorName) {
+        if (quantity != null && quantity > 0 && (pattern.getQuantity() == null || pattern.getQuantity() <= 0)) {
             pattern.setQuantity(quantity);
             pattern.setUpdateBy(operatorName);
             pattern.setUpdateTime(LocalDateTime.now());
             patternProductionService.updateById(pattern);
         }
+    }
 
-        // 创建扫码记录
+    private PatternScanRecord createPatternScanRecord(PatternProduction pattern, String operationType,
+            String operatorId, String operatorName, String operatorRole, String remark, String warehouseCode) {
         PatternScanRecord scanRecord = new PatternScanRecord();
-        scanRecord.setPatternProductionId(patternId);
+        scanRecord.setPatternProductionId(pattern.getId());
         scanRecord.setStyleId(pattern.getStyleId());
         scanRecord.setStyleNo(pattern.getStyleNo());
         scanRecord.setColor(pattern.getColor());
@@ -276,17 +296,18 @@ public class PatternProductionOrchestrator {
         scanRecord.setRemark(remark);
         scanRecord.setCreateTime(LocalDateTime.now());
         scanRecord.setDeleteFlag(0);
+        return scanRecord;
+    }
 
-        patternScanRecordService.save(scanRecord);
-
-        // 同步写入 t_scan_record，使工资统计能覆盖样衣扫码
+    private void syncToScanRecord(PatternProduction pattern, String operationType,
+            String operatorId, String operatorName, String remark, BigDecimal unitPrice) {
         try {
             ScanRecord sr = new ScanRecord();
             sr.setScanType("pattern");
             sr.setScanResult("success");
             sr.setOperatorId(operatorId);
             sr.setOperatorName(operatorName);
-            sr.setScanTime(scanRecord.getScanTime());
+            sr.setScanTime(LocalDateTime.now());
             sr.setStyleNo(pattern.getStyleNo());
             sr.setOrderNo(pattern.getStyleNo());
             sr.setColor(pattern.getColor());
@@ -309,21 +330,10 @@ public class PatternProductionOrchestrator {
         } catch (Exception e) {
             log.warn("样衣扫码同步写入ScanRecord失败，不影响主流程", e);
         }
+    }
 
-        // 更新样板状态
-        statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
-
-        if ("COMPLETE".equals(operationType.trim())
-                || "WAREHOUSE_IN".equals(operationType.trim())) {
-            statusHelper.syncStyleInfoSampleStage(pattern);
-        }
-
-        // 同步库存：根据操作类型自动更新 t_sample_stock / t_sample_loan
-        stockHelper.syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
-
-        // 扫码时同步人员信息回样衣开发表（车板师等）
-        statusHelper.syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
-
+    private Map<String, Object> buildSubmitScanResult(PatternScanRecord scanRecord, String patternId,
+            PatternProduction pattern, String operationType, String operatorName, String warehouseCode) {
         Map<String, Object> result = new HashMap<>();
         result.put("recordId", scanRecord.getId());
         result.put("patternId", patternId);
@@ -332,7 +342,7 @@ public class PatternProductionOrchestrator {
         result.put("operationType", operationType);
         result.put("operatorName", operatorName);
         result.put("quantity", pattern.getQuantity());
-        result.put("warehouseCode", scanRecord.getWarehouseCode());
+        result.put("warehouseCode", warehouseCode);
         result.put("scanTime", scanRecord.getScanTime());
         result.put("newStatus", pattern.getStatus());
         return result;
@@ -343,7 +353,7 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> warehouseIn(String patternId, String remark, String warehouseCode) {
-        PatternProduction pattern = patternProductionService.getById(patternId);
+        PatternProduction pattern = getPatternWithTenant(patternId);
         if (pattern == null || pattern.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
@@ -365,7 +375,7 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> reviewPattern(String patternId, String result, String remark) {
-        PatternProduction pattern = patternProductionService.getById(patternId);
+        PatternProduction pattern = getPatternWithTenant(patternId);
         if (pattern == null || pattern.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
@@ -430,7 +440,7 @@ public class PatternProductionOrchestrator {
      * 维护操作
      */
     public void maintenance(String id, String reason) {
-        PatternProduction pattern = patternProductionService.getById(id);
+        PatternProduction pattern = getPatternWithTenant(id);
         if (pattern == null || pattern.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
@@ -517,5 +527,12 @@ public class PatternProductionOrchestrator {
         } catch (Exception e) {
             log.warn("样衣操作同步写入ScanRecord失败，不影响主流程: {}", e.getMessage());
         }
+    }
+
+    private PatternProduction getPatternWithTenant(String id) {
+        return patternProductionService.lambdaQuery()
+                .eq(PatternProduction::getId, Long.valueOf(id))
+                .eq(PatternProduction::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .one();
     }
 }

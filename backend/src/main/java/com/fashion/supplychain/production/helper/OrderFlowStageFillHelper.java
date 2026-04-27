@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.mapper.ProductionProcessTrackingMapper
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class OrderFlowStageFillHelper {
     private TemplateLibraryService templateLibraryService;
 
     @Autowired
-    private com.fashion.supplychain.production.service.ProcessParentMappingService processParentMappingService;
+    private ProcessParentMappingService processParentMappingService;
 
     private boolean isBaseStageName(String processName) {
         String pn = StringUtils.hasText(processName) ? processName.trim() : null;
@@ -69,33 +70,58 @@ public class OrderFlowStageFillHelper {
     }
 
     public void fillFlowStageFields(List<ProductionOrder> records) {
-        if (records == null || records.isEmpty()) {
-            return;
-        }
+        if (records == null || records.isEmpty()) return;
 
         TenantAssert.assertTenantContext();
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
 
         List<String> orderIds = records.stream()
                 .map(r -> r == null ? null : r.getId())
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .distinct()
+                .filter(StringUtils::hasText).map(String::trim).distinct()
                 .collect(Collectors.toList());
-        if (orderIds.isEmpty()) {
-            return;
-        }
+        if (orderIds.isEmpty()) return;
 
-        boolean flowSnapshotOk = false;
-        List<Map<String, Object>> flowRows = null;
+        FlowQueryResult qr = queryFlowData(orderIds, tenantId);
+
+        if (qr.flowSnapshotOk) {
+            fillFromFlowSnapshot(records, qr.flowByOrder, qr.procurementByOrder, qr.trackingQtyMap);
+        } else {
+            fillFromScanRecords(records, qr.scansByOrder, qr.procurementByOrder, qr.procurementSnapshotOk, qr.purchasesByOrder);
+        }
+    }
+
+    private FlowQueryResult queryFlowData(List<String> orderIds, Long tenantId) {
+        FlowQueryResult qr = new FlowQueryResult();
+
         try {
-            flowRows = scanRecordMapper.selectFlowStageSnapshot(orderIds, tenantId);
-            flowSnapshotOk = true;
+            qr.flowRows = scanRecordMapper.selectFlowStageSnapshot(orderIds, tenantId);
+            qr.flowSnapshotOk = true;
         } catch (Exception e) {
             log.warn("Failed to query flow stage snapshot: orderIdsCount={}", orderIds.size(), e);
         }
 
-        // 从 process_tracking 加载各工序实际已扫数量（与弹窗同源，修正视图匹配遗漏问题）
+        qr.trackingQtyMap = loadTrackingQtyMap(orderIds, tenantId);
+
+        try {
+            qr.procurementRows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, tenantId);
+            qr.procurementSnapshotOk = true;
+        } catch (Exception e) {
+            log.warn("Failed to query procurement snapshot: orderIdsCount={}", orderIds.size(), e);
+        }
+
+        qr.procurementByOrder = buildMapByOrderId(qr.procurementRows);
+        qr.flowByOrder = buildMapByOrderId(qr.flowRows);
+
+        if (!qr.flowSnapshotOk) {
+            qr.scansByOrder = loadScansByOrder(orderIds);
+            if (!qr.procurementSnapshotOk) {
+                qr.purchasesByOrder = loadPurchasesByOrder(orderIds);
+            }
+        }
+        return qr;
+    }
+
+    private Map<String, Map<String, Integer>> loadTrackingQtyMap(List<String> orderIds, Long tenantId) {
         Map<String, Map<String, Integer>> trackingQtyMap = new HashMap<>();
         try {
             List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds, tenantId);
@@ -109,7 +135,6 @@ public class OrderFlowStageFillHelper {
                         if (StringUtils.hasText(pname)) {
                             trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pname, qty, Integer::sum);
                         }
-                        // processCode 单独也作为 key，避免 process_name 为空时漏掉
                         if (StringUtils.hasText(pcode) && !pcode.equals(pname)) {
                             trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pcode, qty, Integer::sum);
                         }
@@ -119,272 +144,10 @@ public class OrderFlowStageFillHelper {
         } catch (Exception e) {
             log.warn("Failed to query process tracking qty summary: {}", e.getMessage());
         }
+        return trackingQtyMap;
+    }
 
-        boolean procurementSnapshotOk = false;
-        List<Map<String, Object>> procurementRows = null;
-        try {
-            procurementRows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, tenantId);
-            procurementSnapshotOk = true;
-        } catch (Exception e) {
-            log.warn("Failed to query procurement snapshot: orderIdsCount={}", orderIds.size(), e);
-        }
-
-        Map<String, Map<String, Object>> procurementByOrder = new HashMap<>();
-        if (procurementRows != null) {
-            for (Map<String, Object> row : procurementRows) {
-                if (row == null || row.isEmpty()) {
-                    continue;
-                }
-                String oid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "orderId"));
-                if (!StringUtils.hasText(oid)) {
-                    continue;
-                }
-                procurementByOrder.put(oid.trim(), row);
-            }
-        }
-
-        if (flowSnapshotOk) {
-            Map<String, Map<String, Object>> flowByOrder = new HashMap<>();
-            if (flowRows != null) {
-                for (Map<String, Object> row : flowRows) {
-                    if (row == null || row.isEmpty()) {
-                        continue;
-                    }
-                    String oid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "orderId"));
-                    if (!StringUtils.hasText(oid)) {
-                        continue;
-                    }
-                    flowByOrder.put(oid.trim(), row);
-                }
-            }
-
-            for (ProductionOrder o : records) {
-                if (o == null || !StringUtils.hasText(o.getId())) {
-                    continue;
-                }
-                String oid = o.getId().trim();
-
-                Map<String, Object> flow = flowByOrder.get(oid);
-                Map<String, Object> proc = procurementByOrder.get(oid);
-
-                LocalDateTime orderStart = o.getCreateTime();
-                LocalDateTime orderEnd = orderStart;
-                String orderOperator = null;
-                Integer orderRate = 100;
-                if (flow != null) {
-                    LocalDateTime os = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "orderStartTime"));
-                    LocalDateTime oe = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "orderEndTime"));
-                    if (os != null) {
-                        orderStart = os;
-                        orderEnd = oe == null ? os : oe;
-                        orderOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "orderOperatorName"));
-                    }
-                }
-                // 如果workflow中没有操作人或操作人是system，使用数据库的创建人
-                if ((!StringUtils.hasText(orderOperator) || "system".equalsIgnoreCase(orderOperator))
-                        && StringUtils.hasText(o.getCreatedByName())) {
-                    orderOperator = o.getCreatedByName();
-                }
-
-                LocalDateTime procurementStart = null;
-                LocalDateTime procurementEnd = null;
-                String procurementOperator = null;
-                Integer procurementRateFromPurchases = null;
-                if (proc != null) {
-                    procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementStartTime"));
-                    procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementEndTime"));
-                    procurementOperator = ParamUtils
-                            .toTrimmedString(ParamUtils.getIgnoreCase(proc, "procurementOperatorName"));
-                    long purchaseQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "purchaseQuantity"));
-                    long arrivedQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "arrivedQuantity"));
-                    if (purchaseQty > 0) {
-                        procurementRateFromPurchases = (int) Math.round(Math.max(0L, arrivedQty) * 100.0 / purchaseQty);
-                    } else {
-                        procurementRateFromPurchases = 0;
-                    }
-                } else if (flow != null) {
-                    procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanStartTime"));
-                    procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanEndTime"));
-                    procurementOperator = ParamUtils
-                            .toTrimmedString(ParamUtils.getIgnoreCase(flow, "procurementScanOperatorName"));
-                }
-
-                LocalDateTime cuttingStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "cuttingStartTime"));
-                LocalDateTime cuttingEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "cuttingEndTime"));
-                String cuttingOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "cuttingOperatorName"));
-                int cuttingQty = flow == null ? 0
-                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "cuttingQuantity"));
-
-                LocalDateTime sewingStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "sewingStartTime"));
-                LocalDateTime sewingEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "sewingEndTime"));
-                String sewingOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "sewingOperatorName"));
-
-                // 车缝环节（新增）
-                LocalDateTime carSewingStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "carSewingStartTime"));
-                LocalDateTime carSewingEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "carSewingEndTime"));
-                String carSewingOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "carSewingOperatorName"));
-
-                // 大烫环节（新增）
-                LocalDateTime ironingStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "ironingStartTime"));
-                LocalDateTime ironingEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "ironingEndTime"));
-                String ironingOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "ironingOperatorName"));
-
-                // 二次工艺环节（新增）
-                LocalDateTime secondaryProcessStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "secondaryProcessStartTime"));
-                LocalDateTime secondaryProcessEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "secondaryProcessEndTime"));
-                String secondaryProcessOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "secondaryProcessOperatorName"));
-
-                // 包装环节（新增）
-                LocalDateTime packagingStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "packagingStartTime"));
-                LocalDateTime packagingEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "packagingEndTime"));
-                String packagingOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "packagingOperatorName"));
-                int carSewingQty = flow == null ? 0
-                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "carSewingQuantity"));
-                int ironingQty = flow == null ? 0
-                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "ironingQuantity"));
-                int secondaryProcessQty = flow == null ? 0
-                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "secondaryProcessQuantity"));
-                int packagingQty = flow == null ? 0
-                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "packagingQuantity"));
-
-                // 用 process_tracking 实际扫码量覆盖（取两者最大值，避免视图条件遗漏）
-                Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, new HashMap<>());
-                if (!trackingByProcess.isEmpty()) {
-                    Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
-                    carSewingQty = Math.max(carSewingQty, parentQtyMap.getOrDefault("车缝", 0));
-                    ironingQty = Math.max(ironingQty, parentQtyMap.getOrDefault("尾部", 0));
-                    secondaryProcessQty = Math.max(secondaryProcessQty, parentQtyMap.getOrDefault("二次工艺", 0));
-                    packagingQty = Math.max(packagingQty, parentQtyMap.getOrDefault("包装", 0));
-                }
-
-                LocalDateTime qualityStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "qualityStartTime"));
-                LocalDateTime qualityEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "qualityEndTime"));
-                String qualityOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "qualityOperatorName"));
-                int qualityQty = flow == null ? 0
-                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "qualityQuantity"));
-                if (!trackingByProcess.isEmpty()) {
-                    Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
-                    qualityQty = Math.max(qualityQty, parentQtyMap.getOrDefault("质检", 0));
-                }
-
-                LocalDateTime wareStart = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "warehousingStartTime"));
-                LocalDateTime wareEnd = flow == null ? null
-                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "warehousingEndTime"));
-                String wareOperator = flow == null ? null
-                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "warehousingOperatorName"));
-                int wareQty = flow == null ? 0
-                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "warehousingQuantity"));
-
-                o.setOrderStartTime(orderStart);
-                o.setOrderEndTime(orderEnd);
-                o.setOrderOperatorName(orderOperator);
-                o.setOrderCompletionRate(orderRate);
-
-                boolean directCuttingOrder = isDirectCuttingOrder(o);
-                fillProcurementDisplay(o, procurementStart, procurementEnd, procurementOperator,
-                        procurementRateFromPurchases, directCuttingOrder);
-
-                o.setCuttingStartTime(cuttingStart);
-                o.setCuttingEndTime(cuttingEnd);
-                o.setCuttingOperatorName(cuttingOperator);
-                int cuttingQtyForRate = o.getCuttingQuantity() == null ? cuttingQty : o.getCuttingQuantity();
-                int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
-                int baseQtyForRate = orderQtyForRate > 0 ? orderQtyForRate : cuttingQtyForRate;
-                int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
-                        ? cuttingQty : 0;
-                Integer cuttingRate = computeRate(cuttingActualQty, baseQtyForRate);
-                o.setCuttingCompletionRate(cuttingRate);
-
-                o.setSewingStartTime(sewingStart);
-                o.setSewingEndTime(sewingEnd);
-                o.setSewingOperatorName(sewingOperator);
-                int wareQtyForRate = o.getWarehousingQualifiedQuantity() == null ? wareQty
-                        : o.getWarehousingQualifiedQuantity();
-                Integer sewingRate = computeRate(wareQtyForRate, cuttingQtyForRate);
-                o.setSewingCompletionRate(sewingRate);
-
-                // 设置车缝环节（新增）
-                o.setCarSewingStartTime(carSewingStart);
-                o.setCarSewingEndTime(carSewingEnd);
-                o.setCarSewingOperatorName(carSewingOperator);
-                Integer carSewingRate = computeRate(carSewingQty, baseQtyForRate);
-                o.setCarSewingCompletionRate(carSewingRate);
-
-                // 设置大烫环节（新增）
-                o.setIroningStartTime(ironingStart);
-                o.setIroningEndTime(ironingEnd);
-                o.setIroningOperatorName(ironingOperator);
-                Integer ironingRate = computeRate(ironingQty, baseQtyForRate);
-                o.setIroningCompletionRate(ironingRate);
-
-                // 设置二次工艺环节（新增）
-                o.setSecondaryProcessStartTime(secondaryProcessStart);
-                o.setSecondaryProcessEndTime(secondaryProcessEnd);
-                o.setSecondaryProcessOperatorName(secondaryProcessOperator);
-                Integer secondaryProcessRate = computeRate(secondaryProcessQty, baseQtyForRate);
-                o.setSecondaryProcessCompletionRate(secondaryProcessRate);
-                o.setSecondaryProcessRate(secondaryProcessRate); // 前端 alias
-
-                // 设置包装环节（新增）
-                o.setPackagingStartTime(packagingStart);
-                o.setPackagingEndTime(packagingEnd);
-                o.setPackagingOperatorName(packagingOperator);
-                Integer packagingRate = computeRate(packagingQty, baseQtyForRate);
-                o.setPackagingCompletionRate(packagingRate);
-
-                if (!trackingByProcess.isEmpty()) {
-                    Integer tailMinRate = resolveTrackingMinRate(trackingByProcess, baseQtyForRate,
-                            new String[]{"尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process"},
-                            new String[]{"包装", "packaging"});
-                    if (tailMinRate != null) {
-                        o.setTailProcessRate(tailMinRate);
-                    } else {
-                        o.setTailProcessRate(packagingRate);
-                    }
-                } else {
-                    Integer elseIroningRate = computeRate(ironingQty, baseQtyForRate);
-                    o.setTailProcessRate(elseIroningRate != null ? elseIroningRate : packagingRate);
-                }
-
-                o.setQualityStartTime(qualityStart);
-                o.setQualityEndTime(qualityEnd);
-                o.setQualityOperatorName(qualityOperator);
-                Integer qualityRate = computeRate(qualityQty, baseQtyForRate);
-                o.setQualityCompletionRate(qualityRate);
-
-                o.setWarehousingStartTime(wareStart);
-                o.setWarehousingEndTime(wareEnd);
-                o.setWarehousingOperatorName(wareOperator);
-                wareQtyForRate = o.getWarehousingQualifiedQuantity() == null ? wareQty
-                        : o.getWarehousingQualifiedQuantity();
-                Integer wareRate = computeRate(wareQtyForRate, baseQtyForRate);
-                o.setWarehousingCompletionRate(wareRate);
-            }
-            return;
-        }
-
+    private Map<String, List<ScanRecord>> loadScansByOrder(List<String> orderIds) {
         List<ScanRecord> scans;
         try {
             scans = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
@@ -392,314 +155,306 @@ public class OrderFlowStageFillHelper {
                             ScanRecord::getProcessName, ScanRecord::getProcessCode, ScanRecord::getQuantity,
                             ScanRecord::getScanTime, ScanRecord::getOperatorName, ScanRecord::getCreateTime)
                     .in(ScanRecord::getOrderId, orderIds)
-                    .in(ScanRecord::getScanType,
-                            java.util.Arrays.asList("production", "cutting", "quality", "warehouse"))
+                    .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "quality", "warehouse"))
                     .eq(ScanRecord::getScanResult, "success")
                     .orderByAsc(ScanRecord::getScanTime)
                     .orderByAsc(ScanRecord::getCreateTime));
         } catch (Exception e) {
-            log.warn("Failed to query scan records for flow stage fields: orderIdsCount={}",
-                    orderIds == null ? 0 : orderIds.size(),
-                    e);
+            log.warn("Failed to query scan records for flow stage fields: orderIdsCount={}", orderIds.size(), e);
             scans = new ArrayList<>();
         }
-
         Map<String, List<ScanRecord>> byOrder = new HashMap<>();
         if (scans != null) {
             for (ScanRecord r : scans) {
-                if (r == null || !StringUtils.hasText(r.getOrderId())) {
-                    continue;
+                if (r == null || !StringUtils.hasText(r.getOrderId())) continue;
+                byOrder.computeIfAbsent(r.getOrderId().trim(), k -> new ArrayList<>()).add(r);
+            }
+        }
+        return byOrder;
+    }
+
+    private Map<String, List<MaterialPurchase>> loadPurchasesByOrder(List<String> orderIds) {
+        Map<String, List<MaterialPurchase>> result = new HashMap<>();
+        try {
+            List<MaterialPurchase> purchases = materialPurchaseMapper
+                    .selectList(new LambdaQueryWrapper<MaterialPurchase>()
+                            .in(MaterialPurchase::getOrderId, orderIds)
+                            .eq(MaterialPurchase::getDeleteFlag, 0)
+                            .orderByAsc(MaterialPurchase::getReceivedTime)
+                            .orderByAsc(MaterialPurchase::getUpdateTime));
+            if (purchases != null) {
+                for (MaterialPurchase p : purchases) {
+                    if (p == null || !StringUtils.hasText(p.getOrderId())) continue;
+                    result.computeIfAbsent(p.getOrderId().trim(), k -> new ArrayList<>()).add(p);
                 }
-                String oid = r.getOrderId().trim();
-                byOrder.computeIfAbsent(oid, k -> new ArrayList<>()).add(r);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query purchases for flow stage fields: orderIdsCount={}", orderIds.size(), e);
+        }
+        return result;
+    }
+
+    private Map<String, Map<String, Object>> buildMapByOrderId(List<Map<String, Object>> rows) {
+        Map<String, Map<String, Object>> result = new HashMap<>();
+        if (rows == null) return result;
+        for (Map<String, Object> row : rows) {
+            if (row == null || row.isEmpty()) continue;
+            String oid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "orderId"));
+            if (StringUtils.hasText(oid)) result.put(oid.trim(), row);
+        }
+        return result;
+    }
+
+    private void fillFromFlowSnapshot(List<ProductionOrder> records,
+            Map<String, Map<String, Object>> flowByOrder,
+            Map<String, Map<String, Object>> procurementByOrder,
+            Map<String, Map<String, Integer>> trackingQtyMap) {
+        for (ProductionOrder o : records) {
+            if (o == null || !StringUtils.hasText(o.getId())) continue;
+            String oid = o.getId().trim();
+            Map<String, Object> flow = flowByOrder.get(oid);
+            Map<String, Object> proc = procurementByOrder.get(oid);
+            Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, new HashMap<>());
+
+            FlowStageData d = extractFlowStageData(o, flow, proc, trackingByProcess);
+            applyFlowStagesToOrder(o, d);
+        }
+    }
+
+    private FlowStageData extractFlowStageData(ProductionOrder o, Map<String, Object> flow,
+            Map<String, Object> proc, Map<String, Integer> trackingByProcess) {
+        FlowStageData d = new FlowStageData();
+        d.orderStart = o.getCreateTime();
+        d.orderEnd = d.orderStart;
+        d.orderOperator = null;
+        d.orderRate = 100;
+        if (flow != null) {
+            LocalDateTime os = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "orderStartTime"));
+            LocalDateTime oe = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "orderEndTime"));
+            if (os != null) { d.orderStart = os; d.orderEnd = oe == null ? os : oe; d.orderOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "orderOperatorName")); }
+        }
+        if ((!StringUtils.hasText(d.orderOperator) || "system".equalsIgnoreCase(d.orderOperator)) && StringUtils.hasText(o.getCreatedByName())) {
+            d.orderOperator = o.getCreatedByName();
+        }
+
+        if (proc != null) {
+            d.procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementStartTime"));
+            d.procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementEndTime"));
+            d.procurementOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(proc, "procurementOperatorName"));
+            long purchaseQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "purchaseQuantity"));
+            long arrivedQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "arrivedQuantity"));
+            d.procurementRateFromPurchases = purchaseQty > 0 ? (int) Math.round(Math.max(0L, arrivedQty) * 100.0 / purchaseQty) : 0;
+        } else if (flow != null) {
+            d.procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanStartTime"));
+            d.procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanEndTime"));
+            d.procurementOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "procurementScanOperatorName"));
+        }
+
+        d.cuttingStart = extractTime(flow, "cuttingStartTime"); d.cuttingEnd = extractTime(flow, "cuttingEndTime");
+        d.cuttingOperator = extractStr(flow, "cuttingOperatorName"); d.cuttingQty = extractInt(flow, "cuttingQuantity");
+        d.sewingStart = extractTime(flow, "sewingStartTime"); d.sewingEnd = extractTime(flow, "sewingEndTime");
+        d.sewingOperator = extractStr(flow, "sewingOperatorName");
+        d.carSewingStart = extractTime(flow, "carSewingStartTime"); d.carSewingEnd = extractTime(flow, "carSewingEndTime");
+        d.carSewingOperator = extractStr(flow, "carSewingOperatorName"); d.carSewingQty = extractInt(flow, "carSewingQuantity");
+        d.ironingStart = extractTime(flow, "ironingStartTime"); d.ironingEnd = extractTime(flow, "ironingEndTime");
+        d.ironingOperator = extractStr(flow, "ironingOperatorName"); d.ironingQty = extractInt(flow, "ironingQuantity");
+        d.secondaryProcessStart = extractTime(flow, "secondaryProcessStartTime"); d.secondaryProcessEnd = extractTime(flow, "secondaryProcessEndTime");
+        d.secondaryProcessOperator = extractStr(flow, "secondaryProcessOperatorName"); d.secondaryProcessQty = extractInt(flow, "secondaryProcessQuantity");
+        d.packagingStart = extractTime(flow, "packagingStartTime"); d.packagingEnd = extractTime(flow, "packagingEndTime");
+        d.packagingOperator = extractStr(flow, "packagingOperatorName"); d.packagingQty = extractInt(flow, "packagingQuantity");
+        d.qualityStart = extractTime(flow, "qualityStartTime"); d.qualityEnd = extractTime(flow, "qualityEndTime");
+        d.qualityOperator = extractStr(flow, "qualityOperatorName"); d.qualityQty = extractInt(flow, "qualityQuantity");
+        d.wareStart = extractTime(flow, "warehousingStartTime"); d.wareEnd = extractTime(flow, "warehousingEndTime");
+        d.wareOperator = extractStr(flow, "warehousingOperatorName"); d.wareQty = extractInt(flow, "warehousingQuantity");
+
+        if (!trackingByProcess.isEmpty()) {
+            Map<String, Integer> parentQtyMap = buildParentNodeQtyMap(trackingByProcess);
+            d.carSewingQty = Math.max(d.carSewingQty, parentQtyMap.getOrDefault("车缝", 0));
+            d.ironingQty = Math.max(d.ironingQty, parentQtyMap.getOrDefault("尾部", 0));
+            d.secondaryProcessQty = Math.max(d.secondaryProcessQty, parentQtyMap.getOrDefault("二次工艺", 0));
+            d.packagingQty = Math.max(d.packagingQty, parentQtyMap.getOrDefault("包装", 0));
+            d.qualityQty = Math.max(d.qualityQty, parentQtyMap.getOrDefault("质检", 0));
+        }
+        d.trackingByProcess = trackingByProcess;
+        return d;
+    }
+
+    private LocalDateTime extractTime(Map<String, Object> map, String key) {
+        return map == null ? null : toLocalDateTime(ParamUtils.getIgnoreCase(map, key));
+    }
+    private String extractStr(Map<String, Object> map, String key) {
+        return map == null ? null : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(map, key));
+    }
+    private int extractInt(Map<String, Object> map, String key) {
+        return map == null ? 0 : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(map, key));
+    }
+
+    private void applyFlowStagesToOrder(ProductionOrder o, FlowStageData d) {
+        o.setOrderStartTime(d.orderStart); o.setOrderEndTime(d.orderEnd);
+        o.setOrderOperatorName(d.orderOperator); o.setOrderCompletionRate(d.orderRate);
+
+        boolean directCuttingOrder = isDirectCuttingOrder(o);
+        fillProcurementDisplay(o, d.procurementStart, d.procurementEnd, d.procurementOperator, d.procurementRateFromPurchases, directCuttingOrder);
+
+        o.setCuttingStartTime(d.cuttingStart); o.setCuttingEndTime(d.cuttingEnd); o.setCuttingOperatorName(d.cuttingOperator);
+        int cuttingQtyForRate = o.getCuttingQuantity() == null ? d.cuttingQty : o.getCuttingQuantity();
+        int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
+        int baseQtyForRate = orderQtyForRate > 0 ? orderQtyForRate : cuttingQtyForRate;
+        int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0 ? d.cuttingQty : 0;
+        o.setCuttingCompletionRate(computeRate(cuttingActualQty, orderQtyForRate));
+
+        o.setSewingStartTime(d.sewingStart); o.setSewingEndTime(d.sewingEnd); o.setSewingOperatorName(d.sewingOperator);
+        int wareQtyForRate = o.getWarehousingQualifiedQuantity() == null ? d.wareQty : o.getWarehousingQualifiedQuantity();
+        o.setSewingCompletionRate(computeRate(wareQtyForRate, cuttingQtyForRate));
+
+        o.setCarSewingStartTime(d.carSewingStart); o.setCarSewingEndTime(d.carSewingEnd); o.setCarSewingOperatorName(d.carSewingOperator);
+        o.setCarSewingCompletionRate(computeRate(d.carSewingQty, baseQtyForRate));
+
+        o.setIroningStartTime(d.ironingStart); o.setIroningEndTime(d.ironingEnd); o.setIroningOperatorName(d.ironingOperator);
+        o.setIroningCompletionRate(computeRate(d.ironingQty, baseQtyForRate));
+
+        o.setSecondaryProcessStartTime(d.secondaryProcessStart); o.setSecondaryProcessEndTime(d.secondaryProcessEnd);
+        o.setSecondaryProcessOperatorName(d.secondaryProcessOperator);
+        Integer secondaryProcessRate = computeRate(d.secondaryProcessQty, baseQtyForRate);
+        o.setSecondaryProcessCompletionRate(secondaryProcessRate); o.setSecondaryProcessRate(secondaryProcessRate);
+
+        o.setPackagingStartTime(d.packagingStart); o.setPackagingEndTime(d.packagingEnd); o.setPackagingOperatorName(d.packagingOperator);
+        Integer packagingRate = computeRate(d.packagingQty, baseQtyForRate);
+        o.setPackagingCompletionRate(packagingRate);
+
+        if (d.trackingByProcess != null && !d.trackingByProcess.isEmpty()) {
+            Integer tailMinRate = resolveTrackingMinRate(d.trackingByProcess, baseQtyForRate,
+                    new String[]{"尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process"},
+                    new String[]{"包装", "packaging"});
+            o.setTailProcessRate(tailMinRate != null ? tailMinRate : packagingRate);
+        } else {
+            Integer elseIroningRate = computeRate(d.ironingQty, baseQtyForRate);
+            o.setTailProcessRate(elseIroningRate != null ? elseIroningRate : packagingRate);
+        }
+
+        o.setQualityStartTime(d.qualityStart); o.setQualityEndTime(d.qualityEnd); o.setQualityOperatorName(d.qualityOperator);
+        o.setQualityCompletionRate(computeRate(d.qualityQty, baseQtyForRate));
+
+        o.setWarehousingStartTime(d.wareStart); o.setWarehousingEndTime(d.wareEnd); o.setWarehousingOperatorName(d.wareOperator);
+        wareQtyForRate = o.getWarehousingQualifiedQuantity() == null ? d.wareQty : o.getWarehousingQualifiedQuantity();
+        o.setWarehousingCompletionRate(computeRate(wareQtyForRate, baseQtyForRate));
+    }
+
+    private void fillFromScanRecords(List<ProductionOrder> records,
+            Map<String, List<ScanRecord>> scansByOrder,
+            Map<String, Map<String, Object>> procurementByOrder,
+            boolean procurementSnapshotOk,
+            Map<String, List<MaterialPurchase>> purchasesByOrder) {
+        for (ProductionOrder o : records) {
+            if (o == null || !StringUtils.hasText(o.getId())) continue;
+            String oid = o.getId().trim();
+            List<ScanRecord> list = scansByOrder.getOrDefault(oid, new ArrayList<>());
+
+            FlowStageData d = aggregateScanRecords(list, o);
+            resolveProcurementFromScanFallback(o, oid, d, procurementByOrder, procurementSnapshotOk, purchasesByOrder);
+            applyFlowStagesToOrder(o, d);
+        }
+    }
+
+    private FlowStageData aggregateScanRecords(List<ScanRecord> list, ProductionOrder o) {
+        FlowStageData d = new FlowStageData();
+        d.orderStart = o.getCreateTime(); d.orderEnd = d.orderStart; d.orderOperator = null; d.orderRate = 100;
+
+        for (ScanRecord r : list) {
+            String st = r.getScanType() == null ? "" : r.getScanType().trim();
+            String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
+            if (!StringUtils.hasText(pn)) pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
+            String pc = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
+            int q = r.getQuantity() == null ? 0 : r.getQuantity();
+            LocalDateTime t = r.getScanTime();
+            String op = r.getOperatorName();
+
+            if (("production".equals(st) || "orchestration".equals(st)) && templateLibraryService.progressStageNameMatches(ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED, pn)) {
+                d.orderStart = t; d.orderEnd = t; d.orderOperator = op; d.orderRate = 100;
+            } else if (("production".equals(st) || "orchestration".equals(st)) && templateLibraryService.progressStageNameMatches(ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT, pn)) {
+                if (d.procurementStart == null) d.procurementStart = t; d.procurementEnd = t; d.procurementOperator = op;
+            } else if ("quality".equals(st) || "quality_warehousing".equals(pc) || ("production".equals(st) && templateLibraryService.isProgressQualityStageName(pn))) {
+                if (d.qualityStart == null) d.qualityStart = t; d.qualityEnd = t; d.qualityOperator = op; d.qualityQty += Math.max(0, q);
+            } else if ("warehouse".equals(st) && !"warehouse_rollback".equals(pc)) {
+                if (d.wareStart == null) d.wareStart = t; d.wareEnd = t; d.wareOperator = op; d.wareQty += Math.max(0, q);
+            } else if ("cutting".equals(st) || (("production".equals(st) || "orchestration".equals(st)) && isParentNodeMatch(pn, "裁剪"))) {
+                if (d.cuttingStart == null) d.cuttingStart = t; d.cuttingEnd = t; d.cuttingOperator = op; d.cuttingQty += Math.max(0, q);
+            } else if ("production".equals(st) && isParentNodeMatch(pn, "车缝")) {
+                if (d.carSewingStart == null) d.carSewingStart = t; d.carSewingEnd = t; d.carSewingOperator = op; d.carSewingQty += Math.max(0, q);
+            } else if ("production".equals(st) && isParentNodeMatch(pn, "尾部")) {
+                if (d.ironingStart == null) d.ironingStart = t; d.ironingEnd = t; d.ironingOperator = op; d.ironingQty += Math.max(0, q);
+            } else if ("production".equals(st) && isParentNodeMatch(pn, "二次工艺")) {
+                if (d.secondaryProcessStart == null) d.secondaryProcessStart = t; d.secondaryProcessEnd = t; d.secondaryProcessOperator = op; d.secondaryProcessQty += Math.max(0, q);
+            } else if ("production".equals(st) && !isBaseStageName(pn) && !"quality_warehousing".equals(pc) && !templateLibraryService.isProgressQualityStageName(pn) && !isAnyRecognizedParentNode(pn)) {
+                if (d.sewingStart == null) d.sewingStart = t; d.sewingEnd = t; d.sewingOperator = op;
             }
         }
 
-        Map<String, List<MaterialPurchase>> purchasesByOrder = new HashMap<>();
-        if (!procurementSnapshotOk) {
+        if ((!StringUtils.hasText(d.orderOperator) || "system".equalsIgnoreCase(d.orderOperator)) && StringUtils.hasText(o.getCreatedByName())) {
+            d.orderOperator = o.getCreatedByName();
+        }
+        return d;
+    }
+
+    private void resolveProcurementFromScanFallback(ProductionOrder o, String oid, FlowStageData d,
+            Map<String, Map<String, Object>> procurementByOrder, boolean procurementSnapshotOk,
+            Map<String, List<MaterialPurchase>> purchasesByOrder) {
+        if (procurementSnapshotOk) {
+            Map<String, Object> proc = procurementByOrder.get(oid);
+            if (proc != null) {
+                d.procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementStartTime"));
+                d.procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementEndTime"));
+                d.procurementOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(proc, "procurementOperatorName"));
+                long purchaseQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "purchaseQuantity"));
+                long arrivedQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "arrivedQuantity"));
+                d.procurementRateFromPurchases = purchaseQty > 0 ? (int) Math.round(Math.max(0L, arrivedQty) * 100.0 / purchaseQty) : 0;
+            }
+        } else {
             try {
-                List<MaterialPurchase> purchases = materialPurchaseMapper
-                        .selectList(new LambdaQueryWrapper<MaterialPurchase>()
-                                .in(MaterialPurchase::getOrderId, orderIds)
-                                .eq(MaterialPurchase::getDeleteFlag, 0)
-                                .orderByAsc(MaterialPurchase::getReceivedTime)
-                                .orderByAsc(MaterialPurchase::getUpdateTime));
-                if (purchases != null) {
+                List<MaterialPurchase> purchases = purchasesByOrder.getOrDefault(oid, new ArrayList<>());
+                if (!purchases.isEmpty()) {
+                    MaterialPurchaseService.ArrivalStats purchaseStats = materialPurchaseService.computeArrivalStats(purchases);
+                    d.procurementRateFromPurchases = purchaseStats == null ? 0 : purchaseStats.getArrivalRate();
                     for (MaterialPurchase p : purchases) {
-                        if (p == null || !StringUtils.hasText(p.getOrderId())) {
-                            continue;
-                        }
-                        purchasesByOrder.computeIfAbsent(p.getOrderId().trim(), k -> new ArrayList<>()).add(p);
+                        if (p == null) continue;
+                        String status = p.getStatus() == null ? "" : p.getStatus().trim();
+                        if ("pending".equalsIgnoreCase(status) || "cancelled".equalsIgnoreCase(status)) continue;
+                        LocalDateTime s = p.getCreateTime();
+                        if (s != null && (d.procurementStart == null || s.isBefore(d.procurementStart))) d.procurementStart = s;
+                        LocalDateTime t = p.getReceivedTime() == null ? p.getUpdateTime() : p.getReceivedTime();
+                        if (t != null && (d.procurementEnd == null || t.isAfter(d.procurementEnd))) { d.procurementEnd = t; d.procurementOperator = p.getReceiverName(); }
                     }
                 }
             } catch (Exception e) {
-                log.warn("Failed to query purchases for flow stage fields: orderIdsCount={}", orderIds.size(), e);
+                log.warn("Failed to compute procurement summary from purchases: orderId={}", oid, e);
             }
         }
+    }
 
-        for (ProductionOrder o : records) {
-            if (o == null || !StringUtils.hasText(o.getId())) {
-                continue;
-            }
-            String oid = o.getId().trim();
-            List<ScanRecord> list = byOrder.getOrDefault(oid, new ArrayList<>());
+    private static class FlowQueryResult {
+        boolean flowSnapshotOk;
+        List<Map<String, Object>> flowRows;
+        Map<String, Map<String, Object>> flowByOrder = new HashMap<>();
+        Map<String, Map<String, Integer>> trackingQtyMap = new HashMap<>();
+        boolean procurementSnapshotOk;
+        List<Map<String, Object>> procurementRows;
+        Map<String, Map<String, Object>> procurementByOrder = new HashMap<>();
+        Map<String, List<ScanRecord>> scansByOrder = new HashMap<>();
+        Map<String, List<MaterialPurchase>> purchasesByOrder = new HashMap<>();
+    }
 
-            LocalDateTime orderStart = o.getCreateTime();
-            LocalDateTime orderEnd = orderStart;
-            String orderOperator = null;
-            Integer orderRate = 100;
-
-            LocalDateTime procurementStart = null, procurementEnd = null;
-            String procurementOperator = null;
-            int procurementStageQty = 0;
-            Integer procurementRateFromPurchases = null;
-
-            LocalDateTime cuttingStart = null, cuttingEnd = null;
-            String cuttingOperator = null;
-            int cuttingQty = 0;
-
-            LocalDateTime sewingStart = null, sewingEnd = null;
-            String sewingOperator = null;
-
-            LocalDateTime carSewingStart = null, carSewingEnd = null;
-            String carSewingOperator = null;
-            int carSewingQty = 0;
-
-            // 尾部（合并：大烫/整烫/剪线/质检/包装等，凡模板中 progressStage=尾部 的子工序均归此桶）
-            LocalDateTime tailStart = null, tailEnd = null;
-            String tailOperator = null;
-            int tailQty = 0;
-
-            LocalDateTime secondaryProcessStart = null, secondaryProcessEnd = null;
-            String secondaryProcessOperator = null;
-            int secondaryProcessQty = 0;
-
-            LocalDateTime qualityStart = null, qualityEnd = null;
-            String qualityOperator = null;
-            int qualityQty = 0;
-
-            LocalDateTime wareStart = null, wareEnd = null;
-            String wareOperator = null;
-            int wareQty = 0;
-
-            for (ScanRecord r : list) {
-                String st = r.getScanType() == null ? "" : r.getScanType().trim();
-                String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
-                if (!StringUtils.hasText(pn)) {
-                    pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
-                }
-                String pc = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
-                int q = r.getQuantity() == null ? 0 : r.getQuantity();
-                LocalDateTime t = r.getScanTime();
-                String op = r.getOperatorName();
-
-                if (("production".equals(st) || "orchestration".equals(st))
-                        && templateLibraryService.progressStageNameMatches(
-                                ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED,
-                                pn)) {
-                    orderStart = t;
-                    orderEnd = t;
-                    orderOperator = op;
-                    orderRate = 100;
-                } else if (("production".equals(st) || "orchestration".equals(st))
-                        && templateLibraryService.progressStageNameMatches(
-                                ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT,
-                                pn)) {
-                    if (procurementStart == null) {
-                        procurementStart = t;
-                    }
-                    procurementEnd = t;
-                    procurementOperator = op;
-                    procurementStageQty = Math.max(procurementStageQty, Math.max(0, q));
-                } else if ("quality".equals(st)
-                        || "quality_warehousing".equals(pc)
-                        || ("production".equals(st) && templateLibraryService.isProgressQualityStageName(pn))) {
-                    if (qualityStart == null) {
-                        qualityStart = t;
-                    }
-                    qualityEnd = t;
-                    qualityOperator = op;
-                    qualityQty += Math.max(0, q);
-                } else if ("warehouse".equals(st) && !"warehouse_rollback".equals(pc)) {
-                    if (wareStart == null) {
-                        wareStart = t;
-                    }
-                    wareEnd = t;
-                    wareOperator = op;
-                    wareQty += Math.max(0, q);
-                } else if ("cutting".equals(st)
-                        || (("production".equals(st) || "orchestration".equals(st))
-                            && isParentNodeMatch(pn, "裁剪"))) {
-                    if (cuttingStart == null) {
-                        cuttingStart = t;
-                    }
-                    cuttingEnd = t;
-                    cuttingOperator = op;
-                    cuttingQty += Math.max(0, q);
-                } else if ("production".equals(st)
-                        && isParentNodeMatch(pn, "车缝")) {
-                    if (carSewingStart == null) {
-                        carSewingStart = t;
-                    }
-                    carSewingEnd = t;
-                    carSewingOperator = op;
-                    carSewingQty += Math.max(0, q);
-                } else if ("production".equals(st)
-                        && isParentNodeMatch(pn, "尾部")) {
-                    if (tailStart == null) {
-                        tailStart = t;
-                    }
-                    tailEnd = t;
-                    tailOperator = op;
-                    tailQty += Math.max(0, q);
-                } else if ("production".equals(st)
-                        && isParentNodeMatch(pn, "二次工艺")) {
-                    if (secondaryProcessStart == null) {
-                        secondaryProcessStart = t;
-                    }
-                    secondaryProcessEnd = t;
-                    secondaryProcessOperator = op;
-                    secondaryProcessQty += Math.max(0, q);
-                } else if ("production".equals(st)
-                        && !isBaseStageName(pn)
-                        && !"quality_warehousing".equals(pc)
-                        && !templateLibraryService.isProgressQualityStageName(pn)
-                        && !isAnyRecognizedParentNode(pn)) {
-                    if (sewingStart == null) {
-                        sewingStart = t;
-                    }
-                    sewingEnd = t;
-                    sewingOperator = op;
-                }
-            }
-
-            if (procurementSnapshotOk) {
-                Map<String, Object> proc = procurementByOrder.get(oid);
-                if (proc != null) {
-                    procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementStartTime"));
-                    procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(proc, "procurementEndTime"));
-                    procurementOperator = ParamUtils
-                            .toTrimmedString(ParamUtils.getIgnoreCase(proc, "procurementOperatorName"));
-                    long purchaseQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "purchaseQuantity"));
-                    long arrivedQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "arrivedQuantity"));
-                    if (purchaseQty > 0) {
-                        procurementRateFromPurchases = (int) Math
-                                .round(Math.max(0L, arrivedQty) * 100.0 / purchaseQty);
-                    } else {
-                        procurementRateFromPurchases = 0;
-                    }
-                }
-            } else {
-                try {
-                    List<MaterialPurchase> purchases = purchasesByOrder.getOrDefault(oid, new ArrayList<>());
-                    if (!purchases.isEmpty()) {
-                        MaterialPurchaseService.ArrivalStats purchaseStats = materialPurchaseService
-                                .computeArrivalStats(purchases);
-                        procurementRateFromPurchases = purchaseStats == null ? 0 : purchaseStats.getArrivalRate();
-
-                        for (MaterialPurchase p : purchases) {
-                            if (p == null) {
-                                continue;
-                            }
-                            String status = p.getStatus() == null ? "" : p.getStatus().trim();
-                            if ("pending".equalsIgnoreCase(status) || "cancelled".equalsIgnoreCase(status)) {
-                                continue;
-                            }
-
-                            LocalDateTime s = p.getCreateTime();
-                            if (s != null && (procurementStart == null || s.isBefore(procurementStart))) {
-                                procurementStart = s;
-                            }
-
-                            LocalDateTime t = p.getReceivedTime() == null ? p.getUpdateTime() : p.getReceivedTime();
-                            if (t != null && (procurementEnd == null || t.isAfter(procurementEnd))) {
-                                procurementEnd = t;
-                                procurementOperator = p.getReceiverName();
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to compute procurement summary from purchases: orderId={}", oid, e);
-                }
-            }
-
-            o.setOrderStartTime(orderStart);
-            o.setOrderEndTime(orderEnd);
-            // 如果没有操作人或操作人是system，使用数据库的创建人
-            String finalOrderOperator = orderOperator;
-            if ((!StringUtils.hasText(finalOrderOperator) || "system".equalsIgnoreCase(finalOrderOperator))
-                    && StringUtils.hasText(o.getCreatedByName())) {
-                finalOrderOperator = o.getCreatedByName();
-            }
-            o.setOrderOperatorName(finalOrderOperator);
-            o.setOrderCompletionRate(orderRate);
-
-            // 采购完成率 + 时间显示（统一逻辑）
-            boolean directCuttingOrder = isDirectCuttingOrder(o);
-            fillProcurementDisplay(o, procurementStart, procurementEnd, procurementOperator,
-                    procurementRateFromPurchases, directCuttingOrder);
-
-            o.setCuttingStartTime(cuttingStart);
-            o.setCuttingEndTime(cuttingEnd);
-            o.setCuttingOperatorName(cuttingOperator);
-            int cuttingQtyForRate = o.getCuttingQuantity() == null ? cuttingQty : o.getCuttingQuantity();
-            int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
-            int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
-                    ? cuttingQty : 0;
-            Integer cuttingRate = computeRate(cuttingActualQty, orderQtyForRate);
-            o.setCuttingCompletionRate(cuttingRate);
-
-            o.setSewingStartTime(sewingStart);
-            o.setSewingEndTime(sewingEnd);
-            o.setSewingOperatorName(sewingOperator);
-            int wareQtyForRate = o.getWarehousingQualifiedQuantity() == null ? wareQty
-                    : o.getWarehousingQualifiedQuantity();
-            Integer sewingRate = computeRate(wareQtyForRate, cuttingQtyForRate);
-            o.setSewingCompletionRate(sewingRate);
-
-            // 设置车缝环节（新增 - 兜底分支）
-            o.setCarSewingStartTime(carSewingStart);
-            o.setCarSewingEndTime(carSewingEnd);
-            o.setCarSewingOperatorName(carSewingOperator);
-            Integer carSewingRate = computeRate(carSewingQty, orderQtyForRate);
-            o.setCarSewingCompletionRate(carSewingRate);
-
-            // 设置大烫环节 → 实际写入「尾部」聚合数据（向前兼容 ironing 字段名）
-            o.setIroningStartTime(tailStart);
-            o.setIroningEndTime(tailEnd);
-            o.setIroningOperatorName(tailOperator);
-            Integer tailRate = computeRate(tailQty, orderQtyForRate);
-            o.setIroningCompletionRate(tailRate);
-
-            // 设置二次工艺环节（新增 - 兜底分支）
-            o.setSecondaryProcessStartTime(secondaryProcessStart);
-            o.setSecondaryProcessEndTime(secondaryProcessEnd);
-            o.setSecondaryProcessOperatorName(secondaryProcessOperator);
-            Integer secondaryProcessRate = computeRate(secondaryProcessQty, orderQtyForRate);
-            o.setSecondaryProcessCompletionRate(secondaryProcessRate);
-            o.setSecondaryProcessRate(secondaryProcessRate); // 前端 alias
-
-            // 设置包装环节 → 实际写入「尾部」聚合数据（向前兼容 packaging 字段名）
-            o.setPackagingStartTime(tailStart);
-            o.setPackagingEndTime(tailEnd);
-            o.setPackagingOperatorName(tailOperator);
-            o.setPackagingCompletionRate(tailRate);
-            o.setTailProcessRate(tailRate);  // 前端 tailProcessRate 别名
-
-            o.setQualityStartTime(qualityStart);
-            o.setQualityEndTime(qualityEnd);
-            o.setQualityOperatorName(qualityOperator);
-            Integer qualityRate = computeRate(qualityQty, orderQtyForRate);
-            o.setQualityCompletionRate(qualityRate);
-
-            o.setWarehousingStartTime(wareStart);
-            o.setWarehousingEndTime(wareEnd);
-            o.setWarehousingOperatorName(wareOperator);
-            wareQtyForRate = o.getWarehousingQualifiedQuantity() == null ? wareQty
-                    : o.getWarehousingQualifiedQuantity();
-            Integer wareRate = computeRate(wareQtyForRate, orderQtyForRate);
-            o.setWarehousingCompletionRate(wareRate);
-        }
+    private static class FlowStageData {
+        LocalDateTime orderStart, orderEnd; String orderOperator; Integer orderRate;
+        LocalDateTime procurementStart, procurementEnd; String procurementOperator; Integer procurementRateFromPurchases;
+        LocalDateTime cuttingStart, cuttingEnd; String cuttingOperator; int cuttingQty;
+        LocalDateTime sewingStart, sewingEnd; String sewingOperator;
+        LocalDateTime carSewingStart, carSewingEnd; String carSewingOperator; int carSewingQty;
+        LocalDateTime ironingStart, ironingEnd; String ironingOperator; int ironingQty;
+        LocalDateTime secondaryProcessStart, secondaryProcessEnd; String secondaryProcessOperator; int secondaryProcessQty;
+        LocalDateTime packagingStart, packagingEnd; String packagingOperator; int packagingQty;
+        LocalDateTime qualityStart, qualityEnd; String qualityOperator; int qualityQty;
+        LocalDateTime wareStart, wareEnd; String wareOperator; int wareQty;
+        Map<String, Integer> trackingByProcess;
     }
 
     /**
@@ -1020,20 +775,6 @@ public class OrderFlowStageFillHelper {
         if (isParentNodeMatch(pn, "尾部")) return true;
         if (isParentNodeMatch(pn, "入库")) return true;
         return false;
-    }
-
-    private int resolveTrackingQty(Map<String, Integer> trackingByProcess, int viewQty, String... keywords) {
-        int trackingTotal = 0;
-        for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {
-            String pname = entry.getKey() == null ? "" : entry.getKey().toLowerCase();
-            for (String kw : keywords) {
-                if (pname.contains(kw.toLowerCase())) {
-                    trackingTotal += entry.getValue();
-                    break;
-                }
-            }
-        }
-        return Math.max(viewQty, trackingTotal);
     }
 
     private Integer resolveTrackingMinRate(Map<String, Integer> trackingByProcess, int baseQty,

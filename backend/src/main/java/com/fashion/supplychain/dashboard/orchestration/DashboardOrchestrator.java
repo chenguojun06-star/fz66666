@@ -1,5 +1,6 @@
 package com.fashion.supplychain.dashboard.orchestration;
 
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.dashboard.dto.DashboardActivityDto;
 import com.fashion.supplychain.dashboard.dto.DashboardResponse;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertOrderDto;
@@ -160,6 +161,7 @@ public class DashboardOrchestrator {
         try {
             return LocalDate.parse(s);
         } catch (Exception e) {
+            log.warn("[Dashboard] 日期解析失败: {}", e.getMessage());
             return null;
         }
     }
@@ -322,7 +324,7 @@ public class DashboardOrchestrator {
                         alert.getLastOutTime() == null ? "" : alert.getLastOutTime().format(formatter)));
             }
         } catch (Exception e) {
-            // ignore alert failures
+            log.warn("[Dashboard] 库存预警查询失败: {}", e.getMessage());
         }
 
         // 注意：当前未实现紧急事件追踪
@@ -354,6 +356,7 @@ public class DashboardOrchestrator {
         LocalDate today = LocalDate.now();
 
         // 仅查询有效的、非终态的生产订单（排除报废/已完成/已取消/已关闭/已归档）
+        TenantAssert.assertTenantContext();
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
         List<ProductionOrder> allOrders = productionOrderService.lambdaQuery()

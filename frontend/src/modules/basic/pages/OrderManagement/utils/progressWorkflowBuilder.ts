@@ -1,0 +1,78 @@
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { PricingProcess, ProgressNode, defaultProgressNodes } from '../types';
+
+export const buildProgressNodesFromTemplate = (rows: any[]): ProgressNode[] => {
+  return (Array.isArray(rows) ? rows : [])
+    .map((n: any) => {
+      const name = String(n?.name || n?.processName || '').trim();
+      if (!name) return null;
+      const id = String(n?.id || n?.processCode || name || '').trim() || name;
+      const p = Number(n?.unitPrice);
+      const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+      const progressStage = String(n?.progressStage || name).trim();
+      const machineType = String(n?.machineType || '').trim();
+      const standardTime = Number(n?.standardTime) || 0;
+      return {
+        id,
+        name,
+        progressStage,
+        machineType,
+        standardTime,
+        processes: [{ id: `${id}-0`, processName: name, unitPrice, progressStage, machineType, standardTime }],
+      } as unknown as ProgressNode;
+    })
+    .filter(Boolean) as ProgressNode[];
+};
+
+export const loadProgressNodesForStyle = async (styleNo: string, setProgressNodes: (nodes: ProgressNode[]) => void) => {
+  const sn = String(styleNo || '').trim();
+  if (!sn) return;
+  try {
+    const res = await templateLibraryApi.progressNodeUnitPrices(sn);
+    const result = res as Record<string, unknown>;
+    if (result.code !== 200) return;
+    const rows = Array.isArray(result.data) ? result.data : [];
+    const normalized = buildProgressNodesFromTemplate(rows);
+    if (normalized.length) {
+      setProgressNodes(normalized);
+    }
+  } catch (e) {
+    console.error('[订单] 加载工序模板失败:', e);
+  }
+};
+
+export const buildProgressWorkflowJson = (nodes: ProgressNode[]) => {
+  const allProcesses: Array<{
+    id: string; name: string; unitPrice: number; progressStage: string;
+    machineType: string; standardTime: number; sortOrder: number;
+  }> = [];
+
+  (Array.isArray(nodes) ? nodes : []).forEach((n, idx) => {
+    const name = String(n?.name || '').trim();
+    if (!name) return;
+    const id = String(n?.id || name || '').trim() || name;
+    const progressStage = String((n as any)?.progressStage || name).trim();
+    const machineType = String((n as any)?.machineType || '').trim();
+    const standardTime = Number((n as any)?.standardTime) || 0;
+    const processes = (Array.isArray(n?.processes) ? n.processes : []) as PricingProcess[];
+    const unitPrice = processes.reduce((sum, p) => sum + (Number(p?.unitPrice) || 0), 0);
+    allProcesses.push({ id, name, unitPrice, progressStage, machineType, standardTime, sortOrder: idx });
+  });
+
+  const ensuredProcesses = allProcesses.length > 0
+    ? allProcesses
+    : defaultProgressNodes.map((n, idx) => ({
+        id: n.id, name: n.name,
+        unitPrice: (Array.isArray(n.processes) ? n.processes : []).reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0),
+        progressStage: n.name, machineType: '', standardTime: 0, sortOrder: idx,
+      }));
+
+  const processesByNode: Record<string, typeof ensuredProcesses> = {};
+  for (const p of ensuredProcesses) {
+    const stage = p.progressStage || p.name;
+    if (!processesByNode[stage]) processesByNode[stage] = [];
+    processesByNode[stage].push(p);
+  }
+
+  return JSON.stringify({ nodes: ensuredProcesses, processesByNode });
+};

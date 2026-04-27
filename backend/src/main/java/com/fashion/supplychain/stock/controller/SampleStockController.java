@@ -72,6 +72,7 @@ public class SampleStockController {
         LambdaQueryWrapper<SampleLoan> wrapper = new LambdaQueryWrapper<SampleLoan>()
             .eq(SampleLoan::getSampleStockId, sampleStockId)
             .eq(SampleLoan::getTenantId, tenantId)
+            .eq(SampleLoan::getDeleteFlag, 0)
             .orderByDesc(SampleLoan::getCreateTime);
         return Result.success(sampleLoanMapper.selectList(wrapper));
     }

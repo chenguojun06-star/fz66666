@@ -344,129 +344,129 @@ public class TemplateMutationHelper {
 
 
     public boolean update(TemplateLibrary tpl) {
-        boolean isAdmin = UserContext.isSupervisorOrAbove();
-        boolean isFactory = DataPermissionHelper.isFactoryAccount();
-        if (!isAdmin && !isFactory) {
-            throw new AccessDeniedException("无权限操作");
-        }
-        if (tpl == null || !StringUtils.hasText(String.valueOf(tpl.getId() == null ? "" : tpl.getId()).trim())) {
-            throw new IllegalArgumentException("id不能为空");
-        }
-
-        TemplateLibrary current = templateLibraryService.getById(String.valueOf(tpl.getId()));
-        if (current == null) {
-            throw new NoSuchElementException("模板不存在");
-        }
-        // 混合表：租户私有模板需校验归属，系统共享模板(tenantId=null)由TopAdmin权限保护
-        if (current.getTenantId() != null) {
-            TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "模板");
-        }
+        assertUpdatePermission();
+        assertTemplateIdValid(tpl);
+        TemplateLibrary current = loadAndAssertOwnership(tpl);
 
         String previousName = String.valueOf(current.getTemplateName() == null ? "" : current.getTemplateName()).trim();
-        String previousContent = String
-                .valueOf(current.getTemplateContent() == null ? "" : current.getTemplateContent()).trim();
+        String previousContent = String.valueOf(current.getTemplateContent() == null ? "" : current.getTemplateContent()).trim();
 
         if (isLocked(current)) {
             throw new IllegalStateException("模板已锁定，仅管理员可退回后修改");
         }
 
-        String type = String.valueOf(tpl.getTemplateType() == null ? current.getTemplateType() : tpl.getTemplateType())
-                .trim().toLowerCase();
-        String key = String.valueOf(tpl.getTemplateKey() == null ? current.getTemplateKey() : tpl.getTemplateKey())
-                .trim();
-        String name = String.valueOf(tpl.getTemplateName() == null ? current.getTemplateName() : tpl.getTemplateName())
-                .trim();
-        String content = String
-                .valueOf(tpl.getTemplateContent() == null ? current.getTemplateContent() : tpl.getTemplateContent())
-                .trim();
+        applyTemplateFields(tpl, current);
+        boolean ok = templateLibraryService.updateById(current);
+        if (!ok) throw new IllegalStateException("保存失败");
 
-        if (!StringUtils.hasText(type) || !StringUtils.hasText(key) || !StringUtils.hasText(name)
-                || !StringUtils.hasText(content)) {
+        String type = current.getTemplateType();
+        String ssn = current.getSourceStyleNo();
+        boolean contentChanged = !previousContent.equals(current.getTemplateContent());
+        handleProgressRecompute(type, ssn, contentChanged);
+        publishPriceChangeEventIfNeeded(type, ssn, contentChanged);
+        syncSiblingNamesIfNeeded(previousName, current);
+
+        return true;
+    }
+
+    private void assertUpdatePermission() {
+        boolean isAdmin = UserContext.isSupervisorOrAbove();
+        boolean isFactory = DataPermissionHelper.isFactoryAccount();
+        if (!isAdmin && !isFactory) {
+            throw new AccessDeniedException("无权限操作");
+        }
+    }
+
+    private void assertTemplateIdValid(TemplateLibrary tpl) {
+        if (tpl == null || !StringUtils.hasText(String.valueOf(tpl.getId() == null ? "" : tpl.getId()).trim())) {
+            throw new IllegalArgumentException("id不能为空");
+        }
+    }
+
+    private TemplateLibrary loadAndAssertOwnership(TemplateLibrary tpl) {
+        TemplateLibrary current = templateLibraryService.getById(String.valueOf(tpl.getId()));
+        if (current == null) throw new NoSuchElementException("模板不存在");
+        if (current.getTenantId() != null) {
+            TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "模板");
+        }
+        return current;
+    }
+
+    private void applyTemplateFields(TemplateLibrary tpl, TemplateLibrary current) {
+        String type = String.valueOf(tpl.getTemplateType() == null ? current.getTemplateType() : tpl.getTemplateType()).trim().toLowerCase();
+        String key = String.valueOf(tpl.getTemplateKey() == null ? current.getTemplateKey() : tpl.getTemplateKey()).trim();
+        String name = String.valueOf(tpl.getTemplateName() == null ? current.getTemplateName() : tpl.getTemplateName()).trim();
+        String content = String.valueOf(tpl.getTemplateContent() == null ? current.getTemplateContent() : tpl.getTemplateContent()).trim();
+        if (!StringUtils.hasText(type) || !StringUtils.hasText(key) || !StringUtils.hasText(name) || !StringUtils.hasText(content)) {
             throw new IllegalArgumentException("模板参数不完整");
         }
-
         current.setTemplateType(type);
         current.setTemplateKey(key);
         current.setTemplateName(name);
         current.setTemplateContent(content);
-        String ssn = String
-                .valueOf(tpl.getSourceStyleNo() == null ? current.getSourceStyleNo() : tpl.getSourceStyleNo()).trim();
+        String ssn = String.valueOf(tpl.getSourceStyleNo() == null ? current.getSourceStyleNo() : tpl.getSourceStyleNo()).trim();
         current.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
         current.setLocked(1);
         current.setOperatorName(UserContext.username());
         current.setUpdateTime(LocalDateTime.now());
-        boolean ok = templateLibraryService.updateById(current);
-        if (!ok) {
-            throw new IllegalStateException("保存失败");
-        }
+    }
 
-        boolean contentChanged = !previousContent.equals(content);
-        if ("progress".equalsIgnoreCase(current.getTemplateType()) && StringUtils.hasText(ssn) && contentChanged) {
-            try {
-                productionOrderOrchestrator.recomputeProgressByStyleNo(ssn);
-            } catch (Exception e) {
-                log.warn("Failed to recompute progress by styleNo: styleNo={}, templateId={}", ssn, current.getId(), e);
-            }
+    private void handleProgressRecompute(String type, String ssn, boolean contentChanged) {
+        if (!"progress".equalsIgnoreCase(type) || !StringUtils.hasText(ssn) || !contentChanged) return;
+        try {
+            productionOrderOrchestrator.recomputeProgressByStyleNo(ssn);
+        } catch (Exception e) {
+            log.warn("Failed to recompute progress by styleNo: styleNo={}", ssn, e);
         }
+    }
 
-        // 发布价格变更事件（如果是工序模板且内容变更）
-        if ("process".equalsIgnoreCase(type) && contentChanged) {
-            try {
-                eventPublisher.publishEvent(new TemplatePriceChangedEvent(
-                    this,
-                    StringUtils.hasText(ssn) ? ssn : null,
-                    type,
-                    UserContext.username()
-                ));
-                log.info("[价格变更事件] 已发布工序模板价格变更事件 - styleNo: {}, operator: {}", ssn, UserContext.username());
-            } catch (Exception e) {
-                log.warn("[价格变更事件] 发布失败 - styleNo: {}", ssn, e);
-            }
+    private void publishPriceChangeEventIfNeeded(String type, String ssn, boolean contentChanged) {
+        if (!"process".equalsIgnoreCase(type) || !contentChanged) return;
+        try {
+            eventPublisher.publishEvent(new TemplatePriceChangedEvent(
+                this,
+                StringUtils.hasText(ssn) ? ssn : null,
+                type,
+                UserContext.username()
+            ));
+            log.info("[价格变更事件] 已发布工序模板价格变更事件 - styleNo: {}, operator: {}", ssn, UserContext.username());
+        } catch (Exception e) {
+            log.warn("[价格变更事件] 发布失败 - styleNo: {}", ssn, e);
         }
+    }
 
-        String newName = String.valueOf(name == null ? "" : name).trim();
+    private void syncSiblingNamesIfNeeded(String previousName, TemplateLibrary current) {
+        String newName = String.valueOf(current.getTemplateName() == null ? "" : current.getTemplateName()).trim();
         boolean nameChanged = !previousName.equals(newName);
-        String groupKey = String.valueOf(key == null ? "" : key).trim();
-        if (nameChanged && StringUtils.hasText(groupKey)) {
-            String base = newName;
-            for (String suffix : List.of("-BOM模板", "-尺码模板", "-工艺模板", "-工序单价模板", "-进度模板")) {
-                if (base.endsWith(suffix)) {
-                    base = base.substring(0, Math.max(0, base.length() - suffix.length()));
-                    break;
-                }
-            }
-            base = String.valueOf(base == null ? "" : base).trim();
-            if (!StringUtils.hasText(base)) {
-                base = newName;
-            }
-            List<TemplateLibrary> siblings = templateLibraryService.list(
-                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TemplateLibrary>()
-                            .eq(TemplateLibrary::getTemplateKey, groupKey));
-            LocalDateTime now = LocalDateTime.now();
-            for (TemplateLibrary s : siblings) {
-                if (s == null) {
-                    continue;
-                }
-                String t = String.valueOf(s.getTemplateType() == null ? "" : s.getTemplateType()).trim().toLowerCase();
-                String suffix = "";
-                if ("bom".equals(t)) {
-                    suffix = "-BOM模板";
-                } else if ("size".equals(t)) {
-                    suffix = "-尺码模板";
-                } else if ("process".equals(t)) {
-                    suffix = "-工艺模板";
-                } else if ("process_price".equals(t)) {
-                    suffix = "-工序单价模板";
-                } else if ("progress".equals(t)) {
-                    suffix = "-进度模板";
-                }
-                String targetName = suffix.isEmpty() ? base : base + suffix;
-                s.setTemplateName(targetName);
-                s.setUpdateTime(now);
-                templateLibraryService.updateById(s);
+        String groupKey = String.valueOf(current.getTemplateKey() == null ? "" : current.getTemplateKey()).trim();
+        if (!nameChanged || !StringUtils.hasText(groupKey)) return;
+
+        String base = newName;
+        for (String suffix : List.of("-BOM模板", "-尺码模板", "-工艺模板", "-工序单价模板", "-进度模板")) {
+            if (base.endsWith(suffix)) {
+                base = base.substring(0, Math.max(0, base.length() - suffix.length()));
+                break;
             }
         }
-        return true;
+        base = String.valueOf(base == null ? "" : base).trim();
+        if (!StringUtils.hasText(base)) base = newName;
+
+        List<TemplateLibrary> siblings = templateLibraryService.list(
+                new LambdaQueryWrapper<TemplateLibrary>().eq(TemplateLibrary::getTemplateKey, groupKey));
+        LocalDateTime now = LocalDateTime.now();
+        for (TemplateLibrary s : siblings) {
+            if (s == null) continue;
+            String t = String.valueOf(s.getTemplateType() == null ? "" : s.getTemplateType()).trim().toLowerCase();
+            String suffix = "";
+            if ("bom".equals(t)) suffix = "-BOM模板";
+            else if ("size".equals(t)) suffix = "-尺码模板";
+            else if ("process".equals(t)) suffix = "-工艺模板";
+            else if ("process_price".equals(t)) suffix = "-工序单价模板";
+            else if ("progress".equals(t)) suffix = "-进度模板";
+            s.setTemplateName(suffix.isEmpty() ? base : base + suffix);
+            s.setUpdateTime(now);
+            templateLibraryService.updateById(s);
+        }
     }
 
     /** 取消修改：将模板重新锁定（不保存任何改动） */

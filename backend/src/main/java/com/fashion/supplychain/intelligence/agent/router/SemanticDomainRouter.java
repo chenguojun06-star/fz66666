@@ -152,10 +152,10 @@ public class SemanticDomainRouter {
             line = line.trim().toUpperCase();
             if (line.startsWith("DOMAIN=")) {
                 String val = line.substring(7).trim();
-                try { domain = ToolDomain.valueOf(val); } catch (Exception ignored) {}
+                try { domain = ToolDomain.valueOf(val); } catch (Exception e) { log.debug("Invalid ToolDomain value: {}", val); }
             } else if (line.startsWith("COMPLEXITY=")) {
                 String val = line.substring(11).trim();
-                try { complexity = Complexity.valueOf(val); } catch (Exception ignored) {}
+                try { complexity = Complexity.valueOf(val); } catch (Exception e) { log.debug("Invalid Complexity value: {}", val); }
             }
         }
 

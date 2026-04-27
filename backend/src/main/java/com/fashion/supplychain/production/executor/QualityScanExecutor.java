@@ -903,75 +903,6 @@ public class QualityScanExecutor {
     }
 
     /**
-     * 验证不重复入库
-     */
-    @SuppressWarnings("unused")
-    private void validateNotDuplicateWarehousing(String orderId, String bundleId, boolean isUnqualified) {
-        try {
-            long qualifiedCount = productWarehousingService.count(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                            .eq(ProductWarehousing::getDeleteFlag, 0)
-                            .eq(ProductWarehousing::getOrderId, orderId)
-                            .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                            .eq(ProductWarehousing::getQualityStatus, "qualified")
-                            .gt(ProductWarehousing::getWarehousingQuantity, 0));
-            if (qualifiedCount > 0) {
-                throw new IllegalStateException("该菲号已质检合格，不能重复扫码");
-            }
-            if (isUnqualified) {
-                long unqualifiedCount = productWarehousingService.count(
-                        new LambdaQueryWrapper<ProductWarehousing>()
-                                .eq(ProductWarehousing::getDeleteFlag, 0)
-                                .eq(ProductWarehousing::getOrderId, orderId)
-                                .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                                .eq(ProductWarehousing::getQualityStatus, "unqualified"));
-                if (unqualifiedCount > 0) {
-                    throw new IllegalStateException("该菲号已质检记录，不能重复扫码");
-                }
-            }
-        } catch (IllegalStateException e) {
-            throw e;
-        } catch (Exception e) {
-            log.warn("检查重复入库失败: orderId={}, bundleId={}", orderId, bundleId, e);
-        }
-    }
-
-    /**
-     * 计算剩余返修数量
-     */
-    @SuppressWarnings("unused")
-    private int computeRemainingRepairQuantity(String orderId, String bundleId, String excludeId) {
-        try {
-            CuttingBundle bundle = cuttingBundleService.getById(bundleId);
-            if (bundle == null) {
-                return 0;
-            }
-            int totalQty = bundle.getQuantity() != null ? bundle.getQuantity() : 0;
-            if (totalQty <= 0) {
-                return 0;
-            }
-            QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
-                    .select("COALESCE(SUM(qualified_quantity), 0) as totalQualified")
-                    .eq("order_id", orderId)
-                    .eq("cutting_bundle_id", bundleId)
-                    .eq("delete_flag", 0);
-            if (hasText(excludeId)) {
-                qw.ne("id", excludeId);
-            }
-            List<Map<String, Object>> result = productWarehousingService.listMaps(qw);
-            int warehoused = 0;
-            if (result != null && !result.isEmpty()) {
-                Object val = result.get(0).get("totalQualified");
-                if (val instanceof Number) warehoused = ((Number) val).intValue();
-            }
-            return Math.max(0, totalQty - warehoused);
-        } catch (Exception e) {
-            log.warn("计算剩余返修数量失败: orderId={}, bundleId={}", orderId, bundleId, e);
-            return 0;
-        }
-    }
-
-    /**
      * 构建质检记录
      */
     private ScanRecord buildQualityRecord(Map<String, Object> params, String requestId, String operatorId,
@@ -1025,24 +956,6 @@ public class QualityScanExecutor {
         }
 
         return sr;
-    }
-
-    /**
-     * 查找入库生成的扫码记录
-     */
-    @SuppressWarnings("unused")
-    private ScanRecord findWarehousingGeneratedRecord(String warehousingId) {
-        if (!hasText(warehousingId)) {
-            return null;
-        }
-        String requestId = "WAREHOUSING:" + warehousingId.trim();
-        try {
-            return scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getRequestId, requestId)
-                    .last("limit 1"));
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     /**

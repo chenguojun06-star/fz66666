@@ -182,6 +182,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_style_quotation", "version", "VARCHAR(20) DEFAULT NULL COMMENT '版本号'");
         add("t_style_quotation", "is_locked", "INT DEFAULT 0 COMMENT '是否锁定'");
         add("t_style_quotation", "standard_other_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '标准其他成本'");
+        add("t_style_quotation", "create_time", "DATETIME DEFAULT NULL COMMENT '创建时间'");
+        add("t_style_quotation", "update_time", "DATETIME DEFAULT NULL COMMENT '更新时间'");
 
         add("t_style_process", "difficulty", "VARCHAR(10) DEFAULT NULL");
         add("t_style_process", "rate_multiplier", "DECIMAL(5,2) DEFAULT NULL");
@@ -270,6 +272,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_product_warehousing", "cutting_bundle_id", "VARCHAR(36) DEFAULT NULL COMMENT '裁剪菲号ID'");
         add("t_product_warehousing", "cutting_bundle_no", "INT DEFAULT NULL COMMENT '裁剪菲号编号'");
         add("t_product_warehousing", "cutting_bundle_qr_code", "VARCHAR(100) DEFAULT NULL COMMENT '裁剪菲号二维码'");
+        add("t_product_warehousing", "create_time", "DATETIME DEFAULT NULL COMMENT '创建时间'");
+        add("t_product_warehousing", "update_time", "DATETIME DEFAULT NULL COMMENT '更新时间'");
 
         add("t_product_outstock", "approval_status", "VARCHAR(20) DEFAULT NULL COMMENT '审批状态'");
         add("t_product_outstock", "approve_by", "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
@@ -384,6 +388,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_scan_record", "assigned_operator_name", "VARCHAR(64) DEFAULT NULL COMMENT '指派操作员名称'");
         add("t_scan_record", "receive_time", "DATETIME DEFAULT NULL COMMENT '领取/开始时间'");
         add("t_scan_record", "confirm_time", "DATETIME DEFAULT NULL COMMENT '录入结果/完成时间'");
+        add("t_scan_record", "create_time", "DATETIME DEFAULT NULL COMMENT '创建时间'");
+        add("t_scan_record", "update_time", "DATETIME DEFAULT NULL COMMENT '更新时间'");
 
         add("t_production_order", "progress_workflow_json", "LONGTEXT DEFAULT NULL COMMENT '生产进度工作流JSON'");
         add("t_production_order", "progress_workflow_locked", "INT NOT NULL DEFAULT 0 COMMENT '进度流程是否锁定'");
@@ -434,6 +440,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_production_order", "color", "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
         add("t_production_order", "size", "VARCHAR(50) DEFAULT NULL COMMENT '尺码'");
         add("t_production_order", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_production_order", "create_time", "DATETIME DEFAULT NULL COMMENT '创建时间'");
+        add("t_production_order", "update_time", "DATETIME DEFAULT NULL COMMENT '更新时间'");
 
         add("t_payroll_settlement", "settlement_no", "VARCHAR(64) DEFAULT NULL COMMENT '结算单号'");
         add("t_payroll_settlement", "auditor_id", "VARCHAR(64) DEFAULT NULL COMMENT '审核人ID'");

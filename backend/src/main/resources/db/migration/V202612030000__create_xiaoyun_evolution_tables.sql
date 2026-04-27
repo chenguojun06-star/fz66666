@@ -38,8 +38,18 @@ CREATE TABLE IF NOT EXISTS t_xiaoyun_param_version (
     INDEX idx_param_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='小云参数版本管理表';
 
-ALTER TABLE t_ai_conversation_memory
-    ADD COLUMN IF NOT EXISTS user_message    TEXT         DEFAULT NULL COMMENT '用户原始消息',
-    ADD COLUMN IF NOT EXISTS ai_response     TEXT         DEFAULT NULL COMMENT 'AI原始回复',
-    ADD COLUMN IF NOT EXISTS feedback_score  TINYINT      DEFAULT NULL COMMENT '用户反馈评分(1-5)',
-    ADD COLUMN IF NOT EXISTS feedback_reason VARCHAR(500) DEFAULT NULL COMMENT '反馈原因';
+-- user_message: 用户原始消息
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_ai_conversation_memory' AND COLUMN_NAME='user_message')=0,'ALTER TABLE t_ai_conversation_memory ADD COLUMN user_message TEXT DEFAULT NULL','SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ai_response: AI原始回复
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_ai_conversation_memory' AND COLUMN_NAME='ai_response')=0,'ALTER TABLE t_ai_conversation_memory ADD COLUMN ai_response TEXT DEFAULT NULL','SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- feedback_score: 用户反馈评分(1-5)
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_ai_conversation_memory' AND COLUMN_NAME='feedback_score')=0,'ALTER TABLE t_ai_conversation_memory ADD COLUMN feedback_score TINYINT DEFAULT NULL','SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- feedback_reason: 反馈原因
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_ai_conversation_memory' AND COLUMN_NAME='feedback_reason')=0,'ALTER TABLE t_ai_conversation_memory ADD COLUMN feedback_reason VARCHAR(500) DEFAULT NULL','SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

@@ -222,6 +222,63 @@ public class OrderProfitOrchestrator {
         return data;
     }
 
+    private static class CostProfitResult {
+        BigDecimal revenue; BigDecimal warehousingRevenue;
+        String calcBasis; int baseQty;
+        BigDecimal processingCost; BigDecimal processingCostPaid; BigDecimal incurredCost;
+        BigDecimal profit; BigDecimal unitRevenue; BigDecimal unitCost;
+        BigDecimal actualUnitCost; BigDecimal unitProfit; BigDecimal marginPercent;
+        BigDecimal quotationUnitCost; BigDecimal quotationTotalCost; BigDecimal quotationTotalPrice;
+    }
+
+    private CostProfitResult computeCostAndProfit(ProductionOrder order, int orderQty, int warehousingQty,
+            BigDecimal materialPlannedCost, BigDecimal materialArrivedCost, BigDecimal lockedOrderUnitPrice) {
+        CostProfitResult r = new CostProfitResult();
+        Long styleId = resolveStyleId(order);
+        StyleQuotation styleQuotation = styleId != null ? styleQuotationService.getByStyleId(styleId) : null;
+        r.quotationUnitCost = BigDecimal.ZERO;
+
+        if (styleId != null) {
+            BigDecimal freshCost = computeLiveFreshCost(styleId);
+            if (freshCost.compareTo(BigDecimal.ZERO) > 0) {
+                r.quotationUnitCost = freshCost;
+            } else if (styleQuotation != null && styleQuotation.getTotalCost() != null) {
+                r.quotationUnitCost = nonNeg(styleQuotation.getTotalCost());
+            }
+        }
+
+        boolean hasLockedOrderPrice = lockedOrderUnitPrice.compareTo(BigDecimal.ZERO) > 0;
+        boolean hasWarehousing = warehousingQty > 0;
+        r.calcBasis = hasWarehousing ? "warehousing" : "order";
+        r.baseQty = hasWarehousing ? warehousingQty : Math.max(0, orderQty);
+
+        BigDecimal processingUnitPrice = resolveProcessingUnitPrice(order);
+        r.processingCost = nonNeg(processingUnitPrice).multiply(BigDecimal.valueOf(Math.max(0, r.baseQty)));
+        r.processingCostPaid = BigDecimal.ZERO;
+
+        r.warehousingRevenue = hasLockedOrderPrice
+                ? lockedOrderUnitPrice.multiply(BigDecimal.valueOf(Math.max(0, warehousingQty)))
+                : BigDecimal.ZERO;
+        r.revenue = (hasLockedOrderPrice && r.baseQty > 0)
+                ? lockedOrderUnitPrice.multiply(BigDecimal.valueOf(r.baseQty))
+                : BigDecimal.ZERO;
+
+        r.profit = r.revenue.subtract(materialPlannedCost).subtract(r.processingCost);
+        r.unitRevenue = safeDivide(r.revenue, r.baseQty);
+        r.actualUnitCost = safeDivide(materialPlannedCost.add(r.processingCost), r.baseQty);
+        r.unitProfit = safeDivide(r.profit, r.baseQty);
+        r.marginPercent = BigDecimal.ZERO;
+        if (r.revenue.compareTo(BigDecimal.ZERO) > 0) {
+            r.marginPercent = r.profit.multiply(BigDecimal.valueOf(100)).divide(r.revenue, 2, RoundingMode.HALF_UP);
+        }
+
+        r.quotationTotalCost = r.quotationUnitCost.multiply(BigDecimal.valueOf(Math.max(0, r.baseQty)));
+        r.quotationTotalPrice = lockedOrderUnitPrice.multiply(BigDecimal.valueOf(Math.max(0, r.baseQty)));
+        r.unitCost = r.quotationUnitCost.compareTo(BigDecimal.ZERO) > 0 ? r.quotationUnitCost : r.actualUnitCost;
+        r.incurredCost = materialArrivedCost.add(r.processingCostPaid);
+        return r;
+    }
+
     // ========================== 私有辅助方法 ==========================
 
     private ProductionOrder resolveOrder(String orderId, String orderNo) {

@@ -32,6 +32,7 @@ export default defineConfig({
   build: {
     target: 'esnext',
     cssMinify: true,
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -42,6 +43,9 @@ export default defineConfig({
         },
       },
     },
+  },
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
   css: {
     postcss: {

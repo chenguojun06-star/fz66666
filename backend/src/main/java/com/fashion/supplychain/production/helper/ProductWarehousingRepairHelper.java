@@ -446,4 +446,11 @@ public class ProductWarehousingRepairHelper {
                         .last("LIMIT 1"));
         return pw != null ? pw.getRepairStatus() : null;
     }
+
+    private CuttingBundle getBundleWithTenant(String bundleId) {
+        return cuttingBundleService.lambdaQuery()
+                .eq(CuttingBundle::getId, bundleId.trim())
+                .eq(CuttingBundle::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .one();
+    }
 }

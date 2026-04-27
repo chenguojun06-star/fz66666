@@ -182,7 +182,7 @@ public final class ParamUtils {
                 return d.atTime(LocalTime.of(0, 0));
             }
         } catch (Exception e) {
-            // fallback silently
+            log.debug("[ParamUtils] 日期解析fallback: {}", e.getMessage());
         }
 
         List<DateTimeFormatter> fmts = List.of(
@@ -193,18 +193,16 @@ public final class ParamUtils {
             try {
                 return LocalDateTime.parse(s, f);
             } catch (Exception e) {
-                // fallback silently
+                log.debug("[ParamUtils] 格式{}解析失败: {}", f, e.getMessage());
             }
         }
         try {
-            // Fix: convert timezone offset to system default before dropping it, to prevent the "8-hour-shift" bug
             return OffsetDateTime.parse(s).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
         } catch (Exception e) {
             try {
-                // Secondary fallback for raw Instant parsing (e.g. standard Zulu with no local component)
                 return Instant.parse(s).atZone(ZoneId.systemDefault()).toLocalDateTime();
             } catch (Exception e2) {
-                // fallback silently
+                log.debug("[ParamUtils] 时区日期解析失败: {}", e2.getMessage());
             }
         }
         try {

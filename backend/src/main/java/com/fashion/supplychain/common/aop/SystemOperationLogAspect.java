@@ -366,12 +366,12 @@ public class SystemOperationLogAspect {
                         String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
                         detailMap.put(fieldName, value);
                     }
-                } catch (NoSuchMethodException ignored) {
-                    // 方法不存在，跳过
+                } catch (NoSuchMethodException e) {
+                    log.trace("[OpLog] 反射方法不存在，跳过: {}", e.getMessage());
                 }
             }
-        } catch (Exception ignored) {
-            // 反射失败不影响主流程
+        } catch (Exception e) {
+            log.trace("[OpLog] 反射提取字段失败: {}", e.getMessage());
         }
     }
 

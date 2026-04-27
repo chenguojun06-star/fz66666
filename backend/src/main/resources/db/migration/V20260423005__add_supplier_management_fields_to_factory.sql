@@ -37,7 +37,7 @@ PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET @s = IF(
     (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
      WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_factory' AND COLUMN_NAME='admission_status')=0,
-    'ALTER TABLE `t_factory` ADD COLUMN `admission_status` VARCHAR(32) DEFAULT 'pending' AFTER `supplier_tier_updated_at`',
+    'ALTER TABLE `t_factory` ADD COLUMN `admission_status` VARCHAR(32) DEFAULT NULL AFTER `supplier_tier_updated_at`',
     'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 

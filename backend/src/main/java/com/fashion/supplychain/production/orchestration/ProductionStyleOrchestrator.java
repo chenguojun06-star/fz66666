@@ -41,6 +41,8 @@ public class ProductionStyleOrchestrator {
 
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("LIMIT 5000")
                 .list();
     }
 
@@ -57,6 +59,8 @@ public class ProductionStyleOrchestrator {
 
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleNo, styleNo.trim())
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("LIMIT 5000")
                 .list();
     }
 
@@ -154,6 +158,7 @@ public class ProductionStyleOrchestrator {
 
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .count() > 0;
     }
 
@@ -170,6 +175,7 @@ public class ProductionStyleOrchestrator {
 
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .count();
     }
 

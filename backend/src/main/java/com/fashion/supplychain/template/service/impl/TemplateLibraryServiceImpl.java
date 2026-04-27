@@ -334,107 +334,11 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         }
         Map<String, BigDecimal> processPriceOverrides = resolveProcessUnitPrices(sn);
 
-        // 优先从模板库的 process 类型模板（单价维护-工序进度单价）读取
-        try {
-            TemplateLibrary processTpl = getOne(new LambdaQueryWrapper<TemplateLibrary>()
-                    .eq(TemplateLibrary::getTemplateType, "process")
-                    .eq(TemplateLibrary::getSourceStyleNo, sn)
-                    .orderByDesc(TemplateLibrary::getUpdateTime)
-                    .orderByDesc(TemplateLibrary::getCreateTime)
-                    .last("LIMIT 1"));
-
-            if (processTpl != null && StringUtils.hasText(processTpl.getTemplateContent())) {
-                com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(processTpl.getTemplateContent());
-                com.fasterxml.jackson.databind.JsonNode stepsArr = root.get("steps");
-
-                if (stepsArr != null && stepsArr.isArray()) {
-                    for (com.fasterxml.jackson.databind.JsonNode step : stepsArr) {
-                        if (step == null) {
-                            continue;
-                        }
-
-                        String processName = step.hasNonNull("processName") ? step.get("processName").asText("") : "";
-                        processName = StringUtils.hasText(processName) ? processName.trim() : "";
-                        if (!StringUtils.hasText(processName)) {
-                            continue;
-                        }
-
-                        String processCode = step.hasNonNull("processCode") ? step.get("processCode").asText("") : "";
-                        if (!StringUtils.hasText(processCode)) {
-                            processCode = processName;
-                        }
-
-                        // 读取工价（unitPrice 或 price）
-                        BigDecimal up = BigDecimal.ZERO;
-                        if (step.hasNonNull("unitPrice")) {
-                            com.fasterxml.jackson.databind.JsonNode v = step.get("unitPrice");
-                            if (v.isNumber()) {
-                                up = v.decimalValue();
-                            } else {
-                                BigDecimal parsed = parseDecimalText(v.asText(null));
-                                up = parsed != null ? parsed : BigDecimal.ZERO;
-                            }
-                        } else if (step.hasNonNull("price")) {
-                            com.fasterxml.jackson.databind.JsonNode v = step.get("price");
-                            if (v.isNumber()) {
-                                up = v.decimalValue();
-                            } else {
-                                BigDecimal parsed = parseDecimalText(v.asText(null));
-                                up = parsed != null ? parsed : BigDecimal.ZERO;
-                            }
-                        }
-                        if (up.compareTo(BigDecimal.ZERO) < 0) {
-                            up = BigDecimal.ZERO;
-                        }
-
-                        // 读取进度节点
-                        String progressStage = step.hasNonNull("progressStage") ? step.get("progressStage").asText("") : "";
-                        if (!StringUtils.hasText(progressStage)) {
-                            progressStage = processName;
-                        }
-
-                        // 读取机器类型
-                        String machineType = step.hasNonNull("machineType") ? step.get("machineType").asText("") : "";
-                        String description = step.hasNonNull("description")
-                                ? step.get("description").asText("")
-                                : (step.hasNonNull("remark") ? step.get("remark").asText("") : "");
-
-                        // 读取标准工时
-                        Integer standardTime = null;
-                        if (step.hasNonNull("standardTime")) {
-                            standardTime = step.get("standardTime").asInt(0);
-                        }
-
-                        Map<String, Object> item = new LinkedHashMap<>();
-                        BigDecimal finalPrice = matchProcessUnitPrice(processPriceOverrides, processName);
-                        if (finalPrice == null) {
-                            finalPrice = up;
-                        }
-                        item.put("id", processCode.trim());
-                        item.put("name", processName);
-                        item.put("unitPrice", finalPrice.setScale(2, RoundingMode.HALF_UP));
-                        item.put("progressStage", progressStage.trim());
-                        if (StringUtils.hasText(machineType)) {
-                            item.put("machineType", machineType);
-                        }
-                        if (StringUtils.hasText(description)) {
-                            item.put("description", description.trim());
-                        }
-                        if (standardTime != null && standardTime > 0) {
-                            item.put("standardTime", standardTime);
-                        }
-                        out.add(item);
-                    }
-
-                    if (!out.isEmpty()) {
-                        sortByStageOrder(out);
-                        log.info("resolveProgressNodeUnitPrices from process template: styleNo={}, count={}", sn, out.size());
-                        return out;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to resolve from process template: styleNo={}", sn, e);
+        List<Map<String, Object>> fromProcess = resolveFromProcessTemplate(sn, processPriceOverrides);
+        if (!fromProcess.isEmpty()) {
+            sortByStageOrder(fromProcess);
+            log.info("resolveProgressNodeUnitPrices from process template: styleNo={}, count={}", sn, fromProcess.size());
+            return fromProcess;
         }
 
         List<Map<String, Object>> processPriceNodes = resolveProgressNodeUnitPricesFromProcessPriceTemplate(sn);
@@ -444,68 +348,155 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             return processPriceNodes;
         }
 
-        // 如果没有 process 模板，回退到旧的 progress 模板
-        TemplateLibrary tpl = resolveProgressTemplate(styleNo);
+        List<Map<String, Object>> fromProgress = resolveFromProgressTemplate(sn);
+        return fromProgress;
+    }
 
-        // 如果没有进度模板，返回空列表
+    private List<Map<String, Object>> resolveFromProcessTemplate(String sn, Map<String, BigDecimal> processPriceOverrides) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        try {
+            TemplateLibrary processTpl = getOne(new LambdaQueryWrapper<TemplateLibrary>()
+                    .eq(TemplateLibrary::getTemplateType, "process")
+                    .eq(TemplateLibrary::getSourceStyleNo, sn)
+                    .orderByDesc(TemplateLibrary::getUpdateTime)
+                    .orderByDesc(TemplateLibrary::getCreateTime)
+                    .last("LIMIT 1"));
+            if (processTpl == null || !StringUtils.hasText(processTpl.getTemplateContent())) {
+                return out;
+            }
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(processTpl.getTemplateContent());
+            com.fasterxml.jackson.databind.JsonNode stepsArr = root.get("steps");
+            if (stepsArr == null || !stepsArr.isArray()) {
+                return out;
+            }
+            for (com.fasterxml.jackson.databind.JsonNode step : stepsArr) {
+                if (step == null) {
+                    continue;
+                }
+                Map<String, Object> item = parseProcessStep(step, processPriceOverrides);
+                if (item != null) {
+                    out.add(item);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to resolve from process template: styleNo={}", sn, e);
+        }
+        return out;
+    }
+
+    private Map<String, Object> parseProcessStep(com.fasterxml.jackson.databind.JsonNode step, Map<String, BigDecimal> processPriceOverrides) {
+        String processName = step.hasNonNull("processName") ? step.get("processName").asText("") : "";
+        processName = StringUtils.hasText(processName) ? processName.trim() : "";
+        if (!StringUtils.hasText(processName)) {
+            return null;
+        }
+        String processCode = step.hasNonNull("processCode") ? step.get("processCode").asText("") : "";
+        if (!StringUtils.hasText(processCode)) {
+            processCode = processName;
+        }
+        BigDecimal up = parseJsonNodeDecimal(step, "unitPrice");
+        if (up == null) {
+            up = parseJsonNodeDecimal(step, "price");
+        }
+        if (up == null || up.compareTo(BigDecimal.ZERO) < 0) {
+            up = BigDecimal.ZERO;
+        }
+        String progressStage = step.hasNonNull("progressStage") ? step.get("progressStage").asText("") : "";
+        if (!StringUtils.hasText(progressStage)) {
+            progressStage = processName;
+        }
+        String machineType = step.hasNonNull("machineType") ? step.get("machineType").asText("") : "";
+        String description = step.hasNonNull("description")
+                ? step.get("description").asText("")
+                : (step.hasNonNull("remark") ? step.get("remark").asText("") : "");
+        Integer standardTime = null;
+        if (step.hasNonNull("standardTime")) {
+            standardTime = step.get("standardTime").asInt(0);
+        }
+
+        Map<String, Object> item = new LinkedHashMap<>();
+        BigDecimal finalPrice = matchProcessUnitPrice(processPriceOverrides, processName);
+        if (finalPrice == null) {
+            finalPrice = up;
+        }
+        item.put("id", processCode.trim());
+        item.put("name", processName);
+        item.put("unitPrice", finalPrice.setScale(2, RoundingMode.HALF_UP));
+        item.put("progressStage", progressStage.trim());
+        if (StringUtils.hasText(machineType)) {
+            item.put("machineType", machineType);
+        }
+        if (StringUtils.hasText(description)) {
+            item.put("description", description.trim());
+        }
+        if (standardTime != null && standardTime > 0) {
+            item.put("standardTime", standardTime);
+        }
+        return item;
+    }
+
+    private BigDecimal parseJsonNodeDecimal(com.fasterxml.jackson.databind.JsonNode parent, String fieldName) {
+        if (!parent.hasNonNull(fieldName)) {
+            return null;
+        }
+        com.fasterxml.jackson.databind.JsonNode v = parent.get(fieldName);
+        if (v.isNumber()) {
+            return v.decimalValue();
+        }
+        return parseDecimalText(v.asText(null));
+    }
+
+    private List<Map<String, Object>> resolveFromProgressTemplate(String sn) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        TemplateLibrary tpl = resolveProgressTemplate(sn);
         if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
             return out;
         }
-
         try {
             com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(tpl.getTemplateContent());
             com.fasterxml.jackson.databind.JsonNode arr = root.get("nodes");
-            if (arr != null && arr.isArray()) {
-                for (com.fasterxml.jackson.databind.JsonNode n : arr) {
-                    if (n == null) {
-                        continue;
-                    }
-                    String name = n.hasNonNull("name") ? n.get("name").asText("") : "";
-                    name = StringUtils.hasText(name) ? name.trim() : "";
-                    if (!StringUtils.hasText(name)) {
-                        continue;
-                    }
-
-                    String id = n.hasNonNull("id") ? n.get("id").asText("") : "";
-                    id = StringUtils.hasText(id) ? id.trim() : name;
-
-                    BigDecimal up = BigDecimal.ZERO;
-                    if (n.hasNonNull("unitPrice")) {
-                        com.fasterxml.jackson.databind.JsonNode v = n.get("unitPrice");
-                        if (v != null) {
-                            if (v.isNumber()) {
-                                up = v.decimalValue();
-                            } else {
-                                BigDecimal parsed = parseDecimalText(v.asText(null));
-                                up = parsed == null ? BigDecimal.ZERO : parsed;
-                            }
-                        }
-                    }
-                    if (up == null || up.compareTo(BigDecimal.ZERO) < 0) {
-                        up = BigDecimal.ZERO;
-                    }
-
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("id", id);
-                    item.put("name", name);
-                    item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
-                    String description = n.hasNonNull("description")
-                            ? n.get("description").asText("")
-                            : (n.hasNonNull("remark") ? n.get("remark").asText("") : "");
-                    if (StringUtils.hasText(description)) {
-                        item.put("description", description.trim());
-                    }
+            if (arr == null || !arr.isArray()) {
+                return out;
+            }
+            for (com.fasterxml.jackson.databind.JsonNode n : arr) {
+                if (n == null) {
+                    continue;
+                }
+                Map<String, Object> item = parseProgressNode(n);
+                if (item != null) {
                     out.add(item);
                 }
             }
         } catch (Exception e) {
             log.warn("Failed to resolve progress node unit prices from template: styleNo={}, templateId={}",
-                    sn,
-                    tpl.getId(),
-                    e);
+                    sn, tpl.getId(), e);
         }
-
         return out;
+    }
+
+    private Map<String, Object> parseProgressNode(com.fasterxml.jackson.databind.JsonNode n) {
+        String name = n.hasNonNull("name") ? n.get("name").asText("") : "";
+        name = StringUtils.hasText(name) ? name.trim() : "";
+        if (!StringUtils.hasText(name)) {
+            return null;
+        }
+        String id = n.hasNonNull("id") ? n.get("id").asText("") : "";
+        id = StringUtils.hasText(id) ? id.trim() : name;
+        BigDecimal up = parseJsonNodeDecimal(n, "unitPrice");
+        if (up == null || up.compareTo(BigDecimal.ZERO) < 0) {
+            up = BigDecimal.ZERO;
+        }
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", id);
+        item.put("name", name);
+        item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
+        String description = n.hasNonNull("description")
+                ? n.get("description").asText("")
+                : (n.hasNonNull("remark") ? n.get("remark").asText("") : "");
+        if (StringUtils.hasText(description)) {
+            item.put("description", description.trim());
+        }
+        return item;
     }
 
     private List<Map<String, Object>> resolveProgressNodeUnitPricesFromProcessPriceTemplate(String styleNo) {
@@ -571,8 +562,8 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     if (standardTime > 0) {
                         node.put("standardTime", standardTime);
                     }
-                } catch (Exception ignore) {
-                    // ignore invalid value
+                } catch (Exception e) {
+                    log.debug("[Template] standardTime解析失败: {}", e.getMessage());
                 }
             }
 

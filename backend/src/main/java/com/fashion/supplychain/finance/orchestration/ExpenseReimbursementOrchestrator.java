@@ -59,7 +59,11 @@ public class ExpenseReimbursementOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public ExpenseReimbursement updateReimbursement(ExpenseReimbursement entity) {
-        ExpenseReimbursement existing = expenseReimbursementService.getById(entity.getId());
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        ExpenseReimbursement existing = expenseReimbursementService.lambdaQuery()
+                .eq(ExpenseReimbursement::getId, entity.getId())
+                .eq(ExpenseReimbursement::getTenantId, tenantId)
+                .one();
         if (existing == null) {
             throw new RuntimeException("报销单不存在");
         }
