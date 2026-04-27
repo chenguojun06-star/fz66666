@@ -991,7 +991,25 @@ body {
 .ant-table-wrapper .ant-table-container {
   border: 1px solid var(--table-border-color);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: clip; /* clip = 纯视觉裁剪，不创建滚动容器边界，不破坏 position:sticky */
+}
+
+/* ── 永久防护: MeasureRow/MeasureCell 高度必须为零，防止表头下方出现白色镂空 ──
+   根因：antd scroll.y 模式在 tbody 首行插入 MeasureRow 测量列宽，
+   全局 line-height / font-size 继承会使其出现实际高度，表现为表头下白色空白。
+   每次修改 line-height/font-size 全局规则时此防护自动兜底，无需重新排查。 */
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-measure-row {
+  height: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+}
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-measure-row > td.ant-table-measure-cell {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+  overflow: hidden !important;
 }
 
 /* 表格边框 - 使用淡淡的颜色 */
@@ -1065,7 +1083,7 @@ body {
   right: 2px;
 }
 
-.ant-table-wrapper .ant-table-tbody > tr:nth-child(even) > td {
+.ant-table-wrapper .ant-table-tbody > tr:nth-child(even):not(.ant-table-measure-row) > td {
   background: var(--table-row-stripe-bg);
 }
 
@@ -1088,7 +1106,7 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow: clip; /* clip 不创建滚动容器，不破坏内部 sticky-header 及 sticky pagination */
 }
 
 .resizable-table-shell .ant-table-wrapper {
