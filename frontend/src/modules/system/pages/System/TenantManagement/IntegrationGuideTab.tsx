@@ -1,10 +1,16 @@
 import React from 'react';
-import { Card, Typography, Tag, Alert, Collapse, Tabs, Row, Col, Divider } from 'antd';
+import { Card, Typography, Alert, Collapse, Tabs, Row, Col, Divider } from 'antd';
 import {
-  SendOutlined, CheckCircleOutlined, ApiOutlined, BookOutlined,
-  CodeOutlined, QuestionCircleOutlined, LinkOutlined, ThunderboltOutlined,
-  CloudDownloadOutlined, CloudUploadOutlined, SwapOutlined, TeamOutlined, PlusOutlined,
-  DashboardOutlined, LockOutlined,
+  SendOutlined,
+  CheckCircleOutlined,
+  BookOutlined,
+  CodeOutlined,
+  QuestionCircleOutlined,
+  LinkOutlined,
+  ThunderboltOutlined,
+  CloudUploadOutlined,
+  SwapOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
 import CopyBlock from './components/CopyBlock';
 import IntegrationQuickStart from './components/IntegrationQuickStart';

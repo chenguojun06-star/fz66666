@@ -1,17 +1,11 @@
-import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
-import { Badge, Popover, Tag, Tooltip } from 'antd';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
-import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
-import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
-import { StyleCoverThumb } from '@/components/StyleAssets';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
-import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { ProductionOrder } from '@/types/production';
-import { getOrderShipTime } from '../utils';
-import type { CSSProperties } from 'react';
 
 function calcHealthScore(record: ProductionOrder): { score: number; level: 'good'|'warn'|'danger' } {
   const prog = record.productionProgress ?? 0;

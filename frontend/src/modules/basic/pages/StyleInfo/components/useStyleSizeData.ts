@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { App } from 'antd';
 import { StyleSize, TemplateLibrary } from '@/types/style';
-import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
+import api, { toNumberSafe } from '@/utils/api';
 import {
   MatrixCell, MatrixRow,
   splitSizeNames, normalizeSizeList, resolveGroupName,

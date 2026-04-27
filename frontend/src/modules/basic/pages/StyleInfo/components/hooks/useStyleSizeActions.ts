@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
+import React from 'react';
+import { useState, useCallback } from 'react';
 import { App } from 'antd';
 import { StyleSize } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -55,7 +56,9 @@ export function useStyleSizeActions(deps: StyleSizeActionsDeps) {
     gradingDraftZones, setGradingDraftZones,
     setGradingConfigOpen, setAddSizeOpen,
     newSizeName, setNewSizeName, newGroupName, setNewGroupName,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sizeTemplateKey, setSizeTemplateKey,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     fetchSize, fetchSizeDictOptions,
   } = deps;
 

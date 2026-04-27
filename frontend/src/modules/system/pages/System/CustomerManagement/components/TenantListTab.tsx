@@ -5,7 +5,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
-import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
 import tenantService from '@/services/tenantService';
 import type { TenantInfo } from '@/services/tenantService';

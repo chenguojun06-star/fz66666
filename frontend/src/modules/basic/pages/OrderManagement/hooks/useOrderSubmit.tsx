@@ -1,15 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
 import { App, Form, Tag } from 'antd';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { StyleInfo, StyleBom } from '@/types/style';
 import type { SizePriceRecord } from '../utils/orderIntelligence';
 import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from '../types';
-import { buildOrderQtyStats, calcBomRequirementQty, getMatchedOrderQty, normalizeMatchKey } from '../utils/orderBomMetrics';
 import { buildOrderSubmitPayload } from '../utils/buildOrderSubmitPayload';
-import { analyzeOrderOrchestration, computeProcessBasedUnitPrice } from '../utils/orderIntelligence';
-import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
-import { getMaterialTypeCategory } from '@/utils/materialType';
+import { analyzeOrderOrchestration } from '../utils/orderIntelligence';
 import { normalizeCategoryQuery } from '@/utils/styleCategory';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { ProductionOrder } from '@/types/production';

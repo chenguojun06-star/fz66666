@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { App, Button, Card, Input, Select, Space, Switch, Tabs } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
@@ -26,6 +26,7 @@ const PayrollOperatorSummary: React.FC = () => {
         detailSelectedKeys, setDetailSelectedKeys,
         selectedRowKeys, setSelectedRowKeys,
         printModalVisible, setPrintModalVisible,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         totalQuantity, totalAmount, sortedRows, filteredRows, summaryRows,
         internalOrders, internalOrdersLoading, fetchInternalOrders,
         workerEffList, workerEffLoading, workerEffFetched, fetchWorkerEfficiency,

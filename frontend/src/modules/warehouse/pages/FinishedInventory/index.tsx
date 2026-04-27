@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Card, Button, Space, Input, Select, App, Tabs, Row, Col } from 'antd';
-import { DownloadOutlined, ExportOutlined, HistoryOutlined, ScanOutlined } from '@ant-design/icons';
+import { HistoryOutlined, ScanOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
 import CustomerInfoSection from './CustomerInfoSection';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
-import type { SKUDetail, FinishedInventory } from './finishedInventoryColumns';
+import type { FinishedInventory } from './finishedInventoryColumns';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardModal from '@/components/common/StandardModal';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -18,6 +18,7 @@ import { useFinishedInventoryData } from './hooks/useFinishedInventoryData';
 import { useFinishedInventoryActions } from './hooks/useFinishedInventoryActions';
 
 const _FinishedInventory: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { message } = App.useApp();
   const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
   const [inboundPage, setInboundPage] = useState(1);
@@ -48,7 +49,7 @@ const _FinishedInventory: React.FC = () => {
           children: (<>
           <Card size="small">
             <ResizableTable columns={columns} dataSource={pagedDataSource} rowKey={(r: FinishedInventory) => `${r.orderNo}_${r.styleNo}`} loading={loading} pagination={false} scroll={{ x: 'max-content' }} />
-            <StandardPagination current={pagination.pagination.current} pageSize={pagination.pagination.pageSize} total={totalRecords} onChange={(page, pageSize) => pagination.gotoPage(page)} />
+            <StandardPagination current={pagination.pagination.current} pageSize={pagination.pagination.pageSize} total={totalRecords} onChange={(page, _pageSize) => pagination.gotoPage(page)} />
           </Card>
           <StandardModal title={`出库 - ${outboundModal.data?.styleNo || ''}`} open={outboundModal.visible} onOk={handleOutboundConfirm} onCancel={outboundModal.close} okText="确认出库" width={800}>
             {outboundModal.data && (

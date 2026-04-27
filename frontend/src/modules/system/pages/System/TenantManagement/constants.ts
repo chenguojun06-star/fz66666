@@ -1,5 +1,3 @@
-import type { TenantAppInfo, TenantAppLogInfo, IntegrationOverview, IntegrationModuleInfo } from '@/services/tenantAppService';
-import type { RoleTemplate } from '@/services/tenantService';
 
 export const APP_TYPE_CONFIG: Record<string, { label: string; color: string; icon: string; description: string }> = {
   ORDER_SYNC:       { label: '下单对接',       color: 'var(--color-primary)', icon: '', description: '客户ERP系统直接下达生产订单，实时查询订单进度' },

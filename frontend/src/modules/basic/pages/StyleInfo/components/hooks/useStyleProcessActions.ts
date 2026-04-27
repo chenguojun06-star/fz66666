@@ -1,10 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import React from 'react';
+import { useState } from 'react';
 import { App } from 'antd';
-import { modal } from '@/utils/antdStatic';
 import api, { toNumberSafe } from '@/utils/api';
-import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '@/services/intelligence/intelligenceApi';
-import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
-import { useDictOptions } from '@/hooks/useDictOptions';
 import type { SizePrice, StyleProcessWithSizePrice } from '../styleProcessTabUtils';
 import { norm, isTempId } from '../styleProcessTabUtils';
 

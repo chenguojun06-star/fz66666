@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Button, Tag, Tooltip, Divider, Empty, Space } from 'antd';
 import { ShopOutlined, SendOutlined, ExclamationCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';

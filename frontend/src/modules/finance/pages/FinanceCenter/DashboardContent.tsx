@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, InfoCircleOutlined, WarningOutlined, CheckCircleOutlined, DashboardOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, ArrowDownOutlined, WarningOutlined, CheckCircleOutlined, DashboardOutlined } from '@ant-design/icons';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import dayjs, { Dayjs } from 'dayjs';
+import { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import type { TimeRangeType, EChartData, RankData } from './dashboardTypes';
+import type { TimeRangeType } from './dashboardTypes';
 import { getCompareLabel } from './dashboardUtils';
 import { useDashboardData } from './hooks/useDashboardData';
 import './FinanceCenter.css';

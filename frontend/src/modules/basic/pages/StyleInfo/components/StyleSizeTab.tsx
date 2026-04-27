@@ -1,13 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Dropdown, Input, Space, Select, Modal, Table, Popover } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
-import { StyleSize, TemplateLibrary } from '@/types/style';
+import { StyleSize } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
 import {
-  MatrixCell, GradingZone, MatrixRow, DisplayRow,
-  splitSizeNames, normalizeSizeList, resolveGroupName,
-  resolveGroupToneMeta, normalizeRowSorts, normalizeChunkImageAssignments,
-  createGradingZone, normalizeGradingZones, parseGradingRule, serializeGradingRule,
+  MatrixCell,
+  GradingZone,
+  MatrixRow,
+  DisplayRow,
+  normalizeSizeList,
+  resolveGroupName,
+  resolveGroupToneMeta,
+  normalizeRowSorts,
+  normalizeChunkImageAssignments,
+  createGradingZone,
+  normalizeGradingZones,
+  serializeGradingRule,
 } from './styleSize/shared';
 
 import ResizableTable from '@/components/common/ResizableTable';
@@ -45,6 +53,7 @@ const StyleSizeTab: React.FC<Props> = ({
     loading, sizeColumns, rows, sizeTemplates, templateLoading, sizeOptions,
     deletedIds, setDeletedIds, originalRef, combinedSizeIdsRef,
     linkedSizeColumns, setSizeColumns, setRows, setSizeOptions,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     fetchSize, fetchSizeTemplates, fetchSizeDictOptions,
   } = useStyleSizeData(styleId, linkedSizes);
 

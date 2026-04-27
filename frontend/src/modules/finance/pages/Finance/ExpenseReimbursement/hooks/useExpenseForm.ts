@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { App, Form } from 'antd';
 import dayjs from 'dayjs';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import {
   expenseReimbursementApi,
   type ExpenseReimbursement,
   type ExpenseReimbursementDoc,
   type RecognizeDocResult,
 } from '@/services/finance/expenseReimbursementApi';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 
 interface UploadedDoc { tempId: string; docId?: string; imageUrl?: string; recognizing: boolean; }
 

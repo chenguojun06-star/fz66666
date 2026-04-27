@@ -1,5 +1,4 @@
 import React from 'react';
-import { Image, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';

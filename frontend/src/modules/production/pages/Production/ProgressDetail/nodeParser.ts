@@ -1,6 +1,6 @@
 import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from './types';
-import { normalizeStageKey, canonicalStageKey, isCuttingStageKey, isSecondaryProcessSubNode, resolveDynamicParent } from './stageResolver';
+import { canonicalStageKey, isCuttingStageKey, isSecondaryProcessSubNode, resolveDynamicParent } from './stageResolver';
 
 export const defaultNodes: ProgressNode[] = [
   { id: 'cutting', name: '裁剪', unitPrice: 0 },

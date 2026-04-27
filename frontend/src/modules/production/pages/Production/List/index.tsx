@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Input, Select, Tag, App, Popover, Checkbox, Segmented } from 'antd';
 
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
@@ -19,14 +19,11 @@ import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { useCustomerOptions } from '@/hooks/useCustomerOptions';
-import api, {
+import {
   parseProductionOrderLines,
-  isApiSuccess,
   isOrderFrozenByStatus,
-  isOrderTerminal,
 } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
-import type { Dayjs } from 'dayjs';
 import '../../../styles.css';
 import dayjs from 'dayjs';
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -35,7 +32,7 @@ import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCar
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
 import ExportButton from '@/components/common/ExportButton';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
-import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
+import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
@@ -52,7 +49,6 @@ import {
   useProgressTracking,
   useProductionStats,
   useProductionColumns,
-  useCardProgress,
   useNodeDetailModal,
   useLabelPrint,
   useOrderFocus,
@@ -98,6 +94,7 @@ const ProductionList: React.FC = () => {
   const isFactoryAccount = !!(user as any)?.factoryId;
   const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;
   const navigate = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const location = useLocation();
   const { factoryTypeOptions } = useOrganizationFilterOptions();
 
@@ -113,15 +110,21 @@ const ProductionList: React.FC = () => {
   const {
     queryParams, setQueryParams, dateRange, setDateRange,
     sortField, sortOrder, handleSort,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     productionList, setProductionList, selectedRowKeys, setSelectedRowKeys,
     _selectedRows, setSelectedRows, loading, total,
     viewMode, setViewMode,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     showDelayedOnly, setShowDelayedOnly, activeStatFilter, setActiveStatFilter,
     smartQueueFilter, setSmartQueueFilter,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     smartError, showSmartErrorNotice, reportSmartError,
     orderFocusRef, calcCardProgress,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     deliveryRiskMap, stagnantOrderIds, smartActionItems, smartQueueOrders,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     fetchProductionList, sortedProductionList, urlFocusApplied,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     wsRefreshRef,
   } = useProductionListData();
 

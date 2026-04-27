@@ -1,3 +1,4 @@
+import React from 'react';
 import { App } from 'antd';
 import api from '@/utils/api';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
@@ -5,7 +6,10 @@ import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
 import dayjs from 'dayjs';
 import { scanTypeText } from './payrollOperatorColumns';
 import {
-    toNumberOrZero, toMoneyText, getDetailRowKey, getDetailApprovalId, isDetailAudited,
+  toNumberOrZero,
+  getDetailRowKey,
+  getDetailApprovalId,
+  isDetailAudited,
 } from './usePayrollData';
 
 export interface PayrollActionDeps {

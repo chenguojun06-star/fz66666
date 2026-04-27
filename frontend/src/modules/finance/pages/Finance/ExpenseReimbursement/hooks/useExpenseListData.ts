@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App } from 'antd';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { useAuth } from '@/utils/AuthContext';
-import { expenseReimbursementApi, EXPENSE_TYPES, EXPENSE_STATUS, type ExpenseReimbursement } from '@/services/finance/expenseReimbursementApi';
+import { expenseReimbursementApi, type ExpenseReimbursement } from '@/services/finance/expenseReimbursementApi';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';

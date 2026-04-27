@@ -1,4 +1,3 @@
-import React, { useMemo } from 'react';
 import { CuttingBundleRow, BatchSelectBundleRow, BundleRepairStats } from '../types';
 import { isBundleBlockedForWarehousing, mapBundleStatusText } from '../utils';
 

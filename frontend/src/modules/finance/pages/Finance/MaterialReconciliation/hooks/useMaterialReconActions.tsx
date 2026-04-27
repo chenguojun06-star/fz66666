@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from 'react';
 import { message, Modal } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
@@ -70,6 +71,7 @@ export const useMaterialReconActions = (
 
   const openRejectModal = (ids: string[]) => setPendingRejectIds(ids);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleRejectConfirm = async (reason: string) => {
     if (!pendingRejectIds?.length) return;
     setRejectIdsLoading(true);

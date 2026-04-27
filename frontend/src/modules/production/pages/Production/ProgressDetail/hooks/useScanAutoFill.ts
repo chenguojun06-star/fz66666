@@ -1,9 +1,9 @@
+import React from 'react';
 import { useEffect, useRef } from 'react';
 import { Form } from 'antd';
 import { ProductionOrder, CuttingBundle } from '@/types/production';
 import { ProgressNode } from '../types';
 import { getCurrentWorkflowNodeForOrder, defaultNodes } from '../progressCalculator';
-import { fetchCuttingBundles as fetchCuttingBundlesHelper } from '../helpers/fetchers';
 
 type UseScanAutoFillOptions = {
   scanOpen: boolean;

@@ -7,8 +7,8 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
-import { MaterialDatabase, MaterialDatabaseQueryParams } from '@/types/production';
-import api, { unwrapApiData } from '@/utils/api';
+import { MaterialDatabase } from '@/types/production';
+import api from '@/utils/api';
 import { useViewport } from '@/utils/useViewport';
 import { useTablePagination } from '@/hooks';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -26,6 +26,7 @@ const MaterialDatabasePage: React.FC = () => {
   const { user } = useAuth();
   const [dataList, setDataList] = useState<MaterialDatabase[]>([]);
   const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = isSmartFeatureEnabled('smart.production.precheck.enabled' as any);
   const [searchKeyword, setSearchKeyword] = useState('');

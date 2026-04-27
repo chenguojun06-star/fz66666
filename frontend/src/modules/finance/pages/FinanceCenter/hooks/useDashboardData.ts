@@ -7,9 +7,10 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import type { StatCardData, RankData, Factory, TimeRangeType, EChartData, SettlementRow } from '../dashboardTypes';
 import { DEFAULT_STAT_DATA, DEFAULT_CHART_DATA } from '../dashboardTypes';
 import { getDateRanges, calcChange, generateTrendData } from '../dashboardUtils';
-import dayjs, { Dayjs } from 'dayjs';
+import { Dayjs } from 'dayjs';
 
 export const useDashboardData = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRangeType>('month');

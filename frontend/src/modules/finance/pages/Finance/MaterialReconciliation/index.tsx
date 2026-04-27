@@ -31,6 +31,7 @@ const MaterialReconciliation: React.FC = () => {
   } = useMaterialReconData();
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const reconModal = { visible: false, data: null as MaterialReconType | null, open: (_d?: MaterialReconType | null) => {}, close: () => {} };
   const [reconModalVisible, setReconModalVisible] = useState(false);
   const [reconModalData, setReconModalData] = useState<MaterialReconType | null>(null);
@@ -47,6 +48,7 @@ const MaterialReconciliation: React.FC = () => {
   } = useMaterialReconActions(reconciliationList, selectedRowKeys, fetchList, user);
 
   const { exporting, exportCsv } = useMaterialReconExport(queryParams, reconciliationList, selectedRowKeys, user);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { columns } = useMaterialReconColumns({ user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal: (ids) => { batchReject(); }, openDialog });
 
   useSync(

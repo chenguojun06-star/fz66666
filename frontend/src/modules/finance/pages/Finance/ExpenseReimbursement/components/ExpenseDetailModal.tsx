@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { App, Alert, Button, Image, Input, Space, Tag } from 'antd';
+import { App, Alert, Button, Image, Input, Tag } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ResizableModal from '@/components/common/ResizableModal';

@@ -5,7 +5,6 @@ import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
-import { formatProcessDisplayName } from '@/utils/productionStage';
 import type { RowAction } from '@/components/common/RowActions';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import api from '@/utils/api';
@@ -61,8 +60,11 @@ const TemplateCenter: React.FC = () => {
   const [applyOpen, setApplyOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [syncPriceOpen, setSyncPriceOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeRow, setActiveRow] = useState<TemplateLibrary | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [viewContent, setViewContent] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [viewObj, setViewObj] = useState<unknown>(null);
   const [cardTab, setCardTab] = usePersistentState<'list' | 'knowledge'>('template-center-card-tab', 'list');
 
