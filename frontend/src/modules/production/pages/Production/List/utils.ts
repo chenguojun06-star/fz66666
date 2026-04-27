@@ -1,7 +1,7 @@
 
 import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
-import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
+import { stageAliasMap, carSewingKeywords, tailProcessKeywords, canonicalizeStage } from '@/utils/productionStage';
 
 /**
  * 安全字符串转换
@@ -140,10 +140,7 @@ export const stageKeyByType: Record<string, string> = {
 };
 
 export const matchStageKey = (progressStage: string, processName: string) => {
-  // 规范化：解决"质检入库"同时匹配质检(tailProcess)和入库(warehousing)的歧义
-  // "质检入库"业务含义是"入库"，不是"质检"
-  const canonicalize = (s: string) => s.replace(/质检入库/g, '入库');
-  const text = canonicalize(`${progressStage || ''} ${processName || ''}`);
+  const text = canonicalizeStage(`${progressStage || ''} ${processName || ''}`);
   for (const stage of mainStages) {
     if (stage.keywords.some(kw => text.includes(kw))) {
       return stage.key;

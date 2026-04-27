@@ -46,6 +46,11 @@ export const materialInventoryApi = {
     return await api.post('/production/material/inbound/manual', data);
   },
 
+  /** 采购到货入库：生成入库记录 + 更新库存 + 同步采购单状态 */
+  confirmArrival: async (data: { purchaseId: string; arrivedQuantity: number; warehouseLocation?: string; remark?: string }): Promise<ApiResponse<any>> => {
+    return await api.post('/production/material/inbound/confirm-arrival', data);
+  },
+
   generateRolls: async (data: RollGenerateRequest): Promise<ApiResponse<RollItem[]>> => {
     return await api.post('/production/material/roll/generate', data);
   },

@@ -23,7 +23,7 @@ interface ProductionModalsProps {
     open: (record: ProductionOrder) => void;
   };
   quickEditSaving: boolean;
-  onQuickEditSave: (values: any, record: ProductionOrder | null, close: () => void) => void;
+  onQuickEditSave: (values: any, record: ProductionOrder | null, close: () => void) => Promise<void>;
   remarkPopoverId: string | null;
   setRemarkPopoverId: (id: string | null) => void;
   remarkText: string;
@@ -36,7 +36,7 @@ interface ProductionModalsProps {
   processDetailType: string;
   procurementStatus: any;
   processStatus: any;
-  fetchProductionList: () => void;
+  fetchProductionList: () => Promise<void>;
   nodeDetailVisible: boolean;
   closeNodeDetail: () => void;
   nodeDetailOrder: ProductionOrder | null;
@@ -47,8 +47,8 @@ interface ProductionModalsProps {
   nodeDetailProcessList: any[];
   transferModalVisible: boolean;
   transferRecord: ProductionOrder | null;
-  transferType: string;
-  setTransferType: (type: string) => void;
+  transferType: 'user' | 'factory';
+  setTransferType: React.Dispatch<React.SetStateAction<'user' | 'factory'>>;
   transferUserId: string;
   setTransferUserId: (id: string) => void;
   transferMessage: string;
@@ -89,7 +89,7 @@ interface ProductionModalsProps {
   remapParentNodes: any[];
   remapConfig: any;
   remapSaving: boolean;
-  saveRemap: () => void;
+  saveRemap: (config: any) => Promise<void>;
   closeRemap: () => void;
   printModalVisible: boolean;
   setPrintModalVisible: (visible: boolean) => void;

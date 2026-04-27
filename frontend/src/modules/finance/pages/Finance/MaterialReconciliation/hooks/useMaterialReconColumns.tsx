@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Button, Tag } from 'antd';
 import type { MaterialReconType } from '@/types/finance';
 import { getMaterialReconStatusConfig } from '@/constants/finance';

@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatDateTime } from '@/utils/datetime';
 import ResizableTable from '@/components/common/ResizableTable';
+import InfoItem from './InfoItem';
 import type { ProductionOrder } from '@/types/production';
 
 interface WarehousingDetailPanelProps {
@@ -205,13 +206,6 @@ const WarehouseSizeTable: React.FC<{
         );
       }}
     />
-  </div>
-);
-
-const InfoItem: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
-  <div>
-    <span style={{ color: 'var(--color-text-secondary)' }}>{label}：</span>
-    <span style={{ fontWeight: 600, color: '#111827' }}>{value || '-'}</span>
   </div>
 );
 

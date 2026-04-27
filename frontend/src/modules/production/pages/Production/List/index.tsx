@@ -240,11 +240,16 @@ const ProductionList: React.FC = () => {
             onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
           />
           </>}
-          {...ProductionFilterBar({
+          filterLeft={ProductionFilterBar({
             queryParams, setQueryParams, dateRange, setDateRange, fetchProductionList,
             visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions,
             viewMode, setViewMode, factoryTypeOptions,
-          })}
+          }).filterLeft}
+          filterRight={ProductionFilterBar({
+            queryParams, setQueryParams, dateRange, setDateRange, fetchProductionList,
+            visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions,
+            viewMode, setViewMode, factoryTypeOptions,
+          }).filterRight}
         >
           {viewMode === 'smart' ? (
             <ExternalFactorySmartView

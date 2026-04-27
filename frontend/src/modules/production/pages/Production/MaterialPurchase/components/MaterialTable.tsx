@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tag, App, Space, Tooltip, Modal } from 'antd';
+import { Tag, App, Space, Tooltip, Modal, InputNumber } from 'antd';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
@@ -440,6 +440,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         const canCancelReceive = !isPending
           && !['completed', 'cancelled'].includes(status)
           && !frozen;
+        const canConfirmArrival = ['received', 'partial', 'partial_arrival'].includes(status) && !frozen;
         return (
           <RowActions
             actions={[
@@ -455,6 +456,36 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 onClick: () => onEdit(record),
                 disabled: frozen,
               },
+              ...(canConfirmArrival ? [{
+                key: 'confirm-arrival',
+                label: '到货入库',
+                onClick: () => {
+                  const maxQty = Math.max(1, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+                  let qty = maxQty;
+                  Modal.confirm({
+                    title: `${record.materialName || record.materialCode} — 到货入库`,
+                    icon: null,
+                    content: (
+                      <div>
+                        <p style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 12 }}>
+                          采购 {record.purchaseQuantity || '-'}{record.unit ? ' ' + record.unit : ''}，已到 {record.arrivedQuantity || 0}，待到 {maxQty}
+                        </p>
+                        <InputNumber
+                          min={1} max={maxQty} defaultValue={qty}
+                          style={{ width: '100%' }} placeholder="请输入到货数量"
+                          onChange={v => { qty = v ?? 1; }}
+                        />
+                      </div>
+                    ),
+                    okText: '确认入库',
+                    onOk: async () => {
+                      await api.post('/production/material/inbound/confirm-arrival', { purchaseId: record.id, arrivedQuantity: qty });
+                      message.success('入库成功，库存已更新');
+                      onRefresh?.();
+                    },
+                  });
+                },
+              }] : []),
               {
                 key: 'remark',
                 label: '备注',

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Form, Input, InputNumber, Select, Space, Button, Tag } from 'antd';
 import RowActions from '@/components/common/RowActions';
 import SupplierSelect from '@/components/common/SupplierSelect';

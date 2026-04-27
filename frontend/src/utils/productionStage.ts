@@ -64,7 +64,7 @@ export const tailProcessKeywords: string[] = [
  * 规范化阶段名（解决"质检入库"同时匹配质检和入库的歧义问题）
  * "质检入库"业务含义是"入库"（质检后入仓），不是"质检"
  */
-const canonicalizeStage = (raw: string): string => {
+export const canonicalizeStage = (raw: string): string => {
   const s = raw.trim();
   if (s === '质检入库') return '入库';
   return s;
