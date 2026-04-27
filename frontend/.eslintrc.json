@@ -41,6 +41,12 @@
   },
   "overrides": [
     {
+      "files": ["**/*.ts", "**/*.tsx"],
+      "rules": {
+        "no-undef": "off"
+      }
+    },
+    {
       "files": ["playwright.config.ts", "e2e/**/*.ts"],
       "env": {
         "node": true
