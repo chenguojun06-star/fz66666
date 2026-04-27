@@ -54,6 +54,7 @@ public class CrossTenantBenchmarkOrchestrator {
         List<ProductionOrder> myOrders = productionOrderService.list(
                 new QueryWrapper<ProductionOrder>()
                         .eq("tenant_id", myTenantId)
+                        .eq("delete_flag", 0)
                         .gt("create_time", LocalDateTime.now().minusDays(90))
                         .select("tenant_id", "status", "completed_quantity",
                                 "order_quantity", "create_time")
@@ -98,6 +99,7 @@ public class CrossTenantBenchmarkOrchestrator {
         List<ScanRecord> scans = scanRecordService.list(
                 new QueryWrapper<ScanRecord>()
                         .eq("tenant_id", tenantId)
+                        .ne("scan_type", "orchestration")
                         .ge("scan_time", LocalDateTime.now().minusDays(90))
                         .select("scan_result"));
         long totalScanCount = scans.size();
@@ -156,6 +158,7 @@ public class CrossTenantBenchmarkOrchestrator {
                     "你是服装供应链AI顾问，根据企业自身经营数据用1-2句话给出改进建议，不超过80字。", msg);
             return r.isSuccess() ? r.getContent() : "建议重点改善逾期率，提升按期完工比例。";
         } catch (Exception e) {
+            log.debug("[CrossTenantBenchmark] generateInsight失败", e);
             return "建议重点改善逾期率，提升按期完工比例。";
         }
     }

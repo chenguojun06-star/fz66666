@@ -221,6 +221,7 @@ public class OrderDeliveryRiskOrchestrator {
             if (dateObj instanceof LocalDateTime) return ((LocalDateTime) dateObj).toLocalDate();
             return LocalDate.parse(dateObj.toString().substring(0, 10), DATE_FMT);
         } catch (Exception e) {
+            log.debug("[OrderDeliveryRisk] toLocalDate失败: dateObj={}", dateObj);
             return null;
         }
     }

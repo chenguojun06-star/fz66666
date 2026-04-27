@@ -24,7 +24,7 @@ public class EdgeTtsService {
 
     private static final String WSS_URL =
             "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
-    private static final String TRUSTED_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+    private static final String TRUSTED_TOKEN = System.getProperty("edge.tts.trusted.token", "6A5AA1D4EAFF4E9FB37E23D68491D6F4");
     private static final String DEFAULT_VOICE = "zh-CN-XiaoxiaoNeural";
     private static final String OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3";
     private static final long TIMEOUT_SECONDS = 15;

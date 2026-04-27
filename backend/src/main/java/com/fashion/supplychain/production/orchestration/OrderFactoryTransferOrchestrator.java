@@ -107,6 +107,7 @@ public class OrderFactoryTransferOrchestrator {
         // 2. 查目标工厂
         Factory targetFactory = factoryService.lambdaQuery()
                 .eq(Factory::getTenantId, tenantId)
+                .eq(Factory::getDeleteFlag, 0)
                 .eq(Factory::getFactoryName, targetFactoryName)
                 .one();
         if (targetFactory == null) {

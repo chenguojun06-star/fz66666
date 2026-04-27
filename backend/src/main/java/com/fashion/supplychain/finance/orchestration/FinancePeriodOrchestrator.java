@@ -37,7 +37,7 @@ public class FinancePeriodOrchestrator {
         return Result.success(periodService.list(qw));
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<FinancePeriod> lock(Integer year, Integer month, String remark) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -74,7 +74,7 @@ public class FinancePeriodOrchestrator {
         return Result.success(period);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<FinancePeriod> unlock(Integer year, Integer month) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();

@@ -153,3 +153,17 @@ node_modules/
 /test_*.js
 /query_db.js
 /patch_*.diff
+
+# === 2026-05 清理：测试/AI工具/重构脚本一律隔离 ===
+.claude/
+CLAUDE.md
+test-results/
+frontend/test-results/
+h5-web/src/__tests__/
+flutter_app/test/business_rules_test.dart
+*.tsx.new
+*.ts.new
+scripts/refactor/
+analyze_methods*.py
+scan_*.py
+refactor_*.py

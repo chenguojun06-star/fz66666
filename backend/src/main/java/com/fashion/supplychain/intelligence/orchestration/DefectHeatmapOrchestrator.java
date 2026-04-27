@@ -71,7 +71,7 @@ public class DefectHeatmapOrchestrator {
         Map<String, String> orderToFactory = new HashMap<>();
         if (!orderIds.isEmpty()) {
             QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
-            oqw.eq("tenant_id", tenantId).in("id", orderIds).select("id", "factory_name");
+            oqw.eq("tenant_id", tenantId).eq("delete_flag", 0).in("id", orderIds).select("id", "factory_name");
             productionOrderService.list(oqw).forEach(o ->
                     orderToFactory.put(String.valueOf(o.getId()),
                             o.getFactoryName() != null ? o.getFactoryName() : "未分配"));

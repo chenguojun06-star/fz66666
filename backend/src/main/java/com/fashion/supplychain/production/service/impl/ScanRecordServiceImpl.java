@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import org.springframework.transaction.annotation.Transactional;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
@@ -251,6 +252,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
         }
 
         @Override
+        @Transactional(rollbackFor = Exception.class)
         public int deleteByOrderId(String orderId) {
                 if (orderId == null || orderId.trim().isEmpty()) {
                         return 0;
@@ -263,6 +265,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
         }
 
         @Override
+        @Transactional(rollbackFor = Exception.class)
         public int deleteByOrderNo(String orderNo) {
                 if (orderNo == null || orderNo.trim().isEmpty()) {
                         return 0;

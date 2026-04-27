@@ -155,194 +155,164 @@ public class OpenApiOrderHelper {
     public Map<String, Object> createExternalOrder(TenantApp app, String body) {
         try {
             Map<String, Object> request = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
-
             String styleNo = (String) request.get("styleNo");
             if (!StringUtils.hasText(styleNo)) {
                 throw new IllegalArgumentException("缺少必填参数: styleNo");
             }
-
             Integer quantity = request.get("quantity") != null ? ((Number) request.get("quantity")).intValue() : null;
             if (quantity == null || quantity <= 0) {
                 throw new IllegalArgumentException("缺少必填参数: quantity (必须大于0)");
             }
 
-            // 查找对应款式
-            StyleInfo style = null;
-            LambdaQueryWrapper<StyleInfo> styleWrapper = new LambdaQueryWrapper<>();
-            styleWrapper.eq(StyleInfo::getStyleNo, styleNo);
-            styleWrapper.last("LIMIT 1");
-            List<StyleInfo> styles = styleInfoService.list(styleWrapper);
-            if (!styles.isEmpty()) {
-                style = styles.get(0);
-            }
-
-            // 生成订单号 (格式: PO + yyyyMMdd + 4位序号)
+            StyleInfo style = findStyleByNo(styleNo);
             String orderNo = generateOrderNo();
+            ProductionOrder order = buildExternalOrder(app, request, styleNo, quantity, style, orderNo);
+            applyRequestOverrides(order, request);
+            applyStyleDefaults(order, style, request);
+            applyProcessUnitPrices(order, style, request);
+            applyTenantAndSave(app, order);
 
-            // 创建真实生产订单
-            ProductionOrder order = new ProductionOrder();
-            order.setOrderNo(orderNo);
-            order.setOrderQuantity(quantity);
-            order.setCompletedQuantity(0);
-            order.setProductionProgress(0);
-            order.setMaterialArrivalRate(0);
-            order.setStatus("pending");
-            order.setDeleteFlag(0);
-            order.setCreateTime(LocalDateTime.now());
-            order.setCreatedByName("OpenAPI-" + app.getAppName());
-            order.setRemarks("[第三方下单] " + (request.get("remarks") != null ? request.get("remarks") : "")
-                    + " | 来源: " + app.getAppName()
-                    + " | appKey: " + app.getAppKey().substring(0, Math.min(8, app.getAppKey().length())) + "***");
-
-            // 关联款式信息
-            if (style != null) {
-                order.setStyleId(String.valueOf(style.getId()));
-                order.setStyleNo(style.getStyleNo());
-                order.setStyleName(style.getStyleName());
-                // 款式带入品类（StyleInfo.category → ProductionOrder.productCategory）
-                if (StringUtils.hasText(style.getCategory())) order.setProductCategory(style.getCategory());
-            } else {
-                order.setStyleNo(styleNo);
-                order.setStyleName(styleNo + " (待关联)");
-            }
-
-            // 请求体字段覆盖默认值
-            if (request.get("merchandiser") != null) order.setMerchandiser((String) request.get("merchandiser"));
-            if (request.get("patternMaker") != null) order.setPatternMaker((String) request.get("patternMaker"));
-            if (request.get("productCategory") != null) order.setProductCategory((String) request.get("productCategory"));
-            if (request.get("factoryName") != null) order.setFactoryName((String) request.get("factoryName"));
-
-            // 设置客户/公司
-            String company = (String) request.get("company");
-            order.setCompany(StringUtils.hasText(company) ? company : app.getAppName());
-
-            // 设置颜色/尺码
-            if (request.get("colors") != null) {
-                @SuppressWarnings("unchecked")
-                List<String> colors = (List<String>) request.get("colors");
-                order.setColor(String.join(",", colors));
-            }
-            if (request.get("sizes") != null) {
-                @SuppressWarnings("unchecked")
-                List<String> sizes = (List<String>) request.get("sizes");
-                order.setSize(String.join(",", sizes));
-            }
-
-            // 设置预计出货日
-            if (request.get("expectedShipDate") != null) {
-                try {
-                    order.setExpectedShipDate(LocalDate.parse((String) request.get("expectedShipDate")));
-                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-            }
-
-            // 设置计划开工/完工日期
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            if (request.get("plannedStartDate") != null) {
-                try {
-                    order.setPlannedStartDate(LocalDate.parse((String) request.get("plannedStartDate"), dateFormatter).atStartOfDay());
-                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-            }
-            if (request.get("plannedEndDate") != null) {
-                try {
-                    order.setPlannedEndDate(LocalDate.parse((String) request.get("plannedEndDate"), dateFormatter).atTime(23, 59, 59));
-                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-            }
-
-            // ===== 构建工序单价 progressWorkflowJson =====
-            // 优先用请求体传入的 processUnitPrices，否则自动从款式工序表（t_style_process）带入
-            String progressWorkflowJson = null;
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> processUnitPrices = (List<Map<String, Object>>) request.get("processUnitPrices");
-
-            if (processUnitPrices != null && !processUnitPrices.isEmpty()) {
-                // 方式一：请求体直接传入工序单价
-                List<Map<String, Object>> nodes = new ArrayList<>();
-                for (Map<String, Object> p : processUnitPrices) {
-                    String pName = p.get("processName") != null ? String.valueOf(p.get("processName")).trim() : null;
-                    if (!StringUtils.hasText(pName)) continue;
-                    Map<String, Object> node = new LinkedHashMap<>();
-                    node.put("name", pName);
-                    if (p.get("processCode") != null) node.put("processCode", String.valueOf(p.get("processCode")).trim());
-                    node.put("unitPrice", p.get("unitPrice") != null ? p.get("unitPrice") : 0);
-                    nodes.add(node);
-                }
-                if (!nodes.isEmpty()) {
-                    Map<String, Object> workflow = new LinkedHashMap<>();
-                    workflow.put("nodes", nodes);
-                    progressWorkflowJson = objectMapper.writeValueAsString(workflow);
-                    log.info("[OpenAPI] 使用请求体传入工序单价: orderNo={}, 工序数={}", orderNo, nodes.size());
-                }
-            } else if (style != null) {
-                // 方式二：自动从款式工序表（t_style_process）读取工序单价
-                LambdaQueryWrapper<StyleProcess> processWrapper = new LambdaQueryWrapper<>();
-                processWrapper.eq(StyleProcess::getStyleId, style.getId());
-                processWrapper.orderByAsc(StyleProcess::getSortOrder);
-                List<StyleProcess> styleProcesses = styleProcessService.list(processWrapper);
-                if (styleProcesses != null && !styleProcesses.isEmpty()) {
-                    List<Map<String, Object>> nodes = new ArrayList<>();
-                    for (StyleProcess sp : styleProcesses) {
-                        Map<String, Object> node = new LinkedHashMap<>();
-                        node.put("name", sp.getProcessName());
-                        if (StringUtils.hasText(sp.getProcessCode())) node.put("processCode", sp.getProcessCode());
-                        if (StringUtils.hasText(sp.getProgressStage())) node.put("stage", sp.getProgressStage());
-                        node.put("unitPrice", sp.getPrice() != null ? sp.getPrice() : BigDecimal.ZERO);
-                        node.put("standardTime", sp.getStandardTime() != null ? sp.getStandardTime() : 0);
-                        nodes.add(node);
-                    }
-                    Map<String, Object> workflow = new LinkedHashMap<>();
-                    workflow.put("nodes", nodes);
-                    progressWorkflowJson = objectMapper.writeValueAsString(workflow);
-                    log.info("[OpenAPI] 自动带入款式工序单价: orderNo={}, styleNo={}, 工序数={}", orderNo, styleNo, nodes.size());
-                }
-            }
-            order.setProgressWorkflowJson(progressWorkflowJson);
-
-            // 保存订单
-            productionOrderService.save(order);
-            log.info("[OpenAPI] 第三方下单成功: orderNo={}, styleNo={}, quantity={}, 来源={}, 工序单价={}",
-                    orderNo, styleNo, quantity, app.getAppName(), progressWorkflowJson != null ? "已配置" : "未配置（款式无工序）");
-
-            // 汇总工序单价信息（用于返回给客户）
-            List<Map<String, Object>> processInfo = new ArrayList<>();
-            if (StringUtils.hasText(progressWorkflowJson)) {
-                try {
-                    Map<String, Object> wf = objectMapper.readValue(progressWorkflowJson, new TypeReference<Map<String, Object>>() {});
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> nodes = (List<Map<String, Object>>) wf.get("nodes");
-                    if (nodes != null) processInfo = nodes;
-                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-            }
-
-            // 构建返回
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("status", "created");
-            result.put("message", "订单已创建成功，可在【生产管理→我的订单】页面查看");
-            result.put("orderNo", orderNo);
+            result.put("success", true);
             result.put("orderId", order.getId());
-            result.put("styleNo", styleNo);
-            result.put("styleName", order.getStyleName());
-            result.put("company", order.getCompany());
-            result.put("quantity", quantity);
-            result.put("merchandiser", order.getMerchandiser());
-            result.put("patternMaker", order.getPatternMaker());
-            result.put("productCategory", order.getProductCategory());
-            result.put("factoryName", order.getFactoryName());
-            result.put("plannedStartDate", order.getPlannedStartDate() != null ? order.getPlannedStartDate().toLocalDate().toString() : null);
-            result.put("plannedEndDate", order.getPlannedEndDate() != null ? order.getPlannedEndDate().toLocalDate().toString() : null);
-            result.put("expectedShipDate", order.getExpectedShipDate());
-            result.put("processUnitPrices", processInfo);
-            result.put("processCount", processInfo.size());
-            result.put("orderStatus", "pending");
-            result.put("createdAt", order.getCreateTime().toString());
-            result.put("viewUrl", "/production?orderNo=" + orderNo);
+            result.put("orderNo", orderNo);
+            result.put("styleNo", order.getStyleNo());
+            result.put("quantity", order.getOrderQuantity());
             return result;
-
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("创建订单失败: " + e.getMessage(), e);
+            throw new RuntimeException("创建外部订单失败: " + e.getMessage(), e);
         }
     }
+
+    private StyleInfo findStyleByNo(String styleNo) {
+        LambdaQueryWrapper<StyleInfo> styleWrapper = new LambdaQueryWrapper<>();
+        styleWrapper.eq(StyleInfo::getStyleNo, styleNo);
+        styleWrapper.last("LIMIT 1");
+        List<StyleInfo> styles = styleInfoService.list(styleWrapper);
+        return styles.isEmpty() ? null : styles.get(0);
+    }
+
+    private ProductionOrder buildExternalOrder(TenantApp app, Map<String, Object> request,
+            String styleNo, Integer quantity, StyleInfo style, String orderNo) {
+        ProductionOrder order = new ProductionOrder();
+        order.setOrderNo(orderNo);
+        order.setOrderQuantity(quantity);
+        order.setCompletedQuantity(0);
+        order.setProductionProgress(0);
+        order.setMaterialArrivalRate(0);
+        order.setStatus("pending");
+        order.setDeleteFlag(0);
+        order.setCreateTime(LocalDateTime.now());
+        order.setCreatedByName("OpenAPI-" + app.getAppName());
+        order.setRemarks("[第三方下单] " + (request.get("remarks") != null ? request.get("remarks") : "")
+                + " | 来源: " + app.getAppName()
+                + " | appKey: " + app.getAppKey().substring(0, Math.min(8, app.getAppKey().length())) + "***");
+        if (style != null) {
+            order.setStyleId(String.valueOf(style.getId()));
+            order.setStyleNo(style.getStyleNo());
+            order.setStyleName(style.getStyleName());
+            if (StringUtils.hasText(style.getCategory())) order.setProductCategory(style.getCategory());
+        } else {
+            order.setStyleNo(styleNo);
+            order.setStyleName(styleNo + " (待关联)");
+        }
+        return order;
+    }
+
+    private void applyRequestOverrides(ProductionOrder order, Map<String, Object> request) {
+        if (request.get("merchandiser") != null) order.setMerchandiser((String) request.get("merchandiser"));
+        if (request.get("company") != null) order.setCompany((String) request.get("company"));
+        if (request.get("factoryName") != null) order.setFactoryName((String) request.get("factoryName"));
+        if (request.get("productCategory") != null) order.setProductCategory((String) request.get("productCategory"));
+        if (request.get("expectedShipDate") != null) {
+            try { order.setExpectedShipDate(LocalDate.parse((String) request.get("expectedShipDate"))); }
+            catch (Exception e) { log.warn("日期解析失败: expectedShipDate={}", request.get("expectedShipDate")); }
+        }
+        if (request.get("plannedStartDate") != null) {
+            try { order.setPlannedStartDate(LocalDate.parse((String) request.get("plannedStartDate")).atStartOfDay()); }
+            catch (Exception e) { log.warn("日期解析失败: plannedStartDate={}", request.get("plannedStartDate")); }
+        }
+        if (request.get("plannedEndDate") != null) {
+            try { order.setPlannedEndDate(LocalDate.parse((String) request.get("plannedEndDate")).atStartOfDay()); }
+            catch (Exception e) { log.warn("日期解析失败: plannedEndDate={}", request.get("plannedEndDate")); }
+        }
+        Object colorsObj = request.get("colors");
+        if (colorsObj instanceof List && !((List<?>) colorsObj).isEmpty()) {
+            order.setColor(String.join(",", ((List<String>) colorsObj)));
+        }
+        Object sizesObj = request.get("sizes");
+        if (sizesObj instanceof List && !((List<?>) sizesObj).isEmpty()) {
+            order.setSize(String.join(",", ((List<String>) sizesObj)));
+        }
+    }
+
+    private void applyStyleDefaults(ProductionOrder order, StyleInfo style, Map<String, Object> request) {
+        if (style == null) return;
+        if (!StringUtils.hasText(order.getProductCategory()) && StringUtils.hasText(style.getCategory())) {
+            order.setProductCategory(style.getCategory());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void applyProcessUnitPrices(ProductionOrder order, StyleInfo style, Map<String, Object> request) {
+        Object pricesObj = request.get("processUnitPrices");
+        List<Map<String, Object>> customPrices = null;
+        if (pricesObj instanceof List) {
+            customPrices = (List<Map<String, Object>>) pricesObj;
+        }
+        if ((customPrices == null || customPrices.isEmpty()) && style != null) {
+            try {
+                List<StyleProcess> processes = styleProcessService.listByStyleId(Long.valueOf(style.getId()));
+                if (processes != null && !processes.isEmpty()) {
+                    customPrices = new ArrayList<>();
+                    for (StyleProcess sp : processes) {
+                        Map<String, Object> p = new LinkedHashMap<>();
+                        p.put("processName", sp.getProcessName());
+                        p.put("processCode", sp.getProcessCode());
+                        p.put("unitPrice", sp.getPrice());
+                        customPrices.add(p);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("从款式工序表读取单价失败: styleId={}", style.getId(), e);
+            }
+        }
+        if (customPrices != null && !customPrices.isEmpty()) {
+            try {
+                List<Map<String, Object>> nodes = new ArrayList<>();
+                for (Map<String, Object> p : customPrices) {
+                    Map<String, Object> node = new LinkedHashMap<>();
+                    node.put("id", p.getOrDefault("processCode", ""));
+                    node.put("name", p.getOrDefault("processName", ""));
+                    node.put("unitPrice", p.getOrDefault("unitPrice", 0));
+                    nodes.add(node);
+                }
+                Map<String, Object> workflow = new LinkedHashMap<>();
+                workflow.put("nodes", nodes);
+                order.setProgressWorkflowJson(objectMapper.writeValueAsString(workflow));
+            } catch (Exception e) {
+                log.warn("设置工序单价JSON失败", e);
+            }
+        }
+    }
+
+    private void applyTenantAndSave(TenantApp app, ProductionOrder order) {
+        if (app.getTenantId() != null) {
+            order.setTenantId(app.getTenantId());
+        }
+        boolean ok = productionOrderService.save(order);
+        if (!ok) {
+            throw new RuntimeException("创建生产订单失败");
+        }
+        try {
+            log.info("[OpenAPI] 订单创建完成，跳过自动采购生成: orderId={}", order.getId());
+        } catch (Exception e) {
+            log.warn("自动生成采购任务失败: orderId={}", order.getId(), e);
+        }
+    }
+
 
     /**
      * 生成唯一订单号

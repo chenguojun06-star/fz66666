@@ -198,6 +198,7 @@ public class InvoiceOrchestrator {
         Invoice existing = invoiceService.lambdaQuery()
                 .eq(Invoice::getId, id)
                 .eq(Invoice::getTenantId, tenantId)
+                .eq(Invoice::getDeleteFlag, 0)
                 .one();
         if (existing == null) {
             throw new NoSuchElementException("发票不存在");

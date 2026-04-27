@@ -214,6 +214,7 @@ public class CollaborationTaskLifecycleOrchestrator {
             if (!StringUtils.hasText(value)) return null;
             return MAPPER.readValue(value, TaskState.class);
         } catch (Exception e) {
+            log.debug("[CollaborationTask] loadTaskState失败: key={}", key);
             return null;
         }
     }

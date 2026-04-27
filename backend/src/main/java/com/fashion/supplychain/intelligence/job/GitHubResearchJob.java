@@ -45,7 +45,7 @@ public class GitHubResearchJob {
 
     private static final String GITHUB_API = "https://api.github.com/search/repositories";
 
-    @Scheduled(cron = "0 0 3 ? * MON")
+    @Scheduled(cron = "0 0 4 ? * MON")
     public void researchAndEvolve() {
         if (!researchEnabled) {
             log.debug("[GitHubResearch] 未启用，跳过");
@@ -81,7 +81,7 @@ public class GitHubResearchJob {
         log.info("[GitHubResearch] ===== 周度技术调研完成 =====");
     }
 
-    @Scheduled(cron = "0 30 3 * * ?")
+    @Scheduled(cron = "0 40 4 * * ?")
     public void evolveFromFeedback() {
         if (!researchEnabled) return;
 

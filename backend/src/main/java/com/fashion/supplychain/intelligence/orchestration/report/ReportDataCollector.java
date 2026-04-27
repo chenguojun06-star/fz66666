@@ -67,7 +67,7 @@ public class ReportDataCollector {
         sq.eq("tenant_id", tenantId);
         if (scopeUserId != null) sq.eq("operator_id", scopeUserId);
         if (factoryId != null && !factoryId.isBlank()) sq.eq("factory_id", factoryId);
-        sq.eq("scan_result", "success").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
+        sq.eq("scan_result", "success").ne("scan_type", "orchestration").orderByDesc("scan_time").last("LIMIT 1").select("scan_time");
         ScanRecord latestScan = scanRecordService.getOne(sq);
         if (latestScan != null && latestScan.getScanTime() != null) {
             fallbackDate = latestScan.getScanTime().toLocalDate();
@@ -95,9 +95,14 @@ public class ReportDataCollector {
     public long sumScanQty(Long tenantId, LocalDateTime start, LocalDateTime end, String userId, String factoryId) {
         QueryWrapper<ScanRecord> q = baseScanQuery(tenantId, userId, factoryId);
         q.ge("scan_time", start).le("scan_time", end);
-        return scanRecordService.list(q).stream()
-                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0)
-                .sum();
+        q.select("IFNULL(SUM(quantity), 0) as quantity");
+        try {
+            ScanRecord result = scanRecordService.getOne(q, false);
+            return result != null && result.getQuantity() != null ? result.getQuantity() : 0;
+        } catch (Exception e) {
+            log.warn("[ReportDataCollector] sumScanQty聚合查询失败: {}", e.getMessage());
+            return 0;
+        }
     }
 
     public long countScansByType(Long tenantId, LocalDateTime start, LocalDateTime end,

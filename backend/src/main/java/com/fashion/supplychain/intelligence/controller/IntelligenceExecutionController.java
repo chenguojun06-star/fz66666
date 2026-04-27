@@ -310,7 +310,8 @@ public class IntelligenceExecutionController {
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
             qw.eq("tenant_id", tenantId)
               .eq("status", "PENDING_APPROVAL")
-              .orderByDesc("created_at");
+              .orderByDesc("created_at")
+              .last("LIMIT 500");
             List<IntelligenceAuditLog> logs = auditLogMapper.selectList(qw);
 
             List<Map<String, Object>> pendingCommands = logs.stream().map(l -> {

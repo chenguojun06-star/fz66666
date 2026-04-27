@@ -27,7 +27,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class OrganizationUnitOrchestrator {
 
@@ -459,6 +461,9 @@ public class OrganizationUnitOrchestrator {
         List<Factory> factories = factoryService.list(wrapper);
         for (Factory factory : factories) {
             bindingHelper.syncFactoryNode(factory);
+        }
+        List<Factory> patches = new java.util.ArrayList<>();
+        for (Factory factory : factories) {
             Factory patch = new Factory();
             patch.setId(factory.getId());
             patch.setOrgUnitId(factory.getOrgUnitId());
@@ -466,7 +471,10 @@ public class OrganizationUnitOrchestrator {
             patch.setParentOrgUnitName(factory.getParentOrgUnitName());
             patch.setOrgPath(factory.getOrgPath());
             patch.setFactoryType(factory.getFactoryType());
-            factoryService.updateById(patch);
+            patches.add(patch);
+        }
+        if (!patches.isEmpty()) {
+            factoryService.updateBatchById(patches);
         }
     }
 
@@ -576,7 +584,7 @@ public class OrganizationUnitOrchestrator {
             String operator = (ctx != null ? ctx.getUsername() : null);
             loginLogService.recordOperation(bizType, bizId, targetName, action, operator, remark);
         } catch (Exception e) {
-            // Ignore
+            log.warn("[OrgUnit] 保存操作日志失败: bizType={}, bizId={}", bizType, bizId, e);
         }
     }
 }

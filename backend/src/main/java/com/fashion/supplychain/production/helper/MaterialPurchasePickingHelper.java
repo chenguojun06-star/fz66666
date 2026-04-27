@@ -25,6 +25,7 @@ import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestratorHelper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPickingService;
+import com.fashion.supplychain.production.mapper.MaterialPickingItemMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -59,6 +60,9 @@ public class MaterialPurchasePickingHelper {
 
     @Autowired
     private MaterialPickingService materialPickingService;
+
+    @Autowired
+    private MaterialPickingItemMapper materialPickingItemMapper;
 
     @Autowired
     private MaterialOutboundLogMapper materialOutboundLogMapper;
@@ -112,7 +116,6 @@ public class MaterialPurchasePickingHelper {
             throw new IllegalArgumentException("领取人ID或姓名不能为空");
         }
 
-        // 1. 查询订单的所有待处理采购任务
         List<MaterialPurchase> pendingPurchases = materialPurchaseService.lambdaQuery()
             .eq(MaterialPurchase::getOrderNo, orderNo)
             .eq(MaterialPurchase::getDeleteFlag, 0)
@@ -127,117 +130,30 @@ public class MaterialPurchasePickingHelper {
             return result;
         }
 
-        int outboundCount = 0;  // 走出库的数量
-        int purchaseCount = 0;  // 保持采购的数量
+        int outboundCount = 0;
+        int purchaseCount = 0;
         List<Map<String, Object>> details = new ArrayList<>();
 
-        // 2. 遍历每个采购任务，智能分发
+        java.util.Map<String, List<MaterialStock>> stockCache = batchQueryStockByPurchases(pendingPurchases);
+
         for (MaterialPurchase purchase : pendingPurchases) {
-            String materialCode = purchase.getMaterialCode();
-            String color = purchase.getColor();
-            String size = purchase.getSize();
             int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+            String stockKey = stockCacheKey(purchase.getMaterialCode(), purchase.getColor(), purchase.getSize());
+            List<MaterialStock> stockList = stockCache.getOrDefault(stockKey, java.util.Collections.emptyList());
+            int availableStock = calcAvailableStock(stockList);
 
-            // 2.1 查询库存（按 materialCode + color + size 匹配）
-            LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
-            stockWrapper.eq(MaterialStock::getMaterialCode, materialCode);
-            if (StringUtils.hasText(color)) {
-                stockWrapper.eq(MaterialStock::getColor, color);
+            Map<String, Object> detail = buildDetailBase(purchase, requiredQty, availableStock);
+            dispatchPurchase(purchase, receiverId, receiverName, stockList, requiredQty, availableStock, detail);
+
+            if ("outbound".equals(detail.get("action")) || "partial".equals(detail.get("action"))) {
+                outboundCount++;
             }
-            if (StringUtils.hasText(size)) {
-                stockWrapper.eq(MaterialStock::getSize, size);
-            }
-
-            List<MaterialStock> stockList = materialStockService.list(stockWrapper);
-
-            // 计算可用库存（总库存 - 锁定库存）
-            int availableStock = stockList.stream()
-                .mapToInt(stock -> {
-                    int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
-                    int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                    return Math.max(0, qty - locked);
-                })
-                .sum();
-
-            Map<String, Object> detail = new java.util.LinkedHashMap<>();
-            detail.put("materialCode", materialCode);
-            detail.put("materialName", purchase.getMaterialName());
-            detail.put("color", color);
-            detail.put("size", size);
-            detail.put("requiredQty", requiredQty);
-            detail.put("availableStock", availableStock);
-
-            // 2.2 判断：有足够库存 → 出库，否则 → 采购
-            if (availableStock >= requiredQty && !stockList.isEmpty()) {
-                // ✅ 走出库流程
-                try {
-                    createOutboundPicking(purchase, receiverId, receiverName, stockList);
-                    outboundCount++;
-                    detail.put("action", "outbound");
-                    detail.put("status", "success");
-                } catch (Exception e) {
-                    log.error("创建出库单失败: materialCode={}, error={}", materialCode, e.getMessage());
-                    detail.put("action", "outbound");
-                    detail.put("status", "failed");
-                    detail.put("error", e.getMessage());
-                }
-            } else if (availableStock > 0 && !stockList.isEmpty()) {
-                // 🔄 部分出库：有多少领多少，不足部分创建新采购任务
-                try {
-                    createOutboundPicking(purchase, receiverId, receiverName, stockList, availableStock);
-                    outboundCount++;
-                    int deficitQty = requiredQty - availableStock;
-                    // 为不足部分补建新采购任务（status=pending，等待外部采购）
-                    MaterialPurchase deficitPurchase = new MaterialPurchase();
-                    deficitPurchase.setOrderId(purchase.getOrderId());
-                    deficitPurchase.setOrderNo(purchase.getOrderNo());
-                    deficitPurchase.setStyleId(purchase.getStyleId());
-                    deficitPurchase.setStyleNo(purchase.getStyleNo());
-                    deficitPurchase.setStyleName(purchase.getStyleName());
-                    deficitPurchase.setMaterialId(purchase.getMaterialId());
-                    deficitPurchase.setMaterialCode(purchase.getMaterialCode());
-                    deficitPurchase.setMaterialName(purchase.getMaterialName());
-                    deficitPurchase.setMaterialType(purchase.getMaterialType());
-                    deficitPurchase.setColor(purchase.getColor());
-                    deficitPurchase.setSize(purchase.getSize());
-                    deficitPurchase.setUnit(purchase.getUnit());
-                    deficitPurchase.setSpecifications(purchase.getSpecifications());
-                    deficitPurchase.setPurchaseQuantity(BigDecimal.valueOf(deficitQty));
-                    deficitPurchase.setStatus("pending");
-                    deficitPurchase.setRemark("部分领取补采|原任务ID=" + purchase.getId() + "|缺口=" + deficitQty);
-                    deficitPurchase.setTenantId(purchase.getTenantId());
-                    deficitPurchase.setCreatorId(receiverId);
-                    deficitPurchase.setCreateTime(LocalDateTime.now());
-                    deficitPurchase.setUpdateTime(LocalDateTime.now());
-                    deficitPurchase.setDeleteFlag(0);
-                    materialPurchaseService.save(deficitPurchase);
-                    purchaseCount++;
-                    detail.put("action", "partial");
-                    detail.put("pickedQty", availableStock);
-                    detail.put("deficitQty", deficitQty);
-                    detail.put("status", "partial");
-                    detail.put("message", String.format("部分出库 %d%s，缺口 %d%s 已创建采购任务",
-                        availableStock, purchase.getUnit() != null ? purchase.getUnit() : "",
-                        deficitQty, purchase.getUnit() != null ? purchase.getUnit() : ""));
-                } catch (Exception e) {
-                    log.error("创建部分出库单失败: materialCode={}, error={}", materialCode, e.getMessage());
-                    purchaseCount++;
-                    detail.put("action", "purchase");
-                    detail.put("status", "pending");
-                    detail.put("message", "部分出库失败，保持采购状态");
-                }
-            } else {
-                // ❌ 无库存，保持采购状态（等待外部采购）
+            if ("purchase".equals(detail.get("action")) || "partial".equals(detail.get("action"))) {
                 purchaseCount++;
-                detail.put("action", "purchase");
-                detail.put("status", "pending");
-                detail.put("message", "库存不足，等待采购");
             }
-
             details.add(detail);
         }
 
-        // 3. 返回汇总结果
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("outboundCount", outboundCount);
         result.put("purchaseCount", purchaseCount);
@@ -247,6 +163,132 @@ public class MaterialPurchasePickingHelper {
 
         log.info("✅ 智能一键领取完成: orderNo={}, 出库={}, 采购={}", orderNo, outboundCount, purchaseCount);
         return result;
+    }
+
+    private List<MaterialStock> queryStockByMaterial(MaterialPurchase purchase) {
+        LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
+        stockWrapper.eq(MaterialStock::getMaterialCode, purchase.getMaterialCode());
+        if (StringUtils.hasText(purchase.getColor())) {
+            stockWrapper.eq(MaterialStock::getColor, purchase.getColor());
+        }
+        if (StringUtils.hasText(purchase.getSize())) {
+            stockWrapper.eq(MaterialStock::getSize, purchase.getSize());
+        }
+        return materialStockService.list(stockWrapper);
+    }
+
+    private java.util.Map<String, List<MaterialStock>> batchQueryStockByPurchases(List<MaterialPurchase> purchases) {
+        java.util.Set<String> materialCodes = purchases.stream()
+                .map(MaterialPurchase::getMaterialCode)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        if (materialCodes.isEmpty()) return java.util.Collections.emptyMap();
+        List<MaterialStock> allStocks = materialStockService.list(new LambdaQueryWrapper<MaterialStock>()
+                .in(MaterialStock::getMaterialCode, materialCodes));
+        return allStocks.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        s -> stockCacheKey(s.getMaterialCode(), s.getColor(), s.getSize())));
+    }
+
+    private String stockCacheKey(String materialCode, String color, String size) {
+        return (materialCode == null ? "" : materialCode) + "|" + (color == null ? "" : color) + "|" + (size == null ? "" : size);
+    }
+
+    private int calcAvailableStock(List<MaterialStock> stockList) {
+        return stockList.stream()
+            .mapToInt(stock -> {
+                int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
+                return Math.max(0, qty - locked);
+            })
+            .sum();
+    }
+
+    private Map<String, Object> buildDetailBase(MaterialPurchase purchase, int requiredQty, int availableStock) {
+        Map<String, Object> detail = new java.util.LinkedHashMap<>();
+        detail.put("materialCode", purchase.getMaterialCode());
+        detail.put("materialName", purchase.getMaterialName());
+        detail.put("color", purchase.getColor());
+        detail.put("size", purchase.getSize());
+        detail.put("requiredQty", requiredQty);
+        detail.put("availableStock", availableStock);
+        return detail;
+    }
+
+    private void dispatchPurchase(MaterialPurchase purchase, String receiverId, String receiverName,
+                                   List<MaterialStock> stockList, int requiredQty, int availableStock,
+                                   Map<String, Object> detail) {
+        if (availableStock >= requiredQty && !stockList.isEmpty()) {
+            dispatchFullOutbound(purchase, receiverId, receiverName, stockList, detail);
+        } else if (availableStock > 0 && !stockList.isEmpty()) {
+            dispatchPartialOutbound(purchase, receiverId, receiverName, stockList, requiredQty, availableStock, detail);
+        } else {
+            detail.put("action", "purchase");
+            detail.put("status", "pending");
+            detail.put("message", "库存不足，等待采购");
+        }
+    }
+
+    private void dispatchFullOutbound(MaterialPurchase purchase, String receiverId, String receiverName,
+                                       List<MaterialStock> stockList, Map<String, Object> detail) {
+        try {
+            createOutboundPicking(purchase, receiverId, receiverName, stockList);
+            detail.put("action", "outbound");
+            detail.put("status", "success");
+        } catch (Exception e) {
+            log.error("创建出库单失败: materialCode={}, error={}", purchase.getMaterialCode(), e.getMessage());
+            detail.put("action", "outbound");
+            detail.put("status", "failed");
+            detail.put("error", e.getMessage());
+        }
+    }
+
+    private void dispatchPartialOutbound(MaterialPurchase purchase, String receiverId, String receiverName,
+                                          List<MaterialStock> stockList, int requiredQty, int availableStock,
+                                          Map<String, Object> detail) {
+        try {
+            createOutboundPicking(purchase, receiverId, receiverName, stockList, availableStock);
+            int deficitQty = requiredQty - availableStock;
+            createDeficitPurchase(purchase, deficitQty, receiverId);
+            detail.put("action", "partial");
+            detail.put("pickedQty", availableStock);
+            detail.put("deficitQty", deficitQty);
+            detail.put("status", "partial");
+            detail.put("message", String.format("部分出库 %d%s，缺口 %d%s 已创建采购任务",
+                availableStock, purchase.getUnit() != null ? purchase.getUnit() : "",
+                deficitQty, purchase.getUnit() != null ? purchase.getUnit() : ""));
+        } catch (Exception e) {
+            log.error("创建部分出库单失败: materialCode={}, error={}", purchase.getMaterialCode(), e.getMessage());
+            detail.put("action", "purchase");
+            detail.put("status", "pending");
+            detail.put("message", "部分出库失败，保持采购状态");
+        }
+    }
+
+    private void createDeficitPurchase(MaterialPurchase original, int deficitQty, String receiverId) {
+        MaterialPurchase deficitPurchase = new MaterialPurchase();
+        deficitPurchase.setOrderId(original.getOrderId());
+        deficitPurchase.setOrderNo(original.getOrderNo());
+        deficitPurchase.setStyleId(original.getStyleId());
+        deficitPurchase.setStyleNo(original.getStyleNo());
+        deficitPurchase.setStyleName(original.getStyleName());
+        deficitPurchase.setMaterialId(original.getMaterialId());
+        deficitPurchase.setMaterialCode(original.getMaterialCode());
+        deficitPurchase.setMaterialName(original.getMaterialName());
+        deficitPurchase.setMaterialType(original.getMaterialType());
+        deficitPurchase.setColor(original.getColor());
+        deficitPurchase.setSize(original.getSize());
+        deficitPurchase.setUnit(original.getUnit());
+        deficitPurchase.setSpecifications(original.getSpecifications());
+        deficitPurchase.setPurchaseQuantity(BigDecimal.valueOf(deficitQty));
+        deficitPurchase.setStatus("pending");
+        deficitPurchase.setRemark("部分领取补采|原任务ID=" + original.getId() + "|缺口=" + deficitQty);
+        deficitPurchase.setTenantId(original.getTenantId());
+        deficitPurchase.setCreatorId(receiverId);
+        deficitPurchase.setCreateTime(LocalDateTime.now());
+        deficitPurchase.setUpdateTime(LocalDateTime.now());
+        deficitPurchase.setDeleteFlag(0);
+        materialPurchaseService.save(deficitPurchase);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -349,119 +391,22 @@ public class MaterialPurchasePickingHelper {
             throw new IllegalArgumentException("订单号或款号不能同时为空");
         }
 
-        LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
-        purchaseWrapper.select(
-                MaterialPurchase::getId,
-                MaterialPurchase::getMaterialCode,
-                MaterialPurchase::getMaterialName,
-                MaterialPurchase::getMaterialType,
-                MaterialPurchase::getColor,
-                MaterialPurchase::getSize,
-                MaterialPurchase::getPurchaseQuantity,
-                MaterialPurchase::getStatus,
-                MaterialPurchase::getUnit,
-                MaterialPurchase::getArrivedQuantity,
-                MaterialPurchase::getSourceType,
-                MaterialPurchase::getOrderNo,
-                MaterialPurchase::getStyleNo
-        );
-        if (byOrderNo) {
-            purchaseWrapper.eq(MaterialPurchase::getOrderNo, orderNo.trim());
-        } else {
-            purchaseWrapper.eq(MaterialPurchase::getStyleNo, styleNo.trim())
-                    .eq(MaterialPurchase::getSourceType, "sample");
-        }
-        purchaseWrapper.eq(MaterialPurchase::getDeleteFlag, 0);
+        LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = buildPurchaseQueryWrapper(byOrderNo, orderNo, byStyleNo, styleNo);
         List<MaterialPurchase> allPurchases = materialPurchaseService.list(purchaseWrapper);
 
         List<Map<String, Object>> items = new ArrayList<>();
         int pendingCount = 0;
-
+        java.util.Map<String, List<MaterialStock>> stockCache = batchQueryStockByPurchases(allPurchases);
         for (MaterialPurchase purchase : allPurchases) {
-            String materialCode = purchase.getMaterialCode();
-            String color = purchase.getColor();
-            String size = purchase.getSize();
-            int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
-            String status = purchase.getStatus() != null ? purchase.getStatus() : "";
-
-            // 查询库存
-            LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
-            stockWrapper.eq(MaterialStock::getMaterialCode, materialCode);
-            if (StringUtils.hasText(color)) {
-                stockWrapper.eq(MaterialStock::getColor, color);
-            }
-            if (StringUtils.hasText(size)) {
-                stockWrapper.eq(MaterialStock::getSize, size);
-            }
-
-            List<MaterialStock> stockList = materialStockService.list(stockWrapper);
-            int availableStock = stockList.stream()
-                .mapToInt(stock -> {
-                    int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
-                    int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                    return Math.max(0, qty - locked);
-                })
-                .sum();
-
-            boolean isPending = MaterialConstants.STATUS_PENDING.equals(status);
-            boolean isWarehousePending = MaterialConstants.STATUS_WAREHOUSE_PENDING.equals(status);
-            if (isPending || isWarehousePending) pendingCount++;
-
-            Map<String, Object> item = new java.util.LinkedHashMap<>();
-            item.put("purchaseId", purchase.getId());
-            item.put("materialCode", materialCode);
-            item.put("materialName", purchase.getMaterialName());
-            item.put("materialType", purchase.getMaterialType());
-            item.put("color", color != null ? color : "");
-            item.put("size", size != null ? size : "");
-            item.put("requiredQty", requiredQty);
-            item.put("availableStock", availableStock);
-            item.put("purchaseStatus", status);
-            // 可领取数量 = pending状态下 min(需求, 库存)，否则0
-            int canPickQty = isPending ? Math.min(requiredQty, availableStock) : 0;
-            item.put("canPickQty", canPickQty);
-            // 需采购数量 = pending状态下 需求 - 可领取，否则0
-            int needPurchaseQty = isPending ? Math.max(0, requiredQty - canPickQty) : 0;
-            item.put("needPurchaseQty", needPurchaseQty);
-            item.put("unit", purchase.getUnit());
-            item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0);
-
+            Map<String, Object> item = buildPurchasePreviewItem(purchase, stockCache);
             items.add(item);
+            String status = purchase.getStatus() != null ? purchase.getStatus() : "";
+            if (MaterialConstants.STATUS_PENDING.equals(status) || MaterialConstants.STATUS_WAREHOUSE_PENDING.equals(status)) {
+                pendingCount++;
+            }
         }
 
-        // 2. 查询已有的出库单
-        LambdaQueryWrapper<MaterialPicking> pickingWrapper = new LambdaQueryWrapper<>();
-        pickingWrapper.select(
-                MaterialPicking::getId,
-                MaterialPicking::getPickingNo,
-                MaterialPicking::getStatus,
-                MaterialPicking::getPickerName,
-                MaterialPicking::getPickTime,
-                MaterialPicking::getRemark
-        );
-        if (byOrderNo) {
-            pickingWrapper.eq(MaterialPicking::getOrderNo, orderNo.trim());
-        } else {
-            pickingWrapper.eq(MaterialPicking::getStyleNo, styleNo.trim());
-        }
-        pickingWrapper.eq(MaterialPicking::getDeleteFlag, 0)
-                .orderByDesc(MaterialPicking::getCreateTime);
-        List<MaterialPicking> existingPickings = materialPickingService.list(pickingWrapper);
-
-        List<Map<String, Object>> pickingRecords = new ArrayList<>();
-        for (MaterialPicking picking : existingPickings) {
-            Map<String, Object> record = new java.util.LinkedHashMap<>();
-            record.put("pickingId", picking.getId());
-            record.put("pickingNo", picking.getPickingNo());
-            record.put("status", picking.getStatus());
-            record.put("pickerName", picking.getPickerName());
-            record.put("pickTime", picking.getPickTime());
-            record.put("remark", picking.getRemark());
-            // 获取出库明细
-            List<MaterialPickingItem> items2 = materialPickingService.getItemsByPickingId(picking.getId());
-            record.put("items", items2);
-            pickingRecords.add(record);
-        }
+        List<Map<String, Object>> pickingRecords = queryExistingPickingRecords(byOrderNo, orderNo, byStyleNo, styleNo);
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("orderNo", byOrderNo ? orderNo.trim() : "");
@@ -474,6 +419,107 @@ public class MaterialPurchasePickingHelper {
         result.put("pendingCount", pendingCount);
         result.put("totalCount", items.size());
         return result;
+    }
+
+    private LambdaQueryWrapper<MaterialPurchase> buildPurchaseQueryWrapper(boolean byOrderNo, String orderNo, boolean byStyleNo, String styleNo) {
+        LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
+        purchaseWrapper.select(
+                MaterialPurchase::getId, MaterialPurchase::getMaterialCode, MaterialPurchase::getMaterialName,
+                MaterialPurchase::getMaterialType, MaterialPurchase::getColor, MaterialPurchase::getSize,
+                MaterialPurchase::getPurchaseQuantity, MaterialPurchase::getStatus, MaterialPurchase::getUnit,
+                MaterialPurchase::getArrivedQuantity, MaterialPurchase::getSourceType,
+                MaterialPurchase::getOrderNo, MaterialPurchase::getStyleNo);
+        if (byOrderNo) {
+            purchaseWrapper.eq(MaterialPurchase::getOrderNo, orderNo.trim());
+        } else {
+            purchaseWrapper.eq(MaterialPurchase::getStyleNo, styleNo.trim()).eq(MaterialPurchase::getSourceType, "sample");
+        }
+        purchaseWrapper.eq(MaterialPurchase::getDeleteFlag, 0);
+        return purchaseWrapper;
+    }
+
+    private Map<String, Object> buildPurchasePreviewItem(MaterialPurchase purchase,
+            java.util.Map<String, List<MaterialStock>> stockCache) {
+        String materialCode = purchase.getMaterialCode();
+        String color = purchase.getColor();
+        String size = purchase.getSize();
+        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+        String status = purchase.getStatus() != null ? purchase.getStatus() : "";
+        String stockKey = stockCacheKey(materialCode, color, size);
+        int availableStock = calcAvailableStock(stockCache.getOrDefault(stockKey, java.util.Collections.emptyList()));
+        boolean isPending = MaterialConstants.STATUS_PENDING.equals(status);
+        int canPickQty = isPending ? Math.min(requiredQty, availableStock) : 0;
+        int needPurchaseQty = isPending ? Math.max(0, requiredQty - canPickQty) : 0;
+
+        Map<String, Object> item = new java.util.LinkedHashMap<>();
+        item.put("purchaseId", purchase.getId());
+        item.put("materialCode", materialCode);
+        item.put("materialName", purchase.getMaterialName());
+        item.put("materialType", purchase.getMaterialType());
+        item.put("color", color != null ? color : "");
+        item.put("size", size != null ? size : "");
+        item.put("requiredQty", requiredQty);
+        item.put("availableStock", availableStock);
+        item.put("purchaseStatus", status);
+        item.put("canPickQty", canPickQty);
+        item.put("needPurchaseQty", needPurchaseQty);
+        item.put("unit", purchase.getUnit());
+        item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0);
+        return item;
+    }
+
+    private int calcAvailableStock(String materialCode, String color, String size) {
+        LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
+        stockWrapper.eq(MaterialStock::getMaterialCode, materialCode);
+        if (StringUtils.hasText(color)) stockWrapper.eq(MaterialStock::getColor, color);
+        if (StringUtils.hasText(size)) stockWrapper.eq(MaterialStock::getSize, size);
+        List<MaterialStock> stockList = materialStockService.list(stockWrapper);
+        return stockList.stream()
+            .mapToInt(stock -> {
+                int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
+                return Math.max(0, qty - locked);
+            }).sum();
+    }
+
+    private List<Map<String, Object>> queryExistingPickingRecords(boolean byOrderNo, String orderNo, boolean byStyleNo, String styleNo) {
+        LambdaQueryWrapper<MaterialPicking> pickingWrapper = new LambdaQueryWrapper<>();
+        pickingWrapper.select(MaterialPicking::getId, MaterialPicking::getPickingNo,
+                MaterialPicking::getStatus, MaterialPicking::getPickerName,
+                MaterialPicking::getPickTime, MaterialPicking::getRemark);
+        if (byOrderNo) {
+            pickingWrapper.eq(MaterialPicking::getOrderNo, orderNo.trim());
+        } else {
+            pickingWrapper.eq(MaterialPicking::getStyleNo, styleNo.trim());
+        }
+        pickingWrapper.eq(MaterialPicking::getDeleteFlag, 0).orderByDesc(MaterialPicking::getCreateTime);
+        List<MaterialPicking> existingPickings = materialPickingService.list(pickingWrapper);
+
+        List<Map<String, Object>> pickingRecords = new ArrayList<>();
+        if (!existingPickings.isEmpty()) {
+            java.util.List<String> pickingIds = existingPickings.stream()
+                    .map(MaterialPicking::getId).filter(StringUtils::hasText).collect(java.util.stream.Collectors.toList());
+            java.util.Map<String, java.util.List<MaterialPickingItem>> itemsByPicking = java.util.Collections.emptyMap();
+            if (!pickingIds.isEmpty()) {
+                itemsByPicking = materialPickingItemMapper.selectList(
+                        new LambdaQueryWrapper<MaterialPickingItem>()
+                                .in(MaterialPickingItem::getPickingId, pickingIds))
+                        .stream()
+                        .collect(java.util.stream.Collectors.groupingBy(MaterialPickingItem::getPickingId));
+            }
+            for (MaterialPicking picking : existingPickings) {
+                Map<String, Object> record = new java.util.LinkedHashMap<>();
+                record.put("pickingId", picking.getId());
+                record.put("pickingNo", picking.getPickingNo());
+                record.put("status", picking.getStatus());
+                record.put("pickerName", picking.getPickerName());
+                record.put("pickTime", picking.getPickTime());
+                record.put("remark", picking.getRemark());
+                record.put("items", itemsByPicking.getOrDefault(picking.getId(), java.util.Collections.emptyList()));
+                pickingRecords.add(record);
+            }
+        }
+        return pickingRecords;
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -491,52 +537,55 @@ public class MaterialPurchasePickingHelper {
         String receiverId = ParamUtils.toTrimmedString(body == null ? null : body.get("receiverId"));
         String receiverName = ParamUtils.toTrimmedString(body == null ? null : body.get("receiverName"));
 
-        if (!StringUtils.hasText(purchaseId)) {
-            throw new IllegalArgumentException("采购任务ID不能为空");
-        }
-        if (pickQty <= 0) {
-            throw new IllegalArgumentException("领取数量必须大于0");
-        }
+        if (!StringUtils.hasText(purchaseId)) throw new IllegalArgumentException("采购任务ID不能为空");
+        if (pickQty <= 0) throw new IllegalArgumentException("领取数量必须大于0");
 
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
-        if (purchase == null) {
-            throw new NoSuchElementException("采购任务不存在");
-        }
-
-        // 幂等校验：已提交仓库出库申请，禁止重复提交
+        MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, purchaseId)
+                .eq(MaterialPurchase::getTenantId, UserContext.tenantId())
+                .one();
+        if (purchase == null) throw new NoSuchElementException("采购任务不存在");
         if (MaterialConstants.STATUS_WAREHOUSE_PENDING.equals(purchase.getStatus())) {
             throw new IllegalStateException("该物料已提交仓库出库申请（待仓库确认），请勿重复提交");
         }
 
         String materialCode = purchase.getMaterialCode();
-        String color = purchase.getColor();
-        String size = purchase.getSize();
-        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
-
-        // 查询库存
-        LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
-        stockWrapper.eq(MaterialStock::getMaterialCode, materialCode);
-        if (StringUtils.hasText(color)) {
-            stockWrapper.eq(MaterialStock::getColor, color);
-        }
-        if (StringUtils.hasText(size)) {
-            stockWrapper.eq(MaterialStock::getSize, size);
-        }
-        List<MaterialStock> stockList = materialStockService.list(stockWrapper);
-
-        int availableStock = stockList.stream()
-            .mapToInt(stock -> {
-                int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
-                int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                return Math.max(0, qty - locked);
-            })
-            .sum();
-
+        int availableStock = calcAvailableStock(materialCode, purchase.getColor(), purchase.getSize());
         if (availableStock < pickQty) {
             throw new IllegalArgumentException("仓库库存不足，可用库存: " + availableStock + "，需领取: " + pickQty);
         }
 
-        // 创建待出库单（status="pending"，仓库确认后才扣库存）
+        List<MaterialStock> stockList = queryStockList(materialCode, purchase.getColor(), purchase.getSize());
+        String pickingId = createPendingPicking(purchase, stockList, pickQty, receiverId, receiverName);
+
+        purchase.setStatus(MaterialConstants.STATUS_WAREHOUSE_PENDING);
+        purchase.setReceiverId(receiverId);
+        purchase.setReceiverName(receiverName);
+        purchase.setUpdateTime(LocalDateTime.now());
+        materialPurchaseService.updateById(purchase);
+
+        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("pickingId", pickingId);
+        result.put("pickingNo", "PICK-" + System.currentTimeMillis());
+        result.put("pickedQty", pickQty);
+        result.put("remainingPurchaseQty", Math.max(0, requiredQty - pickQty));
+        result.put("materialCode", materialCode);
+        result.put("materialName", purchase.getMaterialName());
+        log.info("✅ 仓库单项领取成功: pickingId={}, materialCode={}, qty={}", pickingId, materialCode, pickQty);
+        return result;
+    }
+
+    private List<MaterialStock> queryStockList(String materialCode, String color, String size) {
+        LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
+        stockWrapper.eq(MaterialStock::getMaterialCode, materialCode);
+        if (StringUtils.hasText(color)) stockWrapper.eq(MaterialStock::getColor, color);
+        if (StringUtils.hasText(size)) stockWrapper.eq(MaterialStock::getSize, size);
+        return materialStockService.list(stockWrapper);
+    }
+
+    private String createPendingPicking(MaterialPurchase purchase, List<MaterialStock> stockList,
+                                         int pickQty, String receiverId, String receiverName) {
         MaterialPicking picking = new MaterialPicking();
         picking.setPickingNo("PICK-" + System.currentTimeMillis());
         picking.setOrderId(purchase.getOrderId());
@@ -548,16 +597,15 @@ public class MaterialPurchasePickingHelper {
         picking.setPickupType(resolvePickupType(purchase));
         picking.setUsageType(resolveUsageType(purchase));
         picking.setPickTime(LocalDateTime.now());
-        picking.setStatus("pending");  // 仓库待确认出库
-        picking.setPurchaseId(purchaseId);
-        picking.setRemark("WAREHOUSE_PICK|purchaseId=" + purchaseId);
+        picking.setStatus("pending");
+        picking.setPurchaseId(purchase.getId());
+        picking.setRemark("WAREHOUSE_PICK|purchaseId=" + purchase.getId());
         picking.setCreateTime(LocalDateTime.now());
         picking.setUpdateTime(LocalDateTime.now());
         picking.setDeleteFlag(0);
 
         List<MaterialPickingItem> items = new ArrayList<>();
         int remainingQty = pickQty;
-
         for (MaterialStock stock : stockList) {
             if (remainingQty <= 0) break;
             int stockAvailable = Math.max(0,
@@ -577,31 +625,10 @@ public class MaterialPurchasePickingHelper {
             item.setUnit(stock.getUnit());
             item.setCreateTime(LocalDateTime.now());
             items.add(item);
-
             materialStockService.lockStock(stock.getId(), pickFromThis);
-
-            // 不扣库存，仓库确认出库时再扣（避免采购侧点击即扣减，仓库尚未实际发货）
             remainingQty -= pickFromThis;
         }
-
-        String pickingId = materialPickingService.savePendingPicking(picking, items);
-
-        // 更新采购任务状态为「仓库待出库」
-        purchase.setStatus(MaterialConstants.STATUS_WAREHOUSE_PENDING);
-        purchase.setReceiverId(receiverId);
-        purchase.setReceiverName(receiverName);
-        purchase.setUpdateTime(LocalDateTime.now());
-        materialPurchaseService.updateById(purchase);
-
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("pickingId", pickingId);
-        result.put("pickingNo", picking.getPickingNo());
-        result.put("pickedQty", pickQty);
-        result.put("remainingPurchaseQty", Math.max(0, requiredQty - pickQty));
-        result.put("materialCode", materialCode);
-        result.put("materialName", purchase.getMaterialName());
-        log.info("✅ 仓库单项领取成功: pickingId={}, materialCode={}, qty={}", pickingId, materialCode, pickQty);
-        return result;
+        return materialPickingService.savePendingPicking(picking, items);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -615,9 +642,7 @@ public class MaterialPurchasePickingHelper {
      */
     @Transactional(rollbackFor = Exception.class)
     public void confirmPickingOutbound(String pickingId) {
-        if (!StringUtils.hasText(pickingId)) {
-            throw new IllegalArgumentException("出库单ID不能为空");
-        }
+        if (!StringUtils.hasText(pickingId)) throw new IllegalArgumentException("出库单ID不能为空");
         MaterialPicking picking = materialPickingService.getById(pickingId);
         if (picking == null || (picking.getDeleteFlag() != null && picking.getDeleteFlag() != 0)) {
             throw new java.util.NoSuchElementException("出库单不存在");
@@ -627,16 +652,32 @@ public class MaterialPurchasePickingHelper {
             throw new IllegalStateException("该出库单状态不是待出库，当前状态: " + picking.getStatus());
         }
 
-        // 1. 扣减库存
         List<com.fashion.supplychain.production.entity.MaterialPickingItem> items =
                 materialPickingService.getItemsByPickingId(pickingId);
+        int pickedTotalQty = deductStockForOutboundItems(picking, items);
+
+        picking.setStatus("completed");
+        picking.setUpdateTime(LocalDateTime.now());
+        materialPickingService.updateById(picking);
+
+        MaterialPurchase purchase = updatePurchaseAfterOutbound(picking);
+
+        syncPickupRecordAfterOutbound(picking, purchase, items, pickedTotalQty);
+
+        FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
+        if ("EXTERNAL".equalsIgnoreCase(factorySnapshot.factoryType)) {
+            applyMaterialDeductionForExternalFactory(picking, purchase, items, factorySnapshot);
+        }
+
+        log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
+    }
+
+    private int deductStockForOutboundItems(MaterialPicking picking, List<com.fashion.supplychain.production.entity.MaterialPickingItem> items) {
         LocalDateTime outboundTime = LocalDateTime.now();
         int pickedTotalQty = 0;
         List<String> stockIds = items.stream()
                 .map(com.fashion.supplychain.production.entity.MaterialPickingItem::getMaterialStockId)
-                .filter(id -> id != null)
-                .distinct()
-                .toList();
+                .filter(id -> id != null).distinct().toList();
         Map<String, MaterialStock> stockMap = stockIds.isEmpty()
                 ? Map.of()
                 : materialStockService.listByIds(stockIds).stream()
@@ -657,12 +698,10 @@ public class MaterialPurchasePickingHelper {
                 recordOutboundLog(picking, item, stock, outboundTime);
             }
         }
+        return pickedTotalQty;
+    }
 
-        // 2. 更新出库单状态为 completed
-        picking.setStatus("completed");
-        picking.setUpdateTime(LocalDateTime.now());
-        materialPickingService.updateById(picking);
-
+    private MaterialPurchase updatePurchaseAfterOutbound(MaterialPicking picking) {
         MaterialPurchase purchase = null;
         String associatedPurchaseId = picking.getPurchaseId();
         if (!StringUtils.hasText(associatedPurchaseId)) {
@@ -672,13 +711,15 @@ public class MaterialPurchasePickingHelper {
             }
         }
         if (StringUtils.hasText(associatedPurchaseId)) {
-            purchase = materialPurchaseService.getById(associatedPurchaseId);
+            purchase = materialPurchaseService.lambdaQuery()
+                    .eq(MaterialPurchase::getId, associatedPurchaseId)
+                    .eq(MaterialPurchase::getTenantId, UserContext.tenantId())
+                    .one();
             if (purchase != null) {
                 purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
                 purchase.setReceivedTime(LocalDateTime.now());
                 purchase.setUpdateTime(LocalDateTime.now());
                 materialPurchaseService.updateById(purchase);
-
                 try {
                     if (StringUtils.hasText(purchase.getOrderId())) {
                         helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
@@ -688,16 +729,7 @@ public class MaterialPurchasePickingHelper {
                 }
             }
         }
-
-        syncPickupRecordAfterOutbound(picking, purchase, items, pickedTotalQty);
-
-        // 外发工厂领面料出库 → 自动产生扣款记录
-        FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
-        if ("EXTERNAL".equalsIgnoreCase(factorySnapshot.factoryType)) {
-            applyMaterialDeductionForExternalFactory(picking, purchase, items, factorySnapshot);
-        }
-
-        log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
+        return purchase;
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -714,18 +746,12 @@ public class MaterialPurchasePickingHelper {
         String pickingId = ParamUtils.toTrimmedString(body == null ? null : body.get("pickingId"));
         String reason = ParamUtils.toTrimmedString(body == null ? null : body.get("reason"));
 
-        if (!StringUtils.hasText(pickingId)) {
-            throw new IllegalArgumentException("出库单ID不能为空");
-        }
-        if (!StringUtils.hasText(reason)) {
-            throw new IllegalArgumentException("撤销原因不能为空");
-        }
+        if (!StringUtils.hasText(pickingId)) throw new IllegalArgumentException("出库单ID不能为空");
+        if (!StringUtils.hasText(reason)) throw new IllegalArgumentException("撤销原因不能为空");
 
-        // 检查权限：主管以上
         String currentRole = UserContext.role();
         if (currentRole == null || (!currentRole.contains("admin") && !currentRole.contains("supervisor")
                 && !currentRole.contains("manager") && !currentRole.contains("主管") && !currentRole.contains("管理员"))) {
-            // 允许权限通过 @PreAuthorize 控制，这里做兜底
             log.warn("用户 {} 尝试撤销出库单，角色: {}", UserContext.username(), currentRole);
         }
 
@@ -734,64 +760,21 @@ public class MaterialPurchasePickingHelper {
             throw new NoSuchElementException("出库单不存在或已被删除");
         }
         com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(picking.getTenantId(), "领料出库单");
-        if ("cancelled".equals(picking.getStatus())) {
-            throw new IllegalStateException("出库单已撤销，不可重复操作");
-        }
+        if ("cancelled".equals(picking.getStatus())) throw new IllegalStateException("出库单已撤销，不可重复操作");
 
-        // 1. 获取出库明细
         List<MaterialPickingItem> items = materialPickingService.getItemsByPickingId(pickingId);
-
         boolean wasCompleted = "completed".equalsIgnoreCase(picking.getStatus());
 
-        // 2. 回退库存
-        for (MaterialPickingItem item : items) {
-            if (item.getMaterialStockId() != null) {
-                if (wasCompleted) {
-                    materialStockService.updateStockQuantity(item.getMaterialStockId(), item.getQuantity());
-                } else {
-                    materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
-                }
-            }
-        }
+        restoreStockForItems(items, wasCompleted);
 
-        // 3. 标记出库单为已撤销
         picking.setStatus(MaterialConstants.STATUS_CANCELLED);
         picking.setRemark("【撤销】" + reason + " | 操作人: " + UserContext.username() + " | 原备注: " + (picking.getRemark() != null ? picking.getRemark() : ""));
         picking.setUpdateTime(LocalDateTime.now());
         materialPickingService.updateById(picking);
 
-        // 3.5 撤销外发工厂领料扣款记录
-        if (wasCompleted) {
-            rollbackMaterialDeductionForExternalFactory(pickingId);
-        }
+        if (wasCompleted) rollbackMaterialDeductionForExternalFactory(pickingId);
 
-        // 4. 恢复关联的采购任务状态为 pending
-        String orderNo = picking.getOrderNo();
-        if (StringUtils.hasText(orderNo)) {
-            // 查找与出库单物料匹配的采购任务，恢复为 pending
-            for (MaterialPickingItem item : items) {
-                List<MaterialPurchase> relatedPurchases = materialPurchaseService.lambdaQuery()
-                    .eq(MaterialPurchase::getOrderNo, orderNo)
-                    .eq(MaterialPurchase::getMaterialCode, item.getMaterialCode())
-                    .eq(MaterialPurchase::getDeleteFlag, 0)
-                    .in(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED, MaterialConstants.STATUS_AWAITING_CONFIRM, MaterialConstants.STATUS_PARTIAL, MaterialConstants.STATUS_WAREHOUSE_PENDING)
-                    .list();
-
-                for (MaterialPurchase purchase : relatedPurchases) {
-                    // ⚠️ 用 LambdaUpdateWrapper 显式 SET NULL
-                    LambdaUpdateWrapper<MaterialPurchase> purchaseUw = new LambdaUpdateWrapper<>();
-                    purchaseUw.eq(MaterialPurchase::getId, purchase.getId())
-                              .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
-                              .set(MaterialPurchase::getReceivedTime, null)
-                              .set(MaterialPurchase::getReceiverId, null)
-                              .set(MaterialPurchase::getReceiverName, null)
-                              .set(MaterialPurchase::getArrivedQuantity, 0)
-                              .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
-                    materialPurchaseService.update(purchaseUw);
-                    log.info("✅ 采购任务已恢复: purchaseId={}, materialCode={}", purchase.getId(), purchase.getMaterialCode());
-                }
-            }
-        }
+        restoreRelatedPurchaseStatus(picking.getOrderNo(), items);
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("pickingId", pickingId);
@@ -801,6 +784,40 @@ public class MaterialPurchasePickingHelper {
         result.put("restoredItems", items.size());
         log.info("✅ 出库单已撤销: pickingNo={}, reason={}, 回退{}项物料", picking.getPickingNo(), reason, items.size());
         return result;
+    }
+
+    private void restoreStockForItems(List<MaterialPickingItem> items, boolean wasCompleted) {
+        for (MaterialPickingItem item : items) {
+            if (item.getMaterialStockId() != null) {
+                if (wasCompleted) {
+                    materialStockService.updateStockQuantity(item.getMaterialStockId(), item.getQuantity());
+                } else {
+                    materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
+                }
+            }
+        }
+    }
+
+    private void restoreRelatedPurchaseStatus(String orderNo, List<MaterialPickingItem> items) {
+        if (!StringUtils.hasText(orderNo)) return;
+        java.util.Set<String> materialCodes = items.stream()
+                .map(MaterialPickingItem::getMaterialCode)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        if (materialCodes.isEmpty()) return;
+        materialPurchaseService.lambdaUpdate()
+                .eq(MaterialPurchase::getOrderNo, orderNo)
+                .in(MaterialPurchase::getMaterialCode, materialCodes)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .in(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED, MaterialConstants.STATUS_AWAITING_CONFIRM, MaterialConstants.STATUS_PARTIAL, MaterialConstants.STATUS_WAREHOUSE_PENDING)
+                .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                .set(MaterialPurchase::getReceivedTime, null)
+                .set(MaterialPurchase::getReceiverId, null)
+                .set(MaterialPurchase::getReceiverName, null)
+                .set(MaterialPurchase::getArrivedQuantity, 0)
+                .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
+                .update();
+        log.info("✅ 采购任务已批量恢复: orderNo={}, materialCodes={}", orderNo, materialCodes);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1177,12 +1194,20 @@ public class MaterialPurchasePickingHelper {
             if (items == null || items.isEmpty()) {
                 return;
             }
+            java.util.Set<String> reconIds = items.stream()
+                    .map(DeductionItem::getReconciliationId)
+                    .filter(StringUtils::hasText)
+                    .collect(java.util.stream.Collectors.toSet());
+            java.util.Map<String, ShipmentReconciliation> reconMap = reconIds.isEmpty()
+                    ? java.util.Collections.emptyMap()
+                    : shipmentReconciliationService.listByIds(reconIds).stream()
+                            .collect(java.util.stream.Collectors.toMap(ShipmentReconciliation::getId, r -> r, (a, b) -> a));
             for (DeductionItem item : items) {
                 String reconId = item.getReconciliationId();
                 BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
                 deductionItemMapper.deleteById(item.getId());
 
-                ShipmentReconciliation recon = shipmentReconciliationService.getById(reconId);
+                ShipmentReconciliation recon = reconMap.get(reconId);
                 if (recon != null) {
                     BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
                     BigDecimal newDeduction = existingDeduction.subtract(amount);

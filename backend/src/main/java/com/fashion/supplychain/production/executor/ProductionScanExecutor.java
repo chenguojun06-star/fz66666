@@ -304,7 +304,7 @@ public class ProductionScanExecutor {
         if (ctx.bundle == null || !"split_parent".equals(ctx.bundle.getSplitStatus()) || ctx.bundle.getSplitProcessOrder() == null) return;
         List<ProductionProcessTracking> bundleTrackings = trackingService.getByBundleId(ctx.bundle.getId());
         boolean hasActiveTracking = bundleTrackings.stream()
-                .anyMatch(t -> (ctx.childProcessName.equals(t.getProcessName()) || ctx.progressStage.equals(t.getProcessName()))
+                .anyMatch(t -> (java.util.Objects.equals(ctx.childProcessName, t.getProcessName()) || java.util.Objects.equals(ctx.progressStage, t.getProcessName()))
                         && !"split_archived".equals(t.getScanStatus()));
         if (!hasActiveTracking) {
             String splitInfo = ctx.bundle.getSplitProcessName() != null
@@ -366,16 +366,7 @@ public class ProductionScanExecutor {
                     .last("limit 1"));
             if (existing == null || !hasText(existing.getId())) return null;
 
-            String existingOperatorId = existing.getOperatorId() == null ? null : existing.getOperatorId().trim();
-            String existingOperatorName = existing.getOperatorName() == null ? null : existing.getOperatorName().trim();
-            boolean isSameOperator = false;
-            if (hasText(operatorId) && hasText(existingOperatorId)) isSameOperator = operatorId.equals(existingOperatorId);
-            else if (hasText(operatorName) && hasText(existingOperatorName)) isSameOperator = operatorName.equals(existingOperatorName);
-
-            if (!isSameOperator) {
-                String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
-                throw new IllegalStateException("该菲号「" + processCode + "」环节已被「" + otherName + "」领取，无法重复操作");
-            }
+            assertSameOperator(existing, operatorId, operatorName, processCode);
 
             Integer bundleQuantity = bundle.getQuantity();
             if (duplicateScanPreventer.isWithinDuplicateInterval(existing.getScanTime(), bundleQuantity, null)) {
@@ -390,34 +381,18 @@ public class ProductionScanExecutor {
             int existedQty = existing.getQuantity() == null ? 0 : existing.getQuantity();
             int nextQty = Math.max(existedQty, quantity);
 
-            ScanRecord patch = new ScanRecord();
-            patch.setId(existing.getId());
-            patch.setScanCode(scanCode); patch.setOrderId(order.getId()); patch.setOrderNo(order.getOrderNo());
-            patch.setStyleId(order.getStyleId()); patch.setStyleNo(order.getStyleNo());
-            patch.setColor(color); patch.setSize(size); patch.setQuantity(nextQty);
-            patch.setUnitPrice(unitPrice); patch.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
-            patch.setProcessCode(processCode); patch.setProgressStage(progressStage); patch.setProcessName(childProcessName);
-            patch.setOperatorId(operatorId); patch.setOperatorName(operatorName);
-            patch.setScanTime(LocalDateTime.now()); patch.setScanType(scanType); patch.setScanResult("success");
-            patch.setRemark(remark); patch.setCuttingBundleId(bundle.getId());
-            patch.setCuttingBundleNo(bundle.getBundleNo()); patch.setCuttingBundleQrCode(bundle.getQrCode());
-            patch.setUpdateTime(LocalDateTime.now());
+            ScanRecord patch = buildScanRecordPatch(existing.getId(), scanCode, order, bundle,
+                    color, size, nextQty, unitPrice, processCode, progressStage, childProcessName,
+                    operatorId, operatorName, scanType, remark);
             if (skuService != null) skuService.attachProcessUnitPrice(patch);
             validateScanRecordForSave(patch);
             scanRecordService.updateById(patch);
             productionOrderService.recomputeProgressAsync(order.getId());
 
-            ScanRecord returned = new ScanRecord();
-            returned.setId(existing.getId()); returned.setScanCode(scanCode); returned.setRequestId(requestId);
-            returned.setOrderId(order.getId()); returned.setOrderNo(order.getOrderNo());
-            returned.setStyleId(order.getStyleId()); returned.setStyleNo(order.getStyleNo());
-            returned.setColor(color); returned.setSize(size); returned.setQuantity(nextQty);
-            returned.setUnitPrice(unitPrice); returned.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
-            returned.setProcessCode(processCode); returned.setProgressStage(progressStage); returned.setProcessName(childProcessName);
-            returned.setOperatorId(operatorId); returned.setOperatorName(operatorName);
-            returned.setScanTime(LocalDateTime.now()); returned.setScanType(scanType); returned.setScanResult("success");
-            returned.setRemark(remark); returned.setCuttingBundleId(bundle.getId());
-            returned.setCuttingBundleNo(bundle.getBundleNo()); returned.setCuttingBundleQrCode(bundle.getQrCode());
+            ScanRecord returned = buildScanRecordPatch(existing.getId(), scanCode, order, bundle,
+                    color, size, nextQty, unitPrice, processCode, progressStage, childProcessName,
+                    operatorId, operatorName, scanType, remark);
+            returned.setRequestId(requestId);
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true); result.put("message", "已扫码更新"); result.put("scanRecord", returned);
@@ -430,6 +405,37 @@ public class ProductionScanExecutor {
             log.warn("尝试更新已有扫码记录失败: orderId={}, requestId={}, scanCode={}", order.getId(), requestId, scanCode, e);
             return null;
         }
+    }
+
+    private void assertSameOperator(ScanRecord existing, String operatorId, String operatorName, String processCode) {
+        String existingOperatorId = existing.getOperatorId() == null ? null : existing.getOperatorId().trim();
+        String existingOperatorName = existing.getOperatorName() == null ? null : existing.getOperatorName().trim();
+        boolean isSameOperator = false;
+        if (hasText(operatorId) && hasText(existingOperatorId)) isSameOperator = operatorId.equals(existingOperatorId);
+        else if (hasText(operatorName) && hasText(existingOperatorName)) isSameOperator = operatorName.equals(existingOperatorName);
+        if (!isSameOperator) {
+            String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
+            throw new IllegalStateException("该菲号「" + processCode + "」环节已被「" + otherName + "」领取，无法重复操作");
+        }
+    }
+
+    private ScanRecord buildScanRecordPatch(String id, String scanCode, ProductionOrder order, CuttingBundle bundle,
+                                             String color, String size, int nextQty, BigDecimal unitPrice,
+                                             String processCode, String progressStage, String childProcessName,
+                                             String operatorId, String operatorName, String scanType, String remark) {
+        ScanRecord sr = new ScanRecord();
+        sr.setId(id); sr.setScanCode(scanCode);
+        sr.setOrderId(order.getId()); sr.setOrderNo(order.getOrderNo());
+        sr.setStyleId(order.getStyleId()); sr.setStyleNo(order.getStyleNo());
+        sr.setColor(color); sr.setSize(size); sr.setQuantity(nextQty);
+        sr.setUnitPrice(unitPrice); sr.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
+        sr.setProcessCode(processCode); sr.setProgressStage(progressStage); sr.setProcessName(childProcessName);
+        sr.setOperatorId(operatorId); sr.setOperatorName(operatorName);
+        sr.setScanTime(LocalDateTime.now()); sr.setScanType(scanType); sr.setScanResult("success");
+        sr.setRemark(remark); sr.setCuttingBundleId(bundle.getId());
+        sr.setCuttingBundleNo(bundle.getBundleNo()); sr.setCuttingBundleQrCode(bundle.getQrCode());
+        sr.setUpdateTime(LocalDateTime.now());
+        return sr;
     }
 
     private String resolveProcessCodeFromTemplate(String styleNo, String processName) {

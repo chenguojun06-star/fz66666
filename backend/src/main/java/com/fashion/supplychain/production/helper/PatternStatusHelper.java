@@ -56,116 +56,120 @@ public class PatternStatusHelper {
 
     @org.springframework.transaction.annotation.Transactional
     public void updatePatternStatusByOperation(PatternProduction pattern, String operationType, String operatorName) {
-        boolean needUpdate = false;
-        LocalDateTime now = LocalDateTime.now();
-
         if (!StringUtils.hasText(operationType)) {
             return;
         }
 
+        LocalDateTime now = LocalDateTime.now();
         String normalizedOperation = operationType.trim();
-
-        switch (normalizedOperation) {
-            case "RECEIVE":
-                if (!"IN_PROGRESS".equals(pattern.getStatus())
-                        && !"PRODUCTION_COMPLETED".equals(pattern.getStatus())
-                        && !"COMPLETED".equals(pattern.getStatus())) {
-                    pattern.setStatus("IN_PROGRESS");
-                    pattern.setReceiver(operatorName);
-                    pattern.setReceiveTime(now);
-                    needUpdate = true;
-                }
-                break;
-            case "PLATE":
-                updateProgressNode(pattern, "裁剪", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "FOLLOW_UP":
-                updateProgressNode(pattern, "车缝", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "COMPLETE":
-                // 标记完成时，将所有进度节点都更新到100%
-                updateProgressNode(pattern, "采购", 100);
-                updateProgressNode(pattern, "裁剪", 100);
-                updateProgressNode(pattern, "二次工艺", 100);
-                updateProgressNode(pattern, "车缝", 100);
-                updateProgressNode(pattern, "尾部", 100);
-                updateProgressNode(pattern, "入库", 100);
-                markPatternProductionCompleted(pattern, now);
-                needUpdate = true;
-                break;
-            case "WAREHOUSE_IN":
-                updateProgressNode(pattern, "入库", 100);
-                pattern.setStatus("COMPLETED");
-                if (pattern.getCompleteTime() == null) {
-                    pattern.setCompleteTime(now);
-                }
-                if (!StringUtils.hasText(pattern.getReviewStatus())) {
-                    pattern.setReviewStatus("PENDING");
-                }
-                needUpdate = true;
-                break;
-            case "WAREHOUSE_OUT":
-                updateProgressNode(pattern, "出库", 100);
-                pattern.setStatus("WAREHOUSE_OUT");
-                needUpdate = true;
-                break;
-            case "WAREHOUSE_RETURN":
-                updateProgressNode(pattern, "归还", 100);
-                pattern.setStatus("COMPLETED");
-                needUpdate = true;
-                break;
-            case "PROCUREMENT":
-                updateProgressNode(pattern, "采购", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "CUTTING":
-                updateProgressNode(pattern, "裁剪", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "SECONDARY":
-                updateProgressNode(pattern, "二次工艺", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "SEWING":
-                updateProgressNode(pattern, "车缝", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "TAIL":
-                updateProgressNode(pattern, "尾部", 100);
-                markPatternProductionCompleted(pattern, now);
-                needUpdate = true;
-                break;
-            case "REWORK":
-                pattern.setStatus("IN_PROGRESS");
-                if (!StringUtils.hasText(pattern.getReceiver()) && StringUtils.hasText(operatorName)) {
-                    pattern.setReceiver(operatorName);
-                }
-                needUpdate = true;
-                break;
-            default:
-                ensureInProgress(pattern, operatorName);
-                String dynamicStage = resolveOperationProgressStage(pattern, normalizedOperation);
-                updateProgressNode(pattern, dynamicStage, 100);
-
-                if (isPatternAllProcessesCompleted(pattern.getId(), pattern.getStyleId())) {
-                    markPatternProductionCompleted(pattern, now);
-                }
-                needUpdate = true;
-        }
+        boolean needUpdate = applyOperationStatus(pattern, normalizedOperation, operatorName, now);
 
         if (needUpdate) {
             pattern.setUpdateTime(now);
             patternProductionService.updateById(pattern);
             syncStyleInfoSampleStage(pattern);
         }
+    }
+
+    private boolean applyOperationStatus(PatternProduction pattern, String operation, String operatorName, LocalDateTime now) {
+        switch (operation) {
+            case "RECEIVE":
+                return handleReceive(pattern, operatorName, now);
+            case "PLATE":
+                updateProgressNode(pattern, "裁剪", 100);
+                ensureInProgress(pattern, operatorName);
+                return true;
+            case "FOLLOW_UP":
+                updateProgressNode(pattern, "车缝", 100);
+                ensureInProgress(pattern, operatorName);
+                return true;
+            case "COMPLETE":
+                markAllProgressComplete(pattern);
+                markPatternProductionCompleted(pattern, now);
+                return true;
+            case "WAREHOUSE_IN":
+                return handleWarehouseIn(pattern, now);
+            case "WAREHOUSE_OUT":
+                updateProgressNode(pattern, "出库", 100);
+                pattern.setStatus("WAREHOUSE_OUT");
+                return true;
+            case "WAREHOUSE_RETURN":
+                updateProgressNode(pattern, "归还", 100);
+                pattern.setStatus("COMPLETED");
+                return true;
+            case "PROCUREMENT":
+                updateProgressNode(pattern, "采购", 100);
+                ensureInProgress(pattern, operatorName);
+                return true;
+            case "CUTTING":
+                updateProgressNode(pattern, "裁剪", 100);
+                ensureInProgress(pattern, operatorName);
+                return true;
+            case "SECONDARY":
+                updateProgressNode(pattern, "二次工艺", 100);
+                ensureInProgress(pattern, operatorName);
+                return true;
+            case "SEWING":
+                updateProgressNode(pattern, "车缝", 100);
+                ensureInProgress(pattern, operatorName);
+                return true;
+            case "TAIL":
+                updateProgressNode(pattern, "尾部", 100);
+                markPatternProductionCompleted(pattern, now);
+                return true;
+            case "REWORK":
+                pattern.setStatus("IN_PROGRESS");
+                if (!StringUtils.hasText(pattern.getReceiver()) && StringUtils.hasText(operatorName)) {
+                    pattern.setReceiver(operatorName);
+                }
+                return true;
+            default:
+                return handleDynamicOperation(pattern, operation, operatorName, now);
+        }
+    }
+
+    private boolean handleReceive(PatternProduction pattern, String operatorName, LocalDateTime now) {
+        if (!"IN_PROGRESS".equals(pattern.getStatus())
+                && !"PRODUCTION_COMPLETED".equals(pattern.getStatus())
+                && !"COMPLETED".equals(pattern.getStatus())) {
+            pattern.setStatus("IN_PROGRESS");
+            pattern.setReceiver(operatorName);
+            pattern.setReceiveTime(now);
+            return true;
+        }
+        return false;
+    }
+
+    private void markAllProgressComplete(PatternProduction pattern) {
+        updateProgressNode(pattern, "采购", 100);
+        updateProgressNode(pattern, "裁剪", 100);
+        updateProgressNode(pattern, "二次工艺", 100);
+        updateProgressNode(pattern, "车缝", 100);
+        updateProgressNode(pattern, "尾部", 100);
+        updateProgressNode(pattern, "入库", 100);
+    }
+
+    private boolean handleWarehouseIn(PatternProduction pattern, LocalDateTime now) {
+        updateProgressNode(pattern, "入库", 100);
+        pattern.setStatus("COMPLETED");
+        if (pattern.getCompleteTime() == null) {
+            pattern.setCompleteTime(now);
+        }
+        if (!StringUtils.hasText(pattern.getReviewStatus())) {
+            pattern.setReviewStatus("PENDING");
+        }
+        return true;
+    }
+
+    private boolean handleDynamicOperation(PatternProduction pattern, String operation, String operatorName, LocalDateTime now) {
+        ensureInProgress(pattern, operatorName);
+        String dynamicStage = resolveOperationProgressStage(pattern, operation);
+        updateProgressNode(pattern, dynamicStage, 100);
+
+        if (isPatternAllProcessesCompleted(pattern.getId(), pattern.getStyleId())) {
+            markPatternProductionCompleted(pattern, now);
+        }
+        return true;
     }
 
     public void markPatternProductionCompleted(PatternProduction pattern, LocalDateTime completedTime) {
@@ -694,6 +698,7 @@ public class PatternStatusHelper {
         try {
             return Long.parseLong(styleIdStr.trim());
         } catch (Exception e) {
+            log.warn("[PatternStatus] styleId解析失败: {}", styleIdStr, e);
             return null;
         }
     }

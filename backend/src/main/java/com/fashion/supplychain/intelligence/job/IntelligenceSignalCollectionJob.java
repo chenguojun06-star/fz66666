@@ -32,8 +32,8 @@ public class IntelligenceSignalCollectionJob {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
-    // 错开到 :05 和 :35，避免与 AiPatrolOrchestrator、ProductionDataConsistencyJob 同时触发 DB 连接风暴
-    @Scheduled(cron = "0 5/30 * * * ?")
+    // 错开到 :10 和 :40，避免与其他定时任务同时触发 DB/Redis 连接风暴
+    @Scheduled(cron = "0 10/30 * * * ?")
     public void periodicCollect() {
         if (distributedLockService != null) {
             String lockValue = distributedLockService.tryLock("job:signal-collection", 25, TimeUnit.MINUTES);

@@ -108,18 +108,48 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<CuttingBundle> generateBundles(String orderId, List<Map<String, Object>> bundles) {
-        // 支持订单号或订单ID查询
-        ProductionOrder order = productionOrderService.getById(orderId);
-        if (order == null) {
-            // 如果按ID查不到，尝试按订单号查询
-            order = productionOrderService.getByOrderNo(orderId);
-        }
+        ProductionOrder order = resolveOrder(orderId);
         if (order == null || bundles == null || bundles.isEmpty()) {
             log.warn("generateBundles: 订单未找到或参数为空, orderId={}", orderId);
             return new ArrayList<>();
         }
         log.info("generateBundles: 找到订单, orderNo={}, orderId={}", order.getOrderNo(), order.getId());
 
+        assertMaterialReady(order);
+        CuttingTask task = resolveCuttingTask(order);
+
+        Long existingCount = this.count(new LambdaQueryWrapper<CuttingBundle>()
+                .eq(CuttingBundle::getProductionOrderId, order.getId()));
+        int existingBundleCount = existingCount == null ? 0 : existingCount.intValue();
+
+        int bundleIndex = resolveNextBundleIndex(order.getId());
+        int[] bedInfo = resolveBedInfo(order.getId());
+        int nextBedNo = bedInfo[0];
+        Integer nextBedSubNo = bedInfo[1] > 0 ? bedInfo[1] : null;
+
+        List<CuttingBundle> result = buildBundleList(order, bundles, nextBedNo, nextBedSubNo, bundleIndex);
+
+        if (!result.isEmpty()) {
+            this.saveBatch(result);
+            cuttingTaskService.markBundledByOrderId(order.getId());
+            registerProcessTrackingInitialization(order.getId(), result);
+            updateOrderAfterBundleGenerate(order, existingBundleCount + result.size());
+        }
+        return result;
+    }
+
+    private ProductionOrder resolveOrder(String orderId) {
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
+        if (order == null) {
+            order = productionOrderService.getByOrderNo(orderId);
+        }
+        return order;
+    }
+
+    private void assertMaterialReady(ProductionOrder order) {
         boolean materialReady = materialPurchaseService.hasConfirmedQuantityByOrderId(order.getId(), true);
         if (!materialReady) {
             Integer rate = order.getMaterialArrivalRate();
@@ -135,7 +165,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         if (!materialReady) {
             throw new IllegalStateException("主面料尚未完成可裁确认，无法生成裁剪单");
         }
+    }
 
+    private CuttingTask resolveCuttingTask(ProductionOrder order) {
         CuttingTask task = cuttingTaskService.createTaskIfAbsent(order);
         if (task == null) {
             throw new NoSuchElementException("未找到裁剪任务");
@@ -144,47 +176,41 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         if (!"received".equals(taskStatus) && !"bundled".equals(taskStatus)) {
             throw new IllegalStateException("请先在裁剪任务中领取后再生成裁剪单");
         }
+        return task;
+    }
 
-        Long existingCount = this.count(new LambdaQueryWrapper<CuttingBundle>()
-                .eq(CuttingBundle::getProductionOrderId, order.getId()));
-        int existingBundleCount = existingCount == null ? 0 : existingCount.intValue();
-
-        List<CuttingBundle> result = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-        int bundleIndex = 1;
+    private int resolveNextBundleIndex(String orderId) {
         CuttingBundle lastBundleNo = this.baseMapper.selectOne(
                 new LambdaQueryWrapper<CuttingBundle>()
                         .select(CuttingBundle::getBundleNo)
-                        .eq(CuttingBundle::getProductionOrderId, order.getId())
+                        .eq(CuttingBundle::getProductionOrderId, orderId)
                         .orderByDesc(CuttingBundle::getBundleNo)
                         .last("LIMIT 1"));
         if (lastBundleNo != null && lastBundleNo.getBundleNo() != null && lastBundleNo.getBundleNo() > 0) {
-            bundleIndex = lastBundleNo.getBundleNo() + 1;
+            return lastBundleNo.getBundleNo() + 1;
         }
+        return 1;
+    }
 
-        // ✅ 自动分配床号：
-        // 优先复用同一订单已有的床号（同一订单多个尺码属于同一次裁剪），
-        // 只有当前订单尚无任何bundles时，才从全局最大床号+1（新一床）
+    private int[] resolveBedInfo(String orderId) {
         Long currentTenantId = UserContext.tenantId();
         CuttingBundle sameOrderBundle = this.baseMapper.selectOne(
             new LambdaQueryWrapper<CuttingBundle>()
                 .select(CuttingBundle::getBedNo)
-                .eq(CuttingBundle::getProductionOrderId, order.getId())
+                .eq(CuttingBundle::getProductionOrderId, orderId)
                 .isNotNull(CuttingBundle::getBedNo)
                 .gt(CuttingBundle::getBedNo, 0)
                 .orderByDesc(CuttingBundle::getBedNo)
                 .last("LIMIT 1")
         );
-
         int nextBedNo;
-        Integer nextBedSubNo = null;
+        int nextBedSubNo = 0;
         if (sameOrderBundle != null && sameOrderBundle.getBedNo() != null && sameOrderBundle.getBedNo() > 0) {
-            nextBedNo = sameOrderBundle.getBedNo(); // 保持同一床号，不递增
-            // 查此订单此床号下已有的最大子编号
+            nextBedNo = sameOrderBundle.getBedNo();
             CuttingBundle maxSubBundle = this.baseMapper.selectOne(
                 new LambdaQueryWrapper<CuttingBundle>()
                     .select(CuttingBundle::getBedSubNo)
-                    .eq(CuttingBundle::getProductionOrderId, order.getId())
+                    .eq(CuttingBundle::getProductionOrderId, orderId)
                     .eq(CuttingBundle::getBedNo, nextBedNo)
                     .isNotNull(CuttingBundle::getBedSubNo)
                     .orderByDesc(CuttingBundle::getBedSubNo)
@@ -192,7 +218,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             );
             Integer currentMaxSub = (maxSubBundle != null) ? maxSubBundle.getBedSubNo() : null;
             nextBedSubNo = (currentMaxSub == null ? 0 : currentMaxSub) + 1;
-            log.info("追加子床号: orderId={}, bedNo={}, bedSubNo={}", order.getId(), nextBedNo, nextBedSubNo);
+            log.info("追加子床号: orderId={}, bedNo={}, bedSubNo={}", orderId, nextBedNo, nextBedSubNo);
         } else {
             CuttingBundle lastBundle = this.baseMapper.selectOne(
                 new LambdaQueryWrapper<CuttingBundle>()
@@ -202,48 +228,31 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                     .last("LIMIT 1")
             );
             nextBedNo = (lastBundle != null && lastBundle.getBedNo() != null && lastBundle.getBedNo() > 0)
-                        ? lastBundle.getBedNo() + 1
-                        : 1;
-            log.info("新建床号: tenantId={}, 本批床号={}, orderId={}", currentTenantId, nextBedNo, order.getId());
+                        ? lastBundle.getBedNo() + 1 : 1;
+            log.info("新建床号: tenantId={}, 本批床号={}, orderId={}", currentTenantId, nextBedNo, orderId);
         }
-        log.info("自动分配床号: tenantId={}, 本批床号={}, 本批扎号数={}", currentTenantId, nextBedNo, bundles.size());
+        return new int[]{nextBedNo, nextBedSubNo};
+    }
 
+    private List<CuttingBundle> buildBundleList(ProductionOrder order, List<Map<String, Object>> bundles,
+            int nextBedNo, Integer nextBedSubNo, int bundleIndex) {
+        List<CuttingBundle> result = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        int idx = bundleIndex;
         for (Map<String, Object> item : bundles) {
             String color = item.get("color") == null ? null : item.get("color").toString();
             String size = item.get("size") == null ? null : item.get("size").toString();
-
             if (color != null) color = color.trim();
             if (size != null) size = size.trim();
-
             if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
                 throw new IllegalArgumentException("颜色和尺码不能为空，请为每个菲号指定颜色和尺码");
             }
-
-            // ✅ 新增验证：禁止包含逗号分隔的多尺码（如 "S,M,L,XL,XXL"）
-            if (size != null && size.contains(",")) {
+            if (size.contains(",")) {
                 throw new IllegalArgumentException(
-                    "尺码字段不能包含逗号，请为每个尺码创建单独的菲号。" +
-                    "错误值：" + size + "。" +
-                    "正确做法：发送多个bundles项，每项包含单个尺码"
-                );
+                    "尺码字段不能包含逗号，请为每个尺码创建单独的菲号。错误值：" + size);
             }
-
-            Integer quantity = null;
-            Object quantityObj = item.get("quantity");
-            if (quantityObj != null) {
-                try {
-                    quantity = Integer.parseInt(quantityObj.toString());
-                } catch (NumberFormatException e) {
-                    log.warn("Invalid bundle quantity on generateBundles: orderId={}, value={}",
-                            order == null ? null : order.getId(),
-                            quantityObj,
-                            e);
-                }
-            }
-
-            if (quantity == null || quantity <= 0) {
-                continue;
-            }
+            Integer quantity = parseBundleQuantity(item, order.getId());
+            if (quantity == null || quantity <= 0) continue;
 
             CuttingBundle bundle = new CuttingBundle();
             bundle.setProductionOrderId(order.getId());
@@ -253,55 +262,51 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             bundle.setColor(color);
             bundle.setSize(size);
             bundle.setQuantity(quantity);
-            bundle.setBundleNo(bundleIndex);
-            bundle.setBedNo(nextBedNo); // ✅ 设置床号（按租户自动递增）
-            bundle.setBedSubNo(nextBedSubNo); // 追加裁剪时设置子床次编号（首次 null）
-
-            String qrCode = buildQrCode(
+            bundle.setBundleNo(idx);
+            bundle.setBedNo(nextBedNo);
+            bundle.setBedSubNo(nextBedSubNo);
+            bundle.setQrCode(buildQrCode(
                     StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo() : order.getQrCode(),
-                    order.getStyleNo(),
-                    color,
-                    size,
-                    quantity,
-                    bundleIndex);
-            bundle.setQrCode(qrCode);
+                    order.getStyleNo(), color, size, quantity, idx));
             bundle.setStatus("created");
             bundle.setCreateTime(now);
             bundle.setUpdateTime(now);
-
             result.add(bundle);
-            bundleIndex++;
-            // ❌ 不在此递增 bedNo：同一次裁剪操作的所有扎号共用同一个床号
-            // nextBedNo 在下次调用 generateBundles 时才会 +1
+            idx++;
         }
-
-        if (!result.isEmpty()) {
-            this.saveBatch(result);
-            cuttingTaskService.markBundledByOrderId(order.getId());
-
-            registerProcessTrackingInitialization(order.getId(), result);
-
-            // 更新订单进度到下一阶段（车缝/缝制）
-            try {
-                order.setCurrentProcessName("车缝");
-                order.setCuttingBundleCount(existingBundleCount + result.size());
-                order.setUpdateTime(LocalDateTime.now());
-                productionOrderService.updateById(order);
-                log.info("裁剪菲号生成完成，订单进度已更新到车缝: orderId={}, orderNo={}, bundleCount={}",
-                        order.getId(), order.getOrderNo(), existingBundleCount + result.size());
-            } catch (Exception e) {
-                log.warn("Failed to update order progress to sewing: orderId={}", order.getId(), e);
-            }
-
-            try {
-                productionOrderService.recomputeProgressFromRecords(order.getId());
-            } catch (Exception e) {
-                log.warn("Failed to recompute progress after bundle generate: orderId={}", order.getId(), e);
-            }
-        }
-
         return result;
     }
+
+    private Integer parseBundleQuantity(Map<String, Object> item, String orderId) {
+        Object quantityObj = item.get("quantity");
+        if (quantityObj != null) {
+            try {
+                return Integer.parseInt(quantityObj.toString());
+            } catch (NumberFormatException e) {
+                log.warn("Invalid bundle quantity on generateBundles: orderId={}, value={}", orderId, quantityObj, e);
+            }
+        }
+        return null;
+    }
+
+    private void updateOrderAfterBundleGenerate(ProductionOrder order, int totalBundleCount) {
+        try {
+            order.setCurrentProcessName("车缝");
+            order.setCuttingBundleCount(totalBundleCount);
+            order.setUpdateTime(LocalDateTime.now());
+            productionOrderService.updateById(order);
+            log.info("裁剪菲号生成完成，订单进度已更新到车缝: orderId={}, orderNo={}, bundleCount={}",
+                    order.getId(), order.getOrderNo(), totalBundleCount);
+        } catch (Exception e) {
+            log.warn("Failed to update order progress to sewing: orderId={}", order.getId(), e);
+        }
+        try {
+            productionOrderService.recomputeProgressFromRecords(order.getId());
+        } catch (Exception e) {
+            log.warn("Failed to recompute progress after bundle generate: orderId={}", order.getId(), e);
+        }
+    }
+
 
     private void registerProcessTrackingInitialization(String orderId, List<CuttingBundle> bundles) {
         int bundleCount = bundles == null ? 0 : bundles.size();
@@ -499,6 +504,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteByOrderId(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {

@@ -216,18 +216,27 @@ public class ScanRecordQueryHelper {
             return List.of();
         }
 
+        java.util.Set<String> orderIds = new java.util.HashSet<>();
+        for (ScanRecord r : receivedRecords) {
+            if (hasText(r.getOrderId())) orderIds.add(r.getOrderId());
+        }
+        java.util.Map<String, ProductionOrder> orderMap = java.util.Collections.emptyMap();
+        if (!orderIds.isEmpty()) {
+            orderMap = productionOrderService.lambdaQuery()
+                    .select(ProductionOrder::getId, ProductionOrder::getDeleteFlag, ProductionOrder::getStatus)
+                    .in(ProductionOrder::getId, orderIds)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .list().stream()
+                    .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+        }
+
         List<ScanRecord> pendingTasks = new ArrayList<>();
         for (ScanRecord received : receivedRecords) {
             String orderId = received.getOrderId();
             String bundleId = received.getCuttingBundleId();
 
-            // 排除已关闭/已完成/已取消/已归档订单
             if (hasText(orderId)) {
-                ProductionOrder order = productionOrderService.lambdaQuery()
-                        .select(ProductionOrder::getId, ProductionOrder::getDeleteFlag, ProductionOrder::getStatus)
-                        .eq(ProductionOrder::getId, orderId)
-                        .eq(ProductionOrder::getDeleteFlag, 0)
-                        .one();
+                ProductionOrder order = orderMap.get(orderId);
                 if (order == null) {
                     continue;
                 }
@@ -295,6 +304,7 @@ public class ScanRecordQueryHelper {
                     .eq(ScanRecord::getProcessCode, stageCode)
                     .last("limit 1"));
         } catch (Exception e) {
+            log.warn("[ScanQuery] 查找质检验收记录失败: orderId={}, bundleId={}", orderId, bundleId, e);
             return null;
         }
     }
@@ -319,6 +329,7 @@ public class ScanRecordQueryHelper {
                     .isNotNull(ScanRecord::getConfirmTime)
                     .last("limit 1"));
         } catch (Exception e) {
+            log.warn("[ScanQuery] 查找质检确认记录失败: orderId={}, bundleId={}", orderId, bundleId, e);
             return null;
         }
     }

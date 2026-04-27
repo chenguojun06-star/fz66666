@@ -277,12 +277,14 @@ public class HealthIndexOrchestrator {
         QueryWrapper<ScanRecord> totalQw = new QueryWrapper<>();
         totalQw.eq("tenant_id", tenantId)
                .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+               .ne("scan_type", "orchestration")
                .between("scan_time", start, end);
         long totalScans = scanRecordService.count(totalQw);
         if (totalScans == 0) return 20;
         QueryWrapper<ScanRecord> okQw = new QueryWrapper<>();
         okQw.eq("tenant_id", tenantId)
             .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+            .ne("scan_type", "orchestration")
             .between("scan_time", start, end)
             .eq("scan_result", "success");
         long successScans = scanRecordService.count(okQw);

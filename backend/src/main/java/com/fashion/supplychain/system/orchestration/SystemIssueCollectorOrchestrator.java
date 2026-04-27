@@ -67,7 +67,7 @@ public class SystemIssueCollectorOrchestrator {
                      "  SUM(CASE WHEN scan_result='fail'    THEN 1 ELSE 0 END) as fail_cnt, " +
                      "  MAX(scan_time) as last_scan " +
                      "FROM t_scan_record " +
-                     "WHERE scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                     "WHERE scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND scan_type != 'orchestration'";
         Map<String, Object> row = jdbcTemplate.queryForMap(sql);
         int total   = toInt(row.get("total"));
         int success = toInt(row.get("success_cnt"));
@@ -120,7 +120,7 @@ public class SystemIssueCollectorOrchestrator {
     private void checkScanFailures24h(List<SystemIssueItemDTO> issues) {
         String sql = "SELECT COUNT(*) as cnt, MAX(scan_time) as last_seen " +
                      "FROM t_scan_record " +
-                     "WHERE scan_result = 'fail' AND scan_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)";
+                     "WHERE scan_result = 'fail' AND scan_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR) AND scan_type != 'orchestration'";
         Map<String, Object> row = jdbcTemplate.queryForMap(sql);
         int cnt = toInt(row.get("cnt"));
         if (cnt > 0) {
@@ -141,7 +141,8 @@ public class SystemIssueCollectorOrchestrator {
                      "FROM t_scan_record " +
                      "WHERE scan_result = 'success' " +
                      "  AND (cutting_bundle_id IS NULL OR cutting_bundle_id = '') " +
-                     "  AND scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                     "  AND scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) " +
+                     "  AND scan_type != 'orchestration'";
         Map<String, Object> row = jdbcTemplate.queryForMap(sql);
         int cnt = toInt(row.get("cnt"));
         if (cnt > 0) {
@@ -160,7 +161,7 @@ public class SystemIssueCollectorOrchestrator {
         String sql = "SELECT COUNT(*) as cnt FROM t_production_order po " +
                      "LEFT JOIN (" +
                      "  SELECT order_id, MAX(scan_time) as last_scan " +
-                     "  FROM t_scan_record WHERE scan_result='success' GROUP BY order_id" +
+                     "  FROM t_scan_record WHERE scan_result='success' AND scan_type != 'orchestration' GROUP BY order_id" +
                      ") sr ON sr.order_id = po.id " +
                      "WHERE po.status NOT IN ('completed','cancelled','COMPLETED','CANCELLED') " +
                      "  AND po.delete_flag = 0 " +
@@ -185,7 +186,8 @@ public class SystemIssueCollectorOrchestrator {
                      "FROM t_scan_record " +
                      "WHERE scan_result = 'success' " +
                      "  AND (process_code IS NULL OR process_code = '') " +
-                     "  AND scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                     "  AND scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) " +
+                     "  AND scan_type != 'orchestration'";
         Map<String, Object> row = jdbcTemplate.queryForMap(sql);
         int cnt = toInt(row.get("cnt"));
         if (cnt > 0) {
@@ -204,7 +206,8 @@ public class SystemIssueCollectorOrchestrator {
         String sql = "SELECT COUNT(*) as cnt, MAX(scan_time) as last_seen " +
                      "FROM t_scan_record " +
                      "WHERE scan_result = 'duplicate' " +
-                     "  AND scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                     "  AND scan_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) " +
+                     "  AND scan_type != 'orchestration'";
         Map<String, Object> row = jdbcTemplate.queryForMap(sql);
         int cnt = toInt(row.get("cnt"));
         if (cnt > 20) {

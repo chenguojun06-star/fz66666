@@ -135,102 +135,91 @@ public class ProcessStageDetector {
             return null;
         }
 
-        // 根据生产进度确定起始节点
         int progress = order.getProductionProgress() == null ? 0 : order.getProductionProgress();
         if (progress < 0) progress = 0;
         if (progress > 100) progress = 100;
 
-        int idx = -1;
-        try {
-            idx = scanRecordDomainService.getNodeIndexFromProgress(nodes.size(), progress);
-        } catch (Exception e) {
-            idx = -1;
-        }
-        if (idx < 0) idx = 0;
-        if (idx >= nodes.size()) idx = nodes.size() - 1;
-
-        // ★ 修复(BUG-11): 节点扫码总量缓存（按需懒加载，同一次识别对同一节点只查一次DB）
-        // 解决：productionProgress 指向已完成节点（如裁剪已完成但%未更新）时，
-        // isAutoSkippableStageName 只处理采购，无法跳过已完成的裁剪/生产节点，
-        // 导致工人扫菲号反复被识别到已完成节点，提示"已完成该节点"
+        int idx = resolveStartNodeIndex(nodes.size(), progress);
         int orderQtyForNodeCheck = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
         Map<String, Long> nodeQtyCache = new java.util.HashMap<>();
 
-        // 向后查找第一个未跳过的工序
-        String autoResult = null;
-        for (int i = idx; i < nodes.size(); i++) {
-            String pnRaw = nodes.get(i) == null ? "" : nodes.get(i).trim();
-            if (!hasText(pnRaw)) {
-                continue;
-            }
-            String pn = normalizeFixedProductionNodeName(pnRaw);
-            if (pn == null) {
-                pn = pnRaw;
-            }
-            if (!hasText(pn)) {
-                continue;
-            }
-            if (templateLibraryService.isProgressQualityStageName(pnRaw)
-                    || templateLibraryService.isProgressQualityStageName(pn)) {
-                continue;
-            }
-            if (isAutoSkippableStageName(order, pn)) {
-                continue;
-            }
-            // ★ 修复(BUG-11): 节点扫码量已达订单量则跳过（如裁剪已全部完成，不再识别到裁剪）
-            if (orderQtyForNodeCheck > 0) {
-                long sq = nodeQtyCache.computeIfAbsent(pn, k -> sumScanQtyForParent(order, k));
-                if (sq >= orderQtyForNodeCheck) {
-                    continue;
-                }
-            }
-            autoResult = pn;
-            break;
-        }
+        String autoResult = forwardScanForUncompleted(nodes, idx, order, orderQtyForNodeCheck, nodeQtyCache);
 
-        // 关键校验：自动识别结果不能跳过未完成的前置父节点
-        // 例如：裁剪还没有任何扫码记录，不应直接识别到二次工艺/车缝
-        if (autoResult != null) {
-            String resolvedParent = resolveParentForAutoCheck(autoResult);
-            int resultIdx = indexOfFixedNode(resolvedParent);
-            if (resultIdx > 1) {
-                boolean hasCuttingRecord = hasAnyScanRecordForParent(order, "裁剪");
-                if (!hasCuttingRecord) {
-                    log.warn("自动识别跳过裁剪: orderNo={}, autoResult={}, 回退到裁剪", order.getOrderNo(), autoResult);
-                    String cuttingProcess = findFirstProcessUnderParent(nodes, order, "裁剪");
-                    if (hasText(cuttingProcess)) {
-                        return cuttingProcess;
-                    }
-                    return "裁剪";
-                }
-            }
-        }
+        autoResult = enforcePrerequisiteParent(order, nodes, autoResult);
 
         if (autoResult != null) {
             return autoResult;
         }
 
-        // 向前查找未完成的工序
-        for (int i = idx; i >= 0; i--) {
+        String backwardResult = backwardScanForUncompleted(nodes, idx, order, orderQtyForNodeCheck, nodeQtyCache);
+        if (backwardResult != null) {
+            return backwardResult;
+        }
+
+        return deepAnalysisByScanRecords(order, nodes, orderQtyForNodeCheck);
+    }
+
+    private int resolveStartNodeIndex(int nodeCount, int progress) {
+        int idx = -1;
+        try {
+            idx = scanRecordDomainService.getNodeIndexFromProgress(nodeCount, progress);
+        } catch (Exception e) {
+            log.warn("[ProcessStageDetector] getNodeIndexFromProgress失败: nodeCount={}, progress={}", nodeCount, progress, e);
+            idx = -1;
+        }
+        if (idx < 0) idx = 0;
+        if (idx >= nodeCount) idx = nodeCount - 1;
+        return idx;
+    }
+
+    private String forwardScanForUncompleted(List<String> nodes, int startIdx, ProductionOrder order,
+                                               int orderQtyForNodeCheck, Map<String, Long> nodeQtyCache) {
+        for (int i = startIdx; i < nodes.size(); i++) {
             String pnRaw = nodes.get(i) == null ? "" : nodes.get(i).trim();
-            if (!hasText(pnRaw)) {
-                continue;
-            }
+            if (!hasText(pnRaw)) continue;
             String pn = normalizeFixedProductionNodeName(pnRaw);
-            if (pn == null) {
-                pn = pnRaw;
-            }
-            if (!hasText(pn)) {
-                continue;
-            }
+            if (pn == null) pn = pnRaw;
+            if (!hasText(pn)) continue;
             if (templateLibraryService.isProgressQualityStageName(pnRaw)
-                    || templateLibraryService.isProgressQualityStageName(pn)) {
-                continue;
+                    || templateLibraryService.isProgressQualityStageName(pn)) continue;
+            if (isAutoSkippableStageName(order, pn)) continue;
+            if (orderQtyForNodeCheck > 0) {
+                long sq = nodeQtyCache.computeIfAbsent(pn, k -> sumScanQtyForParent(order, k));
+                if (sq >= orderQtyForNodeCheck) continue;
             }
+            return pn;
+        }
+        return null;
+    }
+
+    private String enforcePrerequisiteParent(ProductionOrder order, List<String> nodes, String autoResult) {
+        if (autoResult == null) return null;
+        String resolvedParent = resolveParentForAutoCheck(autoResult);
+        int resultIdx = indexOfFixedNode(resolvedParent);
+        if (resultIdx > 1) {
+            boolean hasCuttingRecord = hasAnyScanRecordForParent(order, "裁剪");
+            if (!hasCuttingRecord) {
+                log.warn("自动识别跳过裁剪: orderNo={}, autoResult={}, 回退到裁剪", order.getOrderNo(), autoResult);
+                String cuttingProcess = findFirstProcessUnderParent(nodes, order, "裁剪");
+                if (hasText(cuttingProcess)) return cuttingProcess;
+                return "裁剪";
+            }
+        }
+        return autoResult;
+    }
+
+    private String backwardScanForUncompleted(List<String> nodes, int startIdx, ProductionOrder order,
+                                                int orderQtyForNodeCheck, Map<String, Long> nodeQtyCache) {
+        for (int i = startIdx; i >= 0; i--) {
+            String pnRaw = nodes.get(i) == null ? "" : nodes.get(i).trim();
+            if (!hasText(pnRaw)) continue;
+            String pn = normalizeFixedProductionNodeName(pnRaw);
+            if (pn == null) pn = pnRaw;
+            if (!hasText(pn)) continue;
+            if (templateLibraryService.isProgressQualityStageName(pnRaw)
+                    || templateLibraryService.isProgressQualityStageName(pn)) continue;
             if (templateLibraryService.progressStageNameMatches(
-                    ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED, pnRaw)) {
-                continue;
-            }
+                    ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED, pnRaw)) continue;
             if (templateLibraryService.progressStageNameMatches(
                     ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT, pnRaw)) {
                 int r = order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
@@ -238,30 +227,24 @@ public class ProcessStageDetector {
                 if (r > 100) r = 100;
                 if (r >= 100
                         || (order.getProcurementManuallyCompleted() != null
-                            && order.getProcurementManuallyCompleted() == 1)) {
-                    continue;
-                }
+                            && order.getProcurementManuallyCompleted() == 1)) continue;
             }
-            // ★ 修复(BUG-11): 向前兜底路径同样跳过已完成节点
             if (orderQtyForNodeCheck > 0) {
                 long sq = nodeQtyCache.computeIfAbsent(pn, k -> sumScanQtyForParent(order, k));
-                if (sq >= orderQtyForNodeCheck) {
-                    continue;
-                }
+                if (sq >= orderQtyForNodeCheck) continue;
             }
             return pn;
         }
+        return null;
+    }
 
-        // 订单数量校验：订单数量异常为 0 时不应进行扫码
+    private String deepAnalysisByScanRecords(ProductionOrder order, List<String> nodes, int orderQtyForNodeCheck) {
         int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
         if (orderQty <= 0) {
-            // 历史 bug：此处曾返回第一个可用节点（如裁剪/车缝），导致 autoProcess 识别错误。
-            // 订单数量=0 是数据异常，应直接中断让业务人员修正数据。
             log.warn("订单[{}]的订单数量异常为 {}，无法自动识别工序", order.getOrderNo(), orderQty);
             return null;
         }
 
-        // 查询已完成的扫码记录，分析已完成数量
         List<ScanRecord> records;
         try {
             records = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
@@ -277,33 +260,28 @@ public class ProcessStageDetector {
             return null;
         }
 
-        // 统计各工序已完成数量（按菲号去重）
+        LinkedHashMap<String, Long> done = aggregateDoneByStage(records, order);
+        return findFirstUncompletedStage(nodes, order, done, orderQty);
+    }
+
+    private LinkedHashMap<String, Long> aggregateDoneByStage(List<ScanRecord> records, ProductionOrder order) {
         LinkedHashMap<String, Map<String, Integer>> doneByStageBundle = new LinkedHashMap<>();
         LinkedHashMap<String, Long> done = new LinkedHashMap<>();
 
         if (records != null) {
             for (ScanRecord r : records) {
                 if (r == null) continue;
-
                 String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
-                if (!hasText(pn)) {
-                    pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
-                }
+                if (!hasText(pn)) pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
                 if (!hasText(pn)) continue;
                 if (isAutoSkippableStageName(order, pn)) continue;
-
                 String pc = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
-                if ("quality_warehousing".equals(pc) || templateLibraryService.isProgressQualityStageName(pn)) {
-                    continue;
-                }
-
+                if ("quality_warehousing".equals(pc) || templateLibraryService.isProgressQualityStageName(pn)) continue;
                 int q = r.getQuantity() == null ? 0 : r.getQuantity();
                 if (q <= 0) continue;
-
                 String bid = r.getCuttingBundleId() == null ? null : r.getCuttingBundleId().trim();
                 if (hasText(bid)) {
-                    Map<String, Integer> byBundle = doneByStageBundle.computeIfAbsent(pn,
-                            k -> new LinkedHashMap<>());
+                    Map<String, Integer> byBundle = doneByStageBundle.computeIfAbsent(pn, k -> new LinkedHashMap<>());
                     Integer existed = byBundle.get(bid);
                     int next = existed == null ? q : Math.max(existed, q);
                     byBundle.put(bid, next);
@@ -313,13 +291,11 @@ public class ProcessStageDetector {
             }
         }
 
-        // 合并菲号统计
         if (!doneByStageBundle.isEmpty()) {
             for (Map.Entry<String, Map<String, Integer>> e : doneByStageBundle.entrySet()) {
                 if (e == null) continue;
                 String k = e.getKey();
                 if (!hasText(k)) continue;
-
                 long sum = 0L;
                 Map<String, Integer> byBundle = e.getValue();
                 if (byBundle != null) {
@@ -333,19 +309,19 @@ public class ProcessStageDetector {
                 }
             }
         }
+        return done;
+    }
 
-        // 查找第一个未完成的工序
+    private String findFirstUncompletedStage(List<String> nodes, ProductionOrder order,
+                                               LinkedHashMap<String, Long> done, int orderQty) {
         String lastCandidate = null;
         for (String n : nodes) {
             String pn = n == null ? "" : n.trim();
             if (!hasText(pn)) continue;
             if (isAutoSkippableStageName(order, pn)) continue;
             if (templateLibraryService.isProgressQualityStageName(pn)) continue;
-
             long v = done.getOrDefault(pn, 0L);
-            if (v < orderQty) {
-                return pn;
-            }
+            if (v < orderQty) return pn;
             lastCandidate = pn;
         }
         if (lastCandidate != null) {

@@ -96,14 +96,23 @@ public class ProductionCleanupOrchestrator {
                 .select(MaterialPurchase::getId, MaterialPurchase::getOrderId, MaterialPurchase::getPurchaseNo));
 
         if (purchases != null && !purchases.isEmpty()) {
+            java.util.Set<String> orderIds = purchases.stream()
+                    .map(MaterialPurchase::getOrderId)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .collect(java.util.stream.Collectors.toSet());
+            java.util.Map<String, ProductionOrder> orderMap = orderIds.isEmpty()
+                    ? java.util.Collections.emptyMap()
+                    : productionOrderService.listByIds(orderIds).stream()
+                            .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+
             List<String> orphanIds = new ArrayList<>();
             for (MaterialPurchase p : purchases) {
                 if (p == null || !StringUtils.hasText(p.getOrderId())) {
                     continue;
                 }
                 String orderId = p.getOrderId().trim();
-                ProductionOrder order = productionOrderService.getById(orderId);
-                // 如果订单不存在，或者已删除
+                ProductionOrder order = orderMap.get(orderId);
                 if (order == null || (order.getDeleteFlag() != null && order.getDeleteFlag() != 0)) {
                     orphanIds.add(p.getId());
                     log.info("Found orphan purchase order: {} (orderId: {})", p.getPurchaseNo(), orderId);
@@ -321,143 +330,22 @@ public class ProductionCleanupOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-
-        ProductionOrder order = productionOrderService.getById(key);
-        if (order == null) {
-            order = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
-                    .eq(ProductionOrder::getOrderNo, key)
-                    .last("limit 1"));
-        }
-        if (order == null || !StringUtils.hasText(order.getId())) {
-            throw new NoSuchElementException("生产订单不存在");
-        }
+        ProductionOrder order = resolveOrderByKey(key);
         String oid = order.getId().trim();
-
         LocalDateTime now = LocalDateTime.now();
 
-        List<CuttingBundle> bundles = cuttingBundleService.list(new LambdaQueryWrapper<CuttingBundle>()
-                .select(CuttingBundle::getId)
-                .eq(CuttingBundle::getProductionOrderId, oid));
-        List<String> bundleIds = new ArrayList<>();
-        if (bundles != null) {
-            for (CuttingBundle b : bundles) {
-                if (b != null && StringUtils.hasText(b.getId())) {
-                    bundleIds.add(b.getId().trim());
-                }
-            }
-        }
+        List<String> bundleIds = collectBundleIds(oid);
+        List<String> purchaseIds = collectPurchaseIds(oid);
+        List<String> shipmentRecIds = collectShipmentRecIds(oid);
 
-        List<MaterialPurchase> purchases = materialPurchaseService.list(new LambdaQueryWrapper<MaterialPurchase>()
-                .select(MaterialPurchase::getId)
-                .eq(MaterialPurchase::getOrderId, oid));
-        List<String> purchaseIds = new ArrayList<>();
-        if (purchases != null) {
-            for (MaterialPurchase p : purchases) {
-                if (p != null && StringUtils.hasText(p.getId())) {
-                    purchaseIds.add(p.getId().trim());
-                }
-            }
-        }
-
-        List<String> shipmentRecIds = new ArrayList<>();
-        List<ShipmentReconciliation> shipmentRecs = shipmentReconciliationService.list(
-                new LambdaQueryWrapper<ShipmentReconciliation>()
-                        .select(ShipmentReconciliation::getId)
-                        .eq(ShipmentReconciliation::getOrderId, oid));
-        if (shipmentRecs != null) {
-            for (ShipmentReconciliation r : shipmentRecs) {
-                if (r != null && StringUtils.hasText(r.getId())) {
-                    shipmentRecIds.add(r.getId().trim());
-                }
-            }
-        }
-
-        int scanDeleted = 0;
-        scanDeleted += scanRecordService.count(new LambdaQueryWrapper<ScanRecord>().eq(ScanRecord::getOrderId, oid));
-        scanRecordService.remove(new LambdaQueryWrapper<ScanRecord>().eq(ScanRecord::getOrderId, oid));
-        if (!bundleIds.isEmpty()) {
-            scanDeleted += scanRecordService
-                    .count(new LambdaQueryWrapper<ScanRecord>().in(ScanRecord::getCuttingBundleId, bundleIds));
-            scanRecordService
-                    .remove(new LambdaQueryWrapper<ScanRecord>().in(ScanRecord::getCuttingBundleId, bundleIds));
-        }
-
-        long warehousingSoftDeleted = productWarehousingService.count(new LambdaQueryWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getOrderId, oid)
-                .eq(ProductWarehousing::getDeleteFlag, 0));
-        if (warehousingSoftDeleted > 0) {
-            productWarehousingService.lambdaUpdate()
-                    .eq(ProductWarehousing::getOrderId, oid)
-                    .eq(ProductWarehousing::getDeleteFlag, 0)
-                    .set(ProductWarehousing::getDeleteFlag, 1)
-                    .set(ProductWarehousing::getUpdateTime, now)
-                    .update();
-        }
-
-        long outstockSoftDeleted = productOutstockService.count(new LambdaQueryWrapper<ProductOutstock>()
-                .eq(ProductOutstock::getOrderId, oid)
-                .eq(ProductOutstock::getDeleteFlag, 0));
-        if (outstockSoftDeleted > 0) {
-            productOutstockService.lambdaUpdate()
-                    .eq(ProductOutstock::getOrderId, oid)
-                    .eq(ProductOutstock::getDeleteFlag, 0)
-                    .set(ProductOutstock::getDeleteFlag, 1)
-                    .set(ProductOutstock::getUpdateTime, now)
-                    .update();
-        }
-
-        long purchaseSoftDeleted = materialPurchaseService.count(new LambdaQueryWrapper<MaterialPurchase>()
-                .eq(MaterialPurchase::getOrderId, oid)
-                .eq(MaterialPurchase::getDeleteFlag, 0));
-        if (purchaseSoftDeleted > 0) {
-            materialPurchaseService.lambdaUpdate()
-                    .eq(MaterialPurchase::getOrderId, oid)
-                    .eq(MaterialPurchase::getDeleteFlag, 0)
-                    .set(MaterialPurchase::getDeleteFlag, 1)
-                    .set(MaterialPurchase::getUpdateTime, now)
-                    .update();
-        }
-
-        long materialRecDeleted = 0;
-        if (!purchaseIds.isEmpty()) {
-            materialRecDeleted = materialReconciliationService.count(new LambdaQueryWrapper<MaterialReconciliation>()
-                    .in(MaterialReconciliation::getPurchaseId, purchaseIds)
-                    .eq(MaterialReconciliation::getDeleteFlag, 0));
-            if (materialRecDeleted > 0) {
-                materialReconciliationService.lambdaUpdate()
-                        .in(MaterialReconciliation::getPurchaseId, purchaseIds)
-                        .eq(MaterialReconciliation::getDeleteFlag, 0)
-                        .set(MaterialReconciliation::getDeleteFlag, 1)
-                        .set(MaterialReconciliation::getUpdateTime, now)
-                        .update();
-            }
-        }
-
-        long cuttingTaskDeleted = cuttingTaskService.count(new LambdaQueryWrapper<CuttingTask>()
-                .eq(CuttingTask::getProductionOrderId, oid));
-        cuttingTaskService.remove(new LambdaQueryWrapper<CuttingTask>().eq(CuttingTask::getProductionOrderId, oid));
-
-        int cuttingBundleDeleted;
-        if (!bundleIds.isEmpty()) {
-            cuttingBundleDeleted = bundleIds.size();
-        } else {
-            long cnt = cuttingBundleService.count(new LambdaQueryWrapper<CuttingBundle>()
-                    .eq(CuttingBundle::getProductionOrderId, oid));
-            cuttingBundleDeleted = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, cnt));
-        }
-        cuttingBundleService
-                .remove(new LambdaQueryWrapper<CuttingBundle>().eq(CuttingBundle::getProductionOrderId, oid));
-
-        int shipmentRecDeleted = 0;
-        for (String id : shipmentRecIds) {
-            if (!StringUtils.hasText(id)) {
-                continue;
-            }
-            if (shipmentReconciliationService.removeById(id.trim())) {
-                shipmentRecDeleted++;
-            }
-        }
-
+        int scanDeleted = deleteScanRecords(oid, bundleIds);
+        long warehousingSoftDeleted = softDeleteWarehousing(oid, now);
+        long outstockSoftDeleted = softDeleteOutstock(oid, now);
+        long purchaseSoftDeleted = softDeletePurchases(oid, now);
+        long materialRecDeleted = softDeleteMaterialReconciliation(purchaseIds, now);
+        long cuttingTaskDeleted = deleteCuttingTasks(oid);
+        int cuttingBundleDeleted = deleteCuttingBundles(oid, bundleIds);
+        int shipmentRecDeleted = deleteShipmentRecs(shipmentRecIds);
         boolean orderSoftDeleted = productionOrderService.deleteById(oid);
 
         Map<String, Object> data = new HashMap<>();
@@ -475,4 +363,161 @@ public class ProductionCleanupOrchestrator {
         data.put("orderSoftDeleted", orderSoftDeleted);
         return data;
     }
+
+    private ProductionOrder resolveOrderByKey(String key) {
+        ProductionOrder order = productionOrderService.getById(key);
+        if (order == null) {
+            order = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
+                    .eq(ProductionOrder::getOrderNo, key)
+                    .last("limit 1"));
+        }
+        if (order == null || !StringUtils.hasText(order.getId())) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+        return order;
+    }
+
+    private List<String> collectBundleIds(String oid) {
+        List<CuttingBundle> bundles = cuttingBundleService.list(new LambdaQueryWrapper<CuttingBundle>()
+                .select(CuttingBundle::getId)
+                .eq(CuttingBundle::getProductionOrderId, oid));
+        List<String> ids = new ArrayList<>();
+        if (bundles != null) {
+            for (CuttingBundle b : bundles) {
+                if (b != null && StringUtils.hasText(b.getId())) ids.add(b.getId().trim());
+            }
+        }
+        return ids;
+    }
+
+    private List<String> collectPurchaseIds(String oid) {
+        List<MaterialPurchase> purchases = materialPurchaseService.list(new LambdaQueryWrapper<MaterialPurchase>()
+                .select(MaterialPurchase::getId)
+                .eq(MaterialPurchase::getOrderId, oid));
+        List<String> ids = new ArrayList<>();
+        if (purchases != null) {
+            for (MaterialPurchase p : purchases) {
+                if (p != null && StringUtils.hasText(p.getId())) ids.add(p.getId().trim());
+            }
+        }
+        return ids;
+    }
+
+    private List<String> collectShipmentRecIds(String oid) {
+        List<ShipmentReconciliation> recs = shipmentReconciliationService.list(
+                new LambdaQueryWrapper<ShipmentReconciliation>()
+                        .select(ShipmentReconciliation::getId)
+                        .eq(ShipmentReconciliation::getOrderId, oid));
+        List<String> ids = new ArrayList<>();
+        if (recs != null) {
+            for (ShipmentReconciliation r : recs) {
+                if (r != null && StringUtils.hasText(r.getId())) ids.add(r.getId().trim());
+            }
+        }
+        return ids;
+    }
+
+    private int deleteScanRecords(String oid, List<String> bundleIds) {
+        int scanDeleted = 0;
+        scanDeleted += scanRecordService.count(new LambdaQueryWrapper<ScanRecord>().eq(ScanRecord::getOrderId, oid));
+        scanRecordService.remove(new LambdaQueryWrapper<ScanRecord>().eq(ScanRecord::getOrderId, oid));
+        if (!bundleIds.isEmpty()) {
+            scanDeleted += scanRecordService
+                    .count(new LambdaQueryWrapper<ScanRecord>().in(ScanRecord::getCuttingBundleId, bundleIds));
+            scanRecordService
+                    .remove(new LambdaQueryWrapper<ScanRecord>().in(ScanRecord::getCuttingBundleId, bundleIds));
+        }
+        return scanDeleted;
+    }
+
+    private long softDeleteWarehousing(String oid, LocalDateTime now) {
+        long count = productWarehousingService.count(new LambdaQueryWrapper<ProductWarehousing>()
+                .eq(ProductWarehousing::getOrderId, oid)
+                .eq(ProductWarehousing::getDeleteFlag, 0));
+        if (count > 0) {
+            productWarehousingService.lambdaUpdate()
+                    .eq(ProductWarehousing::getOrderId, oid)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .set(ProductWarehousing::getDeleteFlag, 1)
+                    .set(ProductWarehousing::getUpdateTime, now)
+                    .update();
+        }
+        return count;
+    }
+
+    private long softDeleteOutstock(String oid, LocalDateTime now) {
+        long count = productOutstockService.count(new LambdaQueryWrapper<ProductOutstock>()
+                .eq(ProductOutstock::getOrderId, oid)
+                .eq(ProductOutstock::getDeleteFlag, 0));
+        if (count > 0) {
+            productOutstockService.lambdaUpdate()
+                    .eq(ProductOutstock::getOrderId, oid)
+                    .eq(ProductOutstock::getDeleteFlag, 0)
+                    .set(ProductOutstock::getDeleteFlag, 1)
+                    .set(ProductOutstock::getUpdateTime, now)
+                    .update();
+        }
+        return count;
+    }
+
+    private long softDeletePurchases(String oid, LocalDateTime now) {
+        long count = materialPurchaseService.count(new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getOrderId, oid)
+                .eq(MaterialPurchase::getDeleteFlag, 0));
+        if (count > 0) {
+            materialPurchaseService.lambdaUpdate()
+                    .eq(MaterialPurchase::getOrderId, oid)
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .set(MaterialPurchase::getDeleteFlag, 1)
+                    .set(MaterialPurchase::getUpdateTime, now)
+                    .update();
+        }
+        return count;
+    }
+
+    private long softDeleteMaterialReconciliation(List<String> purchaseIds, LocalDateTime now) {
+        if (purchaseIds.isEmpty()) return 0;
+        long count = materialReconciliationService.count(new LambdaQueryWrapper<MaterialReconciliation>()
+                .in(MaterialReconciliation::getPurchaseId, purchaseIds)
+                .eq(MaterialReconciliation::getDeleteFlag, 0));
+        if (count > 0) {
+            materialReconciliationService.lambdaUpdate()
+                    .in(MaterialReconciliation::getPurchaseId, purchaseIds)
+                    .eq(MaterialReconciliation::getDeleteFlag, 0)
+                    .set(MaterialReconciliation::getDeleteFlag, 1)
+                    .set(MaterialReconciliation::getUpdateTime, now)
+                    .update();
+        }
+        return count;
+    }
+
+    private long deleteCuttingTasks(String oid) {
+        long count = cuttingTaskService.count(new LambdaQueryWrapper<CuttingTask>()
+                .eq(CuttingTask::getProductionOrderId, oid));
+        cuttingTaskService.remove(new LambdaQueryWrapper<CuttingTask>().eq(CuttingTask::getProductionOrderId, oid));
+        return count;
+    }
+
+    private int deleteCuttingBundles(String oid, List<String> bundleIds) {
+        int count;
+        if (!bundleIds.isEmpty()) {
+            count = bundleIds.size();
+        } else {
+            long cnt = cuttingBundleService.count(new LambdaQueryWrapper<CuttingBundle>()
+                    .eq(CuttingBundle::getProductionOrderId, oid));
+            count = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, cnt));
+        }
+        cuttingBundleService.remove(new LambdaQueryWrapper<CuttingBundle>().eq(CuttingBundle::getProductionOrderId, oid));
+        return count;
+    }
+
+    private int deleteShipmentRecs(List<String> shipmentRecIds) {
+        int deleted = 0;
+        for (String id : shipmentRecIds) {
+            if (!StringUtils.hasText(id)) continue;
+            if (shipmentReconciliationService.removeById(id.trim())) deleted++;
+        }
+        return deleted;
+    }
+
 }

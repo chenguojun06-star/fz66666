@@ -44,7 +44,7 @@ public class SmartNotifyJob {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
-    @Scheduled(cron = "0 0 3 * * ?")
+    @Scheduled(cron = "0 50 3 * * ?")
     public void cleanupOldNotices() {
         List<Long> tenantIds;
         try {
@@ -80,7 +80,7 @@ public class SmartNotifyJob {
         }
     }
 
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 25 * * * ?")
     public void autoDetectAndNotify() {
         try {
             if (distributedLockService != null) {

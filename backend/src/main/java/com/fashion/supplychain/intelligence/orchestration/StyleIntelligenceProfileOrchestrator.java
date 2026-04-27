@@ -226,6 +226,7 @@ public class StyleIntelligenceProfileOrchestrator {
             qw.eq(ScanRecord::getTenantId, tenantId);
         }
         qw.eq(ScanRecord::getStyleNo, styleNo)
+                .ne(ScanRecord::getScanType, "orchestration")
                 .orderByDesc(ScanRecord::getScanTime)
                 .last("LIMIT 500");
         return scanRecordService.list(qw);

@@ -78,6 +78,7 @@ public class CapacityGapOrchestrator {
         sqw.eq("tenant_id", tenantId)
            .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
            .eq("scan_result", "success")
+           .ne("scan_type", "orchestration")
            .ge("scan_time", since)
            .gt("quantity", 0);
         List<ScanRecord> recentScans = scanRecordMapper.selectList(sqw);

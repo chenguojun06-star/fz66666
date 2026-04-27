@@ -649,6 +649,7 @@ public class StyleInfoOrchestrator {
         if (style == null) {
             throw new NoSuchElementException("款式不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(style.getTenantId(), "款式");
         if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
             throw new IllegalStateException("该开发样已报废，无法继续流转");
         }
@@ -825,13 +826,12 @@ public class StyleInfoOrchestrator {
             throw new IllegalArgumentException("颜色不能为空");
         }
 
-        // 1. 查询源款式
         StyleInfo source = styleInfoService.getById(sourceStyleId);
         if (source == null) {
             throw new NoSuchElementException("源款式不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(source.getTenantId(), "款式");
 
-        // 2. 检查目标款号是否已存在（交给数据库唯一索引兜底，这里提前给友好提示）
         boolean exists = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStyleNo, newStyleNo.trim())
                 .exists();
@@ -839,7 +839,29 @@ public class StyleInfoOrchestrator {
             throw new IllegalArgumentException("款号 " + newStyleNo.trim() + " 已存在，请换一个款号");
         }
 
-        // 3. 构建新款式（清空 id 走新增路径）
+        StyleInfo newStyle = buildNewStyleFromSource(source, newStyleNo, newColor, newStyleName);
+        boolean saved = styleInfoService.saveOrUpdateStyle(newStyle);
+        if (!saved) {
+            throw new IllegalStateException("款式保存失败");
+        }
+
+        StyleInfo savedStyle = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getStyleNo, newStyle.getStyleNo())
+                .orderByDesc(StyleInfo::getCreateTime)
+                .last("LIMIT 1")
+                .one();
+        if (savedStyle == null) {
+            throw new IllegalStateException("款式保存后查询失败");
+        }
+
+        copyBomToNewStyle(sourceStyleId, savedStyle);
+
+        log.info("一键复制款式成功: sourceStyleId={}, newStyleId={}, newStyleNo={}, newColor={}",
+                sourceStyleId, savedStyle.getId(), newStyle.getStyleNo(), newColor);
+        return savedStyle;
+    }
+
+    private StyleInfo buildNewStyleFromSource(StyleInfo source, String newStyleNo, String newColor, String newStyleName) {
         StyleInfo newStyle = new StyleInfo();
         newStyle.setStyleNo(newStyleNo.trim());
         newStyle.setColor(newColor.trim());
@@ -850,58 +872,40 @@ public class StyleInfoOrchestrator {
         newStyle.setMonth(source.getMonth());
         newStyle.setDescription(source.getDescription());
         newStyle.setCover(source.getCover());
-        // id 不设置 → saveOrUpdateStyle 走新增路径，自动生成时间戳/租户/状态等
+        return newStyle;
+    }
 
-        boolean saved = styleInfoService.saveOrUpdateStyle(newStyle);
-        if (!saved) {
-            throw new IllegalStateException("款式保存失败");
-        }
-
-        // saveOrUpdateStyle 在新增后不保证 newStyle.id 已填充，需重新查询
-        StyleInfo savedStyle = styleInfoService.lambdaQuery()
-                .eq(StyleInfo::getStyleNo, newStyle.getStyleNo())
-                .orderByDesc(StyleInfo::getCreateTime)
-                .last("LIMIT 1")
-                .one();
-        if (savedStyle == null) {
-            throw new IllegalStateException("款式保存后查询失败");
-        }
-
-        // 4. 复制 BOM 明细
+    private void copyBomToNewStyle(Long sourceStyleId, StyleInfo savedStyle) {
         List<StyleBom> sourceBoms = styleBomService.listByStyleId(sourceStyleId);
-        if (sourceBoms != null && !sourceBoms.isEmpty()) {
-            List<StyleBom> newBoms = new java.util.ArrayList<>();
-            for (StyleBom bom : sourceBoms) {
-                StyleBom nb = new StyleBom();
-                // id 不设置 → MyBatis-Plus ASSIGN_UUID 自动生成
-                nb.setStyleId(savedStyle.getId());
-                nb.setMaterialCode(bom.getMaterialCode());
-                nb.setMaterialName(bom.getMaterialName());
-                nb.setFabricComposition(bom.getFabricComposition());
-                nb.setFabricWeight(bom.getFabricWeight());
-                nb.setMaterialType(bom.getMaterialType());
-                nb.setGroupName(null);
-                nb.setColor(bom.getColor());
-                nb.setSpecification(bom.getSpecification());
-                nb.setSize(bom.getSize());
-                nb.setUnit(bom.getUnit());
-                nb.setUsageAmount(bom.getUsageAmount());
-                nb.setDevUsageAmount(bom.getDevUsageAmount());
-                nb.setLossRate(bom.getLossRate());
-                nb.setUnitPrice(bom.getUnitPrice());
-                nb.setSizeUsageMap(bom.getSizeUsageMap());
-                nb.setPatternSizeUsageMap(bom.getPatternSizeUsageMap());
-                nb.setSizeSpecMap(bom.getSizeSpecMap());
-                nb.setPatternUnit(bom.getPatternUnit());
-                nb.setCreateTime(LocalDateTime.now());
-                nb.setUpdateTime(LocalDateTime.now());
-                newBoms.add(nb);
-            }
-            styleBomService.saveBatch(newBoms);
+        if (sourceBoms == null || sourceBoms.isEmpty()) {
+            return;
         }
-
-        log.info("一键复制款式成功: sourceStyleId={}, newStyleId={}, newStyleNo={}, newColor={}",
-                sourceStyleId, savedStyle.getId(), newStyle.getStyleNo(), newColor);
-        return savedStyle;
+        List<StyleBom> newBoms = new java.util.ArrayList<>();
+        for (StyleBom bom : sourceBoms) {
+            StyleBom nb = new StyleBom();
+            nb.setStyleId(savedStyle.getId());
+            nb.setMaterialCode(bom.getMaterialCode());
+            nb.setMaterialName(bom.getMaterialName());
+            nb.setFabricComposition(bom.getFabricComposition());
+            nb.setFabricWeight(bom.getFabricWeight());
+            nb.setMaterialType(bom.getMaterialType());
+            nb.setGroupName(null);
+            nb.setColor(bom.getColor());
+            nb.setSpecification(bom.getSpecification());
+            nb.setSize(bom.getSize());
+            nb.setUnit(bom.getUnit());
+            nb.setUsageAmount(bom.getUsageAmount());
+            nb.setDevUsageAmount(bom.getDevUsageAmount());
+            nb.setLossRate(bom.getLossRate());
+            nb.setUnitPrice(bom.getUnitPrice());
+            nb.setSizeUsageMap(bom.getSizeUsageMap());
+            nb.setPatternSizeUsageMap(bom.getPatternSizeUsageMap());
+            nb.setSizeSpecMap(bom.getSizeSpecMap());
+            nb.setPatternUnit(bom.getPatternUnit());
+            nb.setCreateTime(LocalDateTime.now());
+            nb.setUpdateTime(LocalDateTime.now());
+            newBoms.add(nb);
+        }
+        styleBomService.saveBatch(newBoms);
     }
 }

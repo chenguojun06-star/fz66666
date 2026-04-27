@@ -533,6 +533,7 @@ public class PatternProductionOrchestrator {
         return patternProductionService.lambdaQuery()
                 .eq(PatternProduction::getId, Long.valueOf(id))
                 .eq(PatternProduction::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .eq(PatternProduction::getDeleteFlag, 0)
                 .one();
     }
 }

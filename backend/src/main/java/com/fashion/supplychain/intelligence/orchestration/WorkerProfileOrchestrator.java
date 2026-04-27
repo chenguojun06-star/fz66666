@@ -237,8 +237,8 @@ public class WorkerProfileOrchestrator {
         return tenantMap.size();
     }
 
-    /** 每日凌晨 3:10 刷新所有已缓存租户的工人画像 */
-    @Scheduled(cron = "0 10 3 * * ?")
+    /** 每日凌晨 3:20 刷新所有已缓存租户的工人画像 */
+    @Scheduled(cron = "0 20 3 * * ?")
     public void scheduledProfileRebuild() {
         if (profileCache.isEmpty()) return;
         log.info("[WorkerProfile] 定时刷新开始，涉及{}个租户", profileCache.size());
@@ -259,6 +259,7 @@ public class WorkerProfileOrchestrator {
                                            LocalDateTime from, LocalDateTime to) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("scan_result", "success")
+          .ne("scan_type", "orchestration")
           .gt("quantity", 0)
           .eq("tenant_id", tenantId)
           .eq("operator_name", operatorName)
@@ -269,12 +270,10 @@ public class WorkerProfileOrchestrator {
         return result;
     }
 
-    /**
-     * 查询工人全局最近一次成功扫码时间（不限日期，用于90天内也无活动时的兜底显示）
-     */
     private String queryLastScanTime(Long tenantId, String operatorName) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("scan_result", "success")
+          .ne("scan_type", "orchestration")
           .gt("quantity", 0)
           .eq("tenant_id", tenantId)
           .eq("operator_name", operatorName)
@@ -290,6 +289,7 @@ public class WorkerProfileOrchestrator {
     private List<ScanRecord> queryAllRecords(Long tenantId, LocalDateTime from, LocalDateTime to) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("scan_result", "success")
+          .ne("scan_type", "orchestration")
           .gt("quantity", 0)
           .eq("tenant_id", tenantId)
           .ge("scan_time", from)
@@ -402,6 +402,7 @@ public class WorkerProfileOrchestrator {
         try {
             return LocalDate.parse(dateStr, DATE_FMT);
         } catch (Exception e) {
+            log.debug("[WorkerProfile] parseDateOrDefault失败: dateStr={}", dateStr);
             return defaultVal;
         }
     }

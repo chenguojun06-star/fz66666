@@ -231,6 +231,7 @@ public class FinanceAuditOrchestrator {
             qw.eq(ScanRecord::getTenantId, tenantId);
         }
         qw.eq(StringUtils.hasText(factoryId), ScanRecord::getFactoryId, factoryId);
+        qw.ne(ScanRecord::getScanType, "orchestration");
         qw.isNotNull(ScanRecord::getPayrollSettlementId);
         qw.ne(ScanRecord::getPayrollSettlementId, "");
         qw.and(w -> w.ne(ScanRecord::getScanResult, "success")

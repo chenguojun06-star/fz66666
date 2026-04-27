@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -196,6 +197,7 @@ public class MaterialPickingController {
         MaterialPicking picking = materialPickingService.lambdaQuery()
                 .eq(MaterialPicking::getId, id)
                 .eq(MaterialPicking::getTenantId, tenantId)
+                .eq(MaterialPicking::getDeleteFlag, 0)
                 .one();
         if (picking == null) {
             throw new java.util.NoSuchElementException("领料单不存在");
@@ -233,6 +235,9 @@ public class MaterialPickingController {
         if (cancelPurchaseId != null && !cancelPurchaseId.isEmpty()) {
             try {
                 com.fashion.supplychain.production.entity.MaterialPurchase purchase = materialPurchaseService.getById(cancelPurchaseId);
+                if (purchase != null) {
+                    TenantAssert.assertBelongsToCurrentTenant(purchase.getTenantId(), "采购单");
+                }
                 if (purchase != null && "WAREHOUSE_PENDING".equals(purchase.getStatus())) {
                     purchase.setStatus("pending");
                     purchase.setReceiverId(null);

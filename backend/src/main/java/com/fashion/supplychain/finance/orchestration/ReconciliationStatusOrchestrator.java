@@ -134,82 +134,19 @@ public class ReconciliationStatusOrchestrator {
             if (mr != null) {
                 TenantAssert.assertBelongsToCurrentTenant(mr.getTenantId(), "物料对账单");
                 guardTransition(mr.getStatus(), to);
-                if ("rejected".equals(to) && !UserContext.isSupervisorOrAbove()) {
-                    throw new AccessDeniedException("仅主管级别及以上可执行驳回");
-                }
+                assertRejectPermission(to);
                 String from = mr.getStatus() == null ? "" : mr.getStatus().trim();
-                mr.setStatus(to);
-                mr.setUpdateTime(now);
-                String uid = null;
-                try {
-                    UserContext ctx = UserContext.get();
-                    uid = ctx == null ? null : ctx.getUserId();
-                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception e) {
-                    log.warn("ReconciliationStatusOrchestrator.updateStatus 获取用户ID异常(物料): {}", e.getMessage());
-                    uid = null;
-                }
-                if (uid != null) {
-                    mr.setUpdateBy(uid);
-                    if ((mr.getCreateBy() == null || mr.getCreateBy().trim().isEmpty())) {
-                        mr.setCreateBy(uid);
-                    }
-                }
-
-                if (!from.equals(to)) {
-                    mr.setRemark(appendAuditRemark(mr.getRemark(), "STATUS", from + " -> " + to));
-                }
-
-                if ("rejected".equals(from) && "pending".equals(to)) {
-                    mr.setVerifiedAt(null);
-                    mr.setApprovedAt(null);
-                    mr.setPaidAt(null);
-                }
-                if ("verified".equals(to) && mr.getVerifiedAt() == null) {
-                    mr.setVerifiedAt(now);
-                }
-                if ("approved".equals(to) && mr.getApprovedAt() == null) {
-                    mr.setApprovedAt(now);
-                }
-                if ("paid".equals(to)) {
-                    mr.setPaidAt(now);
-                }
+                applyStatusAndTimestamps(mr::setStatus, mr::setUpdateTime, mr::setUpdateBy, mr::setCreateBy,
+                        mr::setRemark, mr::setVerifiedAt, mr::setApprovedAt, mr::setPaidAt,
+                        mr.getStatus(), to, mr.getRemark(), now);
                 boolean ok = materialReconciliationService.updateById(mr);
-                if (!ok) {
-                    throw new IllegalStateException("状态更新失败");
-                }
+                if (!ok) throw new IllegalStateException("状态更新失败");
 
-                if ("approved".equals(to) && billAggregationOrchestrator != null) {
-                    try {
-                        BillPushRequest pushReq = new BillPushRequest();
-                        pushReq.setBillType("PAYABLE");
-                        pushReq.setBillCategory("MATERIAL");
-                        pushReq.setSourceType("MATERIAL_RECONCILIATION");
-                        pushReq.setSourceId(rid);
-                        pushReq.setSourceNo(mr.getReconciliationNo());
-                        pushReq.setCounterpartyType("SUPPLIER");
-                        pushReq.setCounterpartyId(mr.getSupplierId());
-                        pushReq.setCounterpartyName(mr.getSupplierName());
-                        pushReq.setOrderId(mr.getOrderId());
-                        pushReq.setOrderNo(mr.getOrderNo());
-                        pushReq.setAmount(mr.getFinalAmount() != null ? mr.getFinalAmount() : mr.getTotalAmount());
-                        pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-                        billAggregationOrchestrator.pushBill(pushReq);
-                    } catch (Exception e) {
-                        throw new RuntimeException("物料对账推送账单汇总失败，审批未完成: " + e.getMessage(), e);
-                    }
-                }
-                if ("rejected".equals(to) && billAggregationOrchestrator != null) {
-                    try {
-                        billAggregationOrchestrator.cancelBySource("MATERIAL_RECONCILIATION", rid);
-                    } catch (Exception e) {
-                        log.warn("物料对账驳回联动取消账单失败（不影响主流程）: id={}", rid, e);
-                    }
-                }
-                if ("paid".equals(to)) {
-                    syncBillAsSettledBySource("MATERIAL_RECONCILIATION", rid,
-                            mr.getFinalAmount() != null ? mr.getFinalAmount() : mr.getTotalAmount());
-                }
+                pushBillOnApproved(to, "MATERIAL_RECONCILIATION", rid, mr.getReconciliationNo(),
+                        "PAYABLE", "MATERIAL", "SUPPLIER", mr.getSupplierId(), mr.getSupplierName(),
+                        mr.getOrderId(), mr.getOrderNo(), mr.getFinalAmount(), mr.getTotalAmount(), now);
+                cancelBillOnRejected(to, "MATERIAL_RECONCILIATION", rid, "物料对账");
+                syncBillOnPaid(to, "MATERIAL_RECONCILIATION", rid, mr.getFinalAmount(), mr.getTotalAmount());
                 return "状态更新成功";
             }
             if (scope == Scope.MATERIAL) {
@@ -222,97 +159,20 @@ public class ReconciliationStatusOrchestrator {
             if (sr != null) {
                 TenantAssert.assertBelongsToCurrentTenant(sr.getTenantId(), "成品对账单");
                 guardTransition(sr.getStatus(), to);
-                if ("rejected".equals(to) && !UserContext.isSupervisorOrAbove()) {
-                    throw new AccessDeniedException("仅主管级别及以上可执行驳回");
-                }
+                assertRejectPermission(to);
                 String from = sr.getStatus() == null ? "" : sr.getStatus().trim();
-                sr.setStatus(to);
-                sr.setUpdateTime(now);
-                String uid = null;
-                try {
-                    UserContext ctx = UserContext.get();
-                    uid = ctx == null ? null : ctx.getUserId();
-                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception e) {
-                    log.warn("ReconciliationStatusOrchestrator.updateStatus 获取用户ID异常(成品): {}", e.getMessage());
-                    uid = null;
-                }
-                if (uid != null) {
-                    sr.setUpdateBy(uid);
-                    if ((sr.getCreateBy() == null || sr.getCreateBy().trim().isEmpty())) {
-                        sr.setCreateBy(uid);
-                    }
-                }
-                if (!from.equals(to)) {
-                    sr.setRemark(appendAuditRemark(sr.getRemark(), "STATUS", from + " -> " + to));
-                }
-
-                if ("rejected".equals(from) && "pending".equals(to)) {
-                    sr.setVerifiedAt(null);
-                    sr.setApprovedAt(null);
-                    sr.setPaidAt(null);
-                }
-                if ("verified".equals(to) && sr.getVerifiedAt() == null) {
-                    sr.setVerifiedAt(now);
-                }
-                if ("approved".equals(to) && sr.getApprovedAt() == null) {
-                    sr.setApprovedAt(now);
-                }
-                if ("paid".equals(to)) {
-                    sr.setPaidAt(now);
-                }
+                applyStatusAndTimestamps(sr::setStatus, sr::setUpdateTime, sr::setUpdateBy, sr::setCreateBy,
+                        sr::setRemark, sr::setVerifiedAt, sr::setApprovedAt, sr::setPaidAt,
+                        sr.getStatus(), to, sr.getRemark(), now);
                 boolean ok = shipmentReconciliationService.updateById(sr);
-                if (!ok) {
-                    throw new IllegalStateException("状态更新失败");
-                }
+                if (!ok) throw new IllegalStateException("状态更新失败");
 
-                if ("approved".equals(to) && billAggregationOrchestrator != null) {
-                    try {
-                        BillPushRequest pushReq = new BillPushRequest();
-                        pushReq.setBillType("RECEIVABLE");
-                        pushReq.setBillCategory("PRODUCT");
-                        pushReq.setSourceType("SHIPMENT_RECONCILIATION");
-                        pushReq.setSourceId(rid);
-                        pushReq.setSourceNo(sr.getReconciliationNo());
-                        pushReq.setCounterpartyType("CUSTOMER");
-                        pushReq.setCounterpartyId(sr.getCustomerId());
-                        pushReq.setCounterpartyName(sr.getCustomerName());
-                        pushReq.setOrderId(sr.getOrderId());
-                        pushReq.setOrderNo(sr.getOrderNo());
-                        pushReq.setAmount(sr.getFinalAmount() != null ? sr.getFinalAmount() : sr.getTotalAmount());
-                        pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-                        billAggregationOrchestrator.pushBill(pushReq);
-                    } catch (Exception e) {
-                        throw new RuntimeException("成品对账推送账单汇总失败，审批未完成: " + e.getMessage(), e);
-                    }
-                }
-                if ("rejected".equals(to) && billAggregationOrchestrator != null) {
-                    try {
-                        billAggregationOrchestrator.cancelBySource("SHIPMENT_RECONCILIATION", rid);
-                    } catch (Exception e) {
-                        log.warn("成品对账驳回联动取消账单失败（不影响主流程）: id={}", rid, e);
-                    }
-                }
-                if ("paid".equals(to)) {
-                    syncBillAsSettledBySource("SHIPMENT_RECONCILIATION", rid,
-                            sr.getFinalAmount() != null ? sr.getFinalAmount() : sr.getTotalAmount());
-                }
-
-                if ("approved".equals(to)) {
-                    if (webhookPushService != null) {
-                        try {
-                            BigDecimal amount = sr.getFinalAmount() != null ? sr.getFinalAmount() : BigDecimal.ZERO;
-                            String orderNo = sr.getOrderNo() != null ? sr.getOrderNo() : "";
-                            webhookPushService.pushReconciliationCreated(
-                                orderNo, rid, amount,
-                                Map.of("status", "approved", "previousStatus", from)
-                            );
-                        } catch (Exception e) {
-                            log.warn("Webhook推送对账审批通过失败: reconciliationId={}", rid, e);
-                        }
-                    }
-                }
-
+                pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),
+                        "RECEIVABLE", "PRODUCT", "CUSTOMER", sr.getCustomerId(), sr.getCustomerName(),
+                        sr.getOrderId(), sr.getOrderNo(), sr.getFinalAmount(), sr.getTotalAmount(), now);
+                cancelBillOnRejected(to, "SHIPMENT_RECONCILIATION", rid, "成品对账");
+                syncBillOnPaid(to, "SHIPMENT_RECONCILIATION", rid, sr.getFinalAmount(), sr.getTotalAmount());
+                pushWebhookOnShipmentApproved(to, rid, sr, from);
                 return "状态更新成功";
             }
             if (scope == Scope.SHIPMENT) {
@@ -321,6 +181,111 @@ public class ReconciliationStatusOrchestrator {
         }
 
         throw new NoSuchElementException("对账单不存在");
+    }
+
+    private void assertRejectPermission(String to) {
+        if ("rejected".equals(to) && !UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("仅主管级别及以上可执行驳回");
+        }
+    }
+
+    private void applyStatusAndTimestamps(
+            java.util.function.Consumer<String> setStatus,
+            java.util.function.Consumer<LocalDateTime> setUpdateTime,
+            java.util.function.Consumer<String> setUpdateBy,
+            java.util.function.Consumer<String> setCreateBy,
+            java.util.function.Consumer<String> setRemark,
+            java.util.function.Consumer<LocalDateTime> setVerifiedAt,
+            java.util.function.Consumer<LocalDateTime> setApprovedAt,
+            java.util.function.Consumer<LocalDateTime> setPaidAt,
+            String currentStatus, String to, String currentRemark, LocalDateTime now) {
+
+        String from = currentStatus == null ? "" : currentStatus.trim();
+        setStatus.accept(to);
+        setUpdateTime.accept(now);
+
+        String uid = resolveCurrentUserId();
+        if (uid != null) {
+            setUpdateBy.accept(uid);
+        }
+        if (uid != null && (currentStatus == null || currentStatus.trim().isEmpty())) {
+            setCreateBy.accept(uid);
+        }
+        if (!from.equals(to)) {
+            setRemark.accept(appendAuditRemark(currentRemark, "STATUS", from + " -> " + to));
+        }
+
+        if ("rejected".equals(from) && "pending".equals(to)) {
+            setVerifiedAt.accept(null);
+            setApprovedAt.accept(null);
+            setPaidAt.accept(null);
+        }
+        if ("verified".equals(to)) setVerifiedAt.accept(now);
+        if ("approved".equals(to)) setApprovedAt.accept(now);
+        if ("paid".equals(to)) setPaidAt.accept(now);
+    }
+
+    private String resolveCurrentUserId() {
+        try {
+            UserContext ctx = UserContext.get();
+            String uid = ctx == null ? null : ctx.getUserId();
+            return (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        } catch (Exception e) {
+            log.warn("获取用户ID异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private void pushBillOnApproved(String to, String sourceType, String sourceId, String sourceNo,
+            String billType, String billCategory, String counterpartyType, String counterpartyId,
+            String counterpartyName, String orderId, String orderNo,
+            BigDecimal finalAmount, BigDecimal totalAmount, LocalDateTime now) {
+        if (!"approved".equals(to) || billAggregationOrchestrator == null) return;
+        try {
+            BillPushRequest pushReq = new BillPushRequest();
+            pushReq.setBillType(billType);
+            pushReq.setBillCategory(billCategory);
+            pushReq.setSourceType(sourceType);
+            pushReq.setSourceId(sourceId);
+            pushReq.setSourceNo(sourceNo);
+            pushReq.setCounterpartyType(counterpartyType);
+            pushReq.setCounterpartyId(counterpartyId);
+            pushReq.setCounterpartyName(counterpartyName);
+            pushReq.setOrderId(orderId);
+            pushReq.setOrderNo(orderNo);
+            pushReq.setAmount(finalAmount != null ? finalAmount : totalAmount);
+            pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            billAggregationOrchestrator.pushBill(pushReq);
+        } catch (Exception e) {
+            throw new RuntimeException(sourceType + "推送账单汇总失败，审批未完成: " + e.getMessage(), e);
+        }
+    }
+
+    private void cancelBillOnRejected(String to, String sourceType, String sourceId, String label) {
+        if (!"rejected".equals(to) || billAggregationOrchestrator == null) return;
+        try {
+            billAggregationOrchestrator.cancelBySource(sourceType, sourceId);
+        } catch (Exception e) {
+            log.warn("{}驳回联动取消账单失败（不影响主流程）: id={}", label, sourceId, e);
+        }
+    }
+
+    private void syncBillOnPaid(String to, String sourceType, String sourceId,
+            BigDecimal finalAmount, BigDecimal totalAmount) {
+        if (!"paid".equals(to)) return;
+        syncBillAsSettledBySource(sourceType, sourceId, finalAmount != null ? finalAmount : totalAmount);
+    }
+
+    private void pushWebhookOnShipmentApproved(String to, String rid, ShipmentReconciliation sr, String from) {
+        if (!"approved".equals(to) || webhookPushService == null) return;
+        try {
+            BigDecimal amount = sr.getFinalAmount() != null ? sr.getFinalAmount() : BigDecimal.ZERO;
+            String orderNo = sr.getOrderNo() != null ? sr.getOrderNo() : "";
+            webhookPushService.pushReconciliationCreated(
+                    orderNo, rid, amount, Map.of("status", "approved", "previousStatus", from));
+        } catch (Exception e) {
+            log.warn("Webhook推送对账审批通过失败: reconciliationId={}", rid, e);
+        }
     }
 
     private void syncBillAsSettledBySource(String sourceType, String sourceId, BigDecimal amount) {
@@ -376,141 +341,19 @@ public class ReconciliationStatusOrchestrator {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("仅主管级别及以上可执行退回");
         }
-
         String rid = id.trim();
-        LocalDateTime now = LocalDateTime.now();
 
         if (scope == Scope.MATERIAL || scope == Scope.AUTO) {
-            MaterialReconciliation mr = materialReconciliationService.getById(rid);
-            if (mr != null) {
-                TenantAssert.assertBelongsToCurrentTenant(mr.getTenantId(), "物料对账单");
-                String from = mr.getStatus();
-                String to = previousStatus(mr.getStatus());
-                if (to == null) {
-                    throw new IllegalStateException("当前状态不允许退回");
-                }
-                mr.setStatus(to);
-                mr.setUpdateTime(now);
-                mr.setRemark(appendAuditRemark(mr.getRemark(), "RETURN", reason));
-                String uid = null;
-                try {
-                    UserContext ctx = UserContext.get();
-                    uid = ctx == null ? null : ctx.getUserId();
-                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception e) {
-                    log.warn("ReconciliationStatusOrchestrator.returnToPrevious 获取用户ID异常(物料): {}", e.getMessage());
-                    uid = null;
-                }
-                if (uid != null) {
-                    mr.setUpdateBy(uid);
-                    if ((mr.getCreateBy() == null || mr.getCreateBy().trim().isEmpty())) {
-                        mr.setCreateBy(uid);
-                    }
-                }
-
-                if ("verified".equals(from)) {
-                    mr.setVerifiedAt(null);
-                } else if ("approved".equals(from)) {
-                    mr.setApprovedAt(null);
-                } else if ("paid".equals(from)) {
-                    mr.setPaidAt(null);
-                }
-
-                if ("paid".equals(from)) {
-                    mr.setReReviewAt(now);
-                    mr.setReReviewReason(reason);
-                }
-                // ⚠️ 用 LambdaUpdateWrapper 确保时间戳字段真正清空
-                LambdaUpdateWrapper<MaterialReconciliation> mrUw = new LambdaUpdateWrapper<>();
-                mrUw.eq(MaterialReconciliation::getId, mr.getId())
-                    .set(MaterialReconciliation::getStatus, mr.getStatus())
-                    .set(MaterialReconciliation::getUpdateTime, mr.getUpdateTime())
-                    .set(MaterialReconciliation::getRemark, mr.getRemark())
-                    .set(MaterialReconciliation::getUpdateBy, mr.getUpdateBy())
-                    .set(MaterialReconciliation::getCreateBy, mr.getCreateBy());
-                if ("verified".equals(from)) {
-                    mrUw.set(MaterialReconciliation::getVerifiedAt, null);
-                } else if ("approved".equals(from)) {
-                    mrUw.set(MaterialReconciliation::getApprovedAt, null);
-                } else if ("paid".equals(from)) {
-                    mrUw.set(MaterialReconciliation::getPaidAt, null)
-                        .set(MaterialReconciliation::getReReviewAt, now)
-                        .set(MaterialReconciliation::getReReviewReason, reason);
-                }
-                boolean ok = materialReconciliationService.update(mrUw);
-                if (!ok) {
-                    throw new IllegalStateException("退回失败");
-                }
-                return "退回成功";
-            }
+            String result = tryReturnMaterial(rid, reason);
+            if (result != null) return result;
             if (scope == Scope.MATERIAL) {
                 throw new NoSuchElementException("对账单不存在");
             }
         }
 
         if (scope == Scope.SHIPMENT || scope == Scope.AUTO) {
-            ShipmentReconciliation sr = shipmentReconciliationService.getById(rid);
-            if (sr != null) {
-                TenantAssert.assertBelongsToCurrentTenant(sr.getTenantId(), "成品对账单");
-                String from = sr.getStatus();
-                String to = previousStatus(sr.getStatus());
-                if (to == null) {
-                    throw new IllegalStateException("当前状态不允许退回");
-                }
-                sr.setStatus(to);
-                sr.setUpdateTime(now);
-                sr.setRemark(appendAuditRemark(sr.getRemark(), "RETURN", reason));
-                String uid = null;
-                try {
-                    UserContext ctx = UserContext.get();
-                    uid = ctx == null ? null : ctx.getUserId();
-                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception e) {
-                    log.warn("ReconciliationStatusOrchestrator.returnToPrevious 获取用户ID异常(成品): {}", e.getMessage());
-                    uid = null;
-                }
-                if (uid != null) {
-                    sr.setUpdateBy(uid);
-                    if ((sr.getCreateBy() == null || sr.getCreateBy().trim().isEmpty())) {
-                        sr.setCreateBy(uid);
-                    }
-                }
-
-                if ("verified".equals(from)) {
-                    sr.setVerifiedAt(null);
-                } else if ("approved".equals(from)) {
-                    sr.setApprovedAt(null);
-                } else if ("paid".equals(from)) {
-                    sr.setPaidAt(null);
-                }
-
-                if ("paid".equals(from)) {
-                    sr.setReReviewAt(now);
-                    sr.setReReviewReason(reason);
-                }
-                // ⚠️ 用 LambdaUpdateWrapper 确保时间戳字段真正清空
-                LambdaUpdateWrapper<ShipmentReconciliation> srUw = new LambdaUpdateWrapper<>();
-                srUw.eq(ShipmentReconciliation::getId, sr.getId())
-                    .set(ShipmentReconciliation::getStatus, sr.getStatus())
-                    .set(ShipmentReconciliation::getUpdateTime, sr.getUpdateTime())
-                    .set(ShipmentReconciliation::getRemark, sr.getRemark())
-                    .set(ShipmentReconciliation::getUpdateBy, sr.getUpdateBy())
-                    .set(ShipmentReconciliation::getCreateBy, sr.getCreateBy());
-                if ("verified".equals(from)) {
-                    srUw.set(ShipmentReconciliation::getVerifiedAt, null);
-                } else if ("approved".equals(from)) {
-                    srUw.set(ShipmentReconciliation::getApprovedAt, null);
-                } else if ("paid".equals(from)) {
-                    srUw.set(ShipmentReconciliation::getPaidAt, null)
-                        .set(ShipmentReconciliation::getReReviewAt, now)
-                        .set(ShipmentReconciliation::getReReviewReason, reason);
-                }
-                boolean ok = shipmentReconciliationService.update(srUw);
-                if (!ok) {
-                    throw new IllegalStateException("退回失败");
-                }
-                return "退回成功";
-            }
+            String result = tryReturnShipment(rid, reason);
+            if (result != null) return result;
             if (scope == Scope.SHIPMENT) {
                 throw new NoSuchElementException("对账单不存在");
             }
@@ -518,6 +361,120 @@ public class ReconciliationStatusOrchestrator {
 
         throw new NoSuchElementException("对账单不存在");
     }
+
+    private String tryReturnMaterial(String rid, String reason) {
+        MaterialReconciliation mr = materialReconciliationService.getById(rid);
+        if (mr == null) return null;
+        TenantAssert.assertBelongsToCurrentTenant(mr.getTenantId(), "物料对账单");
+        String from = mr.getStatus();
+        String to = previousStatus(mr.getStatus());
+        if (to == null) {
+            throw new IllegalStateException("当前状态不允许退回");
+        }
+        mr.setStatus(to);
+        mr.setUpdateTime(LocalDateTime.now());
+        mr.setRemark(appendAuditRemark(mr.getRemark(), "RETURN", reason));
+        String uid = resolveCurrentUserId("物料");
+        if (uid != null) {
+            mr.setUpdateBy(uid);
+            if (mr.getCreateBy() == null || mr.getCreateBy().trim().isEmpty()) {
+                mr.setCreateBy(uid);
+            }
+        }
+        applyReturnTimestampClear(mr, from, reason);
+        LambdaUpdateWrapper<MaterialReconciliation> uw = buildMaterialReturnUpdate(mr, from, reason);
+        boolean ok = materialReconciliationService.update(uw);
+        if (!ok) throw new IllegalStateException("退回失败");
+        return "退回成功";
+    }
+
+    private String tryReturnShipment(String rid, String reason) {
+        ShipmentReconciliation sr = shipmentReconciliationService.getById(rid);
+        if (sr == null) return null;
+        TenantAssert.assertBelongsToCurrentTenant(sr.getTenantId(), "成品对账单");
+        String from = sr.getStatus();
+        String to = previousStatus(sr.getStatus());
+        if (to == null) {
+            throw new IllegalStateException("当前状态不允许退回");
+        }
+        sr.setStatus(to);
+        sr.setUpdateTime(LocalDateTime.now());
+        sr.setRemark(appendAuditRemark(sr.getRemark(), "RETURN", reason));
+        String uid = resolveCurrentUserId("成品");
+        if (uid != null) {
+            sr.setUpdateBy(uid);
+            if (sr.getCreateBy() == null || sr.getCreateBy().trim().isEmpty()) {
+                sr.setCreateBy(uid);
+            }
+        }
+        applyReturnTimestampClear(sr, from, reason);
+        LambdaUpdateWrapper<ShipmentReconciliation> uw = buildShipmentReturnUpdate(sr, from, reason);
+        boolean ok = shipmentReconciliationService.update(uw);
+        if (!ok) throw new IllegalStateException("退回失败");
+        return "退回成功";
+    }
+
+    private String resolveCurrentUserId(String label) {
+        try {
+            UserContext ctx = UserContext.get();
+            String uid = ctx == null ? null : ctx.getUserId();
+            return (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        } catch (Exception e) {
+            log.warn("ReconciliationStatusOrchestrator.returnToPrevious 获取用户ID异常({}): {}", label, e.getMessage());
+            return null;
+        }
+    }
+
+    private void applyReturnTimestampClear(MaterialReconciliation mr, String from, String reason) {
+        LocalDateTime now = LocalDateTime.now();
+        if ("verified".equals(from)) mr.setVerifiedAt(null);
+        else if ("approved".equals(from)) mr.setApprovedAt(null);
+        else if ("paid".equals(from)) { mr.setPaidAt(null); mr.setReReviewAt(now); mr.setReReviewReason(reason); }
+    }
+
+    private void applyReturnTimestampClear(ShipmentReconciliation sr, String from, String reason) {
+        LocalDateTime now = LocalDateTime.now();
+        if ("verified".equals(from)) sr.setVerifiedAt(null);
+        else if ("approved".equals(from)) sr.setApprovedAt(null);
+        else if ("paid".equals(from)) { sr.setPaidAt(null); sr.setReReviewAt(now); sr.setReReviewReason(reason); }
+    }
+
+    private LambdaUpdateWrapper<MaterialReconciliation> buildMaterialReturnUpdate(MaterialReconciliation mr, String from, String reason) {
+        LambdaUpdateWrapper<MaterialReconciliation> uw = new LambdaUpdateWrapper<>();
+        uw.eq(MaterialReconciliation::getId, mr.getId())
+            .set(MaterialReconciliation::getStatus, mr.getStatus())
+            .set(MaterialReconciliation::getUpdateTime, mr.getUpdateTime())
+            .set(MaterialReconciliation::getRemark, mr.getRemark())
+            .set(MaterialReconciliation::getUpdateBy, mr.getUpdateBy())
+            .set(MaterialReconciliation::getCreateBy, mr.getCreateBy());
+        if ("verified".equals(from)) uw.set(MaterialReconciliation::getVerifiedAt, null);
+        else if ("approved".equals(from)) uw.set(MaterialReconciliation::getApprovedAt, null);
+        else if ("paid".equals(from)) {
+            uw.set(MaterialReconciliation::getPaidAt, null)
+              .set(MaterialReconciliation::getReReviewAt, LocalDateTime.now())
+              .set(MaterialReconciliation::getReReviewReason, reason);
+        }
+        return uw;
+    }
+
+    private LambdaUpdateWrapper<ShipmentReconciliation> buildShipmentReturnUpdate(ShipmentReconciliation sr, String from, String reason) {
+        LambdaUpdateWrapper<ShipmentReconciliation> uw = new LambdaUpdateWrapper<>();
+        uw.eq(ShipmentReconciliation::getId, sr.getId())
+            .set(ShipmentReconciliation::getStatus, sr.getStatus())
+            .set(ShipmentReconciliation::getUpdateTime, sr.getUpdateTime())
+            .set(ShipmentReconciliation::getRemark, sr.getRemark())
+            .set(ShipmentReconciliation::getUpdateBy, sr.getUpdateBy())
+            .set(ShipmentReconciliation::getCreateBy, sr.getCreateBy());
+        if ("verified".equals(from)) uw.set(ShipmentReconciliation::getVerifiedAt, null);
+        else if ("approved".equals(from)) uw.set(ShipmentReconciliation::getApprovedAt, null);
+        else if ("paid".equals(from)) {
+            uw.set(ShipmentReconciliation::getPaidAt, null)
+              .set(ShipmentReconciliation::getReReviewAt, LocalDateTime.now())
+              .set(ShipmentReconciliation::getReReviewReason, reason);
+        }
+        return uw;
+    }
+
 
     private void guardTransition(String from, String to) {
         if (!isAllowedStatusTransition(from, to)) {

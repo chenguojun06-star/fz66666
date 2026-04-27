@@ -172,6 +172,7 @@ public class ProductionOrderProgressOrchestrationService {
         if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
             throw new NoSuchElementException("生产订单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
 
         int r = scanRecordDomainService.clampPercent(rate == null ? 0 : rate);
         ProductionOrder patch = new ProductionOrder();

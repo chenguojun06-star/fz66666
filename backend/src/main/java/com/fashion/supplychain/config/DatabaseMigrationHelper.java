@@ -85,6 +85,7 @@ public class DatabaseMigrationHelper {
             jdbcTemplate.queryForObject("SELECT 1", Integer.class);
             return true;
         } catch (Exception e) {
+            log.debug("[DBMigration] pingDatabaseOnce失败: {}", e.getMessage());
             return false;
         }
     }
@@ -115,6 +116,7 @@ public class DatabaseMigrationHelper {
             }
             return Math.min(v, 120000L);
         } catch (Exception e) {
+            log.debug("[DBMigration] resolveInitializerWaitMs解析失败: raw={}", raw);
             return 30000L;
         }
     }
@@ -179,6 +181,7 @@ public class DatabaseMigrationHelper {
             }
             return content.substring(start, end + 1);
         } catch (Exception e) {
+            log.debug("[DBMigration] loadCreateTableStatementFromInitSql失败: table={}", tableName);
             return null;
         }
     }

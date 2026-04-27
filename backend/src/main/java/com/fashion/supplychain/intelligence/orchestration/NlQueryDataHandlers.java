@@ -151,6 +151,7 @@ public class NlQueryDataHandlers {
                         aqw.eq("tenant_id", tenantId)
                            .in("factory_id", factoryIds)
                            .eq("scan_result", "success")
+                           .ne("scan_type", "orchestration")
                            .ge("scan_time", now.minusDays(30))
                            .select("DISTINCT operator_id");
                         fActiveWorkers = scanRecordService.list(aqw).stream()
@@ -278,6 +279,7 @@ public class NlQueryDataHandlers {
             aqw.eq("tenant_id", tenantId)
                .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .eq("scan_result", "success")
+               .ne("scan_type", "orchestration")
                .ge("scan_time", thirtyMinAgo)
                .select("DISTINCT operator_id");
             activeWorkers = scanRecordService.list(aqw).stream()
@@ -446,6 +448,7 @@ public class NlQueryDataHandlers {
             aqw.eq("tenant_id", tenantId)
                .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .eq("scan_result", "success")
+               .ne("scan_type", "orchestration")
                .ge("scan_time", LocalDateTime.now().minusMinutes(60))
                .select("DISTINCT operator_id");
             long recentWorkers = scanRecordService.list(aqw).stream()

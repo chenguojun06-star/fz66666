@@ -70,7 +70,7 @@ public class MaterialShortageOrchestrator {
         Set<Long> styleIds = activeOrders.stream()
                 .map(ProductionOrder::getStyleId)
                 .filter(Objects::nonNull)
-                .map(s -> { try { return Long.parseLong(s); } catch (Exception e) { return null; } })
+                .map(s -> { try { return Long.parseLong(s); } catch (Exception e) { log.debug("[MaterialShortage] styleId解析失败: {}", s); return null; } })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 

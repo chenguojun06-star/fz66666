@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -70,6 +71,7 @@ public class CuttingTaskOrchestrator {
 
     private final ProductionOrderScanRecordDomainService scanRecordDomainService;
 
+    @Autowired
     private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
 
     private final TemplateLibraryService templateLibraryService;
@@ -254,38 +256,8 @@ public class CuttingTaskOrchestrator {
             throw new IllegalArgumentException("请至少填写一行颜色、尺码和数量");
         }
 
-        String resolvedFactoryType = StringUtils.hasText(factoryType) ? factoryType.trim().toUpperCase() : null;
-        if (!StringUtils.hasText(resolvedFactoryType)) {
-            resolvedFactoryType = StringUtils.hasText(orgUnitId) ? "INTERNAL" : "EXTERNAL";
-        }
-
-        Factory factory = null;
-        FactoryOrganizationSnapshot factorySnapshot = null;
-        OrganizationUnit internalUnit = null;
-        OrganizationUnit internalParentUnit = null;
-        if ("INTERNAL".equals(resolvedFactoryType)) {
-            if (!StringUtils.hasText(orgUnitId)) {
-                throw new IllegalArgumentException("请选择内部生产组/车间");
-            }
-            internalUnit = organizationUnitService.getById(orgUnitId.trim());
-            if (internalUnit == null
-                    || (internalUnit.getDeleteFlag() != null && internalUnit.getDeleteFlag() == 1)
-                    || !"DEPARTMENT".equalsIgnoreCase(internalUnit.getNodeType())) {
-                throw new IllegalArgumentException("所选生产组/车间不存在");
-            }
-            if (StringUtils.hasText(internalUnit.getParentId())) {
-                internalParentUnit = organizationUnitService.getById(internalUnit.getParentId());
-            }
-        } else {
-            if (!StringUtils.hasText(factoryId)) {
-                throw new IllegalArgumentException("请选择外发工厂");
-            }
-            factory = factoryService.getById(factoryId.trim());
-            if (factory == null || (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 1)) {
-                throw new IllegalArgumentException("所选工厂不存在");
-            }
-            factorySnapshot = organizationUnitBindingHelper.getFactorySnapshot(factory);
-        }
+        String resolvedFactoryType = resolveFactoryType(factoryType, orgUnitId);
+        FactoryContext factoryCtx = resolveFactoryContext(resolvedFactoryType, factoryId, orgUnitId);
 
         StyleInfo style = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStyleNo, styleNo)
@@ -303,21 +275,90 @@ public class CuttingTaskOrchestrator {
         String resolvedStyleName = style != null && StringUtils.hasText(style.getStyleName())
             ? style.getStyleName() : styleNo;
 
+        syncStyleCover(styleImageUrl, style);
+
+        String baseOrderNo = StringUtils.hasText(orderNo)
+                ? orderNo
+                : "CUT" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now());
+
+        String progressWorkflowJson = resolveProgressWorkflowJson(body, styleNo);
+
+        ProductionOrder order = buildProductionOrder(baseOrderNo, styleNo, resolvedStyleId, resolvedStyleName,
+                requestedOrderLines, totalOrderQuantity, requestedOrderDate, requestedDeliveryDate,
+                progressWorkflowJson, factoryCtx);
+
+        boolean orderOk = productionOrderService.save(order);
+        if (!orderOk) {
+            throw new IllegalStateException("创建生产订单失败");
+        }
+
+        initializePostCreateRecords(order);
+
+        CuttingTask firstTask = cuttingTaskService.createTaskIfAbsent(order);
+        if (firstTask == null) {
+            throw new IllegalStateException("创建裁剪任务失败");
+        }
+
+        log.info("已创建裁剪订单(含{}行颜色尺码): orderNo={}, totalQty={}, orderId={}",
+                requestedOrderLines.size(), baseOrderNo, totalOrderQuantity, order.getId());
+
+        return firstTask;
+    }
+
+    private String resolveFactoryType(String factoryType, String orgUnitId) {
+        if (StringUtils.hasText(factoryType)) {
+            return factoryType.trim().toUpperCase();
+        }
+        return StringUtils.hasText(orgUnitId) ? "INTERNAL" : "EXTERNAL";
+    }
+
+    private static class FactoryContext {
+        String factoryType;
+        Factory factory;
+        FactoryOrganizationSnapshot factorySnapshot;
+        OrganizationUnit internalUnit;
+        OrganizationUnit internalParentUnit;
+    }
+
+    private FactoryContext resolveFactoryContext(String resolvedFactoryType, String factoryId, String orgUnitId) {
+        FactoryContext ctx = new FactoryContext();
+        ctx.factoryType = resolvedFactoryType;
+        if ("INTERNAL".equals(resolvedFactoryType)) {
+            if (!StringUtils.hasText(orgUnitId)) {
+                throw new IllegalArgumentException("请选择内部生产组/车间");
+            }
+            ctx.internalUnit = organizationUnitService.getById(orgUnitId.trim());
+            if (ctx.internalUnit == null
+                    || (ctx.internalUnit.getDeleteFlag() != null && ctx.internalUnit.getDeleteFlag() == 1)
+                    || !"DEPARTMENT".equalsIgnoreCase(ctx.internalUnit.getNodeType())) {
+                throw new IllegalArgumentException("所选生产组/车间不存在");
+            }
+            if (StringUtils.hasText(ctx.internalUnit.getParentId())) {
+                ctx.internalParentUnit = organizationUnitService.getById(ctx.internalUnit.getParentId());
+            }
+        } else {
+            if (!StringUtils.hasText(factoryId)) {
+                throw new IllegalArgumentException("请选择外发工厂");
+            }
+            ctx.factory = factoryService.getById(factoryId.trim());
+            if (ctx.factory == null || (ctx.factory.getDeleteFlag() != null && ctx.factory.getDeleteFlag() == 1)) {
+                throw new IllegalArgumentException("所选工厂不存在");
+            }
+            ctx.factorySnapshot = organizationUnitBindingHelper.getFactorySnapshot(ctx.factory);
+        }
+        return ctx;
+    }
+
+    private void syncStyleCover(String styleImageUrl, StyleInfo style) {
         if (StringUtils.hasText(styleImageUrl) && style != null) {
             if (!StringUtils.hasText(style.getCover())) {
                 style.setCover(styleImageUrl);
                 styleInfoService.updateById(style);
             }
         }
+    }
 
-        // 生成 CUT 前缀订单号基础（若用户未提供）
-        String baseOrderNo = StringUtils.hasText(orderNo)
-                ? orderNo
-                : "CUT" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now());
-
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
-
+    private String resolveProgressWorkflowJson(Map<String, Object> body, String styleNo) {
         String progressWorkflowJson = getTrimmedText(body, "progressWorkflowJson");
         if (!StringUtils.hasText(progressWorkflowJson)) {
             progressWorkflowJson = buildProgressWorkflowJson(styleNo);
@@ -325,9 +366,17 @@ public class CuttingTaskOrchestrator {
         if (!StringUtils.hasText(progressWorkflowJson)) {
             progressWorkflowJson = buildCuttingDefaultWorkflowJson();
         }
+        return progressWorkflowJson;
+    }
+
+    private ProductionOrder buildProductionOrder(String baseOrderNo, String styleNo, String resolvedStyleId,
+            String resolvedStyleName, List<Map<String, Object>> requestedOrderLines, int totalOrderQuantity,
+            LocalDateTime requestedOrderDate, LocalDateTime requestedDeliveryDate,
+            String progressWorkflowJson, FactoryContext factoryCtx) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
 
-        // ── 创建单一 ProductionOrder，包含所有颜色/尺码 ────────────
         String primaryColor = resolvePrimaryValue(requestedOrderLines, "color", "多色");
         String primarySize = resolvePrimaryValue(requestedOrderLines, "size", "多码");
 
@@ -350,27 +399,9 @@ public class CuttingTaskOrchestrator {
         order.setProgressWorkflowJson(progressWorkflowJson);
         order.setCreateTime(orderCreateTime);
         order.setUpdateTime(now);
-        if ("INTERNAL".equals(resolvedFactoryType)) {
-            order.setFactoryId(null);
-            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : internalUnit.getNodeName());
-            order.setFactoryContactPerson(null);
-            order.setFactoryContactPhone(null);
-            order.setFactoryType("INTERNAL");
-            order.setOrgUnitId(internalUnit.getId());
-            order.setParentOrgUnitId(internalParentUnit != null ? internalParentUnit.getId() : internalUnit.getParentId());
-            order.setParentOrgUnitName(internalParentUnit != null ? internalParentUnit.getNodeName() : null);
-            order.setOrgPath(internalUnit.getPathNames());
-        } else {
-            order.setFactoryId(factory.getId());
-            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : factory.getFactoryName());
-            order.setFactoryContactPerson(factory.getContactPerson());
-            order.setFactoryContactPhone(factory.getContactPhone());
-            order.setFactoryType(factorySnapshot.getFactoryType());
-            order.setOrgUnitId(factorySnapshot.getOrgUnitId());
-            order.setParentOrgUnitId(factorySnapshot.getParentOrgUnitId());
-            order.setParentOrgUnitName(factorySnapshot.getParentOrgUnitName());
-            order.setOrgPath(factorySnapshot.getOrgPath());
-        }
+
+        applyFactoryFields(order, factoryCtx, now);
+
         if (ctx != null && ctx.getTenantId() != null) {
             order.setTenantId(ctx.getTenantId());
         }
@@ -378,28 +409,44 @@ public class CuttingTaskOrchestrator {
             order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
             order.setCreatedByName(ctx.getUsername());
         }
+        return order;
+    }
 
-        boolean orderOk = productionOrderService.save(order);
-        if (!orderOk) {
-            throw new IllegalStateException("创建生产订单失败");
+    private void applyFactoryFields(ProductionOrder order, FactoryContext factoryCtx, LocalDateTime now) {
+        if ("INTERNAL".equals(factoryCtx.factoryType)) {
+            OrganizationUnit unit = factoryCtx.internalUnit;
+            OrganizationUnit parent = factoryCtx.internalParentUnit;
+            order.setFactoryId(null);
+            order.setFactoryName(unit.getNodeName());
+            order.setFactoryContactPerson(null);
+            order.setFactoryContactPhone(null);
+            order.setFactoryType("INTERNAL");
+            order.setOrgUnitId(unit.getId());
+            order.setParentOrgUnitId(parent != null ? parent.getId() : unit.getParentId());
+            order.setParentOrgUnitName(parent != null ? parent.getNodeName() : null);
+            order.setOrgPath(unit.getPathNames());
+        } else {
+            Factory factory = factoryCtx.factory;
+            FactoryOrganizationSnapshot snapshot = factoryCtx.factorySnapshot;
+            order.setFactoryId(factory.getId());
+            order.setFactoryName(factory.getFactoryName());
+            order.setFactoryContactPerson(factory.getContactPerson());
+            order.setFactoryContactPhone(factory.getContactPhone());
+            order.setFactoryType(snapshot.getFactoryType());
+            order.setOrgUnitId(snapshot.getOrgUnitId());
+            order.setParentOrgUnitId(snapshot.getParentOrgUnitId());
+            order.setParentOrgUnitName(snapshot.getParentOrgUnitName());
+            order.setOrgPath(snapshot.getOrgPath());
         }
+    }
 
+    private void initializePostCreateRecords(ProductionOrder order) {
         try {
             scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(order);
             productionOrderService.recomputeProgressFromRecords(order.getId().trim());
         } catch (Exception e) {
             log.warn("裁剪任务创建后初始化基础记录失败: orderId={}", order.getId(), e);
         }
-
-        CuttingTask firstTask = cuttingTaskService.createTaskIfAbsent(order);
-        if (firstTask == null) {
-            throw new IllegalStateException("创建裁剪任务失败");
-        }
-
-        log.info("已创建裁剪订单(含{}行颜色尺码): orderNo={}, totalQty={}, orderId={}",
-                requestedOrderLines.size(), baseOrderNo, totalOrderQuantity, order.getId());
-
-        return firstTask;
     }
 
     private LocalDateTime parseDate(Map<String, Object> body, String key, boolean endOfDay) {
@@ -607,50 +654,12 @@ public class CuttingTaskOrchestrator {
         }
         TenantAssert.assertBelongsToCurrentTenant(task.getTenantId(), "裁剪任务");
 
-        String orderId = task.getProductionOrderId();
-        if (StringUtils.hasText(orderId)) {
-            ProductionOrder order = productionOrderService.getById(orderId.trim());
-            if (!hasCuttingMaterialReady(order, task)) {
-                throw new IllegalStateException("主面料尚未完成可裁确认，无法领取裁剪任务");
-            }
-        }
-
-        // 检查是否已被他人领取
-        String status = task.getStatus() == null ? "" : task.getStatus().trim();
-        String existingReceiverId = task.getReceiverId() == null ? null : task.getReceiverId().trim();
-        String existingReceiverName = task.getReceiverName() == null ? null : task.getReceiverName().trim();
-
-        if (!"pending".equals(status) && StringUtils.hasText(status)) {
-            // 已被领取，检查是否是同一个人
-            boolean isSame = false;
-            if (StringUtils.hasText(receiverId) && StringUtils.hasText(existingReceiverId)) {
-                isSame = receiverId.trim().equals(existingReceiverId);
-            } else if (StringUtils.hasText(receiverName) && StringUtils.hasText(existingReceiverName)) {
-                isSame = receiverName.trim().equals(existingReceiverName);
-            }
-            if (!isSame) {
-                String otherName = StringUtils.hasText(existingReceiverName) ? existingReceiverName : "他人";
-                throw new IllegalStateException("该任务已被「" + otherName + "」领取，无法重复领取");
-            }
-        }
+        assertMaterialReady(task);
+        assertNotReceivedByOther(task, receiverId, receiverName);
 
         boolean ok = cuttingTaskService.receiveTask(taskId, receiverId, receiverName);
         if (!ok) {
-            // 再次检查最新状态
-            CuttingTask latest = cuttingTaskService.getById(taskId);
-            if (latest != null) {
-                String latestReceiverName = latest.getReceiverName() == null ? null : latest.getReceiverName().trim();
-                String latestReceiverId = latest.getReceiverId() == null ? null : latest.getReceiverId().trim();
-                boolean isSameNow = false;
-                if (StringUtils.hasText(receiverId) && StringUtils.hasText(latestReceiverId)) {
-                    isSameNow = receiverId.trim().equals(latestReceiverId);
-                } else if (StringUtils.hasText(receiverName) && StringUtils.hasText(latestReceiverName)) {
-                    isSameNow = receiverName.trim().equals(latestReceiverName);
-                }
-                if (!isSameNow && StringUtils.hasText(latestReceiverName)) {
-                    throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
-                }
-            }
+            assertNotReceivedByOtherAfterFail(taskId, receiverId, receiverName);
             throw new IllegalStateException("领取失败");
         }
 
@@ -659,7 +668,62 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("领取失败");
         }
 
-        // 自动写入系统备注：裁剪任务领取节点
+        writeReceiveRemark(updated);
+        sendReceiveNotice(updated);
+
+        return updated;
+    }
+
+    private void assertMaterialReady(CuttingTask task) {
+        String orderId = task.getProductionOrderId();
+        if (StringUtils.hasText(orderId)) {
+            ProductionOrder order = productionOrderService.getById(orderId.trim());
+            if (order != null) {
+                TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+            }
+            if (!hasCuttingMaterialReady(order, task)) {
+                throw new IllegalStateException("主面料尚未完成可裁确认，无法领取裁剪任务");
+            }
+        }
+    }
+
+    private void assertNotReceivedByOther(CuttingTask task, String receiverId, String receiverName) {
+        String status = task.getStatus() == null ? "" : task.getStatus().trim();
+        if ("pending".equals(status) || !StringUtils.hasText(status)) {
+            return;
+        }
+        String existingReceiverId = task.getReceiverId() == null ? null : task.getReceiverId().trim();
+        String existingReceiverName = task.getReceiverName() == null ? null : task.getReceiverName().trim();
+        boolean isSame = isSameOperator(receiverId, receiverName, existingReceiverId, existingReceiverName);
+        if (!isSame) {
+            String otherName = StringUtils.hasText(existingReceiverName) ? existingReceiverName : "他人";
+            throw new IllegalStateException("该任务已被「" + otherName + "」领取，无法重复领取");
+        }
+    }
+
+    private void assertNotReceivedByOtherAfterFail(String taskId, String receiverId, String receiverName) {
+        CuttingTask latest = cuttingTaskService.getById(taskId);
+        if (latest != null) {
+            String latestReceiverId = latest.getReceiverId() == null ? null : latest.getReceiverId().trim();
+            String latestReceiverName = latest.getReceiverName() == null ? null : latest.getReceiverName().trim();
+            boolean isSameNow = isSameOperator(receiverId, receiverName, latestReceiverId, latestReceiverName);
+            if (!isSameNow && StringUtils.hasText(latestReceiverName)) {
+                throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
+            }
+        }
+    }
+
+    private boolean isSameOperator(String id1, String name1, String id2, String name2) {
+        if (StringUtils.hasText(id1) && StringUtils.hasText(id2)) {
+            return id1.trim().equals(id2);
+        }
+        if (StringUtils.hasText(name1) && StringUtils.hasText(name2)) {
+            return name1.trim().equals(name2);
+        }
+        return false;
+    }
+
+    private void writeReceiveRemark(CuttingTask updated) {
         try {
             if (updated != null && StringUtils.hasText(updated.getProductionOrderNo())) {
                 String updatedReceiverName = updated.getReceiverName();
@@ -679,7 +743,9 @@ public class CuttingTaskOrchestrator {
         } catch (Exception e) {
             log.warn("自动写入裁剪领取备注失败，不影响主流程", e);
         }
+    }
 
+    private void sendReceiveNotice(CuttingTask updated) {
         try {
             Long tenantId = updated.getTenantId();
             String orderNo = updated.getProductionOrderNo() != null ? updated.getProductionOrderNo() : "";
@@ -698,8 +764,6 @@ public class CuttingTaskOrchestrator {
         } catch (Exception e) {
             log.warn("[裁剪领取] 发送通知失败: {}", e.getMessage());
         }
-
-        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -748,6 +812,7 @@ public class CuttingTaskOrchestrator {
         if (updated == null) {
             throw new IllegalStateException("退回失败");
         }
+        TenantAssert.assertBelongsToCurrentTenant(updated.getTenantId(), "裁剪任务");
         return updated;
     }
 

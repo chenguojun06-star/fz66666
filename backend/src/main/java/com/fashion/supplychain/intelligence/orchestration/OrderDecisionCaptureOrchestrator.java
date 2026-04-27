@@ -100,6 +100,7 @@ public class OrderDecisionCaptureOrchestrator {
             JsonNode pricing = root.path("pricing");
             return pricing.isMissingNode() ? null : pricing;
         } catch (Exception ex) {
+            log.debug("[OrderDecision] readPricingNode失败", ex);
             return null;
         }
     }
@@ -137,6 +138,7 @@ public class OrderDecisionCaptureOrchestrator {
         try {
             return new BigDecimal(target.asText("0"));
         } catch (Exception ex) {
+            log.debug("[OrderDecision] decimalValue解析失败: field={}", field);
             return null;
         }
     }

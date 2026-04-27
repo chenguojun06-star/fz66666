@@ -206,11 +206,11 @@ public class PayrollAnomalyDetectorTool implements AgentTool {
     private long toLong(Object o) {
         if (o == null) return 0;
         if (o instanceof Number) return ((Number) o).longValue();
-        try { return Long.parseLong(o.toString()); } catch (Exception e) { return 0; }
+        try { return Long.parseLong(o.toString()); } catch (Exception e) { log.debug("[PayrollAnomaly] toLong解析失败: {}", o); return 0; }
     }
     private double toDouble(Object o) {
         if (o == null) return 0;
         if (o instanceof Number) return ((Number) o).doubleValue();
-        try { return Double.parseDouble(o.toString()); } catch (Exception e) { return 0; }
+        try { return Double.parseDouble(o.toString()); } catch (Exception e) { log.debug("[PayrollAnomaly] toDouble解析失败: {}", o); return 0; }
     }
 }

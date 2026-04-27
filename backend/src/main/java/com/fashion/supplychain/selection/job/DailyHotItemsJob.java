@@ -43,7 +43,7 @@ public class DailyHotItemsJob {
     @Value("${selection.daily-hot.cron-enabled:false}")
     private boolean cronEnabled;
 
-    @Scheduled(cron = "0 0 2 * * ?")
+    @Scheduled(cron = "0 20 2 * * ?")
     public void scheduled() {
         if (!cronEnabled) {
             log.debug("[DailyHotJob] 定时任务未启用，跳过（selection.daily-hot.cron-enabled=false）");

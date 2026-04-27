@@ -108,13 +108,13 @@ public class ProductionOrderScanRecordDomainService {
         }
         try {
             if (StringUtils.hasText(orderId)) {
-                ProductionOrder order = productionOrderService.getById(orderId.trim());
+                ProductionOrder order = productionOrderService.lambdaQuery().eq(ProductionOrder::getId, orderId.trim()).eq(ProductionOrder::getTenantId, UserContext.tenantId()).one();
                 if (order != null && order.getTenantId() != null) {
                     return order.getTenantId();
                 }
             }
             if (StringUtils.hasText(orderNo)) {
-                ProductionOrder order = productionOrderService.getByOrderNo(orderNo.trim());
+                ProductionOrder order = productionOrderService.lambdaQuery().eq(ProductionOrder::getOrderNo, orderNo.trim()).eq(ProductionOrder::getTenantId, UserContext.tenantId()).one();
                 if (order != null && order.getTenantId() != null) {
                     return order.getTenantId();
                 }

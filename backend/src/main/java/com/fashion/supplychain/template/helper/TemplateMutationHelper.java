@@ -58,6 +58,19 @@ public class TemplateMutationHelper {
             throw new IllegalArgumentException("请至少配置一条工序单价");
         }
 
+        List<Map<String, Object>> normalizedSteps = normalizeTemplateSteps(rawSteps);
+        if (normalizedSteps.isEmpty()) {
+            throw new IllegalArgumentException("请至少填写一条有效工序");
+        }
+
+        Map<String, Object> normalizedContent = buildNormalizedContent(content, normalizedSteps);
+        persistProcessPriceTemplate(styleNo, payload, normalizedContent);
+        publishPriceChangedEvent(styleNo);
+
+        return templateQueryHelper.getProcessPriceTemplate(styleNo);
+    }
+
+    private List<Map<String, Object>> normalizeTemplateSteps(List<Map<String, Object>> rawSteps) {
         List<Map<String, Object>> normalizedSteps = new ArrayList<>();
         int index = 1;
         for (Map<String, Object> rawStep : rawSteps) {
@@ -75,17 +88,14 @@ public class TemplateMutationHelper {
             if (StringUtils.hasText(progressStage)) {
                 step.put("progressStage", progressStage);
             }
-
             String machineType = String.valueOf(rawStep.getOrDefault("machineType", "")).trim();
             if (StringUtils.hasText(machineType)) {
                 step.put("machineType", machineType);
             }
-
             String description = String.valueOf(rawStep.getOrDefault("description", rawStep.getOrDefault("remark", ""))).trim();
             if (StringUtils.hasText(description)) {
                 step.put("description", description);
             }
-
             String difficulty = String.valueOf(rawStep.getOrDefault("difficulty", "")).trim();
             if (StringUtils.hasText(difficulty)) {
                 step.put("difficulty", difficulty);
@@ -128,11 +138,10 @@ public class TemplateMutationHelper {
             normalizedSteps.add(step);
             index++;
         }
+        return normalizedSteps;
+    }
 
-        if (normalizedSteps.isEmpty()) {
-            throw new IllegalArgumentException("请至少填写一条有效工序");
-        }
-
+    private Map<String, Object> buildNormalizedContent(Map<String, Object> content, List<Map<String, Object>> normalizedSteps) {
         List<String> sizes = TemplateParseUtils.coerceListOfString(content.get("sizes"));
         List<String> images = TemplateParseUtils.coerceListOfString(content.get("images"));
         Map<String, Object> normalizedContent = new LinkedHashMap<>();
@@ -143,18 +152,20 @@ public class TemplateMutationHelper {
         if (!images.isEmpty()) {
             normalizedContent.put("images", images);
         }
+        return normalizedContent;
+    }
 
-        String normalizedStyleNo = styleNo;
+    private void persistProcessPriceTemplate(String styleNo, Map<String, Object> payload, Map<String, Object> normalizedContent) {
         String templateName = String.valueOf(payload.getOrDefault("templateName", "")).trim();
         if (!StringUtils.hasText(templateName)) {
-            templateName = normalizedStyleNo + "-工序单价模板";
+            templateName = styleNo + "-工序单价模板";
         }
 
         TemplateLibrary template = new TemplateLibrary();
         template.setTemplateType("process_price");
-        template.setTemplateKey("style_" + normalizedStyleNo);
+        template.setTemplateKey("style_" + styleNo);
         template.setTemplateName(templateName);
-        template.setSourceStyleNo(normalizedStyleNo);
+        template.setSourceStyleNo(styleNo);
         try {
             template.setTemplateContent(objectMapper.writeValueAsString(normalizedContent));
         } catch (Exception e) {
@@ -167,20 +178,20 @@ public class TemplateMutationHelper {
         if (!ok) {
             throw new IllegalStateException("保存工序单价模板失败");
         }
+    }
 
+    private void publishPriceChangedEvent(String styleNo) {
         try {
             eventPublisher.publishEvent(new TemplatePriceChangedEvent(
                 this,
-                normalizedStyleNo,
+                styleNo,
                 "process",
                 UserContext.username()
             ));
-            log.info("[价格变更事件] 已发布工序单价模板更新事件 - styleNo: {}", normalizedStyleNo);
+            log.info("[价格变更事件] 已发布工序单价模板更新事件 - styleNo: {}", styleNo);
         } catch (Exception e) {
-            log.warn("[价格变更事件] 发布失败 - styleNo: {}", normalizedStyleNo, e);
+            log.warn("[价格变更事件] 发布失败 - styleNo: {}", styleNo, e);
         }
-
-        return templateQueryHelper.getProcessPriceTemplate(normalizedStyleNo);
     }
 
     public TemplateLibrary create(TemplateLibrary tpl) {

@@ -81,105 +81,100 @@ public class ProductionOrderQueryService {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
         int page = ParamUtils.getPage(safeParams);
         int pageSize = ParamUtils.getPageSizeClamped(safeParams, 10, 1, 200);
-
         Page<ProductionOrder> pageInfo = new Page<>(page, pageSize);
 
-        String orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orderNo"));
-        String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
-        String factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
-        String keyword = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "keyword"));
-        String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
-        String currentProcessName = ParamUtils
-                .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
-        String delayedOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "delayedOnly"));
-        String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
-        String urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
-        String plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
-        String merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
-        String includeScrapped = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeScrapped"));
-        String excludeTerminal = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "excludeTerminal"));
-        String orgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orgUnitId"));
-        String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
-        String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
-        String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
-        String customerId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerId"));
-        String customerName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerName"));
+        QueryParams qp = extractQueryParams(safeParams);
+        QueryWrapper<ProductionOrder> wrapper = buildQueryWrapper(qp);
+        wrapper.orderByDesc("create_time");
 
+        IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo, wrapper);
+        enrichOrderList(resultPage);
+        applyCurrentProcessNameFilter(resultPage, qp.currentProcessName);
+        return resultPage;
+    }
+
+    private static class QueryParams {
+        String orderNo, styleNo, factoryName, keyword, status, currentProcessName;
+        String delayedOnly, todayOnly, urgencyLevel, plateType, merchandiser;
+        String includeScrapped, excludeTerminal, orgUnitId, parentOrgUnitId;
+        String factoryType, factoryId, customerId, customerName;
+    }
+
+    private QueryParams extractQueryParams(Map<String, Object> safeParams) {
+        QueryParams qp = new QueryParams();
+        qp.orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orderNo"));
+        qp.styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
+        qp.factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
+        qp.keyword = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "keyword"));
+        qp.status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
+        qp.currentProcessName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
+        qp.delayedOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "delayedOnly"));
+        qp.todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
+        qp.urgencyLevel = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "urgencyLevel"));
+        qp.plateType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "plateType"));
+        qp.merchandiser = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "merchandiser"));
+        qp.includeScrapped = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeScrapped"));
+        qp.excludeTerminal = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "excludeTerminal"));
+        qp.orgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orgUnitId"));
+        qp.parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
+        qp.factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
+        qp.factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
+        qp.customerId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerId"));
+        qp.customerName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerName"));
+        return qp;
+    }
+
+    private QueryWrapper<ProductionOrder> buildQueryWrapper(QueryParams qp) {
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
-        wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
-                .like(StringUtils.hasText(styleNo), "style_no", styleNo)
-                .like(StringUtils.hasText(factoryName), "factory_name", factoryName)
-            .and(StringUtils.hasText(keyword), w -> w
-                .like("order_no", keyword)
+        wrapper.eq(StringUtils.hasText(qp.orderNo), "order_no", qp.orderNo)
+                .like(StringUtils.hasText(qp.styleNo), "style_no", qp.styleNo)
+                .like(StringUtils.hasText(qp.factoryName), "factory_name", qp.factoryName)
+            .and(StringUtils.hasText(qp.keyword), w -> w
+                .like("order_no", qp.keyword)
                 .or()
-                .like("style_no", keyword)
+                .like("style_no", qp.keyword)
                 .or()
-                .like("factory_name", keyword))
-                .eq(StringUtils.hasText(status), "status", status)
-                .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
-                .eq(StringUtils.hasText(plateType), "plate_type", plateType)
-                .eq(StringUtils.hasText(orgUnitId), "org_unit_id", orgUnitId)
-                .eq(StringUtils.hasText(parentOrgUnitId), "parent_org_unit_id", parentOrgUnitId)
-                .eq(StringUtils.hasText(factoryType), "factory_type", factoryType)
-                .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
-                .eq(StringUtils.hasText(customerId), "customer_id", customerId)
-                .like(StringUtils.hasText(customerName), "customer_name", customerName)
+                .like("factory_name", qp.keyword))
+                .eq(StringUtils.hasText(qp.status), "status", qp.status)
+                .eq(StringUtils.hasText(qp.urgencyLevel), "urgency_level", qp.urgencyLevel)
+                .eq(StringUtils.hasText(qp.plateType), "plate_type", qp.plateType)
+                .eq(StringUtils.hasText(qp.orgUnitId), "org_unit_id", qp.orgUnitId)
+                .eq(StringUtils.hasText(qp.parentOrgUnitId), "parent_org_unit_id", qp.parentOrgUnitId)
+                .eq(StringUtils.hasText(qp.factoryType), "factory_type", qp.factoryType)
+                .like(StringUtils.hasText(qp.merchandiser), "merchandiser", qp.merchandiser)
+                .eq(StringUtils.hasText(qp.customerId), "customer_id", qp.customerId)
+                .like(StringUtils.hasText(qp.customerName), "customer_name", qp.customerName)
                 .eq("delete_flag", 0)
-                // 我的订单页传 includeScrapped=true 时显示报废订单，其他页面默认过滤
-                .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
+                .ne(!"true".equalsIgnoreCase(qp.includeScrapped), "status", "scrapped");
 
-        // 统一终态过滤：默认生产页只看在制单，不混入已完成/已取消/已报废/已归档/已关单
-        if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
+        if ("true".equalsIgnoreCase(qp.excludeTerminal) && !StringUtils.hasText(qp.status)) {
             wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
-
-        // 延期订单筛选：plannedEndDate < 当前时间，且排除终态订单
-        if ("true".equalsIgnoreCase(delayedOnly)) {
+        if ("true".equalsIgnoreCase(qp.delayedOnly)) {
             wrapper.isNotNull("planned_end_date")
                    .lt("planned_end_date", java.time.LocalDateTime.now())
                    .notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
-
-        // 当天下单筛选：createTime 在今天 00:00:00 ~ 23:59:59
-        if ("true".equalsIgnoreCase(todayOnly)) {
+        if ("true".equalsIgnoreCase(qp.todayOnly)) {
             java.time.LocalDate today = java.time.LocalDate.now();
             wrapper.ge("create_time", today.atStartOfDay())
                    .le("create_time", today.atTime(23, 59, 59));
         }
-
-        // 数据隔离策略：
-        // 1. 外发工厂账号：按 factory_id 隔离（只看本工厂订单），优先级最高
-        // 2. 管理员/跟单员通过请求参数 factoryId 按工厂筛选（如外发工厂侧边栏选择特定工厂）
-        // 3. 其他账号（租户主）：依赖 TenantInterceptor 租户级隔离，显示全部订单
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
-            // 工厂账号：只能看自己工厂的订单（登录上下文隔离，不可绕过）
             wrapper.eq("factory_id", ctxFactoryId);
-        } else if (org.springframework.util.StringUtils.hasText(factoryId)) {
-            // 管理员通过前端参数筛选特定工厂（如外发工厂页面侧边栏选择工厂）
-            wrapper.eq("factory_id", factoryId);
+        } else if (org.springframework.util.StringUtils.hasText(qp.factoryId)) {
+            wrapper.eq("factory_id", qp.factoryId);
         }
-        if (log.isDebugEnabled()) {
-            log.debug("[queryPage] userId={}, tenantOwner={}, permRange={}, factoryId={}, dataScope={}",
-                    com.fashion.supplychain.common.UserContext.userId(),
-                    com.fashion.supplychain.common.UserContext.isTenantOwner(),
-                    com.fashion.supplychain.common.UserContext.get() != null ? com.fashion.supplychain.common.UserContext.get().getPermissionRange() : "N/A",
-                    ctxFactoryId,
-                    com.fashion.supplychain.common.UserContext.getDataScope());
-        }
+        return wrapper;
+    }
 
-        wrapper.orderByDesc("create_time");
-
-        IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo, wrapper);
-
+    private void enrichOrderList(IPage<ProductionOrder> resultPage) {
         fillStyleCover(resultPage.getRecords());
         orderCuttingFillService.fillCuttingSummary(resultPage.getRecords());
         progressFillHelper.fillCurrentProcessName(resultPage.getRecords());
         orderStockFillService.fillStockSummary(resultPage.getRecords());
-        // 恢复完整的流程阶段数据填充：从 v_production_order_flow_stage_snapshot 视图读取实际扫码数量
-        // 确保列表页进度条（车缝/二次工艺/质检等）显示真实值，而非以入库量近似代替
         flowStageFillHelper.fillFlowStageFields(resultPage.getRecords());
-        // 兜底：若 fillFlowStageFields 未能填充下单人，则从 createdByName 复用
         resultPage.getRecords().forEach(o -> {
             if (o != null && (!org.springframework.util.StringUtils.hasText(o.getOrderOperatorName()))
                     && org.springframework.util.StringUtils.hasText(o.getCreatedByName())) {
@@ -192,8 +187,9 @@ public class ProductionOrderQueryService {
         priceFillHelper.fillQuotationUnitPrice(resultPage.getRecords());
         priceFillHelper.fillProgressNodeUnitPrices(resultPage.getRecords());
         fillHasSecondaryProcess(resultPage.getRecords());
+    }
 
-        // 在应用层过滤 currentProcessName（因为它是计算字段，不在数据库表中）
+    private void applyCurrentProcessNameFilter(IPage<ProductionOrder> resultPage, String currentProcessName) {
         if (StringUtils.hasText(currentProcessName)) {
             List<ProductionOrder> filtered = resultPage.getRecords().stream()
                     .filter(order -> {
@@ -204,9 +200,8 @@ public class ProductionOrderQueryService {
             resultPage.setRecords(filtered);
             resultPage.setTotal(filtered.size());
         }
-
-        return resultPage;
     }
+
 
     public ProductionOrder getDetailById(String id) {
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
@@ -276,13 +271,10 @@ public class ProductionOrderQueryService {
             return;
         }
 
-        // ── 第一级：t_style_info.cover（去掉 ENABLED 过滤，所有状态的款式都取） ──
         List<StyleInfo> styles = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
                 .in(StyleInfo::getStyleNo, styleNos));
 
-        // styleNo → cover URL
         Map<String, String> coverByStyleNo = new HashMap<>();
-        // styleNo → styleId（Long），用于第二级查附件
         Map<String, Long> styleIdByStyleNo = new HashMap<>();
         if (styles != null) {
             for (StyleInfo s : styles) {
@@ -294,7 +286,6 @@ public class ProductionOrderQueryService {
             }
         }
 
-        // 第一次赋值
         for (ProductionOrder order : records) {
             if (order == null || !StringUtils.hasText(order.getStyleNo())) continue;
             String cover = coverByStyleNo.get(order.getStyleNo());
@@ -303,7 +294,11 @@ public class ProductionOrderQueryService {
             }
         }
 
-        // ── 第二级：对仍无封面的订单，从 t_style_attachment 取第一张图片（PC 端同款逻辑） ──
+        fillCoverFromAttachments(records, styleIdByStyleNo);
+        fillCoverFromTemplates(records);
+    }
+
+    private void fillCoverFromAttachments(List<ProductionOrder> records, Map<String, Long> styleIdByStyleNo) {
         List<Long> missingStyleIds = records.stream()
                 .filter(o -> o != null && !StringUtils.hasText(o.getStyleCover())
                         && StringUtils.hasText(o.getStyleNo())
@@ -312,69 +307,73 @@ public class ProductionOrderQueryService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        if (!missingStyleIds.isEmpty()) {
-            List<StyleAttachment> attachments = styleAttachmentService.list(
-                    new LambdaQueryWrapper<StyleAttachment>()
-                            .in(StyleAttachment::getStyleId, missingStyleIds.stream()
-                                    .map(String::valueOf).collect(Collectors.toList()))
-                            .like(StyleAttachment::getFileType, "image")
-                            .eq(StyleAttachment::getStatus, "active")
-                            .orderByAsc(StyleAttachment::getCreateTime));
+        if (missingStyleIds.isEmpty()) {
+            return;
+        }
 
-            // styleId → 第一张图片 URL
-            Map<Long, String> attachCoverByStyleId = new HashMap<>();
-            if (attachments != null) {
-                for (StyleAttachment a : attachments) {
-                    if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
-                    try {
-                        Long sid = Long.valueOf(a.getStyleId());
-                        attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
-                    } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
-                }
-            }
+        List<StyleAttachment> attachments = styleAttachmentService.list(
+                new LambdaQueryWrapper<StyleAttachment>()
+                        .in(StyleAttachment::getStyleId, missingStyleIds.stream()
+                                .map(String::valueOf).collect(Collectors.toList()))
+                        .like(StyleAttachment::getFileType, "image")
+                        .eq(StyleAttachment::getStatus, "active")
+                        .orderByAsc(StyleAttachment::getCreateTime));
 
-            // 最终回写
-            for (ProductionOrder order : records) {
-                if (order == null || StringUtils.hasText(order.getStyleCover())) continue;
-                String styleNo = order.getStyleNo();
-                if (!StringUtils.hasText(styleNo)) continue;
-                Long sid = styleIdByStyleNo.get(styleNo);
-                if (sid == null) continue;
-                String attachCover = attachCoverByStyleId.get(sid);
-                if (StringUtils.hasText(attachCover)) {
-                    order.setStyleCover(attachCover);
-                }
+        Map<Long, String> attachCoverByStyleId = new HashMap<>();
+        if (attachments != null) {
+            for (StyleAttachment a : attachments) {
+                if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
+                try {
+                    Long sid = Long.valueOf(a.getStyleId());
+                    attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
+                } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
             }
         }
 
+        for (ProductionOrder order : records) {
+            if (order == null || StringUtils.hasText(order.getStyleCover())) continue;
+            String styleNo = order.getStyleNo();
+            if (!StringUtils.hasText(styleNo)) continue;
+            Long sid = styleIdByStyleNo.get(styleNo);
+            if (sid == null) continue;
+            String attachCover = attachCoverByStyleId.get(sid);
+            if (StringUtils.hasText(attachCover)) {
+                order.setStyleCover(attachCover);
+            }
+        }
+    }
+
+    private void fillCoverFromTemplates(List<ProductionOrder> records) {
         List<String> missingTemplateStyleNos = records.stream()
                 .filter(o -> o != null && !StringUtils.hasText(o.getStyleCover()) && StringUtils.hasText(o.getStyleNo()))
                 .map(ProductionOrder::getStyleNo)
                 .distinct()
                 .collect(Collectors.toList());
-        if (!missingTemplateStyleNos.isEmpty()) {
-            List<TemplateLibrary> templates = templateLibraryService.list(new LambdaQueryWrapper<TemplateLibrary>()
-                    .eq(TemplateLibrary::getTemplateType, "process_price")
-                    .in(TemplateLibrary::getSourceStyleNo, missingTemplateStyleNos)
-                    .orderByDesc(TemplateLibrary::getUpdateTime)
-                    .orderByDesc(TemplateLibrary::getCreateTime));
+        if (missingTemplateStyleNos.isEmpty()) {
+            return;
+        }
 
-            Map<String, String> coverByTemplateStyleNo = new HashMap<>();
-            for (TemplateLibrary template : templates) {
-                if (template == null || !StringUtils.hasText(template.getSourceStyleNo()) || !StringUtils.hasText(template.getTemplateContent())) {
-                    continue;
-                }
-                coverByTemplateStyleNo.putIfAbsent(template.getSourceStyleNo(), extractFirstTemplateImage(template.getTemplateContent()));
+        List<TemplateLibrary> templates = templateLibraryService.list(new LambdaQueryWrapper<TemplateLibrary>()
+                .eq(TemplateLibrary::getTemplateType, "process_price")
+                .in(TemplateLibrary::getSourceStyleNo, missingTemplateStyleNos)
+                .orderByDesc(TemplateLibrary::getUpdateTime)
+                .orderByDesc(TemplateLibrary::getCreateTime));
+
+        Map<String, String> coverByTemplateStyleNo = new HashMap<>();
+        for (TemplateLibrary template : templates) {
+            if (template == null || !StringUtils.hasText(template.getSourceStyleNo()) || !StringUtils.hasText(template.getTemplateContent())) {
+                continue;
             }
+            coverByTemplateStyleNo.putIfAbsent(template.getSourceStyleNo(), extractFirstTemplateImage(template.getTemplateContent()));
+        }
 
-            for (ProductionOrder order : records) {
-                if (order == null || StringUtils.hasText(order.getStyleCover()) || !StringUtils.hasText(order.getStyleNo())) {
-                    continue;
-                }
-                String templateCover = coverByTemplateStyleNo.get(order.getStyleNo());
-                if (StringUtils.hasText(templateCover)) {
-                    order.setStyleCover(templateCover);
-                }
+        for (ProductionOrder order : records) {
+            if (order == null || StringUtils.hasText(order.getStyleCover()) || !StringUtils.hasText(order.getStyleNo())) {
+                continue;
+            }
+            String templateCover = coverByTemplateStyleNo.get(order.getStyleNo());
+            if (StringUtils.hasText(templateCover)) {
+                order.setStyleCover(templateCover);
             }
         }
     }
@@ -397,6 +396,7 @@ public class ProductionOrderQueryService {
             }
             return null;
         } catch (Exception e) {
+            log.debug("[OrderQuery] 提取图片URL失败", e);
             return null;
         }
     }
@@ -412,10 +412,22 @@ public class ProductionOrderQueryService {
         com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats =
             new com.fashion.supplychain.production.dto.ProductionOrderStatsDTO();
 
-        // 安全处理空参数
         java.util.Map<String, Object> safeParams = params == null ? new java.util.HashMap<>() : params;
+        QueryWrapper<ProductionOrder> wrapper = buildStatsQueryWrapper(safeParams);
+        wrapper.select("id", "order_no", "order_quantity", "planned_end_date", "create_time", "status");
+        List<ProductionOrder> allOrders = productionOrderMapper.selectList(wrapper);
 
-        // 提取筛选参数（与queryPage保持一致）
+        if (allOrders == null || allOrders.isEmpty()) {
+            resetStatsToZero(stats);
+            return stats;
+        }
+
+        fillStatusStats(stats, allOrders);
+        fillDelayedAndTodayStats(stats, allOrders);
+        return stats;
+    }
+
+    private QueryWrapper<ProductionOrder> buildStatsQueryWrapper(java.util.Map<String, Object> safeParams) {
         String keyword = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "keyword"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
         String factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
@@ -429,11 +441,8 @@ public class ProductionOrderQueryService {
         String delayedOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "delayedOnly"));
         String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
 
-        // 构建基础查询条件
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
         wrapper.eq("delete_flag", 0);
-
-        // 应用筛选条件（与queryPage保持一致）
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
             .eq(StringUtils.hasText(styleNo), "style_no", styleNo)
             .like(StringUtils.hasText(factoryName), "factory_name", factoryName)
@@ -450,45 +459,40 @@ public class ProductionOrderQueryService {
         if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
             wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
-
         if ("true".equalsIgnoreCase(delayedOnly)) {
             wrapper.isNotNull("planned_end_date")
                     .lt("planned_end_date", LocalDateTime.now())
                     .notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
         }
-
         if ("true".equalsIgnoreCase(todayOnly)) {
             java.time.LocalDate today = java.time.LocalDate.now();
             wrapper.ge("create_time", today.atStartOfDay())
                     .le("create_time", today.atTime(23, 59, 59));
         }
 
-        // 与 queryPage 保持一致：生产订单默认是租户共享资源，仅外发工厂账号按 factory_id 隔离
         String ctxFactoryId2 = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId2)) {
             wrapper.eq("factory_id", ctxFactoryId2);
         }
+        return wrapper;
+    }
 
-        // 查询所有订单（只查询需要的字段以提高性能，含 status 字段用于延期判断）
-        wrapper.select("id", "order_no", "order_quantity", "planned_end_date", "create_time", "status");
-        List<ProductionOrder> allOrders = productionOrderMapper.selectList(wrapper);
+    private void resetStatsToZero(com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats) {
+        stats.setActiveOrders(0);
+        stats.setActiveQuantity(0);
+        stats.setCompletedOrders(0);
+        stats.setCompletedQuantity(0);
+        stats.setScrappedOrders(0);
+        stats.setScrappedQuantity(0);
+        stats.setTotalOrders(0);
+        stats.setTotalQuantity(0);
+        stats.setDelayedOrders(0);
+        stats.setDelayedQuantity(0);
+        stats.setTodayOrders(0);
+        stats.setTodayQuantity(0);
+    }
 
-        if (allOrders == null || allOrders.isEmpty()) {
-            stats.setActiveOrders(0);
-            stats.setActiveQuantity(0);
-            stats.setCompletedOrders(0);
-            stats.setCompletedQuantity(0);
-            stats.setScrappedOrders(0);
-            stats.setScrappedQuantity(0);
-            stats.setTotalOrders(0);
-            stats.setTotalQuantity(0);
-            stats.setDelayedOrders(0);
-            stats.setDelayedQuantity(0);
-            stats.setTodayOrders(0);
-            stats.setTodayQuantity(0);
-            return stats;
-        }
-
+    private void fillStatusStats(com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats, List<ProductionOrder> allOrders) {
         List<ProductionOrder> activeOrders = allOrders.stream()
             .filter(o -> !isTerminalStatus(o.getStatus()))
             .collect(Collectors.toList());
@@ -500,14 +504,11 @@ public class ProductionOrderQueryService {
             .collect(Collectors.toList());
 
         long activeQty = activeOrders.stream()
-            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
-            .sum();
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum();
         long completedQty = completedOrders.stream()
-            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
-            .sum();
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum();
         long scrappedQty = scrappedOrders.stream()
-            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
-            .sum();
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum();
 
         stats.setActiveOrders(activeOrders.size());
         stats.setActiveQuantity(activeQty);
@@ -515,26 +516,23 @@ public class ProductionOrderQueryService {
         stats.setCompletedQuantity(completedQty);
         stats.setScrappedOrders(scrappedOrders.size());
         stats.setScrappedQuantity(scrappedQty);
-
-        // 兼容旧字段：继续返回在制口径
         stats.setTotalOrders(activeOrders.size());
         stats.setTotalQuantity(activeQty);
+    }
 
-        // 计算延期订单（plannedEndDate < 当前时间，排除终态订单）
+    private void fillDelayedAndTodayStats(com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats, List<ProductionOrder> allOrders) {
         LocalDateTime now = LocalDateTime.now();
-        List<ProductionOrder> delayedOrders = activeOrders.stream()
-            .filter(o -> o.getPlannedEndDate() != null
-                && o.getPlannedEndDate().isBefore(now))
+        List<ProductionOrder> activeOrders = allOrders.stream()
+            .filter(o -> !isTerminalStatus(o.getStatus()))
             .collect(Collectors.toList());
 
+        List<ProductionOrder> delayedOrders = activeOrders.stream()
+            .filter(o -> o.getPlannedEndDate() != null && o.getPlannedEndDate().isBefore(now))
+            .collect(Collectors.toList());
         stats.setDelayedOrders(delayedOrders.size());
+        stats.setDelayedQuantity(delayedOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum());
 
-        long delayedQty = delayedOrders.stream()
-            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
-            .sum();
-        stats.setDelayedQuantity(delayedQty);
-
-        // 计算当天下单（createTime 在今天 00:00:00 ~ 23:59:59）
         LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
         LocalDateTime todayEnd = now.toLocalDate().atTime(23, 59, 59);
         List<ProductionOrder> todayOrders = allOrders.stream()
@@ -542,15 +540,9 @@ public class ProductionOrderQueryService {
                 && !o.getCreateTime().isBefore(todayStart)
                 && !o.getCreateTime().isAfter(todayEnd))
             .collect(Collectors.toList());
-
         stats.setTodayOrders(todayOrders.size());
-
-        long todayQty = todayOrders.stream()
-            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
-            .sum();
-        stats.setTodayQuantity(todayQty);
-
-        return stats;
+        stats.setTodayQuantity(todayOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0).sum());
     }
 
     private boolean isTerminalStatus(String status) {

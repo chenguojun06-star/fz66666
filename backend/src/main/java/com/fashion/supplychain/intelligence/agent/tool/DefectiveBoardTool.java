@@ -217,6 +217,7 @@ public class DefectiveBoardTool implements AgentTool {
                 ProductionOrder order = productionOrderService.lambdaQuery()
                         .eq(ProductionOrder::getId, orderId)
                         .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                        .eq(ProductionOrder::getDeleteFlag, 0)
                         .one();
                 if (order != null && !userFactoryId.equals(order.getFactoryId())) {
                     return MAPPER.writeValueAsString(Map.of("error", "该次品不属于您的工厂，无权操作"));

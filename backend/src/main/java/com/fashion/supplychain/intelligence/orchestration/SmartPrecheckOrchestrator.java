@@ -153,6 +153,7 @@ public class SmartPrecheckOrchestrator {
                             .eq(ScanRecord::getOrderId, request.getOrderId())
                             .eq(ScanRecord::getProcessName, request.getProcessName())
                             .eq(ScanRecord::getScanResult, "success")
+                            .ne(ScanRecord::getScanType, "orchestration")
                             .ge(ScanRecord::getScanTime, since));
             if (count != null && count > 0) {
                 PrecheckIssue issue = new PrecheckIssue();
@@ -179,6 +180,7 @@ public class SmartPrecheckOrchestrator {
                     new LambdaQueryWrapper<ScanRecord>()
                             .eq(ScanRecord::getOperatorId, operatorId)
                             .eq(ScanRecord::getScanResult, "success")
+                            .ne(ScanRecord::getScanType, "orchestration")
                             .ge(ScanRecord::getScanTime, since));
             if (count != null && count > 25) {
                 PrecheckIssue issue = new PrecheckIssue();
@@ -235,6 +237,7 @@ public class SmartPrecheckOrchestrator {
                     new LambdaQueryWrapper<ScanRecord>()
                             .eq(ScanRecord::getOrderId, request.getOrderId())
                             .eq(ScanRecord::getScanResult, "success")
+                            .ne(ScanRecord::getScanType, "orchestration")
                             .like(ScanRecord::getProgressStage, prereqFinal));
             if (prereqCount == null || prereqCount == 0) {
                 addIssue(response,

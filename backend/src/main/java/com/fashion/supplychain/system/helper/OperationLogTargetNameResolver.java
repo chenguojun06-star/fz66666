@@ -1,6 +1,7 @@
 package com.fashion.supplychain.system.helper;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPicking;
@@ -21,6 +22,7 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OperationLogTargetNameResolver {
@@ -87,6 +89,7 @@ public class OperationLogTargetNameResolver {
                     Object value = bundle.getClass().getMethod("getBundleNo").invoke(bundle);
                     return value == null ? null : String.valueOf(value);
                 } catch (Exception ignored) {
+                    log.debug("[OpLogResolver] 反射获取bundleNo失败: targetId={}", targetId);
                     return null;
                 }
             }
@@ -104,6 +107,7 @@ public class OperationLogTargetNameResolver {
                 return formatOutstock(productOutstockService == null ? null : productOutstockService.getById(targetId));
             }
         } catch (Exception ignored) {
+            log.debug("[OpLogResolver] resolveTargetName失败: targetType={}", targetType);
             return null;
         }
         return null;
@@ -118,6 +122,7 @@ public class OperationLogTargetNameResolver {
             Map<String, Object> detailMap = OBJECT_MAPPER.readValue(details, Map.class);
             return extractFromMap(detailMap);
         } catch (Exception ignored) {
+            log.debug("[OpLogResolver] extractFromDetails解析失败");
             return null;
         }
     }

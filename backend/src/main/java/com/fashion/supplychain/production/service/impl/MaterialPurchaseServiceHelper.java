@@ -257,175 +257,176 @@ public class MaterialPurchaseServiceHelper {
         if (!StringUtils.hasText(order.getStyleId())) {
             throw new IllegalArgumentException("生产订单缺少styleId");
         }
-
         Long styleId;
-        try {
-            styleId = Long.valueOf(order.getStyleId());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("styleId格式错误");
-        }
+        try { styleId = Long.valueOf(order.getStyleId()); }
+        catch (Exception e) { throw new IllegalArgumentException("styleId格式错误"); }
 
         List<StyleBom> bomList = styleBomService.listByStyleId(styleId);
-        if (bomList == null) {
-            bomList = List.of();
-        }
+        if (bomList == null) bomList = List.of();
 
         List<OrderLine> lines = parseOrderLines(order);
+        Set<String> orderColorSet = extractColorSet(lines);
+        Set<String> orderSizeSet = extractSizeSet(lines);
 
-        Set<String> orderColorSet = new HashSet<>();
-        Set<String> orderSizeSet = new HashSet<>();
+        Map<String, MaterialPurchase> grouped = aggregateBomToPurchases(bomList, lines, orderColorSet, orderSizeSet, order);
+        List<MaterialPurchase> result = new ArrayList<>(grouped.values());
+        enrichFromMaterialDatabase(result);
+        return result;
+    }
+
+    private Set<String> extractColorSet(List<OrderLine> lines) {
+        Set<String> set = new HashSet<>();
         for (OrderLine l : lines) {
-            if (l == null) {
-                continue;
-            }
+            if (l == null) continue;
             String lc = MaterialPurchaseHelper.normalizeMatchKey(l.color);
-            String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
-            if (StringUtils.hasText(lc)) {
-                orderColorSet.add(lc);
-            }
-            if (StringUtils.hasText(ls)) {
-                orderSizeSet.add(ls);
-            }
+            if (StringUtils.hasText(lc)) set.add(lc);
         }
+        return set;
+    }
 
+    private Set<String> extractSizeSet(List<OrderLine> lines) {
+        Set<String> set = new HashSet<>();
+        for (OrderLine l : lines) {
+            if (l == null) continue;
+            String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
+            if (StringUtils.hasText(ls)) set.add(ls);
+        }
+        return set;
+    }
+
+    private Map<String, MaterialPurchase> aggregateBomToPurchases(List<StyleBom> bomList, List<OrderLine> lines,
+            Set<String> orderColorSet, Set<String> orderSizeSet, ProductionOrder order) {
         Map<String, MaterialPurchase> grouped = new HashMap<>();
         for (StyleBom bom : bomList) {
-            if (bom == null) {
-                continue;
-            }
+            if (bom == null) continue;
             String bomColor = bom.getColor() == null ? "" : bom.getColor().trim();
             String bomSize = bom.getSize() == null ? "" : bom.getSize().trim();
-
             List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColor);
             Set<String> bomColorSet = bomColorOpts.isEmpty() ? null : new HashSet<>(bomColorOpts);
             List<String> bomSizeOpts = MaterialPurchaseHelper.splitOptions(bomSize);
             Set<String> bomSizeSet = bomSizeOpts.isEmpty() ? null : new HashSet<>(bomSizeOpts);
-
             bomColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
             bomSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
 
-            // 解析纸样录入的各码实际用量（sizeUsageMap），不存在则降级为统一用量 usageAmount
             Map<String, BigDecimal> sizeUsageMapParsed = parseSizeUsageMap(bom.getSizeUsageMap());
-            BigDecimal totalRequired = BigDecimal.ZERO;
-            boolean hasMatchedLine = false;
-            for (OrderLine l : lines) {
-                if (l == null) {
-                    continue;
-                }
-                String lc = MaterialPurchaseHelper.normalizeMatchKey(l.color);
-                String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
-                boolean colorOk = bomColorSet == null || bomColorSet.contains(lc);
-                boolean sizeOk = bomSizeSet == null || bomSizeSet.contains(ls);
-                if (colorOk && sizeOk) {
-                    int qty = l.quantity == null ? 0 : l.quantity;
-                    if (qty <= 0) {
-                        continue;
-                    }
-                    hasMatchedLine = true;
-                    // 优先用纸样各码用量，找不到则降级为 BOM 统一用量
-                    BigDecimal usage = sizeUsageMapParsed.getOrDefault(ls,
-                            bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount());
-                    // 应用损耗率：quantity × usage × (1 + lossRate/100)
-                    BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
-                    BigDecimal lossMultiplier = BigDecimal.ONE.add(
-                            lossRate.divide(new BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP));
-                    totalRequired = totalRequired.add(usage.multiply(lossMultiplier).multiply(BigDecimal.valueOf(qty)));
-                }
-            }
-            if (!hasMatchedLine || totalRequired.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
+            BigDecimal totalRequired = computeBomRequiredQuantity(bom, lines, bomColorSet, bomSizeSet, sizeUsageMapParsed);
+            if (totalRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            BigDecimal requiredQty = totalRequired.setScale(4, java.math.RoundingMode.HALF_UP);
-
-            if (requiredQty.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
-
-            String key = String.join("|",
-                    StringUtils.hasText(bom.getMaterialCode()) ? bom.getMaterialCode() : "",
-                    StringUtils.hasText(bom.getMaterialName()) ? bom.getMaterialName() : "",
-                    StringUtils.hasText(bom.getSpecification()) ? bom.getSpecification() : "",
-                    StringUtils.hasText(bom.getUnit()) ? bom.getUnit() : "",
-                    bomColor,
-                    bomSize,
-                    StringUtils.hasText(bom.getSupplier()) ? bom.getSupplier() : "");
-
+            String key = buildGroupingKey(bom, bomColor, bomSize);
             MaterialPurchase agg = grouped.get(key);
             if (agg == null) {
-                MaterialPurchase mp = new MaterialPurchase();
-                mp.setPurchaseNo(nextPurchaseNo());
-                mp.setMaterialCode(bom.getMaterialCode());
-                mp.setMaterialName(bom.getMaterialName());
-                mp.setMaterialType(MaterialPurchaseHelper.normalizeMaterialType(bom.getMaterialType()));
-                mp.setSpecifications(bom.getSpecification());
-                mp.setUnit(bom.getUnit());
-                mp.setConversionRate(bom.getConversionRate());
-                mp.setPurchaseQuantity(requiredQty);
-                mp.setArrivedQuantity(0);
-                mp.setSupplierName(bom.getSupplier());
-                mp.setSupplierId("");
-                mp.setUnitPrice(bom.getUnitPrice() == null ? BigDecimal.ZERO : bom.getUnitPrice());
-                mp.setTotalAmount(BigDecimal.ZERO);
-                mp.setOrderId(order.getId());
-                mp.setOrderNo(order.getOrderNo());
-                mp.setStyleId(order.getStyleId());
-                mp.setStyleNo(order.getStyleNo());
-                mp.setStyleName(order.getStyleName());
-                mp.setMaterialId(MaterialPurchaseHelper.resolveMaterialId(mp));
-                mp.setStyleCover(resolveStyleCoverByStyleId(order.getStyleId()));
-                mp.setColor(StringUtils.hasText(bomColor) ? bomColor : null);
-                mp.setSize(StringUtils.hasText(bomSize) ? bomSize : null);
-                mp.setStatus(MaterialConstants.STATUS_PENDING);
-                mp.setSourceType("order"); // 标记为生产订单驱动采购，不应写入独立进销存
-                LocalDateTime now = LocalDateTime.now();
-                mp.setCreateTime(now);
-                mp.setUpdateTime(now);
-                mp.setDeleteFlag(0);
-                grouped.put(key, mp);
+                grouped.put(key, createPurchaseFromBom(bom, bomColor, bomSize, totalRequired, order));
             } else {
-                BigDecimal nextQty = (agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(requiredQty);
+                BigDecimal nextQty = (agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(totalRequired);
                 agg.setPurchaseQuantity(nextQty);
                 agg.setTotalAmount(BigDecimal.ZERO);
             }
         }
+        return grouped;
+    }
 
-        List<MaterialPurchase> result = new ArrayList<>(grouped.values());
+    private BigDecimal computeBomRequiredQuantity(StyleBom bom, List<OrderLine> lines,
+            Set<String> bomColorSet, Set<String> bomSizeSet, Map<String, BigDecimal> sizeUsageMapParsed) {
+        BigDecimal totalRequired = BigDecimal.ZERO;
+        boolean hasMatchedLine = false;
+        for (OrderLine l : lines) {
+            if (l == null) continue;
+            String lc = MaterialPurchaseHelper.normalizeMatchKey(l.color);
+            String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
+            boolean colorOk = bomColorSet == null || bomColorSet.contains(lc);
+            boolean sizeOk = bomSizeSet == null || bomSizeSet.contains(ls);
+            if (colorOk && sizeOk) {
+                int qty = l.quantity == null ? 0 : l.quantity;
+                if (qty <= 0) continue;
+                hasMatchedLine = true;
+                BigDecimal usage = sizeUsageMapParsed.getOrDefault(ls,
+                        bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount());
+                BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
+                BigDecimal lossMultiplier = BigDecimal.ONE.add(
+                        lossRate.divide(new BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP));
+                totalRequired = totalRequired.add(usage.multiply(lossMultiplier).multiply(BigDecimal.valueOf(qty)));
+            }
+        }
+        if (!hasMatchedLine) return BigDecimal.ZERO;
+        return totalRequired.setScale(4, java.math.RoundingMode.HALF_UP);
+    }
 
-        // 从物料资料库批量补全缺失属性（fabricWidth / fabricWeight / fabricComposition 等）
+    private String buildGroupingKey(StyleBom bom, String bomColor, String bomSize) {
+        return String.join("|",
+                StringUtils.hasText(bom.getMaterialCode()) ? bom.getMaterialCode() : "",
+                StringUtils.hasText(bom.getMaterialName()) ? bom.getMaterialName() : "",
+                StringUtils.hasText(bom.getSpecification()) ? bom.getSpecification() : "",
+                StringUtils.hasText(bom.getUnit()) ? bom.getUnit() : "",
+                bomColor, bomSize,
+                StringUtils.hasText(bom.getSupplier()) ? bom.getSupplier() : "");
+    }
+
+    private MaterialPurchase createPurchaseFromBom(StyleBom bom, String bomColor, String bomSize,
+            BigDecimal requiredQty, ProductionOrder order) {
+        MaterialPurchase mp = new MaterialPurchase();
+        mp.setPurchaseNo(nextPurchaseNo());
+        mp.setMaterialCode(bom.getMaterialCode());
+        mp.setMaterialName(bom.getMaterialName());
+        mp.setMaterialType(MaterialPurchaseHelper.normalizeMaterialType(bom.getMaterialType()));
+        mp.setSpecifications(bom.getSpecification());
+        mp.setUnit(bom.getUnit());
+        mp.setConversionRate(bom.getConversionRate());
+        mp.setPurchaseQuantity(requiredQty);
+        mp.setArrivedQuantity(0);
+        mp.setSupplierName(bom.getSupplier());
+        mp.setSupplierId("");
+        mp.setUnitPrice(bom.getUnitPrice() == null ? BigDecimal.ZERO : bom.getUnitPrice());
+        mp.setTotalAmount(BigDecimal.ZERO);
+        mp.setOrderId(order.getId());
+        mp.setOrderNo(order.getOrderNo());
+        mp.setStyleId(order.getStyleId());
+        mp.setStyleNo(order.getStyleNo());
+        mp.setStyleName(order.getStyleName());
+        mp.setMaterialId(MaterialPurchaseHelper.resolveMaterialId(mp));
+        mp.setStyleCover(resolveStyleCoverByStyleId(order.getStyleId()));
+        mp.setColor(StringUtils.hasText(bomColor) ? bomColor : null);
+        mp.setSize(StringUtils.hasText(bomSize) ? bomSize : null);
+        mp.setStatus(MaterialConstants.STATUS_PENDING);
+        mp.setSourceType("order");
+        LocalDateTime now = LocalDateTime.now();
+        mp.setCreateTime(now);
+        mp.setUpdateTime(now);
+        mp.setDeleteFlag(0);
+        return mp;
+    }
+
+    private void enrichFromMaterialDatabase(List<MaterialPurchase> result) {
         List<String> matCodes = result.stream()
                 .map(MaterialPurchase::getMaterialCode)
                 .filter(StringUtils::hasText)
                 .distinct()
                 .collect(java.util.stream.Collectors.toList());
-        if (!matCodes.isEmpty()) {
-            Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
-                    new LambdaQueryWrapper<MaterialDatabase>()
-                            .in(MaterialDatabase::getMaterialCode, matCodes)
-                            .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode,
-                                    MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
-                                    MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
-                                    MaterialDatabase::getSupplierId, MaterialDatabase::getUnitPrice,
-                                    MaterialDatabase::getColor, MaterialDatabase::getSpecifications,
-                                    MaterialDatabase::getUnit, MaterialDatabase::getConversionRate))
-                    .stream()
-                    .filter(d -> d != null && StringUtils.hasText(d.getMaterialCode()))
-                    .collect(java.util.stream.Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
-            for (MaterialPurchase mp : result) {
-                MaterialDatabase db = dbMap.get(mp.getMaterialCode());
-                if (db == null) continue;
-                if (!StringUtils.hasText(mp.getFabricWidth())) mp.setFabricWidth(db.getFabricWidth());
-                if (!StringUtils.hasText(mp.getFabricWeight())) mp.setFabricWeight(db.getFabricWeight());
-                if (!StringUtils.hasText(mp.getFabricComposition())) mp.setFabricComposition(db.getFabricComposition());
-                if (!StringUtils.hasText(mp.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) mp.setSupplierName(db.getSupplierName());
-                if (!StringUtils.hasText(mp.getSupplierId()) && StringUtils.hasText(db.getSupplierId())) mp.setSupplierId(db.getSupplierId());
-                if ((mp.getUnitPrice() == null || mp.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) mp.setUnitPrice(db.getUnitPrice());
-                if (!StringUtils.hasText(mp.getColor()) && StringUtils.hasText(db.getColor())) mp.setColor(db.getColor());
-            }
+        if (matCodes.isEmpty()) return;
+        Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
+                new LambdaQueryWrapper<MaterialDatabase>()
+                        .in(MaterialDatabase::getMaterialCode, matCodes)
+                        .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode,
+                                MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
+                                MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
+                                MaterialDatabase::getSupplierId, MaterialDatabase::getUnitPrice,
+                                MaterialDatabase::getColor, MaterialDatabase::getSpecifications,
+                                MaterialDatabase::getUnit, MaterialDatabase::getConversionRate))
+                .stream()
+                .filter(d -> d != null && StringUtils.hasText(d.getMaterialCode()))
+                .collect(java.util.stream.Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
+        for (MaterialPurchase mp : result) {
+            MaterialDatabase db = dbMap.get(mp.getMaterialCode());
+            if (db == null) continue;
+            if (!StringUtils.hasText(mp.getFabricWidth())) mp.setFabricWidth(db.getFabricWidth());
+            if (!StringUtils.hasText(mp.getFabricWeight())) mp.setFabricWeight(db.getFabricWeight());
+            if (!StringUtils.hasText(mp.getFabricComposition())) mp.setFabricComposition(db.getFabricComposition());
+            if (!StringUtils.hasText(mp.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) mp.setSupplierName(db.getSupplierName());
+            if (!StringUtils.hasText(mp.getSupplierId()) && StringUtils.hasText(db.getSupplierId())) mp.setSupplierId(db.getSupplierId());
+            if ((mp.getUnitPrice() == null || mp.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) mp.setUnitPrice(db.getUnitPrice());
+            if (!StringUtils.hasText(mp.getColor()) && StringUtils.hasText(db.getColor())) mp.setColor(db.getColor());
         }
-
-        return result;
     }
+
 
     // ──────────── 各码用量解析 ────────────
 

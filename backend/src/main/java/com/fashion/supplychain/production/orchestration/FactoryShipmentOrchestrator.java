@@ -223,6 +223,7 @@ public class FactoryShipmentOrchestrator {
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getId, orderId)
                 .eq(ProductionOrder::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .eq(ProductionOrder::getDeleteFlag, 0)
                 .one();
         int cuttingTotal = 0;
         if (order != null) {

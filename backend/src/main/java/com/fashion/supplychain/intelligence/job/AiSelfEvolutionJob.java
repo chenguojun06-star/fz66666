@@ -24,7 +24,7 @@ public class AiSelfEvolutionJob {
     @Autowired
     private DistributedLockService distributedLockService;
 
-    @Scheduled(cron = "0 30 3 * * ?")
+    @Scheduled(cron = "0 20 4 * * ?")
     public void runAutoEvolutionForAllTenants() {
         String lockValue = distributedLockService.tryLock(
                 "job:ai-self-evolution", 30, TimeUnit.MINUTES);

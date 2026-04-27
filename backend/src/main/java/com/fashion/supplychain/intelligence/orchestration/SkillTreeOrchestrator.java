@@ -167,12 +167,12 @@ public class SkillTreeOrchestrator {
     // ─────────────────────────────────────────────────────────────────────
 
     /**
-     * 每日 03:30 运行技能剪枝：
+     * 每日 05:00 运行技能剪枝：
      * 累计尝试次数 ≥ 50 且成功率 < 20% 的技能节点标记为逻辑删除。
      *
      * <p>意义：防止无效技能占用 AI 上下文窗口，保持技能库高质量。
      */
-    @Scheduled(cron = "0 30 3 * * ?")
+    @Scheduled(cron = "0 0 5 * * ?")
     @Transactional(rollbackFor = Exception.class)
     public void pruneStaleSkills() {
         try {

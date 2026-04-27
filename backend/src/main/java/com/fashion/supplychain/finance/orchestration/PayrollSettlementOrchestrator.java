@@ -174,7 +174,7 @@ public class PayrollSettlementOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public PayrollSettlement generate(Map<String, Object> params) {
-        TenantAssert.assertTenantContext(); // 工资结算必须有租户上下文
+        TenantAssert.assertTenantContext();
         PayrollQuery q = parseQuery(params, false, false);
         if (!StringUtils.hasText(q.orderId) && !StringUtils.hasText(q.orderNo)
                 && q.startTime == null && q.endTime == null) {
@@ -182,23 +182,32 @@ public class PayrollSettlementOrchestrator {
         }
 
         List<Map<String, Object>> rows = scanRecordMapper.selectPayrollAggregation(
-                q.orderId,
-                q.orderNo,
-                q.styleNo,
-                q.operatorId,
-                q.operatorName,
-                q.scanType,
-                PAYROLL_SCAN_TYPES,
-                q.processName,
-                q.startTime,
-                q.endTime,
-                q.includeSettled,
+                q.orderId, q.orderNo, q.styleNo, q.operatorId, q.operatorName,
+                q.scanType, PAYROLL_SCAN_TYPES, q.processName,
+                q.startTime, q.endTime, q.includeSettled,
                 com.fashion.supplychain.common.UserContext.tenantId());
 
         if (rows == null || rows.isEmpty()) {
             throw new IllegalStateException("无可结算扫码记录");
         }
 
+        PayrollSettlement settlement = buildSettlement(q);
+        List<PayrollSettlementItem> items = buildSettlementItems(rows, settlement);
+        settlement.setTotalQuantity(items.stream().mapToInt(i -> Math.max(0, i.getQuantity() == null ? 0 : i.getQuantity())).sum());
+        settlement.setTotalAmount(items.stream().map(PayrollSettlementItem::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP));
+
+        payrollSettlementService.save(settlement);
+        for (PayrollSettlementItem item : items) {
+            item.setSettlementId(settlement.getId());
+        }
+        payrollSettlementItemService.saveBatch(items);
+        markScanRecordsAsSettled(q, settlement.getId());
+
+        return settlement;
+    }
+
+    private PayrollSettlement buildSettlement(PayrollQuery q) {
         LocalDateTime now = LocalDateTime.now();
         PayrollSettlement settlement = new PayrollSettlement();
         settlement.setSettlementNo(nextSettlementNo());
@@ -210,7 +219,6 @@ public class PayrollSettlementOrchestrator {
         settlement.setStatus("pending");
         settlement.setCreateTime(now);
         settlement.setUpdateTime(now);
-
         String uid = null;
         UserContext ctx = UserContext.get();
         if (ctx != null && StringUtils.hasText(ctx.getUserId())) {
@@ -220,14 +228,14 @@ public class PayrollSettlementOrchestrator {
             settlement.setCreateBy(uid);
             settlement.setUpdateBy(uid);
         }
+        return settlement;
+    }
 
-        int totalQty = 0;
-        BigDecimal totalAmount = BigDecimal.ZERO;
+    private List<PayrollSettlementItem> buildSettlementItems(List<Map<String, Object>> rows, PayrollSettlement settlement) {
+        LocalDateTime now = LocalDateTime.now();
         List<PayrollSettlementItem> items = new ArrayList<>();
         for (Map<String, Object> row : rows) {
-            if (row == null) {
-                continue;
-            }
+            if (row == null) continue;
             PayrollSettlementItem item = new PayrollSettlementItem();
             String opId = TextUtils.safeText(row.get("operatorId"));
             String opName = TextUtils.safeText(row.get("operatorName"));
@@ -237,12 +245,8 @@ public class PayrollSettlementOrchestrator {
             item.setProcessName(StringUtils.hasText(processName) ? processName : "未知环节");
             Integer qty = toInt(row.get("quantity"));
             BigDecimal amount = toBigDecimal(row.get("totalAmount"));
-            if (qty == null) {
-                qty = 0;
-            }
-            if (amount == null) {
-                amount = BigDecimal.ZERO;
-            }
+            if (qty == null) qty = 0;
+            if (amount == null) amount = BigDecimal.ZERO;
             item.setQuantity(qty);
             item.setTotalAmount(amount.setScale(2, RoundingMode.HALF_UP));
             BigDecimal up = qty > 0
@@ -256,28 +260,19 @@ public class PayrollSettlementOrchestrator {
             item.setCreateTime(now);
             item.setUpdateTime(now);
             items.add(item);
-            totalQty += Math.max(0, qty);
-            totalAmount = totalAmount.add(item.getTotalAmount());
         }
+        return items;
+    }
 
-        settlement.setTotalQuantity(totalQty);
-        settlement.setTotalAmount(totalAmount.setScale(2, RoundingMode.HALF_UP));
-
-        payrollSettlementService.save(settlement);
-
-        for (PayrollSettlementItem item : items) {
-            item.setSettlementId(settlement.getId());
-        }
-        payrollSettlementItemService.saveBatch(items);
-
+    private void markScanRecordsAsSettled(PayrollQuery q, String settlementId) {
+        LocalDateTime now = LocalDateTime.now();
         LambdaUpdateWrapper<ScanRecord> uw = new LambdaUpdateWrapper<ScanRecord>()
                 .set(ScanRecord::getSettlementStatus, "payroll_settled")
-                .set(ScanRecord::getPayrollSettlementId, settlement.getId())
+                .set(ScanRecord::getPayrollSettlementId, settlementId)
                 .set(ScanRecord::getUpdateTime, now)
                 .eq(ScanRecord::getScanResult, "success")
                 .gt(ScanRecord::getQuantity, 0)
                 .eq(ScanRecord::getTenantId, UserContext.tenantId());
-
         if (!q.includeSettled) {
             uw.and(w -> w.isNull(ScanRecord::getPayrollSettlementId)
                     .or()
@@ -286,36 +281,21 @@ public class PayrollSettlementOrchestrator {
                             .or()
                             .ne(ScanRecord::getSettlementStatus, "payroll_settled"));
         }
-        if (StringUtils.hasText(q.orderId)) {
-            uw.eq(ScanRecord::getOrderId, q.orderId);
-        }
-        if (StringUtils.hasText(q.orderNo)) {
-            uw.eq(ScanRecord::getOrderNo, q.orderNo);
-        }
-        if (StringUtils.hasText(q.styleNo)) {
-            uw.eq(ScanRecord::getStyleNo, q.styleNo);
-        }
-        if (StringUtils.hasText(q.operatorId)) {
-            uw.eq(ScanRecord::getOperatorId, q.operatorId);
-        }
-        if (StringUtils.hasText(q.operatorName)) {
-            uw.eq(ScanRecord::getOperatorName, q.operatorName);
-        }
+        if (StringUtils.hasText(q.orderId)) uw.eq(ScanRecord::getOrderId, q.orderId);
+        if (StringUtils.hasText(q.orderNo)) uw.eq(ScanRecord::getOrderNo, q.orderNo);
+        if (StringUtils.hasText(q.styleNo)) uw.eq(ScanRecord::getStyleNo, q.styleNo);
+        if (StringUtils.hasText(q.operatorId)) uw.eq(ScanRecord::getOperatorId, q.operatorId);
+        if (StringUtils.hasText(q.operatorName)) uw.eq(ScanRecord::getOperatorName, q.operatorName);
         if (StringUtils.hasText(q.scanType)) {
             uw.eq(ScanRecord::getScanType, q.scanType);
         } else {
             uw.in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "pattern"));
         }
-        if (q.startTime != null) {
-            uw.ge(ScanRecord::getScanTime, q.startTime);
-        }
-        if (q.endTime != null) {
-            uw.le(ScanRecord::getScanTime, q.endTime);
-        }
+        if (q.startTime != null) uw.ge(ScanRecord::getScanTime, q.startTime);
+        if (q.endTime != null) uw.le(ScanRecord::getScanTime, q.endTime);
         scanRecordMapper.update(null, uw);
-
-        return settlement;
     }
+
 
     private String nextSettlementNo() {
         String day = LocalDate.now().format(DAY_FMT);
@@ -365,8 +345,11 @@ public class PayrollSettlementOrchestrator {
     private ProductionOrder resolveOrder(String orderId, String orderNo) {
         String id = TextUtils.safeText(orderId);
         if (StringUtils.hasText(id)) {
-            ProductionOrder order = productionOrderService.getById(id);
-            if (order != null && (order.getDeleteFlag() == null || order.getDeleteFlag() == 0)) {
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, id)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .one();
+            if (order != null) {
                 return order;
             }
         }
@@ -613,7 +596,7 @@ public class PayrollSettlementOrchestrator {
                 .set(ScanRecord::getSettlementStatus, null)
                 .set(ScanRecord::getUpdateTime, LocalDateTime.now())
                 .eq(ScanRecord::getPayrollSettlementId, settlementId.trim())
-                .eq(settlement.getTenantId() != null, ScanRecord::getTenantId, settlement.getTenantId());
+                .eq(ScanRecord::getTenantId, settlement.getTenantId());
         scanRecordMapper.update(new ScanRecord(), scanUw);
 
         try {

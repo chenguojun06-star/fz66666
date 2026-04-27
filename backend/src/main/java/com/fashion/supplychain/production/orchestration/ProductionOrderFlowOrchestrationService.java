@@ -215,38 +215,54 @@ public class ProductionOrderFlowOrchestrationService {
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("参数错误");
         }
-
         ProductionOrder order = productionOrderService.getDetailById(oid);
         if (order == null) {
             throw new NoSuchElementException("生产订单不存在");
         }
 
-        List<ScanRecord> records;
+        List<ScanRecord> records = queryScanRecords(oid);
+        List<Map<String, Object>> stages = buildProductionStageFlow(order, records);
+        enrichOperatorNames(stages, order);
+
+        List<MaterialPurchase> materialPurchases = queryMaterialPurchases(oid);
+        enrichPurchaseCreatorNames(materialPurchases);
+        enrichPurchaseSizeUsageMap(materialPurchases, order);
+
+        List<CuttingTask> cuttingTasks = queryCuttingTasks(oid);
+        List<CuttingBundle> cuttingBundles = queryCuttingBundles(oid);
+        List<ProductWarehousing> warehousings = queryWarehousings(oid);
+        List<ProductOutstock> outstocks = queryOutstocks(oid);
+        List<ShipmentReconciliation> shipmentReconciliations = queryShipmentReconciliations(oid);
+        List<MaterialReconciliation> materialReconciliations = queryMaterialReconciliations(oid);
+        StyleQuotation styleQuotation = queryStyleQuotation(order);
+
+        return new OrderFlowResponse(order, stages, records, materialPurchases,
+                cuttingTasks, cuttingBundles, warehousings, outstocks,
+                shipmentReconciliations, materialReconciliations, styleQuotation);
+    }
+
+    private List<ScanRecord> queryScanRecords(String oid) {
         try {
-            records = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
+            return scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, oid)
+                    .ne(ScanRecord::getScanType, "orchestration")
                     .orderByAsc(ScanRecord::getScanTime)
                     .orderByAsc(ScanRecord::getCreateTime));
         } catch (Exception e) {
             log.warn("[OrderFlow] 查询ScanRecord失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            records = new ArrayList<>();
+            return new ArrayList<>();
         }
+    }
 
-        List<Map<String, Object>> stages = buildProductionStageFlow(order, records);
-
-        // ─── 批量查 DB 将所有 operatorId 替换为用户当前真实显示名 ───────────────────
+    private void enrichOperatorNames(List<Map<String, Object>> stages, ProductionOrder order) {
         try {
             Set<String> operatorIds = new HashSet<>();
             for (Map<String, Object> row : stages) {
-                Object sid = row.get("startOperatorId");
-                Object cid = row.get("completeOperatorId");
-                Object lid = row.get("lastOperatorId");
-                if (sid != null && StringUtils.hasText(String.valueOf(sid))) operatorIds.add(String.valueOf(sid).trim());
-                if (cid != null && StringUtils.hasText(String.valueOf(cid))) operatorIds.add(String.valueOf(cid).trim());
-                if (lid != null && StringUtils.hasText(String.valueOf(lid))) operatorIds.add(String.valueOf(lid).trim());
+                collectOperatorId(row, "startOperatorId", operatorIds);
+                collectOperatorId(row, "completeOperatorId", operatorIds);
+                collectOperatorId(row, "lastOperatorId", operatorIds);
             }
             if (order.getCreatedById() != null) operatorIds.add(order.getCreatedById().trim());
-
             if (!operatorIds.isEmpty()) {
                 Map<String, String> userNames = batchLookupUserDisplayNames(operatorIds);
                 for (Map<String, Object> row : stages) {
@@ -258,21 +274,26 @@ public class ProductionOrderFlowOrchestrationService {
         } catch (Exception e) {
             log.warn("[OrderFlow] 操作人名称补全失败，使用原始值: {}", e.getMessage());
         }
-        // ─────────────────────────────────────────────────────────────────────────
+    }
 
-        List<MaterialPurchase> materialPurchases;
+    private void collectOperatorId(Map<String, Object> row, String key, Set<String> ids) {
+        Object val = row.get(key);
+        if (val != null && StringUtils.hasText(String.valueOf(val))) ids.add(String.valueOf(val).trim());
+    }
+
+    private List<MaterialPurchase> queryMaterialPurchases(String oid) {
         try {
-            materialPurchases = materialPurchaseMapper
-                    .selectList(new LambdaQueryWrapper<MaterialPurchase>()
-                            .eq(MaterialPurchase::getOrderId, oid)
-                            .eq(MaterialPurchase::getDeleteFlag, 0)
-                            .orderByDesc(MaterialPurchase::getCreateTime));
+            return materialPurchaseMapper.selectList(new LambdaQueryWrapper<MaterialPurchase>()
+                    .eq(MaterialPurchase::getOrderId, oid)
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .orderByDesc(MaterialPurchase::getCreateTime));
         } catch (Exception e) {
-            log.warn("[OrderFlow] 查询MaterialPurchase失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            materialPurchases = new ArrayList<>();
+            log.warn("[OrderFlow] 查询MaterialPurchase失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
         }
+    }
 
-        // 批量查 DB 补全采购记录中的 creatorName/updaterName
+    private void enrichPurchaseCreatorNames(List<MaterialPurchase> materialPurchases) {
         try {
             Set<String> purchaseUserIds = new HashSet<>();
             for (MaterialPurchase mp : materialPurchases) {
@@ -283,276 +304,151 @@ public class ProductionOrderFlowOrchestrationService {
                 for (MaterialPurchase mp : materialPurchases) {
                     if (StringUtils.hasText(mp.getCreatorId())) {
                         String realName = purchaseNames.get(mp.getCreatorId().trim());
-                        if (StringUtils.hasText(realName)) {
-                            mp.setCreatorName(realName);
-                        }
+                        if (StringUtils.hasText(realName)) mp.setCreatorName(realName);
                     }
                 }
             }
         } catch (Exception e) {
             log.warn("[OrderFlow] 采购操作人名称补全失败: {}", e.getMessage());
         }
+    }
 
-        // 为面辅料采购记录补全各码用量信息（来自款号BOM的sizeUsageMap）
-        if (!materialPurchases.isEmpty() && StringUtils.hasText(order.getStyleId())) {
-            try {
-                Long styleId = Long.valueOf(order.getStyleId());
-                List<StyleBom> boms = styleBomMapper.selectList(new LambdaQueryWrapper<StyleBom>()
-                        .eq(StyleBom::getStyleId, styleId)
-                        .isNotNull(StyleBom::getSizeUsageMap));
-                Map<String, String> bomSizeUsageByCode = new HashMap<>();
-                for (StyleBom bom : boms) {
-                    if (StringUtils.hasText(bom.getMaterialCode()) && StringUtils.hasText(bom.getSizeUsageMap())) {
-                        bomSizeUsageByCode.put(bom.getMaterialCode(), bom.getSizeUsageMap());
-                    }
-                }
-                if (!bomSizeUsageByCode.isEmpty()) {
-                    for (MaterialPurchase mp : materialPurchases) {
-                        if (StringUtils.hasText(mp.getMaterialCode())) {
-                            String sizeUsageJson = bomSizeUsageByCode.get(mp.getMaterialCode());
-                            if (StringUtils.hasText(sizeUsageJson)) {
-                                mp.setSizeUsageMap(sizeUsageJson);
-                            }
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("[OrderFlow] 补全面辅料各码用量失败: {}", e.getMessage());
-            }
-        }
-
-        List<CuttingTask> cuttingTasks;
+    private void enrichPurchaseSizeUsageMap(List<MaterialPurchase> materialPurchases, ProductionOrder order) {
+        if (materialPurchases.isEmpty() || !StringUtils.hasText(order.getStyleId())) return;
         try {
-            cuttingTasks = cuttingTaskService.list(new LambdaQueryWrapper<CuttingTask>()
+            Long styleId = Long.valueOf(order.getStyleId());
+            List<StyleBom> boms = styleBomMapper.selectList(new LambdaQueryWrapper<StyleBom>()
+                    .eq(StyleBom::getStyleId, styleId)
+                    .isNotNull(StyleBom::getSizeUsageMap));
+            Map<String, String> bomSizeUsageByCode = new HashMap<>();
+            for (StyleBom bom : boms) {
+                if (StringUtils.hasText(bom.getMaterialCode()) && StringUtils.hasText(bom.getSizeUsageMap())) {
+                    bomSizeUsageByCode.put(bom.getMaterialCode(), bom.getSizeUsageMap());
+                }
+            }
+            if (!bomSizeUsageByCode.isEmpty()) {
+                for (MaterialPurchase mp : materialPurchases) {
+                    if (StringUtils.hasText(mp.getMaterialCode())) {
+                        String sizeUsageJson = bomSizeUsageByCode.get(mp.getMaterialCode());
+                        if (StringUtils.hasText(sizeUsageJson)) mp.setSizeUsageMap(sizeUsageJson);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 补全面辅料各码用量失败: {}", e.getMessage());
+        }
+    }
+
+    private List<CuttingTask> queryCuttingTasks(String oid) {
+        try {
+            return cuttingTaskService.list(new LambdaQueryWrapper<CuttingTask>()
                     .eq(CuttingTask::getProductionOrderId, oid)
                     .orderByDesc(CuttingTask::getCreateTime));
         } catch (Exception e) {
-            log.warn("[OrderFlow] 查询CuttingTask失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            cuttingTasks = new ArrayList<>();
+            log.warn("[OrderFlow] 查询CuttingTask失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
         }
+    }
 
-        List<CuttingBundle> cuttingBundles;
+    private List<CuttingBundle> queryCuttingBundles(String oid) {
         try {
-            cuttingBundles = cuttingBundleMapper.selectList(new LambdaQueryWrapper<CuttingBundle>()
+            return cuttingBundleMapper.selectList(new LambdaQueryWrapper<CuttingBundle>()
                     .eq(CuttingBundle::getProductionOrderId, oid)
                     .orderByAsc(CuttingBundle::getBundleNo)
                     .orderByAsc(CuttingBundle::getCreateTime));
         } catch (Exception e) {
-            log.warn("[OrderFlow] 查询CuttingBundle失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            cuttingBundles = new ArrayList<>();
+            log.warn("[OrderFlow] 查询CuttingBundle失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
         }
+    }
 
-        List<ProductWarehousing> warehousings;
+    private List<ProductWarehousing> queryWarehousings(String oid) {
         try {
-            warehousings = productWarehousingService
-                    .list(new LambdaQueryWrapper<ProductWarehousing>()
-                            .eq(ProductWarehousing::getOrderId, oid)
-                            .eq(ProductWarehousing::getDeleteFlag, 0)
-                            .orderByDesc(ProductWarehousing::getCreateTime));
+            return productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getOrderId, oid)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .orderByDesc(ProductWarehousing::getCreateTime));
         } catch (Exception e) {
-            log.warn("[OrderFlow] 查询ProductWarehousing失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            warehousings = new ArrayList<>();
+            log.warn("[OrderFlow] 查询ProductWarehousing失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
         }
+    }
 
-        List<ProductOutstock> outstocks;
+    private List<ProductOutstock> queryOutstocks(String oid) {
         try {
-            outstocks = productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+            return productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
                     .eq(ProductOutstock::getOrderId, oid)
                     .eq(ProductOutstock::getDeleteFlag, 0)
                     .orderByDesc(ProductOutstock::getCreateTime));
         } catch (Exception e) {
-            log.warn("[OrderFlow] 查询ProductOutstock失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            outstocks = new ArrayList<>();
+            log.warn("[OrderFlow] 查询ProductOutstock失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
         }
+    }
 
-        List<ShipmentReconciliation> shipmentReconciliations;
+    private List<ShipmentReconciliation> queryShipmentReconciliations(String oid) {
         try {
-            shipmentReconciliations = shipmentReconciliationService.lambdaQuery()
+            return shipmentReconciliationService.lambdaQuery()
                     .eq(ShipmentReconciliation::getOrderId, oid)
                     .orderByDesc(ShipmentReconciliation::getCreateTime)
                     .list();
         } catch (Exception e) {
-            log.warn("[OrderFlow] 查询ShipmentReconciliation失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            shipmentReconciliations = new ArrayList<>();
+            log.warn("[OrderFlow] 查询ShipmentReconciliation失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
         }
+    }
 
-        List<MaterialReconciliation> materialReconciliations;
+    private List<MaterialReconciliation> queryMaterialReconciliations(String oid) {
         try {
-            materialReconciliations = materialReconciliationService.lambdaQuery()
+            return materialReconciliationService.lambdaQuery()
                     .eq(MaterialReconciliation::getOrderId, oid)
                     .eq(MaterialReconciliation::getDeleteFlag, 0)
                     .orderByDesc(MaterialReconciliation::getCreateTime)
                     .list();
         } catch (Exception e) {
-            log.warn("[OrderFlow] 查询MaterialReconciliation失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
-            materialReconciliations = new ArrayList<>();
+            log.warn("[OrderFlow] 查询MaterialReconciliation失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
         }
-
-        // 查询款号报价单
-        StyleQuotation styleQuotation = null;
-        if (order.getStyleId() != null) {
-            try {
-                styleQuotation = styleQuotationMapper.selectOne(
-                    new LambdaQueryWrapper<StyleQuotation>()
-                        .eq(StyleQuotation::getStyleId, Long.valueOf(order.getStyleId()))
-                );
-            } catch (Exception e) {
-                log.warn("Failed to load style quotation: orderId={}, styleId={}", oid, order.getStyleId(), e);
-            }
-        }
-
-        return new OrderFlowResponse(
-                order,
-                stages,
-                records,
-                materialPurchases,
-                cuttingTasks,
-                cuttingBundles,
-                warehousings,
-                outstocks,
-                shipmentReconciliations,
-                materialReconciliations,
-                styleQuotation);
     }
+
+    private StyleQuotation queryStyleQuotation(ProductionOrder order) {
+        if (order.getStyleId() == null) return null;
+        try {
+            return styleQuotationMapper.selectOne(
+                new LambdaQueryWrapper<StyleQuotation>()
+                    .eq(StyleQuotation::getStyleId, Long.valueOf(order.getStyleId())));
+        } catch (Exception e) {
+            log.warn("Failed to load style quotation: orderId={}, styleId={}", order.getId(), order.getStyleId(), e);
+            return null;
+        }
+    }
+
 
     private List<Map<String, Object>> buildProductionStageFlow(ProductionOrder order, List<ScanRecord> records) {
         if (order == null) {
             return new ArrayList<>();
         }
-
         int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
-
-        List<String> processOrder = new ArrayList<>();
-        try {
-            templateLibraryService.loadProgressWeights(order.getStyleNo(), new LinkedHashMap<>(), processOrder);
-        } catch (Exception e) {
-            log.warn("Failed to load progress weights from template: orderId={}, styleNo={}", order.getId(),
-                    order.getStyleNo(), e);
-        }
-
-        // ---------- 分组：严格用 progressStage 作 key（保留原始语义）----------
-        // 不做任何"降级到子工序名"操作，因为 progressStageNameMatches 的 contains
-        // 语义会导致不同工序内容被错误地归并在一起。
-        // 过滤父分类行（不在 processOrder 中的 key）在下面的输出循环里处理。
-        Map<String, List<ScanRecord>> byProcess = new LinkedHashMap<>();
-        if (records != null) {
-            for (ScanRecord r : records) {
-                if (r == null) {
-                    continue;
-                }
-                if (!"success".equals(r.getScanResult())) {
-                    continue;
-                }
-                String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
-                if (!StringUtils.hasText(pn)) {
-                    pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
-                }
-                String pc = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
-                if ("quality_warehousing".equals(pc)) {
-                    pn = "质检";
-                }
-                if (!StringUtils.hasText(pn)) {
-                    continue;
-                }
-                byProcess.computeIfAbsent(pn, k -> new ArrayList<>()).add(r);
-            }
-        }
-
-        List<Map<String, Object>> result = new ArrayList<>();
-        // processes = 模板节点顺序；若无模板则保留扫码记录中出现的所有 key
+        List<String> processOrder = loadProcessOrder(order);
+        Map<String, List<ScanRecord>> byProcess = groupRecordsByProcess(records);
         List<String> processes = processOrder.isEmpty() ? new ArrayList<>(byProcess.keySet())
                 : new ArrayList<>(processOrder);
-        if (!processOrder.isEmpty()) {
-            // 追加扫码记录中有、但模板里可以匹配到的别名 key（用于后续 list 收集）
-            // 不追加完全不在模板里的父分类 key（如"尾部"/"二次工艺"），避免乱入行
-            for (String pn : byProcess.keySet()) {
-                if (!StringUtils.hasText(pn)) {
-                    continue;
-                }
-                boolean matched = false;
-                for (String tpl : processes) {
-                    if (templateLibraryService.progressStageNameMatches(tpl, pn)) {
-                        matched = true;
-                        break;
-                    }
-                }
-                // 仅当能匹配到模板节点时才可能需要追加（实际上模板节点已在 processes 里，
-                // 不匹配的父分类直接跳过，不追加）
-                if (!matched) {
-                    // 父分类（不在模板里）—— 直接丢弃，不追加到 processes
-                    // 其扫码数据已在 byProcess 里，会在下面 list 收集时被同义词匹配捞到
-                }
-            }
-        }
 
+        List<Map<String, Object>> result = new ArrayList<>();
         for (String name : processes) {
             String pn = name == null ? "" : name.trim();
-            if (!StringUtils.hasText(pn)) {
-                continue;
-            }
-
-            List<ScanRecord> list = new ArrayList<>();
-            for (Map.Entry<String, List<ScanRecord>> e : byProcess.entrySet()) {
-                if (e == null) {
-                    continue;
-                }
-                String k = e.getKey();
-                List<ScanRecord> v = e.getValue();
-                if (v == null || v.isEmpty()) {
-                    continue;
-                }
-                if (templateLibraryService.progressStageNameMatches(pn, k)) {
-                    // key 直接匹配模板节点（常规情况）：整桶收入
-                    list.addAll(v);
-                } else {
-                    // key 是父分类（如"二次工艺"）未匹配模板节点，但桶内某些记录的
-                    // processName（如"绣花"）可能直接匹配当前模板节点。
-                    // 逐条检查 processName，只收集匹配的记录，避免跨工序聚合。
-                    for (ScanRecord r : v) {
-                        if (r == null) continue;
-                        String rProcessName = r.getProcessName() == null ? "" : r.getProcessName().trim();
-                        if (StringUtils.hasText(rProcessName)
-                                && templateLibraryService.progressStageNameMatches(pn, rProcessName)) {
-                            list.add(r);
-                        }
-                    }
-                }
-            }
-            list.sort((a, b) -> {
-                LocalDateTime ta = a == null ? null : a.getScanTime();
-                LocalDateTime tb = b == null ? null : b.getScanTime();
-                if (ta == null && tb == null) {
-                    return 0;
-                }
-                if (ta == null) {
-                    return -1;
-                }
-                if (tb == null) {
-                    return 1;
-                }
-                return ta.compareTo(tb);
-            });
+            if (!StringUtils.hasText(pn)) continue;
+            List<ScanRecord> list = collectRecordsForProcess(pn, byProcess);
+            sortRecordsByScanTime(list);
 
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("processName", pn);
 
-            // ─── 【下单】环节：直接取 order 创建人信息，不依赖 scan record ──────
             if (templateLibraryService.progressStageNameMatches("下单", pn)) {
-                row.put("status", "completed");
-                row.put("totalQuantity", orderQty);
-                row.put("startTime", order.getCreateTime());
-                row.put("completeTime", order.getCreateTime());
-                String creatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
-                String creatorName = StringUtils.hasText(order.getCreatedByName()) ? order.getCreatedByName() : null;
-                row.put("startOperatorId", creatorId);
-                row.put("startOperatorName", creatorName);
-                row.put("completeOperatorId", creatorId);
-                row.put("completeOperatorName", creatorName);
+                fillOrderCreatedRow(row, order, orderQty);
                 result.add(row);
                 continue;
             }
-            // ──────────────────────────────────────────────────────────────────────
-
             if (list.isEmpty()) {
                 row.put("status", "not_started");
                 row.put("totalQuantity", 0);
@@ -562,64 +458,132 @@ public class ProductionOrderFlowOrchestrationService {
 
             ScanRecord first = list.get(0);
             ScanRecord last = list.get(list.size() - 1);
-
             row.put("startTime", first == null ? null : first.getScanTime());
             row.put("startOperatorId", first == null ? null : first.getOperatorId());
             row.put("startOperatorName", first == null ? null : first.getOperatorName());
-
-            long sum = 0;
-            LocalDateTime doneTime = null;
-            String doneOpId = null;
-            String doneOpName = null;
-            Map<String, Integer> maxByBundle = new HashMap<>();
-            for (ScanRecord r : list) {
-                if (r == null) {
-                    continue;
-                }
-                int q = r.getQuantity() == null ? 0 : r.getQuantity();
-                if (q <= 0) {
-                    continue;
-                }
-                String bundleId = r.getCuttingBundleId() == null ? null : r.getCuttingBundleId().trim();
-                if (StringUtils.hasText(bundleId)) {
-                    int prev = maxByBundle.getOrDefault(bundleId, 0);
-                    int next = Math.max(prev, q);
-                    int delta = Math.max(0, next - prev);
-                    if (delta > 0) {
-                        sum += delta;
-                        maxByBundle.put(bundleId, next);
-                    }
-                } else {
-                    sum += q;
-                }
-                if (orderQty > 0 && doneTime == null && sum >= orderQty) {
-                    doneTime = r.getScanTime();
-                    doneOpId = r.getOperatorId();
-                    doneOpName = r.getOperatorName();
-                    break;
-                }
-            }
-
-            row.put("totalQuantity", (int) Math.min((long) Integer.MAX_VALUE, Math.max(0L, sum)));
-
-            if (doneTime != null) {
-                row.put("completeTime", doneTime);
-                row.put("completeOperatorId", doneOpId);
-                row.put("completeOperatorName", doneOpName);
-                row.put("status", "completed");
-            } else {
-                row.put("completeTime", null);
-                row.put("completeOperatorId", null);
-                row.put("completeOperatorName", null);
-                row.put("status", "in_progress");
-                row.put("lastTime", last == null ? null : last.getScanTime());
-                row.put("lastOperatorId", last == null ? null : last.getOperatorId());
-                row.put("lastOperatorName", last == null ? null : last.getOperatorName());
-            }
-
+            fillStageProgress(row, list, orderQty, last);
             result.add(row);
         }
-
         return result;
+    }
+
+    private List<String> loadProcessOrder(ProductionOrder order) {
+        List<String> processOrder = new ArrayList<>();
+        try {
+            templateLibraryService.loadProgressWeights(order.getStyleNo(), new LinkedHashMap<>(), processOrder);
+        } catch (Exception e) {
+            log.warn("Failed to load progress weights from template: orderId={}, styleNo={}", order.getId(),
+                    order.getStyleNo(), e);
+        }
+        return processOrder;
+    }
+
+    private Map<String, List<ScanRecord>> groupRecordsByProcess(List<ScanRecord> records) {
+        Map<String, List<ScanRecord>> byProcess = new LinkedHashMap<>();
+        if (records != null) {
+            for (ScanRecord r : records) {
+                if (r == null || !"success".equals(r.getScanResult())) continue;
+                String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
+                if (!StringUtils.hasText(pn)) pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
+                String pc = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
+                if ("quality_warehousing".equals(pc)) pn = "质检";
+                if (!StringUtils.hasText(pn)) continue;
+                byProcess.computeIfAbsent(pn, k -> new ArrayList<>()).add(r);
+            }
+        }
+        return byProcess;
+    }
+
+    private List<ScanRecord> collectRecordsForProcess(String pn, Map<String, List<ScanRecord>> byProcess) {
+        List<ScanRecord> list = new ArrayList<>();
+        for (Map.Entry<String, List<ScanRecord>> e : byProcess.entrySet()) {
+            if (e == null) continue;
+            String k = e.getKey();
+            List<ScanRecord> v = e.getValue();
+            if (v == null || v.isEmpty()) continue;
+            if (templateLibraryService.progressStageNameMatches(pn, k)) {
+                list.addAll(v);
+            } else {
+                for (ScanRecord r : v) {
+                    if (r == null) continue;
+                    String rProcessName = r.getProcessName() == null ? "" : r.getProcessName().trim();
+                    if (StringUtils.hasText(rProcessName)
+                            && templateLibraryService.progressStageNameMatches(pn, rProcessName)) {
+                        list.add(r);
+                    }
+                }
+            }
+        }
+        return list;
+    }
+
+    private void sortRecordsByScanTime(List<ScanRecord> list) {
+        list.sort((a, b) -> {
+            LocalDateTime ta = a == null ? null : a.getScanTime();
+            LocalDateTime tb = b == null ? null : b.getScanTime();
+            if (ta == null && tb == null) return 0;
+            if (ta == null) return -1;
+            if (tb == null) return 1;
+            return ta.compareTo(tb);
+        });
+    }
+
+    private void fillOrderCreatedRow(Map<String, Object> row, ProductionOrder order, int orderQty) {
+        row.put("status", "completed");
+        row.put("totalQuantity", orderQty);
+        row.put("startTime", order.getCreateTime());
+        row.put("completeTime", order.getCreateTime());
+        String creatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
+        String creatorName = StringUtils.hasText(order.getCreatedByName()) ? order.getCreatedByName() : null;
+        row.put("startOperatorId", creatorId);
+        row.put("startOperatorName", creatorName);
+        row.put("completeOperatorId", creatorId);
+        row.put("completeOperatorName", creatorName);
+    }
+
+    private void fillStageProgress(Map<String, Object> row, List<ScanRecord> list, int orderQty, ScanRecord last) {
+        long sum = 0;
+        LocalDateTime doneTime = null;
+        String doneOpId = null;
+        String doneOpName = null;
+        Map<String, Integer> maxByBundle = new HashMap<>();
+        for (ScanRecord r : list) {
+            if (r == null) continue;
+            int q = r.getQuantity() == null ? 0 : r.getQuantity();
+            if (q <= 0) continue;
+            String bundleId = r.getCuttingBundleId() == null ? null : r.getCuttingBundleId().trim();
+            if (StringUtils.hasText(bundleId)) {
+                int prev = maxByBundle.getOrDefault(bundleId, 0);
+                int next = Math.max(prev, q);
+                int delta = Math.max(0, next - prev);
+                if (delta > 0) {
+                    sum += delta;
+                    maxByBundle.put(bundleId, next);
+                }
+            } else {
+                sum += q;
+            }
+            if (orderQty > 0 && doneTime == null && sum >= orderQty) {
+                doneTime = r.getScanTime();
+                doneOpId = r.getOperatorId();
+                doneOpName = r.getOperatorName();
+                break;
+            }
+        }
+        row.put("totalQuantity", (int) Math.min((long) Integer.MAX_VALUE, Math.max(0L, sum)));
+        if (doneTime != null) {
+            row.put("completeTime", doneTime);
+            row.put("completeOperatorId", doneOpId);
+            row.put("completeOperatorName", doneOpName);
+            row.put("status", "completed");
+        } else {
+            row.put("completeTime", null);
+            row.put("completeOperatorId", null);
+            row.put("completeOperatorName", null);
+            row.put("status", "in_progress");
+            row.put("lastTime", last == null ? null : last.getScanTime());
+            row.put("lastOperatorId", last == null ? null : last.getOperatorId());
+            row.put("lastOperatorName", last == null ? null : last.getOperatorName());
+        }
     }
 }

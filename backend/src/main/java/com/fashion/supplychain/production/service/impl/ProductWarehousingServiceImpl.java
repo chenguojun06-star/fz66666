@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Propagation;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import com.fashion.supplychain.websocket.service.WebSocketService;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 
 import static com.fashion.supplychain.production.service.impl.ProductWarehousingHelper.*;
 
@@ -190,7 +192,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (!StringUtils.hasText(pw.getOrderId())) {
             throw new IllegalArgumentException("订单ID不能为空");
         }
-        ProductionOrder order = productionOrderService.getById(pw.getOrderId());
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, pw.getOrderId())
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
             throw new NoSuchElementException("订单不存在");
         }
@@ -458,7 +464,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     }
 
     private ProductionOrder validateOrderForSaveById(String orderId) {
-        ProductionOrder order = productionOrderService.getById(orderId);
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
             throw new NoSuchElementException("订单不存在");
         }
@@ -476,6 +486,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         ProductWarehousing oldW = this.lambdaQuery()
                 .eq(ProductWarehousing::getId, pw.getId())
                 .eq(ProductWarehousing::getTenantId, tenantId)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
                 .one();
         if (oldW == null) return false;
 
@@ -565,7 +576,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
     private void validateOrderNotTerminal(String orderId) {
         if (!StringUtils.hasText(orderId)) return;
-        ProductionOrder order = productionOrderService.getById(orderId);
+        Long tenantId = UserContext.tenantId();
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .one();
         String st = order == null ? "" : (order.getStatus() == null ? "" : order.getStatus().trim());
         if (OrderStatusConstants.isTerminal(st)) {
             throw new IllegalStateException("订单已完成，已停止入库");
@@ -621,7 +636,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (diff == 0) return;
         ProductionOrder order = null;
         if (StringUtils.hasText(oldW.getOrderId())) {
-            order = productionOrderService.getById(oldW.getOrderId());
+            Long tenantId = UserContext.tenantId();
+            order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, oldW.getOrderId())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
         }
         helper.updateSkuStock(pw, order, bundle, diff);
     }
@@ -660,7 +679,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             String computedQualityStatus, int qualified, int warehousingQty, int unqualified, LocalDateTime now) {
         if (!StringUtils.hasText(oldW.getOrderId())) return;
         try {
-            ProductionOrder order = productionOrderService.getById(oldW.getOrderId());
+            Long tenantId = UserContext.tenantId();
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, oldW.getOrderId())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
             if (order == null) return;
             ProductWarehousing current = buildCurrentForScanRecord(pw, oldW, order, computedQualityStatus, qualified, warehousingQty, unqualified);
             helper.upsertWarehousingStageScanRecord(current, order, bundle, now);
@@ -697,9 +720,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     public boolean softDeleteByOrderId(String orderId) {
         if (!StringUtils.hasText(orderId)) return false;
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getOrderId, orderId.trim());
-        Long tid = com.fashion.supplychain.common.UserContext.tenantId();
-        if (tid != null) wrapper.eq(ProductWarehousing::getTenantId, tid);
+                .eq(ProductWarehousing::getOrderId, orderId.trim())
+                .eq(ProductWarehousing::getDeleteFlag, 0);
+        TenantAssert.assertTenantContext();
+        Long tid = UserContext.tenantId();
+        wrapper.eq(ProductWarehousing::getTenantId, tid);
         return this.remove(wrapper);
     }
 

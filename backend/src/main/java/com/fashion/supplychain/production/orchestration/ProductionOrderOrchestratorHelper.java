@@ -222,6 +222,7 @@ public class ProductionOrderOrchestratorHelper {
 
             return objectMapper.writeValueAsString(Map.of("nodes", outNodes));
         } catch (Exception e) {
+            log.warn("[OrderOrchestrator] serializeWorkflowNodes失败", e);
             return null;
         }
     }

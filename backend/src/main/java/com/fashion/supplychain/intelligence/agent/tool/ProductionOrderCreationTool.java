@@ -72,88 +72,55 @@ public class ProductionOrderCreationTool implements AgentTool {
 
     @Override
     public AiTool getToolDefinition() {
+        Map<String, Object> properties = buildPropertyDefinitions();
+
+        AiTool tool = new AiTool();
+        AiTool.AiFunction function = new AiTool.AiFunction();
+        function.setName(getName());
+        function.setDescription("按正式生产订单链路创建完整订单。优先用于'帮我下单/创建订单/把某款下给某工厂'。如果款式、工厂、颜色尺码数量明细、计划开始时间、计划完成时间任一缺失，必须返回缺失项并要求继续补充，禁止创建残缺草稿单。");
+        AiTool.AiParameters aiParams = new AiTool.AiParameters();
+        aiParams.setProperties(properties);
+        aiParams.setRequired(List.of());
+        function.setParameters(aiParams);
+        tool.setFunction(function);
+        return tool;
+    }
+
+    private Map<String, Object> buildPropertyDefinitions() {
         Map<String, Object> properties = new HashMap<>();
+        addProp(properties, "styleNo", "string", "款号（Style No），优先提供，例如：D2024001");
+        addProp(properties, "styleName", "string", "款名，可替代款号用于匹配；若同名多条会要求用户确认");
+        addProp(properties, "factoryName", "string", "工厂名称或内部生产组名称，例如：鑫达制衣厂 / 二车间");
+        addProp(properties, "factoryId", "string", "外发工厂ID；如果已知可直接传");
+        addProp(properties, "factoryType", "string", "工厂类型，可选值 INTERNAL / EXTERNAL");
+        addProp(properties, "orgUnitId", "string", "内部生产组织节点ID；内部工厂场景优先传这个");
+        addProp(properties, "orgUnitName", "string", "内部生产组织节点名称，例如：一车间 / 二组");
+        addProp(properties, "plannedStartDate", "string", "计划开始时间，格式 yyyy-MM-dd 或 yyyy-MM-ddTHH:mm:ss");
+        addProp(properties, "plannedEndDate", "string", "计划完成时间/交期，格式 yyyy-MM-dd 或 yyyy-MM-ddTHH:mm:ss");
+        addProp(properties, "urgencyLevel", "string", "急单等级：urgent / normal");
+        addProp(properties, "plateType", "string", "单型：FIRST / REORDER，或首单/翻单");
+        addProp(properties, "orderBizType", "string", "下单类型：FOB / ODM / OEM / CMT");
+        addProp(properties, "orderQuantity", "integer", "订单总数量；若已给出 orderLines 可不单独传");
+        addProp(properties, "color", "string", "单色单码场景可直接提供颜色");
+        addProp(properties, "size", "string", "单色单码场景可直接提供尺码");
+        addProp(properties, "quantity", "integer", "单色单码场景可直接提供数量");
+        properties.put("orderLines", buildOrderLinesProperty());
+        addProp(properties, "merchandiser", "string", "跟单员姓名，可选");
+        addProp(properties, "company", "string", "公司/客户名，可选");
+        addProp(properties, "productCategory", "string", "品类，可选");
+        addProp(properties, "patternMaker", "string", "纸样师姓名，可选");
+        addProp(properties, "remark", "string", "订单备注（可选），例如：春季款，优先排期");
+        return properties;
+    }
 
-        Map<String, Object> styleNoProp = new HashMap<>();
-        styleNoProp.put("type", "string");
-        styleNoProp.put("description", "款号（Style No），优先提供，例如：D2024001");
-        properties.put("styleNo", styleNoProp);
+    private void addProp(Map<String, Object> properties, String key, String type, String desc) {
+        Map<String, Object> prop = new HashMap<>();
+        prop.put("type", type);
+        prop.put("description", desc);
+        properties.put(key, prop);
+    }
 
-        Map<String, Object> styleNameProp = new HashMap<>();
-        styleNameProp.put("type", "string");
-        styleNameProp.put("description", "款名，可替代款号用于匹配；若同名多条会要求用户确认");
-        properties.put("styleName", styleNameProp);
-
-        Map<String, Object> factoryNameProp = new HashMap<>();
-        factoryNameProp.put("type", "string");
-        factoryNameProp.put("description", "工厂名称或内部生产组名称，例如：鑫达制衣厂 / 二车间");
-        properties.put("factoryName", factoryNameProp);
-
-        Map<String, Object> factoryIdProp = new HashMap<>();
-        factoryIdProp.put("type", "string");
-        factoryIdProp.put("description", "外发工厂ID；如果已知可直接传");
-        properties.put("factoryId", factoryIdProp);
-
-        Map<String, Object> factoryTypeProp = new HashMap<>();
-        factoryTypeProp.put("type", "string");
-        factoryTypeProp.put("description", "工厂类型，可选值 INTERNAL / EXTERNAL");
-        properties.put("factoryType", factoryTypeProp);
-
-        Map<String, Object> orgUnitIdProp = new HashMap<>();
-        orgUnitIdProp.put("type", "string");
-        orgUnitIdProp.put("description", "内部生产组织节点ID；内部工厂场景优先传这个");
-        properties.put("orgUnitId", orgUnitIdProp);
-
-        Map<String, Object> orgUnitNameProp = new HashMap<>();
-        orgUnitNameProp.put("type", "string");
-        orgUnitNameProp.put("description", "内部生产组织节点名称，例如：一车间 / 二组");
-        properties.put("orgUnitName", orgUnitNameProp);
-
-        Map<String, Object> plannedStartDateProp = new HashMap<>();
-        plannedStartDateProp.put("type", "string");
-        plannedStartDateProp.put("description", "计划开始时间，格式 yyyy-MM-dd 或 yyyy-MM-ddTHH:mm:ss");
-        properties.put("plannedStartDate", plannedStartDateProp);
-
-        Map<String, Object> plannedEndDateProp = new HashMap<>();
-        plannedEndDateProp.put("type", "string");
-        plannedEndDateProp.put("description", "计划完成时间/交期，格式 yyyy-MM-dd 或 yyyy-MM-ddTHH:mm:ss");
-        properties.put("plannedEndDate", plannedEndDateProp);
-
-        Map<String, Object> urgencyLevelProp = new HashMap<>();
-        urgencyLevelProp.put("type", "string");
-        urgencyLevelProp.put("description", "急单等级：urgent / normal");
-        properties.put("urgencyLevel", urgencyLevelProp);
-
-        Map<String, Object> plateTypeProp = new HashMap<>();
-        plateTypeProp.put("type", "string");
-        plateTypeProp.put("description", "单型：FIRST / REORDER，或首单/翻单");
-        properties.put("plateType", plateTypeProp);
-
-        Map<String, Object> orderBizTypeProp = new HashMap<>();
-        orderBizTypeProp.put("type", "string");
-        orderBizTypeProp.put("description", "下单类型：FOB / ODM / OEM / CMT");
-        properties.put("orderBizType", orderBizTypeProp);
-
-        Map<String, Object> orderQtyProp = new HashMap<>();
-        orderQtyProp.put("type", "integer");
-        orderQtyProp.put("description", "订单总数量；若已给出 orderLines 可不单独传");
-        properties.put("orderQuantity", orderQtyProp);
-
-        Map<String, Object> colorProp = new HashMap<>();
-        colorProp.put("type", "string");
-        colorProp.put("description", "单色单码场景可直接提供颜色");
-        properties.put("color", colorProp);
-
-        Map<String, Object> sizeProp = new HashMap<>();
-        sizeProp.put("type", "string");
-        sizeProp.put("description", "单色单码场景可直接提供尺码");
-        properties.put("size", sizeProp);
-
-        Map<String, Object> quantityProp = new HashMap<>();
-        quantityProp.put("type", "integer");
-        quantityProp.put("description", "单色单码场景可直接提供数量");
-        properties.put("quantity", quantityProp);
-
+    private Map<String, Object> buildOrderLinesProperty() {
         Map<String, Object> orderLinesProp = new HashMap<>();
         orderLinesProp.put("type", "array");
         orderLinesProp.put("description", "订单明细数组，每条包含颜色、尺码、数量");
@@ -166,43 +133,7 @@ public class ProductionOrderCreationTool implements AgentTool {
         itemSchema.put("properties", itemProps);
         itemSchema.put("required", List.of("color", "size", "quantity"));
         orderLinesProp.put("items", itemSchema);
-        properties.put("orderLines", orderLinesProp);
-
-        Map<String, Object> merchandiserProp = new HashMap<>();
-        merchandiserProp.put("type", "string");
-        merchandiserProp.put("description", "跟单员姓名，可选");
-        properties.put("merchandiser", merchandiserProp);
-
-        Map<String, Object> companyProp = new HashMap<>();
-        companyProp.put("type", "string");
-        companyProp.put("description", "公司/客户名，可选");
-        properties.put("company", companyProp);
-
-        Map<String, Object> categoryProp = new HashMap<>();
-        categoryProp.put("type", "string");
-        categoryProp.put("description", "品类，可选");
-        properties.put("productCategory", categoryProp);
-
-        Map<String, Object> patternMakerProp = new HashMap<>();
-        patternMakerProp.put("type", "string");
-        patternMakerProp.put("description", "纸样师姓名，可选");
-        properties.put("patternMaker", patternMakerProp);
-
-        Map<String, Object> remarkProp = new HashMap<>();
-        remarkProp.put("type", "string");
-        remarkProp.put("description", "订单备注（可选），例如：春季款，优先排期");
-        properties.put("remark", remarkProp);
-
-        AiTool tool = new AiTool();
-        AiTool.AiFunction function = new AiTool.AiFunction();
-        function.setName(getName());
-        function.setDescription("按正式生产订单链路创建完整订单。优先用于'帮我下单/创建订单/把某款下给某工厂'。如果款式、工厂、颜色尺码数量明细、计划开始时间、计划完成时间任一缺失，必须返回缺失项并要求继续补充，禁止创建残缺草稿单。");
-        AiTool.AiParameters aiParams = new AiTool.AiParameters();
-        aiParams.setProperties(properties);
-        aiParams.setRequired(List.of());
-        function.setParameters(aiParams);
-        tool.setFunction(function);
-        return tool;
+        return orderLinesProp;
     }
 
     @Override
@@ -278,38 +209,8 @@ public class ProductionOrderCreationTool implements AgentTool {
                 return buildError("订单数量必须大于0");
             }
 
-            ProductionOrder order = new ProductionOrder();
-            order.setOrderNo(serialOrchestrator.generate("ORDER_NO"));
-            order.setStyleId(String.valueOf(style.getId()));
-            order.setStyleNo(style.getStyleNo());
-            order.setStyleName(style.getStyleName());
-            order.setSkc(style.getSkc());
-            order.setOrderQuantity(orderQuantity);
-            order.setColor(joinDistinct(orderLines, "color"));
-            order.setSize(joinDistinct(orderLines, "size"));
-            order.setOrderDetails(buildOrderDetails(orderLines));
-            order.setFactoryId(factoryResolution.factoryId);
-            order.setFactoryName(factoryResolution.factoryName);
-            order.setFactoryType(factoryResolution.factoryType);
-            order.setOrgUnitId(factoryResolution.orgUnitId);
-            order.setUrgencyLevel(normalizeUrgency(text(args, "urgencyLevel")));
-            order.setPlateType(normalizePlateType(text(args, "plateType")));
-            order.setOrderBizType(normalizeOrderBizType(text(args, "orderBizType")));
-            order.setMerchandiser(emptyToNull(text(args, "merchandiser")));
-            order.setCompany(emptyToNull(text(args, "company")));
-            order.setProductCategory(emptyToNull(text(args, "productCategory")));
-            order.setPatternMaker(emptyToNull(text(args, "patternMaker")));
-            order.setRemarks(emptyToNull(text(args, "remark")));
-            order.setPlannedStartDate(plannedStartDate);
-            order.setPlannedEndDate(plannedEndDate);
-            order.setProgressWorkflowJson(buildProgressWorkflowJson(style.getStyleNo()));
-            order.setStatus("pending");
-            order.setProductionProgress(0);
-            order.setMaterialArrivalRate(0);
-            order.setDeleteFlag(0);
-            order.setTenantId(tenantId);
-            order.setCreatedById(userId);
-            order.setCreatedByName(username);
+            ProductionOrder order = buildProductionOrder(tenantId, userId, username, style,
+                    factoryResolution, orderLines, args, plannedStartDate, plannedEndDate);
 
             boolean saved = productionOrderOrchestrator.saveOrUpdateOrder(order);
             if (!saved || !StringUtils.hasText(order.getId())) {
@@ -319,23 +220,7 @@ public class ProductionOrderCreationTool implements AgentTool {
             log.info("[ProductionOrderCreationTool] AI完整建单成功 styleNo={} qty={} orderId={} orderNo={} factory={}",
                     order.getStyleNo(), orderQuantity, order.getId(), order.getOrderNo(), order.getFactoryName());
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("orderId", order.getId());
-            result.put("orderNo", order.getOrderNo());
-            result.put("styleNo", order.getStyleNo());
-            result.put("styleName", order.getStyleName());
-            result.put("orderQuantity", orderQuantity);
-            result.put("factoryName", order.getFactoryName());
-            result.put("factoryType", order.getFactoryType());
-            result.put("plannedStartDate", plannedStartDate.toString());
-            result.put("plannedEndDate", plannedEndDate.toString());
-            result.put("orderLineCount", orderLines.size());
-            result.put("status", order.getStatus());
-            result.put("statusLabel", "待生产");
-                result.put("message", "订单已按完整链路创建成功，已包含工厂、颜色尺码数量明细、计划日期和工序工作流，可直接进入后续生产。");
-
-            return OBJECT_MAPPER.writeValueAsString(result);
+            return buildSuccessResult(order, orderQuantity, orderLines, plannedStartDate, plannedEndDate);
 
         } catch (Exception e) {
             log.error("[ProductionOrderCreationTool] 建单异常", e);
@@ -361,71 +246,73 @@ public class ProductionOrderCreationTool implements AgentTool {
         wizard.put("icon", "📋");
         wizard.put("submitLabel", "确认下单");
         wizard.put("submitCommand", "下单");
+        wizard.put("steps", buildWizardSteps());
+        return wizard;
+    }
 
+    private List<Map<String, Object>> buildWizardSteps() {
         List<Map<String, Object>> steps = new ArrayList<>();
+        steps.add(buildFactoryStep());
+        steps.add(buildColorSizeStep());
+        steps.add(buildScheduleStep());
+        return steps;
+    }
 
-        Map<String, Object> step1 = new LinkedHashMap<>();
-        step1.put("stepKey", "factory");
-        step1.put("title", "选择工厂");
-        step1.put("desc", "选择内部生产组或外发加工厂");
-        List<Map<String, Object>> step1Fields = new ArrayList<>();
+    private Map<String, Object> buildFactoryStep() {
+        Map<String, Object> step = new LinkedHashMap<>();
+        step.put("stepKey", "factory");
+        step.put("title", "选择工厂");
+        step.put("desc", "选择内部生产组或外发加工厂");
+        List<Map<String, Object>> fields = new ArrayList<>();
         Map<String, Object> factoryTypeField = new LinkedHashMap<>();
         factoryTypeField.put("key", "factoryType");
         factoryTypeField.put("label", "工厂类型");
         factoryTypeField.put("inputType", "select");
         factoryTypeField.put("required", true);
-        List<Map<String, String>> factoryTypeOpts = new ArrayList<>();
-        factoryTypeOpts.add(Map.of("label", "内部工厂", "value", "INTERNAL", "desc", "自有生产组", "icon", "🏭"));
-        factoryTypeOpts.add(Map.of("label", "外发工厂", "value", "EXTERNAL", "desc", "外部加工厂", "icon", "🏭"));
-        factoryTypeField.put("options", factoryTypeOpts);
-        step1Fields.add(factoryTypeField);
+        List<Map<String, String>> opts = new ArrayList<>();
+        opts.add(Map.of("label", "内部工厂", "value", "INTERNAL", "desc", "自有生产组", "icon", "🏭"));
+        opts.add(Map.of("label", "外发工厂", "value", "EXTERNAL", "desc", "外部加工厂", "icon", "🏭"));
+        factoryTypeField.put("options", opts);
+        fields.add(factoryTypeField);
         Map<String, Object> factoryNameField = new LinkedHashMap<>();
         factoryNameField.put("key", "factoryName");
         factoryNameField.put("label", "工厂名称");
         factoryNameField.put("inputType", "text");
         factoryNameField.put("placeholder", "输入工厂名称搜索");
         factoryNameField.put("required", true);
-        step1Fields.add(factoryNameField);
-        step1.put("fields", step1Fields);
-        steps.add(step1);
+        fields.add(factoryNameField);
+        step.put("fields", fields);
+        return step;
+    }
 
-        Map<String, Object> step2 = new LinkedHashMap<>();
-        step2.put("stepKey", "color_size");
-        step2.put("title", "颜色尺码");
-        step2.put("desc", "选择颜色和尺码，填写数量");
-        List<Map<String, Object>> step2Fields = new ArrayList<>();
+    private Map<String, Object> buildColorSizeStep() {
+        Map<String, Object> step = new LinkedHashMap<>();
+        step.put("stepKey", "color_size");
+        step.put("title", "颜色尺码");
+        step.put("desc", "选择颜色和尺码，填写数量");
+        List<Map<String, Object>> fields = new ArrayList<>();
         Map<String, Object> colorField = new LinkedHashMap<>();
         colorField.put("key", "colors");
         colorField.put("label", "颜色（可多选）");
         colorField.put("inputType", "multi_select");
         colorField.put("required", true);
         List<Map<String, String>> colorOpts = new ArrayList<>();
-        colorOpts.add(Map.of("label", "黑色", "value", "黑色"));
-        colorOpts.add(Map.of("label", "白色", "value", "白色"));
-        colorOpts.add(Map.of("label", "红色", "value", "红色"));
-        colorOpts.add(Map.of("label", "蓝色", "value", "蓝色"));
-        colorOpts.add(Map.of("label", "灰色", "value", "灰色"));
-        colorOpts.add(Map.of("label", "绿色", "value", "绿色"));
-        colorOpts.add(Map.of("label", "黄色", "value", "黄色"));
-        colorOpts.add(Map.of("label", "粉色", "value", "粉色"));
+        for (String c : List.of("黑色", "白色", "红色", "蓝色", "灰色", "绿色", "黄色", "粉色")) {
+            colorOpts.add(Map.of("label", c, "value", c));
+        }
         colorField.put("options", colorOpts);
-        step2Fields.add(colorField);
+        fields.add(colorField);
         Map<String, Object> sizeField = new LinkedHashMap<>();
         sizeField.put("key", "sizes");
         sizeField.put("label", "尺码（可多选）");
         sizeField.put("inputType", "multi_select");
         sizeField.put("required", true);
         List<Map<String, String>> sizeOpts = new ArrayList<>();
-        sizeOpts.add(Map.of("label", "XS", "value", "XS"));
-        sizeOpts.add(Map.of("label", "S", "value", "S"));
-        sizeOpts.add(Map.of("label", "M", "value", "M"));
-        sizeOpts.add(Map.of("label", "L", "value", "L"));
-        sizeOpts.add(Map.of("label", "XL", "value", "XL"));
-        sizeOpts.add(Map.of("label", "2XL", "value", "2XL"));
-        sizeOpts.add(Map.of("label", "3XL", "value", "3XL"));
-        sizeOpts.add(Map.of("label", "4XL", "value", "4XL"));
+        for (String s : List.of("XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL")) {
+            sizeOpts.add(Map.of("label", s, "value", s));
+        }
         sizeField.put("options", sizeOpts);
-        step2Fields.add(sizeField);
+        fields.add(sizeField);
         Map<String, Object> qtyField = new LinkedHashMap<>();
         qtyField.put("key", "quantity");
         qtyField.put("label", "每色每码数量");
@@ -433,32 +320,31 @@ public class ProductionOrderCreationTool implements AgentTool {
         qtyField.put("placeholder", "如每色每码100件");
         qtyField.put("required", true);
         qtyField.put("min", 1);
-        step2Fields.add(qtyField);
-        step2.put("fields", step2Fields);
-        steps.add(step2);
+        fields.add(qtyField);
+        step.put("fields", fields);
+        return step;
+    }
 
-        Map<String, Object> step3 = new LinkedHashMap<>();
-        step3.put("stepKey", "schedule");
-        step3.put("title", "计划日期");
-        step3.put("desc", "设置生产开始和完成时间");
-        List<Map<String, Object>> step3Fields = new ArrayList<>();
+    private Map<String, Object> buildScheduleStep() {
+        Map<String, Object> step = new LinkedHashMap<>();
+        step.put("stepKey", "schedule");
+        step.put("title", "计划日期");
+        step.put("desc", "设置生产开始和完成时间");
+        List<Map<String, Object>> fields = new ArrayList<>();
         Map<String, Object> startDateField = new LinkedHashMap<>();
         startDateField.put("key", "plannedStartDate");
         startDateField.put("label", "计划开始时间");
         startDateField.put("inputType", "date");
         startDateField.put("required", true);
-        step3Fields.add(startDateField);
+        fields.add(startDateField);
         Map<String, Object> endDateField = new LinkedHashMap<>();
         endDateField.put("key", "plannedEndDate");
         endDateField.put("label", "计划完成时间");
         endDateField.put("inputType", "date");
         endDateField.put("required", true);
-        step3Fields.add(endDateField);
-        step3.put("fields", step3Fields);
-        steps.add(step3);
-
-        wizard.put("steps", steps);
-        return wizard;
+        fields.add(endDateField);
+        step.put("fields", fields);
+        return step;
     }
 
     private String buildError(String message) {
@@ -525,7 +411,7 @@ public class ProductionOrderCreationTool implements AgentTool {
 
     private FactoryResolution resolveExternalFactory(Long tenantId, String factoryId, String factoryName) {
         if (StringUtils.hasText(factoryId)) {
-            Factory factory = factoryService.getById(factoryId.trim());
+            Factory factory = factoryService.lambdaQuery().eq(Factory::getId, factoryId.trim()).eq(Factory::getTenantId, tenantId).one();
             if (factory != null && Objects.equals(factory.getTenantId(), tenantId) && !isDeleted(factory.getDeleteFlag())) {
                 return FactoryResolution.external(factory.getId(), factory.getFactoryName());
             }
@@ -553,7 +439,7 @@ public class ProductionOrderCreationTool implements AgentTool {
 
     private FactoryResolution resolveInternalFactory(Long tenantId, String orgUnitId, String orgUnitName) {
         if (StringUtils.hasText(orgUnitId)) {
-            OrganizationUnit unit = organizationUnitService.getById(orgUnitId.trim());
+            OrganizationUnit unit = organizationUnitService.lambdaQuery().eq(OrganizationUnit::getId, orgUnitId.trim()).eq(OrganizationUnit::getTenantId, tenantId).one();
             if (unit != null && Objects.equals(unit.getTenantId(), tenantId) && !isDeleted(unit.getDeleteFlag())) {
                 return FactoryResolution.internal(unit.getId(), unit.getNodeName());
             }
@@ -655,6 +541,69 @@ public class ProductionOrderCreationTool implements AgentTool {
         return OBJECT_MAPPER.writeValueAsString(Map.of("nodes", nodes));
     }
 
+    private ProductionOrder buildProductionOrder(Long tenantId, String userId, String username, StyleInfo style,
+                                                  FactoryResolution factoryResolution, List<Map<String, Object>> orderLines,
+                                                  JsonNode args, LocalDateTime plannedStartDate, LocalDateTime plannedEndDate) throws Exception {
+        int orderQuantity = orderLines.stream()
+                .map(row -> toPositiveInt(row.get("quantity")))
+                .filter(Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .sum();
+        ProductionOrder order = new ProductionOrder();
+        order.setOrderNo(serialOrchestrator.generate("ORDER_NO"));
+        order.setStyleId(String.valueOf(style.getId()));
+        order.setStyleNo(style.getStyleNo());
+        order.setStyleName(style.getStyleName());
+        order.setSkc(style.getSkc());
+        order.setOrderQuantity(orderQuantity);
+        order.setColor(joinDistinct(orderLines, "color"));
+        order.setSize(joinDistinct(orderLines, "size"));
+        order.setOrderDetails(buildOrderDetails(orderLines));
+        order.setFactoryId(factoryResolution.factoryId);
+        order.setFactoryName(factoryResolution.factoryName);
+        order.setFactoryType(factoryResolution.factoryType);
+        order.setOrgUnitId(factoryResolution.orgUnitId);
+        order.setUrgencyLevel(normalizeUrgency(text(args, "urgencyLevel")));
+        order.setPlateType(normalizePlateType(text(args, "plateType")));
+        order.setOrderBizType(normalizeOrderBizType(text(args, "orderBizType")));
+        order.setMerchandiser(emptyToNull(text(args, "merchandiser")));
+        order.setCompany(emptyToNull(text(args, "company")));
+        order.setProductCategory(emptyToNull(text(args, "productCategory")));
+        order.setPatternMaker(emptyToNull(text(args, "patternMaker")));
+        order.setRemarks(emptyToNull(text(args, "remark")));
+        order.setPlannedStartDate(plannedStartDate);
+        order.setPlannedEndDate(plannedEndDate);
+        order.setProgressWorkflowJson(buildProgressWorkflowJson(style.getStyleNo()));
+        order.setStatus("pending");
+        order.setProductionProgress(0);
+        order.setMaterialArrivalRate(0);
+        order.setDeleteFlag(0);
+        order.setTenantId(tenantId);
+        order.setCreatedById(userId);
+        order.setCreatedByName(username);
+        return order;
+    }
+
+    private String buildSuccessResult(ProductionOrder order, int orderQuantity, List<Map<String, Object>> orderLines,
+                                       LocalDateTime plannedStartDate, LocalDateTime plannedEndDate) throws Exception {
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("orderId", order.getId());
+        result.put("orderNo", order.getOrderNo());
+        result.put("styleNo", order.getStyleNo());
+        result.put("styleName", order.getStyleName());
+        result.put("orderQuantity", orderQuantity);
+        result.put("factoryName", order.getFactoryName());
+        result.put("factoryType", order.getFactoryType());
+        result.put("plannedStartDate", plannedStartDate.toString());
+        result.put("plannedEndDate", plannedEndDate.toString());
+        result.put("orderLineCount", orderLines.size());
+        result.put("status", order.getStatus());
+        result.put("statusLabel", "待生产");
+        result.put("message", "订单已按完整链路创建成功，已包含工厂、颜色尺码数量明细、计划日期和工序工作流，可直接进入后续生产。");
+        return OBJECT_MAPPER.writeValueAsString(result);
+    }
+
     private String joinDistinct(List<Map<String, Object>> orderLines, String field) {
         return orderLines.stream()
                 .map(row -> asText(row.get(field)))
@@ -743,6 +692,7 @@ public class ProductionOrderCreationTool implements AgentTool {
         try {
             return Integer.parseInt(node.asText("0").trim());
         } catch (Exception e) {
+            log.debug("[OrderCreation] toInt解析失败: node={}", node);
             return null;
         }
     }

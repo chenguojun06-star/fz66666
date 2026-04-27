@@ -19,7 +19,8 @@ public interface IntelligenceProcessStatsMapper extends BaseMapper<IntelligenceP
      */
     @Select("SELECT DISTINCT tenant_id FROM t_scan_record "
             + "WHERE scan_time >= DATE_SUB(NOW(), INTERVAL 90 DAY) "
-            + "AND tenant_id IS NOT NULL")
+            + "AND tenant_id IS NOT NULL "
+            + "AND scan_type != 'orchestration'")
     List<Long> findActiveTenantIds();
 
     /**
@@ -58,6 +59,7 @@ public interface IntelligenceProcessStatsMapper extends BaseMapper<IntelligenceP
         "      / NULLIF(SUM(quantity), 0)                                             AS per_unit_avg",
         "  FROM t_scan_record",
         "  WHERE scan_result = 'success'",
+        "    AND scan_type     != 'orchestration'",
         "    AND tenant_id      = #{tenantId}",
         "    AND scan_time      >= DATE_SUB(NOW(), INTERVAL 90 DAY)",
         "    AND progress_stage IS NOT NULL",

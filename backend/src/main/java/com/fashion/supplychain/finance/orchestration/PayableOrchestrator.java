@@ -264,6 +264,7 @@ public class PayableOrchestrator {
         Payable existing = payableService.lambdaQuery()
                 .eq(Payable::getId, id)
                 .eq(Payable::getTenantId, tenantId)
+                .eq(Payable::getDeleteFlag, 0)
                 .one();
         if (existing == null) {
             throw new NoSuchElementException("应付单不存在");
@@ -285,13 +286,15 @@ public class PayableOrchestrator {
                         .eq(Payable::getTenantId, tenantId)
                         .in(Payable::getStatus, "PENDING", "PARTIAL")
                         .lt(Payable::getDueDate, LocalDate.now()));
-        int count = 0;
-        for (Payable p : list) {
-            p.setStatus("OVERDUE");
-            payableService.updateById(p);
-            count++;
-        }
+        int count = list.size();
         if (count > 0) {
+            payableService.lambdaUpdate()
+                    .eq(Payable::getDeleteFlag, 0)
+                    .eq(Payable::getTenantId, tenantId)
+                    .in(Payable::getStatus, "PENDING", "PARTIAL")
+                    .lt(Payable::getDueDate, LocalDate.now())
+                    .set(Payable::getStatus, "OVERDUE")
+                    .update();
             log.info("[PayableOrchestrator] 批量标记逾期 {} 条", count);
         }
         return count;

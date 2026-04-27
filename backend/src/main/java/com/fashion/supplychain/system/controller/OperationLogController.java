@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +62,7 @@ public class OperationLogController {
     public Result<?> getOperationLogById(@PathVariable Long id) {
         OperationLog log = operationLogService.getById(id);
         if (log != null) {
+            TenantAssert.assertBelongsToCurrentTenant(log.getTenantId(), "操作日志");
             return Result.success(log);
         } else {
             return Result.fail("操作日志不存在");

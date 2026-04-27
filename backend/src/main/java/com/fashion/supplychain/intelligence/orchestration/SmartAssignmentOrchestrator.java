@@ -57,6 +57,7 @@ public class SmartAssignmentOrchestrator {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId)
           .eq("scan_result", "success")
+          .ne("scan_type", "orchestration")
           .gt("quantity", 0)
           .ge("scan_time", from)
           .lt("scan_time", to)

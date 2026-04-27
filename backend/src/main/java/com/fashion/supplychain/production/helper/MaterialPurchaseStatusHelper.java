@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -135,6 +136,12 @@ public class MaterialPurchaseStatusHelper {
         if (updated.getUpdateTime() == null) {
             updated.setUpdateTime(LocalDateTime.now());
         }
+        sendReceiveNotice(updated, rid, rname);
+        broadcastReceiveProgress(updated, rid, rname, purchaseId);
+        return updated;
+    }
+
+    private void sendReceiveNotice(MaterialPurchase updated, String rid, String rname) {
         try {
             Long tenantId = UserContext.tenantId();
             String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
@@ -154,9 +161,11 @@ public class MaterialPurchaseStatusHelper {
         } catch (Exception e) {
             log.warn("[采购领取] 发送通知失败: {}", e.getMessage());
         }
+    }
+
+    private void broadcastReceiveProgress(MaterialPurchase updated, String rid, String rname, String purchaseId) {
         try {
             String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
-            String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
             String receiver = rname != null && !rname.isEmpty() ? rname : rid;
             String receiverId = rid != null && !rid.isEmpty() ? rid : "";
             webSocketService.notifyOrderProgressChanged(receiverId, orderNo, 0, "采购领取");
@@ -165,7 +174,6 @@ public class MaterialPurchaseStatusHelper {
         } catch (Exception e) {
             log.debug("[采购领取] WebSocket广播失败(不阻断): {}", e.getMessage());
         }
-        return updated;
     }
 
     /**
@@ -206,42 +214,11 @@ public class MaterialPurchaseStatusHelper {
 
         for (String pid : validIds) {
             try {
-                MaterialPurchase purchase = purchaseMap.get(pid);
-                if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
-                    skipCount++;
-                    continue;
-                }
-
-                String st = purchase.getStatus() == null ? "" : purchase.getStatus().trim().toLowerCase();
-                if (MaterialConstants.STATUS_COMPLETED.equals(st) || MaterialConstants.STATUS_CANCELLED.equals(st)) {
-                    skipCount++;
-                    continue;
-                }
-
-                // 如果已被他人领取，跳过
-                if (!MaterialConstants.STATUS_PENDING.equals(st) && StringUtils.hasText(st)) {
-                    String existingRid = helper.safe(purchase.getReceiverId());
-                    String existingRname = helper.safe(purchase.getReceiverName());
-                    boolean isSame = false;
-                    if (!rid.isEmpty() && !existingRid.isEmpty()) {
-                        isSame = Objects.equals(rid, existingRid);
-                    } else if (!rname.isEmpty() && !existingRname.isEmpty()) {
-                        isSame = Objects.equals(rname, existingRname);
-                    }
-                    if (!isSame) {
-                        skipCount++;
-                        continue;
-                    }
-                }
-
-                boolean ok = this.receiveAndSync(
-                        pid,
-                        StringUtils.hasText(rid) ? rid : null,
-                        StringUtils.hasText(rname) ? rname : null);
-                if (ok) {
+                String outcome = processBatchReceiveItem(pid, purchaseMap.get(pid), rid, rname);
+                if ("success".equals(outcome)) {
                     successCount++;
-                } else {
-                    failMessages.add("采购单 " + (purchase.getPurchaseNo() != null ? purchase.getPurchaseNo() : pid) + " 领取失败");
+                } else if ("skip".equals(outcome)) {
+                    skipCount++;
                 }
             } catch (Exception e) {
                 failMessages.add("采购单 " + pid + ": " + (e.getMessage() != null ? e.getMessage() : "领取失败"));
@@ -255,6 +232,36 @@ public class MaterialPurchaseStatusHelper {
         result.put("failMessages", failMessages);
         result.put("totalRequested", purchaseIds.size());
         return result;
+    }
+
+    private String processBatchReceiveItem(String pid, MaterialPurchase purchase, String rid, String rname) {
+        if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
+            return "skip";
+        }
+        String st = purchase.getStatus() == null ? "" : purchase.getStatus().trim().toLowerCase();
+        if (MaterialConstants.STATUS_COMPLETED.equals(st) || MaterialConstants.STATUS_CANCELLED.equals(st)) {
+            return "skip";
+        }
+        if (!MaterialConstants.STATUS_PENDING.equals(st) && StringUtils.hasText(st)) {
+            String existingRid = helper.safe(purchase.getReceiverId());
+            String existingRname = helper.safe(purchase.getReceiverName());
+            boolean isSame = false;
+            if (!rid.isEmpty() && !existingRid.isEmpty()) {
+                isSame = Objects.equals(rid, existingRid);
+            } else if (!rname.isEmpty() && !existingRname.isEmpty()) {
+                isSame = Objects.equals(rname, existingRname);
+            }
+            if (!isSame) {
+                return "skip";
+            }
+        }
+        boolean ok = this.receiveAndSync(pid,
+                StringUtils.hasText(rid) ? rid : null,
+                StringUtils.hasText(rname) ? rname : null);
+        if (!ok) {
+            throw new IllegalStateException("采购单 " + (purchase.getPurchaseNo() != null ? purchase.getPurchaseNo() : pid) + " 领取失败");
+        }
+        return "success";
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -318,44 +325,18 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalStateException("回料确认失败");
         }
 
-        // 优先全字段查询；若schema仍有缺列则降级到原始字段查询，并手动填充业务字段
-        MaterialPurchase updated;
-        try {
-            updated = getPurchaseWithTenant(purchaseId);
-        } catch (Exception e) {
-            log.warn("[returnConfirm] 全字段查询失败(schema漂移)，降级安全查询: {}", e.getMessage());
-            updated = materialPurchaseService.getOne(
-                    new LambdaQueryWrapper<MaterialPurchase>()
-                            .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo,
-                                    MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
-                                    MaterialPurchase::getMaterialName, MaterialPurchase::getMaterialType,
-                                    MaterialPurchase::getSpecifications, MaterialPurchase::getUnit,
-                                    MaterialPurchase::getPurchaseQuantity, MaterialPurchase::getArrivedQuantity,
-                                    MaterialPurchase::getInboundRecordId, MaterialPurchase::getSupplierId,
-                                    MaterialPurchase::getSupplierName, MaterialPurchase::getUnitPrice,
-                                    MaterialPurchase::getTotalAmount, MaterialPurchase::getReceiverId,
-                                    MaterialPurchase::getReceiverName, MaterialPurchase::getReceivedTime,
-                                    MaterialPurchase::getRemark, MaterialPurchase::getOrderId,
-                                    MaterialPurchase::getOrderNo, MaterialPurchase::getStyleId,
-                                    MaterialPurchase::getStyleNo, MaterialPurchase::getStyleName,
-                                    MaterialPurchase::getColor, MaterialPurchase::getSize,
-                                    MaterialPurchase::getStatus, MaterialPurchase::getCreateTime,
-                                    MaterialPurchase::getUpdateTime, MaterialPurchase::getDeleteFlag,
-                                    MaterialPurchase::getCreatorId, MaterialPurchase::getCreatorName,
-                                    MaterialPurchase::getUpdaterId, MaterialPurchase::getUpdaterName,
-                                    MaterialPurchase::getExpectedArrivalDate, MaterialPurchase::getActualArrivalDate,
-                                    MaterialPurchase::getTenantId)
-                            .eq(MaterialPurchase::getId, purchaseId));
-            if (updated != null) {
-                // returnConfirmAndSync 已成功执行，手动填充回料确认字段
-                updated.setReturnConfirmed(1);
-                updated.setReturnQuantity(returnQuantity);
-                updated.setReturnConfirmerId(confirmerId);
-                updated.setReturnConfirmerName(confirmerName);
-                updated.setReturnConfirmTime(LocalDateTime.now());
-                updated.setUpdateTime(LocalDateTime.now());
+        MaterialPurchase updated = fetchUpdatedWithFallback(purchaseId, () -> {
+            MaterialPurchase fallback = queryPurchaseSafeFields(purchaseId);
+            if (fallback != null) {
+                fallback.setReturnConfirmed(1);
+                fallback.setReturnQuantity(returnQuantity);
+                fallback.setReturnConfirmerId(confirmerId);
+                fallback.setReturnConfirmerName(confirmerName);
+                fallback.setReturnConfirmTime(LocalDateTime.now());
+                fallback.setUpdateTime(LocalDateTime.now());
             }
-        }
+            return fallback;
+        });
         if (updated == null) {
             throw new IllegalStateException("回料确认失败");
         }
@@ -444,22 +425,42 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalStateException("退回处理失败");
         }
 
+        syncAfterResetReturnConfirm(purchaseId, purchase);
+        logOrchestrationFailureAfterReset(purchaseId, purchase);
+
+        MaterialPurchase updated = fetchUpdatedWithFallback(purchaseId, () -> {
+            MaterialPurchase fallback = queryPurchaseResetSafeFields(purchaseId);
+            if (fallback != null) {
+                fallback.setReturnConfirmed(0);
+                fallback.setUpdateTime(LocalDateTime.now());
+            }
+            return fallback;
+        });
+        if (updated == null) {
+            throw new IllegalStateException("退回处理失败");
+        }
+        if (updated.getUpdateTime() == null) {
+            updated.setUpdateTime(LocalDateTime.now());
+        }
+        return updated;
+    }
+
+    private void syncAfterResetReturnConfirm(String purchaseId, MaterialPurchase purchase) {
         try {
             materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
         } catch (Exception e) {
-            log.warn("Failed to upsert material reconciliation after return confirm reset: purchaseId={}", purchaseId,
-                    e);
+            log.warn("Failed to upsert material reconciliation after return confirm reset: purchaseId={}", purchaseId, e);
             scanRecordDomainService.insertOrchestrationFailure(
-                    purchase.getOrderId(),
-                    purchase.getOrderNo(),
-                    purchase.getStyleId(),
-                    purchase.getStyleNo(),
+                    purchase.getOrderId(), purchase.getOrderNo(),
+                    purchase.getStyleId(), purchase.getStyleNo(),
                     "upsertMaterialReconciliation",
                     e == null ? "upsertMaterialReconciliation failed"
                             : ("upsertMaterialReconciliation failed: " + e.getMessage()),
                     LocalDateTime.now());
         }
+    }
 
+    private void logOrchestrationFailureAfterReset(String purchaseId, MaterialPurchase purchase) {
         try {
             MaterialPurchase current = getPurchaseWithTenant(purchaseId);
             if (current != null && StringUtils.hasText(current.getOrderId())) {
@@ -469,43 +470,26 @@ public class MaterialPurchaseStatusHelper {
         } catch (Exception e) {
             log.warn("Failed to sync order state after return confirm reset: purchaseId={}", purchaseId, e);
             scanRecordDomainService.insertOrchestrationFailure(
-                    purchase.getOrderId(),
-                    purchase.getOrderNo(),
-                    purchase.getStyleId(),
-                    purchase.getStyleNo(),
+                    purchase.getOrderId(), purchase.getOrderNo(),
+                    purchase.getStyleId(), purchase.getStyleNo(),
                     "syncOrderStateAfterReturnConfirmReset",
                     e == null ? "sync order state after return confirm reset failed"
                             : ("sync order state after return confirm reset failed: " + e.getMessage()),
                     LocalDateTime.now());
         }
+    }
 
-        MaterialPurchase updated;
-        try {
-            updated = getPurchaseWithTenant(purchaseId);
-        } catch (Exception e) {
-            log.warn("[resetReturnConfirm] 全字段查询失败(schema漂移)，降级安全查询: {}", e.getMessage());
-            updated = materialPurchaseService.getOne(
-                    new LambdaQueryWrapper<MaterialPurchase>()
-                            .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo,
-                                    MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
-                                    MaterialPurchase::getMaterialName, MaterialPurchase::getStatus,
-                                    MaterialPurchase::getOrderId, MaterialPurchase::getOrderNo,
-                                    MaterialPurchase::getStyleId, MaterialPurchase::getStyleNo,
-                                    MaterialPurchase::getCreateTime, MaterialPurchase::getUpdateTime,
-                                    MaterialPurchase::getDeleteFlag, MaterialPurchase::getTenantId)
-                            .eq(MaterialPurchase::getId, purchaseId));
-            if (updated != null) {
-                updated.setReturnConfirmed(0);
-                updated.setUpdateTime(LocalDateTime.now());
-            }
-        }
-        if (updated == null) {
-            throw new IllegalStateException("退回处理失败");
-        }
-        if (updated.getUpdateTime() == null) {
-            updated.setUpdateTime(LocalDateTime.now());
-        }
-        return updated;
+    private MaterialPurchase queryPurchaseResetSafeFields(String purchaseId) {
+        return materialPurchaseService.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo,
+                                MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
+                                MaterialPurchase::getMaterialName, MaterialPurchase::getStatus,
+                                MaterialPurchase::getOrderId, MaterialPurchase::getOrderNo,
+                                MaterialPurchase::getStyleId, MaterialPurchase::getStyleNo,
+                                MaterialPurchase::getCreateTime, MaterialPurchase::getUpdateTime,
+                                MaterialPurchase::getDeleteFlag, MaterialPurchase::getTenantId)
+                        .eq(MaterialPurchase::getId, purchaseId));
     }
 
     /**
@@ -568,23 +552,8 @@ public class MaterialPurchaseStatusHelper {
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
         materialPurchaseService.update(uw);
 
-        int arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
-        if (arrivedQty > 0) {
-            String sourceType = purchase.getSourceType();
-            boolean isOrderDriven = "order".equals(sourceType) || "sample".equals(sourceType);
-            if (!isOrderDriven) {
-                materialStockService.decreaseStockForCancelReceive(purchase, arrivedQty);
-                log.info("cancelReceive 已回退库存: purchaseId={}, qty={}", purchaseId, arrivedQty);
-            }
-        }
-
-        materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
-        log.info("cancelReceive 已同步物料对账: purchaseId={}", purchaseId);
-
-        if (StringUtils.hasText(purchase.getOrderId())) {
-            helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
-            log.info("cancelReceive 已重算面料到货率: orderId={}", purchase.getOrderId());
-        }
+        rollbackStockIfNeeded(purchase, purchaseId);
+        syncAfterCancelReceive(purchaseId, purchase);
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("purchaseId", purchaseId);
@@ -595,6 +564,27 @@ public class MaterialPurchaseStatusHelper {
         log.info("采购已撤回: purchaseId={}, purchaseNo={}, operator={}, reason={}",
                 purchaseId, purchase.getPurchaseNo(), operator, reason);
         return result;
+    }
+
+    private void rollbackStockIfNeeded(MaterialPurchase purchase, String purchaseId) {
+        int arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
+        if (arrivedQty > 0) {
+            String sourceType = purchase.getSourceType();
+            boolean isOrderDriven = "order".equals(sourceType) || "sample".equals(sourceType);
+            if (!isOrderDriven) {
+                materialStockService.decreaseStockForCancelReceive(purchase, arrivedQty);
+                log.info("cancelReceive 已回退库存: purchaseId={}, qty={}", purchaseId, arrivedQty);
+            }
+        }
+    }
+
+    private void syncAfterCancelReceive(String purchaseId, MaterialPurchase purchase) {
+        materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
+        log.info("cancelReceive 已同步物料对账: purchaseId={}", purchaseId);
+        if (StringUtils.hasText(purchase.getOrderId())) {
+            helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
+            log.info("cancelReceive 已重算面料到货率: orderId={}", purchase.getOrderId());
+        }
     }
 
     /**
@@ -826,10 +816,45 @@ public class MaterialPurchaseStatusHelper {
         }
     }
 
+    private MaterialPurchase fetchUpdatedWithFallback(String purchaseId, Supplier<MaterialPurchase> fallbackSupplier) {
+        try {
+            return getPurchaseWithTenant(purchaseId);
+        } catch (Exception e) {
+            log.warn("[fetchUpdatedWithFallback] 全字段查询失败(schema漂移)，降级安全查询: {}", e.getMessage());
+            return fallbackSupplier.get();
+        }
+    }
+
+    private MaterialPurchase queryPurchaseSafeFields(String purchaseId) {
+        return materialPurchaseService.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo,
+                                MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
+                                MaterialPurchase::getMaterialName, MaterialPurchase::getMaterialType,
+                                MaterialPurchase::getSpecifications, MaterialPurchase::getUnit,
+                                MaterialPurchase::getPurchaseQuantity, MaterialPurchase::getArrivedQuantity,
+                                MaterialPurchase::getInboundRecordId, MaterialPurchase::getSupplierId,
+                                MaterialPurchase::getSupplierName, MaterialPurchase::getUnitPrice,
+                                MaterialPurchase::getTotalAmount, MaterialPurchase::getReceiverId,
+                                MaterialPurchase::getReceiverName, MaterialPurchase::getReceivedTime,
+                                MaterialPurchase::getRemark, MaterialPurchase::getOrderId,
+                                MaterialPurchase::getOrderNo, MaterialPurchase::getStyleId,
+                                MaterialPurchase::getStyleNo, MaterialPurchase::getStyleName,
+                                MaterialPurchase::getColor, MaterialPurchase::getSize,
+                                MaterialPurchase::getStatus, MaterialPurchase::getCreateTime,
+                                MaterialPurchase::getUpdateTime, MaterialPurchase::getDeleteFlag,
+                                MaterialPurchase::getCreatorId, MaterialPurchase::getCreatorName,
+                                MaterialPurchase::getUpdaterId, MaterialPurchase::getUpdaterName,
+                                MaterialPurchase::getExpectedArrivalDate, MaterialPurchase::getActualArrivalDate,
+                                MaterialPurchase::getTenantId)
+                        .eq(MaterialPurchase::getId, purchaseId));
+    }
+
     private MaterialPurchase getPurchaseWithTenant(String purchaseId) {
         return materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getId, purchaseId)
                 .eq(MaterialPurchase::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                .eq(MaterialPurchase::getDeleteFlag, 0)
                 .one();
     }
 }

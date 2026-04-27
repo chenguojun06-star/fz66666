@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -115,7 +116,7 @@ public class MaterialPurchaseOrchestratorHelper {
             Map<String, String> bizTypeMap) {
         if (orderIds.isEmpty()) return;
         try {
-            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
+            List<ProductionOrder> orders = productionOrderService.lambdaQuery().in(ProductionOrder::getId, orderIds).eq(ProductionOrder::getTenantId, UserContext.tenantId()).list();
             for (ProductionOrder order : orders) {
                 if (order == null || !StringUtils.hasText(order.getId())) continue;
                 String id = order.getId();
@@ -137,7 +138,7 @@ public class MaterialPurchaseOrchestratorHelper {
             Map<String, Integer> quantityMap, Map<String, String> colorMap) {
         if (patternProductionIds.isEmpty()) return;
         try {
-            List<PatternProduction> patterns = patternProductionService.listByIds(patternProductionIds);
+            List<PatternProduction> patterns = patternProductionService.lambdaQuery().in(PatternProduction::getId, patternProductionIds).eq(PatternProduction::getTenantId, UserContext.tenantId()).list();
             for (PatternProduction pattern : patterns) {
                 if (pattern == null || !StringUtils.hasText(pattern.getId())) continue;
                 String id = pattern.getId();
@@ -402,7 +403,7 @@ public class MaterialPurchaseOrchestratorHelper {
     public void ensureOrderStatusProduction(String orderId) {
         if (!StringUtils.hasText(orderId)) return;
         String oid = orderId.trim();
-        ProductionOrder order = productionOrderService.getById(oid);
+        ProductionOrder order = productionOrderService.lambdaQuery().eq(ProductionOrder::getId, oid).eq(ProductionOrder::getTenantId, UserContext.tenantId()).one();
         if (order == null || (order.getDeleteFlag() != null && order.getDeleteFlag() != 0)) return;
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st) || "production".equalsIgnoreCase(st)) return;
@@ -513,7 +514,7 @@ public class MaterialPurchaseOrchestratorHelper {
 
         if (!StringUtils.hasText(purchaseId)) return result;
 
-        MaterialPurchase current = materialPurchaseService.getById(purchaseId.trim());
+        MaterialPurchase current = materialPurchaseService.lambdaQuery().eq(MaterialPurchase::getId, purchaseId.trim()).eq(MaterialPurchase::getTenantId, UserContext.tenantId()).one();
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             return result;
         }
@@ -586,6 +587,6 @@ public class MaterialPurchaseOrchestratorHelper {
         if (v instanceof Number number) return number.intValue();
         String s = String.valueOf(v).trim();
         if (!StringUtils.hasText(s)) return null;
-        try { return Integer.valueOf(s); } catch (Exception e) { return null; }
+        try { return Integer.valueOf(s); } catch (Exception e) { log.debug("[MaterialPurchase] coerceInt失败: {}", s); return null; }
     }
 }

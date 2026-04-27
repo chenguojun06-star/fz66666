@@ -63,6 +63,7 @@ public class ExpenseReimbursementOrchestrator {
         ExpenseReimbursement existing = expenseReimbursementService.lambdaQuery()
                 .eq(ExpenseReimbursement::getId, entity.getId())
                 .eq(ExpenseReimbursement::getTenantId, tenantId)
+                .eq(ExpenseReimbursement::getDeleteFlag, 0)
                 .one();
         if (existing == null) {
             throw new RuntimeException("报销单不存在");

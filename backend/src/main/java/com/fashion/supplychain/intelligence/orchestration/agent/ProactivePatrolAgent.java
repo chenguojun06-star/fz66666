@@ -37,7 +37,7 @@ public class ProactivePatrolAgent {
     @Autowired
     private com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator traceOrchestrator;
 
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 5 * * * ?")
     public void runPatrolTask() {
         if (distributedLockService != null) {
             String lockValue = distributedLockService.tryLock("job:proactive-patrol", 50, TimeUnit.MINUTES);

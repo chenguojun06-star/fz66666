@@ -172,7 +172,7 @@ public class FactoryLeaderboardOrchestrator {
     private List<Factory> loadFactories(Long tenantId, String factoryId) {
         TenantAssert.assertTenantContext();
         QueryWrapper<Factory> qw = new QueryWrapper<>();
-        qw.eq("tenant_id", tenantId);
+        qw.eq("tenant_id", tenantId).eq("delete_flag", 0);
         if (factoryId != null && !factoryId.isBlank()) {
             qw.eq("id", factoryId);
         }

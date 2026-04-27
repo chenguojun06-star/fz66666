@@ -94,7 +94,7 @@ public class ScanRecordOrchestrator {
 
         if ("quality".equals(scanType)) {
             Map<String, Object> r = executeQualityScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
-                    String.valueOf(safeParams.get("operatorId")), String.valueOf(safeParams.get("operatorName")), UserContext.get());
+                    safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId")), safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName")), UserContext.get());
             tryNotifyNextStage(safeParams, r);
             appendBundleStatusHints(safeParams, r);
             return r;
@@ -102,14 +102,14 @@ public class ScanRecordOrchestrator {
 
         if ("warehouse".equals(scanType)) {
             Map<String, Object> r = executeWarehouseScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
-                    String.valueOf(safeParams.get("operatorId")), String.valueOf(safeParams.get("operatorName")));
+                    safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId")), safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName")));
             tryNotifyNextStage(safeParams, r);
             appendBundleStatusHints(safeParams, r);
             return r;
         }
 
         Map<String, Object> r = executeProductionScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
-                String.valueOf(safeParams.get("operatorId")), String.valueOf(safeParams.get("operatorName")), scanType, qty, autoProcess, UserContext.get());
+                safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId")), safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName")), scanType, qty, autoProcess, UserContext.get());
         tryNotifyNextStage(safeParams, r);
         appendBundleStatusHints(safeParams, r);
         return r;

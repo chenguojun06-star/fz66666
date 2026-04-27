@@ -325,6 +325,7 @@ public class FinancialReportTool extends AbstractAgentTool {
         try {
             return Double.parseDouble(val.toString().replace("%", "").trim());
         } catch (Exception e) {
+            log.debug("[FinancialReport] toDouble解析失败: val={}", val);
             return 0;
         }
     }

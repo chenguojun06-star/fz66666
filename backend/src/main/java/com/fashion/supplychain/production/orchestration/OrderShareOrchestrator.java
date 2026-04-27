@@ -128,44 +128,22 @@ public class OrderShareOrchestrator {
      * @return 脱敏后的订单快照，或错误提示
      */
     public Result<OrderShareResponse> resolveShareOrder(String token) {
-        // 1. 验证令牌
-        JWT jwt;
-        try {
-            jwt = JWT.of(token).setKey(jwtSecret);
-        } catch (Exception e) {
-            return Result.fail("分享链接无效");
-        }
-
-        boolean valid;
-        try {
-            valid = jwt.verify() && jwt.validate(0);
-        } catch (Exception e) {
-            valid = false;
-        }
-        if (!valid) {
+        JWT jwt = parseAndVerifyToken(token);
+        if (jwt == null) {
             return Result.fail("分享链接已失效或格式错误");
         }
 
-        // 2. 类型检查
-        Object type = jwt.getPayload("type");
+        String type = String.valueOf(jwt.getPayload("type"));
         if (!"share".equals(type)) {
             return Result.fail("分享链接类型无效");
         }
 
-        // 3. 提取 orderId
-        String orderId = jwt.getPayload("orderId") == null
-                ? null : String.valueOf(jwt.getPayload("orderId"));
+        String orderId = extractOrderId(jwt);
         if (orderId == null) {
             return Result.fail("分享链接损坏");
         }
-        String tenantIdText = jwt.getPayload("tenantId") == null
-                ? null : String.valueOf(jwt.getPayload("tenantId"));
-        Long tenantId;
-        try {
-            tenantId = tenantIdText == null || tenantIdText.isBlank() ? null : Long.parseLong(tenantIdText);
-        } catch (Exception e) {
-            tenantId = null;
-        }
+
+        Long tenantId = extractTenantId(jwt);
         if (tenantId == null) {
             return Result.fail("分享链接缺少租户信息");
         }
@@ -183,86 +161,7 @@ public class OrderShareOrchestrator {
                 return Result.fail("分享链接无权访问该订单");
             }
 
-            String latestScanTime = null;
-            String latestScanStage = null;
-            List<OrderShareResponse.ScanEntry> recentScans = new ArrayList<>();
-            try {
-                QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
-                qw.eq("order_id", orderId)
-                  .eq("scan_result", "success")
-                  .eq("delete_flag", 0)
-                  .orderByDesc("scan_time")
-                  .last("LIMIT 8");
-                List<ScanRecord> scans = scanRecordService.list(qw);
-                if (!scans.isEmpty()) {
-                    ScanRecord latest = scans.get(0);
-                    if (latest.getScanTime() != null) {
-                        latestScanTime = latest.getScanTime().format(DATETIME_FMT);
-                    }
-                    latestScanStage = latest.getProgressStage() != null
-                            ? latest.getProgressStage()
-                            : latest.getProcessName();
-                }
-                recentScans = scans.stream().map(scan -> {
-                    OrderShareResponse.ScanEntry entry = new OrderShareResponse.ScanEntry();
-                    entry.setProcessName(scan.getProcessName() != null ? scan.getProcessName() : scan.getProgressStage());
-                    entry.setQuantity(scan.getQuantity());
-                    entry.setScanTime(scan.getScanTime() == null ? null : scan.getScanTime().format(DATETIME_FMT));
-                    return entry;
-                }).toList();
-            } catch (Exception e) {
-                log.debug("[OrderShare] 查询扫码记录失败，跳过 orderId={}", orderId);
-            }
-
-            LocalDate deliveryDate = order.getExpectedShipDate() != null
-                    ? order.getExpectedShipDate()
-                    : order.getPlannedEndDate() == null ? null : order.getPlannedEndDate().toLocalDate();
-            String statusText = mapStatusText(order.getStatus());
-            List<OrderShareResponse.StageProgress> stages = buildStageProgress(order, statusText);
-            String currentStage = resolveCurrentStage(order, stages, latestScanStage, statusText);
-            OrderShareResponse.AiPrediction aiPrediction = buildAiPrediction(order, deliveryDate);
-
-            OrderShareResponse resp = new OrderShareResponse();
-            List<OrderShareResponse.ColorSizeQuantity> colorSizeQuantities = buildColorSizeQuantities(order);
-            resp.setToken(token);
-            resp.setOrderNo(order.getOrderNo());
-            resp.setStyleNo(order.getStyleNo());
-            resp.setStyleName(order.getStyleName());
-            resp.setStyleCover(normalizeText(order.getStyleCover()));
-            resp.setColor(resolveShareColor(order, colorSizeQuantities));
-            resp.setSize(order.getSize());
-            resp.setOrderQuantity(order.getOrderQuantity());
-            resp.setCompletedQuantity(order.getCompletedQuantity());
-            resp.setProductionProgress(order.getProductionProgress());
-            resp.setStatusText(statusText);
-            resp.setFactoryName(order.getFactoryName());
-            resp.setCompanyName(order.getCompany());
-            resp.setRemarks(normalizeText(order.getRemarks()));
-            resp.setLatestScanTime(latestScanTime);
-            resp.setLatestScanStage(latestScanStage);
-            resp.setCurrentStage(currentStage);
-            resp.setSizeQuantities(buildSizeQuantities(order));
-            resp.setColorSizeQuantities(colorSizeQuantities);
-            resp.setStages(stages);
-            resp.setRecentScans(recentScans);
-            resp.setAiPrediction(aiPrediction);
-
-            Object expObj = jwt.getPayload("exp");
-            long expMs = expObj instanceof Date
-                    ? ((Date) expObj).getTime()
-                    : ((Number) expObj).longValue() * 1000;
-            resp.setExpiresAt(expMs);
-
-            if (deliveryDate != null) {
-                resp.setPlannedEndDate(deliveryDate.format(DATE_FMT));
-            }
-            if (order.getActualEndDate() != null) {
-                resp.setActualEndDate(order.getActualEndDate().format(DATE_FMT));
-            }
-            if (order.getCreateTime() != null) {
-                resp.setCreateTime(order.getCreateTime().format(DATE_FMT));
-            }
-
+            OrderShareResponse resp = buildShareResponse(token, jwt, order);
             return Result.success(resp);
         } finally {
             if (previousContext == null) {
@@ -271,6 +170,135 @@ public class OrderShareOrchestrator {
                 UserContext.set(previousContext);
             }
         }
+    }
+
+    private JWT parseAndVerifyToken(String token) {
+        JWT jwt;
+        try {
+            jwt = JWT.of(token).setKey(jwtSecret);
+        } catch (Exception e) {
+            log.warn("[OrderShare] JWT解析失败: {}", e.getMessage());
+            return null;
+        }
+        try {
+            if (jwt.verify() && jwt.validate(0)) {
+                return jwt;
+            }
+        } catch (Exception e) {
+            log.warn("[OrderShare] JWT验证失败: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String extractOrderId(JWT jwt) {
+        Object raw = jwt.getPayload("orderId");
+        return raw == null ? null : String.valueOf(raw);
+    }
+
+    private Long extractTenantId(JWT jwt) {
+        String tenantIdText = jwt.getPayload("tenantId") == null
+                ? null : String.valueOf(jwt.getPayload("tenantId"));
+        if (tenantIdText == null || tenantIdText.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(tenantIdText);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private OrderShareResponse buildShareResponse(String token, JWT jwt, ProductionOrder order) {
+        ScanSummary scanSummary = queryRecentScans(order.getId());
+
+        LocalDate deliveryDate = order.getExpectedShipDate() != null
+                ? order.getExpectedShipDate()
+                : order.getPlannedEndDate() == null ? null : order.getPlannedEndDate().toLocalDate();
+        String statusText = mapStatusText(order.getStatus());
+        List<OrderShareResponse.StageProgress> stages = buildStageProgress(order, statusText);
+        String currentStage = resolveCurrentStage(order, stages, scanSummary.latestScanStage, statusText);
+        OrderShareResponse.AiPrediction aiPrediction = buildAiPrediction(order, deliveryDate);
+        List<OrderShareResponse.ColorSizeQuantity> colorSizeQuantities = buildColorSizeQuantities(order);
+
+        OrderShareResponse resp = new OrderShareResponse();
+        resp.setToken(token);
+        resp.setOrderNo(order.getOrderNo());
+        resp.setStyleNo(order.getStyleNo());
+        resp.setStyleName(order.getStyleName());
+        resp.setStyleCover(normalizeText(order.getStyleCover()));
+        resp.setColor(resolveShareColor(order, colorSizeQuantities));
+        resp.setSize(order.getSize());
+        resp.setOrderQuantity(order.getOrderQuantity());
+        resp.setCompletedQuantity(order.getCompletedQuantity());
+        resp.setProductionProgress(order.getProductionProgress());
+        resp.setStatusText(statusText);
+        resp.setFactoryName(order.getFactoryName());
+        resp.setCompanyName(order.getCompany());
+        resp.setRemarks(normalizeText(order.getRemarks()));
+        resp.setLatestScanTime(scanSummary.latestScanTime);
+        resp.setLatestScanStage(scanSummary.latestScanStage);
+        resp.setCurrentStage(currentStage);
+        resp.setSizeQuantities(buildSizeQuantities(order));
+        resp.setColorSizeQuantities(colorSizeQuantities);
+        resp.setStages(stages);
+        resp.setRecentScans(scanSummary.recentScans);
+        resp.setAiPrediction(aiPrediction);
+
+        Object expObj = jwt.getPayload("exp");
+        long expMs = expObj instanceof Date
+                ? ((Date) expObj).getTime()
+                : ((Number) expObj).longValue() * 1000;
+        resp.setExpiresAt(expMs);
+
+        if (deliveryDate != null) {
+            resp.setPlannedEndDate(deliveryDate.format(DATE_FMT));
+        }
+        if (order.getActualEndDate() != null) {
+            resp.setActualEndDate(order.getActualEndDate().format(DATE_FMT));
+        }
+        if (order.getCreateTime() != null) {
+            resp.setCreateTime(order.getCreateTime().format(DATE_FMT));
+        }
+        return resp;
+    }
+
+    private static class ScanSummary {
+        String latestScanTime;
+        String latestScanStage;
+        List<OrderShareResponse.ScanEntry> recentScans = new ArrayList<>();
+    }
+
+    private ScanSummary queryRecentScans(String orderId) {
+        ScanSummary summary = new ScanSummary();
+        try {
+            QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
+            qw.eq("order_id", orderId)
+              .eq("scan_result", "success")
+              .ne("scan_type", "orchestration")
+              .eq("delete_flag", 0)
+              .orderByDesc("scan_time")
+              .last("LIMIT 8");
+            List<ScanRecord> scans = scanRecordService.list(qw);
+            if (!scans.isEmpty()) {
+                ScanRecord latest = scans.get(0);
+                if (latest.getScanTime() != null) {
+                    summary.latestScanTime = latest.getScanTime().format(DATETIME_FMT);
+                }
+                summary.latestScanStage = latest.getProgressStage() != null
+                        ? latest.getProgressStage()
+                        : latest.getProcessName();
+            }
+            summary.recentScans = scans.stream().map(scan -> {
+                OrderShareResponse.ScanEntry entry = new OrderShareResponse.ScanEntry();
+                entry.setProcessName(scan.getProcessName() != null ? scan.getProcessName() : scan.getProgressStage());
+                entry.setQuantity(scan.getQuantity());
+                entry.setScanTime(scan.getScanTime() == null ? null : scan.getScanTime().format(DATETIME_FMT));
+                return entry;
+            }).toList();
+        } catch (Exception e) {
+            log.debug("[OrderShare] 查询扫码记录失败，跳过 orderId={}", orderId);
+        }
+        return summary;
     }
 
     public String resolveSharedStyleCover(String token) {
@@ -594,6 +622,17 @@ public class OrderShareOrchestrator {
         Map<String, Integer> quantityBySpec = new HashMap<>();
         Set<String> orderedKeys = new LinkedHashSet<>();
 
+        collectFromOrderLines(order, quantityBySpec, orderedKeys);
+        mergeFromSkuProgress(order, quantityBySpec, orderedKeys);
+
+        if (orderedKeys.isEmpty()) {
+            return buildFallbackColorSize(order);
+        }
+
+        return buildSortedColorSizeList(orderedKeys, quantityBySpec);
+    }
+
+    private void collectFromOrderLines(ProductionOrder order, Map<String, Integer> quantityBySpec, Set<String> orderedKeys) {
         List<Map<String, Object>> orderLines = ProductionOrderUtils.resolveOrderLines(order.getOrderDetails(), OBJECT_MAPPER);
         for (Map<String, Object> line : orderLines) {
             String color = normalizeText(stringValue(
@@ -616,7 +655,9 @@ public class OrderShareOrchestrator {
             quantityBySpec.put(key, quantityBySpec.getOrDefault(key, 0) + quantity);
             orderedKeys.add(key);
         }
+    }
 
+    private void mergeFromSkuProgress(ProductionOrder order, Map<String, Integer> quantityBySpec, Set<String> orderedKeys) {
         try {
             Map<String, Object> progress = order.getOrderNo() == null ? null : skuService.getOrderSKUProgress(order.getOrderNo());
             Object skuListObj = progress == null ? null : progress.get("skuList");
@@ -648,21 +689,23 @@ public class OrderShareOrchestrator {
         } catch (Exception e) {
             log.warn("[OrderShare] 获取颜色尺码分布失败 orderNo={}", order.getOrderNo(), e);
         }
+    }
 
-        if (orderedKeys.isEmpty()) {
-            String color = normalizeText(order.getColor());
-            String size = normalizeSizeValue(order.getSize());
-            int quantity = order.getOrderQuantity() == null ? 0 : Math.max(0, order.getOrderQuantity());
-            if (color != null && size != null && quantity > 0) {
-                OrderShareResponse.ColorSizeQuantity item = new OrderShareResponse.ColorSizeQuantity();
-                item.setColor(color);
-                item.setSize(size);
-                item.setQuantity(quantity);
-                return List.of(item);
-            }
-            return new ArrayList<>();
+    private List<OrderShareResponse.ColorSizeQuantity> buildFallbackColorSize(ProductionOrder order) {
+        String color = normalizeText(order.getColor());
+        String size = normalizeSizeValue(order.getSize());
+        int quantity = order.getOrderQuantity() == null ? 0 : Math.max(0, order.getOrderQuantity());
+        if (color != null && size != null && quantity > 0) {
+            OrderShareResponse.ColorSizeQuantity item = new OrderShareResponse.ColorSizeQuantity();
+            item.setColor(color);
+            item.setSize(size);
+            item.setQuantity(quantity);
+            return List.of(item);
         }
+        return new ArrayList<>();
+    }
 
+    private List<OrderShareResponse.ColorSizeQuantity> buildSortedColorSizeList(Set<String> orderedKeys, Map<String, Integer> quantityBySpec) {
         return orderedKeys.stream()
                 .map(key -> {
                     String[] parts = key.split("__", 2);
@@ -727,6 +770,7 @@ public class OrderShareOrchestrator {
         try {
             return Integer.parseInt(String.valueOf(value).trim());
         } catch (Exception e) {
+            log.debug("[OrderShare] parseInteger失败: value={}", value);
             return 0;
         }
     }

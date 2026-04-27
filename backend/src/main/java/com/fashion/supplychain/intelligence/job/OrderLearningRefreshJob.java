@@ -24,7 +24,7 @@ public class OrderLearningRefreshJob {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
-    @Scheduled(cron = "0 10 3 * * ?")
+    @Scheduled(cron = "0 40 3 * * ?")
     public void refreshRecentLearningData() {
         String lockValue = distributedLockService == null
                 ? null

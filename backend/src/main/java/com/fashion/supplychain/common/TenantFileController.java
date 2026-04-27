@@ -236,7 +236,7 @@ public class TenantFileController {
                 try (var stream = Files.walk(tenantsDir)) {
                     fileCount = stream.filter(Files::isRegularFile).count();
                 } catch (Exception e) {
-                    // ignore
+                    log.warn("[TenantFile] 遍历租户文件目录失败: {}", e.getMessage());
                 }
             }
             status.put("storageType", "本地磁盘（⚠️ 容器重启会丢失！）");

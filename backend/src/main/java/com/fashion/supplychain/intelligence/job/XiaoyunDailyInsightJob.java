@@ -170,6 +170,6 @@ public class XiaoyunDailyInsightJob {
     private int toInt(Object v) {
         if (v instanceof Number) return ((Number) v).intValue();
         if (v == null) return 0;
-        try { return Integer.parseInt(v.toString()); } catch (Exception ignore) { return 0; }
+        try { return Integer.parseInt(v.toString()); } catch (Exception ignore) { log.debug("[DailyInsight] toInt解析失败: v={}", v); return 0; }
     }
 }

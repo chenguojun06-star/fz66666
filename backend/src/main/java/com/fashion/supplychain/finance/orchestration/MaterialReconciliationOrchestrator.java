@@ -322,6 +322,10 @@ public class MaterialReconciliationOrchestrator {
         LocalDateTime now = LocalDateTime.now();
         MaterialPurchase purchase = materialPurchaseService.getById(pid);
 
+        if (purchase != null) {
+            TenantAssert.assertBelongsToCurrentTenant(purchase.getTenantId(), "采购单");
+        }
+
         if (shouldCleanupByPurchase(purchase)) {
             cleanupPendingByPurchaseId(pid, now);
             return;
@@ -440,7 +444,6 @@ public class MaterialReconciliationOrchestrator {
         if (purchase == null || !StringUtils.hasText(purchase.getId())) {
             return false;
         }
-        // 内部大货采购对齐样衣逻辑：允许按采购单直接 upsert 对账。
         if (shouldRouteOrderLinkedPurchaseToInbound(purchase)) {
             cleanupPendingByPurchaseId(purchase.getId(), now == null ? LocalDateTime.now() : now);
             return false;
@@ -462,6 +465,26 @@ public class MaterialReconciliationOrchestrator {
         UserContext ctx = UserContext.get();
         String uid = ctx == null ? null : ctx.getUserId();
         uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        BigDecimal[] prices = resolvePrices(purchase, qty);
+        BigDecimal unitPrice = prices[0];
+        BigDecimal totalAmount = prices[1];
+
+        MaterialReconciliation existed = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getPurchaseId, purchase.getId())
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
+                .orderByDesc(MaterialReconciliation::getCreateTime)
+                .last("limit 1")
+                .one();
+
+        if (existed != null) {
+            return patchExistingReconciliation(existed, purchase, qty, unitPrice, totalAmount, t, uid);
+        }
+
+        MaterialReconciliation mr = buildNewReconciliation(purchase, qty, unitPrice, totalAmount, t, uid);
+        return materialReconciliationService.save(mr);
+    }
+
+    private BigDecimal[] resolvePrices(MaterialPurchase purchase, int qty) {
         BigDecimal unitPrice = purchase.getUnitPrice();
         BigDecimal totalAmount = purchase.getTotalAmount();
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
@@ -475,128 +498,118 @@ public class MaterialReconciliationOrchestrator {
         if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
             totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
         }
+        return new BigDecimal[]{unitPrice, totalAmount};
+    }
 
-        MaterialReconciliation existed = materialReconciliationService.lambdaQuery()
-                .eq(MaterialReconciliation::getPurchaseId, purchase.getId())
-                .eq(MaterialReconciliation::getDeleteFlag, 0)
-                .orderByDesc(MaterialReconciliation::getCreateTime)
-                .last("limit 1")
-                .one();
+    private boolean patchExistingReconciliation(MaterialReconciliation existed, MaterialPurchase purchase,
+            int qty, BigDecimal unitPrice, BigDecimal totalAmount, LocalDateTime t, String uid) {
+        String s = existed.getStatus() == null ? "" : existed.getStatus().trim();
+        if (StringUtils.hasText(s) && !"pending".equalsIgnoreCase(s)) {
+            return patchNonPendingFields(existed, purchase, t, uid);
+        }
 
-        if (existed != null) {
-            String s = existed.getStatus() == null ? "" : existed.getStatus().trim();
-            if (StringUtils.hasText(s) && !"pending".equalsIgnoreCase(s)) {
-                MaterialReconciliation patch = new MaterialReconciliation();
-                patch.setId(existed.getId());
-                boolean needPatch = false;
-
-                if (!StringUtils.hasText(existed.getSupplierId()) && StringUtils.hasText(purchase.getSupplierId())) {
-                    patch.setSupplierId(purchase.getSupplierId().trim());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(existed.getSupplierName())
-                        && StringUtils.hasText(purchase.getSupplierName())) {
-                    patch.setSupplierName(purchase.getSupplierName().trim());
-                    needPatch = true;
-                }
-
-                if (!StringUtils.hasText(existed.getMaterialId())) {
-                    String materialId = materialPurchaseService.resolveMaterialId(purchase);
-                    if (StringUtils.hasText(materialId)) {
-                        patch.setMaterialId(materialId.trim());
-                        needPatch = true;
-                    }
-                }
-                if (!StringUtils.hasText(existed.getMaterialCode())
-                        && StringUtils.hasText(purchase.getMaterialCode())) {
-                    patch.setMaterialCode(purchase.getMaterialCode().trim());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(existed.getMaterialName())
-                        && StringUtils.hasText(purchase.getMaterialName())) {
-                    patch.setMaterialName(purchase.getMaterialName().trim());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(existed.getPurchaseNo()) && StringUtils.hasText(purchase.getPurchaseNo())) {
-                    patch.setPurchaseNo(purchase.getPurchaseNo().trim());
-                    needPatch = true;
-                }
-
-                if (!StringUtils.hasText(existed.getOrderId()) && StringUtils.hasText(purchase.getOrderId())) {
-                    patch.setOrderId(purchase.getOrderId().trim());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(existed.getOrderNo()) && StringUtils.hasText(purchase.getOrderNo())) {
-                    patch.setOrderNo(purchase.getOrderNo().trim());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(existed.getStyleId()) && StringUtils.hasText(purchase.getStyleId())) {
-                    patch.setStyleId(purchase.getStyleId().trim());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(existed.getStyleNo()) && StringUtils.hasText(purchase.getStyleNo())) {
-                    patch.setStyleNo(purchase.getStyleNo().trim());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(existed.getStyleName()) && StringUtils.hasText(purchase.getStyleName())) {
-                    patch.setStyleName(purchase.getStyleName().trim());
-                    needPatch = true;
-                }
-
-                if (!needPatch) {
-                    return false;
-                }
-
-                patch.setUpdateTime(t);
-                if (StringUtils.hasText(uid)) {
-                    patch.setUpdateBy(uid);
-                }
-                return materialReconciliationService.updateById(patch);
+        MaterialReconciliation patch = new MaterialReconciliation();
+        patch.setId(existed.getId());
+        patch.setSupplierId(resolveNotBlank(purchase.getSupplierId(), "UNKNOWN_SUPPLIER"));
+        patch.setSupplierName(resolveNotBlank(purchase.getSupplierName(), "未填写供应商"));
+        String materialId = materialPurchaseService.resolveMaterialId(purchase);
+        if (StringUtils.hasText(materialId)) {
+            patch.setMaterialId(materialId.trim());
+        }
+        patch.setMaterialCode(resolveNotBlank(purchase.getMaterialCode(), "UNKNOWN_MATERIAL"));
+        patch.setMaterialName(resolveNotBlank(purchase.getMaterialName(), "未填写物料"));
+        patch.setPurchaseNo(purchase.getPurchaseNo());
+        patch.setOrderId(purchase.getOrderId());
+        patch.setOrderNo(purchase.getOrderNo());
+        patch.setStyleId(purchase.getStyleId());
+        patch.setStyleNo(purchase.getStyleNo());
+        patch.setStyleName(purchase.getStyleName());
+        patch.setQuantity(qty);
+        patch.setUnitPrice(unitPrice);
+        patch.setTotalAmount(totalAmount);
+        BigDecimal deduction = existed.getDeductionAmount() == null ? BigDecimal.ZERO : existed.getDeductionAmount();
+        patch.setDeductionAmount(deduction);
+        patch.setFinalAmount(totalAmount.subtract(deduction));
+        if (!StringUtils.hasText(existed.getReconciliationDate())) {
+            patch.setReconciliationDate(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        }
+        if (!StringUtils.hasText(existed.getStatus())) {
+            patch.setStatus("pending");
+        }
+        patch.setUpdateTime(t);
+        if (StringUtils.hasText(uid)) {
+            patch.setUpdateBy(uid);
+            if (!StringUtils.hasText(existed.getCreateBy())) {
+                patch.setCreateBy(uid);
             }
+        }
+        return materialReconciliationService.updateById(patch);
+    }
 
-            MaterialReconciliation patch = new MaterialReconciliation();
-            patch.setId(existed.getId());
-            patch.setSupplierId(resolveNotBlank(purchase.getSupplierId(), "UNKNOWN_SUPPLIER"));
-            patch.setSupplierName(resolveNotBlank(purchase.getSupplierName(), "未填写供应商"));
+    private boolean patchNonPendingFields(MaterialReconciliation existed, MaterialPurchase purchase,
+            LocalDateTime t, String uid) {
+        MaterialReconciliation patch = new MaterialReconciliation();
+        patch.setId(existed.getId());
+        boolean needPatch = false;
+        if (!StringUtils.hasText(existed.getSupplierId()) && StringUtils.hasText(purchase.getSupplierId())) {
+            patch.setSupplierId(purchase.getSupplierId().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getSupplierName()) && StringUtils.hasText(purchase.getSupplierName())) {
+            patch.setSupplierName(purchase.getSupplierName().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getMaterialId())) {
             String materialId = materialPurchaseService.resolveMaterialId(purchase);
             if (StringUtils.hasText(materialId)) {
                 patch.setMaterialId(materialId.trim());
+                needPatch = true;
             }
-            patch.setMaterialCode(resolveNotBlank(purchase.getMaterialCode(), "UNKNOWN_MATERIAL"));
-            patch.setMaterialName(resolveNotBlank(purchase.getMaterialName(), "未填写物料"));
-            patch.setPurchaseNo(purchase.getPurchaseNo());
-
-            patch.setOrderId(purchase.getOrderId());
-            patch.setOrderNo(purchase.getOrderNo());
-            patch.setStyleId(purchase.getStyleId());
-            patch.setStyleNo(purchase.getStyleNo());
-            patch.setStyleName(purchase.getStyleName());
-
-            patch.setQuantity(qty);
-            patch.setUnitPrice(unitPrice);
-            patch.setTotalAmount(totalAmount);
-
-            BigDecimal deduction = existed.getDeductionAmount() == null ? BigDecimal.ZERO
-                    : existed.getDeductionAmount();
-            patch.setDeductionAmount(deduction);
-            patch.setFinalAmount(totalAmount.subtract(deduction));
-
-            if (!StringUtils.hasText(existed.getReconciliationDate())) {
-                patch.setReconciliationDate(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            }
-            if (!StringUtils.hasText(existed.getStatus())) {
-                patch.setStatus("pending");
-            }
-            patch.setUpdateTime(t);
-            if (StringUtils.hasText(uid)) {
-                patch.setUpdateBy(uid);
-                if (!StringUtils.hasText(existed.getCreateBy())) {
-                    patch.setCreateBy(uid);
-                }
-            }
-            return materialReconciliationService.updateById(patch);
         }
+        if (!StringUtils.hasText(existed.getMaterialCode()) && StringUtils.hasText(purchase.getMaterialCode())) {
+            patch.setMaterialCode(purchase.getMaterialCode().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getMaterialName()) && StringUtils.hasText(purchase.getMaterialName())) {
+            patch.setMaterialName(purchase.getMaterialName().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getPurchaseNo()) && StringUtils.hasText(purchase.getPurchaseNo())) {
+            patch.setPurchaseNo(purchase.getPurchaseNo().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getOrderId()) && StringUtils.hasText(purchase.getOrderId())) {
+            patch.setOrderId(purchase.getOrderId().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getOrderNo()) && StringUtils.hasText(purchase.getOrderNo())) {
+            patch.setOrderNo(purchase.getOrderNo().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getStyleId()) && StringUtils.hasText(purchase.getStyleId())) {
+            patch.setStyleId(purchase.getStyleId().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getStyleNo()) && StringUtils.hasText(purchase.getStyleNo())) {
+            patch.setStyleNo(purchase.getStyleNo().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getStyleName()) && StringUtils.hasText(purchase.getStyleName())) {
+            patch.setStyleName(purchase.getStyleName().trim());
+            needPatch = true;
+        }
+        if (!needPatch) {
+            return false;
+        }
+        patch.setUpdateTime(t);
+        if (StringUtils.hasText(uid)) {
+            patch.setUpdateBy(uid);
+        }
+        return materialReconciliationService.updateById(patch);
+    }
 
+    private MaterialReconciliation buildNewReconciliation(MaterialPurchase purchase, int qty,
+            BigDecimal unitPrice, BigDecimal totalAmount, LocalDateTime t, String uid) {
         MaterialReconciliation mr = new MaterialReconciliation();
         mr.setReconciliationNo(buildFinanceNo("MR", t));
         mr.setSupplierId(resolveNotBlank(purchase.getSupplierId(), "UNKNOWN_SUPPLIER"));
@@ -609,7 +622,6 @@ public class MaterialReconciliationOrchestrator {
         mr.setMaterialName(resolveNotBlank(purchase.getMaterialName(), "未填写物料"));
         mr.setPurchaseId(purchase.getId());
         mr.setPurchaseNo(purchase.getPurchaseNo());
-
         mr.setOrderId(purchase.getOrderId());
         mr.setOrderNo(purchase.getOrderNo());
         mr.setStyleId(purchase.getStyleId());
@@ -618,7 +630,6 @@ public class MaterialReconciliationOrchestrator {
         if (StringUtils.hasText(purchase.getSourceType())) {
             mr.setSourceType(purchase.getSourceType().trim());
         }
-
         mr.setQuantity(qty);
         mr.setUnitPrice(unitPrice);
         mr.setTotalAmount(totalAmount);
@@ -633,8 +644,9 @@ public class MaterialReconciliationOrchestrator {
             mr.setCreateBy(uid);
             mr.setUpdateBy(uid);
         }
-        return materialReconciliationService.save(mr);
+        return mr;
     }
+
 
     private int resolveEffectiveQuantity(MaterialPurchase purchase) {
         if (purchase == null) {

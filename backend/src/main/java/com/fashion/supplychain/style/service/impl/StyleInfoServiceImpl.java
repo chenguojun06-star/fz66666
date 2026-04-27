@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.stock.entity.SampleStock;
 import com.fashion.supplychain.stock.mapper.SampleStockMapper;
@@ -18,6 +19,7 @@ import com.fashion.supplychain.style.service.StyleOperationLogService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
@@ -75,10 +77,22 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         Long readableTenantId = resolveReadableTenantId();
         boolean tenantScopedRead = isTenantScopedRead();
 
-        // 创建分页对象
         Page<StyleInfo> pageInfo = new Page<>(page, pageSize);
+        LambdaQueryWrapper<StyleInfo> wrapper = buildQueryWrapper(params, readableTenantId, tenantScopedRead);
 
-        // 构建查询条件
+        IPage<StyleInfo> resultPage = baseMapper.selectPage(pageInfo,
+            wrapper.orderByDesc(StyleInfo::getCreateTime));
+
+        fillQuotationPriceFields(resultPage.getRecords());
+        fillProgressFields(resultPage.getRecords());
+        fillOrderCountFields(resultPage.getRecords());
+        fillScrapFields(resultPage.getRecords());
+        fillWarehousedFields(resultPage.getRecords());
+
+        return resultPage;
+    }
+
+    private LambdaQueryWrapper<StyleInfo> buildQueryWrapper(Map<String, Object> params, Long readableTenantId, boolean tenantScopedRead) {
         String styleNo = (String) params.getOrDefault("styleNo", "");
         String styleNoExact = (String) params.getOrDefault("styleNoExact", "");
         String styleName = (String) params.getOrDefault("styleName", "");
@@ -86,26 +100,11 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         String keyword = (String) params.getOrDefault("keyword", "");
         String progressNode = (String) params.getOrDefault("progressNode", "");
 
-        boolean onlyCompleted = false;
-        Object onlyCompletedRaw = params.get("onlyCompleted");
-        if (onlyCompletedRaw != null) {
-            String s = String.valueOf(onlyCompletedRaw).trim();
-            onlyCompleted = "1".equals(s) || "true".equalsIgnoreCase(s) || "yes".equalsIgnoreCase(s);
-        }
-
-        boolean pushedToOrderOnly = false;
-        Object pushedToOrderOnlyRaw = params.get("pushedToOrderOnly");
-        if (pushedToOrderOnlyRaw != null) {
-            String s = String.valueOf(pushedToOrderOnlyRaw).trim();
-            pushedToOrderOnly = "1".equals(s) || "true".equalsIgnoreCase(s) || "yes".equalsIgnoreCase(s);
-        }
-
-        // 是否排除已报废款式（待办任务等场景只关心进行中的款式）
+        boolean onlyCompleted = parseBooleanParam(params, "onlyCompleted");
+        boolean pushedToOrderOnly = parseBooleanParam(params, "pushedToOrderOnly");
         boolean excludeScrapped = Boolean.TRUE.equals(params.get("excludeScrapped"));
 
-        // 使用条件构造器进行查询
-        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo> wrapper =
-            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
+        LambdaQueryWrapper<StyleInfo> wrapper = new LambdaQueryWrapper<StyleInfo>()
                 .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
                 .eq(StringUtils.hasText(styleNoExact), StyleInfo::getStyleNo, styleNoExact)
                 .like(!StringUtils.hasText(styleNoExact) && StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
@@ -119,7 +118,22 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .like(StyleInfo::getCategory, keyword))
                 .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
                 .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1);
-        // 状态过滤：excludeScrapped=true 时只查进行中款式，否则同时包含已报废款式（样衣列表页需要展示报废记录）
+
+        applyStatusFilter(wrapper, excludeScrapped);
+        applyExcludePushedToOrder(wrapper, params);
+        applyProgressNodeFilter(wrapper, progressNode);
+
+        return wrapper;
+    }
+
+    private boolean parseBooleanParam(Map<String, Object> params, String key) {
+        Object raw = params.get(key);
+        if (raw == null) return false;
+        String s = String.valueOf(raw).trim();
+        return "1".equals(s) || "true".equalsIgnoreCase(s) || "yes".equalsIgnoreCase(s);
+    }
+
+    private void applyStatusFilter(LambdaQueryWrapper<StyleInfo> wrapper, boolean excludeScrapped) {
         if (excludeScrapped) {
             wrapper.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED);
         } else {
@@ -127,51 +141,41 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .or()
                     .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED));
         }
-        // 排除已推大货：excludePushedToOrder=true 时过滤掉 pushedToOrder=1 的款式（样衣开发待办只关心还未推大货的款）
+    }
+
+    private void applyExcludePushedToOrder(LambdaQueryWrapper<StyleInfo> wrapper, Map<String, Object> params) {
         boolean excludePushedToOrder = Boolean.TRUE.equals(params.get("excludePushedToOrder"));
         if (excludePushedToOrder) {
-            // pushedToOrder IS NULL 或 pushedToOrder != 1，涵盖未设置和明确未推大货两种情况
             wrapper.and(w -> w.isNull(StyleInfo::getPushedToOrder).or().ne(StyleInfo::getPushedToOrder, 1));
         }
+    }
 
-        if (StringUtils.hasText(progressNode)) {
-            String node = progressNode.trim();
-            switch (node) {
-                case "开发样报废" -> wrapper.eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED);
-                case "样衣完成" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED").or().eq(StyleInfo::getSampleStatus, "Completed"));
-                case "样衣制作中" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "IN_PROGRESS").or().eq(StyleInfo::getSampleStatus, "In_Progress"));
-                case "纸样完成" -> wrapper
-                    .and(w -> w.eq(StyleInfo::getPatternStatus, "COMPLETED").or().eq(StyleInfo::getPatternStatus, "Completed"))
-                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
-                        .or()
-                        .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
-                case "纸样开发中" -> wrapper
-                    .and(w -> w.eq(StyleInfo::getPatternStatus, "IN_PROGRESS").or().eq(StyleInfo::getPatternStatus, "In_Progress"))
-                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
-                        .or()
-                        .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
-                case "未开始" -> wrapper
-                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
-                        .or()
-                        .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"))
-                    .and(w -> w.isNull(StyleInfo::getPatternStatus)
-                        .or()
-                        .notIn(StyleInfo::getPatternStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
-                default -> {
-                }
-            }
+    private void applyProgressNodeFilter(LambdaQueryWrapper<StyleInfo> wrapper, String progressNode) {
+        if (!StringUtils.hasText(progressNode)) return;
+        String node = progressNode.trim();
+        switch (node) {
+            case "开发样报废" -> wrapper.eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED);
+            case "样衣完成" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED").or().eq(StyleInfo::getSampleStatus, "Completed"));
+            case "样衣制作中" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "IN_PROGRESS").or().eq(StyleInfo::getSampleStatus, "In_Progress"));
+            case "纸样完成" -> wrapper
+                .and(w -> w.eq(StyleInfo::getPatternStatus, "COMPLETED").or().eq(StyleInfo::getPatternStatus, "Completed"))
+                .and(w -> w.isNull(StyleInfo::getSampleStatus)
+                    .or()
+                    .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
+            case "纸样开发中" -> wrapper
+                .and(w -> w.eq(StyleInfo::getPatternStatus, "IN_PROGRESS").or().eq(StyleInfo::getPatternStatus, "In_Progress"))
+                .and(w -> w.isNull(StyleInfo::getSampleStatus)
+                    .or()
+                    .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
+            case "未开始" -> wrapper
+                .and(w -> w.isNull(StyleInfo::getSampleStatus)
+                    .or()
+                    .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"))
+                .and(w -> w.isNull(StyleInfo::getPatternStatus)
+                    .or()
+                    .notIn(StyleInfo::getPatternStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
+            default -> {}
         }
-
-        IPage<StyleInfo> resultPage = baseMapper.selectPage(pageInfo,
-            wrapper.orderByDesc(StyleInfo::getCreateTime));
-
-        fillQuotationPriceFields(resultPage.getRecords());
-        fillProgressFields(resultPage.getRecords());
-        fillOrderCountFields(resultPage.getRecords());
-        fillScrapFields(resultPage.getRecords());
-        fillWarehousedFields(resultPage.getRecords());
-
-        return resultPage;
     }
 
     private void fillOrderCountFields(List<StyleInfo> records) {
@@ -266,6 +270,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 cnt = r.get("cnt") == null ? 0 : Integer.parseInt(String.valueOf(r.get("cnt")));
                 totalQty = r.get("totalQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("totalQty")));
             } catch (Exception e) {
+                log.warn("[queryOrderCounts] 解析统计数据异常: {}", e.getMessage());
                 cnt = 0;
                 totalQty = 0;
             }
@@ -424,6 +429,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 try {
                     qty = r.get("scrapQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("scrapQty")));
                 } catch (Exception e) {
+                    log.warn("[fillScrapFields] 解析报废数量异常: {}", e.getMessage());
                     qty = 0;
                 }
                 if (qty <= 0) continue;
@@ -497,6 +503,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 try {
                     qty = r.get("warehousedQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("warehousedQty")));
                 } catch (Exception e) {
+                    log.warn("[fillWarehousedFields] 解析入库数量异常: {}", e.getMessage());
                     qty = 0;
                 }
                 if (qty <= 0) continue;
@@ -870,6 +877,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateStyle(StyleInfo styleInfo) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -931,6 +939,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(Long id) {
         StyleInfo styleInfo = new StyleInfo();
         styleInfo.setId(id);

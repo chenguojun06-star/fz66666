@@ -2,6 +2,8 @@ package com.fashion.supplychain.common.lock;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.SmartLifecycle;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
@@ -65,9 +68,71 @@ public class DistributedLockService {
             }
             log.debug("Lock contention: {} (already held)", lockKey);
             return null;
+        } catch (IllegalStateException ise) {
+            // Redis 连接工厂被 Spring graceful shutdown 等场景 STOPPED，
+            // 但容器仍在运行（云托管常见：SIGTERM 后未真正退出）。
+            // 自愈：重启 ConnectionFactory 并重试一次，避免后续所有定时任务静默罢工。
+            if (tryRecoverConnectionFactory(lockKey, ise)) {
+                try {
+                    Boolean retry = redisTemplate.opsForValue()
+                            .setIfAbsent(lockKey, lockValue, timeout, unit);
+                    if (Boolean.TRUE.equals(retry)) {
+                        log.info("Lock acquired after Redis self-heal: {}", lockKey);
+                        return lockValue;
+                    }
+                    return null;
+                } catch (Exception retryErr) {
+                    log.warn("Lock acquire retry failed after self-heal: {} - {}", lockKey, retryErr.getMessage());
+                    return null;
+                }
+            }
+            // 自愈未通过冷却期或失败：降级为 WARN，避免堆栈刷屏
+            log.warn("Lock acquire skipped (Redis unavailable): {} - {}", lockKey, ise.getMessage());
+            return null;
         } catch (Exception e) {
             log.error("Lock acquire error: {}", lockKey, e);
             return null;
+        }
+    }
+
+    /**
+     * 自愈冷却时间（毫秒）：避免 Redis 真挂时每次定时任务都尝试 start() 风暴
+     */
+    private static final long RECOVER_COOLDOWN_MS = 30_000L;
+    private final AtomicLong lastRecoverAttempt = new AtomicLong(0L);
+
+    /**
+     * 尝试重启被 STOPPED 的 RedisConnectionFactory。
+     * 仅当 connectionFactory 实现了 SmartLifecycle 且距离上次尝试超过冷却时间才执行。
+     *
+     * @return true=已尝试 start，调用方可重试一次；false=跳过（冷却中或不支持）
+     */
+    private boolean tryRecoverConnectionFactory(String lockKey, IllegalStateException originalErr) {
+        long now = System.currentTimeMillis();
+        long last = lastRecoverAttempt.get();
+        if (now - last < RECOVER_COOLDOWN_MS) {
+            return false;
+        }
+        if (!lastRecoverAttempt.compareAndSet(last, now)) {
+            return false;
+        }
+        try {
+            RedisConnectionFactory factory = redisTemplate.getConnectionFactory();
+            if (factory instanceof SmartLifecycle lifecycle) {
+                log.warn("Detected RedisConnectionFactory STOPPED while acquiring {}, attempting auto-restart...",
+                        lockKey);
+                if (!lifecycle.isRunning()) {
+                    lifecycle.start();
+                }
+                log.info("RedisConnectionFactory restarted: running={}", lifecycle.isRunning());
+                return true;
+            }
+            log.warn("RedisConnectionFactory is not SmartLifecycle, cannot self-heal: {}",
+                    factory == null ? "null" : factory.getClass().getName());
+            return false;
+        } catch (Exception healErr) {
+            log.error("RedisConnectionFactory self-heal failed for {}: {}", lockKey, healErr.getMessage(), healErr);
+            return false;
         }
     }
 

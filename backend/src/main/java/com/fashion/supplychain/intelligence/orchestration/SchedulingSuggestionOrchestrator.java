@@ -71,7 +71,7 @@ public class SchedulingSuggestionOrchestrator {
 
             // ① 获取所有工厂
             QueryWrapper<Factory> fqw = new QueryWrapper<>();
-            fqw.eq("tenant_id", tenantId);
+            fqw.eq("tenant_id", tenantId).eq("delete_flag", 0);
             List<Factory> factories = factoryService.list(fqw);
             if (factories.isEmpty()) {
                 resp.setPlans(Collections.emptyList());

@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.DeliveryPredictionRequest;
 import com.fashion.supplychain.intelligence.dto.DeliveryPredictionResponse;
 import com.fashion.supplychain.intelligence.entity.IntelligencePredictionLog;
@@ -68,7 +69,9 @@ public class DeliveryPredictionOrchestrator {
         ProductionOrder order = null;
         // 纯数字时先按主键查
         if (idStr.matches("\\d+")) {
-            try { order = productionOrderService.getById(Long.parseLong(idStr)); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+            try { order = productionOrderService.getById(Long.parseLong(idStr));
+                if (order != null) { TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单"); }
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
         // 主键未命中或含字母（如 PO20260228001），改按订单号查，支持带/不带 PO 前缀
         if (order == null) {

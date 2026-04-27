@@ -72,6 +72,7 @@ public class StagnantAlertOrchestrator {
             QueryWrapper<ScanRecord> sqw = new QueryWrapper<>();
             sqw.eq("tenant_id", tenantId)
                .eq("scan_result", "success")
+               .ne("scan_type", "orchestration")
                .in("order_id", batch)
                .ge("scan_time", since)
                .orderByDesc("scan_time");

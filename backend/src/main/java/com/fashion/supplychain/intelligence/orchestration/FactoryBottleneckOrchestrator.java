@@ -87,6 +87,7 @@ public class FactoryBottleneckOrchestrator {
                         .eq(StringUtils.hasText(factoryId), ScanRecord::getFactoryId, factoryId)
                         .in(ScanRecord::getOrderId, orderIds)
                         .eq(ScanRecord::getScanResult, "success")
+                        .ne(ScanRecord::getScanType, "orchestration")
         );
 
         // 3. orderId → stageLabel → quantity 汇总

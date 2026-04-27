@@ -9,24 +9,14 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 import java.sql.SQLException;
+import java.util.Set;
 
-/**
- * MyBatis-Plus 数据权限拦截器
- * 自动在 SELECT 语句中追加数据过滤条件
- *
- * 工作流程:
- * 1. DataScopeAspect 解析 @DataScope 注解，写入 DataScopeContextHolder
- * 2. 本拦截器在 SQL 执行前读取上下文，修改 SQL 追加 WHERE 条件
- * 3. 执行后自动清理上下文
- *
- * 过滤规则:
- * - scope=own  → WHERE created_by_id = '当前用户ID'
- * - scope=team → WHERE created_by_id IN (SELECT user_id FROM team WHERE team_id = '当前团队ID')
- *                或简化为 factory_id = '当前团队工厂ID'
- * - scope=all  → 不过滤
- */
 @Slf4j
 public class DataPermissionInterceptor implements InnerInterceptor {
+
+    private static final Set<String> VALID_SCOPES = Set.of("all", "own", "team");
+    private static final java.util.regex.Pattern IDENTIFIER_PATTERN =
+            java.util.regex.Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
 
     @Override
     @SuppressWarnings("rawtypes")
@@ -39,18 +29,25 @@ public class DataPermissionInterceptor implements InnerInterceptor {
 
         try {
             String scope = context.getScope();
-            if ("all".equals(scope) || scope == null) {
+            if (scope == null || "all".equals(scope)) {
                 return;
             }
 
+            if (!VALID_SCOPES.contains(scope)) {
+                log.warn("[DataPermission] Unknown scope '{}', defaulting to 'own'", scope);
+                scope = "own";
+            }
+
+            validateIdentifier(context.getCreatorColumn(), "creatorColumn");
+            validateIdentifier(context.getFactoryColumn(), "factoryColumn");
+            validateIdentifier(context.getTableAlias(), "tableAlias");
+
             String originalSql = boundSql.getSql();
-            String additionalCondition = buildCondition(context);
+            String additionalCondition = buildCondition(context, scope);
 
             if (additionalCondition != null && !additionalCondition.isEmpty()) {
-                // 在原始 SQL 外包裹子查询，追加过滤条件
                 String newSql = wrapSqlWithCondition(originalSql, additionalCondition);
 
-                // 通过反射修改 BoundSql 的 sql 字段
                 java.lang.reflect.Field sqlField = BoundSql.class.getDeclaredField("sql");
                 sqlField.setAccessible(true);
                 sqlField.set(boundSql, newSql);
@@ -58,37 +55,37 @@ public class DataPermissionInterceptor implements InnerInterceptor {
                 log.debug("DataPermission applied: scope={}, condition={}", scope, additionalCondition);
             }
         } catch (Exception e) {
-            log.error("DataPermission interceptor error", e);
+            log.error("[DataPermission] interceptor error, blocking query for safety", e);
+            throw new SQLException("Data permission check failed, query blocked", e);
         } finally {
-            // 使用后立即清理，防止污染后续查询
             DataScopeContextHolder.clear();
         }
     }
 
-    /**
-     * 根据数据范围构建过滤条件
-     */
-    private String buildCondition(DataScopeContext context) {
+    private void validateIdentifier(String identifier, String fieldName) {
+        if (identifier != null && !identifier.isEmpty()
+                && !IDENTIFIER_PATTERN.matcher(identifier).matches()) {
+            throw new IllegalArgumentException(
+                    "Invalid " + fieldName + ": '" + identifier + "' contains illegal characters");
+        }
+    }
+
+    private String buildCondition(DataScopeContext context, String scope) {
         StringBuilder condition = new StringBuilder();
         String prefix = context.getTableAlias() != null && !context.getTableAlias().isEmpty()
                 ? context.getTableAlias() + "." : "";
 
-        String scope = context.getScope();
-
         if ("own".equals(scope)) {
-            // 仅查看自己的数据
             if (context.getCreatorColumn() != null && !context.getCreatorColumn().isEmpty()) {
                 condition.append(prefix).append(context.getCreatorColumn())
                         .append(" = '").append(escapeSQL(context.getUserId())).append("'");
             }
         } else if ("team".equals(scope)) {
-            // 查看团队数据（按工厂ID过滤）
             if (context.getFactoryColumn() != null && !context.getFactoryColumn().isEmpty()
                     && context.getTeamId() != null) {
                 condition.append(prefix).append(context.getFactoryColumn())
                         .append(" = '").append(escapeSQL(context.getTeamId())).append("'");
             } else if (context.getCreatorColumn() != null && !context.getCreatorColumn().isEmpty()) {
-                // 退化为按创建人过滤
                 condition.append(prefix).append(context.getCreatorColumn())
                         .append(" = '").append(escapeSQL(context.getUserId())).append("'");
             }
@@ -97,21 +94,18 @@ public class DataPermissionInterceptor implements InnerInterceptor {
         return condition.toString();
     }
 
-    /**
-     * 在原始 SQL 中追加 WHERE 条件
-     * 采用子查询包裹方式，兼容各种复杂 SQL
-     */
     private String wrapSqlWithCondition(String originalSql, String condition) {
-        // 简单方案：在 WHERE 1=1 AND ... 方式追加
-        // 为避免破坏原始 SQL 结构，使用子查询包裹
         return "SELECT * FROM (" + originalSql + ") _data_scope WHERE " + condition;
     }
 
-    /**
-     * 防止 SQL 注入
-     */
     private String escapeSQL(String value) {
         if (value == null) return "";
-        return value.replace("'", "''").replace("\\", "\\\\");
+        return value.replace("\\", "\\\\")
+                    .replace("'", "''")
+                    .replace("\"", "\"\"")
+                    .replace("\0", "")
+                    .replace("\n", "")
+                    .replace("\r", "")
+                    .replace("\u001a", "");
     }
 }

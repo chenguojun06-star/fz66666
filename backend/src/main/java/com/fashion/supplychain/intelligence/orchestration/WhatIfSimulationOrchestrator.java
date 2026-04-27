@@ -363,7 +363,7 @@ public class WhatIfSimulationOrchestrator {
     }
 
     private int parseInt(Object v) {
-        try { return Integer.parseInt(String.valueOf(v)); } catch (Exception e) { return 0; }
+        try { return Integer.parseInt(String.valueOf(v)); } catch (Exception e) { log.debug("[WhatIf] parseInt解析失败: v={}", v); return 0; }
     }
 
     private String llmSummary(WhatIfResponse.ScenarioResult baseline,

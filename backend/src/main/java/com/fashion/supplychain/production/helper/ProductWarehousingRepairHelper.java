@@ -443,6 +443,7 @@ public class ProductWarehousingRepairHelper {
                         .eq(ProductWarehousing::getTenantId, tenantId)
                         .eq(ProductWarehousing::getCuttingBundleId, bundleId)
                         .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
                         .last("LIMIT 1"));
         return pw != null ? pw.getRepairStatus() : null;
     }

@@ -480,6 +480,7 @@ public class NlQuerySmartHandlers {
                     h.getHealthIndex(), h.getGrade(),
                     h.getTopRisk() != null ? " ⚠️" + h.getTopRisk() : "");
         } catch (Exception e) {
+            log.debug("[NlQuery] getHealthSummaryLine失败", e);
             return null;
         }
     }
@@ -723,6 +724,6 @@ public class NlQuerySmartHandlers {
     private double doubleVal(Object obj) {
         if (obj == null) return 0;
         if (obj instanceof Number) return ((Number) obj).doubleValue();
-        try { return Double.parseDouble(obj.toString()); } catch (Exception e) { return 0; }
+        try { return Double.parseDouble(obj.toString()); } catch (Exception e) { log.debug("[NlQuery] doubleVal解析失败: obj={}", obj); return 0; }
     }
 }

@@ -83,6 +83,7 @@ public class AiAgentOrchestrator {
             }
             return Result.success(content);
         } finally {
+            lastCommandIdHolder.remove();
             lastToolRecordsHolder.remove();
             AgentModeContext.clear();
         }
@@ -152,6 +153,8 @@ public class AiAgentOrchestrator {
             if (heartbeat != null) {
                 heartbeat.shutdownNow();
             }
+            lastCommandIdHolder.remove();
+            lastToolRecordsHolder.remove();
             AgentModeContext.clear();
         }
     }

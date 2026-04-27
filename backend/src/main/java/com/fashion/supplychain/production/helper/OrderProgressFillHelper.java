@@ -173,6 +173,56 @@ public class OrderProgressFillHelper {
 
     private void applyCurrentProcessName(List<ProductionOrder> records,
             Map<String, LinkedHashMap<String, Long>> doneByOrder) {
+        Map<String, List<String>> processOrderByStyleNo = loadProcessOrderByStyleNo(records);
+
+        for (ProductionOrder order : records) {
+            if (order == null || !StringUtils.hasText(order.getId())) {
+                continue;
+            }
+            String oid = order.getId().trim();
+            int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+
+            String sn = StringUtils.hasText(order.getStyleNo()) ? order.getStyleNo().trim() : null;
+            List<String> processOrder = sn == null ? Collections.emptyList()
+                    : processOrderByStyleNo.getOrDefault(sn, Collections.emptyList());
+
+            List<String> productionProcesses = filterProductionProcesses(processOrder);
+
+            LinkedHashMap<String, Long> byProc = doneByOrder == null ? new LinkedHashMap<>()
+                    : doneByOrder.getOrDefault(oid, new LinkedHashMap<>());
+            boolean[] startedFlags = detectStartedFlags(byProc);
+            boolean realStarted = startedFlags[0];
+            boolean stageStarted = startedFlags[1];
+
+            if (productionProcesses.isEmpty() && !byProc.isEmpty()) {
+                productionProcesses = extractProductionProcessesFromDone(byProc);
+            }
+
+            if (productionProcesses.isEmpty()) {
+                order.setCurrentProcessName(null);
+                continue;
+            }
+
+            if (isInProcurementStage(order, byProc, realStarted, stageStarted)) {
+                order.setCurrentProcessName("采购");
+                String st = order.getStatus() == null ? "" : order.getStatus().trim();
+                if (!isTerminalStatus(st)) {
+                    order.setStatus("production");
+                }
+                continue;
+            }
+
+            int currentIdx = locateCurrentProcessIndex(productionProcesses, byProc, orderQty);
+            order.setCurrentProcessName(productionProcesses.get(currentIdx));
+
+            String st = order.getStatus() == null ? "" : order.getStatus().trim();
+            if (!isTerminalStatus(st) && (realStarted || stageStarted)) {
+                order.setStatus("production");
+            }
+        }
+    }
+
+    private Map<String, List<String>> loadProcessOrderByStyleNo(List<ProductionOrder> records) {
         Map<String, List<String>> processOrderByStyleNo = new HashMap<>();
         try {
             Set<String> styleNos = records.stream()
@@ -193,158 +243,101 @@ public class OrderProgressFillHelper {
         } catch (Exception e) {
             log.warn("Failed to prepare progress weights cache for current process name", e);
         }
+        return processOrderByStyleNo;
+    }
 
-        for (ProductionOrder order : records) {
-            if (order == null || !StringUtils.hasText(order.getId())) {
-                continue;
-            }
-            String oid = order.getId().trim();
-            int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
-
-            String sn = StringUtils.hasText(order.getStyleNo()) ? order.getStyleNo().trim() : null;
-            List<String> processOrder = sn == null ? Collections.emptyList()
-                    : processOrderByStyleNo.getOrDefault(sn,
-                            Collections.emptyList());
-
-            List<String> productionProcesses = new ArrayList<>();
-            if (!processOrder.isEmpty()) {
-                for (String p : processOrder) {
-                    String pn = p == null ? "" : p.trim();
-                    if (!StringUtils.hasText(pn)) {
-                        continue;
-                    }
-                    if (isBaseStageName(pn)) {
-                        continue;
-                    }
-                    productionProcesses.add(pn);
+    private List<String> filterProductionProcesses(List<String> processOrder) {
+        List<String> productionProcesses = new ArrayList<>();
+        if (!processOrder.isEmpty()) {
+            for (String p : processOrder) {
+                String pn = p == null ? "" : p.trim();
+                if (!StringUtils.hasText(pn) || isBaseStageName(pn)) {
+                    continue;
                 }
-            }
-
-            LinkedHashMap<String, Long> byProc = doneByOrder == null ? new LinkedHashMap<>()
-                    : doneByOrder.getOrDefault(oid, new LinkedHashMap<>());
-            boolean realStarted = false;
-            boolean stageStarted = false;
-            if (!byProc.isEmpty()) {
-                for (Map.Entry<String, Long> e : byProc.entrySet()) {
-                    if (e == null) {
-                        continue;
-                    }
-                    String pn = e.getKey();
-                    pn = pn == null ? null : pn.trim();
-                    if (!StringUtils.hasText(pn)) {
-                        continue;
-                    }
-                    if (!stageStarted && isBaseStageName(pn)) {
-                        long v = e.getValue() == null ? 0L : e.getValue();
-                        if (v > 0) {
-                            stageStarted = true;
-                        }
-                    }
-                    if (isBaseStageName(pn)) {
-                        continue;
-                    }
-                    long v = e.getValue() == null ? 0L : e.getValue();
-                    if (v > 0) {
-                        realStarted = true;
-                        break;
-                    }
-                }
-            }
-            if (productionProcesses.isEmpty() && !byProc.isEmpty()) {
-                productionProcesses = new ArrayList<>();
-                for (String pn : byProc.keySet()) {
-                    String p = pn == null ? null : pn.trim();
-                    if (!StringUtils.hasText(p)) {
-                        continue;
-                    }
-                    if (isBaseStageName(p)) {
-                        continue;
-                    }
-                    productionProcesses.add(p);
-                }
-            }
-
-            if (productionProcesses.isEmpty()) {
-                order.setCurrentProcessName(null);
-                continue;
-            }
-
-            // 检查是否还在采购阶段
-            boolean inProcurement = false;
-
-            // 获取物料到货率和人工确认状态
-            Integer materialArrivalRate = order.getMaterialArrivalRate();
-            Integer manuallyCompleted = order.getProcurementManuallyCompleted();
-            boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
-            boolean directCuttingOrder = isDirectCuttingOrder(order);
-            boolean hasConfirmedFabric = StringUtils.hasText(order.getId())
-                    && materialPurchaseService.hasConfirmedQuantityByOrderId(order.getId(), true);
-
-            // 采购完成判断规则：
-            // 1. 直裁订单可直接跳过采购阶段
-            // 2. 已人工确认可裁主面料：允许进入下一步
-            // 3. 订单人工确认采购完成：允许进入下一步
-            boolean procurementComplete = directCuttingOrder;
-            if (!procurementComplete && hasConfirmedFabric) {
-                procurementComplete = true;
-            } else if (!procurementComplete && materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
-                procurementComplete = true;
-            }
-
-            // 如果采购未完成，必须停留在采购阶段
-            if (!procurementComplete) {
-                if (byProc.containsKey("采购") || byProc.containsKey("物料采购")) {
-                    long procurementDone = sumDoneByStageName(byProc, "采购") + sumDoneByStageName(byProc, "物料采购");
-                    // 如果采购未完成（数量小于订单数量），说明还在采购阶段
-                    if (orderQty > 0 && procurementDone < orderQty) {
-                        inProcurement = true;
-                    } else if (orderQty <= 0 && procurementDone <= 0) {
-                        inProcurement = true;
-                    }
-                } else if (!realStarted && !stageStarted) {
-                    // 如果没有任何扫码记录，也认为在采购阶段
-                    inProcurement = true;
-                } else {
-                    // 默认情况：物料未完成且未确认，停留在采购阶段
-                    inProcurement = true;
-                }
-            }
-
-            if (inProcurement) {
-                order.setCurrentProcessName("采购");
-                String st = order.getStatus() == null ? "" : order.getStatus().trim();
-                if (!isTerminalStatus(st)) {
-                    order.setStatus("production");
-                }
-                continue;
-            }
-
-            int currentIdx = -1;
-            for (int i = 0; i < productionProcesses.size(); i++) {
-                String pn = productionProcesses.get(i);
-                long done = sumDoneByStageName(byProc, pn);
-                if (orderQty > 0) {
-                    if (done < orderQty) {
-                        currentIdx = i;
-                        break;
-                    }
-                } else {
-                    if (done <= 0) {
-                        currentIdx = i;
-                        break;
-                    }
-                }
-            }
-            if (currentIdx < 0) {
-                currentIdx = productionProcesses.size() - 1;
-            }
-            order.setCurrentProcessName(productionProcesses.get(currentIdx));
-
-            String st = order.getStatus() == null ? "" : order.getStatus().trim();
-            if (!isTerminalStatus(st) && (realStarted || stageStarted)) {
-                order.setStatus("production");
+                productionProcesses.add(pn);
             }
         }
+        return productionProcesses;
+    }
+
+    private boolean[] detectStartedFlags(LinkedHashMap<String, Long> byProc) {
+        boolean realStarted = false;
+        boolean stageStarted = false;
+        if (!byProc.isEmpty()) {
+            for (Map.Entry<String, Long> e : byProc.entrySet()) {
+                if (e == null) continue;
+                String pn = e.getKey() == null ? null : e.getKey().trim();
+                if (!StringUtils.hasText(pn)) continue;
+                if (!stageStarted && isBaseStageName(pn)) {
+                    long v = e.getValue() == null ? 0L : e.getValue();
+                    if (v > 0) stageStarted = true;
+                }
+                if (isBaseStageName(pn)) continue;
+                long v = e.getValue() == null ? 0L : e.getValue();
+                if (v > 0) { realStarted = true; break; }
+            }
+        }
+        return new boolean[]{realStarted, stageStarted};
+    }
+
+    private List<String> extractProductionProcessesFromDone(LinkedHashMap<String, Long> byProc) {
+        List<String> productionProcesses = new ArrayList<>();
+        for (String pn : byProc.keySet()) {
+            String p = pn == null ? null : pn.trim();
+            if (!StringUtils.hasText(p) || isBaseStageName(p)) continue;
+            productionProcesses.add(p);
+        }
+        return productionProcesses;
+    }
+
+    private boolean isInProcurementStage(ProductionOrder order, LinkedHashMap<String, Long> byProc,
+                                          boolean realStarted, boolean stageStarted) {
+        Integer materialArrivalRate = order.getMaterialArrivalRate();
+        Integer manuallyCompleted = order.getProcurementManuallyCompleted();
+        boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
+        boolean directCuttingOrder = isDirectCuttingOrder(order);
+        boolean hasConfirmedFabric = StringUtils.hasText(order.getId())
+                && materialPurchaseService.hasConfirmedQuantityByOrderId(order.getId(), true);
+
+        boolean procurementComplete = directCuttingOrder;
+        if (!procurementComplete && hasConfirmedFabric) {
+            procurementComplete = true;
+        } else if (!procurementComplete && materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
+            procurementComplete = true;
+        }
+
+        if (procurementComplete) {
+            return false;
+        }
+
+        int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+        if (byProc.containsKey("采购") || byProc.containsKey("物料采购")) {
+            long procurementDone = sumDoneByStageName(byProc, "采购") + sumDoneByStageName(byProc, "物料采购");
+            if (orderQty > 0 && procurementDone < orderQty) return true;
+            if (orderQty <= 0 && procurementDone <= 0) return true;
+        } else if (!realStarted && !stageStarted) {
+            return true;
+        } else {
+            return true;
+        }
+        return false;
+    }
+
+    private int locateCurrentProcessIndex(List<String> productionProcesses, LinkedHashMap<String, Long> byProc, int orderQty) {
+        int currentIdx = -1;
+        for (int i = 0; i < productionProcesses.size(); i++) {
+            String pn = productionProcesses.get(i);
+            long done = sumDoneByStageName(byProc, pn);
+            if (orderQty > 0) {
+                if (done < orderQty) { currentIdx = i; break; }
+            } else {
+                if (done <= 0) { currentIdx = i; break; }
+            }
+        }
+        if (currentIdx < 0) {
+            currentIdx = productionProcesses.size() - 1;
+        }
+        return currentIdx;
     }
 
     private boolean isTerminalStatus(String status) {

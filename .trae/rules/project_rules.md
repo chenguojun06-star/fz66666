@@ -1270,3 +1270,267 @@ Review 完成后，Reviewer 应自问：
 - ❌ 禁止新增功能后不验证跨端参数映射
 - ❌ 禁止留下未使用的 import、空 catch 块、调试日志
 - ❌ 禁止跳过闭环验证清单直接标记任务完成
+
+---
+
+# P0 - 数据库幂等写法规则
+
+## 规则41：DbColumnRepairRunner 幂等机制
+
+### 核心原则
+DbColumnRepairRunner 是数据库 schema 一致性的最后一道防线，所有写法必须天然幂等（重复执行不报错、不产生副作用）。
+
+### 幂等保障三层机制
+
+| 层级 | 机制 | 代码位置 | 说明 |
+|------|------|---------|------|
+| L1 | `tableExists()` 前置检查 | `tableExists()` 方法 | 查 `INFORMATION_SCHEMA.TABLES` 判断表是否存在 |
+| L2 | `CREATE TABLE IF NOT EXISTS` | `TABLE_FIXES` 的 DDL | 即使 L1 因并发判断失误，DDL 本身也幂等 |
+| L3 | `ensureColumn()` 先查后加 | `ensureColumn()` 方法 | 查 `INFORMATION_SCHEMA.COLUMNS` 判断列是否存在，不存在才 ALTER TABLE |
+
+### COLUMN_FIXES 幂等写法
+
+```java
+// ✅ 正确 - add() 方法内部调用 ensureColumn()，先查列是否存在
+add("t_xxx", "new_column", "VARCHAR(64) DEFAULT NULL COMMENT '说明'");
+
+// ensureColumn 内部逻辑：
+// 1. SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?
+// 2. 如果 count=0，执行 ALTER TABLE t_xxx ADD COLUMN new_column VARCHAR(64) DEFAULT NULL COMMENT '说明'
+// 3. 如果 count>0，跳过（幂等）
+```
+
+### TABLE_FIXES 幂等写法
+
+```java
+// ✅ 正确 - 完整建表 DDL，使用 IF NOT EXISTS
+TABLE_FIXES.put("t_new_table",
+    "CREATE TABLE IF NOT EXISTS `t_new_table` ("
+    + "`id` VARCHAR(36) NOT NULL COMMENT '主键',"
+    + "`tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID',"
+    + "`create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
+    + "`update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',"
+    + "`delete_flag` INT NOT NULL DEFAULT 0 COMMENT '删除标记',"
+    + "PRIMARY KEY (`id`),"
+    + "KEY `idx_tenant_id` (`tenant_id`)"
+    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='表注释'");
+```
+
+### 新增字段标准流程（三层同步）
+
+```
+1. Java 实体新增 private 字段
+2. Flyway 迁移脚本 ALTER TABLE ADD COLUMN
+3. DbColumnRepairRunner.add() 补列
+4. 前端 TS 类型补充
+```
+
+### 新增表标准流程
+
+```
+1. Java 实体 + Mapper + Service
+2. Flyway 迁移脚本 CREATE TABLE
+3. DbColumnRepairRunner TABLE_FIXES.put() 整表兜底
+4. DbColumnRepairRunner COLUMN_FIXES.add() 后续加列兜底
+```
+
+### 禁止事项
+
+```sql
+-- ❌ 禁止 - COMMENT '' 导致 Flyway 截断（规则1）
+ALTER TABLE t_xxx ADD COLUMN yyy VARCHAR(64) COMMENT '';
+
+-- ✅ 正确
+ALTER TABLE t_xxx ADD COLUMN yyy VARCHAR(64) COMMENT '说明文字';
+```
+
+```java
+// ❌ 禁止 - 只写 Flyway 不写 DbColumnRepairRunner（规则2）
+// Flyway 可能静默失败，DbColumnRepairRunner 是兜底
+
+// ❌ 禁止 - TABLE_FIXES 不加 IF NOT EXISTS
+TABLE_FIXES.put("t_xxx", "CREATE TABLE `t_xxx` (...)");  // 重复执行会报错
+
+// ✅ 正确
+TABLE_FIXES.put("t_xxx", "CREATE TABLE IF NOT EXISTS `t_xxx` (...)");
+```
+
+## 规则42：getById 租户过滤标准模式
+
+### 写操作（update/delete/save 后 getById）
+
+```java
+// ✅ 模式 A（推荐）- lambdaQuery + tenantId，不泄露 ID 是否存在
+TenantAssert.assertTenantContext();
+Long tenantId = UserContext.tenantId();
+XxxEntity entity = xxxService.lambdaQuery()
+        .eq(XxxEntity::getId, id)
+        .eq(XxxEntity::getTenantId, tenantId)
+        .one();
+
+// ✅ 模式 B（兼容）- getById 后校验实体归属
+XxxEntity entity = xxxService.getById(id);
+if (entity == null) {
+    throw new NoSuchElementException("实体不存在");
+}
+TenantAssert.assertBelongsToCurrentTenant(entity.getTenantId(), "实体名称");
+```
+
+### 读操作
+
+```java
+// ✅ 读操作也必须校验租户归属
+XxxEntity entity = xxxService.getById(id);
+if (entity != null) {
+    TenantAssert.assertBelongsToCurrentTenant(entity.getTenantId(), "实体名称");
+}
+```
+
+### 禁止的反模式
+
+```java
+// ❌ 禁止 - tenantId 为 null 时跳过过滤（规则6）
+.eq(tenantId != null, XxxEntity::getTenantId, tenantId)
+
+// ❌ 禁止 - 条件判断式租户校验
+if (tenantId != null && !tenantId.equals(entity.getTenantId())) {
+    throw new SecurityException("无权访问");
+}
+```
+
+## 规则43：ScanRecord 查询必须排除 orchestration 类型
+
+### 核心规则
+所有 ScanRecord 查询（包括 MyBatis-Plus QueryWrapper 和原生 SQL）必须添加 `scan_type != 'orchestration'` 过滤。
+
+### LambdaQueryWrapper 写法
+
+```java
+// ✅ 正确
+qw.ne(ScanRecord::getScanType, "orchestration");
+```
+
+### QueryWrapper 写法
+
+```java
+// ✅ 正确
+qw.ne("scan_type", "orchestration");
+```
+
+### 原生 SQL 写法
+
+```sql
+-- ✅ 正确
+SELECT ... FROM t_scan_record WHERE ... AND scan_type != 'orchestration'
+```
+
+### 已修复的文件清单（2026-04-27）
+
+**ScanRecordMapper（5处）**：selectPersonalStats, selectPayrollAggregation, selectBundlePendingStats, selectLastScanTimeByOrderIds, selectOperatorStatsBetween
+
+**AI 模块（18文件29处）**：StyleIntelligenceProfileOrchestrator, FactoryBottleneckOrchestrator, CapacityGapOrchestrator, AnomalyDetectionOrchestrator(2), WorkerProfileOrchestrator(2), FinanceAuditOrchestrator, StagnantAlertOrchestrator, TenantIntelligenceProfileViewOrchestrator, CrossTenantBenchmarkOrchestrator, SmartAssignmentOrchestrator, MindPushOrchestrator, MonthlyBizSummaryOrchestrator(2), HealthIndexOrchestrator(2), PainPointAggregationOrchestrator, NlQueryDataHandlers(3), SmartPrecheckOrchestrator(3), ReportDataCollector, IntelligenceProcessStatsMapper(2)
+
+### 已正确包含过滤器的文件（对比参考）
+ReportDataCollector.baseScanQuery(), WorkerEfficiencyOrchestrator, SupplierScorecardOrchestrator, LiveCostTrackerOrchestrator, HealthIndexOrchestrator.calcQualityScore(), FactoryLeaderboardOrchestrator, DeliveryPredictionOrchestrator, DefectHeatmapOrchestrator, LivePulseOrchestrator, SelfHealingOrchestrator, ProfitEstimationOrchestrator, ProductionProgressTool, OrderComparisonTool, DeepAnalysisTool.baseScanQuery(), SmartReportTool.baseScanQuery(), SystemOverviewTool, ScanUndoTool, BundleSplitTransferTool, OrgQueryTool, OrderFactoryTransferUndoTool, OrphanDataDetector, SignalCollectorHelper, AiPatrolJob
+
+---
+
+# P0 - 精准修改规则
+
+## 规则44：精准修改，发现问题必须处理
+
+### 核心原则
+**改该改的，删该删的。** 不要顺手改无关代码，但发现旁边有问题不能装没看见——有问题必须处理，死代码核实清楚必须删除。
+
+### 编辑已有代码时
+
+| 行为 | ❌ 禁止 | ✅ 正确 |
+|------|---------|---------|
+| 旁边代码 | 不要按自己偏好"改进"旁边没问题的代码 | 旁边代码有 bug/隐患必须处理，没问题的不动 |
+| 重构 | 不要重构没坏的东西 | 没坏的不动，但有问题的必须修 |
+| 风格 | 不要按自己偏好改已有风格 | 匹配已有代码风格，除非风格本身有问题 |
+| 死代码 | 不要留着核实清楚的死代码 | 核实确认无用的死代码，直接删除 |
+
+### 死代码处理规则
+
+- ✅ 核实清楚无用的死代码（未调用的方法、未使用的 import、注释掉的代码块）→ **直接删除**
+- ✅ 不确定是否还在用的 → 先 grep 全局搜索确认，确认无用再删
+- ❌ 不要"感觉可能有用"就留着 → 要么确认有用，要么删
+
+### 你的改动产生废弃代码时
+
+- ✅ 删除**你的改动**导致无用的 import / 变量 / 函数
+- ✅ 顺手发现之前遗留的死代码，核实清楚后一并删除
+
+### 检验标准
+每次改动前问自己两个问题：
+1. **"这一行改动跟用户的需求有直接关系吗？"** — 没关系且没问题的，不要动
+2. **"旁边的代码有问题吗？"** — 有问题必须处理，不能装没看见
+
+### 事故教训
+- 修扫码 bug 时顺手改了旁边方法的变量名 → 导致其他调用方报错
+- 加字段时顺手"优化"了旁边的 import → 引入了不存在的类，编译失败
+- 改 Controller 时顺手改了注释措辞 → diff 里 30 处改动只有 5 处是真正需要的，review 困难
+- 看到旁边有死代码但"怕改错"没删 → 后续维护者以为是有效代码，踩坑
+
+---
+
+# P0 - 自测与场景覆盖规则
+
+## 规则45：修改/新增/更新任何功能前，必须先想清楚所有实际使用场景
+
+### 核心原则
+**写代码之前先想场景，写完代码必须自测。** 不是"功能能跑"就行，而是要覆盖所有真实业务场景。
+
+### 动手前必须回答的三个问题
+
+1. **这个功能涉及几个场景？** — 列出所有可能的业务路径，不是只想"正常流程"
+2. **每个场景能不能做到？** — 逐个验证，不是假设"应该没问题"
+3. **异常/边界情况怎么处理？** — 不是只测 happy path
+
+### 典型场景覆盖示例（物料管理）
+
+以物料节点为例，不能只考虑"领料→使用"这一条线，必须覆盖：
+
+```
+正常流程：领料 → 使用 → 完成
+     ↓
+多次回料：领了100米，用了80米，退回20米 → 再领50米 → 又退回10米
+     ↓
+部分退货：领了100米，面料品质不行，退货50米，剩下50米继续用
+     ↓
+批量退货：整批面辅料品质不合格，全部退货
+     ↓
+退货一半：100件辅料，50件合格继续用，50件不合格退货
+     ↓
+跨节点影响：物料退货后，裁剪数量要不要减？生产订单状态要不要变？
+```
+
+**如果只测"领料成功"，上面这些场景全都会出 bug。**
+
+### 各模块场景覆盖参考
+
+| 模块 | 必须考虑的场景 |
+|------|-------------|
+| 物料管理 | 多次领料、部分退货、批量退货、退货一半、回料、面辅料分开处理 |
+| 扫码 | 正常扫码、重复扫码、撤回、退回重扫、跨工序扫码、ORDER码、菲号码 |
+| 入库 | 全量入库、部分入库、退货入库、样衣入库+借出+归还 |
+| 质检 | 接收质检、确认合格、确认不合格、部分不合格、缺陷记录 |
+| 出货 | 全量出货、部分出货、对账、对账差异处理 |
+| 工资 | 正常计件、撤回扣工资、跨月结算、重复扫码去重 |
+
+### 自测要求
+
+**不管是修改、新增还是更新功能，完成后必须自测：**
+
+1. **正常流程** — 主路径能不能走通
+2. **异常流程** — 输入错误数据、边界值、空值会不会崩
+3. **多步操作** — 同一个数据反复操作（领了退、退了再领）会不会乱
+4. **跨模块影响** — 改了 A 模块，B 模块依赖 A 的数据会不会受影响
+5. **多租户/多工厂** — 不同角色看到的数据对不对
+
+### 禁止事项
+- ❌ 禁止只测 happy path 就说"功能已完成"
+- ❌ 禁止不考虑边界场景（部分退货、退货一半、多次操作同一数据）
+- ❌ 禁止改了代码不重启后端就声称"已验证"
+- ❌ 禁止不考虑跨模块影响（物料退货后裁剪数量没变）

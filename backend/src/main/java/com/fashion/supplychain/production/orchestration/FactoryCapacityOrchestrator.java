@@ -188,7 +188,7 @@ public class FactoryCapacityOrchestrator {
         if (tenantId == null) return;
         try {
             QueryWrapper<Factory> fqw = new QueryWrapper<>();
-            fqw.eq("tenant_id", tenantId);
+            fqw.eq("tenant_id", tenantId).eq("delete_flag", 0);
             List<Factory> factories = factoryService.list(fqw);
             Map<String, Factory> factoryByName = factories.stream()
                 .filter(f -> f.getFactoryName() != null)

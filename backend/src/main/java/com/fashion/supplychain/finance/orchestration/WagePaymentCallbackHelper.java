@@ -149,6 +149,7 @@ public class WagePaymentCallbackHelper {
         MaterialReconciliation recon = materialReconciliationService.lambdaQuery()
                 .eq(MaterialReconciliation::getId, bizId)
                 .eq(MaterialReconciliation::getTenantId, tenantId)
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
                 .one();
         if (recon != null && "approved".equals(recon.getStatus())) {
             recon.setStatus("paid");
@@ -164,6 +165,7 @@ public class WagePaymentCallbackHelper {
         ExpenseReimbursement reimb = expenseReimbursementService.lambdaQuery()
                 .eq(ExpenseReimbursement::getId, bizId)
                 .eq(ExpenseReimbursement::getTenantId, tenantId)
+                .eq(ExpenseReimbursement::getDeleteFlag, 0)
                 .one();
         if (reimb != null && "approved".equals(reimb.getStatus())) {
             reimb.setStatus("paid");
@@ -226,6 +228,7 @@ public class WagePaymentCallbackHelper {
         MaterialReconciliation recon = materialReconciliationService.lambdaQuery()
                 .eq(MaterialReconciliation::getId, bizId)
                 .eq(MaterialReconciliation::getTenantId, tenantId)
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
                 .one();
         if (recon != null && "paid".equals(recon.getStatus())) {
             recon.setStatus("approved");
@@ -243,6 +246,7 @@ public class WagePaymentCallbackHelper {
         ExpenseReimbursement reimb = expenseReimbursementService.lambdaQuery()
                 .eq(ExpenseReimbursement::getId, bizId)
                 .eq(ExpenseReimbursement::getTenantId, tenantId)
+                .eq(ExpenseReimbursement::getDeleteFlag, 0)
                 .one();
         if (reimb != null && "paid".equals(reimb.getStatus())) {
             reimb.setStatus("approved");
@@ -290,6 +294,7 @@ public class WagePaymentCallbackHelper {
     private void markReconciliationRejected(String bizId, String reason) {
         MaterialReconciliation recon = materialReconciliationService.getById(bizId);
         if (recon != null && "approved".equals(recon.getStatus())) {
+            com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(recon.getTenantId(), "物料对账单");
             recon.setStatus("rejected");
             recon.setRemark("【付款驳回】" + (reason != null ? reason : ""));
             recon.setUpdateBy(UserContext.username());
@@ -302,6 +307,7 @@ public class WagePaymentCallbackHelper {
     private void markReimbursementRejected(String bizId, String reason) {
         ExpenseReimbursement reimb = expenseReimbursementService.getById(bizId);
         if (reimb != null && "approved".equals(reimb.getStatus())) {
+            com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(reimb.getTenantId(), "费用报销单");
             reimb.setStatus("rejected");
             reimb.setApprovalRemark("【付款驳回】" + (reason != null ? reason : ""));
             reimb.setUpdateBy(UserContext.username());

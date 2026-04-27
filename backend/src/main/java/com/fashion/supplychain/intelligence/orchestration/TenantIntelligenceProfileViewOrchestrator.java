@@ -71,6 +71,7 @@ public class TenantIntelligenceProfileViewOrchestrator {
                 .last("LIMIT 500"));
         List<ScanRecord> scanRecords = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
                 .eq(ScanRecord::getTenantId, tenantId)
+                .ne(ScanRecord::getScanType, "orchestration")
                 .orderByDesc(ScanRecord::getScanTime)
                 .last("LIMIT 1000"));
         return tenantIntelligencePreferenceService.learnProfile(orders, scanRecords);

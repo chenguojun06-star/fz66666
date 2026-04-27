@@ -104,17 +104,33 @@ public class ExcelImportOrchestrator {
      * 生成Excel模板（含表头+示例数据行+填写说明）
      */
     public byte[] generateTemplate(String type) {
+        TemplateConfig config = resolveTemplateConfig(type);
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            buildDataSheet(workbook, config);
+            buildNoteSheet(workbook, config.notes);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("生成模板失败: " + e.getMessage(), e);
+        }
+    }
+
+    private static class TemplateConfig {
         String[] headers;
         String[] examples;
         String sheetName;
         String[] notes;
+    }
 
+    private TemplateConfig resolveTemplateConfig(String type) {
+        TemplateConfig config = new TemplateConfig();
         switch (type) {
             case "style":
-                headers = STYLE_HEADERS;
-                examples = STYLE_EXAMPLES;
-                sheetName = "款式资料";
-                notes = new String[]{
+                config.headers = STYLE_HEADERS;
+                config.examples = STYLE_EXAMPLES;
+                config.sheetName = "款式资料";
+                config.notes = new String[]{
                         "款号*: 必填，唯一标识，不能重复",
                         "款名: 选填，为空时自动用款号填充",
                         "品类: 选填，如连衣裙、衬衫、裤子等",
@@ -127,10 +143,10 @@ public class ExcelImportOrchestrator {
                 };
                 break;
             case "factory":
-                headers = FACTORY_HEADERS;
-                examples = FACTORY_EXAMPLES;
-                sheetName = "供应商";
-                notes = new String[]{
+                config.headers = FACTORY_HEADERS;
+                config.examples = FACTORY_EXAMPLES;
+                config.sheetName = "供应商";
+                config.notes = new String[]{
                         "供应商名称*: 必填，不能重复",
                         "供应商编码: 选填，内部编码",
                         "联系人: 选填",
@@ -139,10 +155,10 @@ public class ExcelImportOrchestrator {
                 };
                 break;
             case "employee":
-                headers = EMPLOYEE_HEADERS;
-                examples = EMPLOYEE_EXAMPLES;
-                sheetName = "员工";
-                notes = new String[]{
+                config.headers = EMPLOYEE_HEADERS;
+                config.examples = EMPLOYEE_EXAMPLES;
+                config.sheetName = "员工";
+                config.notes = new String[]{
                         "姓名*: 必填",
                         "手机号: 选填，11位手机号",
                         "角色名: 选填，默认为'普通用户'",
@@ -151,10 +167,10 @@ public class ExcelImportOrchestrator {
                 };
                 break;
             case "process":
-                headers = PROCESS_HEADERS;
-                examples = PROCESS_EXAMPLES;
-                sheetName = "工序";
-                notes = new String[]{
+                config.headers = PROCESS_HEADERS;
+                config.examples = PROCESS_EXAMPLES;
+                config.sheetName = "工序";
+                config.notes = new String[]{
                         "款号*: 必填，必须是系统中已存在的款号（请先导入款式）",
                         "工序名称*: 必填，如裁剪、车缝、整烫等",
                         "工序编码: 选填，为空时自动生成P1,P2...",
@@ -166,73 +182,64 @@ public class ExcelImportOrchestrator {
             default:
                 throw new IllegalArgumentException("不支持的导入类型: " + type);
         }
+        return config;
+    }
 
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            // 数据Sheet
-            Sheet dataSheet = workbook.createSheet(sheetName);
+    private void buildDataSheet(XSSFWorkbook workbook, TemplateConfig config) {
+        Sheet dataSheet = workbook.createSheet(config.sheetName);
 
-            // 表头样式
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerFont.setFontHeightInPoints((short) 12);
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            headerStyle.setBorderBottom(BorderStyle.THIN);
-            headerStyle.setBorderTop(BorderStyle.THIN);
-            headerStyle.setBorderLeft(BorderStyle.THIN);
-            headerStyle.setBorderRight(BorderStyle.THIN);
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerFont.setFontHeightInPoints((short) 12);
+        headerStyle.setFont(headerFont);
+        headerStyle.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        headerStyle.setBorderBottom(BorderStyle.THIN);
+        headerStyle.setBorderTop(BorderStyle.THIN);
+        headerStyle.setBorderLeft(BorderStyle.THIN);
+        headerStyle.setBorderRight(BorderStyle.THIN);
 
-            // 示例行样式（灰色字体）
-            CellStyle exampleStyle = workbook.createCellStyle();
-            Font exampleFont = workbook.createFont();
-            exampleFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
-            exampleFont.setItalic(true);
-            exampleStyle.setFont(exampleFont);
+        CellStyle exampleStyle = workbook.createCellStyle();
+        Font exampleFont = workbook.createFont();
+        exampleFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+        exampleFont.setItalic(true);
+        exampleStyle.setFont(exampleFont);
 
-            // 表头行
-            Row headerRow = dataSheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
-                dataSheet.setColumnWidth(i, 5000);
-            }
-
-            // 示例数据行
-            Row exampleRow = dataSheet.createRow(1);
-            for (int i = 0; i < examples.length; i++) {
-                Cell cell = exampleRow.createCell(i);
-                cell.setCellValue(examples[i]);
-                cell.setCellStyle(exampleStyle);
-            }
-
-            // 填写说明Sheet
-            Sheet noteSheet = workbook.createSheet("填写说明");
-            CellStyle noteHeaderStyle = workbook.createCellStyle();
-            Font noteHeaderFont = workbook.createFont();
-            noteHeaderFont.setBold(true);
-            noteHeaderFont.setFontHeightInPoints((short) 14);
-            noteHeaderStyle.setFont(noteHeaderFont);
-
-            Row noteTitleRow = noteSheet.createRow(0);
-            Cell titleCell = noteTitleRow.createCell(0);
-            titleCell.setCellValue("填写说明");
-            titleCell.setCellStyle(noteHeaderStyle);
-
-            for (int i = 0; i < notes.length; i++) {
-                Row noteRow = noteSheet.createRow(i + 2);
-                noteRow.createCell(0).setCellValue(notes[i]);
-            }
-            noteSheet.setColumnWidth(0, 15000);
-
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-            return out.toByteArray();
-        } catch (Exception e) {
-            throw new RuntimeException("生成模板失败: " + e.getMessage(), e);
+        Row headerRow = dataSheet.createRow(0);
+        for (int i = 0; i < config.headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(config.headers[i]);
+            cell.setCellStyle(headerStyle);
+            dataSheet.setColumnWidth(i, 5000);
         }
+
+        Row exampleRow = dataSheet.createRow(1);
+        for (int i = 0; i < config.examples.length; i++) {
+            Cell cell = exampleRow.createCell(i);
+            cell.setCellValue(config.examples[i]);
+            cell.setCellStyle(exampleStyle);
+        }
+    }
+
+    private void buildNoteSheet(XSSFWorkbook workbook, String[] notes) {
+        Sheet noteSheet = workbook.createSheet("填写说明");
+        CellStyle noteHeaderStyle = workbook.createCellStyle();
+        Font noteHeaderFont = workbook.createFont();
+        noteHeaderFont.setBold(true);
+        noteHeaderFont.setFontHeightInPoints((short) 14);
+        noteHeaderStyle.setFont(noteHeaderFont);
+
+        Row noteTitleRow = noteSheet.createRow(0);
+        Cell titleCell = noteTitleRow.createCell(0);
+        titleCell.setCellValue("填写说明");
+        titleCell.setCellStyle(noteHeaderStyle);
+
+        for (int i = 0; i < notes.length; i++) {
+            Row noteRow = noteSheet.createRow(i + 2);
+            noteRow.createCell(0).setCellValue(notes[i]);
+        }
+        noteSheet.setColumnWidth(0, 15000);
     }
 
     // ==================== 数据导入 ====================
@@ -458,7 +465,22 @@ public class ExcelImportOrchestrator {
             throw new IllegalArgumentException("单次最多导入 1000 条工序，当前 " + rows.size() + " 条");
         }
 
-        // 预查所有涉及到的款号，减少N+1查询
+        Map<String, StyleInfo> styleMap = preloadStyleMap(rows);
+        Map<String, Integer> styleProcessCounter = new HashMap<>();
+
+        List<Map<String, Object>> successRecords = new ArrayList<>();
+        List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+        for (int index = 0; index < rows.size(); index++) {
+            processSingleRow(index, rows.get(index), styleMap, styleProcessCounter, successRecords, failedRecords);
+        }
+
+        saveBatchProcesses(successRecords);
+
+        return buildResult(rows.size(), successRecords, failedRecords, "工序");
+    }
+
+    private Map<String, StyleInfo> preloadStyleMap(List<Map<String, String>> rows) {
         Set<String> styleNos = new HashSet<>();
         for (Map<String, String> row : rows) {
             String sn = safe(row.get("款号*"));
@@ -473,66 +495,64 @@ public class ExcelImportOrchestrator {
             );
             if (si != null) styleMap.put(sn, si);
         }
+        return styleMap;
+    }
 
-        // 为每个款号维护自增序号
-        Map<String, Integer> styleProcessCounter = new HashMap<>();
-
-        List<Map<String, Object>> successRecords = new ArrayList<>();
-        List<Map<String, Object>> failedRecords = new ArrayList<>();
-
-        for (int index = 0; index < rows.size(); index++) {
-            Map<String, String> item = rows.get(index);
-            try {
-                String styleNo = safe(item.get("款号*"));
-                if (!StringUtils.hasText(styleNo)) {
-                    throw new IllegalArgumentException("款号不能为空");
-                }
-
-                StyleInfo style = styleMap.get(styleNo);
-                if (style == null) {
-                    throw new IllegalArgumentException("款号不存在: " + styleNo + "（请先导入款式资料）");
-                }
-
-                String processName = safe(item.get("工序名称*"));
-                if (!StringUtils.hasText(processName)) {
-                    throw new IllegalArgumentException("工序名称不能为空");
-                }
-
-                int counter = styleProcessCounter.getOrDefault(styleNo, 0) + 1;
-                styleProcessCounter.put(styleNo, counter);
-
-                StyleProcess sp = new StyleProcess();
-                sp.setStyleId(style.getId());
-                sp.setProcessCode(StringUtils.hasText(safe(item.get("工序编码"))) ? safe(item.get("工序编码")) : "P" + counter);
-                sp.setProcessName(processName);
-                sp.setProgressStage(safe(item.get("进度节点")));
-
-                BigDecimal processPrice = parseDecimal(item.get("工价"));
-                if (processPrice != null) sp.setPrice(processPrice);
-
-                Integer sortOrder = parseInteger(item.get("排序号"));
-                sp.setSortOrder(sortOrder != null ? sortOrder : counter);
-
-                sp.setCreateTime(LocalDateTime.now());
-                sp.setUpdateTime(LocalDateTime.now());
-
-                Map<String, Object> success = new LinkedHashMap<>();
-                success.put("row", index + 2);
-                success.put("styleNo", styleNo);
-                success.put("processName", processName);
-                success.put("processCode", sp.getProcessCode());
-                success.put("entity", sp);
-                successRecords.add(success);
-            } catch (Exception e) {
-                Map<String, Object> fail = new LinkedHashMap<>();
-                fail.put("row", index + 2);
-                fail.put("styleNo", item.get("款号*"));
-                fail.put("processName", item.get("工序名称*"));
-                fail.put("error", e.getMessage());
-                failedRecords.add(fail);
+    private void processSingleRow(int index, Map<String, String> item,
+            Map<String, StyleInfo> styleMap, Map<String, Integer> styleProcessCounter,
+            List<Map<String, Object>> successRecords, List<Map<String, Object>> failedRecords) {
+        try {
+            String styleNo = safe(item.get("款号*"));
+            if (!StringUtils.hasText(styleNo)) {
+                throw new IllegalArgumentException("款号不能为空");
             }
-        }
 
+            StyleInfo style = styleMap.get(styleNo);
+            if (style == null) {
+                throw new IllegalArgumentException("款号不存在: " + styleNo + "（请先导入款式资料）");
+            }
+
+            String processName = safe(item.get("工序名称*"));
+            if (!StringUtils.hasText(processName)) {
+                throw new IllegalArgumentException("工序名称不能为空");
+            }
+
+            int counter = styleProcessCounter.getOrDefault(styleNo, 0) + 1;
+            styleProcessCounter.put(styleNo, counter);
+
+            StyleProcess sp = new StyleProcess();
+            sp.setStyleId(style.getId());
+            sp.setProcessCode(StringUtils.hasText(safe(item.get("工序编码"))) ? safe(item.get("工序编码")) : "P" + counter);
+            sp.setProcessName(processName);
+            sp.setProgressStage(safe(item.get("进度节点")));
+
+            BigDecimal processPrice = parseDecimal(item.get("工价"));
+            if (processPrice != null) sp.setPrice(processPrice);
+
+            Integer sortOrder = parseInteger(item.get("排序号"));
+            sp.setSortOrder(sortOrder != null ? sortOrder : counter);
+
+            sp.setCreateTime(LocalDateTime.now());
+            sp.setUpdateTime(LocalDateTime.now());
+
+            Map<String, Object> success = new LinkedHashMap<>();
+            success.put("row", index + 2);
+            success.put("styleNo", styleNo);
+            success.put("processName", processName);
+            success.put("processCode", sp.getProcessCode());
+            success.put("entity", sp);
+            successRecords.add(success);
+        } catch (Exception e) {
+            Map<String, Object> fail = new LinkedHashMap<>();
+            fail.put("row", index + 2);
+            fail.put("styleNo", item.get("款号*"));
+            fail.put("processName", item.get("工序名称*"));
+            fail.put("error", e.getMessage());
+            failedRecords.add(fail);
+        }
+    }
+
+    private void saveBatchProcesses(List<Map<String, Object>> successRecords) {
         if (!successRecords.isEmpty()) {
             List<StyleProcess> insertBatch = new ArrayList<>();
             for (Map<String, Object> rec : successRecords) {
@@ -542,8 +562,6 @@ public class ExcelImportOrchestrator {
                 styleProcessService.saveBatch(insertBatch, 500);
             }
         }
-
-        return buildResult(rows.size(), successRecords, failedRecords, "工序");
     }
 
     // ==================== Excel解析 ====================
@@ -649,6 +667,7 @@ public class ExcelImportOrchestrator {
                     try {
                         return String.valueOf(cell.getNumericCellValue());
                     } catch (Exception e2) {
+                        log.debug("[Excel导入] 公式单元格数值读取失败: {}", e2.getMessage());
                         return "";
                     }
                 }
@@ -682,6 +701,7 @@ public class ExcelImportOrchestrator {
         try {
             return Integer.parseInt(value.trim());
         } catch (Exception e) {
+            log.debug("[Excel导入] 整数解析失败: value={}", value);
             return null;
         }
     }
@@ -691,6 +711,7 @@ public class ExcelImportOrchestrator {
         try {
             return new BigDecimal(value.trim());
         } catch (Exception e) {
+            log.debug("[Excel导入] 小数解析失败: value={}", value);
             return null;
         }
     }
@@ -712,19 +733,64 @@ public class ExcelImportOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> importStylesFromZip(Long tenantId, MultipartFile zipFile) {
-        // 1. 解压 ZIP，分别收集 Excel 和图片
-        byte[] excelBytes = null;
-        String excelName = null;
-        Map<String, byte[]> imageMap = new LinkedHashMap<>(); // key=款号（无扩展名）, value=图片字节
+        ZipExtractResult extracted = extractZipContent(zipFile);
+        if (extracted.excelBytes == null) {
+            throw new IllegalArgumentException("ZIP 包内未找到 Excel 文件（.xlsx 或 .xls），请确认 ZIP 内容");
+        }
+        log.info("[ZIP导入] 租户={}, Excel={}, 图片数={}", tenantId, extracted.excelName, extracted.imageMap.size());
 
+        MultipartFile excelMultipart = wrapAsMultipartFile(extracted.excelBytes, extracted.excelName);
+        List<Map<String, String>> rows = parseExcel(excelMultipart, STYLE_HEADERS);
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("Excel 文件中没有数据（第1行为表头，请从第2行开始填写）");
+        }
+        if (rows.size() > 500) {
+            throw new IllegalArgumentException("单次最多导入 500 条，当前 " + rows.size() + " 条");
+        }
+
+        List<Map<String, Object>> successRecords = new ArrayList<>();
+        List<Map<String, Object>> failedRecords = new ArrayList<>();
+        List<String> imageErrors = new ArrayList<>();
+
+        for (int index = 0; index < rows.size(); index++) {
+            Map<String, String> item = rows.get(index);
+            try {
+                StyleImportResult importResult = saveStyleFromZipRow(tenantId, item, extracted.imageMap);
+                if (importResult.imageError != null) {
+                    imageErrors.add(importResult.imageError);
+                }
+                Map<String, Object> success = new LinkedHashMap<>();
+                success.put("row", index + 2);
+                success.put("styleNo", importResult.styleNo);
+                success.put("styleName", importResult.styleName);
+                success.put("hasCover", importResult.hasCover);
+                success.put("isUpdate", importResult.isUpdate);
+                successRecords.add(success);
+            } catch (Exception e) {
+                Map<String, Object> fail = new LinkedHashMap<>();
+                fail.put("row", index + 2);
+                fail.put("styleNo", item.get("款号*"));
+                fail.put("error", e.getMessage());
+                failedRecords.add(fail);
+            }
+        }
+
+        return buildZipImportResult(rows.size(), successRecords, failedRecords, extracted.imageMap, imageErrors);
+    }
+
+    private static class ZipExtractResult {
+        byte[] excelBytes;
+        String excelName;
+        Map<String, byte[]> imageMap = new LinkedHashMap<>();
+    }
+
+    private ZipExtractResult extractZipContent(MultipartFile zipFile) {
+        ZipExtractResult result = new ZipExtractResult();
         Set<String> imageExts = new HashSet<>(Arrays.asList("jpg", "jpeg", "png", "gif", "webp"));
-
         try (ZipInputStream zis = new ZipInputStream(zipFile.getInputStream())) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.isDirectory()) { zis.closeEntry(); continue; }
-
-                // 取文件名（忽略 __MACOSX 等垃圾目录）
                 String entryName = entry.getName();
                 if (entryName.contains("__MACOSX") || entryName.startsWith(".")) { zis.closeEntry(); continue; }
                 String baseName = entryName.contains("/")
@@ -736,17 +802,17 @@ public class ExcelImportOrchestrator {
                 String lowerName = baseName.toLowerCase();
 
                 if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
-                    if (excelBytes == null) { // 取第一个 Excel
-                        excelBytes = bytes;
-                        excelName = baseName;
+                    if (result.excelBytes == null) {
+                        result.excelBytes = bytes;
+                        result.excelName = baseName;
                     }
                 } else {
                     int dotIdx = lowerName.lastIndexOf('.');
                     if (dotIdx > 0) {
                         String ext = lowerName.substring(dotIdx + 1);
                         if (imageExts.contains(ext)) {
-                            String styleNo = baseName.substring(0, baseName.lastIndexOf('.')); // 文件名去掉扩展名 = 款号
-                            imageMap.put(styleNo, bytes);
+                            String styleNo = baseName.substring(0, baseName.lastIndexOf('.'));
+                            result.imageMap.put(styleNo, bytes);
                         }
                     }
                 }
@@ -755,146 +821,127 @@ public class ExcelImportOrchestrator {
         } catch (Exception e) {
             throw new RuntimeException("ZIP 文件解压失败: " + e.getMessage(), e);
         }
+        return result;
+    }
 
-        if (excelBytes == null) {
-            throw new IllegalArgumentException("ZIP 包内未找到 Excel 文件（.xlsx 或 .xls），请确认 ZIP 内容");
-        }
-
-        log.info("[ZIP导入] 租户={}, Excel={}, 图片数={}", tenantId, excelName, imageMap.size());
-
-        // 2. 用现有逻辑解析 Excel（包装成 MultipartFile）
-        final byte[] finalExcelBytes = excelBytes;
-        final String finalExcelName = excelName;
-        MultipartFile excelMultipart = new MultipartFile() {
+    private MultipartFile wrapAsMultipartFile(byte[] excelBytes, String excelName) {
+        final byte[] finalBytes = excelBytes;
+        final String finalName = excelName;
+        return new MultipartFile() {
             @Override public String getName() { return "file"; }
-            @Override public String getOriginalFilename() { return finalExcelName; }
+            @Override public String getOriginalFilename() { return finalName; }
             @Override public String getContentType() { return "application/octet-stream"; }
-            @Override public boolean isEmpty() { return finalExcelBytes.length == 0; }
-            @Override public long getSize() { return finalExcelBytes.length; }
-            @Override public byte[] getBytes() { return finalExcelBytes; }
-            @Override public InputStream getInputStream() { return new ByteArrayInputStream(finalExcelBytes); }
+            @Override public boolean isEmpty() { return finalBytes.length == 0; }
+            @Override public long getSize() { return finalBytes.length; }
+            @Override public byte[] getBytes() { return finalBytes; }
+            @Override public InputStream getInputStream() { return new ByteArrayInputStream(finalBytes); }
             @Override public void transferTo(File dest) throws IOException {
-                java.nio.file.Files.write(dest.toPath(), finalExcelBytes);
+                java.nio.file.Files.write(dest.toPath(), finalBytes);
             }
         };
-        List<Map<String, String>> rows = parseExcel(excelMultipart, STYLE_HEADERS);
+    }
 
-        if (rows.isEmpty()) {
-            throw new IllegalArgumentException("Excel 文件中没有数据（第1行为表头，请从第2行开始填写）");
+    private static class StyleImportResult {
+        String styleNo;
+        String styleName;
+        boolean hasCover;
+        boolean isUpdate;
+        String imageError;
+    }
+
+    private StyleImportResult saveStyleFromZipRow(Long tenantId, Map<String, String> item, Map<String, byte[]> imageMap) {
+        StyleImportResult result = new StyleImportResult();
+        String styleNo = safe(item.get("款号*"));
+        if (!StringUtils.hasText(styleNo)) throw new IllegalArgumentException("款号不能为空");
+
+        StyleInfo existing = styleInfoService.getOne(
+                new LambdaQueryWrapper<StyleInfo>()
+                        .eq(StyleInfo::getStyleNo, styleNo)
+                        .eq(StyleInfo::getTenantId, tenantId)
+                        .last("LIMIT 1"));
+
+        StyleInfo style = existing != null ? existing : new StyleInfo();
+        boolean isUpdate = existing != null;
+
+        style.setStyleNo(styleNo);
+        style.setStyleName(StringUtils.hasText(safe(item.get("款名"))) ? safe(item.get("款名")) : styleNo);
+        style.setCategory(safe(item.get("品类")));
+        style.setColor(safe(item.get("颜色")));
+        style.setSize(safe(item.get("码数")));
+        style.setSeason(safe(item.get("季节")));
+        style.setCustomer(safe(item.get("客户")));
+        style.setDescription(StringUtils.hasText(safe(item.get("描述"))) ? safe(item.get("描述")) : "[ZIP导入]");
+        BigDecimal price = parseDecimal(item.get("单价"));
+        if (price != null) style.setPrice(price);
+        style.setUpdateTime(LocalDateTime.now());
+        if (!isUpdate) {
+            style.setYear(LocalDate.now().getYear());
+            style.setMonth(LocalDate.now().getMonthValue());
+            style.setStatus("ENABLED");
+            style.setCreateTime(LocalDateTime.now());
         }
-        if (rows.size() > 500) {
-            throw new IllegalArgumentException("单次最多导入 500 条，当前 " + rows.size() + " 条");
+
+        boolean saved = isUpdate ? styleInfoService.updateById(style) : styleInfoService.save(style);
+        if (!saved) throw new RuntimeException(isUpdate ? "更新失败" : "保存失败");
+        if (isUpdate) log.info("[ZIP导入] 款号={} 已存在，执行覆盖更新", styleNo);
+
+        result.styleNo = styleNo;
+        result.styleName = style.getStyleName();
+        result.isUpdate = isUpdate;
+        result.hasCover = false;
+
+        if (imageMap.containsKey(styleNo)) {
+            result.imageError = uploadCoverImage(tenantId, style, styleNo, imageMap.get(styleNo), isUpdate);
+            result.hasCover = style.getCover() != null;
         }
+        return result;
+    }
 
-        // 3. 逐行保存款式 + 匹配并上传封面图
-        List<Map<String, Object>> successRecords = new ArrayList<>();
-        List<Map<String, Object>> failedRecords = new ArrayList<>();
-        List<String> imageErrors = new ArrayList<>();
+    private String uploadCoverImage(Long tenantId, StyleInfo style, String styleNo, byte[] imgBytes, boolean isUpdate) {
+        try {
+            String newFilename = UUID.randomUUID().toString() + ".jpg";
+            String contentType = "image/jpeg";
 
-        for (int index = 0; index < rows.size(); index++) {
-            Map<String, String> item = rows.get(index);
-            try {
-                String styleNo = safe(item.get("款号*"));
-                if (!StringUtils.hasText(styleNo)) throw new IllegalArgumentException("款号不能为空");
-
-                StyleInfo existing = styleInfoService.getOne(
-                        new LambdaQueryWrapper<StyleInfo>()
-                                .eq(StyleInfo::getStyleNo, styleNo)
-                                .eq(StyleInfo::getTenantId, tenantId)
-                                .last("LIMIT 1"));
-
-                // 款号已存在则覆盖更新，不存在则新增
-                StyleInfo style = existing != null ? existing : new StyleInfo();
-                boolean isUpdate = existing != null;
-
-                style.setStyleNo(styleNo);
-                style.setStyleName(StringUtils.hasText(safe(item.get("款名"))) ? safe(item.get("款名")) : styleNo);
-                style.setCategory(safe(item.get("品类")));
-                style.setColor(safe(item.get("颜色")));
-                style.setSize(safe(item.get("码数")));
-                style.setSeason(safe(item.get("季节")));
-                style.setCustomer(safe(item.get("客户")));
-                style.setDescription(StringUtils.hasText(safe(item.get("描述"))) ? safe(item.get("描述")) : "[ZIP导入]");
-                BigDecimal price = parseDecimal(item.get("单价"));
-                if (price != null) style.setPrice(price);
-                style.setUpdateTime(LocalDateTime.now());
-                if (!isUpdate) {
-                    style.setYear(LocalDate.now().getYear());
-                    style.setMonth(LocalDate.now().getMonthValue());
-                    style.setStatus("ENABLED");
-                    style.setCreateTime(LocalDateTime.now());
-                }
-
-                // 先保存款式（取得 ID 后再处理附件）
-                boolean saved = isUpdate ? styleInfoService.updateById(style) : styleInfoService.save(style);
-                if (!saved) throw new RuntimeException(isUpdate ? "更新失败" : "保存失败");
-                if (isUpdate) log.info("[ZIP导入] 款号={} 已存在，执行覆盖更新", styleNo);
-
-                // 关联封面图（文件名 = 款号），在 save 后插入附件记录
-                if (imageMap.containsKey(styleNo)) {
-                    try {
-                        byte[] imgBytes = imageMap.get(styleNo);
-                        String newFilename = UUID.randomUUID().toString() + ".jpg";
-                        String contentType = "image/jpeg";
-
-                        if (cosService.isEnabled()) {
-                            cosService.upload(tenantId, newFilename, imgBytes, contentType);
-                        } else {
-                            File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
-                            java.nio.file.Files.write(dest.toPath(), imgBytes);
-                            cosService.safeRefreshTenantStorageUsage(tenantId);
-                        }
-                        String coverUrl = TenantFilePathResolver.buildDownloadUrl(newFilename);
-                        // 更新 cover 字段
-                        style.setCover(coverUrl);
-                        styleInfoService.updateById(style);
-
-                        // 写入 t_style_attachment（前端图片列从此表读取）
-                        // 覆盖更新时先删除旧的 general 附件
-                        if (isUpdate && style.getId() != null) {
-                            styleAttachmentService.remove(
-                                new LambdaQueryWrapper<StyleAttachment>()
-                                    .eq(StyleAttachment::getStyleId, String.valueOf(style.getId()))
-                                    .eq(StyleAttachment::getBizType, "general")
-                            );
-                        }
-                        StyleAttachment attachment = new StyleAttachment();
-                        attachment.setStyleId(String.valueOf(style.getId()));
-                        attachment.setFileName(styleNo + ".jpg");
-                        attachment.setFileUrl(coverUrl);
-                        attachment.setFileType("image/jpeg");
-                        attachment.setBizType("general");
-                        attachment.setVersion(1);
-                        attachment.setCreateTime(LocalDateTime.now());
-                        styleAttachmentService.save(attachment);
-                        log.info("[ZIP导入] 款号={} 封面图已上传并写入附件记录: {}", styleNo, coverUrl);
-                    } catch (Exception imgEx) {
-                        String errMsg = styleNo + ": " + imgEx.getMessage();
-                        log.warn("[ZIP导入] 款号={} 封面图上传失败，跳过图片: {}", styleNo, imgEx.getMessage());
-                        imageErrors.add(errMsg);
-                        // 图片上传失败不影响款式数据导入
-                    }
-                }
-
-                Map<String, Object> success = new LinkedHashMap<>();
-                success.put("row", index + 2);
-                success.put("styleNo", styleNo);
-                success.put("styleName", style.getStyleName());
-                success.put("hasCover", style.getCover() != null);
-                success.put("isUpdate", isUpdate);
-                successRecords.add(success);
-            } catch (Exception e) {
-                Map<String, Object> fail = new LinkedHashMap<>();
-                fail.put("row", index + 2);
-                fail.put("styleNo", item.get("款号*"));
-                fail.put("error", e.getMessage());
-                failedRecords.add(fail);
+            if (cosService.isEnabled()) {
+                cosService.upload(tenantId, newFilename, imgBytes, contentType);
+            } else {
+                File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
+                java.nio.file.Files.write(dest.toPath(), imgBytes);
+                cosService.safeRefreshTenantStorageUsage(tenantId);
             }
-        }
+            String coverUrl = TenantFilePathResolver.buildDownloadUrl(newFilename);
+            style.setCover(coverUrl);
+            styleInfoService.updateById(style);
 
-        // 4. 追加统计：有多少款式匹配到了图片
+            if (isUpdate && style.getId() != null) {
+                styleAttachmentService.remove(
+                    new LambdaQueryWrapper<StyleAttachment>()
+                        .eq(StyleAttachment::getStyleId, String.valueOf(style.getId()))
+                        .eq(StyleAttachment::getBizType, "general")
+                );
+            }
+            StyleAttachment attachment = new StyleAttachment();
+            attachment.setStyleId(String.valueOf(style.getId()));
+            attachment.setFileName(styleNo + ".jpg");
+            attachment.setFileUrl(coverUrl);
+            attachment.setFileType("image/jpeg");
+            attachment.setBizType("general");
+            attachment.setVersion(1);
+            attachment.setCreateTime(LocalDateTime.now());
+            styleAttachmentService.save(attachment);
+            log.info("[ZIP导入] 款号={} 封面图已上传并写入附件记录: {}", styleNo, coverUrl);
+            return null;
+        } catch (Exception imgEx) {
+            log.warn("[ZIP导入] 款号={} 封面图上传失败，跳过图片: {}", styleNo, imgEx.getMessage());
+            return styleNo + ": " + imgEx.getMessage();
+        }
+    }
+
+    private Map<String, Object> buildZipImportResult(int totalRows, List<Map<String, Object>> successRecords,
+                                                      List<Map<String, Object>> failedRecords,
+                                                      Map<String, byte[]> imageMap, List<String> imageErrors) {
         long withCover = successRecords.stream().filter(r -> Boolean.TRUE.equals(r.get("hasCover"))).count();
-        Map<String, Object> result = buildResult(rows.size(), successRecords, failedRecords, "款式(ZIP)");
+        Map<String, Object> result = buildResult(totalRows, successRecords, failedRecords, "款式(ZIP)");
         result.put("imageCount", imageMap.size());
         result.put("withCoverCount", withCover);
         if (!imageErrors.isEmpty()) {

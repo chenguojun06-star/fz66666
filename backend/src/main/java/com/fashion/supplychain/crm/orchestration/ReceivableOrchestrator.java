@@ -259,6 +259,7 @@ public class ReceivableOrchestrator {
         Receivable r = receivableService.lambdaQuery()
                 .eq(Receivable::getId, id)
                 .eq(Receivable::getTenantId, tenantId)
+                .eq(Receivable::getDeleteFlag, 0)
                 .one();
         if (r == null) throw new RuntimeException("应收单不存在");
         if ("PAID".equals(r.getStatus())) throw new RuntimeException("该应收单已结清，无法重复收款");

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -294,6 +295,7 @@ public class OrderProfitOrchestrator {
         if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
             throw new java.util.NoSuchElementException("订单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         return order;
     }
 

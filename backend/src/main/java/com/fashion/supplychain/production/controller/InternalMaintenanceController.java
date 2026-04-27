@@ -285,6 +285,8 @@ public class InternalMaintenanceController {
             if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
                 ProductionOrder o = productionOrderService.lambdaQuery()
                         .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                        .eq(ProductionOrder::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                        .eq(ProductionOrder::getDeleteFlag, 0)
                         .last("LIMIT 1").one();
                 if (o != null) orderId = o.getId();
             }

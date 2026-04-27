@@ -420,6 +420,7 @@ public class TemplateQueryHelper {
             List<String> images = TemplateParseUtils.coerceListOfString(raw.get("images"));
             return images.isEmpty() ? null : images.get(0);
         } catch (Exception e) {
+            log.debug("[TemplateQuery] extractFirstImage失败", e);
             return null;
         }
     }

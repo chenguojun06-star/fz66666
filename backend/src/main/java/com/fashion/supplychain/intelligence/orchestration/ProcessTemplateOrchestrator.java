@@ -298,6 +298,7 @@ public class ProcessTemplateOrchestrator {
                     .select("id");
             return (int) styleInfoService.count(qw);
         } catch (Exception e) {
+            log.debug("[ProcessTemplate] countStylesByCategory失败: tenantId={}, category={}", tenantId, category);
             return 0;
         }
     }

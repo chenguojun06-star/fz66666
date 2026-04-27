@@ -685,54 +685,64 @@ public class WarehouseScanExecutor {
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         String warehouse = TextUtils.safeText(params.get("warehouse"));
 
-        if (quantity <= 0) {
-            Map<String, Object> r = new HashMap<>();
-            r.put("success", false);
-            r.put("message", "入库数量必须大于0");
-            return r;
-        }
-        if (!hasText(scanCode)) {
-            Map<String, Object> r = new HashMap<>();
-            r.put("success", false);
-            r.put("message", "扫码内容不能为空");
-            return r;
-        }
+        Map<String, Object> validationError = validateUCodeParams(quantity, scanCode, order);
+        if (validationError != null) return validationError;
 
-        // 解析U编码：款号-颜色-尺码
         String[] segments = scanCode.split("-");
-        if (segments.length < 3) {
-            Map<String, Object> r = new HashMap<>();
-            r.put("success", false);
-            r.put("message", "U编码格式不正确，应为: 款号-颜色-尺码");
-            return r;
-        }
+        if (segments.length < 3) return failResult("U编码格式不正确，应为: 款号-颜色-尺码");
         String styleNo = segments[0];
         String color = segments[1];
         String size = segments[2];
 
-        if (order == null) {
-            Map<String, Object> r = new HashMap<>();
-            r.put("success", false);
-            r.put("message", "未找到关联订单，请指定订单号");
-            return r;
-        }
-        if (order.getStatus() != null && OrderStatusConstants.isTerminal(order.getStatus())) {
-            Map<String, Object> r = new HashMap<>();
-            r.put("success", false);
-            r.put("message", "订单已终态，无法继续入库");
-            return r;
+        resolveOrCreateSku(scanCode, styleNo, color, size, order);
+        Map<String, Object> dupError = checkUCodeDuplicate(order, scanCode, quantity);
+        if (dupError != null) return dupError;
+
+        productSkuService.updateStock(scanCode, quantity);
+
+        ProductWarehousing pw = buildUCodeWarehousing(order, scanCode, warehouse, quantity, operatorId, operatorName);
+        try {
+            boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(pw);
+            if (!ok) return failResult("入库记录保存失败");
+        } catch (DataAccessException dae) {
+            log.error("[U编码入库] 保存入库记录失败: {}", dae.getMessage());
+            return failResult("入库记录保存失败");
         }
 
-        // SKU 查找或自动创建
-        String skuCode = scanCode;
+        recomputeOrderProgress(order.getId());
+
+        ScanRecord sr = buildUCodeScanRecord(requestId, scanCode, order, styleNo, color, size,
+                quantity, operatorId, operatorName, warehouse);
+        try {
+            scanRecordService.save(sr);
+        } catch (DuplicateKeyException dke) {
+            log.warn("[U编码入库] 扫码记录重复: {}", requestId);
+        }
+
+        broadcastUCodeSuccess(operatorId, operatorName, order, styleNo, color, size, quantity, warehouse, sr);
+        return buildUCodeSuccessResult(scanCode, quantity, order, styleNo, color, size);
+    }
+
+    private Map<String, Object> validateUCodeParams(int quantity, String scanCode, ProductionOrder order) {
+        if (quantity <= 0) return failResult("入库数量必须大于0");
+        if (!hasText(scanCode)) return failResult("扫码内容不能为空");
+        if (order == null) return failResult("未找到关联订单，请指定订单号");
+        if (order.getStatus() != null && OrderStatusConstants.isTerminal(order.getStatus())) {
+            return failResult("订单已终态，无法继续入库");
+        }
+        return null;
+    }
+
+    private void resolveOrCreateSku(String scanCode, String styleNo, String color, String size,
+            ProductionOrder order) {
         ProductSku sku = productSkuService.lambdaQuery()
-                .eq(ProductSku::getSkuCode, skuCode)
+                .eq(ProductSku::getSkuCode, scanCode)
                 .eq(ProductSku::getTenantId, order.getTenantId())
                 .last("limit 1")
                 .one();
         if (sku == null) {
             sku = new ProductSku();
-            sku.setSkuCode(skuCode);
+            sku.setSkuCode(scanCode);
             sku.setStyleNo(styleNo);
             sku.setColor(color);
             sku.setSize(size);
@@ -744,40 +754,31 @@ public class WarehouseScanExecutor {
             }
             sku.setTenantId(order.getTenantId());
             productSkuService.save(sku);
-            log.info("[U编码入库] 自动创建SKU: {}", skuCode);
+            log.info("[U编码入库] 自动创建SKU: {}", scanCode);
         }
+    }
 
-        // ★ U编码防重复入库校验：同一订单+同一U编码的累计入库数量不能超过订单数量
+    private Map<String, Object> checkUCodeDuplicate(ProductionOrder order, String scanCode, int quantity) {
         int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
-        if (orderQty > 0) {
-            try {
-                int alreadyWarehoused = productWarehousingService.countUCodeWarehousedQuantity(order.getId(), scanCode);
-                if (alreadyWarehoused >= orderQty) {
-                    Map<String, Object> r = new HashMap<>();
-                    r.put("success", false);
-                    r.put("message", String.format("该U编码已全部入库！订单数量=%d，已入库=%d，无需重复入库", orderQty, alreadyWarehoused));
-                    return r;
-                }
-                if (alreadyWarehoused + quantity > orderQty) {
-                    Map<String, Object> r = new HashMap<>();
-                    r.put("success", false);
-                    r.put("message", String.format("U编码入库数量超出限制！订单数量=%d，已入库=%d，本次=%d，超出%d件",
-                            orderQty, alreadyWarehoused, quantity, alreadyWarehoused + quantity - orderQty));
-                    return r;
-                }
-            } catch (Exception e) {
-                log.warn("[U编码入库] 查询已入库数量失败，为防止重复入库，拒绝本次操作: orderId={}, scanCode={}", order.getId(), scanCode, e);
-                Map<String, Object> r = new HashMap<>();
-                r.put("success", false);
-                r.put("message", "查询已入库数量失败，请重试或联系管理员");
-                return r;
+        if (orderQty <= 0) return null;
+        try {
+            int alreadyWarehoused = productWarehousingService.countUCodeWarehousedQuantity(order.getId(), scanCode);
+            if (alreadyWarehoused >= orderQty) {
+                return failResult(String.format("该U编码已全部入库！订单数量=%d，已入库=%d，无需重复入库", orderQty, alreadyWarehoused));
             }
+            if (alreadyWarehoused + quantity > orderQty) {
+                return failResult(String.format("U编码入库数量超出限制！订单数量=%d，已入库=%d，本次=%d，超出%d件",
+                        orderQty, alreadyWarehoused, quantity, alreadyWarehoused + quantity - orderQty));
+            }
+        } catch (Exception e) {
+            log.warn("[U编码入库] 查询已入库数量失败，为防止重复入库，拒绝本次操作: orderId={}, scanCode={}", order.getId(), scanCode, e);
+            return failResult("查询已入库数量失败，请重试或联系管理员");
         }
+        return null;
+    }
 
-        // 更新SKU库存
-        productSkuService.updateStock(skuCode, quantity);
-
-        // 创建入库记录
+    private ProductWarehousing buildUCodeWarehousing(ProductionOrder order, String scanCode,
+            String warehouse, int quantity, String operatorId, String operatorName) {
         ProductWarehousing pw = new ProductWarehousing();
         pw.setOrderId(order.getId());
         pw.setWarehousingType("scan");
@@ -799,33 +800,12 @@ public class WarehouseScanExecutor {
             pw.setQualityOperatorName(operatorName);
         }
         pw.setTenantId(order.getTenantId());
+        return pw;
+    }
 
-        try {
-            boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(pw);
-            if (!ok) {
-                Map<String, Object> r = new HashMap<>();
-                r.put("success", false);
-                r.put("message", "入库记录保存失败");
-                return r;
-            }
-        } catch (DataAccessException dae) {
-            log.error("[U编码入库] 保存入库记录失败: {}", dae.getMessage());
-            Map<String, Object> r = new HashMap<>();
-            r.put("success", false);
-            r.put("message", "入库记录保存失败");
-            return r;
-        }
-
-        // 重新计算进度
-        try {
-            if (productionOrderService != null) {
-                productionOrderService.recomputeProgressFromRecords(order.getId());
-            }
-        } catch (Exception e) {
-            log.error("重新计算订单进度失败: orderId={}", order.getId(), e);
-        }
-
-        // 创建扫码记录
+    private ScanRecord buildUCodeScanRecord(String requestId, String scanCode, ProductionOrder order,
+            String styleNo, String color, String size, int quantity,
+            String operatorId, String operatorName, String warehouse) {
         ScanRecord sr = new ScanRecord();
         sr.setRequestId(requestId);
         sr.setScanCode(scanCode);
@@ -846,7 +826,6 @@ public class WarehouseScanExecutor {
         sr.setScanType("warehouse");
         sr.setScanResult("success");
         sr.setRemark("U编码入库: " + warehouse);
-        // U编码模式无菲号
         sr.setCuttingBundleId(null);
         sr.setCuttingBundleNo(null);
         sr.setCuttingBundleQrCode(scanCode);
@@ -854,26 +833,21 @@ public class WarehouseScanExecutor {
         sr.setScanMode("ucode");
         sr.setReceiveTime(LocalDateTime.now());
         skuService.attachProcessUnitPrice(sr);
+        return sr;
+    }
 
+    private void recomputeOrderProgress(String orderId) {
         try {
-            scanRecordService.save(sr);
-        } catch (DuplicateKeyException dke) {
-            log.warn("[U编码入库] 扫码记录重复: {}", requestId);
+            if (productionOrderService != null) {
+                productionOrderService.recomputeProgressFromRecords(orderId);
+            }
+        } catch (Exception e) {
+            log.error("重新计算订单进度失败: orderId={}", orderId, e);
         }
+    }
 
-        // U编码模式无菲号，不更新工序跟踪（工序跟踪以 bundleId 为维度）
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("message", "U编码入库成功");
-        result.put("scanMode", "ucode");
-        result.put("skuCode", skuCode);
-        result.put("quantity", quantity);
-        result.put("orderNo", order.getOrderNo());
-        result.put("styleNo", styleNo);
-        result.put("color", color);
-        result.put("size", size);
-
+    private void broadcastUCodeSuccess(String operatorId, String operatorName, ProductionOrder order,
+            String styleNo, String color, String size, int quantity, String warehouse, ScanRecord sr) {
         try {
             String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
             String opName = operatorName != null ? operatorName : "";
@@ -885,7 +859,27 @@ public class WarehouseScanExecutor {
         } catch (Exception wsEx) {
             log.warn("[U编码入库] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
         }
+    }
 
+    private Map<String, Object> buildUCodeSuccessResult(String skuCode, int quantity,
+            ProductionOrder order, String styleNo, String color, String size) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "U编码入库成功");
+        result.put("scanMode", "ucode");
+        result.put("skuCode", skuCode);
+        result.put("quantity", quantity);
+        result.put("orderNo", order.getOrderNo());
+        result.put("styleNo", styleNo);
+        result.put("color", color);
+        result.put("size", size);
         return result;
+    }
+
+    private Map<String, Object> failResult(String message) {
+        Map<String, Object> r = new HashMap<>();
+        r.put("success", false);
+        r.put("message", message);
+        return r;
     }
 }

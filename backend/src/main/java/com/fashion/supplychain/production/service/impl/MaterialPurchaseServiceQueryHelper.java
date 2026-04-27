@@ -120,6 +120,7 @@ public class MaterialPurchaseServiceQueryHelper {
         List<ProductionOrder> factoryOrders = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .in(ProductionOrder::getId, orderIds)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
                         .select(ProductionOrder::getId, ProductionOrder::getFactoryName, ProductionOrder::getFactoryType)
         );
         Map<String, ProductionOrder> factoryOrderMap = factoryOrders.stream()

@@ -62,122 +62,144 @@ public class ProductWarehousingQueryHelper {
     private com.fashion.supplychain.production.service.impl.ProductWarehousingHelper warehousingHelper;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
-        // 工厂账号隔离：只查询该工厂的入库记录
-        String ctxFactoryId = UserContext.factoryId();
-        if (StringUtils.hasText(ctxFactoryId)) {
-            List<String> factoryOrderIds = productionOrderService.list(
-                    new LambdaQueryWrapper<ProductionOrder>()
-                            .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
-                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-            ).stream().map(ProductionOrder::getId).collect(java.util.stream.Collectors.toList());
-            if (factoryOrderIds.isEmpty()) {
-                return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
-            }
-            params = new HashMap<>(params != null ? params : new HashMap<>());
-            params.put("_factoryOrderIds", factoryOrderIds);
+        params = applyFactoryFilter(params);
+        if (params == null) {
+            return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
         }
         IPage<ProductWarehousing> page = productWarehousingService.queryPage(params);
-        // 填充缺失的显示字段（兼容旧数据）
         if (page != null && page.getRecords() != null && !page.getRecords().isEmpty()) {
-            Set<String> orderIds = page.getRecords().stream()
-                .map(ProductWarehousing::getOrderId)
-                .filter(StringUtils::hasText)
-                .collect(Collectors.toSet());
-            Map<String, ProductionOrder> orderMap = loadProductionOrdersSafely(orderIds, "warehousing-list");
-            // 收集所有需要查询的菲号ID和二维码
-            List<String> bundleIds = new ArrayList<>();
-            List<String> bundleQrCodes = new ArrayList<>();
-            for (ProductWarehousing w : page.getRecords()) {
-                if (w == null) continue;
-                if (StringUtils.hasText(w.getCuttingBundleId())) {
-                    bundleIds.add(w.getCuttingBundleId().trim());
-                } else if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
-                    bundleQrCodes.add(w.getCuttingBundleQrCode().trim());
-                }
-            }
-
-            // 批量查询菲号以获取颜色和尺码
-            Map<String, CuttingBundle> bundleByIdMap = new java.util.HashMap<>();
-            Map<String, CuttingBundle> bundleByQrMap = new java.util.HashMap<>();
-            if (!bundleIds.isEmpty()) {
-                try {
-                    List<CuttingBundle> bundles = cuttingBundleService.listByIds(bundleIds);
-                    if (bundles != null) {
-                        for (CuttingBundle b : bundles) {
-                            if (b != null && StringUtils.hasText(b.getId())) {
-                                bundleByIdMap.put(b.getId().trim(), b);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("批量查询菲号失败: {}", e.getMessage());
-                }
-            }
-            if (!bundleQrCodes.isEmpty()) {
-                try {
-                    List<CuttingBundle> bundles = cuttingBundleService.list(
-                        new LambdaQueryWrapper<CuttingBundle>()
-                            .in(CuttingBundle::getQrCode, bundleQrCodes));
-                    if (bundles != null) {
-                        for (CuttingBundle b : bundles) {
-                            if (b != null && StringUtils.hasText(b.getQrCode())) {
-                                bundleByQrMap.put(b.getQrCode().trim(), b);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("批量查询菲号(QrCode)失败: {}", e.getMessage());
-                }
-            }
-
-            for (ProductWarehousing w : page.getRecords()) {
-                if (w == null) continue;
-
-                ProductionOrder order = orderMap.get(w.getOrderId());
-                if (order != null) {
-                    if (!StringUtils.hasText(w.getFactoryName())) {
-                        w.setFactoryName(order.getFactoryName());
-                    }
-                    w.setFactoryType(order.getFactoryType());
-                    w.setOrderBizType(order.getOrderBizType());
-                    w.setOrgUnitId(order.getOrgUnitId());
-                    w.setParentOrgUnitId(order.getParentOrgUnitId());
-                    w.setParentOrgUnitName(order.getParentOrgUnitName());
-                    w.setOrgPath(order.getOrgPath());
-                }
-
-                // 填充颜色和尺码
-                CuttingBundle bundle = null;
-                if (StringUtils.hasText(w.getCuttingBundleId())) {
-                    bundle = bundleByIdMap.get(w.getCuttingBundleId().trim());
-                }
-                if (bundle == null && StringUtils.hasText(w.getCuttingBundleQrCode())) {
-                    bundle = bundleByQrMap.get(w.getCuttingBundleQrCode().trim());
-                }
-                if (bundle != null) {
-                    if (!StringUtils.hasText(w.getColor()) && StringUtils.hasText(bundle.getColor())) {
-                        w.setColor(bundle.getColor());
-                    }
-                    if (!StringUtils.hasText(w.getSize()) && StringUtils.hasText(bundle.getSize())) {
-                        w.setSize(bundle.getSize());
-                    }
-                    if (w.getCuttingQuantity() == null && bundle.getQuantity() != null) {
-                        w.setCuttingQuantity(bundle.getQuantity());
-                    }
-                }
-
-                // 质检人员：优先 qualityOperatorName，其次 receiverName，再次 warehousingOperatorName
-                if (!StringUtils.hasText(w.getQualityOperatorName())) {
-                    if (StringUtils.hasText(w.getReceiverName())) {
-                        w.setQualityOperatorName(w.getReceiverName());
-                    } else if (StringUtils.hasText(w.getWarehousingOperatorName())) {
-                        w.setQualityOperatorName(w.getWarehousingOperatorName());
-                    }
-                }
-            }
+            enrichWarehousingRecords(page.getRecords());
         }
         return page;
+    }
+
+    private Map<String, Object> applyFactoryFilter(Map<String, Object> params) {
+        String ctxFactoryId = UserContext.factoryId();
+        if (!StringUtils.hasText(ctxFactoryId)) {
+            return params;
+        }
+        List<String> factoryOrderIds = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+        ).stream().map(ProductionOrder::getId).collect(java.util.stream.Collectors.toList());
+        if (factoryOrderIds.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> newParams = new HashMap<>(params != null ? params : new HashMap<>());
+        newParams.put("_factoryOrderIds", factoryOrderIds);
+        return newParams;
+    }
+
+    private void enrichWarehousingRecords(List<ProductWarehousing> records) {
+        Set<String> orderIds = records.stream()
+            .map(ProductWarehousing::getOrderId)
+            .filter(StringUtils::hasText)
+            .collect(Collectors.toSet());
+        Map<String, ProductionOrder> orderMap = loadProductionOrdersSafely(orderIds, "warehousing-list");
+
+        Map<String, CuttingBundle> bundleByIdMap = new java.util.HashMap<>();
+        Map<String, CuttingBundle> bundleByQrMap = new java.util.HashMap<>();
+        loadBundleData(records, bundleByIdMap, bundleByQrMap);
+
+        for (ProductWarehousing w : records) {
+            if (w == null) continue;
+            fillOrderFields(w, orderMap);
+            fillBundleFields(w, bundleByIdMap, bundleByQrMap);
+            fillQualityOperator(w);
+        }
+    }
+
+    private void loadBundleData(List<ProductWarehousing> records,
+            Map<String, CuttingBundle> bundleByIdMap, Map<String, CuttingBundle> bundleByQrMap) {
+        List<String> bundleIds = new ArrayList<>();
+        List<String> bundleQrCodes = new ArrayList<>();
+        for (ProductWarehousing w : records) {
+            if (w == null) continue;
+            if (StringUtils.hasText(w.getCuttingBundleId())) {
+                bundleIds.add(w.getCuttingBundleId().trim());
+            } else if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
+                bundleQrCodes.add(w.getCuttingBundleQrCode().trim());
+            }
+        }
+        if (!bundleIds.isEmpty()) {
+            try {
+                List<CuttingBundle> bundles = cuttingBundleService.listByIds(bundleIds);
+                if (bundles != null) {
+                    for (CuttingBundle b : bundles) {
+                        if (b != null && StringUtils.hasText(b.getId())) {
+                            bundleByIdMap.put(b.getId().trim(), b);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("批量查询菲号失败: {}", e.getMessage());
+            }
+        }
+        if (!bundleQrCodes.isEmpty()) {
+            try {
+                List<CuttingBundle> bundles = cuttingBundleService.list(
+                    new LambdaQueryWrapper<CuttingBundle>()
+                        .in(CuttingBundle::getQrCode, bundleQrCodes));
+                if (bundles != null) {
+                    for (CuttingBundle b : bundles) {
+                        if (b != null && StringUtils.hasText(b.getQrCode())) {
+                            bundleByQrMap.put(b.getQrCode().trim(), b);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("批量查询菲号(QrCode)失败: {}", e.getMessage());
+            }
+        }
+    }
+
+    private void fillOrderFields(ProductWarehousing w, Map<String, ProductionOrder> orderMap) {
+        ProductionOrder order = orderMap.get(w.getOrderId());
+        if (order != null) {
+            if (!StringUtils.hasText(w.getFactoryName())) {
+                w.setFactoryName(order.getFactoryName());
+            }
+            w.setFactoryType(order.getFactoryType());
+            w.setOrderBizType(order.getOrderBizType());
+            w.setOrgUnitId(order.getOrgUnitId());
+            w.setParentOrgUnitId(order.getParentOrgUnitId());
+            w.setParentOrgUnitName(order.getParentOrgUnitName());
+            w.setOrgPath(order.getOrgPath());
+        }
+    }
+
+    private void fillBundleFields(ProductWarehousing w,
+            Map<String, CuttingBundle> bundleByIdMap, Map<String, CuttingBundle> bundleByQrMap) {
+        CuttingBundle bundle = null;
+        if (StringUtils.hasText(w.getCuttingBundleId())) {
+            bundle = bundleByIdMap.get(w.getCuttingBundleId().trim());
+        }
+        if (bundle == null && StringUtils.hasText(w.getCuttingBundleQrCode())) {
+            bundle = bundleByQrMap.get(w.getCuttingBundleQrCode().trim());
+        }
+        if (bundle != null) {
+            if (!StringUtils.hasText(w.getColor()) && StringUtils.hasText(bundle.getColor())) {
+                w.setColor(bundle.getColor());
+            }
+            if (!StringUtils.hasText(w.getSize()) && StringUtils.hasText(bundle.getSize())) {
+                w.setSize(bundle.getSize());
+            }
+            if (w.getCuttingQuantity() == null && bundle.getQuantity() != null) {
+                w.setCuttingQuantity(bundle.getQuantity());
+            }
+        }
+    }
+
+    private void fillQualityOperator(ProductWarehousing w) {
+        if (!StringUtils.hasText(w.getQualityOperatorName())) {
+            if (StringUtils.hasText(w.getReceiverName())) {
+                w.setQualityOperatorName(w.getReceiverName());
+            } else if (StringUtils.hasText(w.getWarehousingOperatorName())) {
+                w.setQualityOperatorName(w.getWarehousingOperatorName());
+            }
+        }
     }
 
     private Map<String, ProductionOrder> loadProductionOrdersSafely(Set<String> orderIds, String scene) {
@@ -275,9 +297,22 @@ public class ProductWarehousingQueryHelper {
         if (!StringUtils.hasText(status)) {
             throw new IllegalArgumentException("status参数不能为空");
         }
-
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        List<ScanRecord> allBundleScans;
+        List<ScanRecord> allBundleScans = queryBundleScans(tenantId);
+
+        BundleScanAggregation agg = aggregateBundleScans(allBundleScans);
+        Set<String> packagingDoneBundleIds = findPackagingDoneBundles(agg.bundleProcessCodes);
+        List<String> targetBundleIds = filterBundlesByStatus(status, agg.bundleScanTypes,
+                agg.bundleQualityConfirmed, agg.bundleDefectiveConfirmed,
+                agg.bundleWarehouseDone, packagingDoneBundleIds);
+
+        if (targetBundleIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return buildPendingBundleResult(targetBundleIds, agg);
+    }
+
+    private List<ScanRecord> queryBundleScans(Long tenantId) {
         LambdaQueryWrapper<ScanRecord> q = new LambdaQueryWrapper<ScanRecord>()
                 .isNotNull(ScanRecord::getCuttingBundleId)
                 .ne(ScanRecord::getCuttingBundleId, "")
@@ -286,8 +321,10 @@ public class ProductWarehousingQueryHelper {
         if (tenantId != null) {
             q.eq(ScanRecord::getTenantId, tenantId);
         }
-        allBundleScans = scanRecordService.list(q);
+        return scanRecordService.list(q);
+    }
 
+    private static class BundleScanAggregation {
         Map<String, Set<String>> bundleScanTypes = new HashMap<>();
         Map<String, Integer> bundleQuantities = new HashMap<>();
         Map<String, String> bundleOrderIds = new HashMap<>();
@@ -297,156 +334,132 @@ public class ProductWarehousingQueryHelper {
         Map<String, Boolean> bundleQualityConfirmed = new HashMap<>();
         Map<String, Boolean> bundleDefectiveConfirmed = new HashMap<>();
         Map<String, Boolean> bundleWarehouseDone = new HashMap<>();
+    }
 
+    private BundleScanAggregation aggregateBundleScans(List<ScanRecord> allBundleScans) {
+        BundleScanAggregation agg = new BundleScanAggregation();
         for (ScanRecord scan : allBundleScans) {
             String bundleId = scan.getCuttingBundleId().trim();
             String scanType = scan.getScanType();
             if (!StringUtils.hasText(scanType)) continue;
             String scanResult = scan.getScanResult() == null ? "" : scan.getScanResult().trim().toLowerCase();
             if (!"success".equals(scanResult)) continue;
-
             String processCode = scan.getProcessCode() == null ? "" : scan.getProcessCode().trim();
             String processCodeLower = processCode.toLowerCase();
-
-            bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
+            agg.bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
             if (scan.getQuantity() != null && scan.getQuantity() > 0) {
-                bundleQuantities.merge(bundleId, scan.getQuantity(), Math::max);
+                agg.bundleQuantities.merge(bundleId, scan.getQuantity(), Math::max);
             }
-            if (StringUtils.hasText(scan.getOrderId())) {
-                bundleOrderIds.putIfAbsent(bundleId, scan.getOrderId().trim());
-            }
-            if (StringUtils.hasText(scan.getOrderNo())) {
-                bundleOrderNos.putIfAbsent(bundleId, scan.getOrderNo().trim());
-            }
-            if (StringUtils.hasText(scan.getStyleNo())) {
-                bundleStyleNos.putIfAbsent(bundleId, scan.getStyleNo().trim());
-            }
-            if (StringUtils.hasText(processCode)) {
-                bundleProcessCodes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(processCode);
-            }
-
-            if ("quality".equals(scanType)
-                    && "quality_receive".equals(processCode)
-                    && scan.getConfirmTime() != null) {
-                bundleQualityConfirmed.put(bundleId, true);
+            if (StringUtils.hasText(scan.getOrderId())) agg.bundleOrderIds.putIfAbsent(bundleId, scan.getOrderId().trim());
+            if (StringUtils.hasText(scan.getOrderNo())) agg.bundleOrderNos.putIfAbsent(bundleId, scan.getOrderNo().trim());
+            if (StringUtils.hasText(scan.getStyleNo())) agg.bundleStyleNos.putIfAbsent(bundleId, scan.getStyleNo().trim());
+            if (StringUtils.hasText(processCode)) agg.bundleProcessCodes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(processCode);
+            if ("quality".equals(scanType) && "quality_receive".equals(processCode) && scan.getConfirmTime() != null) {
+                agg.bundleQualityConfirmed.put(bundleId, true);
                 String remark = scan.getRemark() == null ? "" : scan.getRemark().trim().toLowerCase();
-                if (remark.startsWith("unqualified")) {
-                    bundleDefectiveConfirmed.put(bundleId, true);
-                }
+                if (remark.startsWith("unqualified")) agg.bundleDefectiveConfirmed.put(bundleId, true);
             }
-
-            if ("warehouse".equals(scanType)
-                    && !"warehouse_rollback".equals(processCodeLower)) {
-                bundleWarehouseDone.put(bundleId, true);
+            if ("warehouse".equals(scanType) && !"warehouse_rollback".equals(processCodeLower)) {
+                agg.bundleWarehouseDone.put(bundleId, true);
             }
         }
+        return agg;
+    }
 
+    private Set<String> findPackagingDoneBundles(Map<String, Set<String>> bundleProcessCodes) {
         Set<String> packagingDoneBundleIds = new HashSet<>();
         for (Map.Entry<String, Set<String>> entry : bundleProcessCodes.entrySet()) {
             for (String pc : entry.getValue()) {
                 String processCode = pc == null ? "" : pc.trim().toLowerCase();
-                if (processCode.contains("packaging")
-                        || "包装".equals(pc)
-                        || "打包".equals(pc)
-                        || "入袋".equals(pc)
-                        || "后整".equals(pc)
-                        || "装箱".equals(pc)
-                        || "封箱".equals(pc)
-                        || "贴标".equals(pc)
-                        || "packing".equals(processCode)) {
+                if (processCode.contains("packaging") || "包装".equals(pc) || "打包".equals(pc)
+                        || "入袋".equals(pc) || "后整".equals(pc) || "装箱".equals(pc)
+                        || "封箱".equals(pc) || "贴标".equals(pc) || "packing".equals(processCode)) {
                     packagingDoneBundleIds.add(entry.getKey());
                     break;
                 }
             }
         }
+        return packagingDoneBundleIds;
+    }
 
+    private List<String> filterBundlesByStatus(String status, Map<String, Set<String>> bundleScanTypes,
+            Map<String, Boolean> bundleQualityConfirmed, Map<String, Boolean> bundleDefectiveConfirmed,
+            Map<String, Boolean> bundleWarehouseDone, Set<String> packagingDoneBundleIds) {
         List<String> targetBundleIds = new ArrayList<>();
         for (Map.Entry<String, Set<String>> entry : bundleScanTypes.entrySet()) {
             Set<String> types = entry.getValue();
             String bundleId = entry.getKey();
             switch (status) {
                 case "pendingQc":
-                    if (types.contains("production") && !types.contains("quality")) {
-                        targetBundleIds.add(bundleId);
-                    }
+                    if (types.contains("production") && !types.contains("quality")) targetBundleIds.add(bundleId);
                     break;
                 case "pendingPackaging":
                     if (Boolean.TRUE.equals(bundleQualityConfirmed.get(bundleId))
                             && !packagingDoneBundleIds.contains(bundleId)
-                            && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))) {
-                        targetBundleIds.add(bundleId);
-                    }
+                            && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))) targetBundleIds.add(bundleId);
                     break;
                 case "pendingWarehouse":
                     if (Boolean.TRUE.equals(bundleQualityConfirmed.get(bundleId))
                             && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))
                             && (packagingDoneBundleIds.contains(bundleId)
-                                || Boolean.TRUE.equals(bundleDefectiveConfirmed.get(bundleId)))) {
-                        targetBundleIds.add(bundleId);
-                    }
+                                || Boolean.TRUE.equals(bundleDefectiveConfirmed.get(bundleId)))) targetBundleIds.add(bundleId);
                     break;
-                default:
-                    break;
+                default: break;
             }
         }
+        return targetBundleIds;
+    }
 
-        if (targetBundleIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
+    private List<Map<String, Object>> buildPendingBundleResult(List<String> targetBundleIds, BundleScanAggregation agg) {
         List<CuttingBundle> bundles = cuttingBundleService.listByIds(targetBundleIds);
         Map<String, CuttingBundle> bundleMap = new HashMap<>();
         if (bundles != null) {
             for (CuttingBundle b : bundles) {
-                if (b != null && StringUtils.hasText(b.getId())) {
-                    bundleMap.put(b.getId().trim(), b);
-                }
+                if (b != null && StringUtils.hasText(b.getId())) bundleMap.put(b.getId().trim(), b);
             }
         }
-
-        Set<String> orderIds = new HashSet<>(bundleOrderIds.values());
-        Map<String, ProductionOrder> orderMap = new HashMap<>();
-        if (!orderIds.isEmpty()) {
-            List<ProductionOrder> orderList = productionOrderService.listByIds(orderIds);
-            for (ProductionOrder order : orderList) {
-                orderMap.put(String.valueOf(order.getId()).trim(), order);
-            }
-            if (!orderList.isEmpty()) {
-                productionOrderQueryService.fillStyleCover(orderList);
-            }
-        }
-
+        Set<String> orderIds = new HashSet<>(agg.bundleOrderIds.values());
+        Map<String, ProductionOrder> orderMap = loadOrdersWithCover(orderIds);
         List<Map<String, Object>> result = new ArrayList<>();
         for (String bundleId : targetBundleIds) {
-            Map<String, Object> item = new java.util.LinkedHashMap<>();
             CuttingBundle bundle = bundleMap.get(bundleId);
-            String orderId = bundleOrderIds.getOrDefault(bundleId, "");
+            String orderId = agg.bundleOrderIds.getOrDefault(bundleId, "");
             ProductionOrder order = orderMap.get(orderId);
-
             if (order != null) {
                 String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
-                if (OrderStatusConstants.isTerminal(orderStatus)) {
-                    continue;
-                }
+                if (OrderStatusConstants.isTerminal(orderStatus)) continue;
             }
-
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("bundleId", bundleId);
             item.put("bundleNo", bundle != null ? bundle.getBundleNo() : null);
             item.put("qrCode", bundle != null ? bundle.getQrCode() : "");
             item.put("color", bundle != null ? bundle.getColor() : "");
             item.put("size", bundle != null ? bundle.getSize() : "");
-            item.put("quantity", bundleQuantities.getOrDefault(bundleId, bundle != null ? bundle.getQuantity() : 0));
+            item.put("quantity", agg.bundleQuantities.getOrDefault(bundleId, bundle != null ? bundle.getQuantity() : 0));
             item.put("orderId", orderId);
-            item.put("orderNo", bundleOrderNos.getOrDefault(bundleId, ""));
-            item.put("styleNo", bundleStyleNos.getOrDefault(bundleId, bundle != null ? bundle.getStyleNo() : ""));
+            item.put("orderNo", agg.bundleOrderNos.getOrDefault(bundleId, ""));
+            item.put("styleNo", agg.bundleStyleNos.getOrDefault(bundleId, bundle != null ? bundle.getStyleNo() : ""));
             item.put("styleName", order != null ? order.getStyleName() : "");
             item.put("styleCover", order != null ? order.getStyleCover() : "");
-            item.put("status", status);
+            item.put("status", "");
             result.add(item);
         }
-
         return result;
     }
+
+    private Map<String, ProductionOrder> loadOrdersWithCover(Set<String> orderIds) {
+        Map<String, ProductionOrder> orderMap = new HashMap<>();
+        if (orderIds.isEmpty()) return orderMap;
+        List<ProductionOrder> orderList = productionOrderService.listByIds(orderIds);
+        for (ProductionOrder order : orderList) {
+            orderMap.put(String.valueOf(order.getId()).trim(), order);
+        }
+        if (!orderList.isEmpty()) {
+            productionOrderQueryService.fillStyleCover(orderList);
+        }
+        return orderMap;
+    }
+
 
     /**
      * 查询指定订单下各菲号的扫码就绪状态
@@ -458,131 +471,101 @@ public class ProductWarehousingQueryHelper {
         if (!StringUtils.hasText(orderId)) {
             throw new IllegalArgumentException("订单ID不能为空");
         }
-
         String oid = orderId.trim();
         try {
-        ProductionOrder order = productionOrderService.getById(oid);
-        if (order != null) {
-            String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
-            if (OrderStatusConstants.isTerminal(orderStatus)) {
-                Map<String, Object> empty = new java.util.LinkedHashMap<>();
-                empty.put("qcReadyQrs", new ArrayList<>());
-                empty.put("warehouseReadyQrs", new ArrayList<>());
-                empty.put("qrStageHints", new HashMap<>());
-                return empty;
-            }
-        }
-
-        List<ScanRecord> scans;
-        scans = scanRecordService.list(
-                    new LambdaQueryWrapper<ScanRecord>()
-                            .eq(ScanRecord::getOrderId, oid)
-                            .isNotNull(ScanRecord::getCuttingBundleId)
-                            .ne(ScanRecord::getCuttingBundleId, "")
-                            .ne(ScanRecord::getScanType, "orchestration")
-                            .eq(ScanRecord::getScanResult, "success")
-            );
-
-        Map<String, Set<String>> bundleScanTypes = new HashMap<>();
-        Map<String, Set<String>> bundleProcessCodes = new HashMap<>();
-        Map<String, Boolean> bundleQualityConfirmed = new HashMap<>();
-        Map<String, Boolean> bundleDefectiveConfirmed = new HashMap<>();
-        Map<String, Boolean> bundleWarehouseDone = new HashMap<>();
-        for (ScanRecord scan : scans) {
-            if (scan == null) continue;
-            String scanResult = scan.getScanResult() == null ? "" : scan.getScanResult().trim().toLowerCase();
-            if (!"success".equals(scanResult)) continue;
-            String bundleId = scan.getCuttingBundleId() != null ? scan.getCuttingBundleId().trim() : "";
-            if (!StringUtils.hasText(bundleId)) continue;
-            String scanType = scan.getScanType();
-            if (!StringUtils.hasText(scanType)) continue;
-            bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
-
-            String processCode = scan.getProcessCode() == null ? "" : scan.getProcessCode().trim();
-            String processCodeLower = processCode.toLowerCase();
-            if (StringUtils.hasText(processCode)) {
-                bundleProcessCodes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(processCode);
-            }
-
-            if ("quality".equals(scanType)
-                    && "quality_receive".equals(processCode)
-                    && scan.getConfirmTime() != null) {
-                bundleQualityConfirmed.put(bundleId, true);
-                String remark = scan.getRemark() == null ? "" : scan.getRemark().trim().toLowerCase();
-                if (remark.startsWith("unqualified")) {
-                    bundleDefectiveConfirmed.put(bundleId, true);
+            ProductionOrder order = productionOrderService.getById(oid);
+            if (order != null) {
+                String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
+                if (OrderStatusConstants.isTerminal(orderStatus)) {
+                    return buildEmptyReadiness();
                 }
             }
-
-            if ("warehouse".equals(scanType)
-                    && !"warehouse_rollback".equals(processCodeLower)) {
-                bundleWarehouseDone.put(bundleId, true);
+            List<ScanRecord> scans = queryOrderBundleScans(oid);
+            BundleScanAggregation agg = aggregateBundleScans(scans);
+            Set<String> packagingDoneBundleIds = findPackagingDoneBundles(agg.bundleProcessCodes);
+            ReadinessSets readiness = resolveReadinessSets(agg, packagingDoneBundleIds);
+            Map<String, String> bundleIdToQrCode = resolveQrCodes(readiness);
+            List<String> qcReadyQrs = new ArrayList<>();
+            List<String> warehouseReadyQrs = new ArrayList<>();
+            for (String bid : readiness.qcReadyBundleIds) {
+                String qr = bundleIdToQrCode.get(bid);
+                if (StringUtils.hasText(qr)) qcReadyQrs.add(qr);
             }
-        }
-
-        Set<String> packagingDoneBundleIds = new HashSet<>();
-        for (Map.Entry<String, Set<String>> entry : bundleProcessCodes.entrySet()) {
-            for (String pc : entry.getValue()) {
-                String processCode = pc == null ? "" : pc.trim().toLowerCase();
-                if (processCode.contains("packaging")
-                        || "包装".equals(pc)
-                        || "打包".equals(pc)
-                        || "入袋".equals(pc)
-                        || "后整".equals(pc)
-                        || "装箱".equals(pc)
-                        || "封箱".equals(pc)
-                        || "贴标".equals(pc)
-                        || "packing".equals(processCode)) {
-                    packagingDoneBundleIds.add(entry.getKey());
-                    break;
-                }
+            for (String bid : readiness.warehouseReadyBundleIds) {
+                String qr = bundleIdToQrCode.get(bid);
+                if (StringUtils.hasText(qr)) warehouseReadyQrs.add(qr);
             }
+            Map<String, List<String>> qrStageHints = buildQrStageHints(scans, agg, bundleIdToQrCode);
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("qcReadyQrs", qcReadyQrs);
+            result.put("warehouseReadyQrs", warehouseReadyQrs);
+            result.put("qrStageHints", qrStageHints);
+            return result;
+        } catch (Exception e) {
+            log.error("getBundleReadiness failed: orderId={}, error={}", oid, e.getMessage(), e);
+            return buildEmptyReadiness();
         }
+    }
 
+    private Map<String, Object> buildEmptyReadiness() {
+        Map<String, Object> empty = new java.util.LinkedHashMap<>();
+        empty.put("qcReadyQrs", new ArrayList<>());
+        empty.put("warehouseReadyQrs", new ArrayList<>());
+        empty.put("qrStageHints", new HashMap<>());
+        return empty;
+    }
+
+    private List<ScanRecord> queryOrderBundleScans(String oid) {
+        return scanRecordService.list(
+                new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getOrderId, oid)
+                        .isNotNull(ScanRecord::getCuttingBundleId)
+                        .ne(ScanRecord::getCuttingBundleId, "")
+                        .ne(ScanRecord::getScanType, "orchestration")
+                        .eq(ScanRecord::getScanResult, "success"));
+    }
+
+    private static class ReadinessSets {
         Set<String> qcReadyBundleIds = new HashSet<>();
         Set<String> warehouseReadyBundleIds = new HashSet<>();
+        Set<String> allIds = new HashSet<>();
+    }
 
-        for (Map.Entry<String, Set<String>> entry : bundleScanTypes.entrySet()) {
+    private ReadinessSets resolveReadinessSets(BundleScanAggregation agg, Set<String> packagingDoneBundleIds) {
+        ReadinessSets rs = new ReadinessSets();
+        for (Map.Entry<String, Set<String>> entry : agg.bundleScanTypes.entrySet()) {
             Set<String> types = entry.getValue();
             String bundleId = entry.getKey();
             if (types.contains("production") && !types.contains("quality")) {
-                qcReadyBundleIds.add(bundleId);
+                rs.qcReadyBundleIds.add(bundleId);
             }
-            if (Boolean.TRUE.equals(bundleQualityConfirmed.get(bundleId))
-                    && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))
+            if (Boolean.TRUE.equals(agg.bundleQualityConfirmed.get(bundleId))
+                    && !Boolean.TRUE.equals(agg.bundleWarehouseDone.get(bundleId))
                     && (packagingDoneBundleIds.contains(bundleId)
-                        || Boolean.TRUE.equals(bundleDefectiveConfirmed.get(bundleId)))) {
-                warehouseReadyBundleIds.add(bundleId);
+                        || Boolean.TRUE.equals(agg.bundleDefectiveConfirmed.get(bundleId)))) {
+                rs.warehouseReadyBundleIds.add(bundleId);
             }
         }
+        rs.allIds.addAll(rs.qcReadyBundleIds);
+        rs.allIds.addAll(rs.warehouseReadyBundleIds);
+        return rs;
+    }
 
-        Set<String> allIds = new HashSet<>();
-        allIds.addAll(qcReadyBundleIds);
-        allIds.addAll(warehouseReadyBundleIds);
-
-        List<String> qcReadyQrs = new ArrayList<>();
-        List<String> warehouseReadyQrs = new ArrayList<>();
+    private Map<String, String> resolveQrCodes(ReadinessSets readiness) {
         Map<String, String> bundleIdToQrCode = new HashMap<>();
-
-        if (!allIds.isEmpty()) {
-            List<CuttingBundle> bundles = cuttingBundleService.listByIds(new ArrayList<>(allIds));
-            if (bundles != null) {
-                for (CuttingBundle b : bundles) {
-                    if (b == null || !StringUtils.hasText(b.getId()) || !StringUtils.hasText(b.getQrCode())) continue;
-                    String bid = b.getId().trim();
-                    String qr = b.getQrCode().trim();
-                    bundleIdToQrCode.put(bid, qr);
-                    if (qcReadyBundleIds.contains(bid)) qcReadyQrs.add(qr);
-                    if (warehouseReadyBundleIds.contains(bid)) warehouseReadyQrs.add(qr);
-                }
+        if (readiness.allIds.isEmpty()) return bundleIdToQrCode;
+        List<CuttingBundle> bundles = cuttingBundleService.listByIds(new ArrayList<>(readiness.allIds));
+        if (bundles != null) {
+            for (CuttingBundle b : bundles) {
+                if (b == null || !StringUtils.hasText(b.getId()) || !StringUtils.hasText(b.getQrCode())) continue;
+                bundleIdToQrCode.put(b.getId().trim(), b.getQrCode().trim());
             }
         }
+        return bundleIdToQrCode;
+    }
 
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("qcReadyQrs", qcReadyQrs);
-        result.put("warehouseReadyQrs", warehouseReadyQrs);
-
-        Map<String, List<String>> bundleStageHints = new HashMap<>();
+    private Map<String, List<String>> buildQrStageHints(List<ScanRecord> scans, BundleScanAggregation agg,
+            Map<String, String> bundleIdToQrCode) {
         Map<String, List<ScanRecord>> scansByBundle = new HashMap<>();
         for (ScanRecord scan : scans) {
             if (scan == null) continue;
@@ -592,20 +575,17 @@ public class ProductWarehousingQueryHelper {
             if (!StringUtils.hasText(bid)) continue;
             scansByBundle.computeIfAbsent(bid, k -> new ArrayList<>()).add(scan);
         }
+        Map<String, List<String>> bundleStageHints = new HashMap<>();
         if (!scansByBundle.isEmpty()) {
             List<String> allBundleIds = new ArrayList<>(scansByBundle.keySet());
             List<ProductWarehousing> allWhRecords = productWarehousingService.list(
-                    new QueryWrapper<ProductWarehousing>()
-                            .in("cutting_bundle_id", allBundleIds)
-                            .eq("delete_flag", 0));
+                    new QueryWrapper<ProductWarehousing>().in("cutting_bundle_id", allBundleIds).eq("delete_flag", 0));
             Map<String, List<ProductWarehousing>> whByBundle = new HashMap<>();
             if (allWhRecords != null) {
                 for (ProductWarehousing w : allWhRecords) {
                     if (w == null) continue;
                     String bid = w.getCuttingBundleId() == null ? "" : w.getCuttingBundleId().trim();
-                    if (StringUtils.hasText(bid)) {
-                        whByBundle.computeIfAbsent(bid, k -> new ArrayList<>()).add(w);
-                    }
+                    if (StringUtils.hasText(bid)) whByBundle.computeIfAbsent(bid, k -> new ArrayList<>()).add(w);
                 }
             }
             for (Map.Entry<String, List<ScanRecord>> entry : scansByBundle.entrySet()) {
@@ -613,9 +593,7 @@ public class ProductWarehousingQueryHelper {
                 List<ProductWarehousing> whList = whByBundle.getOrDefault(bid, java.util.Collections.emptyList());
                 try {
                     List<String> hints = warehousingHelper.buildBundleStageHints(entry.getValue(), whList);
-                    if (hints != null && !hints.isEmpty()) {
-                        bundleStageHints.put(bid, hints);
-                    }
+                    if (hints != null && !hints.isEmpty()) bundleStageHints.put(bid, hints);
                 } catch (Exception e) {
                     log.warn("buildBundleStageHints failed for bundleId={}: {}", bid, e.getMessage());
                 }
@@ -630,17 +608,9 @@ public class ProductWarehousingQueryHelper {
                 }
             }
         }
-        result.put("qrStageHints", qrStageHints);
-        return result;
-        } catch (Exception e) {
-            log.error("getBundleReadiness failed: orderId={}, error={}", oid, e.getMessage(), e);
-            Map<String, Object> fallback = new java.util.LinkedHashMap<>();
-            fallback.put("qcReadyQrs", new ArrayList<>());
-            fallback.put("warehouseReadyQrs", new ArrayList<>());
-            fallback.put("qrStageHints", new HashMap<>());
-            return fallback;
-        }
+        return qrStageHints;
     }
+
 
     /**
      * 质检简报：返回订单的关键信息、款式BOM、尺寸规格、质检注意事项
@@ -657,6 +627,17 @@ public class ProductWarehousingQueryHelper {
         if (order == null) {
             throw new NoSuchElementException("订单不存在");
         }
+        briefing.put("order", buildOrderInfo(order));
+
+        String styleId = order.getStyleId();
+        briefing.put("style", buildStyleInfo(styleId));
+        briefing.put("bom", buildBomList(styleId));
+        briefing.put("qualityTips", buildQualityTips(orderId, order));
+
+        return briefing;
+    }
+
+    private Map<String, Object> buildOrderInfo(ProductionOrder order) {
         Map<String, Object> orderInfo = new java.util.LinkedHashMap<>();
         orderInfo.put("orderNo", order.getOrderNo());
         orderInfo.put("styleNo", order.getStyleNo());
@@ -670,45 +651,52 @@ public class ProductWarehousingQueryHelper {
         orderInfo.put("orderDetails", order.getOrderDetails());
         orderInfo.put("progressWorkflowJson", order.getProgressWorkflowJson());
         orderInfo.put("styleCover", order.getStyleCover());
-        briefing.put("order", orderInfo);
+        return orderInfo;
+    }
 
-        String styleId = order.getStyleId();
-        if (StringUtils.hasText(styleId)) {
-            try {
-                StyleInfo styleInfo = styleInfoService.getById(styleId.trim());
-                if (styleInfo != null) {
-                    Map<String, Object> styleData = new java.util.LinkedHashMap<>();
-                    styleData.put("cover", styleInfo.getCover());
-                    styleData.put("sizeColorConfig", styleInfo.getSizeColorConfig());
-                    styleData.put("category", styleInfo.getCategory());
-                    styleData.put("styleNo", styleInfo.getStyleNo());
-                    styleData.put("styleName", styleInfo.getStyleName());
-                    styleData.put("description", styleInfo.getDescription());
-                    styleData.put("sampleReviewStatus", styleInfo.getSampleReviewStatus());
-                    styleData.put("sampleReviewComment", styleInfo.getSampleReviewComment());
-                    styleData.put("sampleReviewer", styleInfo.getSampleReviewer());
-                    styleData.put("sampleReviewTime", styleInfo.getSampleReviewTime());
-                    briefing.put("style", styleData);
-                }
-            } catch (Exception e) {
-                log.warn("查询款式信息失败: styleId={}", styleId, e);
-            }
+    private Map<String, Object> buildStyleInfo(String styleId) {
+        if (!StringUtils.hasText(styleId)) {
+            return null;
         }
-
-        if (StringUtils.hasText(styleId)) {
-            try {
-                List<StyleBom> bomList = styleBomService.list(
-                        new LambdaQueryWrapper<StyleBom>().eq(StyleBom::getStyleId, styleId.trim())
-                );
-                briefing.put("bom", bomList != null ? bomList : Collections.emptyList());
-            } catch (Exception e) {
-                log.warn("查询BOM失败: styleId={}", styleId, e);
-                briefing.put("bom", Collections.emptyList());
+        try {
+            StyleInfo styleInfo = styleInfoService.getById(styleId.trim());
+            if (styleInfo == null) {
+                return null;
             }
-        } else {
-            briefing.put("bom", Collections.emptyList());
+            Map<String, Object> styleData = new java.util.LinkedHashMap<>();
+            styleData.put("cover", styleInfo.getCover());
+            styleData.put("sizeColorConfig", styleInfo.getSizeColorConfig());
+            styleData.put("category", styleInfo.getCategory());
+            styleData.put("styleNo", styleInfo.getStyleNo());
+            styleData.put("styleName", styleInfo.getStyleName());
+            styleData.put("description", styleInfo.getDescription());
+            styleData.put("sampleReviewStatus", styleInfo.getSampleReviewStatus());
+            styleData.put("sampleReviewComment", styleInfo.getSampleReviewComment());
+            styleData.put("sampleReviewer", styleInfo.getSampleReviewer());
+            styleData.put("sampleReviewTime", styleInfo.getSampleReviewTime());
+            return styleData;
+        } catch (Exception e) {
+            log.warn("查询款式信息失败: styleId={}", styleId, e);
+            return null;
         }
+    }
 
+    private List<StyleBom> buildBomList(String styleId) {
+        if (!StringUtils.hasText(styleId)) {
+            return Collections.emptyList();
+        }
+        try {
+            List<StyleBom> bomList = styleBomService.list(
+                    new LambdaQueryWrapper<StyleBom>().eq(StyleBom::getStyleId, styleId.trim())
+            );
+            return bomList != null ? bomList : Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("查询BOM失败: styleId={}", styleId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<String> buildQualityTips(String orderId, ProductionOrder order) {
         List<String> tips = new ArrayList<>();
         tips.add("请核对颜色、尺码与制单是否一致");
         tips.add("检查车缝线迹是否均匀、有无跳针断线");
@@ -720,6 +708,11 @@ public class ProductWarehousingQueryHelper {
             tips.add(0, "⚠ 订单备注: " + order.getRemarks().trim());
         }
 
+        appendDefectHistoryTips(tips, orderId);
+        return tips;
+    }
+
+    private void appendDefectHistoryTips(List<String> tips, String orderId) {
         try {
             List<ProductWarehousing> historyDefects = productWarehousingService.list(
                     new LambdaQueryWrapper<ProductWarehousing>()
@@ -727,40 +720,36 @@ public class ProductWarehousingQueryHelper {
                             .eq(ProductWarehousing::getQualityStatus, "unqualified")
                             .and(w -> w.eq(ProductWarehousing::getDeleteFlag, 0).or().isNull(ProductWarehousing::getDeleteFlag))
             );
-            if (historyDefects != null && !historyDefects.isEmpty()) {
-                tips.add(0, "⚠ 该订单已有 " + historyDefects.size() + " 条不合格记录，请重点关注质量");
-                Map<String, Long> categoryCounts = new HashMap<>();
-                for (ProductWarehousing d : historyDefects) {
-                    String cat = TextUtils.safeText(d.getDefectCategory());
-                    if (StringUtils.hasText(cat)) {
-                        categoryCounts.merge(cat, 1L, Long::sum);
-                    }
+            if (historyDefects == null || historyDefects.isEmpty()) {
+                return;
+            }
+            tips.add(0, "⚠ 该订单已有 " + historyDefects.size() + " 条不合格记录，请重点关注质量");
+            Map<String, Long> categoryCounts = new HashMap<>();
+            for (ProductWarehousing d : historyDefects) {
+                String cat = TextUtils.safeText(d.getDefectCategory());
+                if (StringUtils.hasText(cat)) {
+                    categoryCounts.merge(cat, 1L, Long::sum);
                 }
-                if (!categoryCounts.isEmpty()) {
-                    String topCategory = categoryCounts.entrySet().stream()
-                            .max(Map.Entry.comparingByValue())
-                            .map(Map.Entry::getKey)
-                            .orElse("");
-                    if (StringUtils.hasText(topCategory)) {
-                        // 将英文枚举 key 翻译为中文显示
-                        java.util.Map<String, String> categoryLabels = new java.util.HashMap<>();
-                        categoryLabels.put("appearance_integrity", "外观完整性问题");
-                        categoryLabels.put("size_accuracy", "尺寸精准度问题");
-                        categoryLabels.put("process_compliance", "工艺符合性问题");
-                        categoryLabels.put("functional_effectiveness", "功能有效性问题");
-                        categoryLabels.put("other", "其他问题");
-                        String topCategoryLabel = categoryLabels.getOrDefault(topCategory, topCategory);
-                        tips.add(1, "⚠ 高频次品类别: " + topCategoryLabel + " (" + categoryCounts.get(topCategory) + "次)");
-                    }
+            }
+            if (!categoryCounts.isEmpty()) {
+                String topCategory = categoryCounts.entrySet().stream()
+                        .max(Map.Entry.comparingByValue())
+                        .map(Map.Entry::getKey)
+                        .orElse("");
+                if (StringUtils.hasText(topCategory)) {
+                    java.util.Map<String, String> categoryLabels = new java.util.HashMap<>();
+                    categoryLabels.put("appearance_integrity", "外观完整性问题");
+                    categoryLabels.put("size_accuracy", "尺寸精准度问题");
+                    categoryLabels.put("process_compliance", "工艺符合性问题");
+                    categoryLabels.put("functional_effectiveness", "功能有效性问题");
+                    categoryLabels.put("other", "其他问题");
+                    String topCategoryLabel = categoryLabels.getOrDefault(topCategory, topCategory);
+                    tips.add(1, "⚠ 高频次品类别: " + topCategoryLabel + " (" + categoryCounts.get(topCategory) + "次)");
                 }
             }
         } catch (Exception e) {
             log.warn("查询历史次品记录失败: orderId={}", orderId, e);
         }
-
-        briefing.put("qualityTips", tips);
-
-        return briefing;
     }
 
     public ProductWarehousing getById(String id) {
@@ -772,8 +761,9 @@ public class ProductWarehousingQueryHelper {
         ProductWarehousing warehousing = productWarehousingService.lambdaQuery()
                 .eq(ProductWarehousing::getId, key)
                 .eq(ProductWarehousing::getTenantId, tenantId)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
                 .one();
-        if (warehousing == null || (warehousing.getDeleteFlag() != null && warehousing.getDeleteFlag() != 0)) {
+        if (warehousing == null) {
             throw new NoSuchElementException("入库记录不存在");
         }
         return warehousing;

@@ -51,20 +51,24 @@ public class PatternStockHelper {
 
         if ("WAREHOUSE_IN".equals(operationType)) {
             List<SampleStock> plannedStocks = buildInboundStocksFromPattern(pattern, scanRecord, tenantId);
-            for (SampleStock stock : plannedStocks) {
-                LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
-                        .eq(SampleStock::getDeleteFlag, 0)
-                        .eq(SampleStock::getStyleNo, stock.getStyleNo())
-                        .eq(SampleStock::getColor, stock.getColor())
-                        .eq(SampleStock::getSize, stock.getSize())
-                        .eq(SampleStock::getTenantId, tenantId);
-                SampleStock existing = sampleStockService.getOne(q);
-                if (existing != null) {
-                    throw new IllegalStateException("该颜色尺码已存在库存，不能重复扫码入库");
+            if (!plannedStocks.isEmpty()) {
+                String styleNo = plannedStocks.get(0).getStyleNo();
+                List<SampleStock> existingStocks = sampleStockService.list(new LambdaQueryWrapper<SampleStock>()
+                        .eq(SampleStock::getStyleNo, styleNo)
+                        .eq(SampleStock::getTenantId, tenantId)
+                        .eq(SampleStock::getDeleteFlag, 0));
+                java.util.Set<String> existingKeys = existingStocks.stream()
+                        .map(s -> s.getStyleNo() + "|" + (s.getColor() == null ? "" : s.getColor()) + "|" + (s.getSize() == null ? "" : s.getSize()))
+                        .collect(java.util.stream.Collectors.toSet());
+                for (SampleStock stock : plannedStocks) {
+                    String key = stock.getStyleNo() + "|" + (stock.getColor() == null ? "" : stock.getColor()) + "|" + (stock.getSize() == null ? "" : stock.getSize());
+                    if (existingKeys.contains(key)) {
+                        throw new IllegalStateException("该颜色尺码已存在库存，不能重复扫码入库");
+                    }
+                    sampleStockService.save(stock);
+                    log.info("[样衣扫码入库] 新建库存 styleNo={} color={} size={} qty={}",
+                            stock.getStyleNo(), stock.getColor(), stock.getSize(), stock.getQuantity());
                 }
-                sampleStockService.save(stock);
-                log.info("[样衣扫码入库] 新建库存 styleNo={} color={} size={} qty={}",
-                        stock.getStyleNo(), stock.getColor(), stock.getSize(), stock.getQuantity());
             }
         } else if ("WAREHOUSE_OUT".equals(operationType)) {
             LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
@@ -300,6 +304,6 @@ public class PatternStockHelper {
     private Long parseStyleId(String styleIdStr) {
         if (!StringUtils.hasText(styleIdStr)) return null;
         try { return Long.parseLong(styleIdStr.trim()); }
-        catch (Exception e) { return null; }
+        catch (Exception e) { log.debug("[PatternStock] parseStyleId失败: {}", styleIdStr); return null; }
     }
 }

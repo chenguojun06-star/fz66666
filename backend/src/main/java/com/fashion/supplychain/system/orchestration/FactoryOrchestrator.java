@@ -243,7 +243,7 @@ public class FactoryOrchestrator {
                 username = baseUsername + "_" + suffix;
             }
 
-            String initialPassword = "123456";
+            String initialPassword = generateInitialPassword();
 
             SupplierUser user = new SupplierUser();
             user.setSupplierId(factory.getId());
@@ -346,5 +346,15 @@ public class FactoryOrchestrator {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(name + "参数错误");
         }
+    }
+
+    private String generateInitialPassword() {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        StringBuilder sb = new StringBuilder(8);
+        java.util.Random rnd = new java.util.Random();
+        for (int i = 0; i < 8; i++) {
+            sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 }

@@ -93,6 +93,7 @@ public class OrderLearningOutcomeOrchestrator {
             }
             return new BigDecimal(pricing.asText("0"));
         } catch (Exception ex) {
+            log.debug("[OrderLearning] extractPricingValue失败", ex);
             return null;
         }
     }

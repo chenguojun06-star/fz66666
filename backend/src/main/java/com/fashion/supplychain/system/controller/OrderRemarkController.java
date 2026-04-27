@@ -21,6 +21,9 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/system/order-remark")
 @PreAuthorize("isAuthenticated()")
@@ -186,6 +189,7 @@ public class OrderRemarkController {
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             return LocalDateTime.parse(fullTimeStr, fmt);
         } catch (Exception e) {
+            log.debug("[OrderRemark] parseTimeStr失败: timeStr={}", timeStr);
             return null;
         }
     }

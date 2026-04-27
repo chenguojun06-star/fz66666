@@ -42,6 +42,7 @@ public class PainPointAggregationOrchestrator {
                 .last("LIMIT 1000"));
         List<ScanRecord> scanRecords = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
                 .eq(ScanRecord::getTenantId, tenantId)
+                .ne(ScanRecord::getScanType, "orchestration")
                 .orderByDesc(ScanRecord::getScanTime)
                 .last("LIMIT 2000"));
         List<IntelligenceFeedbackReason> feedbackReasons = intelligenceFeedbackReasonService.list(new LambdaQueryWrapper<IntelligenceFeedbackReason>()

@@ -222,6 +222,7 @@ public class OrderWorkflowHelper {
 
             return objectMapper.writeValueAsString(Map.of("nodes", outNodes));
         } catch (Exception e) {
+            log.warn("[OrderWorkflow] serializeWorkflowNodes失败", e);
             return null;
         }
     }

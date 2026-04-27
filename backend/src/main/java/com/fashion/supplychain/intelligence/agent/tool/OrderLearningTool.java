@@ -212,6 +212,7 @@ public class OrderLearningTool implements AgentTool {
         try {
             return value == null ? null : Integer.parseInt(String.valueOf(value));
         } catch (Exception ex) {
+            log.debug("[OrderLearning] integerValue解析失败: value={}", value);
             return null;
         }
     }
@@ -220,6 +221,7 @@ public class OrderLearningTool implements AgentTool {
         try {
             return value == null ? null : new BigDecimal(String.valueOf(value));
         } catch (Exception ex) {
+            log.debug("[OrderLearning] decimalValue解析失败: value={}", value);
             return null;
         }
     }

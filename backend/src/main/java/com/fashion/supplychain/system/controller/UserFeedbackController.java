@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.UserFeedback;
 import com.fashion.supplychain.system.service.TenantService;
@@ -152,6 +153,7 @@ public class UserFeedbackController {
         if (feedback == null) {
             return Result.fail("反馈不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(feedback.getTenantId(), "用户反馈");
 
         UserContext ctx = UserContext.get();
         feedback.setReply(reply);
@@ -179,6 +181,7 @@ public class UserFeedbackController {
         if (feedback == null) {
             return Result.fail("反馈不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(feedback.getTenantId(), "用户反馈");
 
         feedback.setStatus(status);
         feedback.setUpdateTime(LocalDateTime.now());

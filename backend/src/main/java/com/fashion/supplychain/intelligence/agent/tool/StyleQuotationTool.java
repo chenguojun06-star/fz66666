@@ -115,6 +115,7 @@ public class StyleQuotationTool extends AbstractAgentTool {
             ProductionOrder latestOrder = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getStyleId, q.getStyleId())
                     .eq(ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
                     .orderByDesc(ProductionOrder::getCreateTime)
                     .last("LIMIT 1")
                     .one();

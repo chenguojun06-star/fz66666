@@ -131,51 +131,53 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         this.save(stock);
 
         if (matchedPattern != null) {
-            PatternScanRecord scanRecord = new PatternScanRecord();
-            scanRecord.setPatternProductionId(matchedPattern.getId());
-            scanRecord.setStyleId(matchedPattern.getStyleId());
-            scanRecord.setStyleNo(matchedPattern.getStyleNo());
-            scanRecord.setColor(matchedPattern.getColor());
-            scanRecord.setOperationType("WAREHOUSE_IN");
-            scanRecord.setOperatorId(UserContext.userId());
-            scanRecord.setOperatorName(UserContext.username());
-            scanRecord.setOperatorRole("WAREHOUSE");
-            scanRecord.setScanTime(LocalDateTime.now());
-            scanRecord.setRemark(stock.getRemark() != null ? stock.getRemark() : "PC端样衣库存入库");
-            scanRecord.setWarehouseCode(stock.getLocation());
-            scanRecord.setCreateTime(LocalDateTime.now());
-            scanRecord.setDeleteFlag(0);
-            patternScanRecordService.save(scanRecord);
-
-            try {
-                com.fashion.supplychain.production.entity.ScanRecord sr = new com.fashion.supplychain.production.entity.ScanRecord();
-                sr.setScanType("pattern");
-                sr.setScanResult("success");
-                sr.setOperatorId(UserContext.userId());
-                sr.setOperatorName(UserContext.username());
-                sr.setScanTime(LocalDateTime.now());
-                sr.setStyleNo(matchedPattern.getStyleNo());
-                sr.setOrderNo(matchedPattern.getStyleNo());
-                sr.setColor(matchedPattern.getColor());
-                sr.setProcessName("样衣入库");
-                sr.setProcessCode("样衣入库");
-                sr.setProgressStage("样衣入库");
-                sr.setQuantity(1);
-                sr.setTenantId(currentTenantId);
-                sr.setFactoryId(null);
-                sr.setCuttingBundleNo(null);
-                sr.setRemark(stock.getRemark() != null ? stock.getRemark() : "PC端样衣库存入库");
-                sr.setCreateTime(LocalDateTime.now());
-                scanRecordService.saveScanRecord(sr);
-            } catch (Exception e) {
-                log.warn("PC端入库同步写入ScanRecord失败，不影响主流程: {}", e.getMessage());
-            }
-
+            saveInboundScanRecords(stock, matchedPattern, currentTenantId);
             patternStatusHelper.updatePatternStatusByOperation(matchedPattern, "WAREHOUSE_IN", UserContext.username());
-
             log.info("PC入库同步完成: styleNo={}, patternId={}", stock.getStyleNo(), matchedPattern.getId());
         } else {
             log.warn("PC入库未找到对应样板生产记录，仅创建库存记录: styleNo={}, color={}", stock.getStyleNo(), stock.getColor());
+        }
+    }
+
+    private void saveInboundScanRecords(SampleStock stock, PatternProduction matchedPattern, Long currentTenantId) {
+        PatternScanRecord scanRecord = new PatternScanRecord();
+        scanRecord.setPatternProductionId(matchedPattern.getId());
+        scanRecord.setStyleId(matchedPattern.getStyleId());
+        scanRecord.setStyleNo(matchedPattern.getStyleNo());
+        scanRecord.setColor(matchedPattern.getColor());
+        scanRecord.setOperationType("WAREHOUSE_IN");
+        scanRecord.setOperatorId(UserContext.userId());
+        scanRecord.setOperatorName(UserContext.username());
+        scanRecord.setOperatorRole("WAREHOUSE");
+        scanRecord.setScanTime(LocalDateTime.now());
+        scanRecord.setRemark(stock.getRemark() != null ? stock.getRemark() : "PC端样衣库存入库");
+        scanRecord.setWarehouseCode(stock.getLocation());
+        scanRecord.setCreateTime(LocalDateTime.now());
+        scanRecord.setDeleteFlag(0);
+        patternScanRecordService.save(scanRecord);
+
+        try {
+            com.fashion.supplychain.production.entity.ScanRecord sr = new com.fashion.supplychain.production.entity.ScanRecord();
+            sr.setScanType("pattern");
+            sr.setScanResult("success");
+            sr.setOperatorId(UserContext.userId());
+            sr.setOperatorName(UserContext.username());
+            sr.setScanTime(LocalDateTime.now());
+            sr.setStyleNo(matchedPattern.getStyleNo());
+            sr.setOrderNo(matchedPattern.getStyleNo());
+            sr.setColor(matchedPattern.getColor());
+            sr.setProcessName("样衣入库");
+            sr.setProcessCode("样衣入库");
+            sr.setProgressStage("样衣入库");
+            sr.setQuantity(1);
+            sr.setTenantId(currentTenantId);
+            sr.setFactoryId(null);
+            sr.setCuttingBundleNo(null);
+            sr.setRemark(stock.getRemark() != null ? stock.getRemark() : "PC端样衣库存入库");
+            sr.setCreateTime(LocalDateTime.now());
+            scanRecordService.saveScanRecord(sr);
+        } catch (Exception e) {
+            log.warn("PC端入库同步写入ScanRecord失败，不影响主流程: {}", e.getMessage());
         }
     }
 
@@ -453,22 +455,40 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             }
             stock.setInventoryStatus(stock.getDeleteFlag() != null && stock.getDeleteFlag() == 1 ? "destroyed" : "active");
             fillDestroyMeta(stock);
-            if (StringUtils.hasText(stock.getStyleId())) {
-                try {
-                    styleIds.add(Long.valueOf(stock.getStyleId().trim()));
-                } catch (Exception e) {
-                    log.warn("SampleStockServiceImpl.fillStyleFields styleId解析异常: styleId={}", stock.getStyleId(), e);
-                }
-            }
-            if (StringUtils.hasText(stock.getStyleNo())) {
-                styleNos.add(stock.getStyleNo().trim());
-            }
+            collectStyleIdentifiers(stock, styleIds, styleNos);
         }
 
         if (styleIds.isEmpty() && styleNos.isEmpty()) {
             return;
         }
 
+        Map<Long, StyleInfo> byId = new HashMap<>();
+        Map<String, StyleInfo> byNo = new HashMap<>();
+        loadStyleInfoMaps(styleIds, styleNos, byId, byNo);
+
+        for (SampleStock stock : records) {
+            if (stock == null) {
+                continue;
+            }
+            applyStyleToStock(stock, byId, byNo);
+        }
+    }
+
+    private void collectStyleIdentifiers(SampleStock stock, Set<Long> styleIds, Set<String> styleNos) {
+        if (StringUtils.hasText(stock.getStyleId())) {
+            try {
+                styleIds.add(Long.valueOf(stock.getStyleId().trim()));
+            } catch (Exception e) {
+                log.warn("SampleStockServiceImpl.fillStyleFields styleId解析异常: styleId={}", stock.getStyleId(), e);
+            }
+        }
+        if (StringUtils.hasText(stock.getStyleNo())) {
+            styleNos.add(stock.getStyleNo().trim());
+        }
+    }
+
+    private void loadStyleInfoMaps(Set<Long> styleIds, Set<String> styleNos,
+                                    Map<Long, StyleInfo> byId, Map<String, StyleInfo> byNo) {
         LambdaQueryWrapper<StyleInfo> styleQuery = new LambdaQueryWrapper<StyleInfo>()
                 .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getStyleName, StyleInfo::getPatternNo, StyleInfo::getSampleCompletedTime);
         if (!styleIds.isEmpty() && !styleNos.isEmpty()) {
@@ -485,9 +505,6 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         if (styles == null || styles.isEmpty()) {
             return;
         }
-
-        Map<Long, StyleInfo> byId = new HashMap<>();
-        Map<String, StyleInfo> byNo = new HashMap<>();
         for (StyleInfo style : styles) {
             if (style == null) {
                 continue;
@@ -499,34 +516,31 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 byNo.putIfAbsent(style.getStyleNo().trim(), style);
             }
         }
+    }
 
-        for (SampleStock stock : records) {
-            if (stock == null) {
-                continue;
+    private void applyStyleToStock(SampleStock stock, Map<Long, StyleInfo> byId, Map<String, StyleInfo> byNo) {
+        StyleInfo style = null;
+        if (StringUtils.hasText(stock.getStyleId())) {
+            try {
+                style = byId.get(Long.valueOf(stock.getStyleId().trim()));
+            } catch (Exception e) {
+                log.warn("SampleStockServiceImpl.fillStyleFields styleId查找异常: styleId={}", stock.getStyleId(), e);
             }
-            StyleInfo style = null;
-            if (StringUtils.hasText(stock.getStyleId())) {
-                try {
-                    style = byId.get(Long.valueOf(stock.getStyleId().trim()));
-                } catch (Exception e) {
-                    log.warn("SampleStockServiceImpl.fillStyleFields styleId查找异常: styleId={}", stock.getStyleId(), e);
-                }
-            }
-            if (style == null && StringUtils.hasText(stock.getStyleNo())) {
-                style = byNo.get(stock.getStyleNo().trim());
-            }
-            if (style == null) {
-                continue;
-            }
-            if (!StringUtils.hasText(stock.getStyleName()) && StringUtils.hasText(style.getStyleName())) {
-                stock.setStyleName(style.getStyleName());
-            }
-            if (!StringUtils.hasText(stock.getImageUrl()) && StringUtils.hasText(style.getCover())) {
-                stock.setImageUrl(style.getCover());
-            }
-            stock.setPatternNo(style.getPatternNo());
-            stock.setSampleCompletedTime(style.getSampleCompletedTime());
         }
+        if (style == null && StringUtils.hasText(stock.getStyleNo())) {
+            style = byNo.get(stock.getStyleNo().trim());
+        }
+        if (style == null) {
+            return;
+        }
+        if (!StringUtils.hasText(stock.getStyleName()) && StringUtils.hasText(style.getStyleName())) {
+            stock.setStyleName(style.getStyleName());
+        }
+        if (!StringUtils.hasText(stock.getImageUrl()) && StringUtils.hasText(style.getCover())) {
+            stock.setImageUrl(style.getCover());
+        }
+        stock.setPatternNo(style.getPatternNo());
+        stock.setSampleCompletedTime(style.getSampleCompletedTime());
     }
 
     /**
@@ -711,64 +725,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         LinkedHashMap<String, Integer> values = new LinkedHashMap<>();
         try {
             if (StringUtils.hasText(sizeColorConfig)) {
-                Map<String, Object> parsed = OBJECT_MAPPER.readValue(sizeColorConfig, new TypeReference<Map<String, Object>>() {});
-                List<String> sizes = new ArrayList<>();
-                Object sizesRaw = parsed.get("sizes");
-                if (sizesRaw instanceof List<?> list) {
-                    for (Object item : list) {
-                        String normalized = item == null ? "" : String.valueOf(item).trim();
-                        if (StringUtils.hasText(normalized)) {
-                            sizes.add(normalized);
-                        }
-                    }
-                }
-
-                Object rowsRaw = parsed.get("matrixRows");
-                if (rowsRaw instanceof List<?> list) {
-                    for (Object item : list) {
-                        if (!(item instanceof Map<?, ?> row)) {
-                            continue;
-                        }
-                        String color = row.get("color") == null ? "" : String.valueOf(row.get("color")).trim();
-                        Object quantitiesRaw = row.get("quantities");
-                        if (!StringUtils.hasText(color) || !(quantitiesRaw instanceof List<?> quantities)) {
-                            continue;
-                        }
-                        for (int i = 0; i < sizes.size(); i++) {
-                            int quantity = i < quantities.size() ? Integer.parseInt(String.valueOf(quantities.get(i) == null ? 0 : quantities.get(i))) : 0;
-                            if (quantity > 0) {
-                                values.put(color + "|" + sizes.get(i), quantity);
-                            }
-                        }
-                    }
-                }
-                if (!values.isEmpty()) {
-                    return values;
-                }
-
-                String color = "";
-                Object colorsRaw = parsed.get("colors");
-                if (colorsRaw instanceof List<?> list) {
-                    for (Object item : list) {
-                        String normalized = item == null ? "" : String.valueOf(item).trim();
-                        if (StringUtils.hasText(normalized)) {
-                            color = normalized;
-                            break;
-                        }
-                    }
-                }
-                if (!StringUtils.hasText(color)) {
-                    color = String.valueOf(directColor == null ? "" : directColor).trim();
-                }
-                Object topQuantitiesRaw = parsed.get("quantities");
-                if (StringUtils.hasText(color) && topQuantitiesRaw instanceof List<?> topQuantities) {
-                    for (int i = 0; i < sizes.size(); i++) {
-                        int quantity = i < topQuantities.size() ? Integer.parseInt(String.valueOf(topQuantities.get(i) == null ? 0 : topQuantities.get(i))) : 0;
-                        if (quantity > 0) {
-                            values.put(color + "|" + sizes.get(i), quantity);
-                        }
-                    }
-                }
+                parseSizeColorConfig(sizeColorConfig, values);
             }
         } catch (Exception e) {
             log.warn("SampleStockServiceImpl.collectValidSpecMap 解析异常: {}", e.getMessage());
@@ -778,6 +735,80 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             return values;
         }
 
+        fallbackDirectSpecMap(directColor, directSize, sampleQuantity, values);
+        return values;
+    }
+
+    private void parseSizeColorConfig(String sizeColorConfig, LinkedHashMap<String, Integer> values) throws Exception {
+        Map<String, Object> parsed = OBJECT_MAPPER.readValue(sizeColorConfig, new TypeReference<Map<String, Object>>() {});
+        List<String> sizes = extractSizes(parsed);
+
+        Object rowsRaw = parsed.get("matrixRows");
+        if (rowsRaw instanceof List<?> list) {
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> row)) {
+                    continue;
+                }
+                String color = row.get("color") == null ? "" : String.valueOf(row.get("color")).trim();
+                Object quantitiesRaw = row.get("quantities");
+                if (!StringUtils.hasText(color) || !(quantitiesRaw instanceof List<?> quantities)) {
+                    continue;
+                }
+                for (int i = 0; i < sizes.size(); i++) {
+                    int quantity = i < quantities.size() ? Integer.parseInt(String.valueOf(quantities.get(i) == null ? 0 : quantities.get(i))) : 0;
+                    if (quantity > 0) {
+                        values.put(color + "|" + sizes.get(i), quantity);
+                    }
+                }
+            }
+        }
+        if (!values.isEmpty()) {
+            return;
+        }
+
+        String color = extractFirstColor(parsed);
+        if (!StringUtils.hasText(color)) {
+            return;
+        }
+        Object topQuantitiesRaw = parsed.get("quantities");
+        if (topQuantitiesRaw instanceof List<?> topQuantities) {
+            for (int i = 0; i < sizes.size(); i++) {
+                int quantity = i < topQuantities.size() ? Integer.parseInt(String.valueOf(topQuantities.get(i) == null ? 0 : topQuantities.get(i))) : 0;
+                if (quantity > 0) {
+                    values.put(color + "|" + sizes.get(i), quantity);
+                }
+            }
+        }
+    }
+
+    private List<String> extractSizes(Map<String, Object> parsed) {
+        List<String> sizes = new ArrayList<>();
+        Object sizesRaw = parsed.get("sizes");
+        if (sizesRaw instanceof List<?> list) {
+            for (Object item : list) {
+                String normalized = item == null ? "" : String.valueOf(item).trim();
+                if (StringUtils.hasText(normalized)) {
+                    sizes.add(normalized);
+                }
+            }
+        }
+        return sizes;
+    }
+
+    private String extractFirstColor(Map<String, Object> parsed) {
+        Object colorsRaw = parsed.get("colors");
+        if (colorsRaw instanceof List<?> list) {
+            for (Object item : list) {
+                String normalized = item == null ? "" : String.valueOf(item).trim();
+                if (StringUtils.hasText(normalized)) {
+                    return normalized;
+                }
+            }
+        }
+        return "";
+    }
+
+    private void fallbackDirectSpecMap(String directColor, String directSize, Integer sampleQuantity, LinkedHashMap<String, Integer> values) {
         List<String> colors = new ArrayList<>();
         for (String part : String.valueOf(directColor == null ? "" : directColor).split("[/，,\\s]+")) {
             String normalized = part == null ? "" : part.trim();
@@ -795,7 +826,6 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         if (colors.size() == 1 && sizes.size() == 1 && sampleQuantity != null && sampleQuantity > 0) {
             values.put(colors.get(0) + "|" + sizes.get(0), sampleQuantity);
         }
-        return values;
     }
 
     private void fillDestroyMeta(SampleStock stock) {

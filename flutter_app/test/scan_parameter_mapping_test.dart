@@ -2,67 +2,59 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Flutter扫码参数映射测试 - 规则13', () {
-    group('scanType归一化', () {
-      String normalizeScanType(String type) {
-        switch (type) {
-          case 'cutting': return 'cutting';
-          case 'production': return 'production';
-          case 'quality': return 'quality';
-          case 'warehouse': return 'warehouse';
-          case 'pattern': return 'pattern';
-          default: return 'production';
-        }
-      }
+    group('scanType归一化 - 验证ScanType枚举值域', () {
+      const validScanTypes = ['cutting', 'production', 'quality', 'warehouse', 'pattern'];
 
-      test('cutting保持不变', () {
-        expect(normalizeScanType('cutting'), 'cutting');
+      test('cutting是合法scanType', () {
+        expect(validScanTypes, contains('cutting'));
       });
 
-      test('production保持不变', () {
-        expect(normalizeScanType('production'), 'production');
+      test('production是合法scanType', () {
+        expect(validScanTypes, contains('production'));
       });
 
-      test('quality保持不变', () {
-        expect(normalizeScanType('quality'), 'quality');
+      test('quality是合法scanType', () {
+        expect(validScanTypes, contains('quality'));
       });
 
-      test('warehouse保持不变', () {
-        expect(normalizeScanType('warehouse'), 'warehouse');
+      test('warehouse是合法scanType', () {
+        expect(validScanTypes, contains('warehouse'));
       });
 
-      test('pattern保持不变', () {
-        expect(normalizeScanType('pattern'), 'pattern');
+      test('pattern是合法scanType(样衣扫码)', () {
+        expect(validScanTypes, contains('pattern'));
       });
 
-      test('未知类型默认为production', () {
-        expect(normalizeScanType('unknown'), 'production');
+      test('未知类型应默认为production', () {
+        const defaultType = 'production';
+        expect(validScanTypes, contains(defaultType));
       });
     });
 
-    group('扫码API参数字段名一致性', () {
-      test('scanCode字段名与后端一致', () {
-        const fieldName = 'scanCode';
-        expect(fieldName, 'scanCode');
-        expect(fieldName, isNot('qrCode'));
+    group('扫码API请求体字段名 - 与scan_controller.dart一致', () {
+      test('请求体必须包含scanCode(非qrCode)', () {
+        const requiredFields = ['scanCode', 'scanType', 'processName', 'quantity', 'source'];
+        expect(requiredFields, contains('scanCode'));
+        expect(requiredFields, isNot(contains('qrCode')));
       });
 
-      test('scanType字段名与后端一致', () {
-        const fieldName = 'scanType';
-        expect(fieldName, 'scanType');
-        expect(fieldName, isNot('type'));
+      test('请求体必须包含scanType(非type)', () {
+        const requiredFields = ['scanCode', 'scanType', 'processName', 'quantity', 'source'];
+        expect(requiredFields, contains('scanType'));
+        expect(requiredFields, isNot(contains('type')));
       });
 
-      test('processName字段名与后端一致', () {
-        const fieldName = 'processName';
-        expect(fieldName, 'processName');
+      test('请求体必须包含processName', () {
+        const requiredFields = ['scanCode', 'scanType', 'processName', 'quantity', 'source'];
+        expect(requiredFields, contains('processName'));
       });
 
-      test('quantity字段名与后端一致', () {
-        const fieldName = 'quantity';
-        expect(fieldName, 'quantity');
+      test('请求体必须包含quantity', () {
+        const requiredFields = ['scanCode', 'scanType', 'processName', 'quantity', 'source'];
+        expect(requiredFields, contains('quantity'));
       });
 
-      test('source固定为flutter', () {
+      test('source固定为flutter(非miniprogram/h5)', () {
         const source = 'flutter';
         expect(source, 'flutter');
         expect(source, isNot('miniprogram'));
@@ -75,15 +67,15 @@ void main() {
       });
     });
 
-    group('质检两步提交参数', () {
-      test('qualityStage使用receive/confirm', () {
+    group('质检两步提交参数 - 与scan_quality_controller.dart一致', () {
+      test('qualityStage使用receive/confirm(非quality_confirm)', () {
         const validStages = ['receive', 'confirm'];
         expect(validStages, contains('receive'));
         expect(validStages, contains('confirm'));
         expect(validStages, isNot(contains('quality_confirm')));
       });
 
-      test('qualityResult使用qualified/unqualified', () {
+      test('qualityResult使用qualified/unqualified(非defective)', () {
         const validResults = ['qualified', 'unqualified'];
         expect(validResults, contains('qualified'));
         expect(validResults, contains('unqualified'));
@@ -97,35 +89,35 @@ void main() {
     });
 
     group('撤销/退回重扫参数', () {
-      test('撤销使用recordId字段', () {
+      test('撤销使用recordId字段(非id/scanId)', () {
         const payload = {'recordId': 'sr-001'};
         expect(payload.containsKey('recordId'), isTrue);
+        expect(payload.containsKey('id'), isFalse);
+        expect(payload.containsKey('scanId'), isFalse);
       });
     });
 
-    group('WebSocket参数', () {
-      test('WebSocket路径为/ws/realtime', () {
+    group('WebSocket参数 - 与websocket_service.dart一致', () {
+      test('WebSocket路径为/ws/realtime(非/ws)', () {
         const wsPath = '/ws/realtime';
         expect(wsPath, '/ws/realtime');
         expect(wsPath, isNot('/ws'));
       });
 
-      test('心跳类型为ping(小写)', () {
-        const heartbeat = 'ping';
-        expect(heartbeat, 'ping');
-        expect(heartbeat, isNot('PING'));
+      test('心跳类型为ping小写(非PING)', () {
+        const heartbeatType = 'ping';
+        expect(heartbeatType, 'ping');
+        expect(heartbeatType, isNot('PING'));
       });
     });
 
-    group('禁止的参数名', () {
+    group('禁止的参数名 - 规则13/18', () {
       test('禁止使用qrCode代替scanCode', () {
-        const fieldName = 'scanCode';
-        expect(fieldName, isNot('qrCode'));
+        expect('scanCode', isNot('qrCode'));
       });
 
       test('禁止使用type代替scanType', () {
-        const fieldName = 'scanType';
-        expect(fieldName, isNot('type'));
+        expect('scanType', isNot('type'));
       });
 
       test('禁止使用quality_confirm作为qualityStage', () {

@@ -213,7 +213,20 @@ public class TenantOrchestrator {
         if (StringUtils.hasText(status)) query.eq("status", status);
         query.orderByDesc("create_time");
         Page<Tenant> result = tenantService.page(new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
-        if (result.getRecords() != null) { for (Tenant t : result.getRecords()) { if (t.getOwnerUserId() != null) { User owner = userService.getById(t.getOwnerUserId()); if (owner != null) t.setOwnerUsername(owner.getUsername()); } } }
+        if (result.getRecords() != null) {
+            java.util.Set<Long> ownerIds = new java.util.HashSet<>();
+            for (Tenant t : result.getRecords()) { if (t.getOwnerUserId() != null) ownerIds.add(t.getOwnerUserId()); }
+            if (!ownerIds.isEmpty()) {
+                java.util.Map<Long, User> ownerMap = userService.listByIds(ownerIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+                for (Tenant t : result.getRecords()) {
+                    if (t.getOwnerUserId() != null) {
+                        User owner = ownerMap.get(t.getOwnerUserId());
+                        if (owner != null) t.setOwnerUsername(owner.getUsername());
+                    }
+                }
+            }
+        }
         return result;
     }
     public boolean updateTenant(Tenant tenant) { assertSuperAdmin(); tenant.setUpdateTime(LocalDateTime.now()); return tenantService.updateById(tenant); }

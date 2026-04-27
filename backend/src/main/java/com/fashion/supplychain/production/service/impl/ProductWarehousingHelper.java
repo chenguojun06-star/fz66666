@@ -140,6 +140,7 @@ public class ProductWarehousingHelper {
             }
             list = productWarehousingMapper.selectList(qw);
         } catch (Exception e) {
+            log.warn("[Warehousing] 入库统计查询失败: {}", e.getMessage());
             return new int[]{0, 0, 0};
         }
 
@@ -246,6 +247,7 @@ public class ProductWarehousingHelper {
                     .select(CuttingBundle::getQuantity)
                     .eq(CuttingBundle::getProductionOrderId, oid));
         } catch (Exception e) {
+            log.warn("[Warehousing] 裁剪数量查询失败: oid={}", oid, e);
             return 0;
         }
 
@@ -290,6 +292,7 @@ public class ProductWarehousingHelper {
             }
             return (int) Math.min(Integer.MAX_VALUE, Math.max(0, sum));
         } catch (Exception e) {
+            log.warn("[Warehousing] 入库数量汇总失败: oid={}", oid, e);
             return 0;
         }
     }
@@ -323,6 +326,7 @@ public class ProductWarehousingHelper {
             }
             return (int) Math.min(Integer.MAX_VALUE, Math.max(0, sum));
         } catch (Exception e) {
+            log.warn("[Warehousing] 排除ID入库数量汇总失败: oid={}, exId={}", oid, ex, e);
             return 0;
         }
     }
@@ -626,18 +630,47 @@ public class ProductWarehousingHelper {
         boolean qualified = !StringUtils.hasText(qs) || STATUS_QUALIFIED.equalsIgnoreCase(qs);
         String requestId = requestIdPrefix + warehousing.getId().trim();
 
-        ScanRecord existing = null;
+        ScanRecord existing = queryExistingScanRecord(requestId);
+        int qualifiedQty = warehousing.getQualifiedQuantity() == null ? 0 : warehousing.getQualifiedQuantity();
+        LocalDateTime t = now == null ? LocalDateTime.now() : now;
+
+        ScanRecordFieldBundle fields = resolveScanRecordFields(warehousing, order, bundle, t);
+
+        if (!qualified) {
+            markScanRecordAsFailure(existing, failureRemark, t);
+            return;
+        }
+
+        String scanRecordId;
+        if (existing == null) {
+            scanRecordId = insertNewScanRecord(fields, requestId, order, processCode, progressStage,
+                    processName, scanType, successRemark, qualifiedQty, t);
+        } else {
+            scanRecordId = existing.getId();
+            patchExistingScanRecord(existing, fields, order, processCode, progressStage,
+                    processName, scanType, successRemark, qualifiedQty, t);
+        }
+
+        syncProcessTrackingAfterWarehousing(fields.cuttingBundleId, progressStage, fields.operatorId, fields.operatorName, scanRecordId);
+    }
+
+    private ScanRecord queryExistingScanRecord(String requestId) {
         try {
-            existing = scanRecordMapper.selectOne(new LambdaQueryWrapper<ScanRecord>()
+            return scanRecordMapper.selectOne(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getRequestId, requestId)
                     .last("limit 1"));
         } catch (Exception e) {
             log.warn("Failed to query existing scan record: requestId={}", requestId, e);
+            return null;
         }
+    }
 
-        int qualifiedQty = warehousing.getQualifiedQuantity() == null ? 0 : warehousing.getQualifiedQuantity();
-        LocalDateTime t = now == null ? LocalDateTime.now() : now;
+    private record ScanRecordFieldBundle(String operatorId, String operatorName,
+            String cuttingBundleId, Integer cuttingBundleNo, String cuttingBundleQr,
+            String scanCode, String color, String size) {}
 
+    private ScanRecordFieldBundle resolveScanRecordFields(ProductWarehousing warehousing,
+            ProductionOrder order, CuttingBundle bundle, LocalDateTime now) {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         String operatorName = ctx == null ? null : ctx.getUsername();
@@ -645,103 +678,95 @@ public class ProductWarehousingHelper {
         String cuttingBundleId = trimToNull(warehousing.getCuttingBundleId());
         Integer cuttingBundleNo = warehousing.getCuttingBundleNo();
         String cuttingBundleQr = trimToNull(warehousing.getCuttingBundleQrCode());
-        String scanCode = cuttingBundleQr;
 
         String color = bundle == null ? null : trimToNull(bundle.getColor());
         String size = bundle == null ? null : trimToNull(bundle.getSize());
-        if (color == null) {
-            color = trimToNull(order.getColor());
-        }
-        if (size == null) {
-            size = trimToNull(order.getSize());
-        }
+        if (color == null) color = trimToNull(order.getColor());
+        if (size == null) size = trimToNull(order.getSize());
 
-        if (!qualified) {
-            if (existing != null && StringUtils.hasText(existing.getId())) {
-                ScanRecord patch = new ScanRecord();
-                patch.setId(existing.getId());
-                patch.setScanResult(SCAN_RESULT_FAILURE);
-                patch.setRemark(failureRemark);
-                patch.setUpdateTime(t);
-                scanRecordMapper.updateById(patch);
-            }
-            return;
-        }
+        return new ScanRecordFieldBundle(
+                trimToNull(operatorId), trimToNull(operatorName),
+                cuttingBundleId, cuttingBundleNo, cuttingBundleQr, cuttingBundleQr,
+                color, size);
+    }
 
-        String scanRecordId;
-        if (existing == null) {
-            ScanRecord sr = new ScanRecord();
-            scanRecordId = UUID.randomUUID().toString();
-            sr.setId(scanRecordId);
-            sr.setScanCode(scanCode);
-            sr.setRequestId(requestId);
-            sr.setOrderId(order.getId());
-            sr.setOrderNo(order.getOrderNo());
-            sr.setStyleId(order.getStyleId());
-            sr.setStyleNo(order.getStyleNo());
-            sr.setTenantId(order.getTenantId());
-            sr.setColor(color);
-            sr.setSize(size);
-            sr.setQuantity(Math.max(0, qualifiedQty));
-            sr.setProcessCode(processCode);
-            sr.setProgressStage(progressStage);
-            sr.setProcessName(processName);
-            sr.setOperatorId(trimToNull(operatorId));
-            sr.setOperatorName(trimToNull(operatorName));
-            sr.setScanTime(t);
-            sr.setScanType(scanType);
-            sr.setScanResult(SCAN_RESULT_SUCCESS);
-            sr.setRemark(successRemark);
-            sr.setCuttingBundleId(cuttingBundleId);
-            sr.setCuttingBundleNo(cuttingBundleNo);
-            sr.setCuttingBundleQrCode(cuttingBundleQr);
-            sr.setCreateTime(t);
-            sr.setUpdateTime(t);
-            scanRecordMapper.insert(sr);
-        } else {
-            scanRecordId = existing.getId();
+    private void markScanRecordAsFailure(ScanRecord existing, String failureRemark, LocalDateTime t) {
+        if (existing != null && StringUtils.hasText(existing.getId())) {
             ScanRecord patch = new ScanRecord();
-            patch.setId(scanRecordId);
-            patch.setScanCode(scanCode);
-            patch.setOrderId(order.getId());
-            patch.setOrderNo(order.getOrderNo());
-            patch.setStyleId(order.getStyleId());
-            patch.setStyleNo(order.getStyleNo());
-            patch.setColor(color);
-            patch.setSize(size);
-            patch.setQuantity(Math.max(0, qualifiedQty));
-            patch.setProcessCode(processCode);
-            patch.setProgressStage(progressStage);
-            patch.setProcessName(processName);
-            patch.setOperatorId(trimToNull(operatorId));
-            patch.setOperatorName(trimToNull(operatorName));
-            patch.setScanTime(t);
-            patch.setScanType(scanType);
-            patch.setScanResult(SCAN_RESULT_SUCCESS);
-            patch.setRemark(successRemark);
-            patch.setCuttingBundleId(cuttingBundleId);
-            patch.setCuttingBundleNo(cuttingBundleNo);
-            patch.setCuttingBundleQrCode(cuttingBundleQr);
+            patch.setId(existing.getId());
+            patch.setScanResult(SCAN_RESULT_FAILURE);
+            patch.setRemark(failureRemark);
             patch.setUpdateTime(t);
             scanRecordMapper.updateById(patch);
         }
+    }
 
-        // 同步更新工序跟踪记录（t_production_process_tracking）
-        // 工序跟踪表以节点名（如"入库"、"质检"）作为 processCode 初始化
-        // 参考 WarehouseScanExecutor 的实现模式：失败不阻断主流程
-        if (StringUtils.hasText(cuttingBundleId)) {
-            try {
-                boolean updated = processTrackingOrchestrator.updateScanRecord(
-                        cuttingBundleId, progressStage, operatorId, operatorName, scanRecordId);
-                if (updated) {
-                    log.info("PC入库工序跟踪更新成功: bundleId={}, stage={}", cuttingBundleId, progressStage);
-                } else {
-                    log.warn("PC入库工序跟踪未找到记录（不阻断入库）: bundleId={}, stage={}", cuttingBundleId, progressStage);
-                }
-            } catch (Exception e) {
-                log.warn("PC入库工序跟踪更新失败（不阻断入库）: bundleId={}, stage={}, msg={}",
-                        cuttingBundleId, progressStage, e.getMessage());
+    private void populateScanRecordFields(ScanRecord sr, ProductionOrder order,
+            ScanRecordFieldBundle fields, String processCode, String progressStage,
+            String processName, String scanType, String remark, int qualifiedQty) {
+        sr.setOrderId(order.getId());
+        sr.setOrderNo(order.getOrderNo());
+        sr.setStyleId(order.getStyleId());
+        sr.setStyleNo(order.getStyleNo());
+        sr.setColor(fields.color);
+        sr.setSize(fields.size);
+        sr.setQuantity(Math.max(0, qualifiedQty));
+        sr.setProcessCode(processCode);
+        sr.setProgressStage(progressStage);
+        sr.setProcessName(processName);
+        sr.setOperatorId(fields.operatorId);
+        sr.setOperatorName(fields.operatorName);
+        sr.setScanType(scanType);
+        sr.setScanResult(SCAN_RESULT_SUCCESS);
+        sr.setRemark(remark);
+        sr.setCuttingBundleId(fields.cuttingBundleId);
+        sr.setCuttingBundleNo(fields.cuttingBundleNo);
+        sr.setCuttingBundleQrCode(fields.cuttingBundleQr);
+    }
+
+    private String insertNewScanRecord(ScanRecordFieldBundle fields, String requestId,
+            ProductionOrder order, String processCode, String progressStage, String processName, String scanType,
+            String successRemark, int qualifiedQty, LocalDateTime t) {
+        ScanRecord sr = new ScanRecord();
+        String scanRecordId = UUID.randomUUID().toString();
+        sr.setId(scanRecordId);
+        sr.setScanCode(fields.scanCode);
+        sr.setRequestId(requestId);
+        sr.setTenantId(order.getTenantId());
+        populateScanRecordFields(sr, order, fields, processCode, progressStage,
+                processName, scanType, successRemark, qualifiedQty);
+        sr.setCreateTime(t);
+        sr.setUpdateTime(t);
+        scanRecordMapper.insert(sr);
+        return scanRecordId;
+    }
+
+    private void patchExistingScanRecord(ScanRecord existing, ScanRecordFieldBundle fields,
+            ProductionOrder order, String processCode, String progressStage, String processName, String scanType,
+            String successRemark, int qualifiedQty, LocalDateTime t) {
+        ScanRecord patch = new ScanRecord();
+        patch.setId(existing.getId());
+        patch.setScanCode(fields.scanCode);
+        populateScanRecordFields(patch, order, fields, processCode, progressStage,
+                processName, scanType, successRemark, qualifiedQty);
+        patch.setUpdateTime(t);
+        scanRecordMapper.updateById(patch);
+    }
+
+    private void syncProcessTrackingAfterWarehousing(String cuttingBundleId, String progressStage,
+            String operatorId, String operatorName, String scanRecordId) {
+        if (!StringUtils.hasText(cuttingBundleId)) return;
+        try {
+            boolean updated = processTrackingOrchestrator.updateScanRecord(
+                    cuttingBundleId, progressStage, operatorId, operatorName, scanRecordId);
+            if (updated) {
+                log.info("PC入库工序跟踪更新成功: bundleId={}, stage={}", cuttingBundleId, progressStage);
+            } else {
+                log.warn("PC入库工序跟踪未找到记录（不阻断入库）: bundleId={}, stage={}", cuttingBundleId, progressStage);
             }
+        } catch (Exception e) {
+            log.warn("PC入库工序跟踪更新失败（不阻断入库）: bundleId={}, stage={}, msg={}",
+                    cuttingBundleId, progressStage, e.getMessage());
         }
     }
 

@@ -156,6 +156,7 @@ public class IntelligenceAdminController {
                 .select(com.fashion.supplychain.style.entity.StyleInfo::getId,
                         com.fashion.supplychain.style.entity.StyleInfo::getTenantId)
                 .isNotNull(com.fashion.supplychain.style.entity.StyleInfo::getTenantId)
+                .last("LIMIT 5000")
                 .list()
                 .forEach(s -> styleIdToTenantId.put(s.getId(), s.getTenantId()));
         if (styleIdToTenantId.isEmpty()) {

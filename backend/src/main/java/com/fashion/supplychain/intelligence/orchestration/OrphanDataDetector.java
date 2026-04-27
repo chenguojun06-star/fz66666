@@ -337,7 +337,8 @@ public class OrphanDataDetector {
     private long countFactoryShipments(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
         return factoryShipmentService.lambdaQuery().in(FactoryShipment::getOrderId, deadIds)
-                .eq(tenantId != null, FactoryShipment::getTenantId, tenantId).count();
+                .eq(tenantId != null, FactoryShipment::getTenantId, tenantId)
+                .eq(FactoryShipment::getDeleteFlag, 0).count();
     }
     private long countCuttingTasks(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
@@ -453,6 +454,7 @@ public class OrphanDataDetector {
     private List<OrphanDataItemDTO> listFactoryShipments(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return factoryShipmentService.lambdaQuery().in(FactoryShipment::getOrderId, deadIds)
                 .eq(tenantId != null, FactoryShipment::getTenantId, tenantId)
+                .eq(FactoryShipment::getDeleteFlag, 0)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(s -> {
                     OrphanDataItemDTO d = new OrphanDataItemDTO();
                     d.setId(s.getId()); d.setTableName("t_factory_shipment"); d.setTableLabel("工厂发货"); d.setModule("生产管理");

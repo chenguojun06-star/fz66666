@@ -435,7 +435,7 @@ public class SystemOperationLogAspect {
             if (v == null) return null;
             String s = String.valueOf(v).trim();
             return (s.isEmpty() || "null".equals(s)) ? null : s;
-        } catch (Exception ignored) { return null; }
+        } catch (Exception ignored) { log.debug("[OpLog] reflStr反射失败: getter={}", getter); return null; }
     }
 
     private String resolveOperator() {
@@ -773,6 +773,7 @@ public class SystemOperationLogAspect {
             }
             return OBJECT_MAPPER.writeValueAsString(detailMap);
         } catch (Exception ignored) {
+            log.debug("[OpLog] serializeDetails序列化失败");
             return null;
         }
     }

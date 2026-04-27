@@ -183,6 +183,7 @@ public class MonthlyBizSummaryOrchestrator {
         cqw.eq("tenant_id", tenantId);
         if (StringUtils.hasText(factoryId)) cqw.eq("factory_id", factoryId);
         cqw.eq("scan_result", "success").isNotNull("scan_cost")
+           .ne("scan_type", "orchestration")
            .ge("scan_time", start).lt("scan_time", end).select("scan_cost");
         BigDecimal laborCost = scanRecordService.list(cqw).stream()
             .map(ScanRecord::getScanCost).filter(Objects::nonNull)
@@ -224,7 +225,8 @@ public class MonthlyBizSummaryOrchestrator {
         if (StringUtils.hasText(factoryId)) qw.eq("factory_id", factoryId);
         if (type != null) qw.eq("scan_type", type);
         if (result != null) qw.eq("scan_result", result);
-        qw.ge("scan_time", start).lt("scan_time", end).select("quantity");
+        qw.ne("scan_type", "orchestration")
+          .ge("scan_time", start).lt("scan_time", end).select("quantity");
         return scanRecordService.list(qw).stream()
             .mapToLong(r -> r.getQuantity() == null ? 0 : r.getQuantity()).sum();
     }

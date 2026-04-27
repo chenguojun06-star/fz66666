@@ -91,7 +91,7 @@ public class HighRiskAuditService extends ServiceImpl<HighRiskAuditLogMapper, Hi
             Long tenantId = UserContext.tenantId();
             LambdaUpdateWrapper<HighRiskAuditLog> w = new LambdaUpdateWrapper<>();
             w.eq(HighRiskAuditLog::getId, auditId)
-                    .eq(tenantId != null, HighRiskAuditLog::getTenantId, tenantId)
+                    .eq(HighRiskAuditLog::getTenantId, tenantId)
                     .set(HighRiskAuditLog::getStatus, "APPROVED")
                     .set(HighRiskAuditLog::getDecidedAt, LocalDateTime.now());
             update(w);
@@ -109,7 +109,7 @@ public class HighRiskAuditService extends ServiceImpl<HighRiskAuditLogMapper, Hi
             Long tenantId = UserContext.tenantId();
             LambdaUpdateWrapper<HighRiskAuditLog> w = new LambdaUpdateWrapper<>();
             w.eq(HighRiskAuditLog::getId, auditId)
-                    .eq(tenantId != null, HighRiskAuditLog::getTenantId, tenantId)
+                    .eq(HighRiskAuditLog::getTenantId, tenantId)
                     .set(HighRiskAuditLog::getStatus, "EXECUTED")
                     .set(HighRiskAuditLog::getExecutedAt, LocalDateTime.now())
                     .set(HighRiskAuditLog::getElapsedMs, elapsedMs)

@@ -336,6 +336,21 @@ public class SystemTableMigrator {
 
     private void seedDefaultAuthData() {
         JdbcTemplate jdbc = dbHelper.getJdbcTemplate();
+        seedDefaultRoles(jdbc);
+        Long basicId = ensurePermission("样衣管理", "MENU_BASIC", 0L, null, "menu", null, null, 10);
+        Long productionId = ensurePermission("生产管理", "MENU_PRODUCTION", 0L, null, "menu", null, null, 20);
+        Long financeId = ensurePermission("财务管理", "MENU_FINANCE", 0L, null, "menu", null, null, 30);
+        Long systemId = ensurePermission("系统设置", "MENU_SYSTEM", 0L, null, "menu", null, null, 40);
+        seedMenuPermissions(basicId, productionId, financeId, systemId);
+        seedButtonPermissions();
+        try {
+            jdbc.update("INSERT IGNORE INTO t_role_permission (role_id, permission_id) SELECT 1, id FROM t_permission");
+        } catch (Exception e) {
+            log.warn("Failed to seed role permissions: err={}", e.getMessage());
+        }
+    }
+
+    private void seedDefaultRoles(JdbcTemplate jdbc) {
         try {
             jdbc.update("INSERT IGNORE INTO t_role (id, role_name, role_code, description, status) VALUES (?,?,?,?,?)", 1L, "系统管理员", "admin", "系统管理员", "active");
             jdbc.update("INSERT IGNORE INTO t_role (id, role_name, role_code, description, status) VALUES (?,?,?,?,?)", 2L, "财务人员", "finance", "财务人员", "active");
@@ -344,18 +359,18 @@ public class SystemTableMigrator {
         } catch (Exception e) {
             log.warn("Failed to seed default roles: err={}", e.getMessage());
         }
+    }
 
+    private void seedMenuPermissions(Long basicId, Long productionId, Long financeId, Long systemId) {
         ensurePermission("仪表盘", "MENU_DASHBOARD", 0L, null, "menu", "/dashboard", null, 0);
-        Long basicId = ensurePermission("样衣管理", "MENU_BASIC", 0L, null, "menu", null, null, 10);
-        Long productionId = ensurePermission("生产管理", "MENU_PRODUCTION", 0L, null, "menu", null, null, 20);
-        Long financeId = ensurePermission("财务管理", "MENU_FINANCE", 0L, null, "menu", null, null, 30);
-        Long systemId = ensurePermission("系统设置", "MENU_SYSTEM", 0L, null, "menu", null, null, 40);
 
         if (basicId != null) {
             ensurePermission("款号资料", "MENU_STYLE_INFO", basicId, "基础资料", "menu", "/style-info", null, 11);
             ensurePermission("下单管理", "MENU_ORDER_MANAGEMENT", basicId, "基础资料", "menu", "/order-management", null, 12);
             ensurePermission("资料中心", "MENU_DATA_CENTER", basicId, "基础资料", "menu", "/data-center", null, 13);
             ensurePermission("模板中心", "MENU_TEMPLATE_CENTER", basicId, "基础资料", "menu", "/basic/template-center", null, 14);
+            ensurePermission("样衣生产", "MENU_PATTERN_PRODUCTION", basicId, "样衣管理", "menu", "/pattern-production", null, 15);
+            ensurePermission("样衣修订", "MENU_PATTERN_REVISION", basicId, "样衣管理", "menu", "/basic/pattern-revision", null, 16);
         }
         if (productionId != null) {
             ensurePermission("我的订单", "MENU_PRODUCTION_LIST", productionId, "生产管理", "menu", "/production", null, 21);
@@ -403,12 +418,9 @@ public class SystemTableMigrator {
             ensurePermission("系统教学", "MENU_TUTORIAL", systemId, "系统设置", "menu", "/system/tutorial", null, 48);
             ensurePermission("数据导入", "MENU_DATA_IMPORT", systemId, "系统设置", "menu", "/system/data-import", null, 49);
         }
-        if (basicId != null) {
-            ensurePermission("样衣生产", "MENU_PATTERN_PRODUCTION", basicId, "样衣管理", "menu", "/pattern-production", null, 15);
-            ensurePermission("样衣修订", "MENU_PATTERN_REVISION", basicId, "样衣管理", "menu", "/basic/pattern-revision", null, 16);
-        }
+    }
 
-        // 功能按钮权限
+    private void seedButtonPermissions() {
         ensurePermission("新增款号", "STYLE_CREATE", null, null, "button", null, null, 100);
         ensurePermission("编辑款号", "STYLE_EDIT", null, null, "button", null, null, 101);
         ensurePermission("删除款号", "STYLE_DELETE", null, null, "button", null, null, 102);
@@ -465,12 +477,6 @@ public class SystemTableMigrator {
         ensurePermission("数据导出", "DATA_EXPORT", null, null, "button", null, null, 221);
         ensurePermission("上传模板", "TEMPLATE_UPLOAD", null, null, "button", null, null, 230);
         ensurePermission("删除模板", "TEMPLATE_DELETE", null, null, "button", null, null, 231);
-
-        try {
-            jdbc.update("INSERT IGNORE INTO t_role_permission (role_id, permission_id) SELECT 1, id FROM t_permission");
-        } catch (Exception e) {
-            log.warn("Failed to seed role permissions: err={}", e.getMessage());
-        }
     }
 
     private Long ensurePermission(String name, String code, Long parentId, String parentName, String type, String path, String component, int sort) {

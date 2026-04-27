@@ -158,6 +158,13 @@ public class QualityScanExecutor {
             log.warn("质检后进度异步重新计算失败: orderId={}", order.getId(), e);
         }
 
+        broadcastQualityScanSuccess(operatorId, operatorName, order, bundle, qty);
+
+        return result;
+    }
+
+    private void broadcastQualityScanSuccess(String operatorId, String operatorName,
+                                              ProductionOrder order, CuttingBundle bundle, int qty) {
         try {
             if (webSocketService != null) {
                 String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
@@ -165,15 +172,13 @@ public class QualityScanExecutor {
                 String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
                 String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
                 String opName = operatorName != null ? operatorName : "";
-                webSocketService.notifyQualityChecked(operatorId, orderNo, "质检", qty != null ? qty : 0, 0, opName, bNo, bColor, bSize);
+                webSocketService.notifyQualityChecked(operatorId, orderNo, "质检", qty, 0, opName, bNo, bColor, bSize);
                 webSocketService.notifyOrderProgressChanged(operatorId, orderNo, qty, "质检");
                 webSocketService.notifyDataChanged(operatorId, "ScanRecord", null, "create");
             }
         } catch (Exception wsEx) {
             log.warn("[QualityScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
         }
-
-        return result;
     }
 
     /**
@@ -273,27 +278,14 @@ public class QualityScanExecutor {
 
         String qualityResult = parseQualityResultFromParams(params);
         boolean isUnqualified = "unqualified".equalsIgnoreCase(qualityResult);
-
-        // 更新已有记录，写 confirmTime
-        existed.setConfirmTime(LocalDateTime.now());
-        // 将质检结果存入 remark；不合格时格式：unqualified|[category]|[remark]|defectQty=N
-        String defectCategory = TextUtils.safeText(params.get("defectCategory"));
-        String defectRemark = TextUtils.safeText(params.get("defectRemark"));
         Integer defectQtyParam = NumberUtils.toInt(params.get("defectQuantity"));
         int defectQty = (defectQtyParam != null && defectQtyParam > 0) ? defectQtyParam : 0;
         if (defectQty == 0 && isUnqualified) {
             defectQty = qty;
         }
-        if (isUnqualified) {
-            String remarkBase = hasText(defectCategory)
-                    ? "unqualified|" + defectCategory
-                      + (hasText(defectRemark) ? "|" + defectRemark : "")
-                      + "|defectQty=" + defectQty
-                    : "unqualified|defectQty=" + defectQty;
-            existed.setRemark(remarkBase);
-        } else {
-            existed.setRemark(qualityResult);
-        }
+
+        existed.setConfirmTime(LocalDateTime.now());
+        existed.setRemark(buildDefectRemark(params, qualityResult, isUnqualified, defectQty));
 
         try {
             scanRecordService.updateById(existed);
@@ -304,36 +296,52 @@ public class QualityScanExecutor {
             throw new IllegalStateException("质检确认记录更新失败，请重试: bundleId=" + bundle.getId(), e);
         }
 
-        // ★ 次品处理：根据处理方式（返修/报废）创建不同类型的记录
-        //   返修 → quality_scan 记录（repairPool），后续走"次品入库"→重新质检
-        //   报废 → quality_scan_scrap 记录，不建返修池，不流回待质检
-        boolean isScrap = "报废".equals(defectRemark);
+        boolean isScrap = "报废".equals(TextUtils.safeText(params.get("defectRemark")));
         if (isUnqualified) {
-            int dq = defectQty;
             if (isScrap) {
-                createScrapRecord(order, bundle, dq, operatorId, operatorName);
+                createScrapRecord(order, bundle, defectQty, operatorId, operatorName);
             } else {
-                createQualityScanRecord(order, bundle, dq, operatorId, operatorName);
-                // ★ 质检不合格时推送通知给扫码记录人（触发次品入库）
-                notifyDefectiveQuality(order, bundle, dq, operatorName, defectCategory);
+                createQualityScanRecord(order, bundle, defectQty, operatorId, operatorName);
+                notifyDefectiveQuality(order, bundle, defectQty, operatorName,
+                        TextUtils.safeText(params.get("defectCategory")));
             }
         } else {
-            // ★ 合格时也创建 ProductWarehousing 记录，使 PC 端质检入库页面能看到小程序的合格质检结果
             createQualifiedScanRecord(order, bundle, qty, operatorId, operatorName);
         }
 
-        // 更新工序跟踪记录：质检验收时将 tracking 表中对应子工序状态置为已扫码
-        // tracking 表按子工序名（如"质检"）初始化，processName 来自小程序传入参数
+        updateQualityProcessTracking(params, bundle, operatorId, operatorName, existed.getId());
+
+        return buildConfirmResult(existed, order, bundle, isUnqualified, isScrap, operatorId, operatorName, qty);
+    }
+
+    private String buildDefectRemark(Map<String, Object> params, String qualityResult,
+                                      boolean isUnqualified, int defectQty) {
+        if (!isUnqualified) return qualityResult;
+        String defectCategory = TextUtils.safeText(params.get("defectCategory"));
+        String defectRemark = TextUtils.safeText(params.get("defectRemark"));
+        return hasText(defectCategory)
+                ? "unqualified|" + defectCategory
+                  + (hasText(defectRemark) ? "|" + defectRemark : "")
+                  + "|defectQty=" + defectQty
+                : "unqualified|defectQty=" + defectQty;
+    }
+
+    private void updateQualityProcessTracking(Map<String, Object> params, CuttingBundle bundle,
+                                               String operatorId, String operatorName, String recordId) {
         try {
             String processName = TextUtils.safeText(params.get("processName"));
             if (!hasText(processName)) processName = "质检";
             processTrackingOrchestrator.updateScanRecord(
-                bundle.getId(), processName, operatorId, operatorName, existed.getId());
-            log.debug("质检工序跟踪已更新: bundleId={}, processName={}", bundle.getId(), processName);
+                bundle.getId(), processName, operatorId, operatorName, recordId);
         } catch (Exception e) {
             log.warn("质检工序跟踪更新失败（不影响主流程）: bundleId={}", bundle.getId(), e);
         }
+    }
 
+    private Map<String, Object> buildConfirmResult(ScanRecord existed, ProductionOrder order,
+                                                     CuttingBundle bundle, boolean isUnqualified,
+                                                     boolean isScrap, String operatorId,
+                                                     String operatorName, int qty) {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("message", isUnqualified
@@ -344,7 +352,6 @@ public class QualityScanExecutor {
         result.put("cuttingBundle", bundle);
         result.put("nextScanType", "warehouse");
         result.put("nextStageHint", "下一环节: warehouse");
-
         broadcastProcessStage(isUnqualified ? "质检不合格" : "质检合格",
                 order, bundle, operatorId, operatorName, qty, true);
         return result;
@@ -423,95 +430,71 @@ public class QualityScanExecutor {
         String orderId = order.getId();
         String bundleId = bundle.getId();
         try {
-            // 1. 从工序模板获取车缝父节点下的所有子工序
-            String styleNo = order.getStyleNo();
-            List<String> sewingSubProcesses = resolveSewingSubProcesses(styleNo);
+            List<String> sewingSubProcesses = resolveSewingSubProcesses(order.getStyleNo());
 
             if (sewingSubProcesses.isEmpty()) {
-                // 模板未配置或无车缝子工序，降级为至少有1条生产记录
-                long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                        .eq(ScanRecord::getOrderId, orderId)
-                        .eq(ScanRecord::getCuttingBundleId, bundleId)
-                        .eq(ScanRecord::getScanType, "production")
-                        .eq(ScanRecord::getScanResult, "success")
-                        .isNotNull(ScanRecord::getOperatorId));
-                if (productionCount <= 0) {
-                    throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成所有生产工序（车缝/尾部）后再进行质检");
-                }
-                // 校验车缝子工序是否都完成（目标"尾部" → 检查上一个父节点"车缝"的子工序）
-                // 注意：不能传"入库"，否则会检查"尾部"的子工序——质检本身就在"尾部"下，形成循环依赖
+                validateAtLeastOneProductionRecord(orderId, bundleId);
                 stageSupport.validateParentStagePrerequisite(order, bundle, "尾部", null);
                 return;
             }
 
-            // 2. 检查每个车缝子工序是否都有扫码记录归属人
-            List<String> missingProcesses = new ArrayList<>();
-            QueryWrapper<ScanRecord> qwCode = new QueryWrapper<ScanRecord>()
-                    .select("DISTINCT process_code")
-                    .eq("order_id", orderId)
-                    .eq("cutting_bundle_id", bundleId)
-                    .eq("scan_type", "production")
-                    .eq("scan_result", "success")
-                    .isNotNull("process_code");
-            java.util.Set<String> completedSet = new java.util.HashSet<>();
-            List<Map<String, Object>> codeRows = scanRecordService.listMaps(qwCode);
-            if (codeRows != null) {
-                for (Map<String, Object> row : codeRows) {
-                    Object val = row.get("process_code");
-                    if (val != null) completedSet.add(val.toString().trim());
-                }
-            }
-            QueryWrapper<ScanRecord> qwName = new QueryWrapper<ScanRecord>()
-                    .select("DISTINCT process_name")
-                    .eq("order_id", orderId)
-                    .eq("cutting_bundle_id", bundleId)
-                    .eq("scan_type", "production")
-                    .eq("scan_result", "success")
-                    .isNotNull("process_name");
-            List<Map<String, Object>> nameRows = scanRecordService.listMaps(qwName);
-            if (nameRows != null) {
-                for (Map<String, Object> row : nameRows) {
-                    Object val = row.get("process_name");
-                    if (val != null) completedSet.add(val.toString().trim());
-                }
-            }
-            QueryWrapper<ScanRecord> qwStage = new QueryWrapper<ScanRecord>()
-                    .select("DISTINCT progress_stage")
-                    .eq("order_id", orderId)
-                    .eq("cutting_bundle_id", bundleId)
-                    .eq("scan_type", "production")
-                    .eq("scan_result", "success")
-                    .isNotNull("progress_stage");
-            List<Map<String, Object>> stageRows = scanRecordService.listMaps(qwStage);
-            if (stageRows != null) {
-                for (Map<String, Object> row : stageRows) {
-                    Object val = row.get("progress_stage");
-                    if (val != null) completedSet.add(val.toString().trim());
-                }
-            }
-            for (String processName : sewingSubProcesses) {
-                if (!completedSet.contains(processName)) {
-                    missingProcesses.add(processName);
-                }
-            }
-
-            if (!missingProcesses.isEmpty()) {
-                throw new IllegalStateException(
-                        "温馨提示：车缝工序还未全部完成哦～以下子工序还需要扫码：" + String.join("、", missingProcesses)
-                                + "。完成这些工序后就可以进行质检啦！（尾部工序也需全部完成）");
-            }
-
-            // 3. 车缝子工序全部完成校验（基于模板配置）
-            // 质检属于"尾部"下的子工序，传"尾部"作为目标 → 检查上一个父节点"车缝"是否全部完成
-            // 注意：不能传"入库"，否则会检查"尾部"的子工序——质检本身就在"尾部"下，形成循环依赖
+            assertAllSewingSubProcessesCompleted(orderId, bundleId, sewingSubProcesses);
             stageSupport.validateParentStagePrerequisite(order, bundle, "尾部", null);
 
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
             log.warn("检查质检前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
-            // 查询异常时不阻断业务，仅记录日志
         }
+    }
+
+    private void validateAtLeastOneProductionRecord(String orderId, String bundleId) {
+        long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                .eq(ScanRecord::getOrderId, orderId)
+                .eq(ScanRecord::getCuttingBundleId, bundleId)
+                .eq(ScanRecord::getScanType, "production")
+                .eq(ScanRecord::getScanResult, "success")
+                .isNotNull(ScanRecord::getOperatorId));
+        if (productionCount <= 0) {
+            throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成所有生产工序（车缝/尾部）后再进行质检");
+        }
+    }
+
+    private void assertAllSewingSubProcessesCompleted(String orderId, String bundleId, List<String> sewingSubProcesses) {
+        java.util.Set<String> completedSet = collectCompletedProcessSet(orderId, bundleId);
+        List<String> missingProcesses = new ArrayList<>();
+        for (String processName : sewingSubProcesses) {
+            if (!completedSet.contains(processName)) {
+                missingProcesses.add(processName);
+            }
+        }
+        if (!missingProcesses.isEmpty()) {
+            throw new IllegalStateException(
+                    "温馨提示：车缝工序还未全部完成哦～以下子工序还需要扫码：" + String.join("、", missingProcesses)
+                            + "。完成这些工序后就可以进行质检啦！（尾部工序也需全部完成）");
+        }
+    }
+
+    private java.util.Set<String> collectCompletedProcessSet(String orderId, String bundleId) {
+        java.util.Set<String> completedSet = new java.util.HashSet<>();
+        String[] selectFields = {"process_code", "process_name", "progress_stage"};
+        for (String field : selectFields) {
+            QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                    .select("DISTINCT " + field)
+                    .eq("order_id", orderId)
+                    .eq("cutting_bundle_id", bundleId)
+                    .eq("scan_type", "production")
+                    .eq("scan_result", "success")
+                    .isNotNull(field);
+            List<Map<String, Object>> rows = scanRecordService.listMaps(qw);
+            if (rows != null) {
+                for (Map<String, Object> row : rows) {
+                    Object val = row.get(field);
+                    if (val != null) completedSet.add(val.toString().trim());
+                }
+            }
+        }
+        return completedSet;
     }
 
     /**
@@ -563,6 +546,7 @@ public class QualityScanExecutor {
                     .orderByDesc(ScanRecord::getScanTime)
                     .last("limit 1"));
         } catch (Exception e) {
+            log.warn("[QualityScan] 查找质检阶段记录失败: orderId={}, bundleId={}, processCode={}", orderId, bundleId, processCode, e);
             return null;
         }
     }
@@ -780,76 +764,9 @@ public class QualityScanExecutor {
     private void createScrapRecord(ProductionOrder order, CuttingBundle bundle,
                                    int defectQty, String operatorId, String operatorName) {
         try {
-            // ★ 第一步：把该菲号所有旧 quality_scan 转为 quality_scan_scrap（历史兼容 + 用户改选）
-            try {
-                boolean converted = productWarehousingService.update(
-                        null,
-                        new LambdaUpdateWrapper<ProductWarehousing>()
-                                .eq(ProductWarehousing::getOrderId, order.getId())
-                                .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
-                                .eq(ProductWarehousing::getWarehousingType, "quality_scan")
-                                .eq(ProductWarehousing::getDeleteFlag, 0)
-                                .set(ProductWarehousing::getWarehousingType, "quality_scan_scrap")
-                                .set(ProductWarehousing::getQualityStatus, "scrapped")
-                                .set(ProductWarehousing::getWarehouse, "报废")
-                                .set(ProductWarehousing::getUpdateTime, LocalDateTime.now()));
-                if (converted) {
-                    log.info("[QualityScan] 已将旧quality_scan转为scrap: orderId={}, bundleId={}",
-                            order.getId(), bundle.getId());
-                }
-            } catch (Exception e) {
-                log.warn("[QualityScan] 转换旧quality_scan记录失败（继续创建新记录）: orderId={}, bundleId={}",
-                        order.getId(), bundle.getId(), e);
-            }
-
-            // ★ 第二步：幂等创建 scrap 记录
-            long scrapCount = productWarehousingService.count(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                            .eq(ProductWarehousing::getOrderId, order.getId())
-                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
-                            .eq(ProductWarehousing::getWarehousingType, "quality_scan_scrap")
-                            .eq(ProductWarehousing::getDeleteFlag, 0));
-            if (scrapCount > 0) {
-                log.info("[QualityScan] quality_scan_scrap 记录已存在（含转换），跳过新建: orderId={}, bundleId={}",
-                        order.getId(), bundle.getId());
-            } else {
-                LocalDateTime now = LocalDateTime.now();
-                ProductWarehousing w = new ProductWarehousing();
-                w.setOrderId(order.getId());
-                w.setOrderNo(order.getOrderNo());
-                w.setStyleId(order.getStyleId());
-                w.setStyleNo(order.getStyleNo());
-                w.setStyleName(order.getStyleName());
-                w.setWarehousingType("quality_scan_scrap");
-                w.setWarehouse("报废");
-                w.setWarehousingQuantity(0);
-                w.setQualifiedQuantity(0);
-                w.setUnqualifiedQuantity(defectQty);
-                w.setQualityStatus("scrapped");
-                w.setCuttingBundleId(bundle.getId());
-                w.setCuttingBundleNo(bundle.getBundleNo());
-                w.setCuttingBundleQrCode(bundle.getQrCode());
-                w.setTenantId(order.getTenantId());
-                String existingWhNo = productWarehousingService.findExistingWarehousingNoByOrderId(order.getId());
-                w.setWarehousingNo(hasText(existingWhNo) ? existingWhNo : productWarehousingService.buildWarehousingNo(now));
-                if (hasText(operatorId)) {
-                    w.setQualityOperatorId(operatorId);
-                }
-                if (hasText(operatorName)) {
-                    w.setQualityOperatorName(operatorName);
-                }
-                w.setCreateTime(now);
-                w.setUpdateTime(now);
-                w.setDeleteFlag(0);
-
-                productWarehousingService.save(w);
-                log.info("[QualityScan] 已创建报废记录: orderId={}, bundleId={}, scrapQty={}, warehousingNo={}",
-                        order.getId(), bundle.getId(), defectQty, w.getWarehousingNo());
-            }
-
-            // ★ 第三步：更新菲号状态（解除/保持入库阻止）
+            convertOldQualityScanToScrap(order, bundle);
+            createNewScrapWarehousing(order, bundle, defectQty, operatorId, operatorName);
             syncBundleStatusAfterQualityScan(order.getId(), bundle);
-
         } catch (org.springframework.dao.DuplicateKeyException dke) {
             log.info("[QualityScan] quality_scan_scrap 记录重复（幂等）: orderId={}, bundleId={}",
                     order.getId(), bundle.getId());
@@ -857,6 +774,71 @@ public class QualityScanExecutor {
             log.warn("[QualityScan] 创建报废记录失败（不阻断主流程）: orderId={}, bundleId={}, error={}",
                     order.getId(), bundle.getId(), e.getMessage(), e);
         }
+    }
+
+    private void convertOldQualityScanToScrap(ProductionOrder order, CuttingBundle bundle) {
+        try {
+            boolean converted = productWarehousingService.update(
+                    null,
+                    new LambdaUpdateWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, order.getId())
+                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                            .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .set(ProductWarehousing::getWarehousingType, "quality_scan_scrap")
+                            .set(ProductWarehousing::getQualityStatus, "scrapped")
+                            .set(ProductWarehousing::getWarehouse, "报废")
+                            .set(ProductWarehousing::getUpdateTime, LocalDateTime.now()));
+            if (converted) {
+                log.info("[QualityScan] 已将旧quality_scan转为scrap: orderId={}, bundleId={}",
+                        order.getId(), bundle.getId());
+            }
+        } catch (Exception e) {
+            log.warn("[QualityScan] 转换旧quality_scan记录失败（继续创建新记录）: orderId={}, bundleId={}",
+                    order.getId(), bundle.getId(), e);
+        }
+    }
+
+    private void createNewScrapWarehousing(ProductionOrder order, CuttingBundle bundle,
+                                            int defectQty, String operatorId, String operatorName) {
+        long scrapCount = productWarehousingService.count(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getOrderId, order.getId())
+                        .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                        .eq(ProductWarehousing::getWarehousingType, "quality_scan_scrap")
+                        .eq(ProductWarehousing::getDeleteFlag, 0));
+        if (scrapCount > 0) {
+            log.info("[QualityScan] quality_scan_scrap 记录已存在（含转换），跳过新建: orderId={}, bundleId={}",
+                    order.getId(), bundle.getId());
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        ProductWarehousing w = new ProductWarehousing();
+        w.setOrderId(order.getId());
+        w.setOrderNo(order.getOrderNo());
+        w.setStyleId(order.getStyleId());
+        w.setStyleNo(order.getStyleNo());
+        w.setStyleName(order.getStyleName());
+        w.setWarehousingType("quality_scan_scrap");
+        w.setWarehouse("报废");
+        w.setWarehousingQuantity(0);
+        w.setQualifiedQuantity(0);
+        w.setUnqualifiedQuantity(defectQty);
+        w.setQualityStatus("scrapped");
+        w.setCuttingBundleId(bundle.getId());
+        w.setCuttingBundleNo(bundle.getBundleNo());
+        w.setCuttingBundleQrCode(bundle.getQrCode());
+        w.setTenantId(order.getTenantId());
+        String existingWhNo = productWarehousingService.findExistingWarehousingNoByOrderId(order.getId());
+        w.setWarehousingNo(hasText(existingWhNo) ? existingWhNo : productWarehousingService.buildWarehousingNo(now));
+        if (hasText(operatorId)) w.setQualityOperatorId(operatorId);
+        if (hasText(operatorName)) w.setQualityOperatorName(operatorName);
+        w.setCreateTime(now);
+        w.setUpdateTime(now);
+        w.setDeleteFlag(0);
+        productWarehousingService.save(w);
+        log.info("[QualityScan] 已创建报废记录: orderId={}, bundleId={}, scrapQty={}, warehousingNo={}",
+                order.getId(), bundle.getId(), defectQty, w.getWarehousingNo());
     }
 
     /**

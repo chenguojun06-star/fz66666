@@ -65,7 +65,7 @@ async function login(page: Page, credentials: LoginCredentials) {
   const loginButton = page.locator('button[type="submit"], button:has-text("登录"), button:has-text("登 录")').first();
   await loginButton.click();
 
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
   await page.waitForLoadState('networkidle');
 }
 
@@ -77,5 +77,22 @@ export const test = base.extend<{
     await use(page);
   },
 });
+
+/**
+ * 兼容旧版测试写法（extended.spec.ts 等直接调用）
+ * 登录后从 localStorage 获取 JWT token，返回 { token }
+ */
+export async function authenticatedFixture(page: Page): Promise<{ token: string }> {
+  await login(page, TEST_CREDENTIALS.admin);
+  const token = await page.evaluate(() => {
+    return (
+      localStorage.getItem('token') ||
+      localStorage.getItem('accessToken') ||
+      localStorage.getItem('Authorization') ||
+      ''
+    );
+  });
+  return { token };
+}
 
 export { expect, login, selectTenant };

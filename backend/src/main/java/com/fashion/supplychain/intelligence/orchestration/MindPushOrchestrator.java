@@ -276,6 +276,7 @@ public class MindPushOrchestrator {
         List<ProductionOrder> orders = productionOrderService.list(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
+                .eq("delete_flag", 0)
                 .in("status", "production", "pending")
                 .isNotNull("expected_ship_date")
         );
@@ -301,6 +302,7 @@ public class MindPushOrchestrator {
         List<ProductionOrder> orders = productionOrderService.list(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
+                .eq("delete_flag", 0)
                 .eq("status", "production")
         );
         LocalDateTime cutoff = LocalDateTime.now().minusDays(3);
@@ -311,6 +313,7 @@ public class MindPushOrchestrator {
                     .eq("order_id", o.getId())
                     .ge("scan_time", cutoff)
                     .eq("scan_result", "success")
+                    .ne("scan_type", "orchestration")
             );
             if (scanCount == 0) {
                 String title = "⏸️ 生产停滞：" + o.getOrderNo();
@@ -330,6 +333,7 @@ public class MindPushOrchestrator {
         List<ProductionOrder> orders = productionOrderService.list(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
+                .eq("delete_flag", 0)
                 .in("status", "pending", "production")
                 .eq("procurement_manually_completed", 0)
         );
@@ -352,6 +356,7 @@ public class MindPushOrchestrator {
         long completedCount = productionOrderService.count(
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
+                .eq("delete_flag", 0)
                 .in("status", "completed", "production")
                 .gt("completed_quantity", 0)
         );

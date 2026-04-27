@@ -106,7 +106,7 @@ public class SystemStatusController {
      */
     @GetMapping("/tenant-user-stats")
     public Result<?> tenantUserStats() {
-        List<Tenant> tenants = tenantService.list();
+        List<Tenant> tenants = tenantService.list(new LambdaQueryWrapper<Tenant>().last("LIMIT 500"));
         List<Map<String, Object>> result = new ArrayList<>();
         long totalUsers = 0;
 
