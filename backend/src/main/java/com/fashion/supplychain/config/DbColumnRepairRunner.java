@@ -35,17 +35,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             int repaired = 0;
             int repairedTables = 0;
 
-            for (Map.Entry<String, List<String[]>> entry : DbColumnDefinitions.COLUMN_FIXES.entrySet()) {
-                String table = entry.getKey();
-                List<String[]> columns = entry.getValue();
-                Set<String> existingColumns = getExistingColumns(conn, schema, table);
-                for (String[] col : columns) {
-                    if (!existingColumns.contains(col[0])) {
-                        repaired += addColumn(conn, table, col[0], col[1]);
-                    }
-                }
-            }
-
+            // 2026-04-28：必须先建表再补列，避免列修复时表不存在导致 ALTER 失败 silently
             for (Map.Entry<String, String> entry : DbTableDefinitions.TABLE_FIXES.entrySet()) {
                 if (!tableExists(conn, schema, entry.getKey())) {
                     try (Statement stmt = conn.createStatement()) {
@@ -53,6 +43,26 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     }
                     log.warn("[DbRepair] 已创建缺失表: {}", entry.getKey());
                     repairedTables++;
+                }
+            }
+
+            for (Map.Entry<String, List<String[]>> entry : DbColumnDefinitions.COLUMN_FIXES.entrySet()) {
+                String table = entry.getKey();
+                List<String[]> columns = entry.getValue();
+                Set<String> existingColumns = getExistingColumns(conn, schema, table);
+                if (existingColumns.isEmpty()) {
+                    // 表不存在（既不在 TABLE_FIXES 中，也未由 Flyway 创建），跳过列修复以免产生大量噪音错误日志
+                    continue;
+                }
+                for (String[] col : columns) {
+                    if (!existingColumns.contains(col[0])) {
+                        repaired += addColumn(conn, table, col[0], col[1]);
+                    }
+                }
+                for (String[] col : columns) {
+                    if (!existingColumns.contains(col[0])) {
+                        repaired += addColumn(conn, table, col[0], col[1]);
+                    }
                 }
             }
 
