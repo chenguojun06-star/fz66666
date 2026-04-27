@@ -1,26 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Input, Select, Tag, App, Popover, Checkbox, Segmented } from 'antd';
+import { Tag, App } from 'antd';
 
-import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 
-import StandardSearchBar from '@/components/common/StandardSearchBar';
 import PageLayout from '@/components/common/PageLayout';
-import QuickEditModal from '@/components/common/QuickEditModal';
-import StylePrintModal from '@/components/common/StylePrintModal';
-import RejectReasonModal from '@/components/common/RejectReasonModal';
-import SmallModal from '@/components/common/SmallModal';
-import LabelPrintModal from './components/LabelPrintModal';
-import SubProcessRemapModal from './components/SubProcessRemapModal';
-import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
-import { ProductionOrder, ProductionQueryParams } from '@/types/production';
-import { useCustomerOptions } from '@/hooks/useCustomerOptions';
+import { ProductionOrder } from '@/types/production';
 import {
-  parseProductionOrderLines,
   isOrderFrozenByStatus,
 } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
@@ -30,7 +19,6 @@ import UniversalCardView from '@/components/common/UniversalCardView';
 import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
-import ExportButton from '@/components/common/ExportButton';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -38,8 +26,6 @@ import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useModal } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
-import ProcessDetailModal from '@/components/production/ProcessDetailModal';
-import NodeDetailModal from '@/components/common/NodeDetailModal';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import {
   useColumnSettings,
@@ -55,32 +41,10 @@ import {
   useAnomalyDetection,
 } from './hooks';
 import { useProductionListData } from './hooks/useProductionListData';
-import { safeString } from './utils';
-import TransferOrderModal from './TransferOrderModal';
 import AnomalyBanner from './AnomalyBanner';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-
-const CustomerFilterSelect: React.FC<{
-  value: string;
-  onChange: (value: string) => void;
-}> = ({ value, onChange }) => {
-  const { customers } = useCustomerOptions();
-  return (
-    <Select
-      value={value || ''}
-      onChange={onChange}
-      placeholder="客户"
-      allowClear
-      showSearch
-      optionFilterProp="label"
-      style={{ minWidth: 130 }}
-      options={[
-        { label: '全部客户', value: '' },
-        ...customers.map((c) => ({ label: c.companyName, value: c.id })),
-      ]}
-    />
-  );
-};
+import ProductionModals from './components/ProductionModals';
+import ProductionFilterBar from './components/ProductionFilterBar';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -276,122 +240,11 @@ const ProductionList: React.FC = () => {
             onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
           />
           </>}
-          filterLeft={
-            <>
-                  <StandardSearchBar
-                    searchValue={queryParams.keyword || ''}
-                    onSearchChange={(value) => setQueryParams({ ...queryParams, keyword: value, page: 1 })}
-                    searchPlaceholder="搜索订单号/款号/加工厂"
-                    dateValue={dateRange}
-                    onDateChange={setDateRange}
-                    statusValue={queryParams.status || ''}
-                    onStatusChange={(value) => setQueryParams({ ...queryParams, status: value || undefined, includeScrapped: value === 'scrapped' ? true : queryParams.includeScrapped, excludeTerminal: value ? undefined : true, page: 1 })}
-                    statusOptions={[
-                      { label: '全部', value: '' },
-                      { label: '待生产', value: 'pending' },
-                      { label: '生产中', value: 'production' },
-                      { label: '已完成', value: 'completed' },
-                      { label: '已报废', value: 'scrapped' },
-                      { label: '已逾期', value: 'delayed' },
-                      { label: '已取消', value: 'cancelled' },
-                    ]}
-                  />
-                  <Select
-                    value={queryParams.factoryType || ''}
-                    onChange={(value) =>
-                      setQueryParams({
-                        ...queryParams,
-                        factoryType: (value || undefined) as ProductionQueryParams['factoryType'],
-                        page: 1,
-                      })
-                    }
-                    placeholder="内外标签"
-                    allowClear
-                    style={{ minWidth: 110 }}
-                    options={factoryTypeOptions}
-                  />
-                  <Select
-                    value={queryParams.urgencyLevel || ''}
-                    onChange={(value) => setQueryParams({ ...queryParams, urgencyLevel: value || undefined, page: 1 })}
-                    placeholder="紧急程度"
-                    allowClear
-                    style={{ minWidth: 110 }}
-                    options={[
-                      { label: '全部紧急度', value: '' },
-                      { label: ' 急单', value: 'urgent' },
-                      { label: '普通', value: 'normal' },
-                    ]}
-                  />
-                  <Select
-                    value={queryParams.plateType || ''}
-                    onChange={(value) => setQueryParams({ ...queryParams, plateType: value || undefined, page: 1 })}
-                    placeholder="首/翻单"
-                    allowClear
-                    style={{ minWidth: 110 }}
-                    options={[
-                      { label: '全部单型', value: '' },
-                      { label: '首单', value: 'FIRST' },
-                      { label: '翻单', value: 'REORDER' },
-                    ]}
-                  />
-                  <CustomerFilterSelect
-                    value={queryParams.customerId || ''}
-                    onChange={(value) => setQueryParams({ ...queryParams, customerId: value || undefined, page: 1 })}
-                  />
-                </>
-          }
-          filterRight={
-            <>
-                  <Button onClick={() => fetchProductionList()}>刷新</Button>
-                  <Popover
-                    trigger="click"
-                    placement="bottomRight"
-                    overlayStyle={{ padding: 0 }}
-                    styles={{ container: { maxHeight: '70vh', overflowY: 'auto', minWidth: 200, padding: 0 } }}
-                    content={(
-                      <div>
-                        <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '8px 16px 4px' }}>选择要显示的列</div>
-                        <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
-                        {columnOptions.map(opt => (
-                          <div key={opt.key} style={{ padding: '4px 16px' }}>
-                            <Checkbox
-                              checked={visibleColumns[opt.key] === true}
-                              onChange={() => toggleColumnVisible(opt.key)}
-                            >
-                              {opt.label}
-                            </Checkbox>
-                          </div>
-                        ))}
-                        <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
-                        <div
-                          style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer', padding: '6px 16px' }}
-                          onClick={() => resetColumnSettings()}
-                        >
-                          重置为默认
-                        </div>
-                      </div>
-                    )}
-                  >
-                    <Button icon={<SettingOutlined />}>列设置</Button>
-                  </Popover>
-                  <Segmented
-                    value={viewMode}
-                    onChange={(v) => setViewMode(v as 'list' | 'card' | 'smart')}
-                    options={[
-                      { value: 'list', icon: <UnorderedListOutlined /> },
-                      { value: 'card', icon: <AppstoreOutlined /> },
-                      { value: 'smart', icon: <RadarChartOutlined /> },
-                    ]}
-                  />
-                                    <ExportButton
-                    label="导出"
-                    url="/api/production/order/export-excel"
-                    params={queryParams as unknown as Record<string, string>}
-                    type="primary"
-                    size="middle"
-                  />
-                </>
-          }
+          {...ProductionFilterBar({
+            queryParams, setQueryParams, dateRange, setDateRange, fetchProductionList,
+            visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions,
+            viewMode, setViewMode, factoryTypeOptions,
+          })}
         >
           {viewMode === 'smart' ? (
             <ExternalFactorySmartView
@@ -532,73 +385,31 @@ const ProductionList: React.FC = () => {
           )}
         </PageLayout>
 
-        {/* 快速编辑弹窗 */}
-        <QuickEditModal
-          visible={quickEditModal.visible}
-          loading={quickEditSaving}
-          initialValues={{
-            remarks: (quickEditModal.data as any)?.remarks,
-            expectedShipDate: (quickEditModal.data as any)?.expectedShipDate,
-            urgencyLevel: (quickEditModal.data as any)?.urgencyLevel || 'normal',
-          }}
-          onSave={(values) => hookQuickEditSave(values, quickEditModal.data, quickEditModal.close)}
-          onCancel={() => { quickEditModal.close(); }}
-        />
-
-        {/* 备注异常 Modal */}
-        <SmallModal
-          title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}
-          open={remarkPopoverId !== null}
-          onCancel={() => { setRemarkPopoverId(null); setRemarkText(''); }}
-          onOk={() => { if (remarkPopoverId) handleRemarkSave(remarkPopoverId); }}
-          okText="保存"
-          cancelText="取消"
-          confirmLoading={remarkSaving}
-        >
-          <Input.TextArea
-            id="productionRemark"
-            value={remarkText}
-            onChange={(e) => setRemarkText(e.target.value)}
-            rows={6}
-            maxLength={200}
-            showCount
-            placeholder="请输入异常备注..."
-            style={{ marginTop: 8 }}
-          />
-        </SmallModal>
-
-        {/* 工序详情弹窗 */}
-        <ProcessDetailModal
-          visible={processDetailVisible}
-          onClose={closeProcessDetail}
-          record={processDetailRecord}
-          processType={processDetailType}
+        <ProductionModals
+          quickEditModal={quickEditModal}
+          quickEditSaving={quickEditSaving}
+          onQuickEditSave={hookQuickEditSave}
+          remarkPopoverId={remarkPopoverId}
+          setRemarkPopoverId={setRemarkPopoverId}
+          remarkText={remarkText}
+          setRemarkText={setRemarkText}
+          remarkSaving={remarkSaving}
+          handleRemarkSave={handleRemarkSave}
+          processDetailVisible={processDetailVisible}
+          closeProcessDetail={closeProcessDetail}
+          processDetailRecord={processDetailRecord}
+          processDetailType={processDetailType}
           procurementStatus={procurementStatus}
           processStatus={processStatus}
-          onDataChanged={() => {
-            void fetchProductionList();
-          }}
-        />
-
-        {/* 节点详情弹窗 - 进度球点击 */}
-        <NodeDetailModal
-          visible={nodeDetailVisible}
-          onClose={closeNodeDetail}
-          orderId={nodeDetailOrder?.id}
-          orderNo={nodeDetailOrder?.orderNo}
-          styleNo={nodeDetailOrder?.styleNo}
-          nodeType={nodeDetailType}
-          nodeName={nodeDetailName}
-          stats={nodeDetailStats}
-          unitPrice={nodeDetailUnitPrice}
-          processList={nodeDetailProcessList}
-          onSaved={() => {
-            void fetchProductionList();
-          }}
-        />
-
-        {/* 转单弹窗 */}
-        <TransferOrderModal
+          fetchProductionList={fetchProductionList}
+          nodeDetailVisible={nodeDetailVisible}
+          closeNodeDetail={closeNodeDetail}
+          nodeDetailOrder={nodeDetailOrder}
+          nodeDetailType={nodeDetailType}
+          nodeDetailName={nodeDetailName}
+          nodeDetailStats={nodeDetailStats}
+          nodeDetailUnitPrice={nodeDetailUnitPrice}
+          nodeDetailProcessList={nodeDetailProcessList}
           transferModalVisible={transferModalVisible}
           transferRecord={transferRecord}
           transferType={transferType}
@@ -628,101 +439,36 @@ const ProductionList: React.FC = () => {
           searchTransferFactories={searchTransferFactories}
           submitTransfer={submitTransfer}
           closeTransferModal={closeTransferModal}
-        />
-
-        {shareOrderDialog}
-
-        {/* 通用备注记录弹窗 */}
-        <RemarkTimelineModal
-          open={remarkTarget.open}
-          onClose={() => setRemarkTarget({ open: false, orderNo: '' })}
-          targetType="order"
-          targetNo={remarkTarget.orderNo}
-          defaultRole={remarkTarget.defaultRole}
-          canAddRemark={isSupervisorOrAbove || isFactoryAccount || (!!user?.username && user.username === remarkTarget.merchandiser)}
-        />
-
-        {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}
-        <LabelPrintModal
-          open={labelPrintOpen}
-          onClose={closeLabelPrint}
-          order={labelPrintOrder}
-          styleInfo={labelPrintStyle}
-        />
-
-        {/* 子工序临时重新分配弹窗 */}
-        <SubProcessRemapModal
-          visible={remapVisible}
-          record={remapRecord}
-          parentNodes={remapParentNodes}
-          config={remapConfig}
-          saving={remapSaving}
-          onSave={saveRemap}
-          onClose={closeRemap}
+          shareOrderDialog={shareOrderDialog}
+          remarkTarget={remarkTarget}
+          setRemarkTarget={setRemarkTarget}
+          isSupervisorOrAbove={isSupervisorOrAbove}
           isFactoryAccount={isFactoryAccount}
+          user={user}
+          labelPrintOpen={labelPrintOpen}
+          closeLabelPrint={closeLabelPrint}
+          labelPrintOrder={labelPrintOrder}
+          labelPrintStyle={labelPrintStyle}
+          remapVisible={remapVisible}
+          remapRecord={remapRecord}
+          remapParentNodes={remapParentNodes}
+          remapConfig={remapConfig}
+          remapSaving={remapSaving}
+          saveRemap={saveRemap}
+          closeRemap={closeRemap}
+          printModalVisible={printModalVisible}
+          setPrintModalVisible={setPrintModalVisible}
+          printingRecord={printingRecord}
+          setPrintingRecord={setPrintingRecord}
+          pendingCloseOrder={pendingCloseOrder}
+          closeOrderLoading={closeOrderLoading}
+          confirmCloseOrder={confirmCloseOrder}
+          cancelCloseOrder={cancelCloseOrder}
+          pendingScrapOrder={pendingScrapOrder}
+          scrapOrderLoading={scrapOrderLoading}
+          confirmScrapOrder={confirmScrapOrder}
+          cancelScrapOrder={cancelScrapOrder}
         />
-
-        {/* 打印预览弹窗 */}
-        <StylePrintModal
-          visible={printModalVisible}
-          onClose={() => { setPrintModalVisible(false); setPrintingRecord(null); }}
-          styleId={printingRecord?.styleId}
-          orderId={printingRecord?.id}
-          orderNo={printingRecord?.orderNo}
-          styleNo={printingRecord?.styleNo}
-          styleName={printingRecord?.styleName}
-          cover={printingRecord?.styleCover}
-          color={printingRecord?.color}
-          quantity={printingRecord?.orderQuantity}
-          category={(printingRecord as any)?.category}
-          mode="production"
-          extraInfo={{
-            '订单号': printingRecord?.orderNo,
-            '订单数量': printingRecord?.orderQuantity,
-            '加工厂': printingRecord?.factoryName,
-            '跟单员': printingRecord?.merchandiser,
-            '订单交期': printingRecord?.plannedEndDate,
-          }}
-          sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
-        />
-
-      <RejectReasonModal
-        open={!!pendingCloseOrder}
-        title={pendingCloseOrder?.isSpecial ? '特需关单确认' : `确认关单：${safeString((pendingCloseOrder?.order as any)?.orderNo)}`}
-        description={pendingCloseOrder ? (
-          <div>
-            {pendingCloseOrder.isSpecial && (
-              <div style={{ color: '#faad14', marginBottom: 8 }}>
-                ⚠️ 该订单未满足关单条件（合格入库 {pendingCloseOrder.warehousingQualified}/{pendingCloseOrder.minRequired}），特需关单不可撤销，请填写原因。
-              </div>
-            )}
-            <div>订单数量：{pendingCloseOrder.orderQty}</div>
-            <div>关单阈值（裁剪数90%）：{pendingCloseOrder.minRequired}</div>
-            <div>当前裁剪数：{pendingCloseOrder.cuttingQty}</div>
-            <div>当前合格入库：{pendingCloseOrder.warehousingQualified}</div>
-            <div style={{ marginTop: 8 }}>关单后订单状态将变为"已完成"，并自动生成对账记录。</div>
-          </div>
-        ) : null}
-        fieldLabel={pendingCloseOrder?.isSpecial ? '特需原因' : '关闭原因'}
-        placeholder={pendingCloseOrder?.isSpecial ? '请说明特需关单具体原因（必填）' : undefined}
-        required={!!pendingCloseOrder?.isSpecial}
-        okDanger={false}
-        okText={pendingCloseOrder?.isSpecial ? '确认特需关单' : '确认关单'}
-        loading={closeOrderLoading}
-        onOk={confirmCloseOrder}
-        onCancel={cancelCloseOrder}
-      />
-      <RejectReasonModal
-        open={!!pendingScrapOrder}
-        title={`确认报废：${safeString((pendingScrapOrder as any)?.orderNo)}`}
-        fieldLabel="报废原因"
-        required
-        okDanger
-        okText="确认报废"
-        loading={scrapOrderLoading}
-        onOk={confirmScrapOrder}
-        onCancel={cancelScrapOrder}
-      />
 
     </>
   );
