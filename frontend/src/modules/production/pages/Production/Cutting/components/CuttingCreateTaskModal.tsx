@@ -74,11 +74,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             onSearch={(v) => createTask.fetchStyleInfoOptions(v)}
             onChange={(v) => createTask.handleStyleNoChange(v)}
             onSelect={(v) => createTask.handleStyleNoSelect(String(v || ''))}
-            onBlur={() => {
-              // 用户手动输入完整款号（未从下拉选择）时，失焦后触发模板加载
-              const sn = createTask.createStyleNo;
-              if (sn) createTask.handleStyleNoSelect(sn);
-            }}
+            onBlur={createTask.handleStyleNoBlur}
             filterOption={false}
             allowClear
             onClear={() => createTask.handleStyleNoChange('')}

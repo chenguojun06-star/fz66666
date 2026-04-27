@@ -70,6 +70,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
 
   // 用于防止 loadProcessNodesForStyle 异步竞态：记录最新发起的款号请求
   const pendingStyleNoRef = useRef<string>('');
+  // 记录已成功加载模板工序的款号，onBlur 时若款号未变则不重复加载（防止点击工厂等其他控件触发失焦覆盖用户手动工序）
+  const loadedTemplateStyleRef = useRef<string>('');
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);
@@ -182,6 +184,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     if (!sn) {
       // 清空时重置工序节点
       pendingStyleNoRef.current = '';
+      loadedTemplateStyleRef.current = '';
       setCreateProcessNodes([...defaultCuttingProcessNodes]);
     }
   };
@@ -196,7 +199,16 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
       loadProcessNodesForStyle(sn);
     } else {
       pendingStyleNoRef.current = '';
+      loadedTemplateStyleRef.current = '';
       setCreateProcessNodes([...defaultCuttingProcessNodes]);
+    }
+  };
+
+  // onBlur 专用：只有款号与上次成功加载的模板款号不同时才触发加载（防止点击工厂等控件导致失焦重复覆盖用户手动工序）
+  const handleStyleNoBlur = () => {
+    const sn = createStyleNo;
+    if (sn && sn !== loadedTemplateStyleRef.current) {
+      loadProcessNodesForStyle(sn);
     }
   };
 
@@ -231,6 +243,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         });
       if (nodes.length > 0) {
         setCreateProcessNodes(nodes);
+        loadedTemplateStyleRef.current = styleNo;
       }
     } catch {
       if (pendingStyleNoRef.current === styleNo) {
@@ -290,6 +303,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     setCreateOrgUnitId('');
     setCreateFactoryId('');
     setCreateProcessNodes([...defaultCuttingProcessNodes]);
+    loadedTemplateStyleRef.current = '';
     setCreateStyleImageUrl(null);
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
@@ -410,6 +424,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     handleStyleNoChange,
     handleStyleNoSelect,
     openCreateTask,
+    handleStyleNoBlur,
     handleSubmitCreateTask,
   };
 }
