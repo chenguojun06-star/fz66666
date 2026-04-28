@@ -23,6 +23,10 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import ProcessDetailModal from '@/components/production/ProcessDetailModal';
+
+import { useProcessDetail } from '../List/hooks';
+import { productionOrderApi } from '@/services/production/productionApi';
 
 import '../../../styles.css';
 
@@ -83,6 +87,21 @@ const CuttingManagement: React.FC = () => {
   const existingCutQtyByKey = bundles.allBundlesQtyMap;
   const print = useCuttingPrint({ message });
   const createTask = useCuttingCreateTask({ message, navigate, fetchTasks: tasks.fetchTasks });
+
+  const processDetail = useProcessDetail({ message, fetchProductionList: tasks.fetchTasks });
+
+  const openProcessForCuttingTask = async (record: CuttingTask) => {
+    const orderNo = String(record.productionOrderNo || '').trim();
+    if (!orderNo) { message.warning('该裁剪任务缺少订单号'); return; }
+    try {
+      const res = await productionOrderApi.list({ orderNo, page: 1, pageSize: 1 } as any);
+      const order = (res as any)?.data?.records?.[0];
+      if (!order) { message.warning('未找到对应生产订单'); return; }
+      processDetail.openProcessDetail(order, 'all');
+    } catch {
+      message.error('加载订单工序失败');
+    }
+  };
 
   const resolveTaskByOrderNo = async (orderNo: string) => {
     const on = String(orderNo || '').trim();
@@ -705,6 +724,16 @@ const CuttingManagement: React.FC = () => {
             loading={tasks.rollbackTaskLoading}
             onOk={tasks.confirmRollback}
             onCancel={tasks.cancelRollback}
+          />
+
+          <ProcessDetailModal
+            visible={processDetail.processDetailVisible}
+            onClose={processDetail.closeProcessDetail}
+            record={processDetail.processDetailRecord}
+            processType={processDetail.processDetailType}
+            procurementStatus={processDetail.procurementStatus}
+            processStatus={processDetail.processStatus}
+            onDataChanged={tasks.fetchTasks}
           />
 
         </PageLayout>

@@ -298,6 +298,18 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
   const filteredScanRecords = useMemo(() => {
     const nName = normalizeText(nodeName);
     const nKey = String(nodeTypeKey || '').trim();
+    if (childProcessNames.length > 0) {
+      const matched = scanRecords.filter((r) => {
+        if (String((r as any)?.scanResult || '').trim() !== 'success') return false;
+        if ((Number((r as any)?.quantity) || 0) <= 0) return false;
+        const process = String((r as any)?.processName || '').trim();
+        if (process && childProcessNames.some(cp => process === cp)) return true;
+        const stage = String((r as any)?.progressStage || '').trim();
+        if (stage && childProcessNames.length === 1 && stage === childProcessNames[0]) return true;
+        return false;
+      });
+      return matched;
+    }
     const matched = scanRecords.filter((r) => {
       if (String((r as any)?.scanResult || '').trim() !== 'success') return false;
       if ((Number((r as any)?.quantity) || 0) <= 0) return false;
@@ -305,9 +317,6 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
       const stage = (r.progressStage || '').trim();
       const process = (r.processName || '').trim();
       if (stage && nName && (stage.includes(nName) || nName.includes(stage))) return true;
-      if (childProcessNames.length > 0 && process) {
-        return childProcessNames.some(cp => process.includes(cp) || cp.includes(process));
-      }
       return false;
     });
     return matched;

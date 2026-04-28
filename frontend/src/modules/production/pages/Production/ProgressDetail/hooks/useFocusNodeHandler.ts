@@ -66,17 +66,33 @@ export const useFocusNodeHandler = (options: UseFocusNodeHandlerOptions) => {
       resolvedNodeName,
       { done: completedQty, total: totalQty, percent, remaining },
       matchedNode?.unitPrice,
-      resolvedNodes
-        .filter((node) => {
-          const ps = String((node as any).progressStage || '').trim();
-          return ps === resolvedNodeName;
-        })
-        .map((node) => ({
-          id: String(node.id || '').trim() || undefined,
-          processCode: String(node.id || '').trim() || undefined,
-          name: node.name,
-          unitPrice: node.unitPrice,
-        }))
+      (() => {
+        const nodePs = String(matchedNode?.progressStage || '').trim();
+        const stageChildren = resolvedNodes
+          .filter((node) => {
+            const ps = String((node as any).progressStage || '').trim();
+            return ps === resolvedNodeName || (nodePs && ps === nodePs);
+          })
+          .map((node) => ({
+            id: String(node.id || '').trim() || undefined,
+            processCode: String(node.id || '').trim() || undefined,
+            name: node.name,
+            unitPrice: node.unitPrice,
+          }));
+        if (stageChildren.length > 0) return stageChildren;
+        if (nodePs && nodePs !== resolvedNodeName) {
+          const byName = resolvedNodes
+            .filter((node) => String(node.name || '').trim() === resolvedNodeName)
+            .map((node) => ({
+              id: String(node.id || '').trim() || undefined,
+              processCode: String(node.id || '').trim() || undefined,
+              name: node.name,
+              unitPrice: node.unitPrice,
+            }));
+          if (byName.length > 0) return byName;
+        }
+        return [];
+      })()
     );
     setPendingFocusNode(null);
   }, [

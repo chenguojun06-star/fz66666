@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
@@ -29,6 +30,7 @@ public interface ProductionProcessTrackingMapper extends BaseMapper<ProductionPr
      * @param productionOrderId 订单ID（String类型）
      * @return 跟踪记录列表
      */
+    @InterceptorIgnore(tenantLine = "true")
     List<ProductionProcessTracking> selectByOrderId(@Param("productionOrderId") String productionOrderId, @Param("tenantId") Long tenantId);
 
     List<ProductionProcessTracking> selectByBundleId(@Param("cuttingBundleId") String cuttingBundleId, @Param("tenantId") Long tenantId);

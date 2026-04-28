@@ -5,6 +5,7 @@ const SKUProcessor = require('../processors/SKUProcessor');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { sortBySizeOrder } = require('../../../utils/orderParser');
 
 Page({
   data: {
@@ -17,6 +18,7 @@ Page({
     summary: { totalQuantity: 0, totalAmount: 0 },
     sizeMatrix: { sizes: [], rows: [] },
     cuttingTask: null,
+    cuttingUnitPrice: 0,
     aiTipData: null,
     aiTipVisible: false,
     description: '',
@@ -114,6 +116,17 @@ Page({
 
     var description = orderDetail.description || raw.description || '';
 
+    // 提取裁剪工序单价（来自 handleCuttingMode 注入的 stageResult）
+    var cuttingUnitPrice = 0;
+    if (isCutting) {
+      var stageResult = raw.stageResult || {};
+      var allBundleProcesses = stageResult.allBundleProcesses || [];
+      var cuttingProc = allBundleProcesses.find(function(p) {
+        return (p.scanType === 'cutting') || (String(p.progressStage || '').includes('裁剪'));
+      }) || allBundleProcesses[0];
+      cuttingUnitPrice = cuttingProc ? Number(cuttingProc.unitPrice || 0) : 0;
+    }
+
     this.setData({
       isProcurement: isProcurement,
       isCutting: isCutting,
@@ -130,6 +143,7 @@ Page({
       materialPurchases: materialPurchases,
       materialSummary: materialSummary,
       cuttingTask: cuttingTask,
+      cuttingUnitPrice: cuttingUnitPrice,
       description: description,
       secondaryProcesses: secondaryProcesses,
       buttonText: btnText,
@@ -169,6 +183,8 @@ Page({
       if (!colorMap[color]) colorMap[color] = {};
       colorMap[color][size] = qty;
     });
+    // 按标准尺码顺序排列列头（XS→S→M→L→XL→2XL→XXL→...）
+    sizeSet = sortBySizeOrder(sizeSet);
     var rows = Object.keys(colorMap).map(function (color) {
       return {
         color: color,

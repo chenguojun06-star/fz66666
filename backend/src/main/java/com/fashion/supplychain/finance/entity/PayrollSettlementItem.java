@@ -35,6 +35,14 @@ public class PayrollSettlementItem {
 
     private String styleNo;
 
+    private String color;
+
+    private String size;
+
+    private String processCode;
+
+    private Integer cuttingBundleNo;
+
     private String scanType;
 
     private LocalDateTime createTime;

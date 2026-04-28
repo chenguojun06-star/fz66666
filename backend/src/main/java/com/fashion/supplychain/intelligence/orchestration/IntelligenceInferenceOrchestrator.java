@@ -62,6 +62,11 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.doubao.timeout-seconds:60}") private int doubaoTimeoutSeconds;
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
+    @Value("${ai.fallback.qwen.api-key:}") private String qwenApiKey;
+    @Value("${ai.fallback.qwen.api-url:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}") private String qwenApiUrl;
+    @Value("${ai.fallback.qwen.model:qwen-plus}") private String qwenModel;
+    @Value("${ai.fallback.qwen.timeout-seconds:30}") private int qwenTimeoutSeconds;
+    @Value("${ai.fallback.keyword-enabled:true}") private boolean keywordFallbackEnabled;
 
     @Autowired private IntelligenceModelGatewayOrchestrator intelligenceModelGatewayOrchestrator;
     @Autowired private IntelligenceObservabilityOrchestrator intelligenceObservabilityOrchestrator;
@@ -104,6 +109,21 @@ public class IntelligenceInferenceOrchestrator {
         } else {
             result = invokeDirect(scene, messages, tools, traceId);
         }
+
+        if (!result.isSuccess() && hasText(qwenApiKey)) {
+            log.info("[IntelligenceInference] 主模型失败，尝试Qwen备用模型 scene={}", scene);
+            IntelligenceInferenceResult qwenResult = invokeQwen(scene, messages, tools, traceId);
+            if (qwenResult.isSuccess()) {
+                qwenResult.setFallbackUsed(true);
+                result = qwenResult;
+            }
+        }
+
+        if (!result.isSuccess() && keywordFallbackEnabled) {
+            log.info("[IntelligenceInference] 所有模型失败，启用关键词兜底 scene={}", scene);
+            result = invokeKeywordFallback(scene, messages, traceId, start);
+        }
+
         finalizeResult(result, traceId, start, messages, scene);
         return result;
     }
@@ -331,6 +351,58 @@ public class IntelligenceInferenceOrchestrator {
     private IntelligenceInferenceResult invokeDirect(String scene, List<AiMessage> messages,
             List<AiTool> tools, String traceId) {
         return invokeOpenAiCompatible(scene, "direct", directApiUrl, directApiKey, directModel, messages, tools, directTimeoutSeconds, traceId);
+    }
+
+    private IntelligenceInferenceResult invokeQwen(String scene, List<AiMessage> messages,
+            List<AiTool> tools, String traceId) {
+        return invokeOpenAiCompatible(scene, "qwen-fallback", qwenApiUrl, qwenApiKey, qwenModel, messages, tools, qwenTimeoutSeconds, traceId);
+    }
+
+    private IntelligenceInferenceResult invokeKeywordFallback(String scene, List<AiMessage> messages,
+            String traceId, long start) {
+        IntelligenceInferenceResult result = new IntelligenceInferenceResult();
+        result.setProvider("keyword-fallback");
+        result.setModel("rule-engine");
+        result.setTraceId(traceId);
+        result.setFallbackUsed(true);
+        result.setLatencyMs(System.currentTimeMillis() - start);
+
+        String lastUserMsg = messages.stream()
+                .filter(m -> "user".equals(m.getRole()))
+                .map(AiMessage::getContent)
+                .reduce((first, second) -> second)
+                .orElse("");
+
+        String fallbackAnswer = matchKeywordIntent(lastUserMsg);
+        if (fallbackAnswer != null) {
+            result.setContent(fallbackAnswer);
+            result.setSuccess(true);
+        } else {
+            result.setSuccess(false);
+            result.setErrorMessage("all-models-unavailable");
+            result.setContent("AI 服务暂时不可用，请稍后重试或联系管理员。");
+        }
+        return result;
+    }
+
+    private String matchKeywordIntent(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) return null;
+        String msg = userMessage.toLowerCase();
+        if (msg.contains("订单") && (msg.contains("进度") || msg.contains("状态")))
+            return "请前往「生产管理」→「订单列表」查看订单进度详情。";
+        if (msg.contains("延期") || msg.contains("逾期"))
+            return "请前往「智能大脑」→「交付风险」查看延期订单分析。";
+        if (msg.contains("扫码") || msg.contains("产量"))
+            return "请前往「扫码工作台」查看今日扫码统计。";
+        if (msg.contains("工资") || msg.contains("结算"))
+            return "请前往「财务结算」→「工资单」查看结算详情。";
+        if (msg.contains("库存") || msg.contains("入库"))
+            return "请前往「仓储管理」查看库存和入库记录。";
+        if (msg.contains("瓶颈") || msg.contains("堵塞"))
+            return "请前往「智能大脑」→「瓶颈分析」查看生产瓶颈。";
+        if (msg.contains("帮助") || msg.contains("怎么"))
+            return "您可以问我关于订单进度、扫码统计、工资结算、库存查询等问题。";
+        return null;
     }
 
     private IntelligenceInferenceResult invokeOpenAiCompatible(String scene, String provider,

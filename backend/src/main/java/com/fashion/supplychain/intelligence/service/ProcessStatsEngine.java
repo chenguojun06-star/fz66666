@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.intelligence.entity.IntelligenceProcessStats;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceProcessStatsMapper;
 import java.math.BigDecimal;
@@ -184,7 +185,11 @@ public class ProcessStatsEngine {
     public static String normalizeStage(String name) {
         if (!StringUtils.hasText(name)) return name;
         String key = name.trim();
-        return STAGE_ALIASES.getOrDefault(key, key);
+        String mapped = STAGE_ALIASES.get(key);
+        if (mapped != null) return mapped;
+        String synonym = ProcessSynonymMapping.normalize(key);
+        if (StringUtils.hasText(synonym) && !synonym.equals(key)) return synonym;
+        return key;
     }
 
     /** 工序名映射表：子工序名/别名/变体 → 父阶段标准名
@@ -195,38 +200,17 @@ public class ProcessStatsEngine {
     private static final java.util.Map<String, String> STAGE_ALIASES;
     static {
         java.util.Map<String, String> m = new java.util.HashMap<>();
-        // 采购类
         m.put("物料采购", "采购");   m.put("面辅料采购", "采购");  m.put("备料", "采购");
         m.put("到料", "采购");       m.put("进料", "采购");        m.put("物料", "采购");
-        // 裁剪类
-        m.put("裁剪工序", "裁剪");   m.put("裁剪分菲", "裁剪");  m.put("裁床", "裁剪");
-        m.put("剪裁", "裁剪");       m.put("开裁", "裁剪");       m.put("裁片", "裁剪");
-        // 二次工艺类
-        m.put("二次工艺工序", "二次工艺");  m.put("后处理", "二次工艺");  m.put("印花水洗", "二次工艺");
-        m.put("印花", "二次工艺");    m.put("水洗", "二次工艺");    m.put("绣花", "二次工艺");
-        m.put("压花", "二次工艺");    m.put("烫钻", "二次工艺");    m.put("烫画", "二次工艺");
-        m.put("钉珠", "二次工艺");    m.put("烫金", "二次工艺");    m.put("数码印", "二次工艺");
-        m.put("打孔", "二次工艺");    m.put("激光", "二次工艺");    m.put("转印", "二次工艺");
-        m.put("植绒", "二次工艺");    m.put("涂层", "二次工艺");    m.put("磨毛", "二次工艺");
-        m.put("染色", "二次工艺");
-        // 车缝类
-        m.put("缝制工序", "车缝");   m.put("缝制", "车缝");   m.put("整件", "车缝");
-        m.put("缝纫", "车缝");       m.put("车工", "车缝");    m.put("车位", "车缝");
-        m.put("车间生产", "车缝");
-        // 尾部类（含大烫/质检/包装等尾部子工序）
-        m.put("尾部工序", "尾部");   m.put("尾部处理", "尾部");   m.put("剪线", "尾部");
-        m.put("锁边", "尾部");
-        m.put("大烫", "尾部");       m.put("整烫", "尾部");       m.put("熨烫", "尾部");
-        m.put("烫整", "尾部");       m.put("后整烫", "尾部");
-        m.put("质检工序", "尾部");   m.put("质检验收", "尾部");   m.put("验收", "尾部");
-        m.put("质检领取", "尾部");   m.put("领取验收", "尾部");   m.put("质检扫码", "尾部");
-        m.put("QC", "尾部");         m.put("质量检验", "尾部");
-        m.put("包装工序", "尾部");   m.put("包装处理", "尾部");   m.put("折叠包装", "尾部");
-        m.put("后整", "尾部");       m.put("打包", "尾部");       m.put("装箱", "尾部");
-        // 入库类
-        m.put("入库工序", "入库");   m.put("成品入库", "入库");   m.put("仓库入库", "入库");
-        m.put("仓储", "入库");       m.put("上架", "入库");       m.put("进仓", "入库");
-        m.put("入仓", "入库");
+        m.put("裁床", "裁剪");       m.put("剪裁", "裁剪");       m.put("开裁", "裁剪");
+        m.put("裁片", "裁剪");       m.put("裁切", "裁剪");
+        m.put("二次", "二次工艺");
+        m.put("缝制", "车缝");       m.put("整件", "车缝");
+        m.put("缝纫", "车缝");       m.put("车工", "车缝");       m.put("车位", "车缝");
+        m.put("车间生产", "车缝");   m.put("制作", "车缝");       m.put("生产", "车缝");
+        m.put("后整理", "尾部");     m.put("后道", "尾部");
+        m.put("成品入库", "入库");   m.put("仓储", "入库");       m.put("上架", "入库");
+        m.put("进仓", "入库");       m.put("入仓", "入库");       m.put("验收", "入库");
         STAGE_ALIASES = java.util.Collections.unmodifiableMap(m);
     }
 }

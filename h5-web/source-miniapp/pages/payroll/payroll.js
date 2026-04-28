@@ -266,6 +266,7 @@ Page({
         styleNo: item.styleNo || '-',
         color: item.color || '-',
         size: item.size || '-',
+        cuttingBundleNo: item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '',
         processName: item.processName || '-',
         operatorName: item.operatorName || '',
         scanType: item.scanType || '',

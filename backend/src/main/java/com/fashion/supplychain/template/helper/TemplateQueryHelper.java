@@ -199,11 +199,24 @@ public class TemplateQueryHelper {
         TemplateLibrary matched = StringUtils.hasText(sn) ? findStyleScopedProcessPriceTemplate(sn) : null;
 
         String matchedScope = "empty";
+        String fallbackOrderNo = null;
+        Map<String, Object> content;
+
         if (matched != null) {
             matchedScope = "style";
+            content = parseProcessPriceTemplateContent(matched.getTemplateContent());
+        } else if (StringUtils.hasText(sn)) {
+            Map<String, Object> orderFallback = buildContentFromOrderWorkflow(sn);
+            if (orderFallback != null) {
+                matchedScope = "order";
+                content = orderFallback;
+                fallbackOrderNo = (String) orderFallback.remove("_fallbackOrderNo");
+            } else {
+                content = parseProcessPriceTemplateContent(null);
+            }
+        } else {
+            content = parseProcessPriceTemplateContent(null);
         }
-
-        Map<String, Object> content = parseProcessPriceTemplateContent(matched == null ? null : matched.getTemplateContent());
 
         String currentFactoryId = UserContext.factoryId();
         boolean isFactoryWorker = StringUtils.hasText(currentFactoryId) && UserContext.isWorker();
@@ -219,8 +232,40 @@ public class TemplateQueryHelper {
         result.put("templateKey", matched == null ? null : matched.getTemplateKey());
         result.put("templateName", matched == null ? null : matched.getTemplateName());
         result.put("sourceStyleNo", matched == null ? null : matched.getSourceStyleNo());
+        result.put("fallbackOrderNo", fallbackOrderNo);
         result.put("content", content);
         return result;
+    }
+
+    private Map<String, Object> buildContentFromOrderWorkflow(String styleNo) {
+        Long tenantId = TenantAssert.requireTenantId();
+        ProductionOrder order = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getStyleNo, styleNo)
+                .isNotNull(ProductionOrder::getProgressWorkflowJson)
+                .orderByDesc(ProductionOrder::getCreateTime)
+                .last("limit 1"));
+        if (order == null || !StringUtils.hasText(order.getProgressWorkflowJson())) {
+            return null;
+        }
+        try {
+            Map<String, Object> workflowRaw = objectMapper.readValue(order.getProgressWorkflowJson(), new TypeReference<Map<String, Object>>() {});
+            List<Map<String, Object>> nodes = TemplateParseUtils.coerceListOfMap(workflowRaw.get("nodes"));
+            if (nodes.isEmpty()) {
+                return null;
+            }
+            Map<String, Object> content = parseProcessPriceTemplateContent(order.getProgressWorkflowJson());
+            List<Map<String, Object>> steps = (List<Map<String, Object>>) content.get("steps");
+            if (steps == null || steps.isEmpty()) {
+                return null;
+            }
+            content.put("_fallbackOrderNo", order.getOrderNo());
+            return content;
+        } catch (Exception e) {
+            log.warn("[TemplateQuery] 从订单workflow JSON提取工序数据失败, styleNo={}", styleNo, e);
+            return null;
+        }
     }
 
     private Map<String, Object> hidePricesFromContent(Map<String, Object> content) {

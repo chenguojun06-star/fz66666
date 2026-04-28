@@ -59,6 +59,19 @@ public abstract class AbstractAgentTool implements AgentTool {
                 return errorJson("参数校验失败：" + validationError);
             }
 
+            if (accessService != null && accessService.isHighRiskTool(toolName)) {
+                String approvalToken = args.get("_approvalToken") instanceof String ? (String) args.get("_approvalToken") : null;
+                if (approvalToken == null || approvalToken.isBlank()) {
+                    log.info("[{}] 高风险工具需要人工审批，返回审批请求", toolName);
+                    return buildApprovalRequiredResult(toolName, args);
+                }
+                if (!accessService.validateApprovalToken(toolName, approvalToken)) {
+                    log.warn("[{}] 审批令牌无效或已过期", toolName);
+                    return errorJson("审批令牌无效或已过期，请重新获取审批");
+                }
+                args.remove("_approvalToken");
+            }
+
             String auditId = null;
             if (operationAudit != null) {
                 auditId = operationAudit.recordStart(toolName, args);
@@ -274,6 +287,23 @@ public abstract class AbstractAgentTool implements AgentTool {
     private String truncate(String s, int max) {
         if (s == null) return "";
         return s.length() > max ? s.substring(0, max) + "..." : s;
+    }
+
+    private String buildApprovalRequiredResult(String toolName, Map<String, Object> args) {
+        try {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("success", false);
+            result.put("requiresApproval", true);
+            result.put("toolName", toolName);
+            result.put("reason", "该操作为高风险操作，需要人工审批后方可执行");
+            result.put("approvalHint", "请在管理端审批后，携带审批令牌重新调用");
+            Map<String, Object> safeArgs = new LinkedHashMap<>(args);
+            safeArgs.remove("_approvalToken");
+            result.put("pendingArgs", safeArgs);
+            return MAPPER.writeValueAsString(result);
+        } catch (Exception e) {
+            return "{\"success\":false,\"requiresApproval\":true,\"toolName\":\"" + toolName + "\"}";
+        }
     }
 
     protected AiTool buildToolDef(String description,

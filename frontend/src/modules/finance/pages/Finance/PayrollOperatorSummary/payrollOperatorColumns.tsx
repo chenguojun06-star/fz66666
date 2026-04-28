@@ -184,6 +184,17 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
         { title: '颜色', dataIndex: 'color', key: 'color', width: 100, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
         { title: '尺码', dataIndex: 'size', key: 'size', width: 80, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
         {
+            title: '菲号',
+            dataIndex: 'cuttingBundleNo',
+            key: 'cuttingBundleNo',
+            width: 90,
+            align: 'center' as const,
+            render: (v: unknown) => {
+                const no = v != null ? Number(v) : null;
+                return no != null && Number.isFinite(no) ? String(no) : '-';
+            },
+        },
+        {
             title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 120, ellipsis: true,
             render: (name: string) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

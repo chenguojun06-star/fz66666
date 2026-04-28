@@ -1,12 +1,12 @@
 .followUpPanel {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(0, 229, 255, 0.25);
+  border-top: 1px dashed rgba(22, 119, 255, 0.22);
 }
 .followUpHeader {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255,255,255,0.7);
+  color: rgba(0, 0, 0, 0.55);
   margin-bottom: 6px;
 }
 .followUpList {
@@ -21,32 +21,34 @@
 .followUpBtn {
   display: inline-flex;
   align-items: center;
-  background: rgba(0, 229, 255, 0.08);
-  border: 1px solid rgba(0, 229, 255, 0.22);
+  background: rgba(9, 88, 217, 0.06);
+  border: 1px solid rgba(9, 88, 217, 0.3);
   border-radius: 8px;
   padding: 6px 12px;
-  font-size: 12px;
-  color: #00e5ff;
+  font-size: 13px;
+  color: #0958d9;
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
   width: 100%;
+  font-weight: 500;
 }
 .followUpBtn:hover {
-  background: rgba(0, 229, 255, 0.16);
-  border-color: rgba(0, 229, 255, 0.4);
+  background: rgba(9, 88, 217, 0.12);
+  border-color: rgba(9, 88, 217, 0.5);
+  color: #003eb3;
 }
 .followUpExecBadge {
   margin-left: auto;
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: rgba(0, 229, 255, 0.15);
-  color: #00e5ff;
+  background: rgba(9, 88, 217, 0.1);
+  color: #0958d9;
 }
 .followUpSummary {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(0, 0, 0, 0.45);
   padding: 3px 12px 0;
   line-height: 1.4;
   white-space: nowrap;
@@ -56,8 +58,8 @@
 .followUpForm {
   margin-top: 6px;
   padding: 8px 10px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(22, 119, 255, 0.04);
+  border: 1px solid rgba(22, 119, 255, 0.15);
   border-radius: 8px;
 }
 .followUpPrefilled {
@@ -70,8 +72,8 @@
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: rgba(0, 229, 255, 0.1);
-  color: rgba(255,255,255,0.7);
+  background: rgba(22, 119, 255, 0.08);
+  color: rgba(0, 0, 0, 0.65);
 }
 .followUpField {
   margin-bottom: 6px;
@@ -79,26 +81,70 @@
 .followUpFieldLabel {
   display: block;
   font-size: 11px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 0, 0, 0.55);
   margin-bottom: 3px;
 }
 .followUpInput {
   width: 100%;
   padding: 5px 8px;
   font-size: 12px;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(0, 0, 0, 0.18);
   border-radius: 6px;
-  background: rgba(0,0,0,0.2);
-  color: #fff;
+  background: #fff;
+  color: rgba(0, 0, 0, 0.85);
   outline: none;
   transition: border-color 0.2s;
 }
 .followUpInput:focus {
-  border-color: rgba(0, 229, 255, 0.5);
+  border-color: #0958d9;
 }
 .followUpFormActions {
   display: flex;
   gap: 6px;
   margin-top: 8px;
   justify-content: flex-end;
+}
+
+/* ── Dark theme ── */
+:root[data-theme="dark"] .followUpPanel {
+  border-top-color: rgba(107, 163, 255, 0.18);
+}
+:root[data-theme="dark"] .followUpHeader {
+  color: rgba(255, 255, 255, 0.55);
+}
+:root[data-theme="dark"] .followUpBtn {
+  background: rgba(107, 163, 255, 0.08);
+  border-color: rgba(107, 163, 255, 0.25);
+  color: #a8c8ff;
+}
+:root[data-theme="dark"] .followUpBtn:hover {
+  background: rgba(107, 163, 255, 0.15);
+  border-color: rgba(107, 163, 255, 0.4);
+  color: #c0dbff;
+}
+:root[data-theme="dark"] .followUpExecBadge {
+  background: rgba(107, 163, 255, 0.12);
+  color: #a8c8ff;
+}
+:root[data-theme="dark"] .followUpSummary {
+  color: rgba(255, 255, 255, 0.45);
+}
+:root[data-theme="dark"] .followUpForm {
+  background: rgba(107, 163, 255, 0.04);
+  border-color: rgba(107, 163, 255, 0.12);
+}
+:root[data-theme="dark"] .followUpTag {
+  background: rgba(107, 163, 255, 0.08);
+  color: rgba(255, 255, 255, 0.65);
+}
+:root[data-theme="dark"] .followUpFieldLabel {
+  color: rgba(255, 255, 255, 0.5);
+}
+:root[data-theme="dark"] .followUpInput {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e0e0e0;
+}
+:root[data-theme="dark"] .followUpInput:focus {
+  border-color: #6ba3ff;
 }

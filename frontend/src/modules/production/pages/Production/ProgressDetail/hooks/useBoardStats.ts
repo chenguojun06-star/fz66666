@@ -123,19 +123,17 @@ export const ensureBoardStatsForOrder = async ({
       const rProcessName = String((r as any)?.processName || '').trim();
       const nodeParent = String((node as any)?.progressStage || '').trim();
 
-      //  子工序精确归属：节点有父分类 + 记录有明确 processName → 只用 processName 决定归属
-      // 避免 progressStage="尾部" 时，"蒸烫"节点错误地计入"剪线"的扫码记录
-      if (nodeParent && rProcessName) {
-        return rProcessName === nName || stageNameMatches(nName, rProcessName);
+      if (nodeParent && nodeParent !== nName && rProcessName) {
+        return rProcessName === nName;
       }
 
-      // processName 为空时的宽松兜底（旧数据仅有 progressStage 的场景）
-      // 原有：通过 progressStage 别名匹配（大烫→整烫等）
+      if (nodeParent && nodeParent !== nName && !rProcessName) {
+        if (stageNameMatches(nName, rStageName)) return true;
+        return false;
+      }
+
       if (stageNameMatches(nName, rStageName)) return true;
-      // 新增：processName 与节点名原始精确相等（处理 stageNameMatches canonicalKey 不认识的自定义词汇）
       if (rProcessName && rProcessName === nName) return true;
-      // 新增：通过父分类（node.progressStage）兜底——父分类相同时再次尝试子工序名匹配
-      // 解决模板改工序名后旧数据失配的问题（progressStage父分类不变但子工序名变了）
       if (nodeParent && stageNameMatches(nodeParent, rStageName)) {
         if (stageNameMatches(nName, rProcessName) || rProcessName === nName) return true;
       }
@@ -143,29 +141,29 @@ export const ensureBoardStatsForOrder = async ({
     };
     const stats: Record<string, number> = {};
     const hasScanByNode: Record<string, boolean> = {};
+    const parentChildMap = new Map<string, string[]>();
+    for (const n of nodes || []) {
+      const parent = String((n as any)?.progressStage || '').trim();
+      const childName = String((n as any)?.name || '').trim();
+      if (parent && childName && parent !== childName) {
+        if (!parentChildMap.has(parent)) parentChildMap.set(parent, []);
+        parentChildMap.get(parent)!.push(childName);
+      }
+    }
+    const childDoneByProcess = new Map<string, Map<string, number>>();
     for (const n of nodes || []) {
       const nodeName = String((n as any)?.name || '').trim();
       if (!nodeName) continue;
+      const nodeParent = String((n as any)?.progressStage || '').trim();
+      const isSubProcess = nodeParent && nodeParent !== nodeName;
       const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
-      // 父节点子工序平均聚合：
-      // 一个父节点（如"尾部"）可能包含多个子工序（剪线/质检/整烫），
-      // 同一菲号的每个子工序各产生一条扫码记录。
-      // 如果直接 maxByBundle，扫完一个子工序就显示 100%（虚高）。
-      // 正确做法：按 processName 分组，每组独立 maxByBundle 去重，
-      // 再将各组的物理完成件数求和 ÷ 期望子工序数 → 平均完成件数。
-      //
-      // 期望子工序数来源（按优先级）：
-      // 1. childProcessCountByNode（来自款式模板 progressNodesByStyleNo）
-      // 2. 扫码记录中实际出现的 distinct processName 数量
-      // 3. 兜底 = 1（单工序节点，行为与之前一致）
       const byProcess = new Map<string, typeof matchingRecords>();
       for (const r of matchingRecords) {
         const procName = String((r as any)?.processName || '').trim() || '__self__';
         if (!byProcess.has(procName)) byProcess.set(procName, []);
         byProcess.get(procName)!.push(r);
       }
-      // 每个子工序组独立 maxByBundle 去重
-      let totalProcessDone = 0;
+      let nodeDone = 0;
       for (const [, procRecords] of byProcess) {
         const maxByBundle = new Map<string, number>();
         let procNonBundleSum = 0;
@@ -181,13 +179,44 @@ export const ensureBoardStatsForOrder = async ({
         }
         let procDone = procNonBundleSum;
         maxByBundle.forEach((q) => { procDone += q; });
-        totalProcessDone += procDone;
+        if (isSubProcess) {
+          nodeDone = procDone;
+          if (!childDoneByProcess.has(nodeParent)) childDoneByProcess.set(nodeParent, new Map());
+          childDoneByProcess.get(nodeParent)!.set(nodeName, procDone);
+        } else {
+          nodeDone += procDone;
+        }
       }
-      // 确定期望子工序数（>1 时需要平均）
-      const expectedCount = childProcessCountByNode?.[nodeName]
-        || Math.max(1, byProcess.size);
-      stats[nodeName] = Math.round(totalProcessDone / expectedCount);
+      if (!isSubProcess) {
+        const expectedCount = childProcessCountByNode?.[nodeName]
+          || Math.max(1, byProcess.size);
+        if (expectedCount > 1) {
+          nodeDone = Math.round(nodeDone / expectedCount);
+        }
+      }
+      stats[nodeName] = nodeDone;
       hasScanByNode[nodeName] = matchingRecords.length > 0;
+    }
+    for (const [parentName, children] of parentChildMap) {
+      if (stats[parentName] !== undefined) continue;
+      const childDones = childDoneByProcess.get(parentName);
+      if (!childDones || childDones.size === 0) {
+        stats[parentName] = 0;
+        continue;
+      }
+      let parentDone = 0;
+      const allChildren = children.filter(c => childDones.has(c));
+      if (allChildren.length === children.length) {
+        const bundleChildDones = new Map<string, number[]>();
+        for (const childName of allChildren) {
+          const done = childDones.get(childName) || 0;
+          parentDone = parentDone === 0 ? done : Math.min(parentDone, done);
+        }
+      } else {
+        parentDone = 0;
+      }
+      stats[parentName] = parentDone;
+      hasScanByNode[parentName] = childDones.size > 0;
     }
 
     // === 采购节点：从采购模块获取真实到货数据 ===

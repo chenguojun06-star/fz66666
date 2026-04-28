@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.constants.ProductionConstants;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -143,7 +144,16 @@ public class ProductionScanStageSupport {
             }
         }
         for (String process : required) {
-            if (!completedProcesses.contains(process)) {
+            boolean found = completedProcesses.contains(process);
+            if (!found) {
+                for (String completed : completedProcesses) {
+                    if (ProcessSynonymMapping.isEquivalent(process, completed)) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
                 missing.add(process);
             }
         }

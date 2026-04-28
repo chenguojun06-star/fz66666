@@ -70,7 +70,24 @@ const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty, openNode
               processCode: c.processCode,
             }));
           } else {
-            const children = byParent[stage.label] || [];
+            let children = byParent[stage.label] || [];
+            if (!children.length) {
+              const CHINESE_STAGE_MAP: Record<string, string[]> = {
+                '裁剪': ['裁剪'],
+                '车缝': ['车缝', '整件', '缝制', '缝纫'],
+                '尾部': ['尾部', '整烫', '剪线', '包装', '质检'],
+                '入库': ['入库', '质检入库'],
+                '采购': ['采购', '物料', '备料'],
+                '二次工艺': ['二次工艺', '绣花', '印花'],
+              };
+              const altNames = CHINESE_STAGE_MAP[stage.label] || [];
+              for (const alt of altNames) {
+                if (byParent[alt]?.length) {
+                  children = byParent[alt];
+                  break;
+                }
+              }
+            }
             processList = children.map(c => ({
               name: c.name,
               unitPrice: c.unitPrice,

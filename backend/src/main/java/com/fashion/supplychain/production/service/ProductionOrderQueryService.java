@@ -85,7 +85,9 @@ public class ProductionOrderQueryService {
 
         QueryParams qp = extractQueryParams(safeParams);
         QueryWrapper<ProductionOrder> wrapper = buildQueryWrapper(qp);
-        wrapper.orderByDesc("create_time");
+        // 终态订单（关单/报废/已完成/已取消/已归档）自动排到最后，同组内按创建时间倒序
+        // 修复原因：旧排序仅 create_time DESC，终态订单散落各分页；前端排序只能在当页内重排，无法跨页全局置底
+        wrapper.last("ORDER BY CASE WHEN status IN ('closed','scrapped','cancelled','archived','completed') THEN 1 ELSE 0 END ASC, create_time DESC");
 
         IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo, wrapper);
         enrichOrderList(resultPage);

@@ -19,6 +19,7 @@ import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.EntityFactChecker;
 import com.fashion.supplychain.intelligence.service.GroundedGenerationGuard;
+import com.fashion.supplychain.intelligence.service.SelfConsistencyVerifier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,7 @@ public class AgentLoopEngine {
     @Autowired private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
+    @Autowired private SelfConsistencyVerifier selfConsistencyVerifier;
 
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         cb.onThinking(0, "开始思考...");
@@ -198,6 +200,22 @@ public class AgentLoopEngine {
         revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, ctx.getXiaoyunInsightCards());
 
         runDataTruthGuards(ctx, revisedContent);
+
+        boolean usedHighRiskTool = ctx.getAllExecRecords().stream()
+                .anyMatch(r -> selfConsistencyVerifier.isHighRiskScene(r.toolName));
+        if (usedHighRiskTool) {
+            SelfConsistencyVerifier.SelfConsistencyResult scResult =
+                    selfConsistencyVerifier.verify("agent-high-risk", ctx.getMessages(), ctx.getVisibleApiTools());
+            if (scResult.isVerified() && !scResult.isHighConfidence()) {
+                log.warn("[AgentLoop] Self-Consistency 一致性不足: agreement={}/{}={}",
+                        scResult.getSuccessCount(), scResult.getSampleCount(),
+                        String.format("%.2f", scResult.getAgreement()));
+                revisedContent += "\n\n> ⚠️ AI 自检提示：本次回答经过多路径验证，一致性较低，建议人工复核。";
+            } else if (scResult.isVerified() && scResult.isHighConfidence()) {
+                log.info("[AgentLoop] Self-Consistency 验证通过: agreement={}",
+                        String.format("%.2f", scResult.getAgreement()));
+            }
+        }
 
         aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), revisedContent, null,
                 System.currentTimeMillis() - ctx.getRequestStartAt());

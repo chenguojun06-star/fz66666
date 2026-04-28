@@ -26,4 +26,8 @@ public interface ProductionOrderMapper extends BaseMapper<ProductionOrder> {
     @Select("SELECT id, factory_type, parent_org_unit_id, tenant_id, delete_flag "
             + "FROM t_production_order ${ew.customSqlSegment}")
     List<ProductionOrder> listForFinanceScope(@Param(Constants.WRAPPER) Wrapper<ProductionOrder> queryWrapper);
+
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT * FROM t_production_order WHERE id = #{id} AND delete_flag = 0 LIMIT 1")
+    ProductionOrder selectByIdIgnoreTenant(@Param("id") String id);
 }

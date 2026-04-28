@@ -154,7 +154,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setRemarkModalOpen(true);
   }, []);
 
-  const { quickEditVisible, quickEditSaving, setQuickEditVisible, quickEditRecord, handleQuickEditSave } = useQuickEdit({ message, fetchOrders: () => fetchOrders() });
+  const { quickEditVisible, quickEditSaving, setQuickEditVisible, setQuickEditRecord, quickEditRecord, handleQuickEdit, handleQuickEditSave } = useQuickEdit({ message, fetchOrders: () => fetchOrders() });
 
   useEffect(() => { activeOrderRef.current = activeOrder; }, [activeOrder]);
 
@@ -230,7 +230,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const { cardActions, titleTags } = useCardViewConfig({
     isOrderFrozenByStatus, setPrintingRecord, handlePrintLabel, handleFactoryShip,
-    handleQuickEdit: () => {}, handleShareOrder, handleCloseOrder,
+    handleQuickEdit, handleShareOrder, handleCloseOrder,
     onOpenRemark: (record) => openRemarkModal(record.orderNo ?? '', record.merchandiser ?? undefined),
     isFactoryAccount, canManageOrderLifecycle, embedded: !!embedded,
   });
@@ -247,9 +247,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const sortedSmartQueueOrders = useMemo(() => {
     return [...smartQueueOrders].sort((a, b) => {
-      const aClose = isOrderTerminal(a) ? 1 : 0;
-      const bClose = isOrderTerminal(b) ? 1 : 0;
-      if (aClose !== bClose) return aClose - bClose;
+      const aStatus = String(a.status || '').trim().toLowerCase();
+      const bStatus = String(b.status || '').trim().toLowerCase();
+      const aScrapped = ['scrapped', 'cancelled', 'closed', 'archived'].includes(aStatus) ? 2 : isOrderTerminal(a) ? 1 : 0;
+      const bScrapped = ['scrapped', 'cancelled', 'closed', 'archived'].includes(bStatus) ? 2 : isOrderTerminal(b) ? 1 : 0;
+      if (aScrapped !== bScrapped) return aScrapped - bScrapped;
       const aTime = new Date(String(a.createTime || 0)).getTime();
       const bTime = new Date(String(b.createTime || 0)).getTime();
       return dateSortAsc ? aTime - bTime : bTime - aTime;
@@ -263,7 +265,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     orderSortField, orderSortOrder, handleOrderSort,
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
-    setPrintingRecord, handlePrintLabel, setQuickEditRecord: () => {}, setQuickEditVisible: () => {},
+    setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal, stagnantOrderIds, deliveryRiskMap,
     onShareOrder: handleShareOrder, isFactoryAccount, onFactoryShip: handleFactoryShip, canManageOrderLifecycle,
   });
@@ -315,7 +317,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         quickEditRecord={quickEditRecord}
         handleQuickEditSave={handleQuickEditSave}
         setQuickEditVisible={setQuickEditVisible}
-        setQuickEditRecord={() => {}}
+        setQuickEditRecord={setQuickEditRecord}
         labelPrintOpen={labelPrintOpen}
         closeLabelPrint={closeLabelPrint}
         labelPrintOrder={labelPrintOrder}

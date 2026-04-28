@@ -54,17 +54,14 @@ public class MaterialPurchaseController {
      */
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
-        // 智能路由：扫码查询
         if (params.containsKey("scanCode")) {
             return Result.success(materialPurchaseOrchestrator.getByScanCode(params));
         }
 
-        // 智能路由：我的任务
         if ("true".equals(String.valueOf(params.get("myTasks")))) {
             return Result.success(materialPurchaseOrchestrator.getMyTasks());
         }
 
-        // 默认分页查询（含下单数量enrichment）
         return Result.success(materialPurchaseOrchestrator.listWithEnrichment(params));
     }
 

@@ -163,4 +163,7 @@ public class ProductionProcessTracking {
      */
     @TableField(exist = false)
     private Boolean hasNextStageScanned;
+
+    @TableField(exist = false)
+    private String progressStage;
 }

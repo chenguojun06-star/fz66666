@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-@Service
+@Service("productionShipmentReconciliationOrchestrator")
 @Slf4j
 public class ShipmentReconciliationOrchestrator {
 

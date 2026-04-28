@@ -98,17 +98,13 @@ export const isTailStageKey = (k: string) => {
 export const isSecondaryProcessStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
-  return n.includes('二次工艺') || n.includes('二次') || n.includes('绣花') || n.includes('印花') || n.includes('水洗') || n.includes('压花');
+  return n.includes('二次工艺') || n.includes('二次');
 };
 
 export const canonicalStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return '';
   const map: Record<string, string> = {
-    订单创建: '下单',
-    创建订单: '下单',
-    开单: '下单',
-    制单: '下单',
     物料采购: '采购',
     面辅料采购: '采购',
     备料: '采购',
@@ -127,52 +123,15 @@ export const canonicalStageKey = (k: string) => {
     开裁: '裁剪',
     裁片: '裁剪',
     裁切: '裁剪',
-    绣花: '二次工艺',
-    印花: '二次工艺',
-    水洗: '二次工艺',
-    压花: '二次工艺',
-    烫钻: '二次工艺',
-    烫画: '二次工艺',
-    钉珠: '二次工艺',
-    烫金: '二次工艺',
-    数码印: '二次工艺',
-    打孔: '二次工艺',
-    激光: '二次工艺',
-    转印: '二次工艺',
-    植绒: '二次工艺',
-    涂层: '二次工艺',
-    磨毛: '二次工艺',
-    染色: '二次工艺',
-    后处理: '二次工艺',
-    大烫: '尾部',
-    整烫: '尾部',
-    熨烫: '尾部',
-    烫整: '尾部',
-    后整烫: '尾部',
-    剪线: '尾部',
-    锁边: '尾部',
-    检验: '尾部',
-    品检: '尾部',
-    验货: '尾部',
-    QC: '尾部',
-    品控: '尾部',
-    检查: '尾部',
-    后整: '尾部',
-    打包: '尾部',
-    装箱: '尾部',
-    封箱: '尾部',
-    贴标: '尾部',
-    质检入库: '入库',
-    入仓: '入库',
-    仓库: '入库',
+    二次: '二次工艺',
+    后整理: '尾部',
+    后道: '尾部',
     仓储: '入库',
     上架: '入库',
     进仓: '入库',
-    入库质检: '入库',
+    入仓: '入库',
+    验收: '入库',
     成品入库: '入库',
-    完工入库: '入库',
-    发货: '出货',
-    发运: '出货',
   };
   return normalizeStageKey(map[n] || n);
 };

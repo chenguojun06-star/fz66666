@@ -34,14 +34,14 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-@Service
+@Service("financeShipmentReconciliationOrchestrator")
 @Slf4j
 public class ShipmentReconciliationOrchestrator {
 
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
 
-    @Autowired
+    @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
     @Autowired
@@ -448,6 +448,9 @@ public class ShipmentReconciliationOrchestrator {
     }
 
     private String generateReconciliationNo() {
+        if (distributedLockService == null) {
+            return doGenerateReconciliationNo();
+        }
         return distributedLockService.executeWithStrictLock(
                 "shipmentReconciliation:generateNo", 5, TimeUnit.SECONDS,
                 this::doGenerateReconciliationNo);

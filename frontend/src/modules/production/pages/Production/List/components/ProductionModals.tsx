@@ -7,6 +7,7 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import LabelPrintModal from './LabelPrintModal';
 import SubProcessRemapModal from './SubProcessRemapModal';
+import SyncProcessPriceModal from '@/modules/basic/pages/TemplateCenter/components/SyncProcessPriceModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import TransferOrderModal from '../TransferOrderModal';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
@@ -103,6 +104,10 @@ interface ProductionModalsProps {
   scrapOrderLoading: boolean;
   confirmScrapOrder: (reason: string) => void;
   cancelScrapOrder: () => void;
+  workflowEditorVisible: boolean;
+  workflowEditorStyleNo?: string;
+  closeWorkflowEditor: () => void;
+  onWorkflowSaved: () => void;
 }
 
 const ProductionModals: React.FC<ProductionModalsProps> = ({
@@ -188,6 +193,10 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
   scrapOrderLoading,
   confirmScrapOrder,
   cancelScrapOrder,
+  workflowEditorVisible,
+  workflowEditorStyleNo,
+  closeWorkflowEditor,
+  onWorkflowSaved,
 }) => (
   <>
     <QuickEditModal
@@ -306,6 +315,13 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
       onSave={saveRemap}
       onClose={closeRemap}
       isFactoryAccount={isFactoryAccount}
+    />
+
+    <SyncProcessPriceModal
+      open={workflowEditorVisible}
+      onCancel={closeWorkflowEditor}
+      onSynced={onWorkflowSaved}
+      styleNo={workflowEditorStyleNo}
     />
 
     <StylePrintModal

@@ -6,6 +6,8 @@ import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.service.ReceivableService;
 import com.fashion.supplychain.finance.entity.*;
 import com.fashion.supplychain.finance.service.*;
+import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,8 @@ public class FinancialReportOrchestrator {
     private PayableService payableService;
     @Autowired
     private InvoiceService invoiceService;
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     /** 财务报表仅限管理层查看，工厂账户禁止访问 */
     private void assertNotFactoryAccount() {
@@ -61,6 +65,8 @@ public class FinancialReportOrchestrator {
 
         // 2. 成本：物料对账 + 工序成本（扫码结算）
         BigDecimal materialCost = sumMaterialCost(tenantId, startDt, endDt);
+        BigDecimal laborCost   = sumLaborCost(tenantId, startDt, endDt);
+        BigDecimal totalCost   = materialCost.add(laborCost);
 
         // 3. 费用：已批准的报销
         BigDecimal expenseTotal = sumExpense(tenantId, startDt, endDt);
@@ -68,7 +74,7 @@ public class FinancialReportOrchestrator {
         // 4. 税额：已开具发票的税额合计
         BigDecimal taxTotal = sumIssuedTax(tenantId, startDt, endDt);
 
-        BigDecimal grossProfit = totalRevenue.subtract(materialCost);
+        BigDecimal grossProfit = totalRevenue.subtract(totalCost);
         BigDecimal operatingProfit = grossProfit.subtract(expenseTotal);
         BigDecimal netProfit = operatingProfit.subtract(taxTotal);
 
@@ -80,6 +86,8 @@ public class FinancialReportOrchestrator {
         report.put("ecRevenue", ecRevenue);
         report.put("totalRevenue", totalRevenue);
         report.put("materialCost", materialCost);
+        report.put("laborCost", laborCost);
+        report.put("totalCost", totalCost);
         report.put("grossProfit", grossProfit);
         report.put("expenseTotal", expenseTotal);
         report.put("operatingProfit", operatingProfit);
@@ -211,7 +219,13 @@ public class FinancialReportOrchestrator {
                         .le(MaterialReconciliation::getCreateTime, end)
                         .last("LIMIT 5000"));
         return list.stream()
-                .map(m -> m.getTotalAmount() != null ? m.getTotalAmount() : BigDecimal.ZERO)
+                .map(m -> {
+                    BigDecimal finalAmt = m.getFinalAmount();
+                    if (finalAmt != null && finalAmt.compareTo(BigDecimal.ZERO) > 0) {
+                        return finalAmt;
+                    }
+                    return m.getTotalAmount() != null ? m.getTotalAmount() : BigDecimal.ZERO;
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -241,6 +255,33 @@ public class FinancialReportOrchestrator {
         return list.stream()
                 .map(i -> i.getTaxAmount() != null ? i.getTaxAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal sumLaborCost(Long tenantId, LocalDateTime start, LocalDateTime end) {
+        LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(ScanRecord::getScanResult, "success")
+          .gt(ScanRecord::getQuantity, 0)
+          .eq(ScanRecord::getTenantId, tenantId)
+          .isNull(ScanRecord::getFactoryId)
+          .ne(ScanRecord::getScanType, "orchestration")
+          .ge(ScanRecord::getScanTime, start)
+          .le(ScanRecord::getScanTime, end);
+        List<ScanRecord> records = scanRecordService.list(qw);
+        return records.stream()
+                .map(r -> {
+                    if (r.getTotalAmount() != null && r.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        return r.getTotalAmount();
+                    }
+                    if (r.getScanCost() != null && r.getScanCost().compareTo(BigDecimal.ZERO) > 0) {
+                        return r.getScanCost();
+                    }
+                    if (r.getUnitPrice() != null && r.getQuantity() != null) {
+                        return r.getUnitPrice().multiply(BigDecimal.valueOf(r.getQuantity()));
+                    }
+                    return BigDecimal.ZERO;
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Autowired

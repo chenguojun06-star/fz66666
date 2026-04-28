@@ -130,6 +130,32 @@ class ScanDataProcessor {
 
       const styleNo = orderDetail.styleNo || parsedData.styleNo || '';
 
+      // 加载工序配置，找到裁剪工序的单价，用于 scan-result 页面正确显示
+      // 修复：handleCuttingMode 之前未返回 stageResult.allBundleProcesses，
+      // 导致 scan-result/_buildProcessOptions() 拿不到工序信息，单价始终隐藏
+      let allBundleProcesses = [];
+      try {
+        const processConfig = await this.api.production.getProcessConfig(orderNo);
+        if (Array.isArray(processConfig) && processConfig.length > 0) {
+          // 过滤出裁剪类型的工序（scanType=cutting 或 progressStage 含"裁剪"）
+          let cuttingProcs = processConfig.filter(
+            p => p.scanType === 'cutting' || (p.progressStage || '').includes('裁剪'),
+          );
+          // 如果没有专门的裁剪工序，取所有非采购工序作为兜底
+          if (cuttingProcs.length === 0) {
+            cuttingProcs = processConfig.filter(p => p.scanType !== 'procurement');
+          }
+          allBundleProcesses = cuttingProcs.map(p => ({
+            processName: p.processName,
+            progressStage: p.progressStage || '裁剪',
+            scanType: p.scanType || 'cutting',
+            unitPrice: Number(p.price || p.unitPrice || 0),
+          }));
+        }
+      } catch (configErr) {
+        console.warn('[ScanDataProcessor] 获取裁剪工序配置失败:', configErr.message || configErr);
+      }
+
       return {
         success: true,
         needConfirm: true,
@@ -141,6 +167,9 @@ class ScanDataProcessor {
           progressStage: '裁剪',
           orderDetail: orderDetail,
           styleNo: styleNo,
+          stageResult: {
+            allBundleProcesses: allBundleProcesses,
+          },
         },
         message: cuttingTask ? '请确认领取裁剪任务' : '暂无裁剪任务，请稍后再试',
       };

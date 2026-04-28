@@ -1,5 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
+import com.fashion.supplychain.common.ProcessSynonymMapping;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -14,21 +16,40 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class CuttingWorkflowBuilderHelper {
 
-    private final TemplateLibraryService templateLibraryService;
+    private static final List<String> STAGE_ORDER = List.of("采购", "裁剪", "二次工艺", "车缝", "尾部", "入库");
 
-    public CuttingWorkflowBuilderHelper(TemplateLibraryService templateLibraryService) {
+    private final TemplateLibraryService templateLibraryService;
+    private final ProcessParentMappingService processParentMappingService;
+
+    public CuttingWorkflowBuilderHelper(TemplateLibraryService templateLibraryService,
+                                        ProcessParentMappingService processParentMappingService) {
         this.templateLibraryService = templateLibraryService;
+        this.processParentMappingService = processParentMappingService;
     }
 
     public String resolveProgressWorkflowJson(Map<String, Object> body, String styleNo) {
         String progressWorkflowJson = getTrimmedText(body, "progressWorkflowJson");
-        if (!StringUtils.hasText(progressWorkflowJson)) {
-            progressWorkflowJson = buildProgressWorkflowJson(styleNo);
+        if (StringUtils.hasText(progressWorkflowJson) && !isBlankWorkflow(progressWorkflowJson)) {
+            return progressWorkflowJson;
         }
-        if (!StringUtils.hasText(progressWorkflowJson)) {
-            progressWorkflowJson = buildCuttingDefaultWorkflowJson();
+        progressWorkflowJson = buildProgressWorkflowJson(styleNo);
+        if (StringUtils.hasText(progressWorkflowJson)) {
+            return progressWorkflowJson;
         }
-        return progressWorkflowJson;
+        return buildCuttingDefaultWorkflowJson();
+    }
+
+    private boolean isBlankWorkflow(String json) {
+        try {
+            Map<String, Object> parsed = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            Object nodesObj = parsed.get("nodes");
+            if (nodesObj instanceof List<?> list) {
+                return list.isEmpty();
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public String buildProgressWorkflowJson(String styleNo) {
@@ -50,6 +71,9 @@ public class CuttingWorkflowBuilderHelper {
             node.put("name", processName);
 
             String progressStage = item.get("progressStage") == null ? null : String.valueOf(item.get("progressStage")).trim();
+            if (!StringUtils.hasText(progressStage) || progressStage.equals(processName)) {
+                progressStage = resolveProgressStageFromMapping(processName);
+            }
             if (StringUtils.hasText(progressStage)) {
                 node.put("progressStage", progressStage);
             }
@@ -109,5 +133,26 @@ public class CuttingWorkflowBuilderHelper {
         if (v == null) return null;
         String s = String.valueOf(v).trim();
         return StringUtils.hasText(s) ? s : null;
+    }
+
+    private String resolveProgressStageFromMapping(String processName) {
+        if (!StringUtils.hasText(processName)) {
+            return processName;
+        }
+        String normalized = ProcessSynonymMapping.normalize(processName.trim());
+        if (STAGE_ORDER.contains(normalized)) {
+            return normalized;
+        }
+        String mapped = processParentMappingService.resolveParentNode(processName.trim());
+        if (StringUtils.hasText(mapped)) {
+            String normalizedMapped = ProcessSynonymMapping.normalize(mapped.trim());
+            if (STAGE_ORDER.contains(normalizedMapped)) {
+                return normalizedMapped;
+            }
+            if (StringUtils.hasText(mapped)) {
+                return mapped;
+            }
+        }
+        return processName;
     }
 }

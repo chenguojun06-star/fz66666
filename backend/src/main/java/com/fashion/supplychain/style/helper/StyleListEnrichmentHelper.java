@@ -413,7 +413,7 @@ public class StyleListEnrichmentHelper {
             if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
                 style.setProgressNode("开发样报废");
                 style.setCompletedTime(null);
-            } else if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
+            } else if ("COMPLETED".equalsIgnoreCase(sampleStatus) || "PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus)) {
                 style.setProgressNode("样衣完成");
                 style.setCompletedTime(style.getSampleCompletedTime());
             } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {

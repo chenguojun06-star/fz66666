@@ -203,6 +203,8 @@ export interface PayrollOperatorProcessSummaryRow {
   operatorId?: string;
   operatorName?: string;
   processName?: string;
+  processCode?: string;
+  cuttingBundleNo?: number;
   scanType?: string;
   quantity?: number;
   unitPrice?: number;

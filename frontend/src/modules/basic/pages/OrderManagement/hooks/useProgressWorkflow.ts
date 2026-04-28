@@ -11,7 +11,7 @@ export function useProgressWorkflow() {
       .map((n: any) => {
         const name = String(n?.name || n?.processName || '').trim();
         if (!name) return null;
-        const id = String(n?.id || n?.processCode || name || '').trim() || name;
+        const id = String(n?.processCode || n?.id || name || '').trim() || name;
         const p = Number(n?.unitPrice);
         const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
         const progressStage = String(n?.progressStage || name).trim();
@@ -73,7 +73,7 @@ export function useProgressWorkflow() {
       if (seenNames.has(name)) return;
       seenNames.add(name);
 
-      const id = String(n?.id || name || '').trim() || name;
+      const id = String((n as any)?.processCode || n?.id || name || '').trim() || name;
       const progressStage = String((n as any)?.progressStage || name).trim();
       const machineType = String((n as any)?.machineType || '').trim();
       const standardTime = Number((n as any)?.standardTime) || 0;

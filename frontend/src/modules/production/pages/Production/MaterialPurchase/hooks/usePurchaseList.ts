@@ -163,6 +163,11 @@ export function usePurchaseList({
   const sortedPurchaseList = useMemo(() => {
     const sorted = [...purchaseList];
     sorted.sort((a: any, b: any) => {
+      const aStatus = String(a.status || '').trim().toLowerCase();
+      const bStatus = String(b.status || '').trim().toLowerCase();
+      const aCancelled = aStatus === 'cancelled' ? 2 : aStatus === 'completed' ? 1 : 0;
+      const bCancelled = bStatus === 'cancelled' ? 2 : bStatus === 'completed' ? 1 : 0;
+      if (aCancelled !== bCancelled) return aCancelled - bCancelled;
       if (sortField === 'createTime' || sortField === 'returnConfirmTime') {
         const at = a[sortField] ? new Date(a[sortField]).getTime() : 0;
         const bt = b[sortField] ? new Date(b[sortField]).getTime() : 0;

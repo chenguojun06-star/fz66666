@@ -25,7 +25,6 @@ import java.util.Map;
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 2)
-@ConditionalOnBean(StringRedisTemplate.class)
 public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
     private static final String LUA_SCRIPT =

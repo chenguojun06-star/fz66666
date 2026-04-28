@@ -120,6 +120,11 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   const sortedTaskList = useMemo(() => {
     const sorted = [...taskList];
     sorted.sort((a: any, b: any) => {
+      const aStatus = String(a.status || '').trim().toLowerCase();
+      const bStatus = String(b.status || '').trim().toLowerCase();
+      const aTerminal = aStatus === 'bundled' ? 1 : 0;
+      const bTerminal = bStatus === 'bundled' ? 1 : 0;
+      if (aTerminal !== bTerminal) return aTerminal - bTerminal;
       const aVal = a[cuttingSortField];
       const bVal = b[cuttingSortField];
       if (cuttingSortField === 'receivedTime' || cuttingSortField === 'bundledTime' || cuttingSortField === 'orderTime') {

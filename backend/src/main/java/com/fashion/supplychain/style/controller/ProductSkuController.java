@@ -74,7 +74,24 @@ public class ProductSkuController {
 
     @PutMapping("/{id}")
     public Result<Boolean> update(@PathVariable Long id, @RequestBody ProductSku sku) {
+        TenantAssert.assertTenantContext();
+        Long tid = UserContext.tenantId();
+
+        ProductSku existing = productSkuService.getById(id);
+        if (existing == null) {
+            return Result.fail("SKU不存在");
+        }
+        if (!tid.equals(existing.getTenantId())) {
+            return Result.fail("无权操作其他租户数据");
+        }
+
         sku.setId(id);
+        sku.setTenantId(existing.getTenantId());
+        sku.setStockQuantity(existing.getStockQuantity());
+        sku.setVersion(existing.getVersion());
+        sku.setSkuCode(existing.getSkuCode());
+        sku.setStyleNo(existing.getStyleNo());
+
         return Result.success(productSkuService.updateById(sku));
     }
 }

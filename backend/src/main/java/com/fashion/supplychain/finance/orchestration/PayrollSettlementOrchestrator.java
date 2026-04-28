@@ -256,6 +256,13 @@ public class PayrollSettlementOrchestrator {
             item.setOrderId(TextUtils.safeText(row.get("orderId")));
             item.setOrderNo(TextUtils.safeText(row.get("orderNo")));
             item.setStyleNo(TextUtils.safeText(row.get("styleNo")));
+            item.setColor(TextUtils.safeText(row.get("color")));
+            item.setSize(TextUtils.safeText(row.get("size")));
+            item.setProcessCode(TextUtils.safeText(row.get("processCode")));
+            Object bundleNoRaw = row.get("cuttingBundleNo");
+            if (bundleNoRaw instanceof Number num) {
+                item.setCuttingBundleNo(num.intValue());
+            }
             item.setScanType(TextUtils.safeText(row.get("scanType")));
             item.setCreateTime(now);
             item.setUpdateTime(now);

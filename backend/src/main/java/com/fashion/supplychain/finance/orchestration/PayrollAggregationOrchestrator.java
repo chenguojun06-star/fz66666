@@ -105,10 +105,11 @@ public class PayrollAggregationOrchestrator {
         qw.last("LIMIT 5000");
         List<ScanRecord> scanRecords = scanRecordService.list(qw);
 
-        // 按 operator_id + order_id + process_name + color + size 分组
+        // 按 operator_id + order_id + process_name + color + size + cutting_bundle_no 分组
         // ★ 必须含 orderId：否则同一工人对不同订单做同名工序时，数量会被错误累加到第一个订单上
         //    旧 key（只有 operatorId+processName）导致：李老板所有订单的"采购"扫码 → 合并成一行 2553 件
         // ★ 含 color+size：同一订单不同颜色/尺码的扫码记录分开显示，与 PC 端工资结算行一一对应
+        // ★ 含 cuttingBundleNo：同一订单同一颜色尺码不同菲号的扫码记录分开显示，避免多扎货混淆
         Map<String, List<ScanRecord>> grouped = scanRecords.stream()
                 .collect(Collectors.groupingBy(
                         record -> {
@@ -117,7 +118,8 @@ public class PayrollAggregationOrchestrator {
                             String pn = record.getProcessName() != null ? record.getProcessName() : "";
                             String color = record.getColor() != null ? record.getColor() : "";
                             String size = record.getSize() != null ? record.getSize() : "";
-                            return oid + "|" + ordId + "|" + pn + "|" + color + "|" + size;
+                            String bundleNo = record.getCuttingBundleNo() != null ? String.valueOf(record.getCuttingBundleNo()) : "";
+                            return oid + "|" + ordId + "|" + pn + "|" + color + "|" + size + "|" + bundleNo;
                         },
                         Collectors.toList()
                 ));
@@ -223,6 +225,8 @@ public class PayrollAggregationOrchestrator {
         dto.setOperatorId(first.getOperatorId());
         dto.setOperatorName(first.getOperatorName());
         dto.setProcessName(first.getProcessName());
+        dto.setProcessCode(first.getProcessCode());
+        dto.setCuttingBundleNo(first.getCuttingBundleNo());
         dto.setQuantity(totalQuantity);
         dto.setUnitPrice(unitPrice);
         dto.setTotalAmount(totalAmount);
@@ -258,7 +262,8 @@ public class PayrollAggregationOrchestrator {
                 safePart(record.getColor()),
                 safePart(record.getSize()),
                 safePart(record.getOperatorId()),
-                safePart(record.getProcessName()));
+                safePart(record.getProcessName()),
+                record.getCuttingBundleNo() != null ? String.valueOf(record.getCuttingBundleNo()) : "");
         return "PAY_" + DigestUtils.md5DigestAsHex(rawKey.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -282,6 +287,8 @@ public class PayrollAggregationOrchestrator {
         private String operatorId;
         private String operatorName;
         private String processName;
+        private String processCode;
+        private Integer cuttingBundleNo;
         private Long quantity;
         private BigDecimal unitPrice;
         private BigDecimal totalAmount;

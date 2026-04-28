@@ -21,7 +21,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
     const stages: Record<string, { count: number; total: number }> = {};
     CUTTING_STAGE_ORDER.forEach((s) => { stages[s] = { count: 0, total: 0 }; });
     createTask.createProcessNodes.forEach((n) => {
-      const stage = String(n.progressStage || '车缝').trim();
+      const stage = String(n.progressStage || '').trim() || '裁剪';
       const price = Number(n.unitPrice || 0) || 0;
       if (stages[stage]) {
         stages[stage].count += 1;

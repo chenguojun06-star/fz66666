@@ -17,6 +17,7 @@ import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.helper.picking.MaterialPurchasePickingSupport;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +38,7 @@ public class ExternalFactoryMaterialDeductionHelper {
             MaterialPicking picking,
             MaterialPurchase purchase,
             List<MaterialPickingItem> items,
-            MaterialPurchasePickingHelper.FactorySnapshot factorySnapshot) {
+            MaterialPurchasePickingSupport.FactorySnapshot factorySnapshot) {
         try {
             String orderId = purchase != null ? purchase.getOrderId() : picking.getOrderId();
             String orderNo = purchase != null ? purchase.getOrderNo() : picking.getOrderNo();

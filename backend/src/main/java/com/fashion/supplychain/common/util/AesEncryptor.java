@@ -42,8 +42,8 @@ public class AesEncryptor {
 
             return Base64.getEncoder().encodeToString(combined);
         } catch (Exception e) {
-            log.warn("[AesEncryptor] 加密失败: {}", e.getMessage());
-            return plaintext;
+            log.error("[AesEncryptor] 加密失败，拒绝返回明文: {}", e.getMessage());
+            throw new RuntimeException("敏感数据加密失败，请联系管理员", e);
         }
     }
 
@@ -63,8 +63,8 @@ public class AesEncryptor {
 
             return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.warn("[AesEncryptor] 解密失败: {}", e.getMessage());
-            return ciphertext;
+            log.error("[AesEncryptor] 解密失败: {}", e.getMessage());
+            throw new RuntimeException("数据解密失败，请联系管理员", e);
         }
     }
 

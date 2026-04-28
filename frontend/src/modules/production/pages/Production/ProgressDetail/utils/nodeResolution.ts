@@ -14,6 +14,68 @@ import {
   resolveDynamicParent,
 } from './stageMapping';
 
+const STAGE_SORT_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+const isProcessCode = (code: string): boolean => {
+  if (!code) return false;
+  if (/^[0-9a-f]{8}-/i.test(code)) return false;
+  if (['purchase','cutting','sewing','pressing','quality','secondary-process','secondaryProcess','packaging','warehousing'].includes(code)) return false;
+  return /^[\d]+(-[\d]+)*$/.test(code);
+};
+
+const parseProcessCodeSegments = (code: string): (number | string)[] => {
+  if (!code) return [];
+  return code.split('-').map(segment => {
+    const num = parseInt(segment, 10);
+    return !isNaN(num) && /^\d+$/.test(segment) ? num : segment;
+  });
+};
+
+const compareProcessCodes = (codeA: string, codeB: string): number => {
+  const isA = isProcessCode(codeA);
+  const isB = isProcessCode(codeB);
+  if (isA && !isB) return -1;
+  if (!isA && isB) return 1;
+  if (!isA && !isB) return 0;
+  const segsA = parseProcessCodeSegments(codeA);
+  const segsB = parseProcessCodeSegments(codeB);
+  const maxLen = Math.max(segsA.length, segsB.length);
+  for (let i = 0; i < maxLen; i++) {
+    const a = segsA[i];
+    const b = segsB[i];
+    if (a === undefined && b !== undefined) return -1;
+    if (a !== undefined && b === undefined) return 1;
+    if (typeof a === 'number' && typeof b === 'number') {
+      if (a !== b) return a - b;
+    } else if (typeof a === 'number') {
+      return -1;
+    } else if (typeof b === 'number') {
+      return 1;
+    } else {
+      const cmp = String(a).localeCompare(String(b));
+      if (cmp !== 0) return cmp;
+    }
+  }
+  return 0;
+};
+
+const sortNodesByProcessCode = (nodes: ProgressNode[]): ProgressNode[] => {
+  return [...nodes].sort((a, b) => {
+    const codeA = String(a.id || '').trim();
+    const codeB = String(b.id || '').trim();
+    const codeCmp = compareProcessCodes(codeA, codeB);
+    if (codeCmp !== 0) return codeCmp;
+    const stageA = a.progressStage || canonicalStageKey(a.name) || '';
+    const stageB = b.progressStage || canonicalStageKey(b.name) || '';
+    const idxA = STAGE_SORT_ORDER.indexOf(stageA);
+    const idxB = STAGE_SORT_ORDER.indexOf(stageB);
+    const sortA = idxA >= 0 ? idxA : STAGE_SORT_ORDER.length;
+    const sortB = idxB >= 0 ? idxB : STAGE_SORT_ORDER.length;
+    if (sortA !== sortB) return sortA - sortB;
+    return a.name.localeCompare(b.name, 'zh-CN');
+  });
+};
+
 export const findPricingProcessForStage = (list: StyleProcess[], stageName: string) => {
   const stage = String(stageName || '').trim();
   if (!stage) return null;
@@ -86,7 +148,7 @@ export const parseProgressNodes = (raw: string): ProgressNode[] => {
         const name = String(n?.name || n?.processName || '').trim();
         const p = Number(n?.unitPrice);
         const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-        const id = String(n?.id || n?.processCode || name || '');
+        const id = String(n?.processCode || n?.id || name || '');
         const progressStage = String(n?.progressStage || '').trim() || undefined;
         return { id, name, unitPrice, progressStage };
       })
@@ -243,18 +305,18 @@ export const resolveNodesForOrder = (
         const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : 999;
         return ia - ib;
       });
-      return applySubProcessRemapToNodes(merged, order);
+      return sortNodesByProcessCode(applySubProcessRemapToNodes(merged, order));
     }
-    return applySubProcessRemapToNodes(orderNodes, order);
+    return sortNodesByProcessCode(applySubProcessRemapToNodes(orderNodes, order));
   }
   const sn = String((order as any)?.styleNo || '').trim();
   if (sn && progressNodesByStyleNo[sn]?.length) {
-    return applySubProcessRemapToNodes(
+    return sortNodesByProcessCode(applySubProcessRemapToNodes(
       progressNodesByStyleNo[sn].filter(n => (Number(n.unitPrice) || 0) > 0),
       order,
-    );
+    ));
   }
-  return applySubProcessRemapToNodes(fallbackNodes?.length ? fallbackNodes : defaultNodes, order);
+  return sortNodesByProcessCode(applySubProcessRemapToNodes(fallbackNodes?.length ? fallbackNodes : defaultNodes, order));
 };
 
 export const collapseSecondaryProcessNodes = (nodes: ProgressNode[]): ProgressNode[] => {
@@ -327,15 +389,15 @@ export const resolveNodesForListOrder = (
         const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : 999;
         return ia - ib;
       });
-      return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(merged, order));
+      return collapseSecondaryProcessNodes(sortNodesByProcessCode(applySubProcessRemapToNodes(merged, order)));
     }
-    return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(orderNodes, order));
+    return collapseSecondaryProcessNodes(sortNodesByProcessCode(applySubProcessRemapToNodes(orderNodes, order)));
   }
   const sn = String((order as any)?.styleNo || '').trim();
   if (sn && progressNodesByStyleNo[sn]?.length) {
-    return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(progressNodesByStyleNo[sn], order));
+    return collapseSecondaryProcessNodes(sortNodesByProcessCode(applySubProcessRemapToNodes(progressNodesByStyleNo[sn], order)));
   }
-  return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(fallbackNodes?.length ? fallbackNodes : defaultNodes, order));
+  return collapseSecondaryProcessNodes(sortNodesByProcessCode(applySubProcessRemapToNodes(fallbackNodes?.length ? fallbackNodes : defaultNodes, order)));
 };
 
 export const getProcessesByNodeFromOrder = (
@@ -366,7 +428,7 @@ export const getProcessesByNodeFromOrder = (
           const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
           const storedPrice = Number(item?.unitPrice) || 0;
           const price = templatePriceMap.get(n) ?? storedPrice;
-          const processCode = String(item?.id || item?.processCode || '').trim() || undefined;
+          const processCode = String(item?.processCode || item?.id || '').trim() || undefined;
           if (!byNode[stage]) byNode[stage] = [];
           byNode[stage].push({ name: n, unitPrice: price, processCode });
         }
@@ -380,7 +442,7 @@ export const getProcessesByNodeFromOrder = (
           .map((p: any) => {
             const name = String(p?.name || p?.processName || '').trim();
             const storedPrice = Number(p?.unitPrice) || 0;
-            const processCode = String(p?.id || p?.processCode || '').trim() || undefined;
+            const processCode = String(p?.processCode || p?.id || '').trim() || undefined;
             return { name, unitPrice: templatePriceMap.get(name) ?? storedPrice, processCode };
           })
           .filter((x) => x.name);
@@ -402,7 +464,7 @@ export const getProcessesByNodeFromOrder = (
       const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
       const storedPrice = Number(item?.unitPrice) || Number(item?.price) || 0;
       const price = templatePriceMap.get(n) ?? storedPrice;
-      const processCode = String(item?.id || item?.processId || item?.processCode || '').trim() || undefined;
+      const processCode = String(item?.processCode || item?.processId || item?.id || '').trim() || undefined;
       if (!byNode[stage]) byNode[stage] = [];
       byNode[stage].push({ name: n, unitPrice: price, processCode });
     }

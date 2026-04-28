@@ -17,6 +17,7 @@ import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.helper.picking.MaterialPurchasePickingSupport;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
@@ -655,7 +656,7 @@ public class MaterialPurchasePickingHelper {
 
         syncPickupRecordAfterOutbound(picking, purchase, items, pickedTotalQty);
 
-        FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
+        MaterialPurchasePickingSupport.FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
         if ("EXTERNAL".equalsIgnoreCase(factorySnapshot.factoryType)) {
             externalFactoryDeductionHelper.applyMaterialDeduction(picking, purchase, items, factorySnapshot);
         }
@@ -824,7 +825,7 @@ public class MaterialPurchasePickingHelper {
             return;
         }
 
-        FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
+        MaterialPurchasePickingSupport.FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
 
         for (MaterialPickingItem item : items) {
             String itemSyncRemark = buildPickupRemark(picking, purchase) + "|itemId=" + item.getId();
@@ -971,7 +972,7 @@ public class MaterialPurchasePickingHelper {
     }
 
     private void recordOutboundLog(MaterialPicking picking, MaterialPickingItem item, MaterialStock stock, LocalDateTime outboundTime) {
-        FactorySnapshot factorySnapshot = resolveFactorySnapshot(null, picking);
+        MaterialPurchasePickingSupport.FactorySnapshot factorySnapshot = resolveFactorySnapshot(null, picking);
         MaterialOutboundLog outboundLog = new MaterialOutboundLog();
         outboundLog.setStockId(stock != null ? stock.getId() : item.getMaterialStockId());
         outboundLog.setOutboundNo(picking.getPickingNo());
@@ -1061,8 +1062,8 @@ public class MaterialPurchasePickingHelper {
         }
     }
 
-    private FactorySnapshot resolveFactorySnapshot(MaterialPurchase purchase, MaterialPicking picking) {
-        FactorySnapshot snapshot = new FactorySnapshot();
+    private MaterialPurchasePickingSupport.FactorySnapshot resolveFactorySnapshot(MaterialPurchase purchase, MaterialPicking picking) {
+        MaterialPurchasePickingSupport.FactorySnapshot snapshot = new MaterialPurchasePickingSupport.FactorySnapshot();
         if (purchase != null) {
             snapshot.factoryName = purchase.getFactoryName();
             snapshot.factoryType = purchase.getFactoryType();
@@ -1106,9 +1107,4 @@ public class MaterialPurchasePickingHelper {
         return snapshot;
     }
 
-    public static class FactorySnapshot {
-        public String factoryId;
-        public String factoryName;
-        public String factoryType;
-    }
 }

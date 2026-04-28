@@ -1,4 +1,4 @@
-import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
+import { stageAliasMap, carSewingKeywords, tailProcessKeywords, canonicalizeStage } from '@/utils/productionStage';
 
 export interface ProcessTrackingRecord {
   id: string;
@@ -9,6 +9,7 @@ export interface ProcessTrackingRecord {
   quantity: number;
   processCode: string;
   processName: string;
+  progressStage?: string;
   scanType?: string;
   processOrder: number;
   unitPrice: number;
@@ -90,6 +91,43 @@ const STAGE_KEYWORDS: Record<string, string[]> = {
   tailProcess: tailProcessKeywords,
 };
 
+const CHINESE_TO_ENGLISH_KEY: Record<string, string> = {
+  '采购': 'procurement',
+  '物料采购': 'procurement',
+  '面辅料采购': 'procurement',
+  '备料': 'procurement',
+  '物料': 'procurement',
+  '裁剪': 'cutting',
+  '裁床': 'cutting',
+  '剪裁': 'cutting',
+  '开裁': 'cutting',
+  '二次工艺': 'secondaryProcess',
+  '二次': 'secondaryProcess',
+  '车缝': 'carSewing',
+  '缝制': 'carSewing',
+  '缝纫': 'carSewing',
+  '车工': 'carSewing',
+  '整件': 'carSewing',
+  '生产': 'carSewing',
+  '制作': 'carSewing',
+  '尾部': 'tailProcess',
+  '后整理': 'tailProcess',
+  '后道': 'tailProcess',
+  '入库': 'warehousing',
+  '仓储': 'warehousing',
+  '验收': 'warehousing',
+};
+
+const resolveStageKey = (filterType: string): string => {
+  if (STAGE_KEYWORDS[filterType]) return filterType;
+  const mapped = CHINESE_TO_ENGLISH_KEY[filterType.trim()];
+  if (mapped) return mapped;
+  for (const [cn, en] of Object.entries(CHINESE_TO_ENGLISH_KEY)) {
+    if (filterType.includes(cn) || cn.includes(filterType)) return en;
+  }
+  return filterType;
+};
+
 const TYPE_TO_CODE_PREFIX: Record<string, string[]> = {
   procurement: ['procurement'],
   cutting: ['cutting'],
@@ -107,6 +145,8 @@ export const matchesFilter = (record: ProcessTrackingRecord, filterType: string,
   const code = (record.processCode || '').toLowerCase();
   const rawName = record.processName || '';
   const name = rawName === '质检入库' ? '入库' : rawName;
+  const progressStage = (record.progressStage || '').trim();
+  const resolvedKey = resolveStageKey(filterType);
 
   if (processList && processList.length > 0) {
     const plCodes = processList
@@ -124,14 +164,30 @@ export const matchesFilter = (record: ProcessTrackingRecord, filterType: string,
         return true;
       }
     }
+    return false;
   }
 
-  const prefixes = TYPE_TO_CODE_PREFIX[filterType];
+  if (progressStage) {
+    const stageKeywords = STAGE_KEYWORDS[resolvedKey];
+    if (stageKeywords && stageKeywords.some(kw => progressStage.includes(kw) || kw.includes(progressStage))) {
+      return true;
+    }
+    if (nodeName && (progressStage.includes(nodeName.trim()) || nodeName.trim().includes(progressStage))) {
+      return true;
+    }
+    if (resolvedKey !== filterType) {
+      if (progressStage.includes(filterType) || filterType.includes(progressStage)) {
+        return true;
+      }
+    }
+  }
+
+  const prefixes = TYPE_TO_CODE_PREFIX[resolvedKey];
   if (prefixes && prefixes.some(p => code.startsWith(p))) {
     return true;
   }
 
-  const keywords = STAGE_KEYWORDS[filterType];
+  const keywords = STAGE_KEYWORDS[resolvedKey];
   if (keywords && keywords.some(kw => name.includes(kw))) {
     return true;
   }

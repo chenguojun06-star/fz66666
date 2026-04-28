@@ -123,7 +123,7 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
       setSelectedStage({ record: nextRecord, stage: nextStage });
       setReviewModalOpen(false);
       message.success('样衣审核结论已保存');
-      onRefresh();
+      await onRefresh();
     } catch (error: unknown) {
       if (typeof error === 'object' && error !== null && 'errorFields' in error) return;
       message.error(typeof error === 'object' && error !== null && 'response' in error ? (error as any).response?.data?.message : (error instanceof Error ? error.message : '审核保存失败'));

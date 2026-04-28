@@ -3,6 +3,28 @@ import type { FollowUpAction, ActionField } from './types';
 import styles from './FollowUpActionPanel.module.css';
 import sharedStyles from './index.module.css';
 
+/* 后端 icon 名称 → emoji 映射（避免原始字符串"warning"/"bar-chart"直接显示） */
+const ICON_EMOJI_MAP: Record<string, string> = {
+  warning:      '⚠️',
+  'bar-chart':  '📊',
+  search:       '🔍',
+  eye:          '👁',
+  edit:         '✏️',
+  notification: '🔔',
+  plus:         '➕',
+  calculator:   '🧮',
+  export:       '📤',
+  swap:         '🔄',
+  scissor:      '✂️',
+  book:         '📖',
+  history:      '🕐',
+  audit:        '📋',
+};
+
+function resolveIcon(icon: string): string {
+  return ICON_EMOJI_MAP[icon] ?? icon;
+}
+
 /* ── 单个跟进动作卡片（含可选表单输入） ── */
 const FollowUpCard: React.FC<{
   action: FollowUpAction;
@@ -57,7 +79,7 @@ const FollowUpCard: React.FC<{
     <div className={styles.followUpCard}>
       {/* 主按钮行 */}
       <button className={styles.followUpBtn} onClick={handleClick}>
-        {action.icon && <span style={{ marginRight: 4 }}>{action.icon}</span>}
+        {action.icon && <span style={{ marginRight: 4 }}>{resolveIcon(action.icon)}</span>}
         {action.label}
         {action.actionType === 'EXECUTE' && <span className={styles.followUpExecBadge}>可执行</span>}
       </button>

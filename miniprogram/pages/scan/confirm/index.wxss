@@ -208,14 +208,14 @@
 }
 .process-detail-text {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 .process-item-remark {
   margin-top: 8rpx;
 }
 .process-remark-text {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
@@ -277,7 +277,7 @@
 .qty-val.pending { color: var(--color-warning); }
 .qty-lbl {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 裁剪任务信息 ===== */
@@ -293,7 +293,7 @@
 }
 .cutting-lbl {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   width: 80rpx;
   flex-shrink: 0;
 }
@@ -409,6 +409,11 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   background: var(--color-bg-card);
+}
+.sku-qty-readonly {
+  background: var(--color-bg-page, #f5f5f5);
+  color: var(--color-text-secondary);
+  border-color: transparent;
 }
 .sku-unit {
   font-size: var(--font-size-xs);

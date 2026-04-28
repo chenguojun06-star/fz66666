@@ -22,6 +22,19 @@ public class ProductionProcessTrackingService extends ServiceImpl<ProductionProc
         return baseMapper.selectByOrderId(productionOrderId, UserContext.tenantId());
     }
 
+    public List<ProductionProcessTracking> getByOrderIdAndTenant(String productionOrderId, Long tenantId) {
+        return baseMapper.selectByOrderId(productionOrderId, tenantId);
+    }
+
+    public List<ProductionProcessTracking> listByOrderIdAndTenant(String productionOrderId, Long tenantId) {
+        return lambdaQuery()
+                .eq(ProductionProcessTracking::getProductionOrderId, productionOrderId)
+                .eq(tenantId != null, ProductionProcessTracking::getTenantId, tenantId)
+                .orderByAsc(ProductionProcessTracking::getBundleNo)
+                .orderByAsc(ProductionProcessTracking::getProcessOrder)
+                .list();
+    }
+
     public List<ProductionProcessTracking> getByBundleId(String cuttingBundleId) {
         return baseMapper.selectByBundleId(cuttingBundleId, UserContext.tenantId());
     }

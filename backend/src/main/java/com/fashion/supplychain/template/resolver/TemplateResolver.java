@@ -2,6 +2,8 @@ package com.fashion.supplychain.template.resolver;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.template.entity.TemplateLibrary;
 import com.fashion.supplychain.template.helper.TemplateParseUtils;
 import com.fashion.supplychain.template.helper.TemplateStageNameHelper;
@@ -55,6 +57,9 @@ public class TemplateResolver {
 
     @Autowired
     private TemplateStageNameHelper stageNameHelper;
+
+    @Autowired
+    private ProcessParentMappingService processParentMappingService;
 
     private String buildTemplateCacheKey(String styleNo) {
         Long tenantId = UserContext.tenantId();
@@ -354,8 +359,8 @@ public class TemplateResolver {
             up = BigDecimal.ZERO;
         }
         String progressStage = step.hasNonNull("progressStage") ? step.get("progressStage").asText("") : "";
-        if (!StringUtils.hasText(progressStage)) {
-            progressStage = processName;
+        if (!StringUtils.hasText(progressStage) || progressStage.trim().equals(processName)) {
+            progressStage = resolveProgressStageFromMapping(processName);
         }
         String machineType = step.hasNonNull("machineType") ? step.get("machineType").asText("") : "";
         String description = step.hasNonNull("description")
@@ -442,6 +447,13 @@ public class TemplateResolver {
         item.put("id", id);
         item.put("name", name);
         item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
+        String progressStage = n.hasNonNull("progressStage") ? n.get("progressStage").asText("") : "";
+        if (!StringUtils.hasText(progressStage) || progressStage.trim().equals(name)) {
+            progressStage = resolveProgressStageFromMapping(name);
+        }
+        if (StringUtils.hasText(progressStage)) {
+            item.put("progressStage", progressStage.trim());
+        }
         String description = n.hasNonNull("description")
                 ? n.get("description").asText("")
                 : (n.hasNonNull("remark") ? n.get("remark").asText("") : "");
@@ -486,8 +498,8 @@ public class TemplateResolver {
             }
 
             String progressStage = String.valueOf(item.getOrDefault("progressStage", "")).trim();
-            if (!StringUtils.hasText(progressStage)) {
-                progressStage = processName;
+            if (!StringUtils.hasText(progressStage) || progressStage.equals(processName)) {
+                progressStage = resolveProgressStageFromMapping(processName);
             }
 
             Map<String, Object> node = new LinkedHashMap<>();
@@ -537,12 +549,34 @@ public class TemplateResolver {
             if (idxA != idxB) return idxA - idxB;
             String idA = String.valueOf(a.getOrDefault("id", "")).trim();
             String idB = String.valueOf(b.getOrDefault("id", "")).trim();
-            int numA = parseSortNumber(idA);
-            int numB = parseSortNumber(idB);
-            if (numA != numB) return numA - numB;
+            int cmp = compareProcessCodes(idA, idB);
+            if (cmp != 0) return cmp;
             return idA.compareTo(idB);
         });
         return nodes;
+    }
+
+    private static boolean isProcessCode(String id) {
+        if (id == null || id.isEmpty()) return false;
+        if (id.matches("^[0-9a-f]{8}-.*")) return false;
+        return id.matches("^[\\d]+(-[\\d]+)*$");
+    }
+
+    private static int compareProcessCodes(String idA, String idB) {
+        boolean isA = isProcessCode(idA);
+        boolean isB = isProcessCode(idB);
+        if (isA && !isB) return -1;
+        if (!isA && isB) return 1;
+        if (!isA && !isB) return 0;
+        String[] segsA = idA.split("-");
+        String[] segsB = idB.split("-");
+        int maxLen = Math.max(segsA.length, segsB.length);
+        for (int i = 0; i < maxLen; i++) {
+            int numA = i < segsA.length ? parseSortNumber(segsA[i]) : -1;
+            int numB = i < segsB.length ? parseSortNumber(segsB[i]) : -1;
+            if (numA != numB) return numA - numB;
+        }
+        return 0;
     }
 
     private static int parseSortNumber(String id) {
@@ -780,6 +814,7 @@ public class TemplateResolver {
     }
 
     private Map<String, Object> parseContentMap(String json) {
+
         String raw = String.valueOf(json == null ? "" : json).trim();
         if (!StringUtils.hasText(raw)) {
             return new HashMap<>();
@@ -791,5 +826,26 @@ public class TemplateResolver {
         } catch (Exception e) {
             return new HashMap<>();
         }
+    }
+
+    private String resolveProgressStageFromMapping(String processName) {
+        if (!StringUtils.hasText(processName)) {
+            return processName;
+        }
+        String normalized = ProcessSynonymMapping.normalize(processName.trim());
+        if (STAGE_ORDER.contains(normalized)) {
+            return normalized;
+        }
+        String mapped = processParentMappingService.resolveParentNode(processName.trim());
+        if (StringUtils.hasText(mapped)) {
+            String normalizedMapped = ProcessSynonymMapping.normalize(mapped.trim());
+            if (STAGE_ORDER.contains(normalizedMapped)) {
+                return normalizedMapped;
+            }
+            if (StringUtils.hasText(mapped)) {
+                return mapped;
+            }
+        }
+        return processName;
     }
 }

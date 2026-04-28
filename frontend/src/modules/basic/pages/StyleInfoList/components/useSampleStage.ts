@@ -141,7 +141,7 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     try {
       const snapshot = await loadSampleSnapshot(selectedStage.record);
       setSampleSnapshot(snapshot);
-      onRefresh();
+      await onRefresh();
     } finally {
       setSampleSnapshotLoading(false);
     }

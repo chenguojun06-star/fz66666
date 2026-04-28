@@ -66,6 +66,10 @@ const ProductionList: React.FC = () => {
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
 
+  // ===== 裁剪订单工序编辑弹窗状态 =====
+  const [workflowEditorVisible, setWorkflowEditorVisible] = useState(false);
+  const [workflowEditorStyleNo, setWorkflowEditorStyleNo] = useState('');
+
     // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
     const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
     const { labelPrintOpen, closeLabelPrint, labelPrintOrder, labelPrintStyle, handlePrintLabel } = useLabelPrint();
@@ -163,6 +167,10 @@ const ProductionList: React.FC = () => {
     canManageOrderLifecycle,
     openSubProcessRemap,
     isFactoryAccount,
+    openWorkflowEditor: (styleNo?: string) => {
+      setWorkflowEditorStyleNo(styleNo || '');
+      setWorkflowEditorVisible(true);
+    },
     onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole, merchandiser: record.merchandiser }),
   });
 
@@ -473,6 +481,10 @@ const ProductionList: React.FC = () => {
           scrapOrderLoading={scrapOrderLoading}
           confirmScrapOrder={confirmScrapOrder}
           cancelScrapOrder={cancelScrapOrder}
+          workflowEditorVisible={workflowEditorVisible}
+          workflowEditorStyleNo={workflowEditorStyleNo}
+          closeWorkflowEditor={() => setWorkflowEditorVisible(false)}
+          onWorkflowSaved={() => { void fetchProductionList(); }}
         />
 
     </>

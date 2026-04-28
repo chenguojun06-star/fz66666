@@ -2,7 +2,6 @@ package com.fashion.supplychain.common.lock;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -31,7 +30,6 @@ import java.util.function.Supplier;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnBean(RedisConnectionFactory.class)
 public class DistributedLockService {
 
     private final RedisTemplate<String, Object> redisTemplate;

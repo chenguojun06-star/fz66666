@@ -58,4 +58,6 @@ public interface ProductionOrderService extends IService<ProductionOrder> {
      * 根据订单号查询生产订单
      */
     ProductionOrder getByOrderNo(String orderNo);
+
+    ProductionOrder getByIdIgnoreTenant(String id);
 }

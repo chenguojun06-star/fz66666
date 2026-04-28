@@ -17,7 +17,7 @@ public class AiAgentEvidenceHelper {
 
     public String buildToolEvidenceMessage(String toolName, String toolResult) {
         if (toolResult == null || toolResult.isBlank()) {
-            return "【工具证据】\n- 工具: " + toolName + "\n- 结果: 空结果";
+            return "【工具证据】\n- 工具: " + toolName + "\n- 结果: 空结果\n- 数据来源: 无返回数据";
         }
         try {
             JsonNode root = JSON.readTree(toolResult);
@@ -26,6 +26,7 @@ public class AiAgentEvidenceHelper {
             }
 
             StringBuilder evidence = new StringBuilder("【工具证据】\n- 工具: ").append(toolName).append("\n");
+            evidence.append("- 调用时间: ").append(java.time.Instant.now().toString()).append("\n");
 
             if ("tool_knowledge_search".equals(toolName)) {
                 appendKnowledgeEvidence(evidence, root);
@@ -37,6 +38,9 @@ public class AiAgentEvidenceHelper {
                 appendGenericEvidence(evidence, root);
             }
 
+            appendDataSourceTrace(evidence, root, toolName);
+            appendCalculationProcess(evidence, root, toolName);
+
             int rawLimit = resolveRawExcerptLimit(toolName);
             if (rawLimit > 0) {
                 String raw = toolResult.length() > rawLimit ? toolResult.substring(0, rawLimit) + "…(截断)" : toolResult;
@@ -46,6 +50,36 @@ public class AiAgentEvidenceHelper {
         } catch (Exception e) {
             log.debug("[AiAgent] 工具证据构建回退原始文本: tool={}", toolName);
             return "【工具证据】\n- 工具: " + toolName + "\n- 原始结果: " + StatusTranslator.sanitize(truncate(toolResult, MAX_TOOL_RAW_CHARS));
+        }
+    }
+
+    private void appendDataSourceTrace(StringBuilder evidence, JsonNode root, String toolName) {
+        evidence.append("- 数据来源: ");
+        if (root.hasNonNull("orderId") || root.hasNonNull("orderNo")) {
+            evidence.append("订单数据(orderId=").append(root.path("orderId").asText("")).append(")");
+        } else if (root.hasNonNull("styleNo") || root.hasNonNull("styleId")) {
+            evidence.append("款式数据(styleNo=").append(root.path("styleNo").asText("")).append(")");
+        } else if (root.hasNonNull("items") && root.path("items").isArray() && root.path("items").size() > 0) {
+            evidence.append("列表数据(共").append(root.path("items").size()).append("条)");
+        } else if (root.hasNonNull("count")) {
+            evidence.append("统计数据(count=").append(root.path("count").asInt(0)).append(")");
+        } else {
+            evidence.append("工具计算结果");
+        }
+        evidence.append("\n");
+    }
+
+    private void appendCalculationProcess(StringBuilder evidence, JsonNode root, String toolName) {
+        if (root.hasNonNull("quantity") && root.hasNonNull("unitPrice") && root.hasNonNull("totalAmount")) {
+            evidence.append("- 计算过程: ").append(root.path("quantity").asInt(0))
+                    .append(" × ").append(root.path("unitPrice").asDouble(0))
+                    .append(" = ").append(root.path("totalAmount").asDouble(0)).append("\n");
+        } else if (root.hasNonNull("scanCount") && root.hasNonNull("orderCount")) {
+            evidence.append("- 统计过程: 扫码").append(root.path("scanCount").asInt(0))
+                    .append("次, 关联").append(root.path("orderCount").asInt(0)).append("个订单\n");
+        } else if (root.hasNonNull("percentage") || root.hasNonNull("progress")) {
+            double pct = root.path("percentage").asDouble(root.path("progress").asDouble(0));
+            evidence.append("- 进度计算: ").append(String.format("%.1f%%", pct * 100)).append("\n");
         }
     }
 

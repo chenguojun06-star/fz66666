@@ -169,6 +169,15 @@
   margin-right: 8px;
 }
 
+.bundle-no {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  background: rgba(64, 128, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
 .process {
   display: inline-block;
   padding: 2px 8px;

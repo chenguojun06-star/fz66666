@@ -440,10 +440,24 @@ export const useProductWarehousing = () => {
     }
   }, [location.search]);
 
+  const sortedWarehousingList = useMemo(() => {
+    return [...warehousingList].sort((a: any, b: any) => {
+      const aStatus = String(a.status || a.qualityStatus || '').trim().toLowerCase();
+      const bStatus = String(b.status || b.qualityStatus || '').trim().toLowerCase();
+      const aCancelled = ['cancelled', 'scrapped'].includes(aStatus) ? 2 : aStatus === 'completed' || aStatus === 'warehoused' ? 1 : 0;
+      const bCancelled = ['cancelled', 'scrapped'].includes(bStatus) ? 2 : bStatus === 'completed' || bStatus === 'warehoused' ? 1 : 0;
+      if (aCancelled !== bCancelled) return aCancelled - bCancelled;
+      const aTime = new Date(String(a.createTime || a.warehousingTime || 0)).getTime();
+      const bTime = new Date(String(b.createTime || b.warehousingTime || 0)).getTime();
+      return bTime - aTime;
+    });
+  }, [warehousingList]);
+
   return {
     // State
     loading,
     warehousingList,
+    sortedWarehousingList,
     total,
     smartError,
     showSmartErrorNotice,

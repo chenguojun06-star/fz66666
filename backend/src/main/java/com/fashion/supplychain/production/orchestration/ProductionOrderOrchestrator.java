@@ -84,7 +84,7 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private ProductionOrderCreationHelper creationHelper;
 
-    @Autowired
+    @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
     // ======================= 查询类方法 =======================
@@ -257,6 +257,9 @@ public class ProductionOrderOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean scrapOrder(String id, String remark) {
         assertOrderBelongsToCurrentTenant(id, "报废订单");
+        if (distributedLockService == null) {
+            return lifecycleHelper.scrapOrder(id, remark);
+        }
         return distributedLockService.executeWithLock("order:scrap:" + id, 10, java.util.concurrent.TimeUnit.SECONDS,
                 () -> lifecycleHelper.scrapOrder(id, remark));
     }
@@ -329,8 +332,13 @@ public class ProductionOrderOrchestrator {
         if (!CLOSE_SOURCE_MY_ORDERS.equals(src) && !CLOSE_SOURCE_PRODUCTION_PROGRESS.equals(src)) {
             throw new AccessDeniedException("仅允许在我的订单或工序跟进完成");
         }
-        ProductionOrder result = distributedLockService.executeWithLock("order:close:" + id, 15, java.util.concurrent.TimeUnit.SECONDS,
-                () -> financeOrchestrationService.closeOrder(id, specialClose));
+        ProductionOrder result;
+        if (distributedLockService == null) {
+            result = financeOrchestrationService.closeOrder(id, specialClose);
+        } else {
+            result = distributedLockService.executeWithLock("order:close:" + id, 15, java.util.concurrent.TimeUnit.SECONDS,
+                    () -> financeOrchestrationService.closeOrder(id, specialClose));
+        }
         try {
             if (operationLogService != null && result != null) {
                 OperationLog opLog = new OperationLog();

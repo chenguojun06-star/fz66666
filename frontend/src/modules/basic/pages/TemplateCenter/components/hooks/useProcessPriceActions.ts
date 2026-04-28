@@ -20,7 +20,7 @@ interface StyleProcessRow {
   sizePriceTouched?: Record<string, boolean>;
 }
 
-type MatchedScope = 'style' | 'empty';
+type MatchedScope = 'style' | 'order' | 'empty';
 
 const buildRowsFromContent = (content: any, fallbackSizes: string[] = DEFAULT_SIZES): { rows: StyleProcessRow[]; sizes: string[] } => {
   const rawSteps = Array.isArray(content?.steps) ? content.steps : [];
@@ -64,7 +64,7 @@ const buildRowsFromContent = (content: any, fallbackSizes: string[] = DEFAULT_SI
   return { rows, sizes };
 };
 
-export default function useProcessPriceActions(open: boolean) {
+export default function useProcessPriceActions(open: boolean, initialStyleNo?: string) {
   const { message } = App.useApp();
 
   const [matchedScope, setMatchedScope] = useState<MatchedScope>('empty');
@@ -152,14 +152,21 @@ export default function useProcessPriceActions(open: boolean) {
   useEffect(() => {
     if (!open) return;
     fetchStyleNoOptions('');
-    setStyleInputVal('');
-    setSelectedStyleNo('');
-    setData([]);
-    setSizes([...DEFAULT_SIZES]);
-    setImageUrls([]);
-    setTemplateId(null);
-    setMatchedScope('empty');
-  }, [open, fetchStyleNoOptions]);
+    const sn = String(initialStyleNo || '').trim();
+    if (sn) {
+      setStyleInputVal(sn);
+      setSelectedStyleNo(sn);
+      loadTemplate(sn);
+    } else {
+      setStyleInputVal('');
+      setSelectedStyleNo('');
+      setData([]);
+      setSizes([...DEFAULT_SIZES]);
+      setImageUrls([]);
+      setTemplateId(null);
+      setMatchedScope('empty');
+    }
+  }, [open]);
 
   const handleUploadImage = useCallback(async (file: File) => {
     if (!selectedStyleNo.trim()) {

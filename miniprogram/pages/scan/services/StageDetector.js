@@ -21,7 +21,7 @@
  * @date 2026-02-10
  */
 
-var shared = require('../../shared/stageDetection');
+var shared = require('../../../shared/stageDetection');
 var inferScanType = shared.inferScanType;
 var parseDefectQtyFromRemark = shared.parseDefectQtyFromRemark;
 var extractQualityMeta = shared.extractQualityMeta;

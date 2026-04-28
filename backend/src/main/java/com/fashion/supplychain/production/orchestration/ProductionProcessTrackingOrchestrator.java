@@ -12,7 +12,6 @@ import com.fashion.supplychain.common.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -52,7 +51,7 @@ public class ProductionProcessTrackingOrchestrator {
      * 初始化工序跟踪记录（裁剪完成时调用）
      * 委托给 {@link TrackingRecordInitHelper#initializeProcessTracking}
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public int initializeProcessTracking(String productionOrderId) {
         return initHelper.initializeProcessTracking(productionOrderId);
     }
@@ -61,7 +60,7 @@ public class ProductionProcessTrackingOrchestrator {
      * 追加工序跟踪记录（新增菲号时调用）
      * 委托给 {@link TrackingRecordInitHelper#appendProcessTracking}
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public int appendProcessTracking(String productionOrderId, List<CuttingBundle> bundles) {
         return initHelper.appendProcessTracking(productionOrderId, bundles);
     }
@@ -80,7 +79,7 @@ public class ProductionProcessTrackingOrchestrator {
      * @param scanRecordId 扫码记录ID（关联 t_scan_record，String类型）
      * @return 更新成功返回true，记录不存在或已扫码返回false
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateScanRecord(String cuttingBundleId, String processCode,
                                    String operatorId, String operatorName, String scanRecordId) {
 
@@ -210,7 +209,7 @@ public class ProductionProcessTrackingOrchestrator {
      * @param scanRecordId 扫码记录ID
      * @return 更新成功返回true
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public boolean forcedUpdateCuttingScan(String cuttingBundleId, String operatorId,
                                           String operatorName, String scanRecordId) {
         // 查询裁剪工序的跟踪记录
@@ -348,7 +347,7 @@ public class ProductionProcessTrackingOrchestrator {
         return count;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(rollbackFor = Exception.class)
     public void createWarehousingTrackingOnScan(
             CuttingBundle bundle,
             com.fashion.supplychain.production.entity.ProductionOrder order,

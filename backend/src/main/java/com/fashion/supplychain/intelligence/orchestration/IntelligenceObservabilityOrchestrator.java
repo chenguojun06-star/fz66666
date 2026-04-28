@@ -12,12 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/**
- * AI 可观测编排器。
- *
- * <p>职责：统一暴露 AI 可观测与评估层的配置状态，
- * 记录每次AI调用的度量指标到数据库，并提供聚合查询。</p>
- */
 @Service
 @Slf4j
 public class IntelligenceObservabilityOrchestrator {
@@ -37,7 +31,6 @@ public class IntelligenceObservabilityOrchestrator {
     @Value("${ai.observability.sample-rate:100}")
     private int sampleRate;
 
-    /** 单次调用延迟超过此阈值则输出 WARN（毫秒） */
     private static final int LATENCY_WARN_THRESHOLD_MS = 30_000;
 
     @Autowired
@@ -47,7 +40,6 @@ public class IntelligenceObservabilityOrchestrator {
                                  IntelligenceInferenceResult result,
                                  Long tenantId,
                                  String userId) {
-        // 持久化到数据库（不受 enabled 开关影响，始终记录）
         try {
             IntelligenceMetrics metrics = new IntelligenceMetrics();
             metrics.setTenantId(tenantId);
@@ -73,13 +65,11 @@ public class IntelligenceObservabilityOrchestrator {
             log.warn("[AI_OBSERVABILITY] 度量持久化失败（不影响业务）: {}", e.getMessage());
         }
 
-        // F30：延迟异常检测
         if (result.getLatencyMs() > LATENCY_WARN_THRESHOLD_MS) {
             log.warn("[AI_ANOMALY] 高延迟告警 scene={} latencyMs={} model={} traceId={}",
                     scene, result.getLatencyMs(), result.getModel(), result.getTraceId());
         }
 
-        // 结构化日志（受 enabled + sample-rate 控制）
         if (!shouldRecord() || !hitSample()) {
             return;
         }
@@ -105,10 +95,6 @@ public class IntelligenceObservabilityOrchestrator {
                 result.getTraceUrl());
     }
 
-    /**
-     * 获取度量概览（按场景聚合最近N天的调用统计）
-     * 若表尚未创建（V43 未执行）或查询异常，返回空列表而非 500
-     */
     public List<Map<String, Object>> getMetricsOverview(Long tenantId, int days) {
         try {
             return metricsMapper.aggregateByScene(tenantId, days);
@@ -158,10 +144,6 @@ public class IntelligenceObservabilityOrchestrator {
         return base + "/traces/" + traceId;
     }
 
-    /**
-     * F30：健康指标检查 — 查询最近 N 次调用，返回异常告警列表。
-     * 调用方：IntelligenceBrainSnapshot / 定时巡检 / 管理面板
-     */
     public Map<String, Object> checkHealthIndicators(Long tenantId, int recentCount) {
         Map<String, Object> health = new java.util.LinkedHashMap<>();
         try {
@@ -218,33 +200,20 @@ public class IntelligenceObservabilityOrchestrator {
 
     private boolean hitSample() {
         int normalized = normalizeSampleRate();
-        if (normalized >= 100) {
-            return true;
-        }
-        if (normalized <= 0) {
-            return false;
-        }
+        if (normalized >= 100) return true;
+        if (normalized <= 0) return false;
         return Math.floorMod(System.nanoTime(), 100) < normalized;
     }
 
     private String resolveStatus() {
-        if (!enabled) {
-            return "disabled";
-        }
-        if (!hasText(provider) || "none".equalsIgnoreCase(provider)) {
-            return "provider-missing";
-        }
-        if (!hasText(endpoint)) {
-            return "endpoint-missing";
-        }
+        if (!enabled) return "disabled";
+        if (!hasText(provider) || "none".equalsIgnoreCase(provider)) return "provider-missing";
+        if (!hasText(endpoint)) return "endpoint-missing";
         return "ready";
     }
 
     private int normalizeSampleRate() {
-        if (sampleRate < 0) {
-            return 0;
-        }
-        return Math.min(sampleRate, 100);
+        return sampleRate < 0 ? 0 : Math.min(sampleRate, 100);
     }
 
     private String normalizeProvider() {
@@ -252,9 +221,7 @@ public class IntelligenceObservabilityOrchestrator {
     }
 
     private String maskUrl(String url) {
-        if (!hasText(url)) {
-            return null;
-        }
+        if (!hasText(url)) return null;
         String value = url.trim();
         int queryIndex = value.indexOf('?');
         return queryIndex >= 0 ? value.substring(0, queryIndex) : value;

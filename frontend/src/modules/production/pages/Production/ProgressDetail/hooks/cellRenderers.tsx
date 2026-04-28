@@ -452,7 +452,12 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
           const nodeType = (node.progressStage && node.progressStage.trim())
             || NODE_TYPE_MAP[nodeName]
             || nodeName.toLowerCase();
-          const processCode = /^\d+$/.test(String(node.id || '').trim()) ? String(node.id).trim() : '';
+          const rawNodeId = String(node.id || '').trim();
+          // After upstream fix, node.id stores processCode ('01','FIN','06').
+          // Filter UUIDs (contain '-') and default semantic node IDs.
+          const processCode = (rawNodeId && !rawNodeId.includes('-')
+            && !['purchase','cutting','sewing','pressing','quality','secondary-process','secondaryProcess','packaging','warehousing'].includes(rawNodeId))
+            ? rawNodeId : '';
           const nodeLabel = processCode ? `${processCode} ${nodeName}` : nodeName;
           const isWarehousingNode = nodeType === 'warehousing'
             || /入库|仓库|成品仓/.test(nodeName);
@@ -509,29 +514,50 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   const sn = String((record as any)?.styleNo || '').trim();
                   const templateNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : undefined;
                   const byParent = getProcessesByNodeFromOrder(record, templateNodes);
-                  const children = byParent[nodeName];
+                  const nodeProgressStage = String(node.progressStage || '').trim();
+                  const isSubProcessNode = nodeProgressStage && nodeProgressStage !== nodeName
+                    && byParent[nodeProgressStage]?.some(c => c.name === nodeName);
                   let processList: { id?: string; processCode?: string; name: string; unitPrice?: number }[];
-                  if (children?.length) {
-                    processList = children.map(c => ({
-                      name: c.name,
-                      unitPrice: c.unitPrice,
-                      processCode: c.processCode,
-                    }));
+                  let effectiveNodeType = nodeType;
+                  if (isSubProcessNode) {
+                    processList = [{
+                      name: nodeName,
+                      unitPrice: node.unitPrice,
+                      processCode: processCode || undefined,
+                    }];
+                    effectiveNodeType = nodeName;
                   } else {
-                    const stageChildren = ns.filter(n => {
-                      const ps = String((n as any).progressStage || '').trim();
-                      return ps === nodeName;
-                    });
-                    processList = stageChildren.map(n => ({
-                      id: String(n.id || '').trim() || undefined,
-                      processCode: String(n.id || '').trim() || undefined,
-                      name: n.name,
-                      unitPrice: n.unitPrice,
-                    }));
+                    let children = byParent[nodeName];
+                    if (!children?.length && nodeProgressStage && nodeProgressStage !== nodeName) {
+                      children = byParent[nodeProgressStage];
+                    }
+                    if (children?.length) {
+                      processList = children.map(c => ({
+                        name: c.name,
+                        unitPrice: c.unitPrice,
+                        processCode: c.processCode,
+                      }));
+                    } else {
+                      const stageChildren = ns.filter(n => {
+                        const ps = String((n as any).progressStage || '').trim();
+                        return ps === nodeName || (nodeProgressStage && ps === nodeProgressStage);
+                      });
+                      processList = stageChildren.map(n => ({
+                        id: String(n.id || '').trim() || undefined,
+                        processCode: (() => {
+                          const r = String(n.id || '').trim();
+                          return (r && !r.includes('-')
+                            && !['purchase','cutting','sewing','pressing','quality','secondary-process','secondaryProcess','packaging','warehousing'].includes(r))
+                            ? r : undefined;
+                        })(),
+                        name: n.name,
+                        unitPrice: n.unitPrice,
+                      }));
+                    }
                   }
                   openNodeDetail(
                     record,
-                    nodeType,
+                    effectiveNodeType,
                     nodeName,
                     { done: completedQty, total: totalQty, percent, remaining },
                     node.unitPrice,

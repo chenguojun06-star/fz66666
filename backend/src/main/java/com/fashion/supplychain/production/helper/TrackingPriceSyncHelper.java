@@ -63,13 +63,31 @@ public class TrackingPriceSyncHelper {
      * 查询订单工序跟踪记录（含模板最新单价覆盖 + 权限控制 + 质检状态填充）
      */
     public List<ProductionProcessTracking> getTrackingRecords(String productionOrderId) {
-        List<ProductionProcessTracking> records = trackingService.getByOrderId(productionOrderId);
+        ProductionOrder order = productionOrderService.getByIdIgnoreTenant(productionOrderId);
+        if (order == null) {
+            return List.of();
+        }
+
+        Long orderTenantId = order.getTenantId();
+        Long userTenantId = UserContext.tenantId();
+
+        List<ProductionProcessTracking> records;
+        if (orderTenantId != null && !orderTenantId.equals(userTenantId)) {
+            Long savedTenantId = userTenantId;
+            try {
+                UserContext.get().setTenantId(orderTenantId);
+                records = trackingService.getByOrderId(productionOrderId);
+            } finally {
+                UserContext.get().setTenantId(savedTenantId);
+            }
+        } else {
+            records = trackingService.getByOrderId(productionOrderId);
+        }
         if (CollectionUtils.isEmpty(records)) {
             return records;
         }
 
-        ProductionOrder order = productionOrderService.getById(productionOrderId);
-        if (order == null || !StringUtils.hasText(order.getStyleNo())) {
+        if (!StringUtils.hasText(order.getStyleNo())) {
             return records;
         }
 
@@ -87,6 +105,7 @@ public class TrackingPriceSyncHelper {
 
         enrichWithTemplatePrices(records, order);
         fillNextStageScanned(records, productionOrderId);
+        fillProgressStage(records, order);
         return records;
     }
 
@@ -326,6 +345,8 @@ public class TrackingPriceSyncHelper {
             if (templateNodes == null || templateNodes.isEmpty()) return;
 
             Map<String, BigDecimal> priceMap = new HashMap<>();
+            Map<String, String> codeMap = new HashMap<>();
+            Map<String, String> stageMap = new HashMap<>();
             List<String> templateCurrentNames = new ArrayList<>();
             for (Map<String, Object> tn : templateNodes) {
                 String name = initHelper.getStringValue(tn, "name", "").trim();
@@ -333,6 +354,14 @@ public class TrackingPriceSyncHelper {
                 if (!name.isEmpty()) {
                     priceMap.put(name, price);
                     templateCurrentNames.add(name);
+                }
+                String id = initHelper.getStringValue(tn, "id", "").trim();
+                if (!name.isEmpty() && !id.isEmpty()) {
+                    codeMap.put(name, id);
+                }
+                String stage = initHelper.getStringValue(tn, "progressStage", "").trim();
+                if (!name.isEmpty() && !stage.isEmpty()) {
+                    stageMap.put(name, stage);
                 }
             }
             if (priceMap.isEmpty()) return;
@@ -357,13 +386,27 @@ public class TrackingPriceSyncHelper {
             }
 
             for (ProductionProcessTracking tracking : records) {
-                BigDecimal templatePrice = priceMap.get(tracking.getProcessName());
+                String pName = tracking.getProcessName() != null ? tracking.getProcessName().trim() : "";
+                BigDecimal templatePrice = priceMap.get(pName);
                 if (templatePrice == null) templatePrice = priceMap.get(tracking.getProcessCode());
                 if (templatePrice != null) {
                     tracking.setUnitPrice(templatePrice);
                     if (tracking.getQuantity() != null) {
                         tracking.setSettlementAmount(templatePrice.multiply(new BigDecimal(tracking.getQuantity())));
                     }
+                }
+                String templateCode = codeMap.get(pName);
+                if (StringUtils.hasText(templateCode)) {
+                    String currentCode = tracking.getProcessCode() != null ? tracking.getProcessCode().trim() : "";
+                    if (!templateCode.equals(currentCode)) {
+                        if (!StringUtils.hasText(currentCode) || currentCode.equals(pName)) {
+                            tracking.setProcessCode(templateCode);
+                        }
+                    }
+                }
+                String templateStage = stageMap.get(pName);
+                if (StringUtils.hasText(templateStage)) {
+                    tracking.setProgressStage(templateStage);
                 }
             }
         } catch (Exception e) {
@@ -394,6 +437,77 @@ public class TrackingPriceSyncHelper {
             }
         } catch (Exception e) {
             log.warn("填充hasNextStageScanned失败，忽略 orderId={}: {}", productionOrderId, e.getMessage());
+        }
+    }
+
+    private void fillProgressStage(List<ProductionProcessTracking> records, ProductionOrder order) {
+        try {
+            Map<String, String> nameToStage = new HashMap<>();
+            Map<String, Map<String, Object>> codeToNode = new HashMap<>();
+            String workflowJson = order.getProgressWorkflowJson();
+            if (StringUtils.hasText(workflowJson)) {
+                Map<String, Object> workflow = OBJECT_MAPPER.readValue(workflowJson, new TypeReference<Map<String, Object>>() {});
+                Object nodesObj = workflow.get("nodes");
+                if (nodesObj instanceof List<?> nodeList) {
+                    for (Object item : nodeList) {
+                        if (item instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> node = (Map<String, Object>) item;
+                            String name = String.valueOf(node.getOrDefault("name", "")).trim();
+                            String stage = String.valueOf(node.getOrDefault("progressStage", "")).trim();
+                            String code = String.valueOf(node.getOrDefault("processCode", node.getOrDefault("id", ""))).trim();
+                            if (!name.isEmpty() && !stage.isEmpty()) {
+                                nameToStage.put(name, stage);
+                            }
+                            if (!code.isEmpty()) {
+                                codeToNode.put(code, node);
+                            }
+                        }
+                    }
+                }
+            }
+            if (nameToStage.isEmpty() && StringUtils.hasText(order.getStyleNo())) {
+                List<Map<String, Object>> templateNodes = templateLibraryService.resolveProgressNodeUnitPrices(order.getStyleNo().trim());
+                if (templateNodes != null) {
+                    for (Map<String, Object> tn : templateNodes) {
+                        String name = String.valueOf(tn.getOrDefault("name", "")).trim();
+                        String stage = String.valueOf(tn.getOrDefault("progressStage", "")).trim();
+                        if (!name.isEmpty() && !stage.isEmpty()) {
+                            nameToStage.put(name, stage);
+                        }
+                    }
+                }
+            }
+            if (nameToStage.isEmpty() && codeToNode.isEmpty()) return;
+            for (ProductionProcessTracking r : records) {
+                String pName = r.getProcessName() != null ? r.getProcessName().trim() : "";
+                String pCode = r.getProcessCode() != null ? r.getProcessCode().trim() : "";
+
+                Map<String, Object> matchedNode = codeToNode.get(pCode);
+                if (matchedNode != null) {
+                    String wfName = String.valueOf(matchedNode.getOrDefault("name", "")).trim();
+                    String wfStage = String.valueOf(matchedNode.getOrDefault("progressStage", "")).trim();
+                    Object wfPrice = matchedNode.get("unitPrice");
+                    if (!wfName.isEmpty()) r.setProcessName(wfName);
+                    if (!wfStage.isEmpty()) r.setProgressStage(wfStage);
+                    if (wfPrice != null) {
+                        try {
+                            BigDecimal price = new BigDecimal(String.valueOf(wfPrice));
+                            r.setUnitPrice(price);
+                            if (r.getQuantity() != null && price != null) {
+                                r.setSettlementAmount(price.multiply(BigDecimal.valueOf(r.getQuantity())));
+                            }
+                        } catch (NumberFormatException ignored) {}
+                    }
+                    continue;
+                }
+
+                String stage = nameToStage.get(pName);
+                if (stage == null && !pCode.isEmpty()) stage = nameToStage.get(pCode);
+                if (stage != null) r.setProgressStage(stage);
+            }
+        } catch (Exception e) {
+            log.warn("填充progressStage失败，忽略 orderNo={}: {}", order.getOrderNo(), e.getMessage());
         }
     }
 

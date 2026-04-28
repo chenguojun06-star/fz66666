@@ -3,12 +3,12 @@ package com.fashion.supplychain.common.aspect;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.annotation.Cacheable;
 import com.fashion.supplychain.service.RedisService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -24,15 +24,22 @@ import java.lang.reflect.Method;
 @Aspect
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class CacheAspect {
 
     private final RedisService redisService;
     private final SpelExpressionParser parser = new SpelExpressionParser();
     private final DefaultParameterNameDiscoverer discoverer = new DefaultParameterNameDiscoverer();
 
+    public CacheAspect(@Autowired(required = false) RedisService redisService) {
+        this.redisService = redisService;
+    }
+
     @Around("@annotation(cacheable)")
     public Object around(ProceedingJoinPoint point, Cacheable cacheable) throws Throwable {
+        if (redisService == null) {
+            return point.proceed();
+        }
+
         MethodSignature signature = (MethodSignature) point.getSignature();
         Method method = signature.getMethod();
         Object[] args = point.getArgs();

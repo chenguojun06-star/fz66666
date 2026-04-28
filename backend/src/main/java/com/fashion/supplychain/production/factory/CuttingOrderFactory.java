@@ -137,8 +137,11 @@ public class CuttingOrderFactory {
             StyleInfo newStyle = new StyleInfo();
             newStyle.setStyleNo(styleNo);
             newStyle.setStyleName(styleNo);
+            newStyle.setCategory("UNISEX");
             newStyle.setStatus("ENABLED");
             newStyle.setTenantId(tenantId);
+            newStyle.setDescriptionLocked(1);
+            newStyle.setPatternRevLocked(0);
             if (StringUtils.hasText(styleImageUrl)) {
                 newStyle.setCover(styleImageUrl);
             }
@@ -153,7 +156,7 @@ public class CuttingOrderFactory {
             log.warn("[CuttingOrderFactory] 自动创建款式 save 返回 false: styleNo={}", styleNo);
             return null;
         } catch (Exception e) {
-            log.warn("[CuttingOrderFactory] 自动创建款式失败，降级为不写款式信息: styleNo={}, err={}", styleNo, e.getMessage());
+            log.error("[CuttingOrderFactory] 自动创建款式失败: styleNo={}, err={}", styleNo, e.getMessage(), e);
             return null;
         }
     }
@@ -183,6 +186,9 @@ public class CuttingOrderFactory {
         order.setStatus("pending");
         order.setDeleteFlag(0);
         order.setPlannedEndDate(requestedDeliveryDate);
+        if (requestedDeliveryDate != null) {
+            order.setExpectedShipDate(requestedDeliveryDate.toLocalDate());
+        }
         order.setProgressWorkflowJson(progressWorkflowJson);
         order.setCreateTime(orderCreateTime);
         order.setUpdateTime(now);

@@ -1,7 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.production.entity.MaterialPurchase;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -49,7 +48,6 @@ public class MaterialPurchaseOrchestratorHelper {
      * 查询采购列表并补充 orderQuantity 字段
      */
     public Map<String, Object> listWithEnrichment(Map<String, Object> params) {
-        // 工厂账号隔离：只查询该工厂的采购记录
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         Long ctxTenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (StringUtils.hasText(ctxFactoryId)) {
@@ -116,7 +114,7 @@ public class MaterialPurchaseOrchestratorHelper {
             Map<String, String> bizTypeMap) {
         if (orderIds.isEmpty()) return;
         try {
-            List<ProductionOrder> orders = productionOrderService.lambdaQuery().in(ProductionOrder::getId, orderIds).eq(ProductionOrder::getTenantId, UserContext.tenantId()).list();
+            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
             for (ProductionOrder order : orders) {
                 if (order == null || !StringUtils.hasText(order.getId())) continue;
                 String id = order.getId();
@@ -138,7 +136,7 @@ public class MaterialPurchaseOrchestratorHelper {
             Map<String, Integer> quantityMap, Map<String, String> colorMap) {
         if (patternProductionIds.isEmpty()) return;
         try {
-            List<PatternProduction> patterns = patternProductionService.lambdaQuery().in(PatternProduction::getId, patternProductionIds).eq(PatternProduction::getTenantId, UserContext.tenantId()).list();
+            List<PatternProduction> patterns = patternProductionService.listByIds(patternProductionIds);
             for (PatternProduction pattern : patterns) {
                 if (pattern == null || !StringUtils.hasText(pattern.getId())) continue;
                 String id = pattern.getId();
@@ -403,7 +401,7 @@ public class MaterialPurchaseOrchestratorHelper {
     public void ensureOrderStatusProduction(String orderId) {
         if (!StringUtils.hasText(orderId)) return;
         String oid = orderId.trim();
-        ProductionOrder order = productionOrderService.lambdaQuery().eq(ProductionOrder::getId, oid).eq(ProductionOrder::getTenantId, UserContext.tenantId()).one();
+        ProductionOrder order = productionOrderService.getById(oid);
         if (order == null || (order.getDeleteFlag() != null && order.getDeleteFlag() != 0)) return;
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st) || "production".equalsIgnoreCase(st)) return;
@@ -514,7 +512,7 @@ public class MaterialPurchaseOrchestratorHelper {
 
         if (!StringUtils.hasText(purchaseId)) return result;
 
-        MaterialPurchase current = materialPurchaseService.lambdaQuery().eq(MaterialPurchase::getId, purchaseId.trim()).eq(MaterialPurchase::getTenantId, UserContext.tenantId()).one();
+        MaterialPurchase current = materialPurchaseService.getById(purchaseId.trim());
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             return result;
         }

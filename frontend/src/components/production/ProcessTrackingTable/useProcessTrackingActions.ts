@@ -21,13 +21,13 @@ export function useProcessTrackingActions(
     const processCode = String(record.processCode || '').trim().toLowerCase();
     const processName = String(record.processName || '').trim();
     const currentType = String(processType || nodeType || '').trim();
-    if (currentType === 'warehousing' || processCode.startsWith('warehousing') || ['入库', '质检入库', '次品入库'].includes(processName)) {
+    if (currentType === 'warehousing' || currentType === '入库' || processCode.startsWith('warehousing') || ['入库', '质检入库', '次品入库'].includes(processName)) {
       return 'warehouse';
     }
-    if (currentType === 'cutting' || processCode.startsWith('cutting') || processName === '裁剪') {
+    if (currentType === 'cutting' || currentType === '裁剪' || processCode.startsWith('cutting') || processName === '裁剪') {
       return 'cutting';
     }
-    if (currentType === 'procurement' || processCode.startsWith('procurement') || processName.includes('采购')) {
+    if (currentType === 'procurement' || currentType === '采购' || processCode.startsWith('procurement') || processName.includes('采购')) {
       return 'production';
     }
     return 'production';
@@ -37,15 +37,20 @@ export function useProcessTrackingActions(
     const processCode = String(record.processCode || '').trim().toLowerCase();
     const processName = String(record.processName || '').trim();
     const currentType = String(processType || nodeType || '').trim();
-    if (currentType === 'procurement' || processCode.startsWith('procurement') || processName.includes('采购')) return '采购';
-    if (currentType === 'cutting' || processCode.startsWith('cutting') || processName === '裁剪') return '裁剪';
-    if (currentType === 'secondaryProcess' || processCode.startsWith('secondary')) return '二次工艺';
-    if (currentType === 'carSewing' || currentType === 'sewing' || processCode.startsWith('sewing')) return '车缝';
+    if (currentType === 'procurement' || currentType === '采购' || processCode.startsWith('procurement') || processName.includes('采购')) return '采购';
+    if (currentType === 'cutting' || currentType === '裁剪' || processCode.startsWith('cutting') || processName === '裁剪') return '裁剪';
+    if (currentType === 'secondaryProcess' || currentType === '二次工艺' || processCode.startsWith('secondary')) return '二次工艺';
+    if (currentType === 'carSewing' || currentType === 'sewing' || currentType === '车缝' || currentType === '整件' || currentType === '缝制' || processCode.startsWith('sewing')) return '车缝';
     if (
       currentType === 'tailProcess' ||
+      currentType === '尾部' ||
       currentType === 'ironing' ||
       currentType === 'quality' ||
       currentType === 'packaging' ||
+      currentType === '整烫' ||
+      currentType === '剪线' ||
+      currentType === '包装' ||
+      currentType === '质检' ||
       processCode.startsWith('ironing') ||
       processCode.startsWith('pressing') ||
       processCode.startsWith('quality') ||
@@ -54,8 +59,12 @@ export function useProcessTrackingActions(
     ) {
       return '尾部';
     }
-    if (currentType === 'warehousing' || processCode.startsWith('warehousing') || ['入库', '质检入库', '次品入库'].includes(processName)) {
+    if (currentType === 'warehousing' || currentType === '入库' || processCode.startsWith('warehousing') || ['入库', '质检入库', '次品入库'].includes(processName)) {
       return '入库';
+    }
+    if (record.progressStage) {
+      const ps = String(record.progressStage).trim();
+      if (ps) return ps;
     }
     return String(processName || '').trim();
   }, [nodeType, processType]);

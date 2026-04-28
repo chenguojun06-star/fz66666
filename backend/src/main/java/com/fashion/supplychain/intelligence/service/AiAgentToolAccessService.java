@@ -7,12 +7,8 @@ import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -138,6 +134,34 @@ public class AiAgentToolAccessService {
 
     public static boolean isHighRisk(String toolName) {
         return toolName != null && HIGH_RISK_TOOLS.contains(toolName);
+    }
+
+    private static final long APPROVAL_TOKEN_TTL_MS = 30 * 60 * 1000L;
+    private final Map<String, ApprovalEntry> approvalTokens = new ConcurrentHashMap<>();
+
+    public boolean isHighRiskTool(String toolName) {
+        return isHighRisk(toolName);
+    }
+
+    public String generateApprovalToken(String toolName, Map<String, Object> args) {
+        String token = UUID.randomUUID().toString().replace("-", "");
+        approvalTokens.put(token, new ApprovalEntry(toolName, System.currentTimeMillis()));
+        return token;
+    }
+
+    public boolean validateApprovalToken(String toolName, String token) {
+        ApprovalEntry entry = approvalTokens.remove(token);
+        if (entry == null) return false;
+        if (!entry.toolName.equals(toolName)) return false;
+        if (System.currentTimeMillis() - entry.createdAt > APPROVAL_TOKEN_TTL_MS) return false;
+        return true;
+    }
+
+    @lombok.AllArgsConstructor
+    @lombok.Data
+    private static class ApprovalEntry {
+        private final String toolName;
+        private final long createdAt;
     }
 
     public static ToolDomain getDomainForTool(String toolName) {

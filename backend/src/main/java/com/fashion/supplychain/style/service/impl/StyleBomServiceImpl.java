@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> implements StyleBomService {
 
-    @Autowired
+    @Autowired(required = false)
     private com.fashion.supplychain.service.RedisService redisService;
 
     @Autowired
@@ -45,7 +45,7 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         // 尝试从Redis缓存获取
         String cacheKey = BOM_CACHE_PREFIX + BOM_CACHE_VERSION + ":" + UserContext.tenantId() + ":" + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp") + ":" + (includeFabricWeight ? "fw" : "nofw");
         try {
-            List<StyleBom> cached = redisService.get(cacheKey);
+            List<StyleBom> cached = redisService != null ? redisService.get(cacheKey) : null;
             if (cached != null) {
                 log.debug("BOM缓存命中: styleId={}", styleId);
                 return cached;
@@ -95,7 +95,9 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
 
         // 写入缓存
         try {
-            redisService.set(cacheKey, result, BOM_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            if (redisService != null) {
+                redisService.set(cacheKey, result, BOM_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            }
         } catch (Exception e) {
             log.debug("BOM缓存写入失败: styleId={}", styleId);
         }
@@ -216,7 +218,9 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             return;
         }
         try {
-            redisService.deleteByPattern(BOM_CACHE_PREFIX + "*:" + UserContext.tenantId() + ":" + styleId + ":*");
+            if (redisService != null) {
+                redisService.deleteByPattern(BOM_CACHE_PREFIX + "*:" + UserContext.tenantId() + ":" + styleId + ":*");
+            }
         } catch (Exception e) {
             log.debug("清除BOM缓存失败: styleId={}", styleId);
         }

@@ -198,9 +198,11 @@ export function useProductionListData() {
   const sortedProductionList = useMemo(() => {
     const filtered = [...smartQueueOrders];
     filtered.sort((a: any, b: any) => {
-      const aClose = isOrderTerminal(a) ? 1 : 0;
-      const bClose = isOrderTerminal(b) ? 1 : 0;
-      if (aClose !== bClose) return aClose - bClose;
+      const aStatus = String(a.status || '').trim().toLowerCase();
+      const bStatus = String(b.status || '').trim().toLowerCase();
+      const aScrapped = ['scrapped', 'cancelled', 'closed', 'archived'].includes(aStatus) ? 2 : isOrderTerminal(a) ? 1 : 0;
+      const bScrapped = ['scrapped', 'cancelled', 'closed', 'archived'].includes(bStatus) ? 2 : isOrderTerminal(b) ? 1 : 0;
+      if (aScrapped !== bScrapped) return aScrapped - bScrapped;
       if (sortField === 'createTime') {
         const aTime = a[sortField] ? new Date(a[sortField]).getTime() : 0;
         const bTime = b[sortField] ? new Date(b[sortField]).getTime() : 0;

@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.service.RedisService;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -15,7 +16,7 @@ public class DashboardCacheHelper {
 
     private final RedisService redisService;
 
-    public DashboardCacheHelper(RedisService redisService) {
+    public DashboardCacheHelper(@Autowired(required = false) RedisService redisService) {
         this.redisService = redisService;
     }
 
@@ -27,7 +28,7 @@ public class DashboardCacheHelper {
 
     public <T> T getFromCache(String key) {
         try {
-            return redisService.get(tenantCacheKey(key));
+            return redisService != null ? redisService.get(tenantCacheKey(key)) : null;
         } catch (Exception e) {
             log.debug("Redis cache miss or error for key: {}", key);
             return null;
@@ -36,7 +37,9 @@ public class DashboardCacheHelper {
 
     public void putToCache(String key, Object value) {
         try {
-            redisService.set(tenantCacheKey(key), value, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            if (redisService != null) {
+                redisService.set(tenantCacheKey(key), value, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            }
         } catch (Exception e) {
             log.debug("Redis cache put error for key: {}", key);
         }

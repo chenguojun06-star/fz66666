@@ -56,6 +56,7 @@ export interface UseProductionColumnsProps {
   openSubProcessRemap?: (record: ProductionOrder) => void;
   isFactoryAccount?: boolean;
   onOpenRemark?: (record: ProductionOrder, defaultRole?: string) => void;
+  openWorkflowEditor?: (styleNo?: string) => void;
 }
 
 export function useProductionColumns({
@@ -71,6 +72,7 @@ export function useProductionColumns({
   openSubProcessRemap,
   isFactoryAccount = false,
   onOpenRemark,
+  openWorkflowEditor,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
 
@@ -245,7 +247,7 @@ export function useProductionColumns({
         const v = Number(record?.factoryUnitPrice);
         return (Number.isFinite(v) && v > 0)
           ? <span style={{ fontWeight: 500 }}>¥{v.toFixed(2)}</span>
-          : <span style={{ color: '#bfbfbf' }}>-</span>;
+          : <span style={{ color: '#8c8c8c' }}>-</span>;
       },
     },
     {
@@ -301,10 +303,10 @@ export function useProductionColumns({
               style={{ cursor: 'default', padding: '4px', opacity: 0.8 }}
               onClick={(e) => { e.stopPropagation(); }}
             >
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
                 无采购
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
                 -/-
               </div>
               <LiquidProgressBar percent={0} width="100%" height={16} status="default" />
@@ -321,9 +323,6 @@ export function useProductionColumns({
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
             {renderCompletionTimeTag(record, '采购', rate || 0)}
-            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
-              {(rate || 0) > 0 ? '' : ''}
-            </div>
             <LiquidProgressBar percent={procurePercent} width="100%" height={16} status={colorStatus} />
           </div>
         );
@@ -516,6 +515,7 @@ export function useProductionColumns({
                   { key: 'tailProcess', label: '尾部', onClick: () => openProcessDetail(record, 'tailProcess') },
                   { type: 'divider' },
                   { key: 'syncProcess', label: ' 从模板同步', onClick: () => syncProcessFromTemplate(record) },
+                  ...(directCutting && openWorkflowEditor ? [{ key: 'editWorkflow', label: '编辑工序', onClick: () => openWorkflowEditor(record.styleNo) }] : []),
                 ],
               }] as RowAction[] : []),
               ...(isFactoryAccount && openSubProcessRemap ? [{

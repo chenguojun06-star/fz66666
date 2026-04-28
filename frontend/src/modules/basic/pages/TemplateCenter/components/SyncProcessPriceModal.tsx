@@ -17,12 +17,14 @@ export interface SyncProcessPriceModalProps {
   open: boolean;
   onCancel: () => void;
   onSynced?: () => void;
+  styleNo?: string;
 }
 
 const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
   open,
   onCancel,
   onSynced,
+  styleNo,
 }: SyncProcessPriceModalProps) {
   const {
     matchedScope, styleInputVal,
@@ -33,7 +35,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
     enterEdit, exitEdit, handleAdd, handleDelete,
     updateField, updateSizePrice, handleAddSize, handleRemoveSize,
     saveAll, syncToOrders, saveAndSync: hookSaveAndSync, handleClose,
-  } = useProcessPriceActions(open);
+  } = useProcessPriceActions(open, styleNo);
 
   const columns = useProcessPriceColumns(
     editMode, sizes, data, updateField, updateSizePrice, handleRemoveSize, handleDelete,
@@ -77,7 +79,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         style={{ width: 280 }}
       />
       <span style={{ color: 'var(--color-text-3)', fontSize: 12 }}>
-        {matchedScope === 'style' ? '✅ 已匹配款号模板' : matchedScope === 'empty' ? '未匹配，将创建新模板' : ''}
+        {matchedScope === 'style' ? '✅ 已匹配款号模板' : matchedScope === 'order' ? '📋 从订单工序数据加载' : '未匹配，将创建新模板'}
       </span>
     </div>
   );

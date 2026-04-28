@@ -122,6 +122,7 @@ public class TemplatePriceSyncHelper {
 
         Map<String, BigDecimal> priceMap = new HashMap<>();
         Map<String, String> codeMap = new HashMap<>();
+        Map<String, String> stageMap = new HashMap<>();
         for (Map<String, Object> templateNode : templateNodes) {
             String name = String.valueOf(templateNode.getOrDefault("name", "")).trim();
             if (!StringUtils.hasText(name)) {
@@ -133,8 +134,12 @@ public class TemplatePriceSyncHelper {
             if (StringUtils.hasText(id)) {
                 codeMap.put(name, id);
             }
+            String stage = String.valueOf(templateNode.getOrDefault("progressStage", "")).trim();
+            if (StringUtils.hasText(stage)) {
+                stageMap.put(name, stage);
+            }
         }
-        if (priceMap.isEmpty() && codeMap.isEmpty()) {
+        if (priceMap.isEmpty() && codeMap.isEmpty() && stageMap.isEmpty()) {
             return 0;
         }
 
@@ -164,6 +169,15 @@ public class TemplatePriceSyncHelper {
                 String currentIdStr = currentId == null ? "" : String.valueOf(currentId).trim();
                 if (!templateCode.equals(currentIdStr)) {
                     node.put("id", templateCode);
+                    changedCount++;
+                }
+            }
+            String templateStage = stageMap.get(nodeName);
+            if (StringUtils.hasText(templateStage)) {
+                Object currentStage = node.get("progressStage");
+                String currentStageStr = currentStage == null ? "" : String.valueOf(currentStage).trim();
+                if (!templateStage.equals(currentStageStr)) {
+                    node.put("progressStage", templateStage);
                     changedCount++;
                 }
             }

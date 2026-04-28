@@ -315,6 +315,14 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
                 .last("LIMIT 1"));
     }
 
+    @Override
+    public ProductionOrder getByIdIgnoreTenant(String id) {
+        if (!StringUtils.hasText(id)) {
+            return null;
+        }
+        return baseMapper.selectByIdIgnoreTenant(id);
+    }
+
     private void generateMaterialPurchases(ProductionOrder order) {
         if (order == null || !StringUtils.hasText(order.getId())) {
             return;

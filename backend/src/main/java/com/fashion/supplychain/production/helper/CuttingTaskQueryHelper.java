@@ -10,6 +10,8 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,7 @@ import org.springframework.util.StringUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -30,6 +33,7 @@ public class CuttingTaskQueryHelper {
     @Autowired private CuttingBundleMapper cuttingBundleMapper;
     @Autowired private ProductionOrderService productionOrderService;
     @Autowired private ProductionOrderQueryService productionOrderQueryService;
+    @Autowired private StyleInfoService styleInfoService;
 
     public IPage<CuttingTask> queryPage(Map<String, Object> params,
                                          com.fashion.supplychain.production.mapper.CuttingTaskMapper taskMapper) {
@@ -229,6 +233,37 @@ public class CuttingTaskQueryHelper {
                 t.setFactoryName(order.getFactoryName());
                 t.setFactoryType(order.getFactoryType());
                 t.setStyleCover(order.getStyleCover());
+            }
+        }
+
+        fillStyleCoverFallback(records);
+    }
+
+    private void fillStyleCoverFallback(List<CuttingTask> records) {
+        List<CuttingTask> missing = records.stream()
+                .filter(t -> t != null && !StringUtils.hasText(t.getStyleCover()) && StringUtils.hasText(t.getStyleNo()))
+                .collect(Collectors.toList());
+        if (missing.isEmpty()) return;
+
+        Set<String> styleNos = missing.stream()
+                .map(CuttingTask::getStyleNo)
+                .map(String::trim)
+                .collect(Collectors.toSet());
+
+        List<StyleInfo> styles = styleInfoService.list(new LambdaQueryWrapper<StyleInfo>()
+                .in(StyleInfo::getStyleNo, styleNos));
+        Map<String, String> coverByStyleNo = new HashMap<>();
+        if (styles != null) {
+            for (StyleInfo s : styles) {
+                if (s == null || !StringUtils.hasText(s.getStyleNo()) || !StringUtils.hasText(s.getCover())) continue;
+                coverByStyleNo.putIfAbsent(s.getStyleNo().trim(), s.getCover());
+            }
+        }
+
+        for (CuttingTask t : missing) {
+            String cover = coverByStyleNo.get(t.getStyleNo().trim());
+            if (StringUtils.hasText(cover)) {
+                t.setStyleCover(cover);
             }
         }
     }

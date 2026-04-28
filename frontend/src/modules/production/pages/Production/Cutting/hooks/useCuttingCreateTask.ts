@@ -1,10 +1,9 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
 import { factoryApi, type Factory } from '@/services/system/factoryApi';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit } from '@/types/system';
-import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { CUTTING_STAGE_ORDER } from '@/utils/productionStage';
 import { productionOrderApi, type FactoryCapacityItem } from '@/services/production/productionApi';
 
@@ -47,11 +46,37 @@ export interface CuttingProcessNode {
   unitPrice: number;
 }
 
-const defaultCuttingProcessNodes: CuttingProcessNode[] = [
-  { id: '01', name: '裁剪', progressStage: '裁剪', unitPrice: 0 },
-  { id: '02', name: '整件', progressStage: '车缝', unitPrice: 0 },
-  { id: '03', name: '尾部', progressStage: '尾部', unitPrice: 0 },
-];
+// 已移除 defaultCuttingProcessNodes（2026-04-28）：不再使用自动模板加载
+// 用户现在必须手动从零开始配置工序
+
+const FIXED_PARENT_NODES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+const SYNONYM_TO_PARENT: Record<string, string> = {
+  '采购': '采购', '物料采购': '采购', '面辅料采购': '采购', '备料': '采购', '到料': '采购', '进料': '采购', '物料': '采购',
+  '裁剪': '裁剪', '裁床': '裁剪', '剪裁': '裁剪', '开裁': '裁剪', '裁片': '裁剪', '裁切': '裁剪',
+  '二次工艺': '二次工艺', '二次': '二次工艺',
+  '车缝': '车缝', '缝制': '车缝', '缝纫': '车缝', '车工': '车缝', '生产': '车缝', '制作': '车缝',
+  '车位': '车缝', '车间生产': '车缝', '整件': '车缝',
+  '尾部': '尾部', '后整理': '尾部', '后道': '尾部',
+  '入库': '入库', '仓储': '入库', '上架': '入库', '进仓': '入库', '入仓': '入库', '验收': '入库', '成品入库': '入库',
+};
+
+function resolveProgressStage(processName: string, dynamicMapping?: Record<string, string>): string {
+  if (!processName?.trim()) return '';
+  const name = processName.trim();
+  if (FIXED_PARENT_NODES.includes(name)) return name;
+  if (dynamicMapping && dynamicMapping[name]) return dynamicMapping[name];
+  if (SYNONYM_TO_PARENT[name]) return SYNONYM_TO_PARENT[name];
+  for (const [keyword, parent] of Object.entries(SYNONYM_TO_PARENT)) {
+    if (name.includes(keyword)) return parent;
+  }
+  if (dynamicMapping) {
+    for (const [keyword, parent] of Object.entries(dynamicMapping)) {
+      if (name.includes(keyword)) return parent;
+    }
+  }
+  return '';
+}
 
 export interface ProcessUnitPrice {
   processName: string;
@@ -68,11 +93,6 @@ interface UseCuttingCreateTaskOptions {
 export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCuttingCreateTaskOptions) {
   useAuth();
 
-  // 用于防止 loadProcessNodesForStyle 异步竞态：记录最新发起的款号请求
-  const pendingStyleNoRef = useRef<string>('');
-  // 记录已成功加载模板工序的款号，onBlur 时若款号未变则不重复加载（防止点击工厂等其他控件触发失焦覆盖用户手动工序）
-  const loadedTemplateStyleRef = useRef<string>('');
-
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);
   const [createOrderDate, setCreateOrderDate] = useState('');
@@ -88,9 +108,23 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createFactoryId, setCreateFactoryId] = useState<string>('');
   const [createFactoryOptions, setCreateFactoryOptions] = useState<Factory[]>([]);
   const [createFactoryLoading, setCreateFactoryLoading] = useState(false);
-  const [createProcessNodes, setCreateProcessNodes] = useState<CuttingProcessNode[]>([...defaultCuttingProcessNodes]);
+  const [createProcessNodes, setCreateProcessNodes] = useState<CuttingProcessNode[]>([]);
   const [createStyleImageUrl, setCreateStyleImageUrl] = useState<string | null>(null);
   const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
+  const [dynamicProcessMapping, setDynamicProcessMapping] = useState<Record<string, string>>({});
+  const mappingLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (mappingLoadedRef.current) return;
+    mappingLoadedRef.current = true;
+    api.get<{ code: number; data: Record<string, string> }>('/production/process-mapping/list')
+      .then((res) => {
+        if (res.code === 200 && res.data) {
+          setDynamicProcessMapping(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     productionOrderApi.getFactoryCapacity()
@@ -182,85 +216,34 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     const hit = createStyleOptions.find((x) => x.styleNo === sn);
     setCreateStyleName(String(hit?.styleName || '').trim());
     if (!sn) {
-      // 清空时重置工序节点
-      pendingStyleNoRef.current = '';
-      loadedTemplateStyleRef.current = '';
-      setCreateProcessNodes([...defaultCuttingProcessNodes]);
+      setCreateProcessNodes([]);
     }
   };
 
-  // onSelect / onBlur：用户明确确认款号后才加载模板工序（避免打字过程中异步覆盖）
+  // onSelect：仅更新款号和名称，不自动加载模板工序（由用户手动配置）
   const handleStyleNoSelect = (value: string) => {
     const sn = String(value || '').trim();
     setCreateStyleNo(sn);
     const hit = createStyleOptions.find((x) => x.styleNo === sn);
     setCreateStyleName(String(hit?.styleName || '').trim());
-    if (sn) {
-      loadProcessNodesForStyle(sn);
-    } else {
-      pendingStyleNoRef.current = '';
-      loadedTemplateStyleRef.current = '';
-      setCreateProcessNodes([...defaultCuttingProcessNodes]);
+    if (!sn) {
+      setCreateProcessNodes([]);
     }
   };
 
-  // onBlur 专用：只有款号与上次成功加载的模板款号不同时才触发加载（防止点击工厂等控件导致失焦重复覆盖用户手动工序）
   const handleStyleNoBlur = () => {
-    const sn = createStyleNo;
-    if (sn && sn !== loadedTemplateStyleRef.current) {
-      loadProcessNodesForStyle(sn);
-    }
-  };
-
-  const loadProcessNodesForStyle = async (styleNo: string) => {
-    // 标记本次请求的款号；若款号在等待过程中被更新，本次结果将被丢弃
-    pendingStyleNoRef.current = styleNo;
-    try {
-      const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
-      // 竞态保护：若已有更新的款号请求，丢弃本次结果
-      if (pendingStyleNoRef.current !== styleNo) return;
-      const result = res as Record<string, unknown>;
-      if (result.code !== 200) return;
-      const rows = Array.isArray(result.data) ? result.data : [];
-      if (rows.length === 0) return;
-      const nodes: CuttingProcessNode[] = rows
-        .filter((r: any) => {
-          const name = String(r?.name || r?.processName || '').trim();
-          const stage = String(r?.progressStage || '').trim();
-          return name && !['采购'].includes(stage) && !['采购'].includes(name);
-        })
-        .map((r: any, idx: number) => {
-          let stage = String(r?.progressStage || '').trim();
-          if (!stage || !CUTTING_STAGE_ORDER.includes(stage)) {
-            stage = '车缝';
-          }
-          return {
-            id: String(r?.id || r?.processCode || String(idx + 1).padStart(2, '0')).trim(),
-            name: String(r?.name || r?.processName || '').trim(),
-            progressStage: stage,
-            unitPrice: Number(r?.unitPrice || r?.price || 0) || 0,
-          };
-        });
-      if (nodes.length > 0) {
-        setCreateProcessNodes(nodes);
-        loadedTemplateStyleRef.current = styleNo;
-      }
-    } catch {
-      if (pendingStyleNoRef.current === styleNo) {
-        setCreateProcessNodes([...defaultCuttingProcessNodes]);
-      }
-    }
+    // 不做任何操作 - 禁用自动模板加载功能
   };
 
   const addProcessNodeToStage = (stage: string) => {
-    const targetStage = CUTTING_STAGE_ORDER.includes(stage) ? stage : '车缝';
+    const targetStage = CUTTING_STAGE_ORDER.includes(stage) ? stage : '裁剪';
     const maxSort = createProcessNodes.length;
     const nextId = String(maxSort + 1).padStart(2, '0');
     setCreateProcessNodes((prev) => [...prev, { id: nextId, name: '', progressStage: targetStage, unitPrice: 0 }]);
   };
 
   const addProcessNode = () => {
-    addProcessNodeToStage('车缝');
+    addProcessNodeToStage('裁剪');
   };
 
   const removeProcessNode = (index: number) => {
@@ -270,14 +253,23 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const updateProcessNode = (index: number, field: keyof CuttingProcessNode, value: string | number) => {
     setCreateProcessNodes((prev) => prev.map((node, idx) => {
       if (idx !== index) return node;
-      return { ...node, [field]: value };
+      const updated = { ...node, [field]: value };
+      if (field === 'name' && typeof value === 'string') {
+        const resolved = resolveProgressStage(value, dynamicProcessMapping);
+        if (resolved && CUTTING_STAGE_ORDER.includes(resolved)) {
+          updated.progressStage = resolved;
+        }
+      }
+      return updated;
     }));
   };
 
-  const buildCuttingWorkflowJson = (): string => {
+  const buildCuttingWorkflowJson = (): string | undefined => {
     const sorted = [...createProcessNodes].sort((a, b) => {
-      const sa = CUTTING_STAGE_ORDER.indexOf(a.progressStage || '车缝');
-      const sb = CUTTING_STAGE_ORDER.indexOf(b.progressStage || '车缝');
+      const stageA = a.progressStage || resolveProgressStage(a.name, dynamicProcessMapping) || '裁剪';
+      const stageB = b.progressStage || resolveProgressStage(b.name, dynamicProcessMapping) || '裁剪';
+      const sa = CUTTING_STAGE_ORDER.indexOf(stageA);
+      const sb = CUTTING_STAGE_ORDER.indexOf(stageB);
       if (sa !== sb) return sa - sb;
       return 0;
     });
@@ -287,9 +279,10 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         id: String(idx + 1).padStart(2, '0'),
         name: n.name,
         processCode: String(idx + 1).padStart(2, '0'),
-        progressStage: n.progressStage,
+        progressStage: n.progressStage || resolveProgressStage(n.name, dynamicProcessMapping) || '',
         unitPrice: n.unitPrice,
       }));
+    if (nodes.length === 0) return undefined;
     return JSON.stringify({ nodes });
   };
 
@@ -302,8 +295,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     setCreateFactoryMode('INTERNAL');
     setCreateOrgUnitId('');
     setCreateFactoryId('');
-    setCreateProcessNodes([...defaultCuttingProcessNodes]);
-    loadedTemplateStyleRef.current = '';
+    setCreateProcessNodes([]);
     setCreateStyleImageUrl(null);
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');

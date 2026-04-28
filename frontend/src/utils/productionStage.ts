@@ -12,18 +12,26 @@ export function computeStageSortedAndSpan<T extends { progressStage?: string }>(
   items: T[],
   stageOrder: readonly string[] = STAGE_ORDER,
 ): { sorted: T[]; spanMap: Map<number, StageSpanInfo> } {
+  const resolveStage = (item: T) => {
+    const ps = item.progressStage?.trim();
+    if (ps && stageOrder.includes(ps)) return ps;
+    if (ps) return ps;
+    return stageOrder[0] || '裁剪';
+  };
   const sorted = [...items].sort((a, b) => {
-    const sa = stageOrder.indexOf(a.progressStage || '车缝');
-    const sb = stageOrder.indexOf(b.progressStage || '车缝');
-    if (sa !== sb) return sa - sb;
-    return 0;
+    const sa = stageOrder.indexOf(resolveStage(a));
+    const sb = stageOrder.indexOf(resolveStage(b));
+    // 自定义阶段（不在 stageOrder 中，indexOf=-1）排到已知阶段后面
+    const na = sa === -1 ? stageOrder.length : sa;
+    const nb = sb === -1 ? stageOrder.length : sb;
+    return na - nb;
   });
   const spanMap = new Map<number, StageSpanInfo>();
   let i = 0;
   while (i < sorted.length) {
-    const stage = sorted[i].progressStage || '车缝';
+    const stage = resolveStage(sorted[i]);
     let j = i + 1;
-    while (j < sorted.length && (sorted[j].progressStage || '车缝') === stage) j++;
+    while (j < sorted.length && resolveStage(sorted[j]) === stage) j++;
     const count = j - i;
     spanMap.set(i, { rowSpan: count, stage, count });
     for (let k = i + 1; k < j; k++) spanMap.set(k, { rowSpan: 0, stage, count });
@@ -33,32 +41,17 @@ export function computeStageSortedAndSpan<T extends { progressStage?: string }>(
 }
 
 export const stageAliasMap: Record<string, string[]> = {
-  procurement: ['采购', '物料', '备料'],
-  cutting: ['裁剪', '裁床', '剪裁', '开裁'],
-  sewing: ['车缝', '缝制', '缝纫', '车工', '整件'],
-  ironing: ['整烫', '熨烫', '大烫'],
-  quality: ['质检', '检验', '品检', '验货'],
-  packaging: ['包装', '后整', '打包', '装箱'],
+  procurement: ['采购', '物料采购', '面辅料采购', '备料', '到料', '进料', '物料'],
+  cutting: ['裁剪', '裁床', '剪裁', '开裁', '裁片', '裁切'],
+  sewing: ['车缝', '缝制', '缝纫', '车工', '整件', '生产', '制作', '车位', '车间生产'],
+  tailProcess: ['尾部', '后整理', '后道'],
   secondaryProcess: ['二次工艺', '二次'],
-  warehousing: ['入库', '仓库', '质检入库'],
+  warehousing: ['入库', '仓储', '上架', '进仓', '入仓', '验收', '成品入库'],
 };
 
-/**
- * carSewing 工序关键词（含宽泛别名「生产」，用于列表页/详情页工序分类匹配）
- * sewing 与 carSewing 区别：sewing=进度球节点匹配（精确），carSewing=列表页工序分类（含「生产」宽泛匹配）
- */
-export const carSewingKeywords: string[] = [...stageAliasMap.sewing, '生产'];
+export const carSewingKeywords: string[] = [...stageAliasMap.sewing];
 
-/**
- * 尾部工序关键词集合（整烫/包装/质检/后整等大尾工序合集）
- * 派生自 ironing + quality + packaging 子集，额外补「尾部」「剪线」
- */
-export const tailProcessKeywords: string[] = [
-  '尾部', '剪线',
-  ...stageAliasMap.ironing,
-  ...stageAliasMap.quality,
-  ...stageAliasMap.packaging,
-];
+export const tailProcessKeywords: string[] = [...stageAliasMap.tailProcess];
 
 /**
  * 规范化阶段名（解决"质检入库"同时匹配质检和入库的歧义问题）
@@ -70,8 +63,29 @@ export const canonicalizeStage = (raw: string): string => {
   return s;
 };
 
+const CHINESE_TO_ENGLISH_STAGE: Record<string, string> = {
+  '采购': 'procurement', '物料采购': 'procurement', '面辅料采购': 'procurement', '备料': 'procurement', '到料': 'procurement', '进料': 'procurement', '物料': 'procurement',
+  '裁剪': 'cutting', '裁床': 'cutting', '剪裁': 'cutting', '开裁': 'cutting', '裁片': 'cutting', '裁切': 'cutting',
+  '二次工艺': 'secondaryProcess', '二次': 'secondaryProcess',
+  '车缝': 'carSewing', '缝制': 'carSewing', '缝纫': 'carSewing', '车工': 'carSewing', '整件': 'carSewing', '生产': 'carSewing', '制作': 'carSewing', '车位': 'carSewing', '车间生产': 'carSewing',
+  '尾部': 'tailProcess', '后整理': 'tailProcess', '后道': 'tailProcess',
+  '入库': 'warehousing', '仓储': 'warehousing', '上架': 'warehousing', '进仓': 'warehousing', '入仓': 'warehousing', '验收': 'warehousing', '成品入库': 'warehousing',
+};
+
+const resolveEnglishStageKey = (key: string): string => {
+  const trimmed = key.trim();
+  if (stageAliasMap[trimmed]) return trimmed;
+  const mapped = CHINESE_TO_ENGLISH_STAGE[trimmed];
+  if (mapped) return mapped;
+  for (const [cn, en] of Object.entries(CHINESE_TO_ENGLISH_STAGE)) {
+    if (trimmed.includes(cn) || cn.includes(trimmed)) return en;
+  }
+  return trimmed;
+};
+
 export const getStageAliases = (nodeTypeKey: string, nodeName?: string) => {
-  const aliases = [nodeName || '', nodeTypeKey, ...(stageAliasMap[nodeTypeKey] || [])]
+  const englishKey = resolveEnglishStageKey(nodeTypeKey);
+  const aliases = [nodeName || '', nodeTypeKey, englishKey, ...(stageAliasMap[englishKey] || [])]
     .map((v) => String(v || '').trim())
     .filter(Boolean);
   return Array.from(new Set(aliases));

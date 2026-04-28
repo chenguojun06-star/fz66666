@@ -24,6 +24,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
   const {
     loading,
     warehousingList,
+    sortedWarehousingList,
     total,
     smartError,
     showSmartErrorNotice,
@@ -164,7 +165,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           {statusFilter === 'all' || statusFilter === 'completed' ? (
             <WarehousingTable
               loading={loading}
-              dataSource={warehousingList}
+              dataSource={sortedWarehousingList}
               total={total}
               queryParams={queryParams}
               setQueryParams={setQueryParams}

@@ -83,20 +83,11 @@ function getCanonicalParentNodes(): ParentNode[] {
 
 // ── 工序中文名 → 父节点 key（把 workflow 扁平节点归类到 6 个父阶段）
 const PROCESS_NAME_TO_PARENT: Record<string, string> = {
-  '采购': 'procurement', '面料采购': 'procurement', '面辅料采购': 'procurement', '备料': 'procurement', '到料': 'procurement', '进料': 'procurement', '物料': 'procurement',
+  '采购': 'procurement', '物料采购': 'procurement', '面辅料采购': 'procurement', '备料': 'procurement', '到料': 'procurement', '进料': 'procurement', '物料': 'procurement',
   '裁剪': 'cutting', '裁床': 'cutting', '裁切': 'cutting', '裁片': 'cutting', '剪裁': 'cutting', '开裁': 'cutting',
-  '二次工艺': 'secondaryProcess', '烫画': 'secondaryProcess', '印花': 'secondaryProcess',
-  '绣花': 'secondaryProcess', '水洗': 'secondaryProcess', '染色': 'secondaryProcess',
-  '压花': 'secondaryProcess', '烫钻': 'secondaryProcess', '钉珠': 'secondaryProcess', '烫金': 'secondaryProcess',
-  '数码印': 'secondaryProcess', '打孔': 'secondaryProcess', '激光': 'secondaryProcess', '转印': 'secondaryProcess',
-  '植绒': 'secondaryProcess', '涂层': 'secondaryProcess', '磨毛': 'secondaryProcess', '后处理': 'secondaryProcess',
+  '二次工艺': 'secondaryProcess', '二次': 'secondaryProcess',
   '车缝': 'carSewing', '缝制': 'carSewing', '车位': 'carSewing', '整件': 'carSewing', '生产': 'carSewing', '制作': 'carSewing', '车间生产': 'carSewing',
-  '尾部': 'tailProcess', '尾部工序': 'tailProcess', '剪线': 'tailProcess',
-  '整烫': 'tailProcess', '大烫': 'tailProcess', '熨烫': 'tailProcess', '烫整': 'tailProcess', '后整烫': 'tailProcess',
-  '包装': 'tailProcess', '质检': 'tailProcess', '检测': 'tailProcess',
-  '检验': 'tailProcess', '品检': 'tailProcess', '验货': 'tailProcess', '品控': 'tailProcess', '检查': 'tailProcess',
-  '后整': 'tailProcess', '钉扣': 'tailProcess', '锁眼': 'tailProcess', '锁边': 'tailProcess',
-  '打包': 'tailProcess', '装箱': 'tailProcess', '封箱': 'tailProcess', '贴标': 'tailProcess',
+  '尾部': 'tailProcess', '后整理': 'tailProcess', '后道': 'tailProcess',
   '入库': 'warehousing', '验收': 'warehousing', '成品入库': 'warehousing', '仓储': 'warehousing', '上架': 'warehousing', '进仓': 'warehousing', '入仓': 'warehousing',
 };
 

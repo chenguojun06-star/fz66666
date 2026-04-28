@@ -8,8 +8,8 @@ import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.service.MaterialInboundService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +24,11 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MaterialInboundServiceImpl extends ServiceImpl<MaterialInboundMapper, MaterialInbound>
         implements MaterialInboundService {
 
-    private final DistributedLockService distributedLockService;
+    @Autowired(required = false)
+    private DistributedLockService distributedLockService;
 
     @Override
     public IPage<MaterialInbound> queryPage(Page<MaterialInbound> page, String materialCode, String purchaseId) {
@@ -49,6 +49,9 @@ public class MaterialInboundServiceImpl extends ServiceImpl<MaterialInboundMappe
 
     @Override
     public String generateInboundNo() {
+        if (distributedLockService == null) {
+            return doGenerateInboundNo();
+        }
         return distributedLockService.executeWithStrictLock(
                 "inbound:generateNo", 5, TimeUnit.SECONDS,
                 this::doGenerateInboundNo);

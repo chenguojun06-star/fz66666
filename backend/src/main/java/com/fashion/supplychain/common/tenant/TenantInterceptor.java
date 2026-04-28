@@ -66,6 +66,11 @@ public class TenantInterceptor implements InnerInterceptor {
     @SuppressWarnings("rawtypes")
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
+        if (isInterceptorIgnored(ms)) {
+            log.debug("[TenantInterceptor] @InterceptorIgnore detected, skip tenant filtering for msId={}", ms.getId());
+            return;
+        }
+
         UserContext ctx = UserContext.get();
         if (ctx == null) {
             return;
@@ -110,6 +115,9 @@ public class TenantInterceptor implements InnerInterceptor {
 
     @Override
     public void beforeUpdate(Executor executor, MappedStatement ms, Object parameter) throws SQLException {
+        if (isInterceptorIgnored(ms)) {
+            return;
+        }
         Long tenantId = getCurrentTenantId();
         if (tenantId == null) {
             return;
@@ -134,6 +142,30 @@ public class TenantInterceptor implements InnerInterceptor {
             setFieldValue(boundSql, "sql", newSql);
             log.debug("Tenant {} filter applied: tenantId={}", type, tenantId);
         }
+    }
+
+    /**
+     * 检查 MappedStatement 是否标注了 @InterceptorIgnore(tenantLine = "true")
+     */
+    private boolean isInterceptorIgnored(MappedStatement ms) {
+        try {
+            String msId = ms.getId();
+            int dotIdx = msId.lastIndexOf('.');
+            if (dotIdx < 0) return false;
+            String className = msId.substring(0, dotIdx);
+            String methodName = msId.substring(dotIdx + 1);
+            Class<?> mapperClass = Class.forName(className);
+            for (java.lang.reflect.Method method : mapperClass.getMethods()) {
+                if (method.getName().equals(methodName)) {
+                    com.baomidou.mybatisplus.annotation.InterceptorIgnore ignore =
+                            method.getAnnotation(com.baomidou.mybatisplus.annotation.InterceptorIgnore.class);
+                    return ignore != null && "true".equals(ignore.tenantLine());
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            // not a mapper class, ignore
+        }
+        return false;
     }
 
     /**

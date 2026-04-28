@@ -31,6 +31,7 @@ export const getDetailRowKey = (r: any): string =>
         String(r?.scanType || ''),
         String(r?.color || ''),
         String(r?.size || ''),
+        String(r?.cuttingBundleNo ?? ''),
     ].join('|');
 
 export const getDetailApprovalId = (r: any): string => String(r?.approvalId || '').trim();

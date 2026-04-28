@@ -103,6 +103,7 @@ export default function PayrollPage() {
       if (item.orderNo) orderNoSet.add(item.orderNo);
       recs.push({
         orderNo: item.orderNo || '-', styleNo: item.styleNo || '-', color: item.color || '-', size: item.size || '-',
+        cuttingBundleNo: item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '',
         processName: item.processName || '-', operatorName: item.operatorName || item.actualOperatorName || '',
         scanTypeText: scanTypeText(item.scanType),
         orderStatusText: orderStatusText(item.orderStatus), quantity: qty,
@@ -189,7 +190,7 @@ export default function PayrollPage() {
                 <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>¥{r.totalAmount}</span>
               </div>
               <div style={{ marginTop: 4, color: 'var(--color-text-secondary)' }}>
-                {r.processName} · {r.scanTypeText} · {r.quantity}件 · ¥{r.unitPrice}/件
+                {r.color} {r.size}{r.cuttingBundleNo ? ` · 菲号${r.cuttingBundleNo}` : ''} · {r.processName} · {r.scanTypeText} · {r.quantity}件 · ¥{r.unitPrice}/件
                 {r.operatorName && <span> · {r.operatorName}</span>}
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 2 }}>{r.scanTime}</div>
