@@ -1,12 +1,6 @@
 name: Deploy Backend to WeChat Cloud Run
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-      - 'Dockerfile'
-      - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
 env:
@@ -48,6 +42,8 @@ jobs:
           tags: |
             ccr.ccs.tencentyun.com/${{ secrets.TCR_NAMESPACE }}/fashion-backend:${{ github.sha }}
             ccr.ccs.tencentyun.com/${{ secrets.TCR_NAMESPACE }}/fashion-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Deploy to WeChat Cloud Run
         run: |

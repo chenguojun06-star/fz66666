@@ -1,11 +1,6 @@
 name: Deploy Frontend (Admin) to WeChat Cloud Run
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
 
 env:
@@ -29,7 +24,7 @@ jobs:
           cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
         working-directory: ${{ env.FRONTEND_DIR }}
 
       - name: Build Frontend
@@ -64,6 +59,8 @@ jobs:
           build-args: |
             BUILD_DATE=${{ github.run_number }}
             BACKEND_URL=http://fashion-backend:8080
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Deploy to WeChat Cloud Run
         run: |

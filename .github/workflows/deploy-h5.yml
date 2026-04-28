@@ -1,11 +1,6 @@
 name: Deploy H5 to WeChat Cloud Run
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'h5-web/**'
-      - '.github/workflows/deploy-h5.yml'
   workflow_dispatch:
 
 env:
