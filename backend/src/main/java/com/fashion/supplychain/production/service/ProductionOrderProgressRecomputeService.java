@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -82,6 +83,7 @@ public class ProductionOrderProgressRecomputeService {
                         .progressStageNameMatches(ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT, pn);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public ProductionOrder recomputeProgressFromRecords(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) return null;

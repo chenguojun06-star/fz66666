@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -227,6 +228,7 @@ public class StyleListEnrichmentHelper {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void fillQuotationPriceFields(List<StyleInfo> records) {
         if (records == null || records.isEmpty()) return;
 

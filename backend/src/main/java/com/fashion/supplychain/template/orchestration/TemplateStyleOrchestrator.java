@@ -80,12 +80,18 @@ public class TemplateStyleOrchestrator {
         log.info("开始应用模板到款式: templateId={}, targetStyleId={}, templateType={}, mode={}",
                 templateId, targetStyleId, templateType, mode);
 
-        boolean result = switch (templateType) {
-            case "bom" -> applyBomTemplate(template, targetStyleId, overwrite);
-            case "process" -> applyProcessTemplate(template, targetStyleId, overwrite);
-            case "size" -> applySizeTemplate(template, targetStyleId, overwrite);
-            default -> throw new IllegalArgumentException("不支持的模板类型: " + templateType);
-        };
+        boolean result;
+        try {
+            result = switch (templateType) {
+                case "bom" -> applyBomTemplate(template, targetStyleId, overwrite);
+                case "process" -> applyProcessTemplate(template, targetStyleId, overwrite);
+                case "size" -> applySizeTemplate(template, targetStyleId, overwrite);
+                default -> throw new IllegalArgumentException("不支持的模板类型: " + templateType);
+            };
+        } catch (Exception e) {
+            log.error("应用模板失败: templateId={}, targetStyleId={}, type={}", templateId, targetStyleId, templateType, e);
+            throw new RuntimeException("应用模板失败: " + templateType, e);
+        }
 
         log.info("模板应用完成: templateId={}, targetStyleId={}, result={}",
                 templateId, targetStyleId, result);
@@ -221,29 +227,23 @@ public class TemplateStyleOrchestrator {
         return objectMapper.writeValueAsString(payload);
     }
 
-    private boolean applyBomTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
-        try {
-            List<StyleBom> boms = parseBomContent(template.getTemplateContent());
+    private boolean applyBomTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) throws Exception {
+        List<StyleBom> boms = parseBomContent(template.getTemplateContent());
 
-            if (overwrite) {
-                styleBomService.lambdaUpdate()
-                        .eq(StyleBom::getStyleId, targetStyleId)
-                        .remove();
-            }
-
-            for (StyleBom bom : boms) {
-                bom.setId(null);
-                bom.setStyleId(targetStyleId);
-                styleBomService.save(bom);
-            }
-
-            styleBomService.clearBomCache(targetStyleId);
-
-            return true;
-        } catch (Exception e) {
-            log.error("应用BOM模板失败", e);
-            return false;
+        if (overwrite) {
+            styleBomService.lambdaUpdate()
+                    .eq(StyleBom::getStyleId, targetStyleId)
+                    .remove();
         }
+
+        for (StyleBom bom : boms) {
+            bom.setId(null);
+            bom.setStyleId(targetStyleId);
+            styleBomService.save(bom);
+        }
+
+        styleBomService.clearBomCache(targetStyleId);
+        return true;
     }
 
     private List<StyleBom> parseBomContent(String content) throws Exception {
@@ -293,29 +293,24 @@ public class TemplateStyleOrchestrator {
         bom.setMaterialCode(base + String.format("%03d", index));
     }
 
-    private boolean applyProcessTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
-        try {
-            List<StyleProcess> processes = parseProcessContent(template.getTemplateContent());
+    private boolean applyProcessTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) throws Exception {
+        List<StyleProcess> processes = parseProcessContent(template.getTemplateContent());
 
-            if (overwrite) {
-                styleProcessService.lambdaUpdate()
-                        .eq(StyleProcess::getStyleId, targetStyleId)
-                        .remove();
-            }
-
-            for (StyleProcess process : processes) {
-                process.setProcessName(fixMojibake(process.getProcessName()));
-                process.setProgressStage(fixMojibake(process.getProgressStage()));
-                process.setId(null);
-                process.setStyleId(targetStyleId);
-                styleProcessService.save(process);
-            }
-
-            return true;
-        } catch (Exception e) {
-            log.error("应用工序模板失败", e);
-            return false;
+        if (overwrite) {
+            styleProcessService.lambdaUpdate()
+                    .eq(StyleProcess::getStyleId, targetStyleId)
+                    .remove();
         }
+
+        for (StyleProcess process : processes) {
+            process.setProcessName(fixMojibake(process.getProcessName()));
+            process.setProgressStage(fixMojibake(process.getProgressStage()));
+            process.setId(null);
+            process.setStyleId(targetStyleId);
+            styleProcessService.save(process);
+        }
+
+        return true;
     }
 
     private List<StyleProcess> parseProcessContent(String content) throws Exception {
@@ -336,27 +331,22 @@ public class TemplateStyleOrchestrator {
         }
     }
 
-    private boolean applySizeTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
-        try {
-            List<StyleSize> sizes = parseSizeContent(template.getTemplateContent());
+    private boolean applySizeTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) throws Exception {
+        List<StyleSize> sizes = parseSizeContent(template.getTemplateContent());
 
-            if (overwrite) {
-                styleSizeService.lambdaUpdate()
-                        .eq(StyleSize::getStyleId, targetStyleId)
-                        .remove();
-            }
-
-            for (StyleSize size : sizes) {
-                size.setId(null);
-                size.setStyleId(targetStyleId);
-                styleSizeService.save(size);
-            }
-
-            return true;
-        } catch (Exception e) {
-            log.error("应用尺寸模板失败", e);
-            return false;
+        if (overwrite) {
+            styleSizeService.lambdaUpdate()
+                    .eq(StyleSize::getStyleId, targetStyleId)
+                    .remove();
         }
+
+        for (StyleSize size : sizes) {
+            size.setId(null);
+            size.setStyleId(targetStyleId);
+            styleSizeService.save(size);
+        }
+
+        return true;
     }
 
     private List<StyleSize> parseSizeContent(String content) throws Exception {

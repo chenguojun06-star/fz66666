@@ -454,7 +454,15 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             log.warn("decreaseStockForCancelReceive: 库存记录不存在，跳过: materialCode={}", purchase.getMaterialCode());
             return;
         }
-        this.updateStockQuantity(stock.getId(), -quantity);
+        int rows = baseMapper.decreaseStockWithCheck(stock.getId(), quantity, com.fashion.supplychain.common.UserContext.tenantId());
+        if (rows == 0) {
+            int currentQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+            log.warn("decreaseStockForCancelReceive: 库存不足，当前库存={}, 需扣减={}, materialCode={}",
+                    currentQty, quantity, purchase.getMaterialCode());
+            throw new IllegalStateException(
+                    "取消收货扣减库存失败（库存不足）: " + stock.getMaterialName()
+                    + "，当前库存=" + currentQty + "，需扣减=" + quantity);
+        }
         log.info("Decreased stock for cancelReceive: id={}, delta={}", stock.getId(), quantity);
     }
 
@@ -466,7 +474,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         }
         int rows = baseMapper.lockStock(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
-            log.warn("lockStock failed: stockId={}", stockId);
+            MaterialStock stock = this.getById(stockId);
+            String name = stock != null ? stock.getMaterialName() : "Unknown";
+            throw new IllegalStateException("库存锁定失败（库存不足或记录不存在）: " + name);
         }
     }
 
@@ -478,7 +488,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         }
         int rows = baseMapper.unlockStock(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
-            log.warn("unlockStock failed: stockId={}", stockId);
+            MaterialStock stock = this.getById(stockId);
+            String name = stock != null ? stock.getMaterialName() : "Unknown";
+            throw new IllegalStateException("库存解锁失败（锁定数量不足或记录不存在）: " + name);
         }
     }
 

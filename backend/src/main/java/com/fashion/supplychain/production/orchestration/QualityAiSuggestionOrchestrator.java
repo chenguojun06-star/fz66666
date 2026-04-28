@@ -237,7 +237,8 @@ public class QualityAiSuggestionOrchestrator {
         DefectRateResult defectResult = computeHistoricalDefectRate(orderId);
         String styleId = order.getStyleId();
         if (StringUtils.hasText(styleId) && inferenceOrchestrator.isAnyModelEnabled()) {
-            CachedStyleCheckpoints cached = styleCache.get(styleId);
+            String cacheKey = buildStyleCacheKey(styleId);
+            CachedStyleCheckpoints cached = styleCache.get(cacheKey);
             if (cached != null && !cached.isExpired()) {
                 log.debug("[QualityAI] 命中款式缓存: styleId={}, orderId={}", styleId, orderId);
                 return buildFromCache(cached, order, defectResult.rate, defectResult.verdict);
@@ -248,7 +249,7 @@ public class QualityAiSuggestionOrchestrator {
                 if (llmResult != null) {
                     List<String> pureCheckpoints = new ArrayList<>(llmResult.getCheckpoints());
                     pureCheckpoints.removeIf(cp -> cp.startsWith("🔴") || cp.startsWith("🟡"));
-                    styleCache.put(styleId, new CachedStyleCheckpoints(pureCheckpoints, llmResult.getUrgentTip()));
+                    styleCache.put(cacheKey, new CachedStyleCheckpoints(pureCheckpoints, llmResult.getUrgentTip()));
                     log.info("[QualityAI] LLM生成质检指引成功并缓存: styleId={}, orderId={}, checkpoints={}", styleId, orderId, llmResult.getCheckpoints().size());
                     return llmResult;
                 }
@@ -562,5 +563,10 @@ public class QualityAiSuggestionOrchestrator {
                 .defectSuggestions(DEFECT_SUGGESTIONS)
                 .historicalVerdict("good")
                 .build();
+    }
+
+    private String buildStyleCacheKey(String styleId) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        return (tenantId != null ? tenantId : "0") + ":" + styleId;
     }
 }

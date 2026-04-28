@@ -61,6 +61,7 @@ public class ProductWarehousingRollbackHelper {
     /**
      * 更新 SKU 库存（公开方法，供外部调用）
      */
+    @Transactional(rollbackFor = Exception.class)
     public void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
         if (deltaQuantity == 0) {
             return;
