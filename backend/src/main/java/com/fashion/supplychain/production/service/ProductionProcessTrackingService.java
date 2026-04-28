@@ -27,9 +27,12 @@ public class ProductionProcessTrackingService extends ServiceImpl<ProductionProc
     }
 
     public List<ProductionProcessTracking> listByOrderIdAndTenant(String productionOrderId, Long tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("tenantId must not be null");
+        }
         return lambdaQuery()
                 .eq(ProductionProcessTracking::getProductionOrderId, productionOrderId)
-                .eq(tenantId != null, ProductionProcessTracking::getTenantId, tenantId)
+                .eq(ProductionProcessTracking::getTenantId, tenantId)
                 .orderByAsc(ProductionProcessTracking::getBundleNo)
                 .orderByAsc(ProductionProcessTracking::getProcessOrder)
                 .list();

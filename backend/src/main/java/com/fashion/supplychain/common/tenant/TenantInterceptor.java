@@ -155,6 +155,11 @@ public class TenantInterceptor implements InnerInterceptor {
             String className = msId.substring(0, dotIdx);
             String methodName = msId.substring(dotIdx + 1);
             Class<?> mapperClass = Class.forName(className);
+            com.baomidou.mybatisplus.annotation.InterceptorIgnore classIgnore =
+                    mapperClass.getAnnotation(com.baomidou.mybatisplus.annotation.InterceptorIgnore.class);
+            if (classIgnore != null && "true".equals(classIgnore.tenantLine())) {
+                return true;
+            }
             for (java.lang.reflect.Method method : mapperClass.getMethods()) {
                 if (method.getName().equals(methodName)) {
                     com.baomidou.mybatisplus.annotation.InterceptorIgnore ignore =
@@ -163,7 +168,6 @@ public class TenantInterceptor implements InnerInterceptor {
                 }
             }
         } catch (ClassNotFoundException e) {
-            // not a mapper class, ignore
         }
         return false;
     }

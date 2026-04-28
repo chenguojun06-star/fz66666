@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -70,16 +71,15 @@ public class TrackingPriceSyncHelper {
 
         Long orderTenantId = order.getTenantId();
         Long userTenantId = UserContext.tenantId();
+        boolean isSuperAdmin = UserContext.isSuperAdmin();
+        if (!isSuperAdmin && orderTenantId != null && userTenantId != null
+                && !orderTenantId.equals(userTenantId)) {
+            TenantAssert.assertBelongsToCurrentTenant(orderTenantId, "生产订单");
+        }
 
         List<ProductionProcessTracking> records;
         if (orderTenantId != null && !orderTenantId.equals(userTenantId)) {
-            Long savedTenantId = userTenantId;
-            try {
-                UserContext.get().setTenantId(orderTenantId);
-                records = trackingService.getByOrderId(productionOrderId);
-            } finally {
-                UserContext.get().setTenantId(savedTenantId);
-            }
+            records = trackingService.listByOrderIdAndTenant(productionOrderId, orderTenantId);
         } else {
             records = trackingService.getByOrderId(productionOrderId);
         }

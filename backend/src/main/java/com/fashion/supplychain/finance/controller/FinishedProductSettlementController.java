@@ -135,6 +135,7 @@ public class FinishedProductSettlementController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/detail/{orderNo}")
     public Result<FinishedProductSettlement> getByOrderNo(@PathVariable String orderNo) {
+        TenantAssert.assertTenantContext();
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(FinishedProductSettlement::getOrderNo, orderNo);
         wrapper.eq(FinishedProductSettlement::getTenantId, UserContext.tenantId());
