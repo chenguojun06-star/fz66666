@@ -207,7 +207,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
             { required: true, message: '请输入密码' },
             { min: 6, max: 20, message: '密码需6-20位' },
           ]}>
-            <Input.Password placeholder="6-20位密码" />
+            <Input.Password placeholder="6-20位密码" autoComplete="new-password" />
           </Form.Item>
           <Form.Item name="contactPerson" label="联系人">
             <Input placeholder="供应商联系人姓名" />

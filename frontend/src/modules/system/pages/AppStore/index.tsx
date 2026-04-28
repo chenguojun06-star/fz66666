@@ -145,7 +145,7 @@ const AppStore: React.FC = () => {
             <Form form={setupForm} layout="vertical" size="small">
               <Form.Item label="店铺名称" name="shopName"><Input placeholder="请输入店铺名称" /></Form.Item>
               <Form.Item label="AppKey / Client ID" name="ecAppKey" rules={[{ required: true, message: '请输入AppKey' }]}><Input placeholder="平台颁发的AppKey或Client ID" /></Form.Item>
-              <Form.Item label="AppSecret / Client Secret" name="ecAppSecret" rules={[{ required: true, message: '请输入AppSecret' }]}><Input.Password placeholder="平台颁发的AppSecret或Client Secret" /></Form.Item>
+              <Form.Item label="AppSecret / Client Secret" name="ecAppSecret" rules={[{ required: true, message: '请输入AppSecret' }]}><Input.Password placeholder="平台颁发的AppSecret或Client Secret" autoComplete="off" /></Form.Item>
               {EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint && <Form.Item label={<span>扩展字段<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>{EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint}</Text></span>} name="extraField"><Input placeholder={EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint} /></Form.Item>}
               <Form.Item label={<span>物流回传地址<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>出库后自动回传物流信息到此地址</Text></span>} name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder="https://open.platform.com/api/logistics/callback" prefix={<LinkOutlined />} /></Form.Item>
             </Form></>

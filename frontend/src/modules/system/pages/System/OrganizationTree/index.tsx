@@ -617,6 +617,7 @@ const OrganizationTreePage: React.FC = () => {
                   <div>
                     <Input.Password
                       placeholder="请输入新密码（至少6位）"
+                      autoComplete="new-password"
                       value={resetPwdValue}
                       onChange={e => setResetPwdValue(e.target.value)}
                       style={{ marginBottom: 8 }}

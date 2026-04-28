@@ -355,7 +355,7 @@ const FactoryWorkerList: React.FC = () => {
             label="初始密码"
             rules={[{ required: true, message: '请输入初始密码' }, { min: 6, message: '密码至少6位' }]}
           >
-            <Input.Password placeholder="设置初始密码（至少6位）" />
+            <Input.Password placeholder="设置初始密码（至少6位）" autoComplete="new-password" />
           </Form.Item>
           <Form.Item name="name" label="联系人姓名">
             <Input placeholder="可选，方便识别" />

@@ -212,7 +212,7 @@ const UserList: React.FC = () => {
                         {!userModal.data && (
                           <Col span={8}>
                             <Form.Item name="password" label="密码" rules={formRules.password}>
-                              <Input.Password placeholder="请输入密码" />
+                              <Input.Password placeholder="请输入密码" autoComplete="new-password" />
                             </Form.Item>
                           </Col>
                         )}
