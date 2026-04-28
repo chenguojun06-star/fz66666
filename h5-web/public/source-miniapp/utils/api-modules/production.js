@@ -165,6 +165,10 @@ const production = {
       remark: remark || '',
     });
   },
+  completePatternByTask(patternId) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/complete`, 'POST', {});
+  },
   warehouseIn(patternId, warehouseCode, remark) {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=warehouse-in`, 'POST', {

@@ -62,28 +62,19 @@ public class OrderProgressFillHelper {
             return;
         }
 
+        Map<String, LinkedHashMap<String, Long>> doneByOrder = queryDoneByOrderAgg(orderIds, tenantId);
+        if (doneByOrder.isEmpty()) {
+            doneByOrder = queryDoneByOrderFallback(orderIds);
+        }
+
+        applyCurrentProcessName(records, doneByOrder);
+    }
+
+    private Map<String, LinkedHashMap<String, Long>> queryDoneByOrderAgg(List<String> orderIds, Long tenantId) {
         Map<String, LinkedHashMap<String, Long>> doneByOrder = new HashMap<>();
-        boolean doneAggOk = false;
         try {
             List<Map<String, Object>> rows = scanRecordMapper.selectStageDoneAgg(orderIds, tenantId);
-            Map<String, List<Object[]>> tmp = new HashMap<>();
-            if (rows != null) {
-                for (Map<String, Object> row : rows) {
-                    if (row == null || row.isEmpty()) {
-                        continue;
-                    }
-                    String orderId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "orderId"));
-                    String stageName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "stageName"));
-                    long doneQuantity = toLongSafe(ParamUtils.getIgnoreCase(row, "doneQuantity"));
-                    LocalDateTime lastScanTime = toLocalDateTime(ParamUtils.getIgnoreCase(row, "lastScanTime"));
-                    if (!StringUtils.hasText(orderId) || !StringUtils.hasText(stageName) || doneQuantity <= 0) {
-                        continue;
-                    }
-                    tmp.computeIfAbsent(orderId.trim(), k -> new ArrayList<>())
-                            .add(new Object[] { stageName.trim(), doneQuantity, lastScanTime });
-                }
-            }
-
+            Map<String, List<Object[]>> tmp = parseAggRows(rows);
             for (Map.Entry<String, List<Object[]>> e : tmp.entrySet()) {
                 if (e == null || !StringUtils.hasText(e.getKey()) || e.getValue() == null) {
                     continue;
@@ -92,83 +83,77 @@ public class OrderProgressFillHelper {
                 list.sort((a, b) -> {
                     LocalDateTime ta = a == null ? null : (LocalDateTime) a[2];
                     LocalDateTime tb = b == null ? null : (LocalDateTime) b[2];
-                    if (ta == null && tb == null) {
-                        return 0;
-                    }
-                    if (ta == null) {
-                        return 1;
-                    }
-                    if (tb == null) {
-                        return -1;
-                    }
+                    if (ta == null && tb == null) return 0;
+                    if (ta == null) return 1;
+                    if (tb == null) return -1;
                     return ta.compareTo(tb);
                 });
 
                 LinkedHashMap<String, Long> byStage = new LinkedHashMap<>();
                 for (Object[] r : list) {
-                    if (r == null) {
-                        continue;
-                    }
+                    if (r == null) continue;
                     String stageName = r[0] == null ? null : String.valueOf(r[0]).trim();
                     long q = r[1] instanceof Number n ? n.longValue() : 0L;
-                    if (!StringUtils.hasText(stageName) || q <= 0) {
-                        continue;
-                    }
+                    if (!StringUtils.hasText(stageName) || q <= 0) continue;
                     byStage.put(stageName, byStage.getOrDefault(stageName, 0L) + q);
                 }
                 doneByOrder.put(e.getKey().trim(), byStage);
             }
-            doneAggOk = true;
         } catch (Exception e) {
             log.warn("Failed to query stage done aggregation for current process name: orderIdsCount={}",
-                    orderIds == null ? 0 : orderIds.size(),
-                    e);
+                    orderIds == null ? 0 : orderIds.size(), e);
         }
+        return doneByOrder;
+    }
 
-        if (!doneAggOk) {
-            List<ScanRecord> scanRecords;
-            try {
-                scanRecords = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
-                        .in(ScanRecord::getOrderId, orderIds)
-                        .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"))
-                        .eq(ScanRecord::getScanResult, "success")
-                        .orderByAsc(ScanRecord::getScanTime)
-                        .orderByAsc(ScanRecord::getCreateTime));
-            } catch (Exception e) {
-                log.warn("Failed to query scan records for current process name: orderIdsCount={}",
-                        orderIds == null ? 0 : orderIds.size(),
-                        e);
-                scanRecords = new ArrayList<>();
+    private Map<String, List<Object[]>> parseAggRows(List<Map<String, Object>> rows) {
+        Map<String, List<Object[]>> tmp = new HashMap<>();
+        if (rows != null) {
+            for (Map<String, Object> row : rows) {
+                if (row == null || row.isEmpty()) continue;
+                String orderId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "orderId"));
+                String stageName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "stageName"));
+                long doneQuantity = toLongSafe(ParamUtils.getIgnoreCase(row, "doneQuantity"));
+                LocalDateTime lastScanTime = toLocalDateTime(ParamUtils.getIgnoreCase(row, "lastScanTime"));
+                if (!StringUtils.hasText(orderId) || !StringUtils.hasText(stageName) || doneQuantity <= 0) continue;
+                tmp.computeIfAbsent(orderId.trim(), k -> new ArrayList<>())
+                        .add(new Object[]{stageName.trim(), doneQuantity, lastScanTime});
             }
+        }
+        return tmp;
+    }
 
+    private Map<String, LinkedHashMap<String, Long>> queryDoneByOrderFallback(List<String> orderIds) {
+        Map<String, LinkedHashMap<String, Long>> doneByOrder = new HashMap<>();
+        try {
+            List<ScanRecord> scanRecords = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
+                    .in(ScanRecord::getOrderId, orderIds)
+                    .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"))
+                    .eq(ScanRecord::getScanResult, "success")
+                    .orderByAsc(ScanRecord::getScanTime)
+                    .orderByAsc(ScanRecord::getCreateTime));
             if (scanRecords != null) {
                 for (ScanRecord r : scanRecords) {
-                    if (r == null) {
-                        continue;
-                    }
+                    if (r == null) continue;
                     String oid = r.getOrderId();
-                    if (!StringUtils.hasText(oid)) {
-                        continue;
-                    }
+                    if (!StringUtils.hasText(oid)) continue;
                     String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
                     if (!StringUtils.hasText(pn)) {
                         pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
                     }
-                    if (!StringUtils.hasText(pn)) {
-                        continue;
-                    }
+                    if (!StringUtils.hasText(pn)) continue;
                     int q = r.getQuantity() == null ? 0 : r.getQuantity();
-                    if (q <= 0) {
-                        continue;
-                    }
+                    if (q <= 0) continue;
                     LinkedHashMap<String, Long> byProc = doneByOrder.computeIfAbsent(oid.trim(),
                             k -> new LinkedHashMap<>());
                     byProc.put(pn, byProc.getOrDefault(pn, 0L) + q);
                 }
             }
+        } catch (Exception e) {
+            log.warn("Failed to query scan records for current process name: orderIdsCount={}",
+                    orderIds == null ? 0 : orderIds.size(), e);
         }
-
-        applyCurrentProcessName(records, doneByOrder);
+        return doneByOrder;
     }
 
     private void applyCurrentProcessName(List<ProductionOrder> records,

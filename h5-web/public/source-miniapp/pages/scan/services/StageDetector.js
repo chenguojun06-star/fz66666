@@ -21,24 +21,13 @@
  * @date 2026-02-10
  */
 
-/**
- * 从质检验收 remark 中解析次品件数
- * remark 格式：unqualified|[category]|[remark]|defectQty=N
- * @param {string} remark
- * @param {number} fallbackQty - 若未找到则返回此值
- * @returns {number}
- */
-function _parseDefectQtyFromRemark(remark, fallbackQty) {
-  if (!remark) return fallbackQty || 0;
-  const parts = (remark || '').split('|');
-  for (const part of parts) {
-    if (part.startsWith('defectQty=')) {
-      const n = parseInt(part.substring('defectQty='.length), 10);
-      if (n > 0) return n;
-    }
-  }
-  return fallbackQty || 0;
-}
+var shared = require('../../shared/stageDetection');
+var inferScanType = shared.inferScanType;
+var parseDefectQtyFromRemark = shared.parseDefectQtyFromRemark;
+var extractQualityMeta = shared.extractQualityMeta;
+var SCAN_TYPE_RULES = shared.SCAN_TYPE_RULES;
+var VALID_SCAN_TYPES = shared.VALID_SCAN_TYPES;
+var DEFAULT_SCAN_TYPE = shared.DEFAULT_SCAN_TYPE;
 
 class StageDetector {
   /**
@@ -59,16 +48,11 @@ class StageDetector {
     // scanType 推断规则（根据 progressStage 或 processName 推断扫码类型）
     // ⚠️ 这套规则仅作兜底，后端 /process-config 接口现在已统一返回 scanType
     // 工序名称到 scanType 的映射规则
-    this.scanTypeRules = {
-      采购: 'production',
-      裁剪: 'cutting',
-      质检: 'quality',
-      入库: 'warehouse',
-    };
+    this.scanTypeRules = SCAN_TYPE_RULES;
     // 合法的 scanType 集合（用于校验后端返回值）
-    this.VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting']);
+    this.VALID_SCAN_TYPES = VALID_SCAN_TYPES;
     // 默认 scanType（不在上述规则中的工序）
-    this.defaultScanType = 'production';
+    this.defaultScanType = DEFAULT_SCAN_TYPE;
   }
 
   /**
@@ -105,7 +89,7 @@ class StageDetector {
       })
       .map(p => ({
         ...p,
-        // 优先使用后端已计算的 scanType，无则就地推断山底）
+        // 优先使用后端已计算的 scanType，无则就地推断
         scanType: this._inferScanType(p.processName, p.progressStage, p.scanType),
       }));
 
@@ -121,19 +105,7 @@ class StageDetector {
    * @private
    */
   _inferScanType(processName, progressStage, backendScanType) {
-    // 后端已计算并返回合法的 scanType，直接使用，不再就地推断
-    if (backendScanType && this.VALID_SCAN_TYPES.has(backendScanType)) {
-      return backendScanType;
-    }
-    // 兼容展岗：后端未返回 scanType 时、就地推断
-    if (this.scanTypeRules[processName]) {
-      return this.scanTypeRules[processName];
-    }
-    // 再按 progressStage 匹配
-    if (progressStage && this.scanTypeRules[progressStage]) {
-      return this.scanTypeRules[progressStage];
-    }
-    return this.defaultScanType;
+    return inferScanType(processName, progressStage, backendScanType);
   }
 
   /**
@@ -286,8 +258,6 @@ class StageDetector {
     }
 
     // 区分入库工序和计数工序
-    // 入库工序：scanType='warehouse' 的工序，需要等待其他工序完成后扫码
-    // 计数工序：其他所有菲号工序（包括 production 和 quality）
     const _warehouseProcess = bundleProcesses.find(p => p.scanType === 'warehouse');
     const countableProcesses = bundleProcesses.filter(p => p.scanType !== 'warehouse');
 
@@ -295,13 +265,10 @@ class StageDetector {
     const scanHistory = await this._getScanHistory(orderNo, bundleNo);
 
     // === 步骤3.5：预判质检完成状态 ===
-    // 质检工序一步（quality_confirm）完成即算已扫
-    // 只有 _inferQualityStage='done' 才将质检加入 scannedProcessNames
     const qualityProcess = countableProcesses.find(p => p.scanType === 'quality');
     let precomputedQualityStage = '';
     let qualityIsFullyDone = false;
     if (qualityProcess) {
-      // 获取菲号当前状态，判断是否处于返修后重新质检（repaired_waiting_qc）场景
       let bundleStatus = '';
       try {
         const bundleInfo = await this.api.production.getCuttingBundle(orderNo, bundleNo);
@@ -309,24 +276,20 @@ class StageDetector {
       } catch (e) {
         console.warn('[StageDetector] 获取菲号状态失败，跳过返修质检判断:', e);
       }
-      // 🔧 修复：用 scanType 匹配而非 processName，避免 "质检领取" !== "质检" 的问题
       const hasAnyQualityScan = scanHistory.some(r => (r.scanType || '').toLowerCase() === 'quality');
       if (hasAnyQualityScan || bundleStatus === 'repaired_waiting_qc') {
         precomputedQualityStage = await this._inferQualityStage(orderNo, scanHistory, bundleStatus);
         qualityIsFullyDone = precomputedQualityStage === 'done';
       } else {
-        // 无任何质检记录，默认需要先领取
         precomputedQualityStage = 'receive';
       }
     }
 
-    // 🔧 修复：quality 工序两步骤共享 processName，必须两步全部完成才算"已扫"
     const scannedProcessNames = new Set(
       scanHistory
         .map(r => r.processName)
         .filter(name => {
           if (!name) return false;
-          // 质检工序：只有全部完成才放入 scannedProcessNames
           if (qualityProcess && name === qualityProcess.processName) {
             return qualityIsFullyDone;
           }
@@ -342,15 +305,10 @@ class StageDetector {
       const nextProcess = remainingProcesses[0];
       const doneCount = countableProcesses.length - remainingProcesses.length;
 
-      // 质检工序：直接走 confirm，一步完成
-      // 复用步骤3.5的预计算结果，不重复调用 _inferQualityStage
-      // 由于 qualityIsFullyDone=true 时质检已被排出 remainingProcesses，
-      // 进入此分支时 qualityIsFullyDone 必然为 false，qualityStage 只会是 receive/confirm
       let qualityStage = '';
       if (nextProcess.scanType === 'quality') {
         qualityStage = precomputedQualityStage || 'receive';
         if (!qualityStage) qualityStage = 'receive';
-        // 此分支理论上不会出现 'done'（qualityIsFullyDone=true 时质检已排出 remainingProcesses）
         if (qualityStage === 'done') {
           const skipNames = new Set([...scannedProcessNames, nextProcess.processName]);
           const afterQuality = countableProcesses.filter(p => !skipNames.has(p.processName));
@@ -372,7 +330,6 @@ class StageDetector {
               allBundleProcesses: bundleProcesses,
             };
           }
-          // 质检是最后一道可计数工序 → 检查是否有入库环节
           if (_warehouseProcess) {
             const qualityMeta = this._extractQualityMeta(scanHistory, accurateQuantity);
             const whResult = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
@@ -400,7 +357,6 @@ class StageDetector {
                 };
               }
 
-              // ★ 报废不走"次品入库"（报废件数不回流待质检）
               if (qualityMeta.isUnqualified && defects > 0 && !qualityMeta.isScrap) {
                 return {
                   processName: _warehouseProcess.processName,
@@ -434,7 +390,6 @@ class StageDetector {
               };
             }
           }
-          // 无入库工序或已入库，全部完成
           return {
             processName: nextProcess.processName,
             progressStage: nextProcess.progressStage || nextProcess.processName,
@@ -461,9 +416,7 @@ class StageDetector {
         isDuplicate: false,
         quantity: accurateQuantity,
         unitPrice: Number(nextProcess.price || 0),
-        // 质检子阶段（仅 quality 类型工序有值）
         qualityStage,
-        // 携带已扫工序信息，供工序选择器过滤
         scannedProcessNames: [...scannedProcessNames],
         allBundleProcesses: bundleProcesses,
       };
@@ -474,14 +427,12 @@ class StageDetector {
       const qualityMeta = this._extractQualityMeta(scanHistory, accurateQuantity);
       const whResult = await this._checkBundleWarehoused(orderNo, bundleNo, qualityMeta.expectedQty);
       if (!whResult.isComplete) {
-        // 计算合格品待入库数量 vs 次品待入库数量
         const totalQty = qualityMeta.expectedQty || accurateQuantity;
         const defects = qualityMeta.defectQty || 0;
         const qualifiedTarget = qualityMeta.isUnqualified ? Math.max(0, totalQty - defects) : totalQty;
         const qualifiedPending = Math.max(0, qualifiedTarget - whResult.warehousedQty);
 
         if (qualifiedPending > 0) {
-          // 合格品尚未入完 → 正常入库（数量=合格品待入库数）
           return {
             processName: _warehouseProcess.processName,
             progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
@@ -499,7 +450,6 @@ class StageDetector {
           };
         }
 
-        // 合格品已入完，剩余全是次品 → 次品入库（★ 报废不走此路径）
         if (qualityMeta.isUnqualified && defects > 0 && !qualityMeta.isScrap) {
           return {
             processName: _warehouseProcess.processName,
@@ -518,7 +468,6 @@ class StageDetector {
           };
         }
 
-        // 无次品但未全部入库（异常兜底）
         return {
           processName: _warehouseProcess.processName,
           progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
@@ -553,14 +502,10 @@ class StageDetector {
   /**
    * 检查菲号是否已入库
    * @private
-   * @param {string} orderNo - 订单号
-   * @param {string} bundleNo - 菲号
-   * @returns {Promise<{isComplete: boolean, warehousedQty: number}>} 入库状态与已入库数量
    */
   async _checkBundleWarehoused(orderNo, bundleNo, expectedQuantity) {
     const EMPTY = { isComplete: false, warehousedQty: 0 };
     try {
-      // 先获取菲号ID
       const bundleInfo = await this.api.production.getCuttingBundle(orderNo, bundleNo);
       if (!bundleInfo || !bundleInfo.id) {
         return EMPTY;
@@ -591,7 +536,6 @@ class StageDetector {
 
         hasAnyRecord = true;
         const pageQty = records.reduce((sum, item) => {
-          // 排除质检产生的待返修记录（quality_scan）、报废记录（quality_scan_scrap）、次品返修申报（repair_return）
           if (item && (item.warehousingType === 'quality_scan' || item.warehousingType === 'quality_scan_scrap' || item.warehousingType === 'repair_return')) return sum;
           const qualified = Number(item && item.qualifiedQuantity);
           if (!Number.isNaN(qualified) && qualified > 0) {
@@ -619,7 +563,6 @@ class StageDetector {
         return EMPTY;
       }
 
-      // 无目标数量时退化为"有记录即已入库"，避免阻塞异常数据
       if (!(targetQty > 0)) {
         return { isComplete: warehousedQty > 0, warehousedQty };
       }
@@ -633,10 +576,6 @@ class StageDetector {
   /**
    * 获取菲号准确数量（优先从裁剪表查询）
    * @private
-   * @param {string} orderNo - 订单号
-   * @param {string} bundleNo - 菲号
-   * @param {number} fallbackQuantity - 备用数量（来自二维码）
-   * @returns {Promise<number>} 准确数量
    */
   async _getAccurateBundleQuantity(orderNo, bundleNo, fallbackQuantity) {
     try {
@@ -648,58 +587,43 @@ class StageDetector {
       console.warn('[StageDetector] 查询菲号失败，使用二维码数量:', e);
     }
 
-    // 查询失败或无数据，使用备用值
-    return fallbackQuantity || 10; // 默认10件
+    return fallbackQuantity || 10;
   }
 
   /**
    * 根据质检扫码历史推断当前应执行的质检子阶段
-   *
-   * 质检两步骤：receive（领取）→ confirm（录入结果+确认）
-   * quality_inspect（验收）是后端遗留步骤，实际不触发
-   * 通过查询 processCode 字段判断已完成到哪一步
-   *
    * @private
-   * @param {string} orderNo - 订单号
-   * @param {Array} scanHistory - 当前菲号扫码历史（已过滤的）
-   * @returns {Promise<string>} 'confirm' | 'done'
    */
   async _inferQualityStage(orderNo, scanHistory, bundleStatus) {
     try {
-      // 返修后重新质检场景：菲号状态为 repaired_waiting_qc，忽略旧的质检确认记录
-      // 以最新未确认的 quality_receive 记录（本轮新开）为判断依据
       if (bundleStatus === 'repaired_waiting_qc') {
         const receiveRecords = (scanHistory || []).filter(r => {
           const scanType = (r.scanType || '').toLowerCase();
           return scanType === 'quality' && r.processCode === 'quality_receive';
         });
-        // 有未确认的领取记录 → 本轮已领取，等待录入验收结果
         const hasNewUnconfirmed = receiveRecords.some(r => !r.confirmTime);
         if (hasNewUnconfirmed) {
           return 'confirm';
         }
-        // 无未确认记录（全部是旧轮的 confirmTime）→ 等待质检员重新领取
         return 'receive';
       }
 
-      // 从已有扫码历史里查找 quality 子阶段记录
       const qualityRecords = scanHistory.filter(r => {
         const scanType = (r.scanType || '').toLowerCase();
         return scanType === 'quality';
       });
 
-      // 质量状态判定采用“任一 confirmTime 即 done”，避免记录排序差异导致误判
       const receiveRecords = qualityRecords.filter(r => r.processCode === 'quality_receive');
 
       if (!receiveRecords.length) {
-        return 'receive';   // 无领取记录 → 需要先领取
+        return 'receive';
       }
 
       if (receiveRecords.some(r => !!r.confirmTime)) {
-        return 'done';      // 已完成质检验收
+        return 'done';
       }
 
-      return 'confirm';     // 已领取未验收 → 需要录入结果
+      return 'confirm';
     } catch (e) {
       console.warn('[StageDetector] 推断质检阶段失败，默认 receive:', e);
       return 'receive';
@@ -707,55 +631,12 @@ class StageDetector {
   }
 
   _extractQualityMeta(scanHistory, fallbackQty) {
-    // 使用最新的质检确认记录（多轮质检时取最近一次，避免用返修前的旧记录）
-    const allConfirmRecs = (scanHistory || []).filter(r =>
-      r && r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime
-    );
-
-    allConfirmRecs.sort((a, b) => (a.confirmTime || '').localeCompare(b.confirmTime || ''));
-    const confirmRec = allConfirmRecs.length > 0 ? allConfirmRecs[allConfirmRecs.length - 1] : null;
-
-    const remarkStr = confirmRec ? String(confirmRec.remark || '') : '';
-    const isUnqualified = !!(confirmRec && remarkStr.startsWith('unqualified'));
-    const defectQty = isUnqualified
-      ? _parseDefectQtyFromRemark(remarkStr, confirmRec.quantity)
-      : 0;
-
-    // ★ 解析处理方式：remark 格式 "unqualified|category|返修|defectQty=N" 或 "unqualified|category|报废|defectQty=N"
-    let handleMethod = '返修'; // 默认返修
-    if (isUnqualified) {
-      const parts = remarkStr.split('|');
-      for (const part of parts) {
-        if (part === '报废' || part === '返修') {
-          handleMethod = part;
-          break;
-        }
-      }
-    }
-    const isScrap = handleMethod === '报废';
-
-    // expectedQty 始终 = 菲号总件数（用于判断是否全部入库完成）
-    // 不能用 defectQty，否则 8件入库>=2件次品 → 误判为已全部入库
-    const expectedQty = Number(fallbackQty || 0) > 0 ? Number(fallbackQty || 0) : 0;
-
-    return {
-      isUnqualified,
-      defectQty,
-      handleMethod,
-      isScrap,
-      defectRemark: isUnqualified ? remarkStr : '',
-      expectedQty,
-    };
+    return extractQualityMeta(scanHistory, fallbackQty);
   }
 
   /**
    * 查询菲号的扫码历史（所有用户，不仅当前用户）
-   *
-   * ❗ 必须查所有用户的记录：工人A扫了车缝，工人B再扫同一菲号时不应该再选车缝
    * @private
-   * @param {string} orderNo - 订单号
-   * @param {string} bundleNo - 菲号
-   * @returns {Promise<Array>} 扫码记录数组
    */
   async _getScanHistory(orderNo, bundleNo) {
     var allRecords = [];

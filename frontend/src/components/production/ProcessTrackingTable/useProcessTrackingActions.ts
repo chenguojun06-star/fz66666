@@ -102,6 +102,9 @@ export function useProcessTrackingActions(
             progressStage: resolveProgressStage(record),
             processName: String(record.processName || '').trim() || undefined,
             processCode: String(record.processCode || '').trim() || undefined,
+            // 必传：避免后端 fallback 到 order 级聚合标签（如"多码"）触发 SKU 校验失败
+            color: String(record.color || '').trim() || undefined,
+            size: String(record.size || '').trim() || undefined,
             unitPrice: Number.isFinite(Number(record.unitPrice)) ? Number(record.unitPrice) : undefined,
             scanTime: new Date().toISOString(),
             operatorId: String(user?.id || '').trim() || undefined,
@@ -159,6 +162,9 @@ export function useProcessTrackingActions(
               progressStage: resolveProgressStage(record),
               processName: String(record.processName || '').trim() || undefined,
               processCode: String(record.processCode || '').trim() || undefined,
+              // 必传：避免后端 fallback 到 order 级聚合标签（如"多码"）触发 SKU 校验失败
+              color: String(record.color || '').trim() || undefined,
+              size: String(record.size || '').trim() || undefined,
               unitPrice: Number.isFinite(Number(record.unitPrice)) ? Number(record.unitPrice) : undefined,
               scanTime: new Date().toISOString(),
               operatorId: String(user?.id || '').trim() || undefined,

@@ -19,6 +19,7 @@ const copyEntries = [
   'utils',
   'styles',
   'assets',
+  'shared',
 ];
 
 function ensureDir(dirPath) {

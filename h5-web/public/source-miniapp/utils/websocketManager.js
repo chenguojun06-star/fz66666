@@ -1,5 +1,3 @@
-const { eventBus, Events } = require('./eventBus');
-
 class NoOpWebSocketManager {
   connect() {}
   disconnect() {}
@@ -10,6 +8,6 @@ class NoOpWebSocketManager {
   isPolling() { return false; }
 }
 
-var wsManager = new NoOpWebSocketManager();
+const wsManager = new NoOpWebSocketManager();
 
 module.exports = { wsManager };

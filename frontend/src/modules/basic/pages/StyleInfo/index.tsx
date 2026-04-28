@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Modal, Tabs } from 'antd';
-import dayjs from 'dayjs';
 import PageLayout from '@/components/common/PageLayout';
-import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { useStyleDetail } from './hooks/useStyleDetail';
 import { useStyleFormActions } from './hooks/useStyleFormActions';
+import { useStyleColorSize } from './hooks/useStyleColorSize';
+import { useStyleProduction } from './hooks/useStyleProduction';
+import { useStylePushOrder } from './hooks/useStylePushOrder';
 import StyleBasicInfoForm from './components/StyleBasicInfoForm';
 import StyleActionButtons from './components/StyleActionButtons';
 
-// Tab组件导入
 import StyleBomTab from './components/StyleBomTab';
 import StyleQuotationTab from './components/StyleQuotationTab';
 import StyleAttachmentTab from './components/StyleAttachmentTab';
@@ -21,40 +21,8 @@ import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileC
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import { setStyleCoverOverride } from '@/components/StyleAssets';
 
 import './styles.css';
-
-type SizeColorMatrixRow = {
-  color: string;
-  quantities: number[];
-  imageUrl?: string;
-};
-
-type PendingColorImage = {
-  color: string;
-  file: File;
-};
-
-const COLOR_IMAGE_BIZ_TYPE_PREFIX = 'color_image::';
-
-const parseColorImageBizType = (bizType: unknown) => {
-  const value = String(bizType || '').trim();
-  if (!value.startsWith(COLOR_IMAGE_BIZ_TYPE_PREFIX)) {
-    return null;
-  }
-  const rawColor = value.slice(COLOR_IMAGE_BIZ_TYPE_PREFIX.length);
-  if (!rawColor) {
-    return '';
-  }
-  try {
-    return decodeURIComponent(rawColor);
-  } catch {
-    return rawColor;
-  }
-};
-
-const buildColorImageBizType = (color: string) => `${COLOR_IMAGE_BIZ_TYPE_PREFIX}${String(color || '').trim()}`;
 
 const StyleInfoDetailPage: React.FC = () => {
   const params = useParams();
@@ -63,7 +31,6 @@ const StyleInfoDetailPage: React.FC = () => {
   const styleIdParam = isNewPath ? 'new' : (params.id as string | undefined);
   const { message } = App.useApp();
 
-  // ===== 1. 核心Hooks（数据+操作） =====
   const {
     loading: _loading,
     currentStyle,
@@ -79,8 +46,6 @@ const StyleInfoDetailPage: React.FC = () => {
     resetForm: _resetForm,
   } = useStyleDetail(styleIdParam);
 
-  const [commonColors, setCommonColors] = useState<string[]>(['黑色', '白色', '灰色', '蓝色', '红色']);
-  const [commonSizes, setCommonSizes] = useState<string[]>(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
@@ -89,300 +54,8 @@ const StyleInfoDetailPage: React.FC = () => {
     setSmartError({ title, reason, code });
   };
 
-  const [size1, setSize1] = useState('');
-  const [size2, setSize2] = useState('');
-  const [size3, setSize3] = useState('');
-  const [size4, setSize4] = useState('');
-  const [size5, setSize5] = useState('');
+  const colorSize = useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, form });
 
-  const [color1, setColor1] = useState('');
-  const [color2, setColor2] = useState('');
-  const [color3, setColor3] = useState('');
-  const [color4, setColor4] = useState('');
-  const [color5, setColor5] = useState('');
-
-  const [qty1, setQty1] = useState(0);
-  const [qty2, setQty2] = useState(0);
-  const [qty3, setQty3] = useState(0);
-  const [qty4, setQty4] = useState(0);
-  const [qty5, setQty5] = useState(0);
-  const [matrixSizes, setMatrixSizes] = useState<string[]>([]);
-  const [matrixColors, setMatrixColors] = useState<string[]>([]);
-  const [sizeColorMatrixRows, setSizeColorMatrixRows] = useState<SizeColorMatrixRow[]>([]);
-  const [colorImageMap, setColorImageMap] = useState<Record<string, string>>({});
-  const [coverRefreshToken, setCoverRefreshToken] = useState(0);
-  // 标志：当 setCurrentStyle 只是更新封面URL时，跳过颜色/码数数据的重新解析
-  const skipColorSizeResetRef = useRef(false);
-
-  // 待上传图片
-  const [pendingImages, setPendingImages] = useState<File[]>([]);
-  const [pendingColorImages, setPendingColorImages] = useState<PendingColorImage[]>([]);
-
-  // ===== 3. 从currentStyle恢复颜色码数数据 =====
-  useEffect(() => {
-    if (!currentStyle) return;
-    // 仅更新封面时（如颜色图上传），跳过颜色/码数重置，避免新增颜色被旧服务端数据覆盖
-    if (skipColorSizeResetRef.current) {
-      skipColorSizeResetRef.current = false;
-      return;
-    }
-
-    // 优先从sizeColorConfig JSON解析（新版格式）
-    if ((currentStyle as any).sizeColorConfig) {
-      try {
-        const config = JSON.parse((currentStyle as any).sizeColorConfig);
-        if (config.sizes) {
-          setMatrixSizes(config.sizes.map((item: unknown) => String(item || '').trim()).filter(Boolean));
-          setSize1(config.sizes[0] || '');
-          setSize2(config.sizes[1] || '');
-          setSize3(config.sizes[2] || '');
-          setSize4(config.sizes[3] || '');
-          setSize5(config.sizes[4] || '');
-        }
-        if (config.colors) {
-          setMatrixColors(config.colors.map((item: unknown) => String(item || '').trim()).filter(Boolean));
-          setColor1(config.colors[0] || '');
-          setColor2(config.colors[1] || '');
-          setColor3(config.colors[2] || '');
-          setColor4(config.colors[3] || '');
-          setColor5(config.colors[4] || '');
-        }
-        if (config.quantities) {
-          setQty1(config.quantities[0] || 0);
-          setQty2(config.quantities[1] || 0);
-          setQty3(config.quantities[2] || 0);
-          setQty4(config.quantities[3] || 0);
-          setQty5(config.quantities[4] || 0);
-        }
-        if (Array.isArray(config.matrixRows)) {
-          const restoredRows = config.matrixRows.map((row: any) => ({
-            color: String(row?.color || ''),
-            quantities: Array.isArray(row?.quantities) ? row.quantities.map((qty: any) => Number(qty || 0)) : [],
-            imageUrl: row?.imageUrl || undefined,
-          }));
-          setSizeColorMatrixRows(restoredRows);
-          // 同步恢复颜色图片映射（新上传的 URL 不被覆盖）
-          const imageMapFromConfig: Record<string, string> = {};
-          restoredRows.forEach((row) => {
-            if (row.color && row.imageUrl) {
-              imageMapFromConfig[row.color] = row.imageUrl;
-            }
-          });
-          if (Object.keys(imageMapFromConfig).length > 0) {
-            setColorImageMap((prev) => ({ ...imageMapFromConfig, ...prev }));
-          }
-        } else {
-          setSizeColorMatrixRows([]);
-        }
-        if (config.commonSizes) {
-          setCommonSizes(config.commonSizes);
-        }
-        if (config.commonColors) {
-          setCommonColors(config.commonColors);
-        }
-        return;
-      } catch (e) {
-        console.error('解析sizeColorConfig失败:', e);
-      }
-    }
-
-    const legacy = currentStyle as any;
-    const legacySizes = [legacy.size1, legacy.size2, legacy.size3, legacy.size4, legacy.size5].map((item) => String(item || '').trim()).filter(Boolean);
-    const legacyColors = [legacy.color1, legacy.color2, legacy.color3, legacy.color4, legacy.color5].map((item) => String(item || '').trim()).filter(Boolean);
-    setMatrixSizes(legacySizes);
-    setMatrixColors(legacyColors);
-    setSize1(legacy.size1 || '');
-    setSize2(legacy.size2 || '');
-    setSize3(legacy.size3 || '');
-    setSize4(legacy.size4 || '');
-    setSize5(legacy.size5 || '');
-
-    setColor1(legacy.color1 || '');
-    setColor2(legacy.color2 || '');
-    setColor3(legacy.color3 || '');
-    setColor4(legacy.color4 || '');
-    setColor5(legacy.color5 || '');
-
-    setQty1(legacy.qty1 || 0);
-    setQty2(legacy.qty2 || 0);
-    setQty3(legacy.qty3 || 0);
-    setQty4(legacy.qty4 || 0);
-    setQty5(legacy.qty5 || 0);
-    setSizeColorMatrixRows([]);
-    setColorImageMap({});
-  }, [currentStyle]);
-
-  useEffect(() => {
-    const resolvedStyleId = String(currentStyle?.id ?? '').trim();
-    const resolvedStyleNo = String(currentStyle?.styleNo || '').trim();
-    if (!resolvedStyleId && !resolvedStyleNo) return;
-    let mounted = true;
-    void (async () => {
-      try {
-        const res = await api.get<ApiResult<any[]>>('/style/attachment/list', {
-          params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
-        });
-        const list = Array.isArray(res?.data) ? res.data : [];
-        const nextMap: Record<string, string> = {};
-        list.forEach((item: any) => {
-          const color = parseColorImageBizType(item?.bizType);
-          if (color && item?.fileUrl && !nextMap[color]) {
-            nextMap[color] = String(item.fileUrl);
-          }
-        });
-        if (mounted) {
-          // 使用合并（非替换）避免竞态导致图片闪烁消失
-          setColorImageMap((prev) => ({ ...prev, ...nextMap }));
-        }
-      } catch {
-        // 出错时保留现有图片，避免因接口失败导致图片消失
-        // 删除操作已由 handleColorImageClear 直接更新 map，无需在此清空
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [currentStyle?.id, currentStyle?.styleNo, coverRefreshToken]);
-
-  const colorImageMapKey = JSON.stringify(colorImageMap);
-  useEffect(() => {
-    setSizeColorMatrixRows((prev) => prev.map((row) => ({
-      ...row,
-      imageUrl: colorImageMap[row.color] || row.imageUrl,
-    })));
-  }, [colorImageMapKey]);
-
-  useEffect(() => {
-    const normalized = [...matrixSizes, '', '', '', '', ''];
-    setSize1(normalized[0] || '');
-    setSize2(normalized[1] || '');
-    setSize3(normalized[2] || '');
-    setSize4(normalized[3] || '');
-    setSize5(normalized[4] || '');
-  }, [matrixSizes]);
-
-  useEffect(() => {
-    const normalized = [...matrixColors, '', '', '', '', ''];
-    setColor1(normalized[0] || '');
-    setColor2(normalized[1] || '');
-    setColor3(normalized[2] || '');
-    setColor4(normalized[3] || '');
-    setColor5(normalized[4] || '');
-  }, [matrixColors]);
-
-  useEffect(() => {
-    const currentPatternNo = String(form.getFieldValue('patternNo') || '').trim();
-    if (!isNewPage || currentPatternNo) return;
-    form.setFieldValue('patternNo', `ZYH${dayjs().format('YYYYMMDDHHmmss')}`);
-  }, [form, isNewPage]);
-
-  const handleCoverChange = (url: string | null) => {
-    skipColorSizeResetRef.current = true; // 标记：此次 currentStyle 变更只更新封面，不重置颜色/码数
-    setCurrentStyle((prev) => (prev ? { ...prev, cover: url || undefined } as any : prev));
-    if (currentStyle?.id || currentStyle?.styleNo) {
-      setStyleCoverOverride(currentStyle?.id, currentStyle?.styleNo, url);
-    }
-  };
-
-  const handleColorImageSync = async (color: string, file: File) => {
-    const normalizedColor = String(color || '').trim();
-    const bizType = buildColorImageBizType(normalizedColor);
-    const resolvedStyleId = String(currentStyle?.id ?? '').trim();
-    const resolvedStyleNo = String(currentStyle?.styleNo || '').trim();
-    if (resolvedStyleId || resolvedStyleNo) {
-      const oldRes = await api.get('/style/attachment/list', {
-        params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
-      });
-      const oldList = (Array.isArray(oldRes?.data) ? oldRes.data : []).filter((item: any) =>
-        parseColorImageBizType(item?.bizType) === normalizedColor
-      );
-      await Promise.all(oldList.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
-      const formData = new FormData();
-      formData.append('file', file);
-      if (resolvedStyleId) {
-        formData.append('styleId', resolvedStyleId);
-      }
-      if (resolvedStyleNo) {
-        formData.append('styleNo', resolvedStyleNo);
-      }
-      formData.append('bizType', bizType);
-      const res = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
-      if (!isApiSuccess(res)) {
-        throw new Error(getApiMessage(res, '上传失败'));
-      }
-      const uploadedUrl = String(res?.data?.fileUrl || '');
-      if (uploadedUrl) {
-        setColorImageMap((prev) => ({ ...prev, [color]: uploadedUrl }));
-        handleCoverChange(uploadedUrl);
-      }
-      setCoverRefreshToken((prev) => prev + 1);
-      return;
-    }
-    setPendingImages((prev) => {
-      const exists = prev.some((item) =>
-        item.name === file.name && item.size === file.size && item.lastModified === file.lastModified
-      );
-      return exists ? prev : [...prev, file];
-    });
-    setPendingColorImages((prev) => [...prev.filter((item) => item.color !== color), { color, file }]);
-  };
-
-  const handleColorImageClear = async (color: string) => {
-    const resolvedStyleId = String(currentStyle?.id ?? '').trim();
-    const resolvedStyleNo = String(currentStyle?.styleNo || '').trim();
-    if (resolvedStyleId || resolvedStyleNo) {
-      const normalizedColor = String(color || '').trim();
-      const res = await api.get<ApiResult<any[]>>('/style/attachment/list', {
-        params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
-      });
-      const list = (Array.isArray(res?.data) ? res.data : []).filter((item: any) =>
-        parseColorImageBizType(item?.bizType) === normalizedColor
-      );
-      await Promise.all(list.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
-      setColorImageMap((prev) => {
-        const next = { ...prev };
-        delete next[color];
-        return next;
-      });
-      if (String(currentStyle?.cover || '') === String(colorImageMap[color] || '')) {
-        handleCoverChange(null);
-      }
-      setCoverRefreshToken((prev) => prev + 1);
-      return;
-    }
-    const removed = pendingColorImages.find((item) => item.color === color)?.file;
-    if (removed) {
-      setPendingImages((prev) => prev.filter((file) =>
-        !(file.name === removed.name && file.size === removed.size && file.lastModified === removed.lastModified)
-      ));
-    }
-    setPendingColorImages((prev) => prev.filter((item) => item.color !== color));
-  };
-
-  // sizeColorConfig对象
-  const sizeColorConfig = {
-    sizes: matrixSizes,
-    colors: matrixColors,
-    quantities: sizeColorMatrixRows.map((row) => row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0)),
-    commonSizes,
-    commonColors,
-    matrixRows: sizeColorMatrixRows.map((row) => {
-      // 优先用 colorImageMap 中的服务端 URL（上传后真实地址）；data: blob 不保存到服务器
-      const serverImgUrl = colorImageMap[row.color]
-        || (row.imageUrl && !row.imageUrl.startsWith('data:') ? row.imageUrl : undefined);
-      return {
-        color: row.color,
-        quantities: row.quantities,
-        ...(serverImgUrl ? { imageUrl: serverImgUrl } : {}),
-      };
-    }),
-  };
-  const totalMatrixQty = sizeColorMatrixRows.reduce(
-    (sum, row) => sum + row.quantities.reduce((subtotal, qty) => subtotal + Number(qty || 0), 0),
-    0
-  );
-
-  // ===== 3. 表单操作Hook =====
   const {
     saving,
     completingSample,
@@ -399,155 +72,31 @@ const StyleInfoDetailPage: React.FC = () => {
     fetchDetail,
     setEditLocked,
     isNewPage,
-    sizeColorConfig,
-    pendingImages,
-    pendingColorImages,
+    sizeColorConfig: colorSize.sizeColorConfig,
+    pendingImages: colorSize.pendingImages,
+    pendingColorImages: colorSize.pendingColorImages,
   });
 
-  // ===== 4. Tab相关状态（工序、生产制单） =====
-  const [_processModalVisible, _setProcessModalVisible] = useState(false);
-  const [pushToOrderModalVisible, setPushToOrderModalVisible] = useState(false);
-  const [pushToOrderForm] = Form.useForm();
-  const [pushToOrderSaving, setPushToOrderSaving] = useState(false);
-  const [pushToOrderTargets, setPushToOrderTargets] = useState<string[]>([
-    'bom',
-    'pattern',
-    'size',
-    'process',
-    'production',
-    'secondary',
-    'sizePrice',
-  ]);
+  const production = useStyleProduction({
+    currentStyle,
+    fetchDetail,
+    styleIdParam,
+    reportSmartError,
+  });
 
-  // 生产制单相关状态
-  const productionReqRowCount = 100;
-  const [productionReqRows, setProductionReqRows] = useState<string[]>(() =>
-    Array.from({ length: productionReqRowCount }).map(() => '')
-  );
-  const [productionSaving, setProductionSaving] = useState(false);
-  const [productionRollbackSaving, setProductionRollbackSaving] = useState(false);
-  const productionReqEditable = true;
+  const pushOrder = useStylePushOrder({
+    handlePushToOrderDirect,
+    reportSmartError,
+    showSmartErrorNotice,
+    setSmartError,
+  });
 
-  // ===== 5. 辅助函数 =====
   const isFieldLocked = (_fieldValue: any) => {
     return editLocked && Boolean(currentStyle?.id);
   };
 
-  // 生产制单辅助函数
-  const updateProductionReqRow = (index: number, value: string) => {
-    setProductionReqRows((prev) => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
-  };
-
-  const parseProductionReqRows = (value: unknown) => {
-    const raw = String(value ?? '');
-    // 原文整串存 index 0，不拆行、不修改任何内容
-    const out = Array.from({ length: productionReqRowCount }).map(() => '');
-    out[0] = raw;
-    return out;
-  };
-
-  const _serializeProductionReqRows = (rows: string[]) => {
-    // 直接取 index 0 原文，不做任何 trim / 过滤 / 拼接
-    return String((Array.isArray(rows) ? rows[0] : '') ?? '');
-  };
-
-  const handleSaveProduction = async () => {
-    if (!currentStyle?.id) {
-      message.warning('请先保存款式基本信息');
-      return;
-    }
-    setProductionSaving(true);
-    try {
-      const content = _serializeProductionReqRows(productionReqRows);
-      await api.put('/style/info', {
-        id: currentStyle.id,
-        styleNo: currentStyle.styleNo,
-        styleName: currentStyle.styleName,
-        category: currentStyle.category,
-        description: content,
-      });
-      message.success('生产制单保存成功');
-      // 刷新详情
-      fetchDetail(String(currentStyle.id));
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : '服务返回异常，请稍后重试';
-      reportSmartError('生产制单保存失败', errMsg, 'STYLE_PRODUCTION_SAVE_FAILED');
-      message.error(errMsg);
-    } finally {
-      setProductionSaving(false);
-    }
-  };
-
-  const resetProductionReqFromCurrent = () => {
-    const src = (currentStyle as any)?.productionRequirements || (currentStyle as any)?.description;
-    if (src) {
-      setProductionReqRows(parseProductionReqRows(src));
-    }
-  };
-
-  useEffect(() => {
-    if (!currentStyle) return;
-    const src = (currentStyle as any)?.productionRequirements || (currentStyle as any)?.description;
-    if (src) {
-      setProductionReqRows(parseProductionReqRows(src));
-    } else {
-      setProductionReqRows(Array.from({ length: productionReqRowCount }).map(() => ''));
-    }
-  }, [currentStyle, productionReqRowCount]);
-
-  const handleRollbackProductionReq = async () => {
-    if (!currentStyle?.id) {
-      message.warning('请先保存款式基本信息');
-      return;
-    }
-    setProductionRollbackSaving(true);
-    try {
-      await api.post(`/style/info/${currentStyle.id}/production-requirements/rollback`);
-      message.success('已回退到上一版本');
-      // 刷新详情
-      fetchDetail(String(currentStyle.id));
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (e: unknown) {
-      const errMsg = e instanceof Error ? e.message : '服务返回异常，请稍后重试';
-      reportSmartError('生产制单回退失败', errMsg, 'STYLE_PRODUCTION_ROLLBACK_FAILED');
-      message.error(errMsg);
-    } finally {
-      setProductionRollbackSaving(false);
-    }
-  };
-
-  // 推送到订单弹窗确认
-  const handlePushToOrder = () => {
-    setPushToOrderModalVisible(true);
-  };
-
-  // 提交推送到订单
-  const submitPushToOrder = async () => {
-    try {
-      const values = await pushToOrderForm.validateFields();
-      setPushToOrderSaving(true);
-
-      await handlePushToOrderDirect(values.priceType, values.remark, pushToOrderTargets);
-
-      setPushToOrderModalVisible(false);
-      pushToOrderForm.resetFields();
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (error) {
-      reportSmartError('推送到下单失败', (error as any)?.message || '服务返回异常，请稍后重试', 'STYLE_PUSH_TO_ORDER_FAILED');
-      console.error('推送失败:', error);
-    } finally {
-      setPushToOrderSaving(false);
-    }
-  };
-
-  // ===== 6. 渲染 =====
   if (!isDetailPage && !isNewPage) {
-    return null; // 列表页已移至 StyleInfoList
+    return null;
   }
 
   return (
@@ -559,7 +108,6 @@ const StyleInfoDetailPage: React.FC = () => {
           </Card>
         ) : null}
         <StyleIntelligenceProfileCard style={currentStyle} />
-        {/* ===== 基础信息卡片 ===== */}
         <Card
           title="样衣详情"
           style={{ marginBottom: 24 }}
@@ -575,70 +123,68 @@ const StyleInfoDetailPage: React.FC = () => {
               pushedToOrder={Boolean((currentStyle as any)?.pushedToOrder)}
               onSave={handleSave}
               onCompleteSample={handleCompleteSample}
-              onPushToOrder={handlePushToOrder}
+              onPushToOrder={pushOrder.handlePushToOrder}
               onUnlock={handleUnlock}
             />
           }
         >
           <Form layout="horizontal" form={form} labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
-            {/* 基础信息表单（包含颜色码数配置） */}
             <StyleBasicInfoForm
               _form={form}
               currentStyle={currentStyle}
               editLocked={editLocked}
               isNewPage={isNewPage}
               isFieldLocked={isFieldLocked}
-              pendingImages={pendingImages}
-              onPendingImagesChange={setPendingImages}
-              coverRefreshToken={coverRefreshToken}
-              onCoverChange={handleCoverChange}
-              size1={size1}
-              setSize1={setSize1}
-              size2={size2}
-              setSize2={setSize2}
-              size3={size3}
-              setSize3={setSize3}
-              size4={size4}
-              setSize4={setSize4}
-              size5={size5}
-              setSize5={setSize5}
-              color1={color1}
-              setColor1={setColor1}
-              color2={color2}
-              setColor2={setColor2}
-              color3={color3}
-              setColor3={setColor3}
-              color4={color4}
-              setColor4={setColor4}
-              color5={color5}
-              setColor5={setColor5}
-              qty1={qty1}
-              setQty1={setQty1}
-              qty2={qty2}
-              setQty2={setQty2}
-              qty3={qty3}
-              setQty3={setQty3}
-              qty4={qty4}
-              setQty4={setQty4}
-              qty5={qty5}
-              setQty5={setQty5}
-              sizeOptions={matrixSizes}
-              setSizeOptions={setMatrixSizes}
-              colorOptions={matrixColors}
-              setColorOptions={setMatrixColors}
-              sizeColorMatrixRows={sizeColorMatrixRows}
-              setSizeColorMatrixRows={setSizeColorMatrixRows}
-              onColorImageSync={handleColorImageSync}
-              onColorImageClear={handleColorImageClear}
-              commonSizes={commonSizes}
-              setCommonSizes={setCommonSizes}
-              commonColors={commonColors}
-              setCommonColors={setCommonColors}
+              pendingImages={colorSize.pendingImages}
+              onPendingImagesChange={colorSize.setPendingImages}
+              coverRefreshToken={colorSize.coverRefreshToken}
+              onCoverChange={colorSize.handleCoverChange}
+              size1={colorSize.size1}
+              setSize1={colorSize.setSize1}
+              size2={colorSize.size2}
+              setSize2={colorSize.setSize2}
+              size3={colorSize.size3}
+              setSize3={colorSize.setSize3}
+              size4={colorSize.size4}
+              setSize4={colorSize.setSize4}
+              size5={colorSize.size5}
+              setSize5={colorSize.setSize5}
+              color1={colorSize.color1}
+              setColor1={colorSize.setColor1}
+              color2={colorSize.color2}
+              setColor2={colorSize.setColor2}
+              color3={colorSize.color3}
+              setColor3={colorSize.setColor3}
+              color4={colorSize.color4}
+              setColor4={colorSize.setColor4}
+              color5={colorSize.color5}
+              setColor5={colorSize.setColor5}
+              qty1={colorSize.qty1}
+              setQty1={colorSize.setQty1}
+              qty2={colorSize.qty2}
+              setQty2={colorSize.setQty2}
+              qty3={colorSize.qty3}
+              setQty3={colorSize.setQty3}
+              qty4={colorSize.qty4}
+              setQty4={colorSize.setQty4}
+              qty5={colorSize.qty5}
+              setQty5={colorSize.setQty5}
+              sizeOptions={colorSize.matrixSizes}
+              setSizeOptions={colorSize.setMatrixSizes}
+              colorOptions={colorSize.matrixColors}
+              setColorOptions={colorSize.setMatrixColors}
+              sizeColorMatrixRows={colorSize.sizeColorMatrixRows}
+              setSizeColorMatrixRows={colorSize.setSizeColorMatrixRows}
+              onColorImageSync={colorSize.handleColorImageSync}
+              onColorImageClear={colorSize.handleColorImageClear}
+              commonSizes={colorSize.commonSizes}
+              setCommonSizes={colorSize.setCommonSizes}
+              commonColors={colorSize.commonColors}
+              setCommonColors={colorSize.setCommonColors}
             />
           </Form>
         </Card>
 
-        {/* ===== Tabs区域（12个Tab组件保持不变） ===== */}
         <Card style={{ marginTop: 24 }}>
           <Tabs
             activeKey={activeTabKey}
@@ -647,11 +193,11 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '2',
                 label: 'BOM清单',
-                disabled: !currentStyle?.id, // 需要先保存款式
+                disabled: !currentStyle?.id,
                 children: (
                   <StyleBomTab
                     styleId={currentStyle?.id}
-                    sizeColorConfig={sizeColorConfig}
+                    sizeColorConfig={colorSize.sizeColorConfig}
                     readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
                     bomAssignee={(currentStyle as any)?.bomAssignee}
                     bomStartTime={(currentStyle as any)?.bomStartTime}
@@ -667,7 +213,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StylePatternTab
                     styleId={currentStyle?.id}
-                    sizeColorConfig={sizeColorConfig}
+                    sizeColorConfig={colorSize.sizeColorConfig}
                     readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
                     patternAssignee={(currentStyle as any)?.patternAssignee}
                     patternStartTime={(currentStyle as any)?.patternStartTime}
@@ -676,7 +222,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     sizeAssignee={(currentStyle as any)?.sizeAssignee}
                     sizeStartTime={(currentStyle as any)?.sizeStartTime}
                     sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
-                    linkedSizes={matrixSizes}
+                    linkedSizes={colorSize.matrixSizes}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
@@ -689,16 +235,16 @@ const StyleInfoDetailPage: React.FC = () => {
                   <StyleProductionTab
                     styleId={currentStyle?.id}
                     styleNo={currentStyle?.styleNo}
-                    productionReqRows={productionReqRows}
-                    productionReqRowCount={productionReqRowCount}
+                    productionReqRows={production.productionReqRows}
+                    productionReqRowCount={production.productionReqRowCount}
                     productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
-                    productionReqEditable={productionReqEditable}
-                    productionReqSaving={productionSaving}
-                    productionReqRollbackSaving={productionRollbackSaving}
-                    onProductionReqChange={updateProductionReqRow}
-                    onProductionReqSave={handleSaveProduction}
-                    onProductionReqReset={resetProductionReqFromCurrent}
-                    onProductionReqRollback={handleRollbackProductionReq}
+                    productionReqEditable={production.productionReqEditable}
+                    productionReqSaving={production.productionSaving}
+                    productionReqRollbackSaving={production.productionRollbackSaving}
+                    onProductionReqChange={production.updateProductionReqRow}
+                    onProductionReqSave={production.handleSaveProduction}
+                    onProductionReqReset={production.resetProductionReqFromCurrent}
+                    onProductionReqRollback={production.handleRollbackProductionReq}
                     productionReqCanRollback
                     productionAssignee={(currentStyle as any)?.productionAssignee}
                     productionStartTime={(currentStyle as any)?.productionStartTime}
@@ -754,38 +300,36 @@ const StyleInfoDetailPage: React.FC = () => {
                 key: '3',
                 label: '报价单',
                 disabled: !currentStyle?.id,
-                children: <StyleQuotationTab styleId={currentStyle?.id} styleNo={currentStyle?.styleNo} totalQty={totalMatrixQty} />
+                children: <StyleQuotationTab styleId={currentStyle?.id} styleNo={currentStyle?.styleNo} totalQty={colorSize.totalMatrixQty} />
               },
               {
                 key: '4',
                 label: '附件文件',
                 disabled: !currentStyle?.id,
                 children: <StyleAttachmentTab styleId={currentStyle?.id} styleNo={currentStyle?.styleNo} />
-
               }
             ]}
           />
         </Card>
       </PageLayout>
 
-      {/* ===== 推送到订单弹窗 ===== */}
       <Modal
         title="推送到下单管理"
-        open={pushToOrderModalVisible}
-        onOk={submitPushToOrder}
+        open={pushOrder.pushToOrderModalVisible}
+        onOk={pushOrder.submitPushToOrder}
         onCancel={() => {
-          setPushToOrderModalVisible(false);
-          pushToOrderForm.resetFields();
+          pushOrder.setPushToOrderModalVisible(false);
+          pushOrder.pushToOrderForm.resetFields();
         }}
-        confirmLoading={pushToOrderSaving}
+        confirmLoading={pushOrder.pushToOrderSaving}
         width="40vw"
         forceRender
       >
-        <Form form={pushToOrderForm} layout="vertical">
+        <Form form={pushOrder.pushToOrderForm} layout="vertical">
           <Form.Item label="同步目标（勾选才会过去）">
             <Checkbox.Group
-              value={pushToOrderTargets}
-              onChange={(values) => setPushToOrderTargets(values.map((v) => String(v)))}
+              value={pushOrder.pushToOrderTargets}
+              onChange={(values) => pushOrder.setPushToOrderTargets(values.map((v) => String(v)))}
             >
               <div
                 style={{

@@ -246,37 +246,51 @@ public class OrderWorkflowHelper {
             throw new IllegalArgumentException("确认备注至少需要10个字符，请详细说明确认原因");
         }
 
-        // 获取订单详情（包含物料到货率）
         ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
         if (order == null) {
             throw new NoSuchElementException("订单不存在: " + orderId);
         }
 
-        // 验证物料到货率
+        validateMaterialArrivalRate(order);
+        checkAlreadyConfirmed(order);
+
+        LocalDateTime now = LocalDateTime.now();
+        String userId = UserContext.userId();
+        String username = UserContext.username();
+
+        updateProcurementConfirmation(orderId, remark, now, userId, username);
+        logProcurementProgress(order, orderId);
+
+        log.info("Order procurement manually confirmed: orderId={}, materialArrivalRate={}%, confirmedBy={}, remark={}",
+                orderId, order.getMaterialArrivalRate(), username, remark);
+
+        logProcurementConfirmation(order, remark, now);
+
+        return productionOrderQueryService.getDetailById(orderId);
+    }
+
+    private void validateMaterialArrivalRate(ProductionOrder order) {
         Integer materialArrivalRate = order.getMaterialArrivalRate();
         if (materialArrivalRate == null) {
             materialArrivalRate = 0;
         }
-
-        // 物料到货率<50%：不允许确认
         if (materialArrivalRate < 50) {
             throw new IllegalStateException(
                 String.format("物料到货率不足50%%（当前%d%%），不允许确认采购完成，请继续采购",
                     materialArrivalRate)
             );
         }
+    }
 
-        // 已经确认过了
+    private void checkAlreadyConfirmed(ProductionOrder order) {
         Integer manuallyCompleted = order.getProcurementManuallyCompleted();
         if (manuallyCompleted != null && manuallyCompleted == 1) {
             throw new IllegalStateException("该订单采购已确认完成，无需重复确认");
         }
+    }
 
-        // 更新确认信息
-        LocalDateTime now = LocalDateTime.now();
-        String userId = UserContext.userId();
-        String username = UserContext.username();
-
+    private void updateProcurementConfirmation(String orderId, String remark, LocalDateTime now,
+            String userId, String username) {
         ProductionOrder updateEntity = new ProductionOrder();
         updateEntity.setId(orderId);
         updateEntity.setProcurementManuallyCompleted(1);
@@ -285,7 +299,13 @@ public class OrderWorkflowHelper {
         updateEntity.setProcurementConfirmedAt(now);
         updateEntity.setProcurementConfirmRemark(remark.trim());
 
-        // 计算采购完成后的进度（采购是第1个节点）
+        boolean updated = productionOrderService.updateById(updateEntity);
+        if (!updated) {
+            throw new RuntimeException("更新采购确认信息失败");
+        }
+    }
+
+    private void logProcurementProgress(ProductionOrder order, String orderId) {
         try {
             String workflowJson = order.getProgressWorkflowJson();
             if (StringUtils.hasText(workflowJson)) {
@@ -295,27 +315,19 @@ public class OrderWorkflowHelper {
                 List<Map<String, Object>> nodes = (List<Map<String, Object>>) workflow.get("nodes");
 
                 if (nodes != null && !nodes.isEmpty()) {
-                    // 用户需求：采购确认不计入进度，进度仅由实际产线扫码决定
-                    // 进度由 recomputeProgressFromRecords() 统一计算，下单/采购均保持 0%
                     log.info("Order procurement confirmed: orderId={}, totalNodes={}",
                             orderId, nodes.size());
                 }
             }
         } catch (Exception e) {
             log.warn("Failed to calculate procurement progress: orderId={}", orderId, e);
-            // 即使计算失败也继续，不阻断采购确认流程
         }
+    }
 
-        boolean updated = productionOrderService.updateById(updateEntity);
-        if (!updated) {
-            throw new RuntimeException("更新采购确认信息失败");
-        }
-
-        log.info("Order procurement manually confirmed: orderId={}, materialArrivalRate={}%, confirmedBy={}, remark={}",
-                orderId, materialArrivalRate, username, remark);
-
-        // 记录扫码日志（用于追踪）
+    private void logProcurementConfirmation(ProductionOrder order, String remark, LocalDateTime now) {
         try {
+            Integer materialArrivalRate = order.getMaterialArrivalRate();
+            String username = UserContext.username();
             scanRecordDomainService.insertRollbackRecord(
                 order,
                 "采购手动确认",
@@ -323,10 +335,7 @@ public class OrderWorkflowHelper {
                 now
             );
         } catch (Exception e) {
-            log.warn("Failed to log procurement confirmation: orderId={}", orderId, e);
+            log.warn("Failed to log procurement confirmation: orderId={}", order.getId(), e);
         }
-
-        // 返回更新后的完整订单信息
-        return productionOrderQueryService.getDetailById(orderId);
     }
 }

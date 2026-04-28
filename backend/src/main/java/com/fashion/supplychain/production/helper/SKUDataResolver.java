@@ -190,6 +190,12 @@ public class SKUDataResolver {
             return false;
         }
         String v = value.trim();
+        // 中文聚合标签：自定义裁剪单订单级 color/size 在多种取值时回退为"多色"/"多码"/"多种"
+        // 这些值不可能精确匹配 orderDetails 中的具体 SKU 行，必须按复合值处理跳过精确比对
+        if ("多色".equals(v) || "多码".equals(v) || "多种".equals(v) || "多".equals(v)
+                || "MULTI".equalsIgnoreCase(v) || "MIXED".equalsIgnoreCase(v)) {
+            return true;
+        }
         return v.contains(",") || v.contains("，") || v.contains("/") || v.contains("、") || v.contains(";")
                 || v.contains("|") || v.contains(" ");
     }

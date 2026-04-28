@@ -7,6 +7,20 @@
   padding-bottom: 20px;
 }
 
+.feedback-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px;
+  padding: 12px 16px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.feedback-entry-text { font-size: var(--font-size-md); color: var(--color-primary); font-weight: 500; }
+.feedback-entry-arrow { font-size: 24px; color: var(--color-text-secondary); }
+.feedback-entry-hover { opacity: 0.8; }
+
 
 /* 筛选器 */
 .filter-bar {

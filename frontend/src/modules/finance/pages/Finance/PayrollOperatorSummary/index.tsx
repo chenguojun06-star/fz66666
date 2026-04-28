@@ -13,6 +13,7 @@ import { usePayrollData, toNumberOrZero, toMoneyText, getDetailRowKey, getDetail
 import { usePayrollActions } from './usePayrollActions';
 import WorkerEfficiencyTab from './WorkerEfficiencyTab';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
+import { SCAN_TYPE_OPTIONS } from '@/components/common/ScanTypeBadge';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 
 const PayrollOperatorSummary: React.FC = () => {
@@ -92,12 +93,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         <Input placeholder="搜索订单号 / 款号 / 人员 / 工序" style={{ width: 280 }} allowClear value={keyword}
                             onChange={(e) => setKeyword(e.target.value)} prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />} />
                         <Select placeholder="生产节点" style={{ width: 140 }} allowClear value={scanType}
-                            options={[
-                                { value: 'production', label: '生产' }, { value: 'cutting', label: '裁剪' },
-                                { value: 'procurement', label: '采购' }, { value: 'quality', label: '质检' },
-                                { value: 'pressing', label: '大烫' }, { value: 'packaging', label: '包装' },
-                                { value: 'warehousing', label: '入库' },
-                            ]}
+                            options={SCAN_TYPE_OPTIONS}
                             onChange={(v) => setScanType(v)} />
                         <UnifiedRangePicker showTime value={dateRange as any} onChange={(v) => setDateRange(v as any)} style={{ width: 320 }} />
                         <Space>

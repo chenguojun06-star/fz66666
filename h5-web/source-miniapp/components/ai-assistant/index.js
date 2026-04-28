@@ -83,46 +83,11 @@ function parseAiCards(text) {
   }
   text = text.replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '');
 
-  var overdueFactoryCard = null;
-  var overdueRe = /【OVERDUE_FACTORY】([\s\S]*?)【\/OVERDUE_FACTORY】/g;
-  while ((m = overdueRe.exec(text)) !== null) {
-    var op = safeParse(m[1]);
-    if (op && typeof op === 'object') {
-      var groups = Array.isArray(op) ? op : [op];
-      var first = groups[0];
-      if (first && first.factoryName) {
-        overdueFactoryCard = {
-          overdueCount: groups.reduce(function (s, g) { return s + (g.totalOrders || 0); }, 0),
-          totalQuantity: groups.reduce(function (s, g) { return s + (g.totalQuantity || 0); }, 0),
-          avgProgress: groups.length > 0 ? Math.round(groups.reduce(function (s, g) { return s + (g.avgProgress || 0); }, 0) / groups.length) : 0,
-          avgOverdueDays: groups.length > 0 ? Math.round(groups.reduce(function (s, g) { return s + (g.avgOverdueDays || 0); }, 0) / groups.length) : 0,
-          factoryGroupCount: groups.length,
-          factoryGroups: groups,
-        };
-      } else if (op.overdueCount) {
-        overdueFactoryCard = op;
-      }
-    }
-  }
-  text = text.replace(/【OVERDUE_FACTORY】[\s\S]*?【\/OVERDUE_FACTORY】/g, '');
-
-  var reportPreview = null;
-  var reportType = null;
-  var reportRe = /【REPORT_PREVIEW】([\s\S]*?)【\/REPORT_PREVIEW】/g;
-  while ((m = reportRe.exec(text)) !== null) {
-    var rpp = safeParse(m[1]);
-    if (rpp && typeof rpp === 'object' && rpp.kpis) {
-      reportPreview = rpp;
-      reportType = rpp.reportType || 'daily';
-    }
-  }
-  text = text.replace(/【REPORT_PREVIEW】[\s\S]*?【\/REPORT_PREVIEW】/g, '');
-
   text = text.replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '');
   text = text.replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '');
   text = text.replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '');
 
-  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards, overdueFactoryCard: overdueFactoryCard, reportPreview: reportPreview, reportType: reportType };
+  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards };
 }
 
 Component({
@@ -186,14 +151,14 @@ Component({
             tx = edge === 'left' ? -30 : sw - 20;
             ty = Math.max(40, Math.min(saved.y != null ? saved.y : ty, sh - 60));
           }
-        } catch (_e) {}
+        } catch (_e) { /* ignore invalid saved trigger position */ }
 
         var conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
         var savedMessages = [];
         try {
           savedMessages = wx.getStorageSync('ai_chat_history') || [];
           if (!Array.isArray(savedMessages) || savedMessages.length === 0) savedMessages = [];
-        } catch (_e) {}
+        } catch (_e) { /* ignore unreadable chat history */ }
 
         var initMsgs = savedMessages.length > 0 ? savedMessages : [{
           id: Date.now(), role: 'ai', content: greeting,
@@ -239,7 +204,7 @@ Component({
             this.setData({ triggerX: tx, triggerY: ty, edgeSide: edge });
           }
         }
-      } catch (_e) {}
+      } catch (_e) { /* ignore invalid stored trigger position on show */ }
     },
   },
   detached() {
@@ -302,7 +267,7 @@ Component({
       const snapX = edge === 'left' ? -30 : sw - 20;
       this.setData({ triggerX: snapX, edgeSide: edge });
       this._isDragging = false;
-      try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) {}
+      try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) { /* ignore storage write failure */ }
       if (!this.data.isOpen) this._startIdleSnap();
     },
     _snapToVisible() {
@@ -383,12 +348,12 @@ Component({
       try {
         var msgs = this.data.messages.slice(-20);
         wx.setStorageSync('ai_chat_history', msgs);
-      } catch (_e) {}
+      } catch (_e) { /* ignore chat history save failure */ }
     },
 
     _abortStream() {
       if (this._streamTask) {
-        try { this._streamTask.abort(); } catch (_e) {}
+        try { this._streamTask.abort(); } catch (_e) { /* ignore abort failure */ }
         this._streamTask = null;
       }
     },
@@ -470,7 +435,6 @@ Component({
         var self = this;
         var accumulatedText = '';
         var streamStarted = false;
-        var streamFailed = false;
         var pendingFollowUpActions = null;
         var _streamPendingUpdate = false;
         var _streamUpdateTimer = null;
@@ -534,15 +498,14 @@ Component({
                 };
               });
             }
-            var aiMsg = {
+            var completedAiMsg = {
               id: aiMsgId, role: 'ai', content: parsed.text,
               recommendPills: recommendPills,
               actions: actions,
-              overdueFactoryCard: parsed.overdueFactoryCard,
-              reportPreview: parsed.reportPreview,
-              reportType: parsed.reportType,
+              insightCards: parsed.insightCards || [],
+              clarificationHints: parsed.clarificationHints || [],
             };
-            self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
+            self._setMessages([].concat(self.data.messages, [completedAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
             self._saveChatHistory();
           },
@@ -550,8 +513,8 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              var aiMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
-              self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
+              var streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
               return;
@@ -595,15 +558,14 @@ Component({
                 }
               }
               var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
-              var aiMsg = {
+              var syncAiMsg = {
                 id: aiMsgId, role: 'ai', content: parsed.text,
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
-                overdueFactoryCard: parsed.overdueFactoryCard,
-                reportPreview: parsed.reportPreview,
-                reportType: parsed.reportType,
+                insightCards: parsed.insightCards || [],
+                clarificationHints: parsed.clarificationHints || [],
               };
-              self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
+              self._setMessages([].concat(self.data.messages, [syncAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
@@ -643,11 +605,13 @@ Component({
         if (userInfo.realName) userName = userInfo.realName;
         else if (userInfo.username) userName = userInfo.username;
         else if (userInfo.nickname) userName = userInfo.nickname;
-      } catch (err) {}
+      } catch (err) {
+        /* ignore greeting name read failure */
+      }
       const greeting = userName ? 'Hi ' + userName + '，这里是小云帮助中心。' : 'Hi，这里是小云帮助中心。';
       var newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       this._setMessages([{ id: Date.now(), role: 'ai', content: greeting }], { inputValue: '', conversationId: newConvId });
-      try { wx.removeStorageSync('ai_chat_history'); } catch (_e) {}
+      try { wx.removeStorageSync('ai_chat_history'); } catch (_e) { /* ignore storage cleanup failure */ }
     },
     scrollToBottom() {
       setTimeout(() => {

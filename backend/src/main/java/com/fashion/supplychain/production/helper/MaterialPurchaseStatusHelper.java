@@ -59,6 +59,8 @@ public class MaterialPurchaseStatusHelper {
 
     private final com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
+    private final MaterialPurchaseSyncHelper materialPurchaseSyncHelper;
+
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
@@ -79,54 +81,15 @@ public class MaterialPurchaseStatusHelper {
             throw new NoSuchElementException("采购任务不存在");
         }
 
-        String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
-        String normalizedStatus = status.toLowerCase();
-        if (MaterialConstants.STATUS_COMPLETED.equals(normalizedStatus) || MaterialConstants.STATUS_CANCELLED.equals(normalizedStatus)) {
-            throw new IllegalStateException("该采购任务已结束，无法领取");
-        }
-
-        // 检查是否已被领取
-        String existingReceiverId = purchase.getReceiverId() == null ? "" : purchase.getReceiverId().trim();
-        String existingReceiverName = purchase.getReceiverName() == null ? "" : purchase.getReceiverName().trim();
         String rid = helper.safe(receiverIdValue);
         String rname = helper.safe(receiverNameValue);
+        validateReceivePermission(purchase, rid, rname);
 
-        boolean alreadyReceived = !MaterialConstants.STATUS_PENDING.equals(normalizedStatus) && StringUtils.hasText(normalizedStatus);
-        if (alreadyReceived) {
-            // 检查是否是同一个人
-            boolean isSame = false;
-            if (!rid.isEmpty() && !existingReceiverId.isEmpty()) {
-                isSame = Objects.equals(rid, existingReceiverId);
-            } else if (!rname.isEmpty() && !existingReceiverName.isEmpty()) {
-                isSame = Objects.equals(rname, existingReceiverName);
-            }
-            if (!isSame) {
-                String otherName = StringUtils.hasText(existingReceiverName) ? existingReceiverName : "他人";
-                throw new IllegalStateException("该任务已被「" + otherName + "」领取，无法重复领取");
-            }
-        }
-
-        boolean ok = this.receiveAndSync(
-                purchaseId,
+        boolean ok = this.receiveAndSync(purchaseId,
                 StringUtils.hasText(rid) ? rid : null,
                 StringUtils.hasText(rname) ? rname : null);
         if (!ok) {
-            // 再次检查最新状态
-            MaterialPurchase latest = getPurchaseWithTenant(purchaseId);
-            if (latest != null) {
-                String latestReceiverName = helper.safe(latest.getReceiverName());
-                String latestReceiverId = helper.safe(latest.getReceiverId());
-                boolean isSameNow = false;
-                if (!rid.isEmpty() && !latestReceiverId.isEmpty()) {
-                    isSameNow = Objects.equals(rid, latestReceiverId);
-                } else if (!rname.isEmpty() && !latestReceiverName.isEmpty()) {
-                    isSameNow = Objects.equals(rname, latestReceiverName);
-                }
-                if (!isSameNow && !latestReceiverName.isEmpty()) {
-                    throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
-                }
-            }
-            throw new IllegalStateException("领取失败");
+            handleReceiveFailure(purchaseId, rid, rname);
         }
 
         MaterialPurchase updated = getPurchaseWithTenant(purchaseId);
@@ -139,6 +102,49 @@ public class MaterialPurchaseStatusHelper {
         sendReceiveNotice(updated, rid, rname);
         broadcastReceiveProgress(updated, rid, rname, purchaseId);
         return updated;
+    }
+
+    private void validateReceivePermission(MaterialPurchase purchase, String rid, String rname) {
+        String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
+        String normalizedStatus = status.toLowerCase();
+        if (MaterialConstants.STATUS_COMPLETED.equals(normalizedStatus) || MaterialConstants.STATUS_CANCELLED.equals(normalizedStatus)) {
+            throw new IllegalStateException("该采购任务已结束，无法领取");
+        }
+
+        String existingReceiverId = purchase.getReceiverId() == null ? "" : purchase.getReceiverId().trim();
+        String existingReceiverName = purchase.getReceiverName() == null ? "" : purchase.getReceiverName().trim();
+
+        boolean alreadyReceived = !MaterialConstants.STATUS_PENDING.equals(normalizedStatus) && StringUtils.hasText(normalizedStatus);
+        if (alreadyReceived) {
+            boolean isSame = false;
+            if (!rid.isEmpty() && !existingReceiverId.isEmpty()) {
+                isSame = Objects.equals(rid, existingReceiverId);
+            } else if (!rname.isEmpty() && !existingReceiverName.isEmpty()) {
+                isSame = Objects.equals(rname, existingReceiverName);
+            }
+            if (!isSame) {
+                String otherName = StringUtils.hasText(existingReceiverName) ? existingReceiverName : "他人";
+                throw new IllegalStateException("该任务已被「" + otherName + "」领取，无法重复领取");
+            }
+        }
+    }
+
+    private void handleReceiveFailure(String purchaseId, String rid, String rname) {
+        MaterialPurchase latest = getPurchaseWithTenant(purchaseId);
+        if (latest != null) {
+            String latestReceiverName = helper.safe(latest.getReceiverName());
+            String latestReceiverId = helper.safe(latest.getReceiverId());
+            boolean isSameNow = false;
+            if (!rid.isEmpty() && !latestReceiverId.isEmpty()) {
+                isSameNow = Objects.equals(rid, latestReceiverId);
+            } else if (!rname.isEmpty() && !latestReceiverName.isEmpty()) {
+                isSameNow = Objects.equals(rname, latestReceiverName);
+            }
+            if (!isSameNow && !latestReceiverName.isEmpty()) {
+                throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
+            }
+        }
+        throw new IllegalStateException("领取失败");
     }
 
     private void sendReceiveNotice(MaterialPurchase updated, String rid, String rname) {
@@ -278,47 +284,8 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalArgumentException("参数错误");
         }
 
-        // 只查验证所需字段，避免未迁移列导致全字段SELECT 500
-        MaterialPurchase purchase = materialPurchaseService.getOne(
-                new LambdaQueryWrapper<MaterialPurchase>()
-                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
-                                MaterialPurchase::getStatus)
-                        .eq(MaterialPurchase::getId, purchaseId));
-        if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
-            throw new NoSuchElementException("采购任务不存在");
-        }
-
-        if (materialQualityIssueOrchestrator.hasOpenIssue(purchaseId)) {
-            throw new IllegalStateException("当前采购仍有未处理的品质异常，处理完成后才能确认回料");
-        }
-
-        String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
-        if (MaterialConstants.STATUS_CANCELLED.equals(status)) {
-            throw new IllegalStateException("该采购任务已取消，无法回料确认");
-        }
-
-        if (returnQuantity == null) {
-            throw new IllegalArgumentException("请填写实际回料数量");
-        }
-        if (returnQuantity < 0) {
-            throw new IllegalArgumentException("实际回料数量不能小于0");
-        }
-
-        // 保存凭证图片 URLs
-        Object rawUrls = body == null ? null : body.get("evidenceImageUrls");
-        if (rawUrls != null) {
-            String urls = String.valueOf(rawUrls).trim();
-            if (!urls.isEmpty()) {
-                try {
-                    MaterialPurchase toUpdate = new MaterialPurchase();
-                    toUpdate.setId(purchaseId);
-                    toUpdate.setEvidenceImageUrls(urls);
-                    materialPurchaseService.updateById(toUpdate);
-                } catch (Exception e) {
-                    log.warn("[returnConfirm] 保存凭证图片失败(列可能缺失): {}", e.getMessage());
-                }
-            }
-        }
+        MaterialPurchase purchase = validateReturnConfirm(purchaseId, returnQuantity);
+        saveEvidenceImages(purchaseId, body);
 
         boolean ok = this.returnConfirmAndSync(purchaseId, confirmerId, confirmerName, returnQuantity);
         if (!ok) {
@@ -344,6 +311,51 @@ public class MaterialPurchaseStatusHelper {
             updated.setUpdateTime(LocalDateTime.now());
         }
         return updated;
+    }
+
+    private MaterialPurchase validateReturnConfirm(String purchaseId, Integer returnQuantity) {
+        MaterialPurchase purchase = materialPurchaseService.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
+                                MaterialPurchase::getStatus)
+                        .eq(MaterialPurchase::getId, purchaseId));
+        if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
+            throw new NoSuchElementException("采购任务不存在");
+        }
+
+        if (materialQualityIssueOrchestrator.hasOpenIssue(purchaseId)) {
+            throw new IllegalStateException("当前采购仍有未处理的品质异常，处理完成后才能确认回料");
+        }
+
+        String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
+        if (MaterialConstants.STATUS_CANCELLED.equals(status)) {
+            throw new IllegalStateException("该采购任务已取消，无法回料确认");
+        }
+
+        if (returnQuantity == null) {
+            throw new IllegalArgumentException("请填写实际回料数量");
+        }
+        if (returnQuantity < 0) {
+            throw new IllegalArgumentException("实际回料数量不能小于0");
+        }
+        return purchase;
+    }
+
+    private void saveEvidenceImages(String purchaseId, Map<String, Object> body) {
+        Object rawUrls = body == null ? null : body.get("evidenceImageUrls");
+        if (rawUrls != null) {
+            String urls = String.valueOf(rawUrls).trim();
+            if (!urls.isEmpty()) {
+                try {
+                    MaterialPurchase toUpdate = new MaterialPurchase();
+                    toUpdate.setId(purchaseId);
+                    toUpdate.setEvidenceImageUrls(urls);
+                    materialPurchaseService.updateById(toUpdate);
+                } catch (Exception e) {
+                    log.warn("[returnConfirm] 保存凭证图片失败(列可能缺失): {}", e.getMessage());
+                }
+            }
+        }
     }
 
     public Map<String, Object> batchReturnConfirm(Map<String, Object> body) {
@@ -446,18 +458,7 @@ public class MaterialPurchaseStatusHelper {
     }
 
     private void syncAfterResetReturnConfirm(String purchaseId, MaterialPurchase purchase) {
-        try {
-            materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
-        } catch (Exception e) {
-            log.warn("Failed to upsert material reconciliation after return confirm reset: purchaseId={}", purchaseId, e);
-            scanRecordDomainService.insertOrchestrationFailure(
-                    purchase.getOrderId(), purchase.getOrderNo(),
-                    purchase.getStyleId(), purchase.getStyleNo(),
-                    "upsertMaterialReconciliation",
-                    e == null ? "upsertMaterialReconciliation failed"
-                            : ("upsertMaterialReconciliation failed: " + e.getMessage()),
-                    LocalDateTime.now());
-        }
+        materialPurchaseSyncHelper.syncAfterResetReturnConfirm(purchaseId, purchase);
     }
 
     private void logOrchestrationFailureAfterReset(String purchaseId, MaterialPurchase purchase) {
@@ -579,12 +580,7 @@ public class MaterialPurchaseStatusHelper {
     }
 
     private void syncAfterCancelReceive(String purchaseId, MaterialPurchase purchase) {
-        materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
-        log.info("cancelReceive 已同步物料对账: purchaseId={}", purchaseId);
-        if (StringUtils.hasText(purchase.getOrderId())) {
-            helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
-            log.info("cancelReceive 已重算面料到货率: orderId={}", purchase.getOrderId());
-        }
+        materialPurchaseSyncHelper.syncAfterCancelReceive(purchaseId, purchase);
     }
 
     /**
@@ -645,175 +641,28 @@ public class MaterialPurchaseStatusHelper {
      * 此方法设计为不抛出异常，失败只记录 warn 日志，不影响主流程。
      */
     private void tryMarkOrderProcurementComplete(MaterialPurchase purchase) {
-        if (!org.springframework.util.StringUtils.hasText(purchase.getOrderId())) return;
-        String oid = purchase.getOrderId().trim();
-        try {
-            // 统计仍在进行中（非 completed、非 cancelled）的采购数
-            long inProgressCount = materialPurchaseService.count(
-                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase>()
-                            .eq(MaterialPurchase::getOrderId, oid)
-                            .ne(MaterialPurchase::getDeleteFlag, 1)
-                            .notIn(MaterialPurchase::getStatus,
-                                    MaterialConstants.STATUS_COMPLETED,
-                                    MaterialConstants.STATUS_CANCELLED));
-            if (inProgressCount > 0) return;
-
-            // 所有采购均已 completed/cancelled → 确认订单尚未手工标记时再写入
-            ProductionOrder existOrder = productionOrderService.getOne(
-                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductionOrder>()
-                            .select(ProductionOrder::getId, ProductionOrder::getProcurementManuallyCompleted)
-                            .eq(ProductionOrder::getId, oid),
-                    false);
-            if (existOrder == null) return;
-            if (existOrder.getProcurementManuallyCompleted() != null
-                    && existOrder.getProcurementManuallyCompleted() == 1) return;
-
-            // 用该订单所有已完成/已取消采购单中最晚的 update_time 作为采购实际完成时间，
-            // 避免因批量触发、代码新部署等原因把实际较早完成的订单时间错误地写为当前系统时间
-            LocalDateTime actualLastCompletedAt = queryMaxPurchaseUpdateTime(oid);
-            LocalDateTime confirmedAt = (actualLastCompletedAt != null) ? actualLastCompletedAt : LocalDateTime.now();
-
-            LambdaUpdateWrapper<ProductionOrder> ouw = new LambdaUpdateWrapper<>();
-            ouw.eq(ProductionOrder::getId, oid)
-               .set(ProductionOrder::getProcurementManuallyCompleted, 1)
-               .set(ProductionOrder::getProcurementConfirmedAt, confirmedAt)
-               .set(ProductionOrder::getProcurementConfirmedBy, UserContext.userId())
-               .set(ProductionOrder::getProcurementConfirmedByName, UserContext.username());
-            productionOrderService.update(ouw);
-            log.info("✅ 所有采购单已完成，订单采购自动标记手工确认: orderId={}, confirmedAt={}", oid, confirmedAt);
-        } catch (Exception e) {
-            log.warn("[confirmComplete] 自动标记采购手工完成失败（不影响主流程）: orderId={}, error={}", oid, e.getMessage());
-        }
+        materialPurchaseSyncHelper.tryMarkOrderProcurementComplete(purchase);
     }
 
-    /**
-     * 查询该订单所有已完成/已取消采购单中最晚的 update_time。
-     * 用于 tryMarkOrderProcurementComplete 中确定实际采购完成时间，
-     * 避免用 LocalDateTime.now() 导致批量触发时所有订单都显示当天日期。
-     */
     private LocalDateTime queryMaxPurchaseUpdateTime(String orderId) {
-        try {
-            List<MaterialPurchase> purchases = materialPurchaseService.list(
-                    new LambdaQueryWrapper<MaterialPurchase>()
-                            .select(MaterialPurchase::getUpdateTime)
-                            .eq(MaterialPurchase::getOrderId, orderId)
-                            .ne(MaterialPurchase::getDeleteFlag, 1)
-                            .in(MaterialPurchase::getStatus,
-                                    MaterialConstants.STATUS_COMPLETED,
-                                    MaterialConstants.STATUS_CANCELLED));
-            return purchases.stream()
-                    .map(MaterialPurchase::getUpdateTime)
-                    .filter(t -> t != null)
-                    .max(java.util.Comparator.naturalOrder())
-                    .orElse(null);
-        } catch (Exception e) {
-            log.warn("queryMaxPurchaseUpdateTime failed for orderId={}: {}", orderId, e.getMessage());
-            return null;
-        }
+        return materialPurchaseSyncHelper.queryMaxPurchaseUpdateTime(orderId);
     }
 
     public boolean receiveAndSync(String purchaseId, String receiverId, String receiverName) {
-        boolean ok = materialPurchaseService.receivePurchase(purchaseId, receiverId, receiverName);
-        if (!ok) {
-            return false;
-        }
-        MaterialPurchase updated = getPurchaseWithTenant(purchaseId);
-        if (updated != null) {
-            syncAfterPurchaseChanged(updated);
-        }
-        return true;
+        return materialPurchaseSyncHelper.receiveAndSync(purchaseId, receiverId, receiverName);
     }
 
     public boolean returnConfirmAndSync(String purchaseId, String confirmerId, String confirmerName,
             Integer returnQuantity) {
-        boolean ok = materialPurchaseService.confirmReturnPurchase(purchaseId, confirmerId, confirmerName,
-                returnQuantity);
-        if (!ok) {
-            return false;
-        }
-        // 只查sync所需字段，避免未迁移列导致全字段SELECT 500
-        MaterialPurchase updated = materialPurchaseService.getOne(
-                new LambdaQueryWrapper<MaterialPurchase>()
-                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
-                                MaterialPurchase::getOrderId, MaterialPurchase::getOrderNo,
-                                MaterialPurchase::getStyleId, MaterialPurchase::getStyleNo,
-                                MaterialPurchase::getStatus)
-                        .eq(MaterialPurchase::getId, purchaseId));
-        if (updated != null) {
-            syncAfterPurchaseChanged(updated);
-            tryMarkOrderProcurementComplete(updated);
-        }
-        return true;
+        return materialPurchaseSyncHelper.returnConfirmAndSync(purchaseId, confirmerId, confirmerName, returnQuantity);
     }
 
     public void syncAfterPurchaseChanged(MaterialPurchase purchase) {
-        if (purchase == null) {
-            return;
-        }
-
-        // 直采直用场景：
-        // 1) 无 orderId 的采购（批量/库存/手工）直接进入物料对账
-        // 2) INTERNAL 内部订单采购对齐样衣逻辑，采购完成后直接进入物料对账
-        // 3) 其他订单采购（如 EXTERNAL）仍走入库回流链路
-        boolean allowReconciliation = !StringUtils.hasText(purchase.getOrderId())
-                || isInternalOrderPurchase(purchase);
-        if (allowReconciliation && StringUtils.hasText(purchase.getId())) {
-            try {
-                materialReconciliationOrchestrator.upsertFromPurchaseId(purchase.getId().trim());
-            } catch (Exception e) {
-                log.warn("Failed to upsert material reconciliation after purchase changed: purchaseId={}, orderId={}",
-                        purchase.getId(),
-                        purchase.getOrderId(),
-                        e);
-                scanRecordDomainService.insertOrchestrationFailure(
-                        purchase.getOrderId(),
-                        purchase.getOrderNo(),
-                        purchase.getStyleId(),
-                        purchase.getStyleNo(),
-                        "upsertMaterialReconciliation",
-                        e == null ? "upsertMaterialReconciliation failed"
-                                : ("upsertMaterialReconciliation failed: " + e.getMessage()),
-                        LocalDateTime.now());
-            }
-        }
-
-        if (StringUtils.hasText(purchase.getOrderId())) {
-            String oid = purchase.getOrderId().trim();
-            try {
-                helper.ensureOrderStatusProduction(oid);
-            } catch (Exception e) {
-                log.warn("syncAfterPurchaseChanged: ensureOrderStatusProduction failed, orderId={}, error={}", oid, e.getMessage());
-            }
-            try {
-                helper.recomputeAndUpdateMaterialArrivalRate(oid, productionOrderOrchestrator);
-            } catch (Exception e) {
-                log.warn("syncAfterPurchaseChanged: recomputeAndUpdateMaterialArrivalRate failed, orderId={}, error={}", oid, e.getMessage());
-            }
-            try {
-                productionOrderService.recomputeProgressFromRecords(oid);
-            } catch (Exception e) {
-                log.warn("syncAfterPurchaseChanged: recomputeProgressFromRecords failed, orderId={}, error={}", oid, e.getMessage());
-            }
-        }
+        materialPurchaseSyncHelper.syncAfterPurchaseChanged(purchase);
     }
 
     private boolean isInternalOrderPurchase(MaterialPurchase purchase) {
-        if (purchase == null || !StringUtils.hasText(purchase.getOrderId())) {
-            return false;
-        }
-        if (StringUtils.hasText(purchase.getFactoryType())) {
-            return "INTERNAL".equalsIgnoreCase(purchase.getFactoryType().trim());
-        }
-        try {
-            ProductionOrder order = productionOrderService.getById(purchase.getOrderId().trim());
-            return order != null
-                    && StringUtils.hasText(order.getFactoryType())
-                    && "INTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
-        } catch (Exception e) {
-            log.warn("syncAfterPurchaseChanged: 识别内部订单失败，按非内部处理 purchaseId={}, orderId={}",
-                    purchase.getId(), purchase.getOrderId(), e);
-            return false;
-        }
+        return materialPurchaseSyncHelper.isInternalOrderPurchase(purchase);
     }
 
     private MaterialPurchase fetchUpdatedWithFallback(String purchaseId, Supplier<MaterialPurchase> fallbackSupplier) {

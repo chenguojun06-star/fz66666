@@ -223,6 +223,7 @@ Page({
         return {
           label: name,
           value: name,
+          progressStage: p.progressStage || '',
           scanType: p.scanType || 'production',
           unitPrice: p.unitPrice || 0,
           hidePrice: !p.unitPrice,

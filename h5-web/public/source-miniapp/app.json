@@ -30,7 +30,7 @@
     {
       "root": "pages/payroll",
       "name": "pkg-payroll",
-      "pages": ["payroll"]
+      "pages": ["payroll", "feedback/index"]
     },
     {
       "root": "pages/admin/user-approval",

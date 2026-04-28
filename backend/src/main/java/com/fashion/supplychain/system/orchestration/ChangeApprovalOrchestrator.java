@@ -103,36 +103,35 @@ public class ChangeApprovalOrchestrator {
         UserContext ctx = UserContext.get();
         if (ctx == null) return null;
 
-        // 管理员/租户主不需要走审批（直接执行）
         if (UserContext.isTenantOwner() || UserContext.isSuperAdmin()) {
             return null;
         }
 
         User user = userService.getById(ctx.getUserId());
         if (user == null || !StringUtils.hasText(user.getOrgUnitId())) {
-            return null; // 未加入组织，直接执行
+            return null;
         }
 
-        // 沿层级向上查找审批人
         User approver = findApproverUpChain(user.getOrgUnitId(), ctx.getUserId(), ctx.getTenantId());
-        if (approver == null) {
-            return null; // 无审批人，直接执行
-        }
+        if (approver == null) return null;
 
-        // 序列化操作参数
-        String dataJson;
-        try {
-            if (operationData instanceof String) {
-                dataJson = (String) operationData;
-            } else {
-                dataJson = objectMapper.writeValueAsString(operationData);
-            }
-        } catch (Exception e) {
-            log.warn("[ChangeApproval] 序列化操作参数失败: {}", e.getMessage());
-            dataJson = "{}";
-        }
+        Map<String, Object> existingResult = checkExistingPending(targetId, operationType);
+        if (existingResult != null) return existingResult;
 
-        // 查看是否已有 PENDING 的同类申请（避免重复提交）
+        String dataJson = serializeOperationData(operationData);
+        ChangeApproval approval = createApprovalRecord(ctx, operationType, targetId, targetNo, dataJson, reason, user, approver);
+
+        notifyApproverPending(approver, ctx, operationType, targetNo, reason);
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("needApproval", true);
+        resp.put("approvalId", approval.getId());
+        resp.put("approverName", approver.getUsername());
+        resp.put("message", "操作申请已提交，等待主管【" + approver.getUsername() + "】审批");
+        return resp;
+    }
+
+    private Map<String, Object> checkExistingPending(String targetId, String operationType) {
         long existing = changeApprovalService.count(new LambdaQueryWrapper<ChangeApproval>()
                 .eq(ChangeApproval::getTargetId, targetId)
                 .eq(ChangeApproval::getOperationType, operationType)
@@ -144,8 +143,23 @@ public class ChangeApprovalOrchestrator {
             resp.put("message", "该操作已有待审批申请，请等待主管审批");
             return resp;
         }
+        return null;
+    }
 
-        // 查找申请人所属组织名称
+    private String serializeOperationData(Object operationData) {
+        try {
+            if (operationData instanceof String) {
+                return (String) operationData;
+            }
+            return objectMapper.writeValueAsString(operationData);
+        } catch (Exception e) {
+            log.warn("[ChangeApproval] 序列化操作参数失败: {}", e.getMessage());
+            return "{}";
+        }
+    }
+
+    private ChangeApproval createApprovalRecord(UserContext ctx, String operationType, String targetId,
+            String targetNo, String dataJson, String reason, User user, User approver) {
         OrganizationUnit orgUnit = organizationUnitService.getById(user.getOrgUnitId());
 
         ChangeApproval approval = new ChangeApproval();
@@ -170,8 +184,10 @@ public class ChangeApprovalOrchestrator {
 
         log.info("[ChangeApproval] 创建审批申请 id={} type={} target={} applicant={} approver={}",
                 approval.getId(), operationType, targetId, ctx.getUserId(), approver.getId());
+        return approval;
+    }
 
-        // 实时推送给审批人
+    private void notifyApproverPending(User approver, UserContext ctx, String operationType, String targetNo, String reason) {
         try {
             webSocketService.notifyApprovalPending(
                     String.valueOf(approver.getId()), approver.getUsername(),
@@ -179,13 +195,6 @@ public class ChangeApprovalOrchestrator {
         } catch (Exception e) {
             log.warn("[ChangeApproval] 推送审批通知失败（不影响审批创建）: {}", e.getMessage());
         }
-
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("needApproval", true);
-        resp.put("approvalId", approval.getId());
-        resp.put("approverName", approver.getUsername());
-        resp.put("message", "操作申请已提交，等待主管【" + approver.getUsername() + "】审批");
-        return resp;
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -365,99 +374,24 @@ public class ChangeApprovalOrchestrator {
             Map<String, Object> params = objectMapper.readValue(dataJson,
                     new TypeReference<Map<String, Object>>() {});
             switch (type) {
-                case "ORDER_DELETE": {
-                    if (productionOrderOrchestrator == null) {
-                        result.put("error", "ProductionOrderOrchestrator 未加载");
-                        break;
-                    }
-                    String orderId = (String) params.get("orderId");
-                    productionOrderOrchestrator.deleteById(orderId);
-                    result.put("success", true);
+                case "ORDER_DELETE":
+                    result = executeOrderDelete(params);
                     break;
-                }
-                case "STYLE_DELETE": {
-                    if (styleInfoOrchestrator == null) {
-                        result.put("error", "StyleInfoOrchestrator 未加载");
-                        break;
-                    }
-                    Object sid = params.get("styleId");
-                    Long styleId = sid instanceof Number ? ((Number) sid).longValue() : Long.parseLong(String.valueOf(sid));
-                        String scrapReason = approval.getApplyReason();
-                        if (scrapReason == null || scrapReason.isBlank()) {
-                            scrapReason = approval.getReviewRemark();
-                        }
-                        styleInfoOrchestrator.scrap(styleId, scrapReason);
-                    result.put("success", true);
+                case "STYLE_DELETE":
+                    result = executeStyleDelete(params, approval);
                     break;
-                }
-                case "SETTLEMENT_DELETE": {
-                    if (payrollSettlementOrchestrator == null) {
-                        result.put("error", "PayrollSettlementOrchestrator 未加载");
-                        break;
-                    }
-                    String settlementId = (String) params.get("settlementId");
-                    payrollSettlementOrchestrator.delete(settlementId);
-                    result.put("success", true);
+                case "SETTLEMENT_DELETE":
+                    result = executeSettlementDelete(params);
                     break;
-                }
-                case "RECONCILIATION_REJECT": {
-                    if (reconciliationStatusOrchestrator == null) {
-                        result.put("error", "ReconciliationStatusOrchestrator 未加载");
-                        break;
-                    }
-                    String reconId = (String) params.get("reconciliationId");
-                    reconciliationStatusOrchestrator.updateStatusCompat(reconId, "rejected");
-                    result.put("success", true);
+                case "RECONCILIATION_REJECT":
+                    result = executeReconciliationReject(params);
                     break;
-                }
-                case "EXPENSE_APPROVE": {
-                    if (expenseReimbursementOrchestrator == null) {
-                        result.put("error", "ExpenseReimbursementOrchestrator 未加载");
-                        break;
-                    }
-                    String expenseId = (String) params.get("expenseId");
-                    String action = (String) params.getOrDefault("action", "approve");
-                    expenseReimbursementOrchestrator.approveReimbursement(expenseId, action, approval.getReviewRemark());
-                    result.put("success", true);
+                case "EXPENSE_APPROVE":
+                    result = executeExpenseApprove(params, approval);
                     break;
-                }
-                case "OVER_QUANTITY_SCAN": {
-                    // 超额入库审批通过后，执行真正的入库操作
-                    if (productWarehousingService == null) {
-                        result.put("error", "ProductWarehousingService 未加载");
-                        break;
-                    }
-                    String orderId   = (String) params.get("orderId");
-                    String bundleId  = (String) params.get("bundleId");
-                    int qty          = ((Number) params.get("qty")).intValue();
-                    String warehouse = (String) params.get("warehouse");
-                    String operatorId   = (String) params.get("operatorId");
-                    String operatorName = (String) params.get("operatorName");
-
-                    com.fashion.supplychain.production.entity.ProductWarehousing w =
-                        new com.fashion.supplychain.production.entity.ProductWarehousing();
-                    w.setOrderId(orderId);
-                    w.setWarehousingType("scan");
-                    w.setWarehouse(warehouse);
-                    w.setWarehousingQuantity(qty);
-                    w.setCuttingBundleId(bundleId);
-                    w.setQualityStatus("qualified");
-                    w.setQualifiedQuantity(qty);
-                    w.setReceiverId(operatorId);
-                    w.setReceiverName(operatorName);
-                    w.setCreateTime(java.time.LocalDateTime.now());
-                    w.setUpdateTime(java.time.LocalDateTime.now());
-                    w.setDeleteFlag(0);
-
-                    boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
-                    if (!ok) {
-                        result.put("error", "超额入库审批通过但入库记录保存失败");
-                        break;
-                    }
-                    result.put("success", true);
-                    result.put("message", "超额入库审批通过，已完成入库");
+                case "OVER_QUANTITY_SCAN":
+                    result = executeOverQuantityScan(params);
                     break;
-                }
                 default:
                     log.warn("[ChangeApproval] 未知操作类型，审批通过但无法自动执行: type={}", type);
                     result.put("warning", "审批已通过，请手动执行操作");
@@ -466,6 +400,110 @@ public class ChangeApprovalOrchestrator {
             log.error("[ChangeApproval] 执行审批操作异常 id={} type={}", approval.getId(), type, e);
             result.put("error", "执行操作失败: " + e.getMessage());
         }
+        return result;
+    }
+
+    private Map<String, Object> executeOrderDelete(Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (productionOrderOrchestrator == null) {
+            result.put("error", "ProductionOrderOrchestrator 未加载");
+            return result;
+        }
+        String orderId = (String) params.get("orderId");
+        productionOrderOrchestrator.deleteById(orderId);
+        result.put("success", true);
+        return result;
+    }
+
+    private Map<String, Object> executeStyleDelete(Map<String, Object> params, ChangeApproval approval) {
+        Map<String, Object> result = new HashMap<>();
+        if (styleInfoOrchestrator == null) {
+            result.put("error", "StyleInfoOrchestrator 未加载");
+            return result;
+        }
+        Object sid = params.get("styleId");
+        Long styleId = sid instanceof Number ? ((Number) sid).longValue() : Long.parseLong(String.valueOf(sid));
+        String scrapReason = approval.getApplyReason();
+        if (scrapReason == null || scrapReason.isBlank()) {
+            scrapReason = approval.getReviewRemark();
+        }
+        styleInfoOrchestrator.scrap(styleId, scrapReason);
+        result.put("success", true);
+        return result;
+    }
+
+    private Map<String, Object> executeSettlementDelete(Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (payrollSettlementOrchestrator == null) {
+            result.put("error", "PayrollSettlementOrchestrator 未加载");
+            return result;
+        }
+        String settlementId = (String) params.get("settlementId");
+        payrollSettlementOrchestrator.delete(settlementId);
+        result.put("success", true);
+        return result;
+    }
+
+    private Map<String, Object> executeReconciliationReject(Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (reconciliationStatusOrchestrator == null) {
+            result.put("error", "ReconciliationStatusOrchestrator 未加载");
+            return result;
+        }
+        String reconId = (String) params.get("reconciliationId");
+        reconciliationStatusOrchestrator.updateStatusCompat(reconId, "rejected");
+        result.put("success", true);
+        return result;
+    }
+
+    private Map<String, Object> executeExpenseApprove(Map<String, Object> params, ChangeApproval approval) {
+        Map<String, Object> result = new HashMap<>();
+        if (expenseReimbursementOrchestrator == null) {
+            result.put("error", "ExpenseReimbursementOrchestrator 未加载");
+            return result;
+        }
+        String expenseId = (String) params.get("expenseId");
+        String action = (String) params.getOrDefault("action", "approve");
+        expenseReimbursementOrchestrator.approveReimbursement(expenseId, action, approval.getReviewRemark());
+        result.put("success", true);
+        return result;
+    }
+
+    private Map<String, Object> executeOverQuantityScan(Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        if (productWarehousingService == null) {
+            result.put("error", "ProductWarehousingService 未加载");
+            return result;
+        }
+        String orderId   = (String) params.get("orderId");
+        String bundleId  = (String) params.get("bundleId");
+        int qty          = ((Number) params.get("qty")).intValue();
+        String warehouse = (String) params.get("warehouse");
+        String operatorId   = (String) params.get("operatorId");
+        String operatorName = (String) params.get("operatorName");
+
+        com.fashion.supplychain.production.entity.ProductWarehousing w =
+            new com.fashion.supplychain.production.entity.ProductWarehousing();
+        w.setOrderId(orderId);
+        w.setWarehousingType("scan");
+        w.setWarehouse(warehouse);
+        w.setWarehousingQuantity(qty);
+        w.setCuttingBundleId(bundleId);
+        w.setQualityStatus("qualified");
+        w.setQualifiedQuantity(qty);
+        w.setReceiverId(operatorId);
+        w.setReceiverName(operatorName);
+        w.setCreateTime(java.time.LocalDateTime.now());
+        w.setUpdateTime(java.time.LocalDateTime.now());
+        w.setDeleteFlag(0);
+
+        boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
+        if (!ok) {
+            result.put("error", "超额入库审批通过但入库记录保存失败");
+            return result;
+        }
+        result.put("success", true);
+        result.put("message", "超额入库审批通过，已完成入库");
         return result;
     }
 

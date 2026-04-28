@@ -163,7 +163,13 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
   // ── 阶段二：待领取 → 领取操作 ───────────────────────────────────────
   if (status === 'PENDING') {
     options.push({ value: 'RECEIVE', label: '领取样板', icon: '' });
-    return options; // 待领取状态只展示领取
+    return options;
+  }
+
+  // ── 返修中 → 返修完成操作 ────────────────────────────────────────
+  if (status === 'REWORK') {
+    options.push({ value: 'COMPLETE', label: '返修完成', icon: '' });
+    return options;
   }
 
   // ── 阶段三：生产完成，等待入库 ─────────────────────────────────────

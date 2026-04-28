@@ -37,21 +37,19 @@ public class ProductWarehousingHelper {
 
     // ──────────── 常量 ────────────
 
-    static final String STATUS_QUALIFIED = "qualified";
-    static final String STATUS_UNQUALIFIED = "unqualified";
-    static final String STATUS_REPAIRED = "repaired";
-    /** 返修完成、待质检重检 */
-    static final String STATUS_REPAIRED_WAITING_QC = "repaired_waiting_qc";
-    static final String STATUS_COMPLETED = "completed";
+    public static final String STATUS_QUALIFIED = "qualified";
+    public static final String STATUS_UNQUALIFIED = "unqualified";
+    public static final String STATUS_REPAIRED = "repaired";
+    public static final String STATUS_REPAIRED_WAITING_QC = "repaired_waiting_qc";
+    public static final String STATUS_COMPLETED = "completed";
 
-    static final String SCAN_RESULT_SUCCESS = "success";
-    static final String SCAN_RESULT_FAILURE = "failure";
-    static final String SCAN_TYPE_QUALITY = "quality";
-    static final String SCAN_TYPE_WAREHOUSE = "warehouse";
-    static final String WAREHOUSING_TYPE_MANUAL = "manual";
-    static final String WAREHOUSING_TYPE_SCAN = "scan";
-    /** 返修完成申报（不计入库存，等待质检重检） */
-    static final String WAREHOUSING_TYPE_REPAIR_RETURN = "repair_return";
+    public static final String SCAN_RESULT_SUCCESS = "success";
+    public static final String SCAN_RESULT_FAILURE = "failure";
+    public static final String SCAN_TYPE_QUALITY = "quality";
+    public static final String SCAN_TYPE_WAREHOUSE = "warehouse";
+    public static final String WAREHOUSING_TYPE_MANUAL = "manual";
+    public static final String WAREHOUSING_TYPE_SCAN = "scan";
+    public static final String WAREHOUSING_TYPE_REPAIR_RETURN = "repair_return";
 
     static final Set<String> REPAIRED_STATUS_SET = new HashSet<>(Arrays.asList(
             "repaired", "返修完成", "已返修", "返修合格", "已修复"));
@@ -66,20 +64,17 @@ public class ProductWarehousingHelper {
     private ProductWarehousingMapper productWarehousingMapper;
 
     @Autowired
-    private ScanRecordMapper scanRecordMapper;
-
-    @Autowired
     private CuttingBundleService cuttingBundleService;
 
     @Autowired
     private ProductSkuService productSkuService;
 
     @Autowired
-    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+    private WarehousingScanRecordHelper scanRecordHelper;
 
     // ──────────── 工具方法 ────────────
 
-    String trimToNull(String value) {
+    public String trimToNull(String value) {
         if (value == null) {
             return null;
         }
@@ -100,7 +95,7 @@ public class ProductWarehousingHelper {
         return UNQUALIFIED_STATUS_SET.contains(s) || UNQUALIFIED_STATUS_SET.contains(status);
     }
 
-    String buildWarehousingNo(LocalDateTime now) {
+    public String buildWarehousingNo(LocalDateTime now) {
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
         return "WH" + ts + rand;
@@ -331,7 +326,7 @@ public class ProductWarehousingHelper {
         }
     }
 
-    int sumQualifiedByOrderId(String orderId) {
+    public int sumQualifiedByOrderId(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {
             return 0;
@@ -365,7 +360,7 @@ public class ProductWarehousingHelper {
         }
     }
 
-    String warehousingQuantityRuleViolationMessage(String orderId, Integer requestWarehousingQuantity,
+    public String warehousingQuantityRuleViolationMessage(String orderId, Integer requestWarehousingQuantity,
             String excludeWarehousingId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         int q = requestWarehousingQuantity == null ? 0 : requestWarehousingQuantity;
@@ -404,7 +399,7 @@ public class ProductWarehousingHelper {
 
     // ──────────── 验证逻辑 ────────────
 
-    void ensureBundleNotAlreadyQualifiedWarehoused(String orderId, String cuttingBundleId, String excludeId) {
+    public void ensureBundleNotAlreadyQualifiedWarehoused(String orderId, String cuttingBundleId, String excludeId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         String bid = StringUtils.hasText(cuttingBundleId) ? cuttingBundleId.trim() : null;
         if (!StringUtils.hasText(oid) || !StringUtils.hasText(bid)) {
@@ -458,7 +453,7 @@ public class ProductWarehousingHelper {
         }
     }
 
-    String findExistingWarehousingNoByOrderId(String orderId) {
+    public String findExistingWarehousingNoByOrderId(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {
             return null;
@@ -491,20 +486,13 @@ public class ProductWarehousingHelper {
             return;
         }
         try {
-            scanRecordMapper.update(null, new LambdaUpdateWrapper<ScanRecord>()
-                    .eq(ScanRecord::getCuttingBundleId, bid)
-                    .eq(ScanRecord::getScanType, "production")
-                    .eq(ScanRecord::getScanResult, SCAN_RESULT_SUCCESS)
-                    .in(ScanRecord::getProcessName, Arrays.asList("整烫", "二次工艺", "包装"))
-                    .set(ScanRecord::getScanResult, SCAN_RESULT_FAILURE)
-                    .set(ScanRecord::getRemark, "次品退回缝制，后续环节作废")
-                    .set(ScanRecord::getUpdateTime, now));
+            scanRecordHelper.invalidateBundleFlowAfterReturnToSewing(bid, now);
         } catch (Exception e) {
             log.warn("Failed to invalidate bundle flow after return to sewing: cuttingBundleId={}", bid, e);
         }
     }
 
-    void updateBundleStatusAfterWarehousing(CuttingBundle bundle, String computedQualityStatus,
+    public void updateBundleStatusAfterWarehousing(CuttingBundle bundle, String computedQualityStatus,
             String repairRemark, LocalDateTime now) {
         if (bundle == null || !StringUtils.hasText(bundle.getId()))
             return;
@@ -547,7 +535,7 @@ public class ProductWarehousingHelper {
      * @param cuttingBundleId     菲号ID
      * @param excludeWarehousingId 本次新建的入库记录ID（排除，避免影响刚插入的记录）
      */
-    void resolveDefectRecordsAfterReQc(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+    public void resolveDefectRecordsAfterReQc(String orderId, String cuttingBundleId, String excludeWarehousingId) {
         if (!StringUtils.hasText(orderId) || !StringUtils.hasText(cuttingBundleId)) return;
 
         LambdaUpdateWrapper<ProductWarehousing> wrapper = new LambdaUpdateWrapper<ProductWarehousing>()
@@ -597,177 +585,21 @@ public class ProductWarehousingHelper {
         }
     }
 
-    void upsertWarehousingStageScanRecord(ProductWarehousing warehousing, ProductionOrder order,
+    public void upsertWarehousingStageScanRecord(ProductWarehousing warehousing, ProductionOrder order,
             CuttingBundle bundle, LocalDateTime now) {
-        upsertScanRecord(warehousing, order, bundle, now, "WAREHOUSING:", "quality_warehousing",
-                "质检", "质检", SCAN_TYPE_QUALITY, "质检完成", "次品退回，质检记录作废");
+        scanRecordHelper.upsertWarehousingStageScanRecord(warehousing, order, bundle, now);
     }
 
-    void upsertWarehouseScanRecord(ProductWarehousing warehousing, ProductionOrder order,
+    public void upsertWarehouseScanRecord(ProductWarehousing warehousing, ProductionOrder order,
             CuttingBundle bundle, LocalDateTime now) {
-        String wt = warehousing.getWarehousingType() == null ? "" : warehousing.getWarehousingType().trim();
-        if (WAREHOUSING_TYPE_SCAN.equalsIgnoreCase(wt)) {
-            return;
-        }
-        String warehouse = trimToNull(warehousing.getWarehouse());
-        if (!StringUtils.hasText(warehouse)) {
-            return;
-        }
-        upsertScanRecord(warehousing, order, bundle, now, "WAREHOUSE:", "warehouse_manual",
-                "入库", "入库", SCAN_TYPE_WAREHOUSE, "入库完成", "次品退回，入库记录作废");
+        scanRecordHelper.upsertWarehouseScanRecord(warehousing, order, bundle, now);
     }
 
     void upsertScanRecord(ProductWarehousing warehousing, ProductionOrder order, CuttingBundle bundle,
             LocalDateTime now, String requestIdPrefix, String processCode, String progressStage,
             String processName, String scanType, String successRemark, String failureRemark) {
-
-        if (warehousing == null || order == null || !StringUtils.hasText(warehousing.getId())
-                || !StringUtils.hasText(order.getId())) {
-            return;
-        }
-
-        String qs = warehousing.getQualityStatus() == null ? "" : warehousing.getQualityStatus().trim();
-        boolean qualified = !StringUtils.hasText(qs) || STATUS_QUALIFIED.equalsIgnoreCase(qs);
-        String requestId = requestIdPrefix + warehousing.getId().trim();
-
-        ScanRecord existing = queryExistingScanRecord(requestId);
-        int qualifiedQty = warehousing.getQualifiedQuantity() == null ? 0 : warehousing.getQualifiedQuantity();
-        LocalDateTime t = now == null ? LocalDateTime.now() : now;
-
-        ScanRecordFieldBundle fields = resolveScanRecordFields(warehousing, order, bundle, t);
-
-        if (!qualified) {
-            markScanRecordAsFailure(existing, failureRemark, t);
-            return;
-        }
-
-        String scanRecordId;
-        if (existing == null) {
-            scanRecordId = insertNewScanRecord(fields, requestId, order, processCode, progressStage,
-                    processName, scanType, successRemark, qualifiedQty, t);
-        } else {
-            scanRecordId = existing.getId();
-            patchExistingScanRecord(existing, fields, order, processCode, progressStage,
-                    processName, scanType, successRemark, qualifiedQty, t);
-        }
-
-        syncProcessTrackingAfterWarehousing(fields.cuttingBundleId, progressStage, fields.operatorId, fields.operatorName, scanRecordId);
-    }
-
-    private ScanRecord queryExistingScanRecord(String requestId) {
-        try {
-            return scanRecordMapper.selectOne(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getRequestId, requestId)
-                    .last("limit 1"));
-        } catch (Exception e) {
-            log.warn("Failed to query existing scan record: requestId={}", requestId, e);
-            return null;
-        }
-    }
-
-    private record ScanRecordFieldBundle(String operatorId, String operatorName,
-            String cuttingBundleId, Integer cuttingBundleNo, String cuttingBundleQr,
-            String scanCode, String color, String size) {}
-
-    private ScanRecordFieldBundle resolveScanRecordFields(ProductWarehousing warehousing,
-            ProductionOrder order, CuttingBundle bundle, LocalDateTime now) {
-        UserContext ctx = UserContext.get();
-        String operatorId = ctx == null ? null : ctx.getUserId();
-        String operatorName = ctx == null ? null : ctx.getUsername();
-
-        String cuttingBundleId = trimToNull(warehousing.getCuttingBundleId());
-        Integer cuttingBundleNo = warehousing.getCuttingBundleNo();
-        String cuttingBundleQr = trimToNull(warehousing.getCuttingBundleQrCode());
-
-        String color = bundle == null ? null : trimToNull(bundle.getColor());
-        String size = bundle == null ? null : trimToNull(bundle.getSize());
-        if (color == null) color = trimToNull(order.getColor());
-        if (size == null) size = trimToNull(order.getSize());
-
-        return new ScanRecordFieldBundle(
-                trimToNull(operatorId), trimToNull(operatorName),
-                cuttingBundleId, cuttingBundleNo, cuttingBundleQr, cuttingBundleQr,
-                color, size);
-    }
-
-    private void markScanRecordAsFailure(ScanRecord existing, String failureRemark, LocalDateTime t) {
-        if (existing != null && StringUtils.hasText(existing.getId())) {
-            ScanRecord patch = new ScanRecord();
-            patch.setId(existing.getId());
-            patch.setScanResult(SCAN_RESULT_FAILURE);
-            patch.setRemark(failureRemark);
-            patch.setUpdateTime(t);
-            scanRecordMapper.updateById(patch);
-        }
-    }
-
-    private void populateScanRecordFields(ScanRecord sr, ProductionOrder order,
-            ScanRecordFieldBundle fields, String processCode, String progressStage,
-            String processName, String scanType, String remark, int qualifiedQty) {
-        sr.setOrderId(order.getId());
-        sr.setOrderNo(order.getOrderNo());
-        sr.setStyleId(order.getStyleId());
-        sr.setStyleNo(order.getStyleNo());
-        sr.setColor(fields.color);
-        sr.setSize(fields.size);
-        sr.setQuantity(Math.max(0, qualifiedQty));
-        sr.setProcessCode(processCode);
-        sr.setProgressStage(progressStage);
-        sr.setProcessName(processName);
-        sr.setOperatorId(fields.operatorId);
-        sr.setOperatorName(fields.operatorName);
-        sr.setScanType(scanType);
-        sr.setScanResult(SCAN_RESULT_SUCCESS);
-        sr.setRemark(remark);
-        sr.setCuttingBundleId(fields.cuttingBundleId);
-        sr.setCuttingBundleNo(fields.cuttingBundleNo);
-        sr.setCuttingBundleQrCode(fields.cuttingBundleQr);
-    }
-
-    private String insertNewScanRecord(ScanRecordFieldBundle fields, String requestId,
-            ProductionOrder order, String processCode, String progressStage, String processName, String scanType,
-            String successRemark, int qualifiedQty, LocalDateTime t) {
-        ScanRecord sr = new ScanRecord();
-        String scanRecordId = UUID.randomUUID().toString();
-        sr.setId(scanRecordId);
-        sr.setScanCode(fields.scanCode);
-        sr.setRequestId(requestId);
-        sr.setTenantId(order.getTenantId());
-        populateScanRecordFields(sr, order, fields, processCode, progressStage,
-                processName, scanType, successRemark, qualifiedQty);
-        sr.setCreateTime(t);
-        sr.setUpdateTime(t);
-        scanRecordMapper.insert(sr);
-        return scanRecordId;
-    }
-
-    private void patchExistingScanRecord(ScanRecord existing, ScanRecordFieldBundle fields,
-            ProductionOrder order, String processCode, String progressStage, String processName, String scanType,
-            String successRemark, int qualifiedQty, LocalDateTime t) {
-        ScanRecord patch = new ScanRecord();
-        patch.setId(existing.getId());
-        patch.setScanCode(fields.scanCode);
-        populateScanRecordFields(patch, order, fields, processCode, progressStage,
-                processName, scanType, successRemark, qualifiedQty);
-        patch.setUpdateTime(t);
-        scanRecordMapper.updateById(patch);
-    }
-
-    private void syncProcessTrackingAfterWarehousing(String cuttingBundleId, String progressStage,
-            String operatorId, String operatorName, String scanRecordId) {
-        if (!StringUtils.hasText(cuttingBundleId)) return;
-        try {
-            boolean updated = processTrackingOrchestrator.updateScanRecord(
-                    cuttingBundleId, progressStage, operatorId, operatorName, scanRecordId);
-            if (updated) {
-                log.info("PC入库工序跟踪更新成功: bundleId={}, stage={}", cuttingBundleId, progressStage);
-            } else {
-                log.warn("PC入库工序跟踪未找到记录（不阻断入库）: bundleId={}, stage={}", cuttingBundleId, progressStage);
-            }
-        } catch (Exception e) {
-            log.warn("PC入库工序跟踪更新失败（不阻断入库）: bundleId={}, stage={}, msg={}",
-                    cuttingBundleId, progressStage, e.getMessage());
-        }
+        scanRecordHelper.upsertScanRecord(warehousing, order, bundle, now, requestIdPrefix, processCode,
+                progressStage, processName, scanType, successRemark, failureRemark);
     }
 
     private static String escapeHtml(String s) {

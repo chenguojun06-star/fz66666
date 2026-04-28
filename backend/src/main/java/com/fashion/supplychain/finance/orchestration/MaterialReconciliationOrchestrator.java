@@ -79,7 +79,6 @@ public class MaterialReconciliationOrchestrator {
             return;
         }
 
-        // 获取所有采购单ID
         List<String> purchaseIds = records.stream()
                 .map(MaterialReconciliation::getPurchaseId)
                 .filter(StringUtils::hasText)
@@ -91,42 +90,44 @@ public class MaterialReconciliationOrchestrator {
             return;
         }
 
-        // 批量查询采购单
+        PurchaseFillData fillData = loadPurchaseFillData(purchaseIds);
+        applyPurchaseFillData(records, fillData);
+    }
+
+    private static class PurchaseFillData {
         Map<String, String> coverByPurchaseId = new HashMap<>();
         Map<String, String> purchaserByPurchaseId = new HashMap<>();
         Map<String, String> unitByPurchaseId = new HashMap<>();
         Map<String, BigDecimal> unitPriceByPurchaseId = new HashMap<>();
         Map<String, Integer> arrivedQuantityByPurchaseId = new HashMap<>();
         Map<String, String> sourceTypeByPurchaseId = new HashMap<>();
+    }
+
+    private PurchaseFillData loadPurchaseFillData(List<String> purchaseIds) {
+        PurchaseFillData data = new PurchaseFillData();
         try {
             List<MaterialPurchase> purchases = materialPurchaseService.listByIds(purchaseIds);
             if (purchases != null) {
                 for (MaterialPurchase p : purchases) {
                     if (p != null && StringUtils.hasText(p.getId())) {
                         String pid = p.getId().trim();
-                        // 填充款式封面
                         if (StringUtils.hasText(p.getStyleCover())) {
-                            coverByPurchaseId.put(pid, p.getStyleCover().trim());
+                            data.coverByPurchaseId.put(pid, p.getStyleCover().trim());
                         }
-                        // 填充采购员姓名（从领取人获取）
                         if (StringUtils.hasText(p.getReceiverName())) {
-                            purchaserByPurchaseId.put(pid, p.getReceiverName().trim());
+                            data.purchaserByPurchaseId.put(pid, p.getReceiverName().trim());
                         }
-                        // 填充单位
                         if (StringUtils.hasText(p.getUnit())) {
-                            unitByPurchaseId.put(pid, p.getUnit().trim());
+                            data.unitByPurchaseId.put(pid, p.getUnit().trim());
                         }
-                        // 填充单价
                         if (p.getUnitPrice() != null) {
-                            unitPriceByPurchaseId.put(pid, p.getUnitPrice());
+                            data.unitPriceByPurchaseId.put(pid, p.getUnitPrice());
                         }
-                        // 填充到货数量
                         if (p.getArrivedQuantity() != null) {
-                            arrivedQuantityByPurchaseId.put(pid, p.getArrivedQuantity());
+                            data.arrivedQuantityByPurchaseId.put(pid, p.getArrivedQuantity());
                         }
-                        // 填充采购类型
                         if (StringUtils.hasText(p.getSourceType())) {
-                            sourceTypeByPurchaseId.put(pid, p.getSourceType().trim());
+                            data.sourceTypeByPurchaseId.put(pid, p.getSourceType().trim());
                         }
                     }
                 }
@@ -134,26 +135,25 @@ public class MaterialReconciliationOrchestrator {
         } catch (Exception e) {
             log.warn("面料对账采购信息填充失败（单价/数量可能缺失）", e);
         }
+        return data;
+    }
 
-        // 填充图片URL、采购员姓名、单位、单价、到货数量、采购类型
+    private void applyPurchaseFillData(List<MaterialReconciliation> records, PurchaseFillData data) {
         for (MaterialReconciliation r : records) {
             if (r != null && StringUtils.hasText(r.getPurchaseId())) {
                 String pid = r.getPurchaseId().trim();
-                r.setMaterialImageUrl(coverByPurchaseId.get(pid));
-                r.setPurchaserName(purchaserByPurchaseId.get(pid));
-                r.setUnit(unitByPurchaseId.get(pid));
-                // 用采购单的到货数量覆盖quantity字段
-                Integer arrivedQty = arrivedQuantityByPurchaseId.get(pid);
+                r.setMaterialImageUrl(data.coverByPurchaseId.get(pid));
+                r.setPurchaserName(data.purchaserByPurchaseId.get(pid));
+                r.setUnit(data.unitByPurchaseId.get(pid));
+                Integer arrivedQty = data.arrivedQuantityByPurchaseId.get(pid);
                 if (arrivedQty != null) {
                     r.setQuantity(arrivedQty);
                 }
-                // 用采购单的采购类型覆盖sourceType字段
-                String sourceType = sourceTypeByPurchaseId.get(pid);
+                String sourceType = data.sourceTypeByPurchaseId.get(pid);
                 if (StringUtils.hasText(sourceType)) {
                     r.setSourceType(sourceType);
                 }
-                // 强制用采购单的单价覆盖（物料对账的单价必须来自采购单，不能使用款式报价）
-                BigDecimal purchaseUnitPrice = unitPriceByPurchaseId.get(pid);
+                BigDecimal purchaseUnitPrice = data.unitPriceByPurchaseId.get(pid);
                 if (purchaseUnitPrice != null) {
                     r.setUnitPrice(purchaseUnitPrice);
                 }

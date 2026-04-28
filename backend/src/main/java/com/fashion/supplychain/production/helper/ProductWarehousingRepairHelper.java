@@ -56,17 +56,7 @@ public class ProductWarehousingRepairHelper {
         if (bundle == null || !StringUtils.hasText(bundle.getId())) {
             throw new NoSuchElementException("未找到对应的裁剪扎号");
         }
-        if (!StringUtils.hasText(oid)) {
-            oid = StringUtils.hasText(bundle.getProductionOrderId()) ? bundle.getProductionOrderId().trim() : null;
-        }
-        if (!StringUtils.hasText(oid)) {
-            throw new IllegalArgumentException("未匹配到订单");
-        }
-        String bundleOid = StringUtils.hasText(bundle.getProductionOrderId()) ? bundle.getProductionOrderId().trim()
-                : null;
-        if (bundleOid != null && !bundleOid.isEmpty() && !bundleOid.equals(oid)) {
-            throw new IllegalArgumentException("扎号与订单不匹配");
-        }
+        oid = resolveOrderId(oid, bundle);
 
         List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
                 .select(ProductWarehousing::getId, ProductWarehousing::getUnqualifiedQuantity,
@@ -78,18 +68,33 @@ public class ProductWarehousingRepairHelper {
                 .ne(StringUtils.hasText(exId), ProductWarehousing::getId, exId)
                 .orderByDesc(ProductWarehousing::getCreateTime));
 
+        long[] stats = calculateRepairStats(list);
+        return buildRepairStatsResult(oid, bundle.getId(), qr, stats);
+    }
+
+    private String resolveOrderId(String oid, CuttingBundle bundle) {
+        if (!StringUtils.hasText(oid)) {
+            oid = StringUtils.hasText(bundle.getProductionOrderId()) ? bundle.getProductionOrderId().trim() : null;
+        }
+        if (!StringUtils.hasText(oid)) {
+            throw new IllegalArgumentException("未匹配到订单");
+        }
+        String bundleOid = StringUtils.hasText(bundle.getProductionOrderId()) ? bundle.getProductionOrderId().trim() : null;
+        if (bundleOid != null && !bundleOid.isEmpty() && !bundleOid.equals(oid)) {
+            throw new IllegalArgumentException("扎号与订单不匹配");
+        }
+        return oid;
+    }
+
+    private long[] calculateRepairStats(List<ProductWarehousing> list) {
         long repairPool = 0;
-        long repairReturnQty = 0;  // 已申报返修完成、等待质检重检的件数
-        long reQcDoneQty = 0;       // 已质检重检并入库的件数
+        long repairReturnQty = 0;
+        long reQcDoneQty = 0;
         if (list != null) {
             for (ProductWarehousing w : list) {
-                if (w == null) {
-                    continue;
-                }
+                if (w == null) continue;
                 int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
-                if (uq > 0) {
-                    repairPool += uq;
-                }
+                if (uq > 0) repairPool += uq;
 
                 boolean isRepairReturn = "repair_return".equalsIgnoreCase(
                         w.getWarehousingType() == null ? "" : w.getWarehousingType().trim());
@@ -97,28 +102,34 @@ public class ProductWarehousingRepairHelper {
                 int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
                 if (q > 0) {
                     if (isRepairReturn) {
-                        repairReturnQty += q;   // 申报返修完成，等待质检
+                        repairReturnQty += q;
                     } else if (rr != null) {
-                        reQcDoneQty += q;       // 质检重检通过，实际入库
+                        reQcDoneQty += q;
                     }
                 }
             }
         }
+        return new long[]{repairPool, repairReturnQty, reQcDoneQty};
+    }
+
+    private Map<String, Object> buildRepairStatsResult(String oid, String bundleId, String qr, long[] stats) {
+        long repairPool = stats[0];
+        long repairReturnQty = stats[1];
+        long reQcDoneQty = stats[2];
         long awaitingReQc = Math.max(0, repairReturnQty - reQcDoneQty);
         long awaitingRepair = Math.max(0, repairPool - repairReturnQty - reQcDoneQty);
-        long remaining = awaitingReQc;  // 前端 remaining = 可质检重检件数
 
         Map<String, Object> data = new HashMap<>();
         data.put("orderId", oid);
-        data.put("cuttingBundleId", bundle.getId());
+        data.put("cuttingBundleId", bundleId);
         data.put("cuttingBundleQrCode", qr);
         data.put("repairPool", Math.max(0, repairPool));
-        data.put("repairReturnQty", repairReturnQty);   // 新增：已申报返修完成件数
-        data.put("reQcDoneQty", reQcDoneQty);           // 新增：已质检重检件数
-        data.put("awaitingReQc", awaitingReQc);         // 新增：待质检重检件数
-        data.put("awaitingRepair", awaitingRepair);     // 新增：仍在工厂返修件数
-        data.put("repairedOut", reQcDoneQty);           // 兼容旧字段：已完成全流程件数
-        data.put("remaining", remaining);               // 可质检重检件数
+        data.put("repairReturnQty", repairReturnQty);
+        data.put("reQcDoneQty", reQcDoneQty);
+        data.put("awaitingReQc", awaitingReQc);
+        data.put("awaitingRepair", awaitingRepair);
+        data.put("repairedOut", reQcDoneQty);
+        data.put("remaining", awaitingReQc);
         return data;
     }
 
@@ -130,15 +141,7 @@ public class ProductWarehousingRepairHelper {
             throw new IllegalArgumentException("订单ID不能为空");
         }
 
-        Object qrsRaw = body == null ? null : body.get("qrs");
-        List<?> qrsList = qrsRaw instanceof List<?> l ? l : Collections.emptyList();
-        List<String> qrs = new ArrayList<>();
-        for (Object v : qrsList) {
-            String s = v == null ? null : String.valueOf(v).trim();
-            if (StringUtils.hasText(s)) {
-                qrs.add(s);
-            }
-        }
+        List<String> qrs = parseQrCodes(body);
         if (qrs.isEmpty()) {
             Map<String, Object> resp = new HashMap<>();
             resp.put("items", new ArrayList<>());
@@ -149,67 +152,84 @@ public class ProductWarehousingRepairHelper {
         String excludeWarehousingId = excludeWarehousingIdRaw == null ? null : String.valueOf(excludeWarehousingIdRaw);
         String exId = TextUtils.safeText(excludeWarehousingId);
 
+        Map<String, CuttingBundle> bundleByQr = loadBundlesByQrs(qrs);
+        Map<String, long[]> statsByBundleId = aggregateStatsByBundle(oid, bundleByQr, exId);
+        List<Map<String, Object>> items = buildBatchRepairItems(qrs, bundleByQr, statsByBundleId, oid);
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("orderId", oid);
+        resp.put("items", items);
+        return resp;
+    }
+
+    private List<String> parseQrCodes(Map<String, Object> body) {
+        Object qrsRaw = body == null ? null : body.get("qrs");
+        List<?> qrsList = qrsRaw instanceof List<?> l ? l : Collections.emptyList();
+        List<String> qrs = new ArrayList<>();
+        for (Object v : qrsList) {
+            String s = v == null ? null : String.valueOf(v).trim();
+            if (StringUtils.hasText(s)) qrs.add(s);
+        }
+        return qrs;
+    }
+
+    private Map<String, CuttingBundle> loadBundlesByQrs(List<String> qrs) {
         List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
                 .select(CuttingBundle::getId, CuttingBundle::getQrCode, CuttingBundle::getProductionOrderId)
                 .in(CuttingBundle::getQrCode, qrs)
                 .list();
         Map<String, CuttingBundle> bundleByQr = new HashMap<>();
-        List<String> bundleIds = new ArrayList<>();
         if (bundles != null) {
             for (CuttingBundle b : bundles) {
-                if (b == null) {
-                    continue;
-                }
+                if (b == null) continue;
                 String qr = StringUtils.hasText(b.getQrCode()) ? b.getQrCode().trim() : null;
                 String bid = StringUtils.hasText(b.getId()) ? b.getId().trim() : null;
-                if (!StringUtils.hasText(qr) || !StringUtils.hasText(bid)) {
-                    continue;
-                }
+                if (!StringUtils.hasText(qr) || !StringUtils.hasText(bid)) continue;
                 bundleByQr.put(qr, b);
-                bundleIds.add(bid);
             }
         }
+        return bundleByQr;
+    }
 
+    private Map<String, long[]> aggregateStatsByBundle(String oid, Map<String, CuttingBundle> bundleByQr, String exId) {
+        List<String> bundleIds = new ArrayList<>(bundleByQr.values().stream()
+                .map(b -> b.getId() == null ? null : b.getId().trim())
+                .filter(StringUtils::hasText)
+                .distinct().toList());
         Map<String, long[]> statsByBundleId = new HashMap<>();
-        if (!bundleIds.isEmpty()) {
-            List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
-                    .select(ProductWarehousing::getId, ProductWarehousing::getCuttingBundleId,
-                            ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getQualifiedQuantity,
-                            ProductWarehousing::getRepairRemark, ProductWarehousing::getWarehousingType)
-                    .eq(ProductWarehousing::getDeleteFlag, 0)
-                    .eq(ProductWarehousing::getOrderId, oid)
-                    .in(ProductWarehousing::getCuttingBundleId, bundleIds)
-                    .ne(StringUtils.hasText(exId), ProductWarehousing::getId, exId));
-            if (list != null) {
-                for (ProductWarehousing w : list) {
-                    if (w == null) {
-                        continue;
-                    }
-                    String bid = StringUtils.hasText(w.getCuttingBundleId()) ? w.getCuttingBundleId().trim() : null;
-                    if (!StringUtils.hasText(bid)) {
-                        continue;
-                    }
-                    // agg[0]=repairPool, agg[1]=repairReturnQty, agg[2]=reQcDoneQty
-                    long[] agg = statsByBundleId.computeIfAbsent(bid, k -> new long[] { 0, 0, 0 });
-                    int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
-                    if (uq > 0) {
-                        agg[0] += uq;
-                    }
-                    boolean isRepairReturn = "repair_return".equalsIgnoreCase(
-                            w.getWarehousingType() == null ? "" : w.getWarehousingType().trim());
-                    String rr = TextUtils.safeText(w.getRepairRemark());
-                    int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
-                    if (q > 0) {
-                        if (isRepairReturn) {
-                            agg[1] += q;   // repairReturnQty
-                        } else if (rr != null) {
-                            agg[2] += q;   // reQcDoneQty
-                        }
-                    }
+        if (bundleIds.isEmpty()) return statsByBundleId;
+
+        List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
+                .select(ProductWarehousing::getId, ProductWarehousing::getCuttingBundleId,
+                        ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getQualifiedQuantity,
+                        ProductWarehousing::getRepairRemark, ProductWarehousing::getWarehousingType)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getOrderId, oid)
+                .in(ProductWarehousing::getCuttingBundleId, bundleIds)
+                .ne(StringUtils.hasText(exId), ProductWarehousing::getId, exId));
+        if (list != null) {
+            for (ProductWarehousing w : list) {
+                if (w == null) continue;
+                String bid = StringUtils.hasText(w.getCuttingBundleId()) ? w.getCuttingBundleId().trim() : null;
+                if (!StringUtils.hasText(bid)) continue;
+                long[] agg = statsByBundleId.computeIfAbsent(bid, k -> new long[]{0, 0, 0});
+                int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
+                if (uq > 0) agg[0] += uq;
+                boolean isRepairReturn = "repair_return".equalsIgnoreCase(
+                        w.getWarehousingType() == null ? "" : w.getWarehousingType().trim());
+                String rr = TextUtils.safeText(w.getRepairRemark());
+                int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                if (q > 0) {
+                    if (isRepairReturn) agg[1] += q;
+                    else if (rr != null) agg[2] += q;
                 }
             }
         }
+        return statsByBundleId;
+    }
 
+    private List<Map<String, Object>> buildBatchRepairItems(List<String> qrs,
+            Map<String, CuttingBundle> bundleByQr, Map<String, long[]> statsByBundleId, String oid) {
         List<Map<String, Object>> items = new ArrayList<>();
         for (String qr : qrs) {
             CuttingBundle b = bundleByQr.get(qr);
@@ -221,9 +241,7 @@ public class ProductWarehousingRepairHelper {
             long pool = 0;
             long repairReturnQty = 0;
             long reQcDoneQty = 0;
-            if (mismatch || bid == null) {
-                pool = 0;
-            } else {
+            if (!mismatch && bid != null) {
                 long[] agg = statsByBundleId.get(bid);
                 pool = agg == null ? 0 : Math.max(0, agg[0]);
                 repairReturnQty = agg == null ? 0 : Math.max(0, agg[1]);
@@ -238,15 +256,11 @@ public class ProductWarehousingRepairHelper {
             m.put("repairReturnQty", repairReturnQty);
             m.put("reQcDoneQty", reQcDoneQty);
             m.put("awaitingReQc", awaitingReQc);
-            m.put("repairedOut", reQcDoneQty);  // 兼容旧字段
-            m.put("remaining", awaitingReQc);   // 可质检重检件数
+            m.put("repairedOut", reQcDoneQty);
+            m.put("remaining", awaitingReQc);
             items.add(m);
         }
-
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("orderId", oid);
-        resp.put("items", items);
-        return resp;
+        return items;
     }
 
     /**

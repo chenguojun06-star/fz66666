@@ -2,56 +2,32 @@ package com.fashion.supplychain.style.orchestration;
 
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.production.entity.MaterialDatabase;
-import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
-import com.fashion.supplychain.production.orchestration.MaterialDatabaseOrchestrator;
-import com.fashion.supplychain.production.service.MaterialDatabaseService;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
-import com.fashion.supplychain.production.service.MaterialStockService;
-import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.RoundingMode;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
+import com.fashion.supplychain.style.helper.StyleBomMaterialSyncHelper;
+import com.fashion.supplychain.style.helper.StyleBomPurchaseHelper;
+import java.math.RoundingMode;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.service.MaterialStockService;
 
 @Service
 @Slf4j
 public class StyleBomOrchestrator {
-
-    private static final ExecutorService MATERIAL_SYNC_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r);
-        t.setName("material-sync-worker");
-        t.setDaemon(true);
-        return t;
-    });
-
-    private static final ConcurrentHashMap<String, Map<String, Object>> SYNC_JOBS = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, String> RUNNING_JOB_BY_STYLE_ID = new ConcurrentHashMap<>();
 
     @Autowired
     private StyleBomService styleBomService;
@@ -60,16 +36,10 @@ public class StyleBomOrchestrator {
     private StyleInfoService styleInfoService;
 
     @Autowired
-    private TemplateLibraryOrchestrator templateLibraryOrchestrator;
+    private StyleBomMaterialSyncHelper materialSyncHelper;
 
     @Autowired
-    private MaterialDatabaseService materialDatabaseService;
-
-    @Autowired
-    private MaterialDatabaseOrchestrator materialDatabaseOrchestrator;
-
-    @Autowired
-    private MaterialPurchaseService materialPurchaseService;
+    private StyleBomPurchaseHelper purchaseHelper;
 
     @Autowired
     private MaterialStockService materialStockService;
@@ -99,14 +69,12 @@ public class StyleBomOrchestrator {
             throw new IllegalStateException("保存失败");
         }
 
-        // BOM变更后自动重算报价单
         try {
             styleQuotationOrchestrator.recalculateFromLiveData(styleBom.getStyleId());
         } catch (Exception e) {
             log.warn("Auto-sync quotation failed after BOM save: styleId={}, error={}", styleBom.getStyleId(), e.getMessage());
         }
 
-        // 跟单员 = 填写BOM信息的人（自动填充到款式基础信息）
         try {
             String currentUser = UserContext.username();
             if (StringUtils.hasText(currentUser)) {
@@ -144,7 +112,6 @@ public class StyleBomOrchestrator {
         styleBom.setUpdateTime(LocalDateTime.now());
         boolean ok = styleBomService.updateById(styleBom);
 
-        // BOM变更后自动重算报价单
         if (ok) {
             Long sid = styleBom.getStyleId() != null ? styleBom.getStyleId() : current.getStyleId();
             try {
@@ -162,7 +129,6 @@ public class StyleBomOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
-        // 先获取 styleId 再删除，以便清缓存 + 重算报价
         StyleBom current = styleBomService.getById(id);
         if (current != null) {
             com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "BOM记录");
@@ -172,19 +138,16 @@ public class StyleBomOrchestrator {
         boolean ok = styleBomService.removeById(id);
         if (!ok) {
             if (current == null) {
-                // DB 中行已不存在（可能是 Redis 缓存中的幽灵行）→ 幂等成功
                 log.warn("[BOM-DELETE] id={} not found in DB, idempotent success (stale Redis cache?)", id);
                 return true;
             }
             throw new IllegalStateException("删除失败");
         }
 
-        // ✅ 删除成功后立即清除 Redis BOM 缓存，防止 listByStyleId 在 30min 内仍返回已删除行
         if (styleId != null) {
             styleBomService.clearBomCache(styleId);
         }
 
-        // BOM删除后自动重算报价单
         if (styleId != null) {
             try {
                 styleQuotationOrchestrator.recalculateFromLiveData(styleId);
@@ -196,343 +159,17 @@ public class StyleBomOrchestrator {
     }
 
     public Map<String, Object> syncToMaterialDatabase(Long styleId, boolean forceUpdateCompleted) {
-        if (styleId == null) {
-            throw new IllegalArgumentException("styleId不能为空");
-        }
-
-        StyleInfo style = styleInfoService.getById(styleId);
-        if (style == null) {
-            throw new NoSuchElementException("款号不存在");
-        }
-        TenantAssert.assertBelongsToCurrentTenant(style.getTenantId(), "款式");
-        String styleNo = StringUtils.hasText(style.getStyleNo()) ? style.getStyleNo().trim() : null;
-
-        List<StyleBom> bomRows = styleBomService.listByStyleId(styleId);
-        int totalBomRows = bomRows == null ? 0 : bomRows.size();
-
-        Map<String, MaterialDatabase> existingByCode = loadExistingMaterialByCode(bomRows);
-
-        SyncStats stats = new SyncStats(0, 0, 0, 0, 0);
-        List<Map<String, Object>> details = new ArrayList<>();
-
-        if (bomRows != null) {
-            for (StyleBom b : bomRows) {
-                if (b == null) continue;
-                syncSingleBomRow(b, existingByCode, styleNo, forceUpdateCompleted, stats, details);
-            }
-        }
-
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("styleId", styleId);
-        out.put("styleNo", styleNo == null ? "" : styleNo);
-        out.put("totalBomRows", totalBomRows);
-        out.put("created", stats.created);
-        out.put("updated", stats.updated);
-        out.put("skippedInvalid", stats.skippedInvalid);
-        out.put("skippedCompleted", stats.skippedCompleted);
-        out.put("failed", stats.failed);
-        out.put("details", details);
-        return out;
-    }
-
-    private Map<String, MaterialDatabase> loadExistingMaterialByCode(List<StyleBom> bomRows) {
-        Set<String> codes = new HashSet<>();
-        if (bomRows != null) {
-            for (StyleBom b : bomRows) {
-                if (b == null) continue;
-                String code = StringUtils.hasText(b.getMaterialCode()) ? b.getMaterialCode().trim() : null;
-                if (StringUtils.hasText(code)) codes.add(code);
-            }
-        }
-
-        Map<String, MaterialDatabase> existingByCode = new HashMap<>();
-        if (!codes.isEmpty()) {
-            List<MaterialDatabase> existed = materialDatabaseService.lambdaQuery()
-                    .in(MaterialDatabase::getMaterialCode, codes)
-                    .and(w -> w.isNull(MaterialDatabase::getDeleteFlag).or().eq(MaterialDatabase::getDeleteFlag, 0))
-                    .orderByDesc(MaterialDatabase::getUpdateTime)
-                    .list();
-            for (MaterialDatabase m : existed) {
-                if (m == null) continue;
-                String code = StringUtils.hasText(m.getMaterialCode()) ? m.getMaterialCode().trim() : null;
-                if (StringUtils.hasText(code)) existingByCode.putIfAbsent(code, m);
-            }
-        }
-        return existingByCode;
-    }
-
-    private static class SyncStats {
-        int created, updated, skippedInvalid, skippedCompleted, failed;
-        SyncStats(int c, int u, int si, int sc, int f) {
-            created = c; updated = u; skippedInvalid = si; skippedCompleted = sc; failed = f;
-        }
-    }
-
-    private void syncSingleBomRow(StyleBom b, Map<String, MaterialDatabase> existingByCode,
-            String styleNo, boolean forceUpdateCompleted, SyncStats stats, List<Map<String, Object>> details) {
-        String code = StringUtils.hasText(b.getMaterialCode()) ? b.getMaterialCode().trim() : null;
-        String name = StringUtils.hasText(b.getMaterialName()) ? b.getMaterialName().trim() : null;
-        String unit = StringUtils.hasText(b.getUnit()) ? b.getUnit().trim() : null;
-        String supplierName = StringUtils.hasText(b.getSupplier()) ? b.getSupplier().trim() : null;
-
-        String invalidReason = validateBomRequiredFields(code, name, unit, supplierName);
-        if (invalidReason != null) {
-            stats.skippedInvalid += 1;
-            if (details.size() < 100) {
-                details.add(new LinkedHashMap<>(Map.of("materialCode", code == null ? "" : code,
-                        "status", "skipped", "reason", invalidReason)));
-            }
-            return;
-        }
-
-        String normalizedType = normalizeMaterialType(b.getMaterialType());
-        String specifications = StringUtils.hasText(b.getSpecification()) ? b.getSpecification().trim() : null;
-        String remark = StringUtils.hasText(b.getRemark()) ? b.getRemark().trim() : null;
-
-        MaterialDatabase current = existingByCode.get(code);
-        if (current != null) {
-            String st = StringUtils.hasText(current.getStatus()) ? current.getStatus().trim().toLowerCase() : "";
-            if ("completed".equals(st) && !forceUpdateCompleted) {
-                stats.skippedCompleted += 1;
-                if (details.size() < 100) {
-                    details.add(new LinkedHashMap<>(Map.of("materialCode", code,
-                            "status", "skipped", "reason", "已完成，未覆盖")));
-                }
-                return;
-            }
-        }
-
-        try {
-            if (current == null) {
-                MaterialDatabase toCreate = new MaterialDatabase();
-                toCreate.setMaterialCode(code);
-                toCreate.setMaterialName(name);
-                toCreate.setStyleNo(styleNo);
-                toCreate.setMaterialType(normalizedType);
-                toCreate.setSpecifications(specifications);
-                toCreate.setUnit(unit);
-                toCreate.setSupplierName(supplierName);
-                toCreate.setUnitPrice(b.getUnitPrice());
-                toCreate.setRemark(remark);
-                materialDatabaseOrchestrator.save(toCreate);
-                stats.created += 1;
-            } else {
-                MaterialDatabase patch = new MaterialDatabase();
-                patch.setId(current.getId());
-                patch.setMaterialCode(code);
-                patch.setMaterialName(name);
-                patch.setStyleNo(styleNo);
-                patch.setMaterialType(normalizedType);
-                patch.setSpecifications(specifications);
-                patch.setUnit(unit);
-                patch.setSupplierName(supplierName);
-                patch.setUnitPrice(b.getUnitPrice());
-                patch.setRemark(remark);
-                materialDatabaseOrchestrator.update(patch);
-                stats.updated += 1;
-            }
-        } catch (Exception e) {
-            stats.failed += 1;
-            if (details.size() < 100) {
-                String msg = e.getMessage() == null ? "同步失败" : e.getMessage();
-                details.add(new LinkedHashMap<>(Map.of("materialCode", code, "status", "failed", "reason", msg)));
-            }
-        }
-    }
-
-    private String validateBomRequiredFields(String code, String name, String unit, String supplierName) {
-        if (!StringUtils.hasText(code)) return "物料编码为空";
-        if (!StringUtils.hasText(name)) return "物料名称为空";
-        if (!StringUtils.hasText(unit)) return "单位为空";
-        if (!StringUtils.hasText(supplierName)) return "供应商为空";
-        return null;
-    }
-
-    private String normalizeMaterialType(String materialType) {
-        String mt = StringUtils.hasText(materialType) ? materialType.trim().toLowerCase() : null;
-        if (mt == null) return "accessory";
-        if (mt.startsWith("fabric")) return "fabric";
-        if (mt.startsWith("lining")) return "lining";
-        if (mt.startsWith("accessory")) return "accessory";
-        return mt;
+        return materialSyncHelper.syncToMaterialDatabase(styleId, forceUpdateCompleted);
     }
 
     public Map<String, Object> startSyncToMaterialDatabaseJob(Long styleId, boolean forceUpdateCompleted) {
-        if (styleId == null) {
-            throw new IllegalArgumentException("styleId不能为空");
-        }
-
-        // 清理已完成/失败 10 分钟以上的旧任务，防止 SYNC_JOBS 无限增长（内存泄漏）
-        LocalDateTime pruneThreshold = LocalDateTime.now().minusMinutes(10);
-        SYNC_JOBS.entrySet().removeIf(e -> {
-            Object st = e.getValue().get("status");
-            Object ut = e.getValue().get("updateTime");
-            if (!"done".equals(st) && !"failed".equals(st)) return false;
-            try { return ut == null || LocalDateTime.parse((String) ut).isBefore(pruneThreshold); }
-            catch (Exception ex) { log.debug("[StyleBom] isJobPrunable时间解析失败"); return false; }
-        });
-        // 租户隔离：同一款式在不同租户下拥有独立的任务状态
-        String tenantKey = UserContext.tenantId() + ":" + styleId;
-        String existed = RUNNING_JOB_BY_STYLE_ID.get(tenantKey);
-        if (StringUtils.hasText(existed)) {
-            Map<String, Object> job = SYNC_JOBS.get(existed);
-            if (job != null) {
-                return new LinkedHashMap<>(Map.of("jobId", existed, "status", job.getOrDefault("status", "running")));
-            }
-        }
-
-        String jobId = UUID.randomUUID().toString();
-        Map<String, Object> job = new LinkedHashMap<>();
-        job.put("jobId", jobId);
-        job.put("styleId", styleId);
-        job.put("status", "queued");
-        job.put("forceUpdateCompleted", forceUpdateCompleted);
-        job.put("createTime", LocalDateTime.now().toString());
-        job.put("updateTime", LocalDateTime.now().toString());
-        job.put("result", null);
-        job.put("error", null);
-        SYNC_JOBS.put(jobId, job);
-        RUNNING_JOB_BY_STYLE_ID.put(tenantKey, jobId);
-
-        MATERIAL_SYNC_EXECUTOR.submit(() -> {
-            try {
-                job.put("status", "running");
-                job.put("updateTime", LocalDateTime.now().toString());
-                Map<String, Object> result = syncToMaterialDatabase(styleId, forceUpdateCompleted);
-                job.put("result", result);
-                job.put("status", "done");
-                job.put("updateTime", LocalDateTime.now().toString());
-            } catch (Exception e) {
-                job.put("status", "failed");
-                job.put("error", e.getMessage() == null ? "同步失败" : e.getMessage());
-                job.put("updateTime", LocalDateTime.now().toString());
-                log.warn("Material database sync job failed: jobId={}, styleId={}", jobId, styleId, e);
-            } finally {
-                // tenantKey 为 lambda 捕获的本地变量，后台线程无需 UserContext
-                RUNNING_JOB_BY_STYLE_ID.remove(tenantKey, jobId);
-            }
-        });
-
-        return new LinkedHashMap<>(Map.of("jobId", jobId, "status", "queued"));
+        return materialSyncHelper.startSyncToMaterialDatabaseJob(styleId, forceUpdateCompleted);
     }
 
     public Map<String, Object> getSyncJob(String jobId) {
-        if (!StringUtils.hasText(jobId)) {
-            throw new IllegalArgumentException("jobId不能为空");
-        }
-        Map<String, Object> job = SYNC_JOBS.get(jobId.trim());
-        if (job == null) {
-            throw new NoSuchElementException("任务不存在");
-        }
-        return job;
+        return materialSyncHelper.getSyncJob(jobId);
     }
 
-    private void tryCreateBomTemplate(Long styleId) {
-        try {
-            StyleInfo style = styleId == null ? null : styleInfoService.getById(styleId);
-            String styleNo = style == null ? null : style.getStyleNo();
-            if (styleNo != null && !styleNo.trim().isEmpty()) {
-                Map<String, Object> body = new HashMap<>();
-                body.put("sourceStyleNo", styleNo.trim());
-                body.put("templateTypes", List.of("bom"));
-                templateLibraryOrchestrator.createFromStyle(body);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to sync templates from style bom: styleId={}", styleId, e);
-        }
-    }
-
-    private void autoSyncBomRow(StyleBom styleBom) {
-        if (styleBom == null || styleBom.getStyleId() == null) {
-            return;
-        }
-        String code = StringUtils.hasText(styleBom.getMaterialCode()) ? styleBom.getMaterialCode().trim() : null;
-        if (!StringUtils.hasText(code)) {
-            return;
-        }
-
-        StyleInfo style = styleInfoService.getById(styleBom.getStyleId());
-        if (style != null) {
-            TenantAssert.assertBelongsToCurrentTenant(style.getTenantId(), "款式");
-        }
-        String styleNo = style == null ? null : (StringUtils.hasText(style.getStyleNo()) ? style.getStyleNo().trim() : null);
-
-        MaterialDatabase existed = materialDatabaseService.lambdaQuery()
-                .eq(MaterialDatabase::getMaterialCode, code)
-                .and(w -> w.isNull(MaterialDatabase::getDeleteFlag).or().eq(MaterialDatabase::getDeleteFlag, 0))
-                .orderByDesc(MaterialDatabase::getUpdateTime)
-                .last("limit 1")
-                .one();
-
-        if (existed == null) {
-            String name = StringUtils.hasText(styleBom.getMaterialName()) ? styleBom.getMaterialName().trim() : null;
-            String unit = StringUtils.hasText(styleBom.getUnit()) ? styleBom.getUnit().trim() : null;
-            String supplierName = StringUtils.hasText(styleBom.getSupplier()) ? styleBom.getSupplier().trim() : null;
-            if (!StringUtils.hasText(name)) {
-                throw new IllegalArgumentException("物料名称不能为空");
-            }
-            if (!StringUtils.hasText(unit)) {
-                throw new IllegalArgumentException("单位不能为空");
-            }
-            if (!StringUtils.hasText(supplierName)) {
-                throw new IllegalArgumentException("供应商不能为空");
-            }
-        }
-
-        String mt = StringUtils.hasText(styleBom.getMaterialType()) ? styleBom.getMaterialType().trim().toLowerCase() : null;
-        String normalizedType;
-        if (mt == null) {
-            normalizedType = "accessory";
-        } else if (mt.startsWith("fabric")) {
-            normalizedType = "fabric";
-        } else if (mt.startsWith("lining")) {
-            normalizedType = "lining";
-        } else if (mt.startsWith("accessory")) {
-            normalizedType = "accessory";
-        } else {
-            normalizedType = mt;
-        }
-
-        if (existed != null) {
-            String st = StringUtils.hasText(existed.getStatus()) ? existed.getStatus().trim().toLowerCase() : "";
-            if ("completed".equals(st)) {
-                return;
-            }
-
-            MaterialDatabase patch = new MaterialDatabase();
-            patch.setId(existed.getId());
-            patch.setMaterialCode(code);
-            patch.setMaterialName(styleBom.getMaterialName());
-            patch.setStyleNo(styleNo);
-            patch.setMaterialType(normalizedType);
-            patch.setSpecifications(styleBom.getSpecification());
-            patch.setUnit(styleBom.getUnit());
-            patch.setSupplierName(styleBom.getSupplier());
-            patch.setUnitPrice(styleBom.getUnitPrice());
-            patch.setRemark(styleBom.getRemark());
-            materialDatabaseOrchestrator.update(patch);
-            return;
-        }
-
-        MaterialDatabase toCreate = new MaterialDatabase();
-        toCreate.setMaterialCode(code);
-        toCreate.setMaterialName(styleBom.getMaterialName());
-        toCreate.setStyleNo(styleNo);
-        toCreate.setMaterialType(normalizedType);
-        toCreate.setSpecifications(styleBom.getSpecification());
-        toCreate.setUnit(styleBom.getUnit());
-        toCreate.setSupplierName(styleBom.getSupplier());
-        toCreate.setUnitPrice(styleBom.getUnitPrice());
-        toCreate.setRemark(styleBom.getRemark());
-        materialDatabaseOrchestrator.save(toCreate);
-    }
-
-    // ==================== 库存检查（跨模块编排） ====================
-
-    /**
-     * 保存BOM并检查库存（跨模块编排：style BOM + production MaterialStock）
-     * 从 StyleBomServiceImpl 迁移，消除 Service 层跨模块依赖
-     */
     @Transactional(rollbackFor = Exception.class)
     public List<StyleBom> saveBomWithStockCheck(List<StyleBom> bomList, Integer productionQty) {
         if (bomList == null || bomList.isEmpty()) {
@@ -546,10 +183,8 @@ public class StyleBomOrchestrator {
         log.info("开始保存BOM并检查库存: 款号ID={}, 生产数量={}, BOM条数={}",
                 styleId, productionQty, bomList.size());
 
-        // 清除BOM缓存（数据变更时主动失效）
         styleBomService.clearBomCache(styleId);
 
-        // 遍历每个BOM项，检查库存
         for (StyleBom bom : bomList) {
             int requiredQty = calculateRequirement(bom, productionQty);
             MaterialStock stock = findStock(bom);
@@ -578,10 +213,9 @@ public class StyleBomOrchestrator {
                     bom.getStockStatus(), bom.getRequiredPurchase());
         }
 
-        // 批量更新BOM（只更新已存在的记录）
         List<StyleBom> existingBoms = bomList.stream()
                 .filter(bom -> bom.getId() != null && !bom.getId().trim().isEmpty())
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
         if (!existingBoms.isEmpty()) {
             styleBomService.updateBatchById(existingBoms);
@@ -593,10 +227,6 @@ public class StyleBomOrchestrator {
         return bomList;
     }
 
-    /**
-     * 获取BOM库存汇总信息（跨模块编排：style BOM + production MaterialStock）
-     * 从 StyleBomServiceImpl 迁移，消除 Service 层跨模块依赖
-     */
     public Map<String, Object> getBomStockSummary(Long styleId, Integer productionQty) {
         List<StyleBom> bomList = styleBomService.listByStyleId(styleId);
 
@@ -676,10 +306,6 @@ public class StyleBomOrchestrator {
         return summary;
     }
 
-    /**
-     * 计算BOM物料需求量
-     * 公式：单件用量 × 生产数量 × (1 + 损耗率)
-     */
     private int calculateRequirement(StyleBom bom, Integer productionQty) {
         if (bom.getUsageAmount() == null) {
             return 0;
@@ -692,9 +318,6 @@ public class StyleBomOrchestrator {
         return requirement.setScale(0, RoundingMode.UP).intValue();
     }
 
-    /**
-     * 查找库存记录（按物料编码、颜色、尺码精确匹配）
-     */
     private MaterialStock findStock(StyleBom bom) {
         LambdaQueryWrapper<MaterialStock> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialStock::getMaterialCode, bom.getMaterialCode());
@@ -729,205 +352,13 @@ public class StyleBomOrchestrator {
         styleBom.setTotalPrice(qty.multiply(unitPrice));
     }
 
-    /**
-     * 根据BOM配置生成物料采购记录（样衣开发阶段），不支持强制重置
-     */
     @Transactional(rollbackFor = Exception.class)
     public int generatePurchase(Long styleId) {
-        return generatePurchase(styleId, false);
+        return purchaseHelper.generatePurchase(styleId);
     }
 
-    /**
-     * 根据BOM配置生成物料采购记录（样衣开发阶段）
-     *
-     * @param styleId 款式ID
-     * @param force   true=强制重新生成（先软删除已有记录再重建）；false=若已存在则报错
-     * @return 生成的采购记录数量
-     */
     @Transactional(rollbackFor = Exception.class)
     public int generatePurchase(Long styleId, boolean force) {
-        if (styleId == null || styleId <= 0) {
-            throw new IllegalArgumentException("款式ID不能为空");
-        }
-
-        StyleInfo styleInfo = styleInfoService.getById(styleId);
-        if (styleInfo == null) {
-            throw new NoSuchElementException("款式不存在");
-        }
-        TenantAssert.assertBelongsToCurrentTenant(styleInfo.getTenantId(), "款式");
-
-        List<StyleBom> bomList = listByStyleId(styleId);
-        if (bomList == null || bomList.isEmpty()) {
-            throw new IllegalStateException("该款式尚未配置BOM");
-        }
-
-        softDeleteExistingSamplePurchases(styleId, force);
-
-        SizeColorParseResult parseResult = parseSizeColorConfig(styleInfo);
-        log.info("样衣采购参数: styleId={}, 颜色={}, 尺码={}, 款式总件数={}",
-                styleId, parseResult.colorStr, parseResult.sizeStr, parseResult.styleTotalQty);
-
-        int createdCount = 0;
-        for (StyleBom bom : bomList) {
-            try {
-                MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult);
-                if (purchase == null) continue;
-                materialPurchaseService.save(purchase);
-                createdCount++;
-            } catch (Exception e) {
-                log.error("Failed to create material purchase for bom: bomId={}", bom.getId(), e);
-            }
-        }
-
-        log.info("Generated {} material purchase records for styleId={}", createdCount, styleId);
-        return createdCount;
-    }
-
-    private void softDeleteExistingSamplePurchases(Long styleId, boolean force) {
-        LambdaQueryWrapper<MaterialPurchase> existsWrapper = new LambdaQueryWrapper<>();
-        existsWrapper.eq(MaterialPurchase::getStyleId, String.valueOf(styleId))
-                .eq(MaterialPurchase::getSourceType, "sample")
-                .eq(MaterialPurchase::getDeleteFlag, 0);
-        long existsCount = materialPurchaseService.count(existsWrapper);
-
-        if (existsCount > 0) {
-            if (!force) {
-                throw new IllegalStateException("该款式已生成过样衣采购记录，请勿重复生成");
-            }
-            List<MaterialPurchase> existingRecords = materialPurchaseService.list(existsWrapper);
-            int softDeletedCount = 0;
-            for (MaterialPurchase mp : existingRecords) {
-                String status = mp.getStatus() == null ? "" : mp.getStatus().trim().toLowerCase();
-                if (MaterialConstants.STATUS_PENDING.equals(status)) {
-                    materialPurchaseService.removeById(mp.getId());
-                    softDeletedCount++;
-                } else {
-                    log.warn("样衣采购记录已{}，无法删除，跳过重新生成: purchaseNo={}", status, mp.getPurchaseNo());
-                }
-            }
-            log.info("强制重新生成：软删除 {} 条旧样衣采购记录: styleId={}", softDeletedCount, styleId);
-        }
-    }
-
-    private record SizeColorParseResult(String colorStr, String sizeStr, int styleTotalQty) {}
-
-    private SizeColorParseResult parseSizeColorConfig(StyleInfo styleInfo) {
-        String colorStr = null;
-        String sizeStr = null;
-        int styleTotalQty = 0;
-
-        String sizeColorConfig = styleInfo.getSizeColorConfig();
-        if (StringUtils.hasText(sizeColorConfig)) {
-            try {
-                ObjectMapper om = new ObjectMapper();
-                JsonNode root = om.readTree(sizeColorConfig);
-                JsonNode colorsNode = root.get("colors");
-                JsonNode sizesNode = root.get("sizes");
-                JsonNode quantitiesNode = root.get("quantities");
-
-                List<String> colors = new ArrayList<>();
-                if (colorsNode != null && colorsNode.isArray()) {
-                    for (JsonNode n : colorsNode) {
-                        String c = n.asText("").trim();
-                        if (!c.isEmpty()) colors.add(c);
-                    }
-                }
-                List<String> sizes = new ArrayList<>();
-                if (sizesNode != null && sizesNode.isArray()) {
-                    for (JsonNode n : sizesNode) {
-                        String s = n.asText("").trim();
-                        if (!s.isEmpty()) sizes.add(s);
-                    }
-                }
-                if (quantitiesNode != null && quantitiesNode.isArray()) {
-                    for (JsonNode n : quantitiesNode) {
-                        styleTotalQty += n.asInt(0);
-                    }
-                }
-
-                if (!colors.isEmpty()) colorStr = String.join(",", colors);
-                if (!sizes.isEmpty()) sizeStr = String.join(",", sizes);
-            } catch (Exception e) {
-                log.warn("解析 size_color_config 失败，降级为款式 color/size 字段: styleId={}, error={}",
-                        styleInfo.getId(), e.getMessage());
-            }
-        }
-
-        if (colorStr == null || colorStr.isEmpty()) {
-            String fallbackColor = styleInfo.getColor();
-            if (fallbackColor != null && !fallbackColor.trim().isEmpty()) {
-                colorStr = fallbackColor.trim();
-            }
-        }
-        if (sizeStr == null || sizeStr.isEmpty()) {
-            String fallbackSize = styleInfo.getSize();
-            if (fallbackSize != null && !fallbackSize.trim().isEmpty()) {
-                sizeStr = fallbackSize.trim();
-            }
-        }
-
-        if (styleTotalQty <= 0) {
-            styleTotalQty = 1;
-            log.warn("款式颜色尺码数量配置未设置，采购数量将按BOM单件用量计算: styleId={}", styleInfo.getId());
-        }
-
-        return new SizeColorParseResult(colorStr, sizeStr, styleTotalQty);
-    }
-
-    private MaterialPurchase buildPurchaseFromBom(StyleBom bom, StyleInfo styleInfo,
-            SizeColorParseResult parseResult) {
-        BigDecimal usageAmount = bom.getDevUsageAmount() != null ? bom.getDevUsageAmount()
-                : (bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO);
-        BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
-        BigDecimal lossFactor = BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-        BigDecimal totalUsage = usageAmount.multiply(BigDecimal.valueOf(parseResult.styleTotalQty)).multiply(lossFactor);
-        BigDecimal purchaseQty = totalUsage.setScale(4, RoundingMode.HALF_UP);
-
-        if (purchaseQty.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("BOM配置用量为0或未设置，跳过该物料: styleId={}, materialName={}",
-                    styleInfo.getId(), bom.getMaterialName());
-            return null;
-        }
-
-        MaterialPurchase purchase = new MaterialPurchase();
-        purchase.setPurchaseNo("MP" + System.currentTimeMillis() % 100000000);
-        purchase.setMaterialCode(bom.getMaterialCode());
-        purchase.setMaterialName(bom.getMaterialName());
-        purchase.setMaterialType(bom.getMaterialType());
-        purchase.setSpecifications(bom.getSpecification());
-        purchase.setUnit(bom.getUnit());
-        purchase.setConversionRate(bom.getConversionRate());
-        purchase.setPurchaseQuantity(purchaseQty);
-        purchase.setArrivedQuantity(0);
-
-        String supplier = bom.getSupplier();
-        if (supplier == null || supplier.trim().isEmpty()) {
-            log.warn("BOM配置缺少供应商信息: styleId={}, materialName={}", styleInfo.getId(), bom.getMaterialName());
-        }
-        purchase.setSupplierName(supplier != null ? supplier.trim() : "");
-
-        BigDecimal bomUnitPrice = bom.getUnitPrice();
-        purchase.setUnitPrice(bomUnitPrice);
-        purchase.setTotalAmount(bomUnitPrice != null ? bomUnitPrice.multiply(purchaseQty) : BigDecimal.ZERO);
-
-        purchase.setStyleId(String.valueOf(styleInfo.getId()));
-        purchase.setStyleNo(styleInfo.getStyleNo());
-        purchase.setStyleName(styleInfo.getStyleName());
-        purchase.setStyleCover(styleInfo.getCover());
-
-        if (parseResult.colorStr != null && !parseResult.colorStr.isEmpty()) {
-            purchase.setColor(parseResult.colorStr);
-        }
-        if (parseResult.sizeStr != null && !parseResult.sizeStr.isEmpty()) {
-            purchase.setSize(parseResult.sizeStr);
-        }
-
-        purchase.setSourceType("sample");
-        purchase.setStatus(MaterialConstants.STATUS_PENDING);
-        purchase.setDeleteFlag(0);
-        purchase.setCreateTime(LocalDateTime.now());
-        purchase.setUpdateTime(LocalDateTime.now());
-
-        return purchase;
+        return purchaseHelper.generatePurchase(styleId, force);
     }
 }

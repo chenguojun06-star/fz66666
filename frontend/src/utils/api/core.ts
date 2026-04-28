@@ -295,8 +295,14 @@ export const createApiClient = (): ApiClient => {
             navigateToLogin();
             break;
           case 403: {
-            const isExpired = msg && (msg.includes('过期') || msg.includes('expired') || msg.includes('invalid token'));
-            if (isExpired) {
+            const isExpiredByMessage = msg && (msg.includes('过期') || msg.includes('expired') || msg.includes('invalid token'));
+            const isExpiredByJwt = (() => {
+              try {
+                const token = String(localStorage.getItem('authToken') || '').trim();
+                return token ? isJwtExpired(token) : true;
+              } catch { return true; }
+            })();
+            if (isExpiredByMessage || isExpiredByJwt) {
               errorMessage = '登录已过期，请重新登录';
               try {
                 localStorage.removeItem('authToken');

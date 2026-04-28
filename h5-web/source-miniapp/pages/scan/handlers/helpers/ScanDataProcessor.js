@@ -403,7 +403,7 @@ class ScanDataProcessor {
       ...workerInfo,
       scanTime: formatLocalDateTime(new Date()),
       warehouse: warehouse || '',
-      source: 'h5',
+      source: 'miniprogram',
     };
   }
 

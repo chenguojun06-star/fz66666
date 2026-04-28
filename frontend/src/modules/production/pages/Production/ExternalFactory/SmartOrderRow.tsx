@@ -4,7 +4,6 @@ import dayjs from 'dayjs';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { ProductionOrder } from '@/types/production';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
@@ -12,6 +11,9 @@ import { useNavigate } from 'react-router-dom';
 import StageNode from './StageNode';
 import type { SmartStage, DeliveryTone } from './types';
 import type { OrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
+import { StyleCoverThumb } from '@/components/StyleAssets';
+import { ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 
 interface SmartOrderRowProps {
   record: ProductionOrder;
@@ -64,22 +66,18 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   const doneCount = stages.filter(s => s.status === 'done').length;
   const timelinePercent = ((doneCount + 1) / (stages.length + 1)) * 100;
   const shipDate = (record as any).expectedShipDate || record.plannedEndDate;
-  const factoryTag = record.factoryType === 'INTERNAL'
-    ? <Tag color="blue"   style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', marginLeft: 4 }}>内部</Tag>
-    : record.factoryType === 'EXTERNAL'
-    ? <Tag color="orange" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', marginLeft: 4 }}>外发</Tag>
-    : null;
+  const factoryTag = <FactoryTypeTag factoryType={record.factoryType} style={{ marginLeft: 4 }} />;
 
   return (
     <div className={`style-smart-row style-smart-row--${deliveryMeta.tone}`}>
       <div className="style-smart-row__cover">
-        {record.styleCover ? (
-          <div className="style-smart-row__thumb">
-            <img src={getFullAuthedFileUrl(record.styleCover)} alt={record.styleName} loading="lazy" />
-          </div>
-        ) : (
-          <div className="style-smart-row__thumb ef-thumb-empty">暂无图片</div>
-        )}
+        <StyleCoverThumb
+          styleId={record.styleId}
+          styleNo={record.styleNo}
+          src={record.styleCover || null}
+          size="fill"
+          borderRadius={8}
+        />
         <div className="ef-cover-below">
           <div className="ef-cover-tags">
             <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
@@ -145,33 +143,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               position: 'relative',
             }}>
               <Popover
-                content={sizeMatrix.hasData ? (
-                  <div style={{ minWidth: 100 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#333' }}>颜色码数</div>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: `max-content repeat(${sizeMatrix.sizes.length}, minmax(20px, max-content))`,
-                      columnGap: 6, rowGap: 2, fontSize: 12, textAlign: 'center',
-                    }}>
-                      <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
-                      {sizeMatrix.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
-                      {sizeMatrix.rows.map(row => (
-                        <React.Fragment key={row.label}>
-                          <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
-                          {sizeMatrix.sizes.map(s => (
-                            <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
-                              {row.quantityMap.get(s) || 0}
-                            </span>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                      <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
-                      <span style={{ gridColumn: `2 / ${sizeMatrix.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
-                        {sizeMatrix.total}件
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
+                content={<ColorSizeMatrixPopoverContent model={sizeMatrix} />}
                 trigger="hover" placement="top" mouseEnterDelay={0.1}
                 overlayStyle={{ maxWidth: 320, zIndex: 1100 }}
                 open={sizeMatrix.hasData ? undefined : false}

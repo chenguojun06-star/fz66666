@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
 import AccountManagementModal from './components/AccountManagementModal';
@@ -53,6 +53,7 @@ import { usePaymentData } from './hooks/usePaymentData';
 import { usePayModal } from './hooks/usePayModal';
 import { useAccountModal } from './hooks/useAccountModal';
 import { useProofModal } from './hooks/useProofModal';
+import { useWagePayment } from './useWagePayment';
 
 const { RangePicker } = DatePicker;
 
@@ -81,9 +82,7 @@ const PaymentCenterPage: React.FC = () => {
   const acct = useAccountModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError });
   const proof = useProofModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError, fetchPayments: data.fetchPayments, fetchPayables: data.fetchPayables });
 
-  // ---- 支付详情弹窗（仅 2 个 state，保留在主组件）----
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailRecord, setDetailRecord] = useState<WagePayment | null>(null);
+  const { detailOpen, setDetailOpen, detailRecord, setDetailRecord } = useWagePayment();
 
   // ---- 表格列定义 ----
   const { payableColumns, paymentColumns } = usePaymentColumns({

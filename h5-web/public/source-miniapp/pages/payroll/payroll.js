@@ -346,4 +346,8 @@ Page({
       this.setData({ records });
     });
   },
+
+  goFeedback() {
+    wx.navigateTo({ url: '/pages/payroll/feedback/index' });
+  },
 });

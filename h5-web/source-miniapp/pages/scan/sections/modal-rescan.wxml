@@ -28,7 +28,7 @@
         </view>
         <view class="rescan-warning">
           <view class="line-icon line-icon--sm icon-alert warning-icon"></view>
-          <text class="warning-text">仅允许退回30分钟内的扫码记录，管理员5小时内可退回，退回后可重新扫码</text>
+          <text class="warning-text">仅允许退回1小时内的扫码记录，退回后可重新扫码</text>
         </view>
       </view>
       <view class="modal-foot">

@@ -107,7 +107,7 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo) {
     quantity: totalQty,
     operatorId: userInfo.id || '',
     operatorName: userInfo.name || userInfo.username || '',
-    source: 'h5',
+    source: 'miniprogram',
   };
 }
 
@@ -172,7 +172,7 @@ async function submitQualityResult(page) {
       quantity: payload.quantity, scanCode: payload.scanCode,
       scanType: 'quality', qualityStage: 'receive',
       operatorId: payload.operatorId, operatorName: payload.operatorName,
-      source: 'h5',
+      source: 'miniprogram',
     };
     try {
       await api.production.executeScan(receivePayload);

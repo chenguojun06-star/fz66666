@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import StandardPagination from '@/components/common/StandardPagination';
 import { ProductionOrder } from '@/types/production';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
+import { getOrderStatusConfig } from '@/components/common/OrderStatusTag';
 import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import SmartOrderRow from './SmartOrderRow';
@@ -23,19 +24,6 @@ const PRODUCTION_STAGES: readonly {
   { key: 'tail', label: '尾部', rateField: 'tailProcessRate', startField: '', endField: '' },
   { key: 'warehousing', label: '入库', rateField: 'warehousingCompletionRate', startField: 'warehousingStartTime', endField: 'warehousingEndTime' },
 ];
-
-const STATUS_MAP: Record<string, { text: string; color: string }> = {
-  pending: { text: '待生产', color: 'default' },
-  production: { text: '生产中', color: 'processing' },
-  completed: { text: '已完成', color: 'success' },
-  delayed: { text: '已延期', color: 'error' },
-  scrapped: { text: '已废弃', color: 'default' },
-  cancelled: { text: '已取消', color: 'default' },
-  closed: { text: '已关单', color: 'default' },
-  archived: { text: '已归档', color: 'default' },
-  paused: { text: '暂停', color: 'warning' },
-  returned: { text: '已退回', color: 'error' },
-};
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
@@ -125,7 +113,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
     const deliveryMeta = getDeliveryMeta(record);
     const stages = buildStages(record, deliveryMeta.tone === 'danger');
     const overallProgress = calcOrderProgress(record);
-    const statusInfo = STATUS_MAP[record.status] || STATUS_MAP.pending;
+    const statusInfo = getOrderStatusConfig(record.status);
     const sizeQtyItems = getOrderCardSizeQuantityItems(record);
     const sizeMatrix = buildOrderColorSizeMatrixModel({
       items: sizeQtyItems,

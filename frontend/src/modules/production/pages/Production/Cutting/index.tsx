@@ -3,6 +3,7 @@ import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
 import PageLayout from '@/components/common/PageLayout';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -10,14 +11,12 @@ import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
-import { QRCodeCanvas } from 'qrcode.react';
 import { useAuth } from '@/utils/AuthContext';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { formatDateTime } from '@/utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getMaterialTypeLabel } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -35,6 +34,7 @@ import {
 } from './hooks';
 import type { CuttingBundleRow } from './hooks';
 import { CuttingCreateTaskModal, CuttingPrintPreviewModal, CuttingRatioPanel } from './components';
+import { usePurchaseColumns, useBundleColumns } from './columns';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -66,18 +66,12 @@ const CuttingManagement: React.FC = () => {
     return search.get('autoPrint') === '1';
   }, [location.search]);
 
-  // 活动任务状态（主组件持有，供 hooks 使用）
   const [orderId, setOrderId] = useState<string>('');
   const [activeTask, setActiveTask] = useState<CuttingTask | null>(null);
-
-  // 裁剪单打印
   const [cuttingSheetPrintOpen, setCuttingSheetPrintOpen] = useState(false);
-
-  // 备注
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
 
-  // ─── Hooks ───────────────────────────────────────────────
   const tasks = useCuttingTasks({ message, isEntryPage });
 
   const bundles = useCuttingBundles({
@@ -87,16 +81,9 @@ const CuttingManagement: React.FC = () => {
   });
 
   const existingCutQtyByKey = bundles.allBundlesQtyMap;
-
   const print = useCuttingPrint({ message });
+  const createTask = useCuttingCreateTask({ message, navigate, fetchTasks: tasks.fetchTasks });
 
-  const createTask = useCuttingCreateTask({
-    message,
-    navigate,
-    fetchTasks: tasks.fetchTasks,
-  });
-
-  // ─── 任务路由解析 ──────────────────────────────────────────
   const resolveTaskByOrderNo = async (orderNo: string) => {
     const on = String(orderNo || '').trim();
     if (!on) return null;
@@ -141,7 +128,6 @@ const CuttingManagement: React.FC = () => {
     navigate(`/production/cutting/task/${encodeURIComponent(orderNo)}`);
   };
 
-  // 路由entry初始化
   useEffect(() => {
     if (!routeOrderNo) return;
     (async () => {
@@ -167,13 +153,11 @@ const CuttingManagement: React.FC = () => {
     navigate(location.pathname, { replace: true });
   }, [autoPrintBundleIds, autoPrintEnabled, bundles.dataSource, location.pathname, navigate, print, bundles]);
 
-  // 打印解锁：已有二维码时自动解锁
   useEffect(() => {
     const hasQr = bundles.dataSource.some((r) => String(r?.qrCode || '').trim());
     if (hasQr) print.setPrintUnlocked(true);
   }, [bundles.dataSource]);
 
-  // 活动任务变更 → 重置打印
   useEffect(() => {
     print.setPrintUnlocked(false);
     print.setHighlightedBundleIds([]);
@@ -182,7 +166,6 @@ const CuttingManagement: React.FC = () => {
     print.setPrintPreviewOpen(false);
   }, [activeTask?.id]);
 
-  // 退回后清理活动任务
   const handleRollbackActive = (task: CuttingTask) => {
     tasks.handleRollbackTask(task, () => {
       if (activeTask?.id === task.id) {
@@ -191,96 +174,9 @@ const CuttingManagement: React.FC = () => {
     });
   };
 
-  // ─── 面辅料采购表格列 ─────────────────────────────────────
-  const purchaseColumns = useMemo(
-    () =>
-      [
-        {
-          title: '物料类型',
-          dataIndex: 'materialType',
-          key: 'materialType',
-          width: 110,
-          render: (v: unknown) => getMaterialTypeLabel(v),
-        },
-        { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, ellipsis: true },
-        { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-        {
-          title: '规格',
-          dataIndex: 'specifications',
-          key: 'specifications',
-          width: 180,
-          ellipsis: true,
-          render: (v: unknown) => String(v || '').trim() || '-',
-        },
-        { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
-        {
-          title: '实际到料',
-          dataIndex: 'arrivedQuantity',
-          key: 'arrivedQuantity',
-          width: 110,
-          align: 'right' as const,
-          render: (v: unknown) => Number(v ?? 0) || 0,
-        },
-      ],
-    []
-  );
+  const purchaseColumns = usePurchaseColumns();
+  const columns = useBundleColumns(activeTask);
 
-  // ─── 菲号表格列 ──────────────────────────────────────────
-  const columns = [
-    {
-      title: '图片',
-      key: 'cover',
-      width: 72,
-      render: (_: any, record: any) => (
-        <StyleCoverThumb src={activeTask?.styleCover || null} styleId={activeTask?.styleId} styleNo={record.styleNo || activeTask?.styleNo} size={24} borderRadius={4} />
-      )
-    },
-    {
-      title: '订单号',
-      dataIndex: 'productionOrderNo',
-      key: 'productionOrderNo',
-      width: 140,
-      render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
-    },
-    { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 },
-    {
-      title: '款名',
-      key: 'styleName',
-      width: 160,
-      ellipsis: true,
-      render: () => activeTask?.styleName || '-',
-    },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
-    { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 80 },
-    {
-      title: '床号',
-      dataIndex: 'bedNo',
-      key: 'bedNo',
-      width: 80,
-      render: (value: number | null | undefined, record: CuttingBundleRow) => {
-        const display = value
-          ? (record.bedSubNo != null ? `${value}-${record.bedSubNo}` : String(value))
-          : '-';
-        return (
-          <span style={{ fontWeight: 600, color: value ? 'var(--color-primary)' : 'var(--neutral-text-secondary)' }}>
-            {display}
-          </span>
-        );
-      }
-    },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const },
-    { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', width: 220, ellipsis: true },
-    {
-      title: '二维码',
-      dataIndex: 'qrCode',
-      key: 'qrCodeImage',
-      width: 92,
-      render: (value: string) => (value ? <QRCodeCanvas value={value} size={42} /> : null),
-    },
-  ];
-
-  // ─── JSX ─────────────────────────────────────────────────
   return (
     <>
         <PageLayout
@@ -292,7 +188,6 @@ const CuttingManagement: React.FC = () => {
           ) : undefined}
         >
 
-          {/* ====== 任务列表（非entry时显示） ====== */}
           {isEntryPage ? null : (
             <Card size="small" className="mb-sm">
               <PageStatCards
@@ -421,8 +316,7 @@ const CuttingManagement: React.FC = () => {
                       if (!name) return '-';
                       return (
                         <Space size={4}>
-                          {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-                          {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+                          <FactoryTypeTag factoryType={type} />
                           <span style={{ fontSize: 12 }}>{name}</span>
                         </Space>
                       );
@@ -590,7 +484,6 @@ const CuttingManagement: React.FC = () => {
             </Card>
           )}
 
-          {/* ====== Entry页面（任务详情 + 菲号编辑） ====== */}
           {isEntryPage && activeTask ? (
             <>
               <div ref={bundles.editSectionRef} />
@@ -663,8 +556,6 @@ const CuttingManagement: React.FC = () => {
                         generating={bundles.generateLoading}
                         disabled={bundles.importLocked}
                         onConfirm={(rows) => {
-                          // 同步更新 state（用于回显/状态保持）+ 直接把 rows 传入 handleGenerate，
-                          // 绕开 React setState 异步导致的 stale closure（详见 useCuttingBundles.handleGenerate 注释）
                           bundles.setBundlesInput(rows);
                           bundles.handleGenerate(rows);
                         }}
@@ -769,7 +660,6 @@ const CuttingManagement: React.FC = () => {
                 }}
               />
 
-              {/* 打印预览弹窗 */}
               <CuttingPrintPreviewModal
                 modalWidth={modalWidth}
                 print={print}
@@ -779,10 +669,8 @@ const CuttingManagement: React.FC = () => {
             </>
           ) : null}
 
-          {/* ====== 新建裁剪任务弹窗 ====== */}
           <CuttingCreateTaskModal createTask={createTask} />
 
-          {/* 快速编辑弹窗 */}
           <QuickEditModal
             visible={tasks.quickEditVisible}
             loading={tasks.quickEditSaving}
@@ -797,7 +685,6 @@ const CuttingManagement: React.FC = () => {
             }}
           />
 
-          {/* 裁剪单打印弹窗 */}
           <CuttingSheetPrintModal
             open={cuttingSheetPrintOpen}
             onCancel={() => setCuttingSheetPrintOpen(false)}
@@ -811,7 +698,6 @@ const CuttingManagement: React.FC = () => {
             } : undefined}
           />
 
-          {/* 裁剪任务退回弹窗 */}
           <RejectReasonModal
             open={tasks.pendingRollbackTask !== null}
             title="确认退回该裁剪任务？"

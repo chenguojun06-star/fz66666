@@ -1,9 +1,9 @@
-import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { App, Avatar, Button, Dropdown, Layout as AntLayout, Menu, Tag, Tooltip } from 'antd';
-import { CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
-import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
-import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { App, Avatar, Button, Dropdown, Tag } from 'antd';
+import { CloseOutlined, DownOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { useAuth } from '../../utils/AuthContext';
+import { paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
 import { getFullAuthedFileUrl } from '../../utils/fileUrl';
 import { useAppLanguage } from '../../i18n/useAppLanguage';
@@ -15,19 +15,17 @@ import SmartAlertBell from './SmartAlertBell';
 import DailyTodoModal from './DailyTodoModal';
 import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
 import GlobalAiAssistant from '../common/GlobalAiAssistant';
+import SideMenu from './SideMenu';
+import { useLayoutAuth, normalizePath } from './useLayoutAuth';
+import { useActivePath, useActiveSectionKey, useRecentPages } from './router';
+import { menuConfig } from '../../routeConfig';
 import './styles.css';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-type RecentPage = {
-  path: string;
-  basePath: string;
-  title: string;
-  ts: number;
-};
-
+const sidebarCollapsedStorageKey = 'layout.sidebar.collapsed';
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
@@ -35,83 +33,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const { language } = useAppLanguage();
   const { message } = App.useApp();
-  const recentPagesStorageKey = 'layout.header.recentPages';
-  const sidebarCollapsedStorageKey = 'layout.sidebar.collapsed';
-  const maxRecentPages = 12;
-
-  const normalizePath = (path: string) => path.split('?')[0];
+  const { isMobile } = useViewport();
+  const auth = useLayoutAuth();
 
   const backgroundLocation = (location.state as any)?.backgroundLocation;
   const effectivePathname: string = backgroundLocation?.pathname || location.pathname;
   const effectiveSearch: string = backgroundLocation?.search || location.search;
   const effectiveFullPath = `${effectivePathname}${effectiveSearch || ''}`;
 
-  const getActivePath = useMemo(() => {
-    const current = normalizePath(effectivePathname);
-    const allPaths: string[] = [];
-    for (const section of menuConfig) {
-      if (section.items?.length) {
-        for (const item of section.items) allPaths.push(normalizePath(item.path));
-      } else if (section.path) {
-        allPaths.push(normalizePath(section.path));
-      }
-    }
-
-    let best: string | undefined;
-    for (const p of allPaths) {
-      if (current === p) {
-        if (!best || p.length > best.length) best = p;
-        continue;
-      }
-      if (current.startsWith(p + '/')) {
-        if (!best || p.length > best.length) best = p;
-      }
-    }
-    return best;
-  }, [effectivePathname]);
-
-  const activeSectionKey = useMemo(() => {
-    if (!getActivePath) return null;
-    for (const section of menuConfig) {
-      if (section.items?.some((it) => normalizePath(it.path) === getActivePath)) return section.key;
-      if (section.path && normalizePath(section.path) === getActivePath) return section.key;
-    }
-    return null;
-  }, [getActivePath]);
-
-  const readRecentPages = (): RecentPage[] => {
-    try {
-      const raw = localStorage.getItem(recentPagesStorageKey);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      const list = parsed
-        .filter((x) => x && typeof x.path === 'string' && typeof x.title === 'string')
-        .map((x) => ({
-          path: String(x.path),
-          basePath: typeof x.basePath === 'string' ? x.basePath : String(x.path).split('?')[0],
-          title: (typeof x.basePath === 'string' ? x.basePath : String(x.path).split('?')[0]) === '/production/warehousing'
-            ? '质检入库'
-            : String(x.title),
-          ts: typeof x.ts === 'number' ? x.ts : Date.now(),
-        }));
-
-      const seen = new Set<string>();
-      const deduped: RecentPage[] = [];
-      for (const p of list) {
-        const k = String(p.basePath || '').trim() || String(p.path || '').split('?')[0];
-        if (!k) continue;
-        if (seen.has(k)) continue;
-        seen.add(k);
-        deduped.push(p);
-      }
-      return deduped;
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      return [];
-    }
-  };
+  const getActivePath = useActivePath(effectivePathname);
+  const activeSectionKey = useActiveSectionKey(getActivePath);
 
   const readSidebarCollapsed = () => {
     if (typeof window === 'undefined') return isMobile;
@@ -124,230 +55,36 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  const writeRecentPages = (pages: RecentPage[]) => {
-    try {
-      localStorage.setItem(recentPagesStorageKey, JSON.stringify(pages));
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-    }
-  };
-
-  const [recentPages, setRecentPages] = useState<RecentPage[]>(() => {
-    if (typeof window === 'undefined') return [];
-    return readRecentPages().slice(0, maxRecentPages);
-  });
-  // 标签栏滚动容器的ref
-  const recentsContainerRef = useRef<HTMLDivElement>(null);
-  const activeTabRef = useRef<HTMLDivElement>(null);
-
-  const { isMobile } = useViewport();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const collapsed = sidebarCollapsed;
   const sidebarIsCollapsed = isMobile ? true : collapsed;
   const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() => (activeSectionKey ? [activeSectionKey] : []));
   const [factoryModalOpen, setFactoryModalOpen] = useState(false);
 
-  const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
-  const isSuperAdmin = user?.isSuperAdmin === true;
+  const userDisplayName = String(user?.name || user?.username || '').trim() || t('layout.userDefault', language);
+  const userInitial = userDisplayName.slice(0, 1).toUpperCase();
 
-  const menuI18nMapByPath = useMemo<Record<string, string>>(() => ({
-    [paths.styleInfoList]: 'menu.items.styleInfo',
-    [paths.dataCenter]: 'menu.items.dataCenter',
-    [paths.templateCenter]: 'menu.items.templateCenter',
-    [paths.productionList]: 'menu.items.productionList',
-    [paths.materialPurchase]: 'menu.items.materialPurchase',
-    [paths.productionPartners]: 'menu.items.factory',
-    [paths.cutting]: 'menu.items.cutting',
-    [paths.progressDetail]: 'menu.items.progressDetail',
-    [paths.externalFactory]: 'menu.items.externalFactory',
-    [paths.warehousing]: 'menu.items.warehousing',
-    [paths.materialInventory]: 'menu.items.materialInventory',
-    [paths.materialDatabase]: 'menu.items.materialDatabase',
-    [paths.finishedInventory]: 'menu.items.finishedInventory',
-    [paths.sampleInventory]: 'menu.items.sampleInventory',
-    [paths.materialReconciliation]: 'menu.items.materialReconciliation',
-    [paths.payrollOperatorSummary]: 'menu.items.payrollOperatorSummary',
-    [paths.financeCenter]: 'menu.items.financeCenter',
-    [paths.expenseReimbursement]: 'menu.items.expenseReimbursement',
-    [paths.wagePayment]: 'menu.items.wagePayment',
-    [paths.profile]: 'menu.items.profile',
-    [paths.user]: 'menu.items.user',
-    [paths.role]: 'menu.items.role',
-    [paths.factory]: 'menu.items.factory',
-    [paths.dict]: 'menu.items.dict',
-    [paths.systemLogs]: 'menu.items.systemLogs',
-    [paths.tutorial]: 'menu.items.tutorial',
-    [paths.dataImport]: 'menu.items.dataImport',
-  }), []);
+  const showGlobalSmartGuide = useMemo(() => isSmartFeatureEnabled('smart.guide.enabled'), []);
+  const globalGuide = useMemo(() => resolveSmartGlobalGuide(effectivePathname), [effectivePathname]);
 
-  const menuI18nMapBySectionKey = useMemo<Record<string, string>>(() => ({
-    dashboard: 'menu.sections.dashboard',
-    basic: 'menu.sections.basic',
-    procurement: 'menu.sections.procurement',
-    production: 'menu.sections.production',
-    warehouse: 'menu.sections.warehouse',
-    finance: 'menu.sections.finance',
-    system: 'menu.sections.system',
-    appStore: 'menu.sections.appStore',
-    customer: 'menu.sections.customer',
-    tenant: 'menu.sections.tenant',
-    integrationCenter: 'menu.sections.integrationCenter',
-  }), []);
+  const brandName = String((user as any)?.tenantName || '').trim() || t('login.brand', language);
 
   const localizedMenuConfig = useMemo(() => {
-    return menuConfig.map((section) => {
-      const localizedTitle = t(menuI18nMapBySectionKey[section.key] || '', language);
-      if (section.items?.length) {
-        return {
-          ...section,
-          title: localizedTitle === '' || localizedTitle.includes('menu.sections.') ? section.title : localizedTitle,
-          items: section.items.map((item) => {
-            const localizedLabel = t(menuI18nMapByPath[normalizePath(item.path)] || '', language);
-            return {
-              ...item,
-              label: localizedLabel === '' || localizedLabel.includes('menu.items.') ? item.label : localizedLabel,
-            };
-          }),
-        };
-      }
-      return {
-        ...section,
-        title: localizedTitle === '' || localizedTitle.includes('menu.sections.') ? section.title : localizedTitle,
-      };
-    });
-  }, [language, menuI18nMapByPath, menuI18nMapBySectionKey]);
+    return menuConfig.map((section) => ({ ...section }));
+  }, []);
 
-  const hasPermissionForPath = (path: string) => {
-    if (isAdmin) return true;
-    const code = resolvePermissionCode(normalizePath(path));
-    if (!code) return true;
-    return Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(code));
-  };
+  const { recentPages, recentsContainerRef, activeTabRef, closeRecent } = useRecentPages(
+    effectivePathname,
+    effectiveSearch,
+    effectiveFullPath,
+    getActivePath,
+    language,
+    localizedMenuConfig,
+  );
 
-  // 外发工厂联系人账号识别：factoryId 有値表示该用户是某外发工厂的联系人
-  const isFactoryAccount = !!(user as any)?.factoryId;
-  const factoryName = (user as any)?.factoryName as string | undefined;
-
-  // 租户模块白名单（undefined/空数组=全部开放，有值则按路径白名单过滤侧边栏）
-  const tenantModules = (user as any)?.tenantModules as string[] | undefined;
-  const isTenantModuleEnabled = (path: string) =>
-    !tenantModules || tenantModules.length === 0 || tenantModules.includes(path);
-
-  // 这些顶层路径始终显示，不受租户模块白名单控制
-  const ALWAYS_VISIBLE_PATHS = new Set(['/integration/center', '/system/app-store']);
-
-  // 工厂账号可见的菜单分组键（其余整组隐藏）
-  // 注意：'basic'（样衣管理）不在工厂账号白名单内，外发工厂不可见
-  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['procurement', 'production', 'finance', 'system']);
-  // 工厂账号可见的具体路径白名单
-  const FACTORY_VISIBLE_PATHS = new Set<string>([
-    paths.productionList,          // /production（我的订单）
-    paths.progressDetail,          // /production/progress-detail（工序跟进）
-    paths.cutting,                 // /production/cutting（裁剪管理）
-    paths.materialPurchase,        // /production/material（面辅料采购）
-    paths.financeCenter,           // /finance/center（订单结算(外)）
-    paths.factoryWorkers,          // /system/factory-workers（工人名册）
-    paths.organization,            // /system/organization（组织架构）
-    paths.tutorial,                // /system/tutorial（系统教学）
-    paths.orderFlow,               // /production/order-flow（订单全流程记录）
-  ]);
-
-  // 构建 Menu items
-  const menuItems = useMemo(() => {
-    return localizedMenuConfig
-      .filter((section) => {
-        // 外发工厂账号：只显示指定分组，其余整组隐藏
-        if (isFactoryAccount && !FACTORY_VISIBLE_SECTIONS.has(section.key)) return false;
-        // 租户模块白名单：若设置了白名单，则隐藏整个无启用项的分组
-        // 注意：ALWAYS_VISIBLE_PATHS 中的路径始终显示，不受白名单控制
-        if (tenantModules && tenantModules.length > 0) {
-          if (section.path && !ALWAYS_VISIBLE_PATHS.has(section.path) && !tenantModules.includes(section.path)) return false;
-          if (section.items && !section.items.some(item => isTenantModuleEnabled(item.path))) return false;
-        }
-        // 超管专属菜单：非超管不可见
-        if (section.superAdminOnly && !isSuperAdmin) return false;
-        if (section.items) {
-          // 工厂账号：只要白名单内有一项在该分组，整个分组可见
-          return section.items.some((item) =>
-            (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(normalizePath(item.path))) || hasPermissionForPath(item.path)
-          );
-        }
-        if (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(normalizePath(section.path!))) return true;
-        return hasPermissionForPath(section.path!);
-      })
-      .map((section) => {
-        if (section.items) {
-          const children = section.items
-            .filter((item) => {
-              if ((item as any).superAdminOnly && !isSuperAdmin) return false;
-              // 外发工厂账号：只显示白名单内的页面
-              if (isFactoryAccount && !FACTORY_VISIBLE_PATHS.has(normalizePath(item.path))) return false;
-              // 租户模块白名单：路径不在白名单内则隐藏
-              if (!isTenantModuleEnabled(item.path)) return false;
-              // 工厂账号白名单内的路径直接放行，不受权限码约束
-              if (isFactoryAccount && FACTORY_VISIBLE_PATHS.has(normalizePath(item.path))) return true;
-              return hasPermissionForPath(item.path);
-            })
-            .map((item) => ({
-              key: item.path,
-              icon: item.icon,
-              label: <Link to={item.path}>{item.label}</Link>,
-            }));
-
-          return {
-            key: section.key,
-            icon: section.icon,
-            label: section.title,
-            children: children.length > 0 ? children : undefined,
-            popupClassName: 'layout-sidebar-submenu-popup',
-          };
-        } else {
-          if (sidebarIsCollapsed && !isMobile) {
-            return {
-              key: `${section.key}__collapsed_group`,
-              icon: section.icon,
-              label: section.title,
-              children: [
-                {
-                  key: section.path!,
-                  icon: section.icon,
-                  label: <Link to={section.path!}>{section.title}</Link>,
-                },
-              ],
-              popupClassName: 'layout-sidebar-submenu-popup',
-            };
-          }
-          return {
-            key: section.path!,
-            icon: section.icon,
-            label: <Link to={section.path!}>{section.title}</Link>,
-          };
-        }
-      });
-  }, [localizedMenuConfig, user, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile]);
-
-  // 获取当前选中的菜单项
   const selectedKeys = useMemo(() => {
     return getActivePath ? [getActivePath] : [];
   }, [getActivePath]);
-
-  const handleMenuOpenChange = (openKeys: string[]) => {
-    if (sidebarIsCollapsed) return;
-    setMenuOpenKeys(openKeys);
-  };
-
-  const menuInteractionProps = sidebarIsCollapsed
-    ? {
-        triggerSubMenuAction: (isMobile ? 'click' : 'hover') as 'click' | 'hover',
-        subMenuOpenDelay: 0,
-        subMenuCloseDelay: 0.08,
-      }
-    : {
-        openKeys: menuOpenKeys,
-        onOpenChange: handleMenuOpenChange,
-        triggerSubMenuAction: 'click' as const,
-      };
 
   useEffect(() => {
     if (isMobile) {
@@ -389,130 +126,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [activeSectionKey, menuOpenKeys, sidebarIsCollapsed]);
 
-  const resolveRecentTitle = (basePath: string | undefined, pathname: string) => {
-    const base = basePath || pathname;
-    if (base === '/style-info' && pathname !== base) return t('layout.styleInfoDetail', language);
-    if (base === '/production/cutting' && pathname.startsWith('/production/cutting/task/')) return t('layout.cuttingTask', language);
-    if (base === '/production/warehousing' && pathname.startsWith('/production/warehousing/detail/')) return t('layout.warehousingDetail', language);
-    if (base === '/cockpit') return '数据看板';
-    if (base === '/cockpit/agent-traces') return 'AI执行记录中心';
-    if (base === '/intelligence/center') return '智能运营中心';
-    if (base === '/intelligence/agent-traces') return 'AI执行记录中心';
-
-    for (const section of localizedMenuConfig) {
-      if (section.path && normalizePath(section.path) === base) return section.title;
-      if (section.items?.length) {
-        for (const item of section.items) {
-          if (normalizePath(item.path) === base) return item.label;
-        }
-      }
+  useEffect(() => {
+    if (auth.isFactoryAccount && effectivePathname === '/dashboard') {
+      navigate(paths.productionList);
     }
-    return base;
-  };
+  }, [auth.isFactoryAccount, effectivePathname, navigate]);
 
   useEffect(() => {
-    if (!effectivePathname) return;
-    if (normalizePath(effectivePathname) === '/login') return;
+    document.title = brandName;
+  }, [brandName]);
 
-    const basePath = getActivePath || normalizePath(effectivePathname);
-    let title = resolveRecentTitle(basePath, normalizePath(effectivePathname));
-    // 工人名册页面带工厂名动态 tab 标题
-    if (normalizePath(effectivePathname) === '/system/factory-workers') {
-      const sp = new URLSearchParams(effectiveSearch || '');
-      const factoryName = sp.get('factoryName');
-      title = factoryName ? `${factoryName} - 工人名册` : '工人名册';
-    }
-    const nextItem: RecentPage = {
-      path: effectiveFullPath,
-      basePath,
-      title,
-      ts: Date.now(),
-    };
-
-    setRecentPages((prev) => {
-      const filtered = prev.filter((p) => p.basePath !== nextItem.basePath);
-      const next = [nextItem, ...filtered].slice(0, maxRecentPages);
-      writeRecentPages(next);
-      return next;
-    });
-  }, [effectiveFullPath, effectivePathname, getActivePath]);
-
-  // 当活动标签变化时，自动滚动到可见区域
-  useEffect(() => {
-    if (!activeTabRef.current || !recentsContainerRef.current) return;
-
-    // 使用 requestAnimationFrame 确保 DOM 更新后再滚动
-    requestAnimationFrame(() => {
-      if (!activeTabRef.current || !recentsContainerRef.current) return;
-
-      const container = recentsContainerRef.current;
-      const activeTab = activeTabRef.current;
-
-      const containerRect = container.getBoundingClientRect();
-      const tabRect = activeTab.getBoundingClientRect();
-
-      // 计算标签相对于容器的位置
-      const tabLeft = tabRect.left - containerRect.left + container.scrollLeft;
-      const tabRight = tabLeft + tabRect.width;
-
-      // 如果标签在可见区域外，则滚动到可见位置
-      if (tabLeft < container.scrollLeft) {
-        // 标签在左侧视野外，滚动到左边缘
-        container.scrollLeft = tabLeft - 10; // 留10px边距
-      } else if (tabRight > container.scrollLeft + containerRect.width) {
-        // 标签在右侧视野外，滚动到右边缘
-        container.scrollLeft = tabRight - containerRect.width + 10; // 留10px边距
-      }
-      // 如果标签已在可见区域内，不进行滚动
-    });
-  }, [effectiveFullPath]);
-
-  const closeRecent = (path: string) => {
-    setRecentPages((prev) => {
-      const idx = prev.findIndex((p) => p.path === path);
-      const next = prev.filter((p) => p.path !== path);
-      writeRecentPages(next);
-
-      if (path === effectiveFullPath) {
-        const fallback = next[idx] || next[idx - 1] || { path: '/dashboard' };
-        if (fallback.path && fallback.path !== effectiveFullPath) navigate(fallback.path);
-      }
-      return next;
-    });
-  };
-
-  // 登出处理
   const handleLogout = () => {
     logout();
     message.success(t('layout.logoutSuccess', language));
     navigate('/login');
   };
 
-  const userDisplayName = String(user?.name || user?.username || '').trim() || t('layout.userDefault', language);
-  const userInitial = userDisplayName.slice(0, 1).toUpperCase();
-
-  const showGlobalSmartGuide = useMemo(() => isSmartFeatureEnabled('smart.guide.enabled'), []);
-  const globalGuide = useMemo(() => resolveSmartGlobalGuide(effectivePathname), [effectivePathname]);
-
-  // 个性化号：租户用户显示工厂名称，超管显示平台默认名称
-  const brandName = String((user as any)?.tenantName || '').trim() || t('login.brand', language);
-
-  // 工厂账号登录后跳转到生产列表（避免停留在仪表盘）
-  useEffect(() => {
-    if (isFactoryAccount && effectivePathname === '/dashboard') {
-      navigate(paths.productionList);
-    }
-  }, [isFactoryAccount, effectivePathname, navigate]);
-
-  // 实时更新浏览器标题
-  useEffect(() => {
-    document.title = brandName;
-  }, [brandName]);
-
   return (
     <div className={`layout${collapsed ? ' layout-collapsed' : ''}`}>
       <DailyTodoModal />
-      {isFactoryAccount && (
+      {auth.isFactoryAccount && (
         <FactoryPersonalCenterModal open={factoryModalOpen} onClose={() => setFactoryModalOpen(false)} />
       )}
       <header className="layout-header">
@@ -557,13 +190,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           <div className="header-user">
             <SmartAlertBell />
-
-            {isFactoryAccount && (
+            {auth.isFactoryAccount && (
               <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 12 }}>
-                 {factoryName || '外发工厂'}
+                 {auth.factoryName || '外发工厂'}
               </Tag>
             )}
-
             <Dropdown
               placement="bottomRight"
               trigger={['click']}
@@ -576,7 +207,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 onClick: ({ key }) => {
                   if (key === 'logout') handleLogout();
                   if (key === 'profile') {
-                    if (isFactoryAccount) setFactoryModalOpen(true);
+                    if (auth.isFactoryAccount) setFactoryModalOpen(true);
                     else navigate('/system/profile');
                   }
                 },
@@ -595,74 +226,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       <div className="layout-main">
-        <AntLayout.Sider
-          collapsible={!isMobile}
-          collapsed={sidebarIsCollapsed}
-          onCollapse={isMobile ? undefined : setSidebarCollapsed}
-          width={window.innerWidth >= 3840 ? 320 : window.innerWidth >= 2560 ? 280 : 210}
-          collapsedWidth={window.innerWidth >= 2560 ? 72 : 64}
-          trigger={null}
-          className="layout-sidebar"
-        >
-          {!isMobile ? (
-            <div className="sidebar-tools">
-              <Button
-                type="text"
-                className="sidebar-collapse-btn"
-                icon={sidebarIsCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                aria-label={sidebarIsCollapsed ? t('layout.expandSidebar', language) : t('layout.collapseSidebar', language)}
-                onClick={() => setSidebarCollapsed((prev) => !prev)}
-              />
-            </div>
-          ) : null}
-          <Menu
-            mode="inline"
-            selectedKeys={selectedKeys}
-            items={menuItems}
-            inlineCollapsed={sidebarIsCollapsed}
-            getPopupContainer={() => document.body}
-            {...menuInteractionProps}
-            className="sidebar-menu"
-          />
-          {sidebarIsCollapsed && !isMobile ? (
-            <div className="sidebar-icp-collapsed">
-              <Tooltip
-                placement="rightBottom"
-                classNames={{ root: 'sidebar-icp-tooltip' }}
-                title={(
-                  <div className="sidebar-icp-tooltip-content">
-                    <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer">
-                      粤公网安备44011302005352号
-                    </a>
-                    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
-                      粤ICP备2026026776号-1
-                    </a>
-                  </div>
-                )}
-              >
-                <Button type="text" size="small" className="sidebar-icp-collapsed-btn">
-                  <img src="/police.png" alt="公安备案图标" className="sidebar-icp-collapsed-icon" />
-                  <span>备案</span>
-                </Button>
-              </Tooltip>
-            </div>
-          ) : null}
-          {!sidebarIsCollapsed && !isMobile && (
-            <div className="sidebar-icp">
-              <div className="sidebar-icp-links">
-                <div className="sidebar-icp-link-row">
-                  <img src="/police.png" alt="公安备案图标" className="sidebar-icp-icon" />
-                  <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer">
-                    粤公网安备44011302005352号
-                  </a>
-                </div>
-                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
-                  粤ICP备2026026776号-1
-                </a>
-              </div>
-            </div>
-          )}
-        </AntLayout.Sider>
+        <SideMenu
+          sidebarIsCollapsed={sidebarIsCollapsed}
+          isMobile={isMobile}
+          selectedKeys={selectedKeys}
+          menuOpenKeys={menuOpenKeys}
+          activeSectionKey={activeSectionKey}
+          onMenuOpenChange={setMenuOpenKeys}
+          onSidebarCollapse={setSidebarCollapsed}
+          auth={auth}
+        />
 
         <main className="layout-content">
           <div className="content-wrapper">

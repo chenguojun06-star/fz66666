@@ -14,6 +14,8 @@ import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.helper.StyleCostCalculator;
+import com.fashion.supplychain.style.helper.StyleListEnrichmentHelper;
 import com.fashion.supplychain.style.helper.StyleLogHelper;
 import com.fashion.supplychain.style.helper.StyleStageHelper;
 import com.fashion.supplychain.style.helper.StyleStageCompletionHelper;
@@ -23,7 +25,6 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Collections;
 import java.util.HashMap;
@@ -64,6 +65,12 @@ public class StyleInfoOrchestrator {
     private StylePatternProductionHelper stylePatternProductionHelper;
 
     @Autowired
+    private StyleCostCalculator styleCostCalculator;
+
+    @Autowired
+    private StyleListEnrichmentHelper styleListEnrichmentHelper;
+
+    @Autowired
     private ProductionOrderService productionOrderService;
 
     @Autowired
@@ -82,10 +89,9 @@ public class StyleInfoOrchestrator {
     @Autowired(required = false)
     private ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
-    /**
-     * 实时计算款式的开发成本（BOM用料成本 + 工序成本 + 二次工艺成本）
-     * 不依赖可能过期的报价单快照数据
-     */
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleOperationLogService styleOperationLogService;
+
     public IPage<StyleInfo> list(Map<String, Object> params) {
         IPage<StyleInfo> page = styleInfoService.queryPage(params);
         styleSelectionSourceHelper.fillSelectionSourceAndCoverFallback(page.getRecords());
@@ -124,44 +130,21 @@ public class StyleInfoOrchestrator {
         records.forEach(style -> {
             try {
                 if (style.getId() != null) {
-                    style.setPrice(computeLiveDevCostFromBatch(
+                    style.setPrice(styleCostCalculator.computeLiveDevCostFromBatch(
                             style.getId(), bomByStyleId, processByStyleId, secondaryByStyleId));
                 }
             } catch (Exception e) {
                 log.warn("计算款式{}实时成本失败: {}", style.getId(), e.getMessage());
             }
         });
+
+        styleListEnrichmentHelper.fillQuotationPriceFields(records);
+        styleListEnrichmentHelper.fillProgressFields(records);
+        styleListEnrichmentHelper.fillOrderCountFields(records);
+        styleListEnrichmentHelper.fillScrapFields(records);
+        styleListEnrichmentHelper.fillWarehousedFields(records);
+
         return page;
-    }
-
-    private BigDecimal computeLiveDevCostFromBatch(
-            Long styleId,
-            Map<Long, List<StyleBom>> bomByStyleId,
-            Map<Long, List<StyleProcess>> processByStyleId,
-            Map<Long, List<SecondaryProcess>> secondaryByStyleId) {
-
-        List<StyleBom> bomItems = bomByStyleId.getOrDefault(styleId, Collections.emptyList());
-        double materialTotal = bomItems.stream().mapToDouble(bom -> {
-            BigDecimal tp = bom.getTotalPrice();
-            if (tp != null) return tp.doubleValue();
-            double usage = bom.getUsageAmount() != null ? bom.getUsageAmount().doubleValue() : 0.0;
-            double loss  = bom.getLossRate()    != null ? bom.getLossRate().doubleValue()    : 0.0;
-            double up    = bom.getUnitPrice()   != null ? bom.getUnitPrice().doubleValue()   : 0.0;
-            return usage * (1.0 + loss / 100.0) * up;
-        }).sum();
-
-        List<StyleProcess> processes = processByStyleId.getOrDefault(styleId, Collections.emptyList());
-        double processTotal = processes.stream()
-                .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
-                .sum();
-
-        List<SecondaryProcess> secondaryList = secondaryByStyleId.getOrDefault(styleId, Collections.emptyList());
-        double otherTotal = secondaryList.stream()
-                .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
-                .sum();
-
-        return BigDecimal.valueOf(materialTotal + processTotal + otherTotal)
-                .setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
     public StyleInfo detail(String idOrStyleNo) {
@@ -204,25 +187,25 @@ public class StyleInfoOrchestrator {
         return tenantId != null ? tenantId : -1L;
     }
 
+    private boolean isTenantScopedRead() {
+        return !UserContext.isSuperAdmin();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean save(StyleInfo styleInfo) {
         if (styleInfo == null) {
             throw new IllegalArgumentException("参数错误");
         }
-        // [2026-07-20 修复] 防御性校验：非超管用户必须有 tenantId，否则拒绝保存
         Long currentTenantId = UserContext.tenantId();
         if (currentTenantId == null && !UserContext.isSuperAdmin()) {
             log.error("[TenantGuard] 租户信息缺失，拒绝创建款式。userId={}, username={}",
                     UserContext.userId(), UserContext.username());
             throw new IllegalStateException("租户信息异常，请退出重新登录后再试");
         }
-        // 显式设置 tenantId，不完全依赖 MetaObjectHandler 自动填充
         if (currentTenantId != null && styleInfo.getTenantId() == null) {
             styleInfo.setTenantId(currentTenantId);
         }
-        // 最终兜底：tenantId 仍为 null 则拒绝（防止 DB NOT NULL 约束报错）
-        // 超管没有 tenantId，需在请求体中明确传入 tenantId 才能创建款式
         if (styleInfo.getTenantId() == null) {
             throw new IllegalArgumentException(
                     UserContext.isSuperAdmin()
@@ -231,16 +214,13 @@ public class StyleInfoOrchestrator {
         }
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
-        // 新建款式时：若款号已存在则自动追加 -1/-2/... 后缀，保证不冲突
         if (styleInfo.getId() == null && StringUtils.hasText(styleInfo.getStyleNo())) {
             styleInfo.setStyleNo(generateUniqueStyleNo(styleInfo.getStyleNo()));
         }
         try {
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
-                // 自动创建样板生产记录（待领取状态）
                 try {
-                    // 如果是新增，重新查询获取完整对象（包含自动生成的ID）
                     if (styleInfo.getId() == null && StringUtils.hasText(styleInfo.getStyleNo())) {
                         StyleInfo savedStyle = styleInfoService.lambdaQuery()
                                 .eq(StyleInfo::getStyleNo, styleInfo.getStyleNo())
@@ -288,7 +268,6 @@ public class StyleInfoOrchestrator {
             }
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
-                // 同步更新样板生产记录的颜色和数量
                 try {
                     stylePatternProductionHelper.syncPatternProductionInfo(styleInfo);
                 } catch (Exception e) {
@@ -392,10 +371,6 @@ public class StyleInfoOrchestrator {
         return styleStageHelper.resetSample(id, body);
     }
 
-    /**
-     * 直接删除款式（级联删除关联样板生产记录）。
-     * 若存在未删除的生产订单则拒绝删除。
-     */
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean delete(Long id) {
@@ -453,7 +428,6 @@ public class StyleInfoOrchestrator {
 
         String remark = StringUtils.hasText(reason) ? reason.trim() : "未填写报废原因";
 
-        // 检查是否存在关联的未删除生产订单
         long activeOrders = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getStyleId, String.valueOf(id))
@@ -488,21 +462,16 @@ public class StyleInfoOrchestrator {
         return true;
     }
 
-    /**
-     * 检查生产要求是否被锁定（是否被生产订单引用）
-     */
     public boolean isProductionReqLocked(Long styleId) {
         if (styleId == null) {
             return false;
         }
 
-        // 获取款号信息
         StyleInfo styleInfo = styleInfoService.getById(styleId);
         if (styleInfo == null || !StringUtils.hasText(styleInfo.getStyleNo())) {
             return false;
         }
 
-        // 检查是否有生产订单引用了这个款号
         QueryWrapper<ProductionOrder> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("style_no", styleInfo.getStyleNo());
         queryWrapper.last("LIMIT 1");
@@ -516,8 +485,6 @@ public class StyleInfoOrchestrator {
         }
     }
 
-
-    /** 为新款式生成一个当前不存在的款号，冲突时加 -1/-2/... 后缀 */
     private String generateUniqueStyleNo(String requested) {
         String baseNo = requested.trim().replaceAll("-\\d+$", "");
         if (!styleNoExists(baseNo)) {
@@ -552,20 +519,13 @@ public class StyleInfoOrchestrator {
         if (!StringUtils.hasText(styleInfo.getStyleName())) {
             throw new IllegalArgumentException("请输入款名");
         }
-        // 品类不再必填，允许创建空记录
     }
 
-    /**
-     * 开始配置尺寸表
-     */
     public boolean startSize(Long id) {
         ensureStyleNotScrapped(id);
         return styleStageCompletionHelper.startSize(id);
     }
 
-    /**
-     * 完成尺寸表配置
-     */
     public boolean completeSize(Long id) {
         ensureStyleNotScrapped(id);
         return styleStageCompletionHelper.completeSize(id);
@@ -655,101 +615,11 @@ public class StyleInfoOrchestrator {
         }
     }
 
-    /**
-     * 获取样衣开发费用统计
-     */
     public Map<String, Object> getDevelopmentStats(String rangeType) {
-        LocalDateTime startTime = getStartTimeByRange(rangeType);
-        LocalDateTime endTime = LocalDateTime.now();
-
-        boolean tenantScopedRead = !UserContext.isSuperAdmin();
-        Long readableTenantId = resolveReadableTenantId();
-
-        // 查询时间范围内已完成的样衣（租户隔离：非超管只查本租户数据）
-        List<StyleInfo> completedStyles = styleInfoService.lambdaQuery()
-                .eq(StyleInfo::getSampleStatus, "COMPLETED")
-                .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
-                .ge(StyleInfo::getSampleCompletedTime, startTime)
-                .le(StyleInfo::getSampleCompletedTime, endTime)
-                .list();
-
-        int totalSampleQuantity = 0;
-
-        // 统计费用：遍历所有已完成的样衣，汇总其报价单费用
-        double totalMaterialCost = 0.0;
-        double totalProcessCost = 0.0;
-        double totalOtherCost = 0.0;
-
-        for (StyleInfo style : completedStyles) {
-            int sampleQty = style.getSampleQuantity() == null || style.getSampleQuantity() <= 0
-                    ? 1
-                    : style.getSampleQuantity();
-            totalSampleQuantity += sampleQty;
-
-            // 用实时BOM成本（不依赖可能过期的报价单快照）
-            List<StyleBom> bomItems = styleBomService.listByStyleId(style.getId());
-            double materialCost = bomItems.stream().mapToDouble(bom -> {
-                BigDecimal tp = bom.getTotalPrice();
-                if (tp != null) return tp.doubleValue();
-                double usage = bom.getUsageAmount() != null ? bom.getUsageAmount().doubleValue() : 0.0;
-                double loss  = bom.getLossRate()    != null ? bom.getLossRate().doubleValue()    : 0.0;
-                double up    = bom.getUnitPrice()   != null ? bom.getUnitPrice().doubleValue()   : 0.0;
-                return usage * (1.0 + loss / 100.0) * up;
-            }).sum();
-            totalMaterialCost += materialCost * sampleQty;
-
-            // 用实时工序成本
-            List<StyleProcess> processes = styleProcessService.listByStyleId(style.getId());
-            double processCost = processes.stream()
-                    .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
-                    .sum();
-                totalProcessCost += processCost * sampleQty;
-
-            // 二次工艺成本：从 t_secondary_process 实时计算
-            List<SecondaryProcess> secondaryItems = secondaryProcessService.listByStyleId(style.getId());
-            double secondaryCost = secondaryItems.stream()
-                    .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
-                    .sum();
-                totalOtherCost += secondaryCost * sampleQty;
-        }
-
-        double totalCost = totalMaterialCost + totalProcessCost + totalOtherCost;
-
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("patternCount", totalSampleQuantity);
-        stats.put("materialCost", totalMaterialCost);
-        stats.put("processCost", totalProcessCost);
-        stats.put("secondaryProcessCost", totalOtherCost);  // other_cost 对应二次工艺
-        stats.put("totalCost", totalCost);
-
-        return stats;
+        return styleCostCalculator.getDevelopmentStats(rangeType);
     }
 
-    private LocalDateTime getStartTimeByRange(String rangeType) {
-        LocalDate today = LocalDate.now();
-        switch (rangeType) {
-            case "day":
-                return today.atStartOfDay();
-            case "week":
-                return today.minusDays(today.getDayOfWeek().getValue() - 1).atStartOfDay();
-            case "month":
-                return today.withDayOfMonth(1).atStartOfDay();
-            case "year":
-                return today.withDayOfYear(1).atStartOfDay();
-            default:
-                return today.atStartOfDay();
-        }
-    }
-
-    /**
-     * 保存样衣审核结论（评语可选）
-     *
-     * @param id            款式ID
-     * @param reviewStatus  审核状态：PASS / REWORK / REJECT
-     * @param reviewComment 审核评语（可为空）
-     * @return 更新后的款式信息
-     */
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment) {
         StyleInfo style = styleInfoService.getById(id);
         if (style == null) {
@@ -762,19 +632,11 @@ public class StyleInfoOrchestrator {
         style.setSampleReviewTime(LocalDateTime.now());
         styleInfoService.updateById(style);
 
-        // 同步审核结果到 PatternProduction（确保小程序入库校验 isReviewApproved 能通过）
-        // 映射：PC端 PASS→APPROVED, REJECT/REWORK→REJECTED
         syncPatternProductionReviewFields(id, reviewStatus, reviewComment);
 
         return styleInfoService.getById(id);
     }
 
-    /**
-     * PC端审核后同步审核结果到 PatternProduction 表。
-     * 与 PatternStatusHelper.syncStyleInfoReviewFields() 互为镜像：
-     *   小程序审核：PatternProduction → StyleInfo（APPROVED→PASS, REJECTED→REJECT）
-     *   PC端审核：  StyleInfo → PatternProduction（PASS→APPROVED, REJECT→REJECTED）
-     */
     private void syncPatternProductionReviewFields(Long styleId, String reviewStatus, String reviewComment) {
         try {
             PatternProduction pattern = patternProductionService.lambdaQuery()
@@ -805,15 +667,6 @@ public class StyleInfoOrchestrator {
         }
     }
 
-    /**
-     * 一键复制款式：将源款式的基础信息和BOM全量复制到新款色。
-     *
-     * @param sourceStyleId 源款式ID
-     * @param newStyleNo    新款号（必填）
-     * @param newColor      新颜色（必填）
-     * @param newStyleName  新款式名称（可选，null 时沿用原款名）
-     * @return 新创建的款式信息
-     */
     @Transactional(rollbackFor = Exception.class)
     public StyleInfo copyStyle(Long sourceStyleId, String newStyleNo, String newColor, String newStyleName) {
         if (sourceStyleId == null) {

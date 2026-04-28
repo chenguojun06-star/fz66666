@@ -9,6 +9,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import WorkerPayrollAuditPopover from './WorkerPayrollAuditPopover';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
+import { getScanTypeLabel } from '@/components/common/ScanTypeBadge';
 
 // 工具函数：创建可排序的数字列配置
 export const createSortableNumberColumn = (
@@ -58,19 +59,7 @@ export const createSortableTimeColumn = (
     render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm') : '-',
 });
 
-export const scanTypeText = (raw: any) => {
-    const v = String(raw || '').trim();
-    if (!v) return '-';
-    if (v === 'production') return '生产';
-    if (v === 'cutting') return '裁剪';
-    if (v === 'procurement') return '采购';
-    if (v === 'quality') return '质检';
-    if (v === 'pressing') return '大烫';
-    if (v === 'packaging') return '包装';
-    if (v === 'warehousing') return '入库';
-    if (v === 'sewing' || v === 'carSewing') return '车缝';
-    return v;
-};
+export const scanTypeText = (raw: any) => getScanTypeLabel(raw);
 
 export interface SummaryColumnDeps {
     sortField: string;

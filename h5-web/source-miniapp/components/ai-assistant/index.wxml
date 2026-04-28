@@ -78,41 +78,7 @@
             <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
             <view class="bubble">
               <image class="msg-image" src="{{item.imageUrl}}" mode="widthFix" catchtap="previewImage" data-src="{{item.imageUrl}}" wx:if="{{item.imageUrl}}" />
-              <view class="overdue-factory-wrapper" wx:if="{{item.overdueFactoryCard && item.overdueFactoryCard.factoryGroups.length > 0}}">
-                <view class="overdue-summary-bar">
-                  <view class="overdue-summary-title"><view class="overdue-alert-dot"></view> 逾期订单总览</view>
-                  <view class="overdue-summary-stats">
-                    <view class="overdue-stat-chip overdue-stat-highlight"><view class="overdue-stat-val">{{item.overdueFactoryCard.overdueCount}}<text class="overdue-stat-unit">张</text></view><view class="overdue-stat-label">逾期订单</view></view>
-                    <view class="overdue-stat-chip"><view class="overdue-stat-val">{{item.overdueFactoryCard.totalQuantity}}<text class="overdue-stat-unit">件</text></view><view class="overdue-stat-label">总件数</view></view>
-                    <view class="overdue-stat-chip"><view class="overdue-stat-val">{{item.overdueFactoryCard.avgProgress}}<text class="overdue-stat-unit">%</text></view><view class="overdue-stat-label">平均进度</view></view>
-                    <view class="overdue-stat-chip overdue-stat-highlight"><view class="overdue-stat-val">{{item.overdueFactoryCard.avgOverdueDays}}<text class="overdue-stat-unit">天</text></view><view class="overdue-stat-label">平均延期</view></view>
-                  </view>
-                </view>
-                <view class="overdue-factory-card" wx:for="{{item.overdueFactoryCard.factoryGroups}}" wx:for-item="fg" wx:key="factoryName">
-                  <view class="overdue-factory-header">
-                    <view class="overdue-factory-name">🏭 {{fg.factoryName}}</view>
-                    <view class="overdue-factory-badge">{{fg.totalOrders}}张 · {{fg.totalQuantity}}件</view>
-                  </view>
-                  <view class="overdue-factory-metrics">
-                    <view class="overdue-metric-item"><text class="overdue-metric-label">平均进度</text><text class="overdue-metric-val {{fg.avgProgress < 50 ? 'overdue-danger' : ''}}">{{fg.avgProgress}}%</text></view>
-                    <view class="overdue-metric-item"><text class="overdue-metric-label">平均延期</text><text class="overdue-metric-val {{fg.avgOverdueDays > 7 ? 'overdue-danger' : ''}}">{{fg.avgOverdueDays}}天</text></view>
-                    <view class="overdue-metric-item"><text class="overdue-metric-label">预计完成</text><text class="overdue-metric-val">{{fg.estimatedCompletionDays > 0 ? fg.estimatedCompletionDays + '天' : '—'}}</text></view>
-                    <view class="overdue-metric-item"><text class="overdue-metric-label">生产人数</text><text class="overdue-metric-val">{{fg.activeWorkers || '—'}}人</text></view>
-                  </view>
-                  <view class="overdue-order-list">
-                    <view class="overdue-order-item" wx:for="{{fg.orders}}" wx:for-item="od" wx:key="orderNo" catchtap="handleOverdueOrder" data-item="{{od}}">
-                      <view class="overdue-order-left">
-                        <text class="overdue-order-no">{{od.orderNo}}</text>
-                        <text class="overdue-order-style" wx:if="{{od.styleNo}}">{{od.styleNo}}</text>
-                      </view>
-                      <view class="overdue-order-right">
-                        <text class="overdue-order-progress {{od.progress < 50 ? 'overdue-danger' : ''}}">{{od.progress}}%</text>
-                        <text class="overdue-order-days">延{{od.overdueDays}}天</text>
-                      </view>
-                    </view>
-                  </view>
-                </view>
-              </view>
+              <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
               <view class="action-cards" wx:if="{{item.actions && item.actions.length > 0}}">
                 <view class="action-card" wx:for="{{item.actions}}" wx:for-item="act" wx:key="label">
                   <view class="action-card-body">
@@ -140,41 +106,6 @@
                   </view>
                 </view>
               </view>
-              <view class="report-preview-wrapper" wx:if="{{item.reportPreview && item.reportPreview.kpis.length > 0}}">
-                <view class="report-preview-header">
-                  <view class="report-preview-title">📊 运营{{item.reportPreview.typeLabel || '日报'}}看板</view>
-                  <view class="report-preview-range">{{item.reportPreview.rangeLabel}}</view>
-                </view>
-                <view class="report-kpi-grid">
-                  <view class="report-kpi-item" wx:for="{{item.reportPreview.kpis}}" wx:for-item="kpi" wx:key="name">
-                    <view class="report-kpi-name">{{kpi.name}}</view>
-                    <view class="report-kpi-val">{{kpi.current}}<text class="report-kpi-unit" wx:if="{{kpi.unit}}">{{kpi.unit}}</text></view>
-                    <view class="report-kpi-change {{kpi.change && kpi.change[0] === '+' ? 'report-change-up' : kpi.change && kpi.change[0] === '-' ? 'report-change-down' : ''}}" wx:if="{{kpi.change}}">{{kpi.change}}</view>
-                  </view>
-                </view>
-                <view class="report-risk-summary" wx:if="{{item.reportPreview.riskSummary}}">
-                  <view class="report-risk-title">⚠️ 风险概览</view>
-                  <view class="report-risk-grid">
-                    <view class="report-risk-item report-risk-danger"><text class="report-risk-val">{{item.reportPreview.riskSummary.overdueCount || 0}}</text><text class="report-risk-label">逾期</text></view>
-                    <view class="report-risk-item report-risk-warning"><text class="report-risk-val">{{item.reportPreview.riskSummary.highRiskCount || 0}}</text><text class="report-risk-label">高风险</text></view>
-                    <view class="report-risk-item"><text class="report-risk-val">{{item.reportPreview.riskSummary.stagnantCount || 0}}</text><text class="report-risk-label">停滞</text></view>
-                  </view>
-                </view>
-                <view class="report-factory-ranking" wx:if="{{item.reportPreview.factoryRanking.length > 0}}">
-                  <view class="report-ranking-title">🏭 工厂排名</view>
-                  <view class="report-ranking-item" wx:for="{{item.reportPreview.factoryRanking}}" wx:for-item="factory" wx:key="rank">
-                    <view class="report-ranking-badge">{{factory.rank}}</view>
-                    <view class="report-ranking-name">{{factory.name || factory.factoryName}}</view>
-                    <view class="report-ranking-stats">{{factory.scanCount}}次 / {{factory.scanQty || factory.scanQuantity}}件</view>
-                  </view>
-                </view>
-                <view class="report-cost-summary" wx:if="{{item.reportPreview.costSummary}}">
-                  <view class="report-cost-title">💰 成本汇总</view>
-                  <view class="report-cost-row"><text class="report-cost-label">扫码总成本</text><text class="report-cost-val">¥{{item.reportPreview.costSummary.totalCost}}</text></view>
-                  <view class="report-cost-row"><text class="report-cost-label">扫码记录数</text><text class="report-cost-val">{{item.reportPreview.costSummary.scanCount}}条</text></view>
-                </view>
-              </view>
-              <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
               <view class="clarification-card" wx:if="{{item.clarificationHints && item.clarificationHints.length > 0}}">
                 <view class="clarification-label">🤔 需要补充信息：</view>
                 <view class="clarification-btns">

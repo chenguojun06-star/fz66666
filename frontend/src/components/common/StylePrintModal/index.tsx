@@ -23,12 +23,7 @@ import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { toSeasonCn, PrintOptions, DEFAULT_PRINT_OPTIONS, StylePrintModalProps, PrintData } from './types';
 import { buildPrintHtml } from './printTemplate';
 import { safePrint } from '@/utils/safePrint';
-
-type LabelSize = '40x70' | '50x100';
-const LABEL_SIZE_MAP: Record<LabelSize, [number, number]> = {
-  '40x70': [70, 40],
-  '50x100': [100, 50],
-};
+import { LABEL_SIZE_MAP, parseSizeColorMatrix, resolveLabelItems, type LabelItem } from './printDataTransform';
 
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
@@ -49,59 +44,15 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   const [autoPatternId, setAutoPatternId] = useState<string | null>(null);
   const [qrPngDataUrl, setQrPngDataUrl] = useState<string>('');
   const resolvedPatternId = propPatternId ? String(propPatternId) : autoPatternId;
+  type LabelSize = '40x70' | '50x100';
 
-  /* ---- 解析 sizeColorConfig（开发详情的权威数据） ---- */
   const sizeColorMatrix = useMemo(() => {
-    const raw = sizeColorConfig || (extraInfo as any)?.sizeColorConfig;
-    if (!raw) return null;
-    try {
-      const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      const sizes: string[] = Array.isArray(config.sizes) ? config.sizes.map((s: unknown) => String(s || '').trim()).filter(Boolean) : [];
-      const matrixRows: Array<{ color: string; quantities: number[] }> = Array.isArray(config.matrixRows)
-        ? config.matrixRows.map((row: any) => ({
-            color: String(row?.color || '').trim(),
-            quantities: Array.isArray(row?.quantities) ? row.quantities.map((q: any) => Number(q || 0)) : [],
-          }))
-        : [];
-      if (sizes.length === 0 && matrixRows.length === 0) return null;
-      return { sizes, matrixRows };
-    } catch { return null; }
+    return parseSizeColorMatrix(sizeColorConfig || (extraInfo as any)?.sizeColorConfig);
   }, [sizeColorConfig, extraInfo]);
 
-  /* ---- 自动识别颜色×码数×数量 ---- */
+
   const labelItems = useMemo(() => {
-    // 优先使用 sizeDetails prop（调用方显式传入）
-    if (sizeDetails && sizeDetails.length > 0) {
-      return sizeDetails.filter(d => d.quantity > 0);
-    }
-    // 其次解析 productionSheet 的 sizeColorConfig
-    const raw = (data.productionSheet as any)?.sizeColorConfig;
-    if (raw) {
-      try {
-        const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        const sizes: string[] = config.sizes || [];
-        const matrixRows: Array<{ color: string; quantities: number[] }> = config.matrixRows || [];
-        if (matrixRows.length > 0 && sizes.length > 0) {
-          return matrixRows.flatMap(row =>
-            row.quantities.map((qty: number, idx: number) => ({
-              color: row.color,
-              size: sizes[idx] || '',
-              quantity: qty || 0,
-            }))
-          ).filter(item => item.quantity > 0 && item.size);
-        }
-        // 仅有 colors + sizes 无 matrixRows 时，生成空数量占位
-        const colors: string[] = config.colors || [];
-        if (colors.length > 0 && sizes.length > 0) {
-          return colors.flatMap(c => sizes.map(s => ({ color: c, size: s, quantity: 0 })));
-        }
-      } catch { /* ignore parse error */ }
-    }
-    // 兜底：使用 props 单色/单数量
-    if (color) {
-      return [{ color, size: '', quantity: quantity ?? 0 }];
-    }
-    return [];
+    return resolveLabelItems(sizeDetails, data.productionSheet, color, quantity ?? 0);
   }, [sizeDetails, data.productionSheet, color, quantity]);
 
   useEffect(() => { setResolvedCover(cover || null); }, [cover]);

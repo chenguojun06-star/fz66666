@@ -480,6 +480,16 @@
 .process-bar-fill--done {
   background: var(--color-success);
 }
+.process-bar-wrap {
+  position: relative;
+}
+.bundle-stats {
+  display: block;
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 2px;
+  line-height: 1;
+}
 
 /* 颜色尺码矩阵 */
 .sku-section {

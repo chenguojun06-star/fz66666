@@ -40,6 +40,7 @@ function buildProcessOptions(processName, progressStage, stageResult) {
     .map(p => ({
       label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
       value: p.processName,
+      progressStage: p.progressStage || '',
       scanType: normalizeScanType(p.processName, p.scanType),
       unitPrice: Number(p.unitPrice || p.price || 0),
       hidePrice: hidePrice,
@@ -163,7 +164,7 @@ function buildScanData(confirm, option, confirmedQty) {
   return {
     ...existingScanData,
     processName: option.value,
-    progressStage: option.value,
+    progressStage: option.progressStage || existingScanData.progressStage || option.value,
     scanType: normalizedScanType,
     unitPrice: option.unitPrice || 0,
     quantity: confirmedQty,
@@ -269,7 +270,7 @@ function onProcessScrollSelect(ctx, e) {
     'scanResultConfirm.selectedProcessCount': selectionSummary.selectedProcessCount,
     'scanResultConfirm.selectedProcessAmount': selectionSummary.selectedProcessAmount,
     'scanResultConfirm.processName': primaryOption.value,
-    'scanResultConfirm.progressStage': primaryOption.value,
+    'scanResultConfirm.progressStage': primaryOption.progressStage || primaryOption.value,
     'scanResultConfirm.scanType': primaryOption.scanType,
     'scanResultConfirm.unitPrice': primaryOption.unitPrice || 0,
     'scanResultConfirm.hasWarehouseSelected': selectedOptions.some(item => item.scanType === 'warehouse'),

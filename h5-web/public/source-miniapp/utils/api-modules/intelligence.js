@@ -21,6 +21,10 @@ const intelligence = {
     var url = '/api/intelligence/ai-advisor/chat/stream?question=' + question;
     if (pageContext) url += '&pageContext=' + pageContext;
     if (conversationId) url += '&conversationId=' + encodeURIComponent(conversationId);
+    if (payload.imageUrl) url += '&imageUrl=' + encodeURIComponent(payload.imageUrl);
+    if (payload.orderNo) url += '&orderNo=' + encodeURIComponent(payload.orderNo);
+    if (payload.processName) url += '&processName=' + encodeURIComponent(payload.processName);
+    if (payload.stage) url += '&stage=' + encodeURIComponent(payload.stage);
 
     var safeDone = function () {
       if (doneCalled) return;

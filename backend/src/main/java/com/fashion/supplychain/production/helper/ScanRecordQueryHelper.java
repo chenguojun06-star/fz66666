@@ -181,7 +181,17 @@ public class ScanRecordQueryHelper {
             throw new AccessDeniedException("未登录");
         }
 
-        List<ScanRecord> receivedRecords = scanRecordService.lambdaQuery()
+        List<ScanRecord> receivedRecords = queryReceivedQualityRecords(operatorId);
+        if (receivedRecords == null || receivedRecords.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, ProductionOrder> orderMap = loadActiveOrders(receivedRecords);
+        return filterPendingQualityTasks(receivedRecords, orderMap);
+    }
+
+    private List<ScanRecord> queryReceivedQualityRecords(String operatorId) {
+        return scanRecordService.lambdaQuery()
                 .select(
                         ScanRecord::getId,
                         ScanRecord::getScanCode,
@@ -211,25 +221,26 @@ public class ScanRecordQueryHelper {
                 .orderByDesc(ScanRecord::getScanTime)
                 .last("limit 100")
                 .list();
+    }
 
-        if (receivedRecords == null || receivedRecords.isEmpty()) {
-            return List.of();
-        }
-
+    private Map<String, ProductionOrder> loadActiveOrders(List<ScanRecord> receivedRecords) {
         java.util.Set<String> orderIds = new java.util.HashSet<>();
         for (ScanRecord r : receivedRecords) {
             if (hasText(r.getOrderId())) orderIds.add(r.getOrderId());
         }
-        java.util.Map<String, ProductionOrder> orderMap = java.util.Collections.emptyMap();
-        if (!orderIds.isEmpty()) {
-            orderMap = productionOrderService.lambdaQuery()
-                    .select(ProductionOrder::getId, ProductionOrder::getDeleteFlag, ProductionOrder::getStatus)
-                    .in(ProductionOrder::getId, orderIds)
-                    .eq(ProductionOrder::getDeleteFlag, 0)
-                    .list().stream()
-                    .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+        if (orderIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
         }
+        return productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getDeleteFlag, ProductionOrder::getStatus)
+                .in(ProductionOrder::getId, orderIds)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .list().stream()
+                .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+    }
 
+    private List<ScanRecord> filterPendingQualityTasks(List<ScanRecord> receivedRecords,
+            Map<String, ProductionOrder> orderMap) {
         List<ScanRecord> pendingTasks = new ArrayList<>();
         for (ScanRecord received : receivedRecords) {
             String orderId = received.getOrderId();
@@ -246,43 +257,44 @@ public class ScanRecordQueryHelper {
                 }
             }
 
-            // 检查是否已有质检验收记录
-            // 🔧 修复(2026-02-25)：quality_confirm processCode 从未被写入，
-            // 改为查询 quality_receive 记录的 confirmTime 是否不为空
             ScanRecord confirmed = findQualityConfirmedRecord(orderId, bundleId);
             if (confirmed != null && hasText(confirmed.getId())) {
                 continue;
             }
 
-            // 检查该菲号是否已全部入库
-            if (hasText(bundleId)) {
-        CuttingBundle bundle = cuttingBundleService.lambdaQuery()
-            .select(CuttingBundle::getId, CuttingBundle::getQuantity)
-            .eq(CuttingBundle::getId, bundleId)
-            .one();
-                if (bundle != null) {
-                    int cuttingQuantity = bundle.getQuantity() == null ? 0 : bundle.getQuantity();
-
-                    List<ProductWarehousing> warehousingRecords = productWarehousingService.list(
-                            new LambdaQueryWrapper<ProductWarehousing>()
-                    .select(ProductWarehousing::getQualifiedQuantity)
-                                    .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                                    .eq(ProductWarehousing::getDeleteFlag, 0));
-
-                    int totalWarehoused = warehousingRecords.stream()
-                            .mapToInt(w -> w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity())
-                            .sum();
-
-                    if (cuttingQuantity > 0 && totalWarehoused >= cuttingQuantity) {
-                        continue;
-                    }
-                }
+            if (isBundleFullyWarehoused(bundleId)) {
+                continue;
             }
 
             pendingTasks.add(received);
         }
-
         return pendingTasks;
+    }
+
+    private boolean isBundleFullyWarehoused(String bundleId) {
+        if (!hasText(bundleId)) {
+            return false;
+        }
+        CuttingBundle bundle = cuttingBundleService.lambdaQuery()
+            .select(CuttingBundle::getId, CuttingBundle::getQuantity)
+            .eq(CuttingBundle::getId, bundleId)
+            .one();
+        if (bundle == null) {
+            return false;
+        }
+        int cuttingQuantity = bundle.getQuantity() == null ? 0 : bundle.getQuantity();
+
+        List<ProductWarehousing> warehousingRecords = productWarehousingService.list(
+                new LambdaQueryWrapper<ProductWarehousing>()
+        .select(ProductWarehousing::getQualifiedQuantity)
+                        .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                        .eq(ProductWarehousing::getDeleteFlag, 0));
+
+        int totalWarehoused = warehousingRecords.stream()
+                .mapToInt(w -> w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity())
+                .sum();
+
+        return cuttingQuantity > 0 && totalWarehoused >= cuttingQuantity;
     }
 
     /**

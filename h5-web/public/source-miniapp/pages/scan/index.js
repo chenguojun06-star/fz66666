@@ -42,8 +42,7 @@
  */
 
 // ==================== 导入模块 ====================
-const { getUserInfo } = require('../../utils/storage');
-const { safeNavigate, toast } = require('../../utils/uiHelper');
+const { safeNavigate } = require('../../utils/uiHelper');
 
 // 导入 Mixins (生命周期 + 核心业务 + 数据配置)
 const scanLifecycleMixin = require('./mixins/scanLifecycleMixin');

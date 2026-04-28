@@ -1,4 +1,5 @@
 const { formatLocalDateTime } = require('./ScanPeripheralHelper');
+const { normalizeScanType } = require('./ScanModeResolver');
 
 /**
  * 扫码数据处理器
@@ -391,9 +392,8 @@ class ScanDataProcessor {
       scanCode: parsedData.scanCode || '',
       skuItems: parsedData.skuItems || [],
       processName: stageResult.processName,
-      processCode: stageResult.processCode || '',
       progressStage: stageResult.progressStage,
-      scanType: stageResult.scanType,
+      scanType: normalizeScanType(stageResult.progressStage, stageResult.scanType),
       unitPrice: Number(stageResult.unitPrice || 0),
       qualityStage: stageResult.qualityStage || '',
       styleNo: parsedData.styleNo || orderDetail.styleNo || '',
@@ -403,7 +403,7 @@ class ScanDataProcessor {
       ...workerInfo,
       scanTime: formatLocalDateTime(new Date()),
       warehouse: warehouse || '',
-      source: 'h5',
+      source: 'miniprogram',
     };
   }
 

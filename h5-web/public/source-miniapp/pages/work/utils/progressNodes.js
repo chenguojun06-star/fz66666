@@ -159,26 +159,37 @@ function buildProcessNodesWithRates(order) {
   var progress = Number(order.productionProgress) || 0;
   var hasAnyRate = false;
   var hasRealRate = false;
+  var totalBundles = Number(order.cuttingBundleCount) || 0;
+  var processScannedMap = order.stageScannedBundleCount || {};
   var result = nodes.map(function (n) {
     var name = n.name || n;
     var rate = getNodeRateFromOrder(name, order);
+    var scannedBundles = Number(processScannedMap[name]) || 0;
+    var bundleInfo = null;
+    if (totalBundles > 0 && scannedBundles > 0) {
+      bundleInfo = {
+        total: totalBundles,
+        scanned: scannedBundles,
+        remaining: Math.max(0, totalBundles - scannedBundles)
+      };
+    }
     if (rate >= 0) {
       hasAnyRate = true;
       if (rate > 0 && rate < 100) hasRealRate = true;
-      return { name: name, percent: rate };
+      return { name: name, percent: rate, bundleInfo: bundleInfo };
     }
-    return { name: name, percent: -1 };
+    return { name: name, percent: -1, bundleInfo: bundleInfo };
   });
   if (hasAnyRate && hasRealRate) {
     return result.map(function (r) {
-      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0 };
+      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo };
     });
   }
   if (hasAnyRate && !hasRealRate) {
     var allHundred = result.every(function (r) { return r.percent === 100 || r.percent < 0; });
     if (allHundred) {
       return result.map(function (r) {
-        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0 };
+        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo };
       });
     }
   }
@@ -193,7 +204,17 @@ function buildProcessNodesWithRates(order) {
     } else if (progress > nodeStart) {
       pct = Math.round(((progress - nodeStart) / perNode) * 100);
     }
-    return { name: n.name || n, percent: clampPercent(pct) };
+    var name2 = n.name || n;
+    var scannedBundles2 = Number(processScannedMap[name2]) || 0;
+    var bundleInfo2 = null;
+    if (totalBundles > 0 && scannedBundles2 > 0) {
+      bundleInfo2 = {
+        total: totalBundles,
+        scanned: scannedBundles2,
+        remaining: Math.max(0, totalBundles - scannedBundles2)
+      };
+    }
+    return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2 };
   });
 }
 

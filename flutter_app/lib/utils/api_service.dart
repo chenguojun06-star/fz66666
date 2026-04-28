@@ -116,7 +116,7 @@ class ApiService extends GetxService {
     if (bundleNo != null && bundleNo.isNotEmpty) {
       params['bundleNo'] = bundleNo;
     }
-    return _http.get('/api/production/scan/records', params: params);
+    return _http.get('/api/production/scan/list', params: params);
   }
 
   Future<Response> rollbackByBundle(Map<String, dynamic> data) =>

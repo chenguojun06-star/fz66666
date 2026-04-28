@@ -11,7 +11,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 /**
  * 点击"退回重扫"按钮 - 弹出确认弹窗

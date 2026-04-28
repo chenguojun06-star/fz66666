@@ -5,7 +5,7 @@
  * @module UndoHandler
  */
 
-const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { toast } = require('../../../utils/uiHelper');
 const api = require('../../../utils/api');
 
@@ -102,6 +102,11 @@ async function handleUndo(page) {
         statusText: '已撤销',
         statusClass: 'warning',
       },
+      lastLocalScanRecord: page.data.lastLocalScanRecord ? {
+        ...page.data.lastLocalScanRecord,
+        success: false,
+        processName: '已撤销',
+      } : null,
       'undo.canUndo': false,
       'undo.loading': false,
     });

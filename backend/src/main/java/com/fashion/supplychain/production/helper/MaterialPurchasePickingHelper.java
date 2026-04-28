@@ -7,11 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.MaterialConstants;
@@ -29,11 +27,7 @@ import com.fashion.supplychain.production.mapper.MaterialPickingItemMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.finance.entity.DeductionItem;
-import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
-import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
-import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
 import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
 import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
@@ -82,14 +76,11 @@ public class MaterialPurchasePickingHelper {
     @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
 
-    @Autowired
-    private ShipmentReconciliationService shipmentReconciliationService;
-
-    @Autowired
-    private DeductionItemMapper deductionItemMapper;
-
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired
+    private ExternalFactoryMaterialDeductionHelper externalFactoryDeductionHelper;
 
     // ──────────────────────────────────────────────────────────────
     // 智能一键领取
@@ -666,7 +657,7 @@ public class MaterialPurchasePickingHelper {
 
         FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
         if ("EXTERNAL".equalsIgnoreCase(factorySnapshot.factoryType)) {
-            applyMaterialDeductionForExternalFactory(picking, purchase, items, factorySnapshot);
+            externalFactoryDeductionHelper.applyMaterialDeduction(picking, purchase, items, factorySnapshot);
         }
 
         log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
@@ -772,7 +763,7 @@ public class MaterialPurchasePickingHelper {
         picking.setUpdateTime(LocalDateTime.now());
         materialPickingService.updateById(picking);
 
-        if (wasCompleted) rollbackMaterialDeductionForExternalFactory(pickingId);
+        if (wasCompleted) externalFactoryDeductionHelper.rollbackMaterialDeduction(pickingId);
 
         restoreRelatedPurchaseStatus(picking.getOrderNo(), items);
 
@@ -1115,129 +1106,9 @@ public class MaterialPurchasePickingHelper {
         return snapshot;
     }
 
-    private void applyMaterialDeductionForExternalFactory(
-            MaterialPicking picking,
-            MaterialPurchase purchase,
-            List<MaterialPickingItem> items,
-            FactorySnapshot factorySnapshot) {
-        try {
-            String orderId = purchase != null ? purchase.getOrderId() : picking.getOrderId();
-            String orderNo = purchase != null ? purchase.getOrderNo() : picking.getOrderNo();
-            if (!StringUtils.hasText(orderId) && !StringUtils.hasText(orderNo)) {
-                return;
-            }
-
-            BigDecimal totalMaterialCost = BigDecimal.ZERO;
-            for (MaterialPickingItem item : items) {
-                BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
-                int qty = item.getQuantity() != null ? item.getQuantity() : 0;
-                totalMaterialCost = totalMaterialCost.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
-            }
-
-            if (totalMaterialCost.compareTo(BigDecimal.ZERO) <= 0) {
-                return;
-            }
-
-            ShipmentReconciliation recon = shipmentReconciliationService.lambdaQuery()
-                    .and(w -> {
-                        if (StringUtils.hasText(orderId)) w.eq(ShipmentReconciliation::getOrderId, orderId);
-                        if (StringUtils.hasText(orderNo)) w.or().eq(ShipmentReconciliation::getOrderNo, orderNo);
-                    })
-                    .orderByDesc(ShipmentReconciliation::getCreateTime)
-                    .last("LIMIT 1")
-                    .one();
-
-            if (recon == null) {
-                log.info("外发工厂面料扣款: 暂无出货对账单，扣款将在关单时自动归集, orderNo={}", orderNo);
-                return;
-            }
-
-            DeductionItem deduction = new DeductionItem();
-            deduction.setReconciliationId(recon.getId());
-            deduction.setDeductionType("MATERIAL_PICKUP");
-            deduction.setDeductionAmount(totalMaterialCost);
-            deduction.setSourceType("MATERIAL_PICKING");
-            deduction.setSourceId(picking.getId());
-            deduction.setDescription("外发工厂领料扣款|" + (factorySnapshot.factoryName != null ? factorySnapshot.factoryName : "")
-                    + "|pickingNo=" + picking.getPickingNo()
-                    + "|物料" + items.size() + "项|金额" + totalMaterialCost.setScale(2, java.math.RoundingMode.HALF_UP));
-            deductionItemMapper.insert(deduction);
-
-            BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
-            BigDecimal existingSupplement = BigDecimal.ZERO;
-            List<DeductionItem> existingItems = deductionItemMapper.selectByReconciliationId(recon.getId(), UserContext.tenantId());
-            if (existingItems != null) {
-                for (DeductionItem di : existingItems) {
-                    if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
-                        existingSupplement = existingSupplement.add(di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO);
-                    }
-                }
-            }
-            recon.setDeductionAmount(existingDeduction.add(totalMaterialCost));
-            BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
-            recon.setFinalAmount(totalAmount.subtract(recon.getDeductionAmount()).add(existingSupplement));
-            shipmentReconciliationService.updateById(recon);
-
-            log.info("外发工厂面料扣款已记录: orderNo={}, pickingNo={}, deductionAmount={}, totalDeduction={}",
-                    orderNo, picking.getPickingNo(), totalMaterialCost, recon.getDeductionAmount());
-        } catch (Exception e) {
-            log.error("外发工厂面料扣款记录失败: pickingId={}", picking.getId(), e);
-        }
-    }
-
-    private void rollbackMaterialDeductionForExternalFactory(String pickingId) {
-        try {
-            List<DeductionItem> items = deductionItemMapper.selectList(
-                    new LambdaQueryWrapper<DeductionItem>()
-                            .eq(DeductionItem::getSourceType, "MATERIAL_PICKING")
-                            .eq(DeductionItem::getSourceId, pickingId));
-            if (items == null || items.isEmpty()) {
-                return;
-            }
-            java.util.Set<String> reconIds = items.stream()
-                    .map(DeductionItem::getReconciliationId)
-                    .filter(StringUtils::hasText)
-                    .collect(java.util.stream.Collectors.toSet());
-            java.util.Map<String, ShipmentReconciliation> reconMap = reconIds.isEmpty()
-                    ? java.util.Collections.emptyMap()
-                    : shipmentReconciliationService.listByIds(reconIds).stream()
-                            .collect(java.util.stream.Collectors.toMap(ShipmentReconciliation::getId, r -> r, (a, b) -> a));
-            for (DeductionItem item : items) {
-                String reconId = item.getReconciliationId();
-                BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
-                deductionItemMapper.deleteById(item.getId());
-
-                ShipmentReconciliation recon = reconMap.get(reconId);
-                if (recon != null) {
-                    BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
-                    BigDecimal newDeduction = existingDeduction.subtract(amount);
-                    if (newDeduction.compareTo(BigDecimal.ZERO) < 0) {
-                        newDeduction = BigDecimal.ZERO;
-                    }
-                    recon.setDeductionAmount(newDeduction);
-                    BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
-                    List<DeductionItem> remainingItems = deductionItemMapper.selectByReconciliationId(reconId, UserContext.tenantId());
-                    BigDecimal supplementAmount = BigDecimal.ZERO;
-                    if (remainingItems != null) {
-                        for (DeductionItem di : remainingItems) {
-                            if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
-                                supplementAmount = supplementAmount.add(di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO);
-                            }
-                        }
-                    }
-                    recon.setFinalAmount(totalAmount.subtract(newDeduction).add(supplementAmount));
-                    shipmentReconciliationService.updateById(recon);
-                    log.info("外发工厂领料扣款已回退: pickingId={}, reconId={}, rollbackAmount={}", pickingId, reconId, amount);
-                }
-            }
-        } catch (Exception e) {
-            log.error("撤销外发工厂领料扣款失败: pickingId={}", pickingId, e);
-        }
-    }
-
-    private static class FactorySnapshot {
-        private String factoryId;
-        private String factoryName;
-        private String factoryType;
+    public static class FactorySnapshot {
+        public String factoryId;
+        public String factoryName;
+        public String factoryType;
     }
 }

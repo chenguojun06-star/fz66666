@@ -2,35 +2,14 @@
 import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
 import { stageAliasMap, carSewingKeywords, tailProcessKeywords, canonicalizeStage } from '@/utils/productionStage';
+import { getOrderStatusConfig } from '@/components/common/OrderStatusTag';
 
-/**
- * 安全字符串转换
- */
 export const safeString = (value: any, defaultValue: string = '-') => {
   const str = String(value || '').trim();
   return str || defaultValue;
 };
 
-/**
- * 获取状态文本和标签颜色
- */
-export const getStatusConfig = (status: ProductionOrder['status'] | string | undefined | null) => {
-  const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待生产', color: 'default' },
-    production: { text: '生产中', color: 'success' },
-    completed: { text: '已完成', color: 'default' },
-    delayed: { text: '已逾期', color: 'warning' },
-    scrapped: { text: '已报废', color: 'default' },
-    cancelled: { text: '已取消', color: 'error' },
-    canceled: { text: '已取消', color: 'error' },
-    closed: { text: '已关单', color: 'default' },
-    archived: { text: '已归档', color: 'default' },
-    paused: { text: '已暂停', color: 'default' },
-    returned: { text: '已退回', color: 'error' },
-  };
-  const key = safeString(status, '');
-  return statusMap[key] || { text: '未知', color: 'default' };
-};
+export const getStatusConfig = getOrderStatusConfig;
 
 /**
  * 获取关单最低要求数量（裁剪数量的90%）

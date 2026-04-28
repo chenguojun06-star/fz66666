@@ -206,6 +206,43 @@ export const createOrderColorSizeMatrixInfoItems = ({
   ];
 };
 
+export const ColorSizeMatrixPopoverContent: React.FC<{
+  model: OrderColorSizeMatrixModel;
+  title?: string;
+}> = ({ model, title = '颜色码数' }) => {
+  if (!model.hasData) return null;
+  return (
+    <div style={{ minWidth: 100 }}>
+      <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#333' }}>{title}</div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `max-content repeat(${model.sizes.length}, minmax(20px, max-content))`,
+        columnGap: 6,
+        rowGap: 2,
+        fontSize: 12,
+        textAlign: 'center',
+      }}>
+        <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
+        {model.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
+        {model.rows.map(row => (
+          <React.Fragment key={row.label}>
+            <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
+            {model.sizes.map(s => (
+              <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
+                {row.quantityMap.get(s) || 0}
+              </span>
+            ))}
+          </React.Fragment>
+        ))}
+        <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
+        <span style={{ gridColumn: `2 / ${model.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
+          {model.total}件
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
   items,
   fallbackColor,

@@ -23,6 +23,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import FactoryAuditPopover from './FactoryAuditPopover';
+import { toMoney, getLeaderboardScoreColor } from './chartConfigs';
 
 
 /** 工厂汇总行数据 */
@@ -49,11 +50,6 @@ interface Props {
   auditedOrderNos: Set<string>;
   onAuditNosChange: (s: Set<string>) => void;
 }
-
-const toMoney = (v: unknown): string => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n.toFixed(2) : '0.00';
-};
 
 const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosChange }) => {
   const { message, modal } = App.useApp();
@@ -551,7 +547,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           {!lbCollapsed && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {leaderboard.map((r) => {
-                const scoreColor = r.totalScore >= 80 ? '#52c41a' : r.totalScore >= 60 ? '#fa8c16' : '#ff4d4f';
+                const scoreColor = getLeaderboardScoreColor(r.totalScore);
                 return (
                   <div key={r.factoryId} style={{
                     display: 'flex', alignItems: 'center', gap: 6,

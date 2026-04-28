@@ -355,7 +355,6 @@ Page({
 
       var tasks = requests.map(function (req) {
         req.scanType = normalizeScanType(raw.progressStage, req.scanType || 'production');
-        req.source = 'h5';
         return api.production.executeScan(req);
       });
 
@@ -384,10 +383,25 @@ Page({
       }
 
       toast.success('批量提交成功（' + tasks.length + '条）');
+      getApp().globalData.lastScanResult = {
+        orderNo: raw.orderNo || '',
+        processCode: raw.processCode || '',
+        processName: raw.progressStage || raw.processName || '',
+        quantity: (validation.validList || []).reduce(function (sum, item) { return sum + (item.quantity || 0); }, 0),
+        success: true,
+      };
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
       this.setData({ loading: false });
+      var raw = this._scanContext;
+      getApp().globalData.lastScanResult = {
+        orderNo: (raw && raw.orderNo) || '',
+        processCode: (raw && raw.processCode) || '',
+        processName: (raw && (raw.progressStage || raw.processName)) || '',
+        quantity: 0,
+        success: false,
+      };
       wx.showModal({
         title: '扫码失败',
         content: e.message || e.errMsg || '提交失败，请稍后重试',

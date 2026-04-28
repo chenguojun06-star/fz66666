@@ -65,7 +65,7 @@ const ALLOWED_DOMAINS = [
 
 function isAllowedDomain(url) {
   try {
-    var match = url.match(/^https?:\/\/([^\/:]+)/i);
+    var match = url.match(/^https?:\/\/([^/:]+)/i);
     if (!match) return false;
     var host = match[1].toLowerCase();
     for (var i = 0; i < ALLOWED_DOMAINS.length; i++) {

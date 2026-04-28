@@ -1,5 +1,5 @@
 {
-  "copiedAt": "2026-04-21T13:13:38.449Z",
+  "copiedAt": "2026-04-28T09:17:33.256Z",
   "sourceRoot": "miniprogram",
   "copiedEntries": [
     "app.js",
@@ -10,6 +10,7 @@
     "components",
     "utils",
     "styles",
-    "assets"
+    "assets",
+    "shared"
   ]
 }

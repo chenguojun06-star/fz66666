@@ -7,7 +7,7 @@ const { safeNavigate } = require('../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const i18n = require('../../utils/i18n/index');
 
-function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName }) {
+function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName: _currentLanguageName }) {
   const items = [
     { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/change-password/index' },
     { id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' },
