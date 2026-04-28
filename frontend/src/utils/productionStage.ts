@@ -131,7 +131,7 @@ export const formatProcessDisplayName = (processCode?: string, processName?: str
   const code = String(processCode || '').trim();
   const name = String(processName || '').trim();
   if (!code && !name) return '-';
-  if (!code) return name || '-';
+  if (!code || code === name) return name || '-';
   if (!name) return code;
   return `${code} ${name}`;
 };

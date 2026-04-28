@@ -151,6 +151,8 @@ public class PayrollSettlementOrchestrator {
             return List.of();
         }
 
+        Map<String, Map<String, String>> orderNoToProcessCodeMap = buildProcessCodeMapFromRows(rows);
+
         for (Map<String, Object> row : rows) {
             if (row == null) {
                 continue;
@@ -167,6 +169,17 @@ public class PayrollSettlementOrchestrator {
                     ? amount.divide(BigDecimal.valueOf(qty), 2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
             row.put("unitPrice", up);
+
+            String processCode = TextUtils.safeText(row.get("processCode"));
+            String processName = TextUtils.safeText(row.get("processName"));
+            if ((processCode.isEmpty() || processCode.equals(processName)) && !processName.isEmpty()) {
+                String orderNo = TextUtils.safeText(row.get("orderNo"));
+                Map<String, String> nameToCode = orderNoToProcessCodeMap.get(orderNo);
+                if (nameToCode != null) {
+                    String resolved = nameToCode.get(processName.trim());
+                    if (resolved != null) row.put("processCode", resolved);
+                }
+            }
         }
 
         return rows;
@@ -232,6 +245,8 @@ public class PayrollSettlementOrchestrator {
     }
 
     private List<PayrollSettlementItem> buildSettlementItems(List<Map<String, Object>> rows, PayrollSettlement settlement) {
+        Map<String, Map<String, String>> orderNoToProcessCodeMap = buildProcessCodeMapFromRows(rows);
+
         LocalDateTime now = LocalDateTime.now();
         List<PayrollSettlementItem> items = new ArrayList<>();
         for (Map<String, Object> row : rows) {
@@ -258,7 +273,18 @@ public class PayrollSettlementOrchestrator {
             item.setStyleNo(TextUtils.safeText(row.get("styleNo")));
             item.setColor(TextUtils.safeText(row.get("color")));
             item.setSize(TextUtils.safeText(row.get("size")));
-            item.setProcessCode(TextUtils.safeText(row.get("processCode")));
+
+            String processCode = TextUtils.safeText(row.get("processCode"));
+            if ((processCode.isEmpty() || processCode.equals(processName)) && !processName.isEmpty()) {
+                String orderNo = TextUtils.safeText(row.get("orderNo"));
+                Map<String, String> nameToCode = orderNoToProcessCodeMap.get(orderNo);
+                if (nameToCode != null) {
+                    String resolved = nameToCode.get(processName.trim());
+                    if (resolved != null) processCode = resolved;
+                }
+            }
+            item.setProcessCode(processCode);
+
             Object bundleNoRaw = row.get("cuttingBundleNo");
             if (bundleNoRaw instanceof Number num) {
                 item.setCuttingBundleNo(num.intValue());
@@ -269,6 +295,49 @@ public class PayrollSettlementOrchestrator {
             items.add(item);
         }
         return items;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Map<String, String>> buildProcessCodeMapFromRows(List<Map<String, Object>> rows) {
+        Map<String, Map<String, String>> result = new HashMap<>();
+        java.util.Set<String> orderNos = new java.util.HashSet<>();
+        for (Map<String, Object> row : rows) {
+            String on = TextUtils.safeText(row.get("orderNo"));
+            if (!on.isEmpty()) orderNos.add(on);
+        }
+        if (orderNos.isEmpty()) return result;
+        try {
+            List<ProductionOrder> orders = productionOrderService.list(
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductionOrder>()
+                            .in("order_no", orderNos)
+                            .eq("tenant_id", com.fashion.supplychain.common.UserContext.tenantId())
+                            .last("LIMIT 5000"));
+            for (ProductionOrder order : orders) {
+                String wf = order.getProgressWorkflowJson();
+                if (wf == null || wf.trim().isEmpty()) continue;
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    Map<String, Object> workflow = mapper.readValue(wf, Map.class);
+                    Object nodesObj = workflow.get("nodes");
+                    if (!(nodesObj instanceof List)) continue;
+                    List<Map<String, Object>> nodeList = (List<Map<String, Object>>) nodesObj;
+                    Map<String, String> nameToCode = new HashMap<>();
+                    for (Map<String, Object> node : nodeList) {
+                        String name = node.get("name") != null ? node.get("name").toString().trim() : "";
+                        String id = node.get("id") != null ? node.get("id").toString().trim() : "";
+                        if (!name.isEmpty() && !id.isEmpty() && !id.equals(name)) {
+                            nameToCode.put(name, id);
+                        }
+                    }
+                    if (!nameToCode.isEmpty()) result.put(order.getOrderNo(), nameToCode);
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return result;
     }
 
     private void markScanRecordsAsSettled(PayrollQuery q, String settlementId) {

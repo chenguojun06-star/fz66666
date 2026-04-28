@@ -145,7 +145,8 @@ public class PayrollAggregationOrchestrator {
             orderQw.in("order_no", orderNos);
             orderQw.eq("tenant_id", tenantId);
             orderQw.last("LIMIT 5000");
-            Map<String, String> orderNoToStatus = productionOrderService.list(orderQw).stream()
+            List<ProductionOrder> orders = productionOrderService.list(orderQw);
+            Map<String, String> orderNoToStatus = orders.stream()
                     .collect(Collectors.toMap(
                             ProductionOrder::getOrderNo,
                             o -> o.getStatus() != null ? o.getStatus() : "",
@@ -153,6 +154,28 @@ public class PayrollAggregationOrchestrator {
             dtoList.forEach(d -> {
                 if (d.getOrderNo() != null) {
                     d.setOrderStatus(orderNoToStatus.getOrDefault(d.getOrderNo(), ""));
+                }
+            });
+
+            Map<String, Map<String, String>> orderNoToProcessCodeMap = new HashMap<>();
+            for (ProductionOrder order : orders) {
+                Map<String, String> nameToCode = parseProcessCodeMapFromWorkflow(order);
+                if (!nameToCode.isEmpty()) {
+                    orderNoToProcessCodeMap.put(order.getOrderNo(), nameToCode);
+                }
+            }
+            dtoList.forEach(d -> {
+                String code = d.getProcessCode();
+                String name = d.getProcessName();
+                boolean needFix = (code == null || code.trim().isEmpty() || code.equals(name));
+                if (needFix && d.getOrderNo() != null) {
+                    Map<String, String> nameToCode = orderNoToProcessCodeMap.get(d.getOrderNo());
+                    if (nameToCode != null && name != null) {
+                        String resolved = nameToCode.get(name.trim());
+                        if (resolved != null) {
+                            d.setProcessCode(resolved);
+                        }
+                    }
                 }
             });
         }
@@ -269,6 +292,31 @@ public class PayrollAggregationOrchestrator {
 
     private String safePart(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> parseProcessCodeMapFromWorkflow(ProductionOrder order) {
+        Map<String, String> result = new HashMap<>();
+        if (order == null) return result;
+        String workflowJson = order.getProgressWorkflowJson();
+        if (workflowJson == null || workflowJson.trim().isEmpty()) return result;
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            Map<String, Object> workflow = mapper.readValue(workflowJson, Map.class);
+            Object nodesObj = workflow.get("nodes");
+            if (!(nodesObj instanceof List)) return result;
+            List<Map<String, Object>> nodeList = (List<Map<String, Object>>) nodesObj;
+            for (Map<String, Object> node : nodeList) {
+                String name = node.get("name") != null ? node.get("name").toString().trim() : "";
+                String id = node.get("id") != null ? node.get("id").toString().trim() : "";
+                if (!name.isEmpty() && !id.isEmpty() && !id.equals(name)) {
+                    result.put(name, id);
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return result;
     }
 
     /**

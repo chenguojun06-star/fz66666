@@ -198,6 +198,12 @@ public class ProductionScanExecutor {
         ctx.unitPriceZero = ctx.unitPrice.compareTo(BigDecimal.ZERO) <= 0;
 
         ctx.processCode = resolveProcessCodeFromTemplate(ctx.order.getStyleNo(), ctx.childProcessName);
+        if (!hasText(ctx.processCode)) {
+            ctx.processCode = resolveProcessCodeFromOrderWorkflow(ctx.order, ctx.childProcessName);
+        }
+        if (!hasText(ctx.processCode)) {
+            ctx.processCode = resolveProcessCodeFromOrderWorkflow(ctx.order, ctx.progressStage);
+        }
         if (!hasText(ctx.processCode)) ctx.processCode = ctx.childProcessName;
     }
 
@@ -454,6 +460,31 @@ public class ProductionScanExecutor {
             }
         } catch (Exception e) {
             log.warn("解析工序编号失败: styleNo={}, processName={}", sn, pn, e);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String resolveProcessCodeFromOrderWorkflow(ProductionOrder order, String processName) {
+        if (order == null || !hasText(processName)) return null;
+        String pn = processName.trim();
+        String workflowJson = order.getProgressWorkflowJson();
+        if (!hasText(workflowJson)) return null;
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            Map<String, Object> workflow = mapper.readValue(workflowJson, Map.class);
+            Object nodesObj = workflow.get("nodes");
+            if (!(nodesObj instanceof List)) return null;
+            List<Map<String, Object>> nodeList = (List<Map<String, Object>>) nodesObj;
+            for (Map<String, Object> node : nodeList) {
+                String name = String.valueOf(node.getOrDefault("name", "")).trim();
+                if (pn.equals(name)) {
+                    String id = String.valueOf(node.getOrDefault("id", "")).trim();
+                    if (hasText(id) && !id.equals(name)) return id;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("从订单workflow解析工序编号失败: orderNo={}, processName={}", order.getOrderNo(), pn, e);
         }
         return null;
     }

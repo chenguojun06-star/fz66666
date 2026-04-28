@@ -560,6 +560,18 @@ public class TrackingPriceSyncHelper {
                 log.warn("从模板库获取工序编号失败 styleNo={}: {}", styleNo, e.getMessage());
             }
         }
+        if (codeMap.isEmpty()) {
+            List<Map<String, Object>> processNodes = initHelper.parseProcessNodes(order);
+            if (!CollectionUtils.isEmpty(processNodes)) {
+                for (Map<String, Object> node : processNodes) {
+                    String name = initHelper.getStringValue(node, "name", "").trim();
+                    String id = initHelper.getStringValue(node, "id", "").trim();
+                    if (!name.isEmpty() && !id.isEmpty() && !id.equals(name)) {
+                        codeMap.put(name, id);
+                    }
+                }
+            }
+        }
         return codeMap;
     }
 
