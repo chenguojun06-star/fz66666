@@ -224,11 +224,12 @@ public class SerpApiTrendService {
         }
 
         try {
+            // SerpAPI google_shopping 不支持 gl=cn，使用 gl=us 国际市场（关键词已翻译为英文）
             String url = BASE_URL
                     + "?engine=google_shopping"
                     + "&q=" + URLEncoder.encode(keyword, StandardCharsets.UTF_8)
-                    + "&gl=cn"
-                    + "&hl=zh-cn"
+                    + "&gl=us"
+                    + "&hl=en"
                     + "&num=10";
 
             String body = doGet(url);
@@ -383,7 +384,8 @@ public class SerpApiTrendService {
         url.append("&num=").append(Math.max(limit, 10));
 
         if ("google_shopping".equals(source.engine)) {
-            url.append("&gl=cn&hl=zh-cn");
+            // SerpAPI google_shopping 不支持 gl=cn（Unsupported country - gl parameter）
+            url.append("&gl=us&hl=en");
         } else {
             url.append("&hl=en");
         }
