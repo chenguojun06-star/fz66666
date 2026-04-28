@@ -43,7 +43,6 @@ import {
   OWNER_TYPE_OPTIONS,
   BIZ_TYPE_OPTIONS,
   BIZ_TYPE_MAP,
-  type WagePayment,
 } from '@/services/finance/wagePaymentApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import PaymentDashboardTab from './components/PaymentDashboardTab';

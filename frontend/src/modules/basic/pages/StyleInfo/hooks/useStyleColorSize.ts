@@ -43,7 +43,7 @@ interface UseStyleColorSizeOptions {
 }
 
 export function useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, form }: UseStyleColorSizeOptions) {
-  const { message } = App.useApp();
+  const { message: _message } = App.useApp();
 
   const [commonColors, setCommonColors] = useState<string[]>(['黑色', '白色', '灰色', '蓝色', '红色']);
   const [commonSizes, setCommonSizes] = useState<string[]>(['XS', 'S', 'M', 'L', 'XL', 'XXL']);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Tooltip, Badge } from 'antd';
+import { Tooltip, Badge } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ProductionOrder } from '@/types/production';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';

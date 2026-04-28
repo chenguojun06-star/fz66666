@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
 import { factoryApi, type Factory } from '@/services/system/factoryApi';

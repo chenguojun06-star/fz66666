@@ -9,7 +9,7 @@ interface UseStyleProductionOptions {
   reportSmartError: (title: string, reason?: string, code?: string) => void;
 }
 
-export function useStyleProduction({ currentStyle, fetchDetail, styleIdParam, reportSmartError }: UseStyleProductionOptions) {
+export function useStyleProduction({ currentStyle, fetchDetail, styleIdParam: _styleIdParam, reportSmartError }: UseStyleProductionOptions) {
   const { message } = App.useApp();
 
   const productionReqRowCount = 100;

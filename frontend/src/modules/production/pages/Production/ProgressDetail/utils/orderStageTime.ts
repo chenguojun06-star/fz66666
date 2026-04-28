@@ -1,5 +1,4 @@
 import { ProductionOrder } from '@/types/production';
-import { ProgressNode } from '../types';
 import {
   isCuttingStageKey,
   isSecondaryProcessStageKey,

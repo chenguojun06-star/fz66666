@@ -207,7 +207,6 @@ export const ensureBoardStatsForOrder = async ({
       let parentDone = 0;
       const allChildren = children.filter(c => childDones.has(c));
       if (allChildren.length === children.length) {
-        const bundleChildDones = new Map<string, number[]>();
         for (const childName of allChildren) {
           const done = childDones.get(childName) || 0;
           parentDone = parentDone === 0 ? done : Math.min(parentDone, done);

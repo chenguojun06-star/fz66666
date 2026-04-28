@@ -23,7 +23,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
   const navigate = useNavigate();
   const {
     loading,
-    warehousingList,
+    warehousingList: _warehousingList,
     sortedWarehousingList,
     total,
     smartError,

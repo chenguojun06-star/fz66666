@@ -90,7 +90,7 @@ const CuttingManagement: React.FC = () => {
 
   const processDetail = useProcessDetail({ message, fetchProductionList: tasks.fetchTasks });
 
-  const openProcessForCuttingTask = async (record: CuttingTask) => {
+  const _openProcessForCuttingTask = async (record: CuttingTask) => {
     const orderNo = String(record.productionOrderNo || '').trim();
     if (!orderNo) { message.warning('该裁剪任务缺少订单号'); return; }
     try {

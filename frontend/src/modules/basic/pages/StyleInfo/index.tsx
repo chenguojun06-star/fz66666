@@ -29,7 +29,7 @@ const StyleInfoDetailPage: React.FC = () => {
   const location = window.location;
   const isNewPath = location.pathname.endsWith('/new');
   const styleIdParam = isNewPath ? 'new' : (params.id as string | undefined);
-  const { message } = App.useApp();
+  const { message: _message } = App.useApp();
 
   const {
     loading: _loading,

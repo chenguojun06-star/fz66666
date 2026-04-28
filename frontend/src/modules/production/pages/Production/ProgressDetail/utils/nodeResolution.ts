@@ -4,7 +4,6 @@ import { StyleProcess } from '@/types/style';
 import { ProgressNode } from '../types';
 import {
   defaultNodes,
-  normalizeStageKey,
   canonicalStageKey,
   stageNameMatches,
   getRecordStageName,

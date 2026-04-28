@@ -3,6 +3,7 @@ import { App } from 'antd';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import api from '@/utils/api';
+import { downloadFile } from '@/utils/fileUrl';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -174,7 +175,6 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     }
     const queryParams = new URLSearchParams();
     selectedRowKeys.forEach(id => queryParams.append('orderIds', id));
-    const { downloadFile } = require('@/utils/fileUrl');
     downloadFile(`/api/finance/finished-settlement/export?${queryParams.toString()}`);
     message.success(`正在导出 ${selectedRowKeys.length} 条数据...`);
   };
@@ -228,7 +228,6 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
       const queryString = new URLSearchParams(
         Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
       ).toString();
-      const { downloadFile } = require('@/utils/fileUrl');
       downloadFile(`/api/finance/finished-settlement/export?${queryString}`);
       message.success({ content: '导出成功', key: 'export', duration: 2 });
     } catch (error: unknown) {

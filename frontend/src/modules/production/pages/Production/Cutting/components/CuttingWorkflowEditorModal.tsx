@@ -46,7 +46,6 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       return;
     }
     void loadWorkflow();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, orderNo]);
 
   const loadWorkflow = async () => {
