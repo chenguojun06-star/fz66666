@@ -60,8 +60,10 @@ public class FactoryWorkerController {
     @PostMapping("/save")
     public Result<Boolean> save(@RequestBody FactoryWorker worker) {
         String ctxFactoryId = UserContext.factoryId();
-        if (!StringUtils.hasText(worker.getFactoryId())) {
+        if (StringUtils.hasText(ctxFactoryId)) {
             worker.setFactoryId(ctxFactoryId);
+        } else if (!StringUtils.hasText(worker.getFactoryId())) {
+            return Result.fail("请指定所属工厂");
         }
         if (worker.getTenantId() == null) {
             worker.setTenantId(UserContext.tenantId());
@@ -84,6 +86,13 @@ public class FactoryWorkerController {
      */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            FactoryWorker worker = factoryWorkerService.getById(id);
+            if (worker == null || !ctxFactoryId.equals(worker.getFactoryId())) {
+                return Result.fail("无权删除其他工厂的工人");
+            }
+        }
         return Result.success(factoryWorkerService.removeById(id));
     }
 }
