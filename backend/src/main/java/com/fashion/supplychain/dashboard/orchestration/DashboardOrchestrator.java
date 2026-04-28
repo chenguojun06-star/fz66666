@@ -11,6 +11,7 @@ import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
 import com.fashion.supplychain.dashboard.dto.ScanCountChartResponse;
 import com.fashion.supplychain.dashboard.dto.TopStatsResponse;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
+import com.fashion.supplychain.dashboard.helper.DashboardCacheHelper;
 import com.fashion.supplychain.dashboard.helper.DashboardStatsHelper;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -40,16 +41,19 @@ public class DashboardOrchestrator {
     private final ProductionOrderService productionOrderService;
     private final MaterialStockOrchestrator materialStockOrchestrator;
     private final DashboardStatsHelper statsHelper;
+    private final DashboardCacheHelper cacheHelper;
 
     public DashboardOrchestrator(
             DashboardQueryService dashboardQueryService,
             ProductionOrderService productionOrderService,
             MaterialStockOrchestrator materialStockOrchestrator,
-            DashboardStatsHelper statsHelper) {
+            DashboardStatsHelper statsHelper,
+            DashboardCacheHelper cacheHelper) {
         this.dashboardQueryService = dashboardQueryService;
         this.productionOrderService = productionOrderService;
         this.materialStockOrchestrator = materialStockOrchestrator;
         this.statsHelper = statsHelper;
+        this.cacheHelper = cacheHelper;
     }
 
     public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
@@ -352,8 +356,19 @@ public class DashboardOrchestrator {
     public TopStatsResponse getTopStats(String range) {
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
-            return buildFactoryTopStats(ctxFactoryId);
+            // 工厂账号：按工厂 ID 分别缓存 5 分钟
+            String factoryCacheKey = "topstats_factory_" + ctxFactoryId;
+            TopStatsResponse factoryCached = cacheHelper.getFromCache(factoryCacheKey);
+            if (factoryCached != null) return factoryCached;
+            TopStatsResponse factoryResult = buildFactoryTopStats(ctxFactoryId);
+            cacheHelper.putToCache(factoryCacheKey, factoryResult);
+            return factoryResult;
         }
+
+        // 管理员/租户账号：全量统计结果缓存 5 分钟（每个方法 ×5 范围 = 约 20 次 DB 查询降为 0）
+        String cacheKey = "topstats";
+        TopStatsResponse cached = cacheHelper.getFromCache(cacheKey);
+        if (cached != null) return cached;
 
         TopStatsResponse response = new TopStatsResponse();
         LocalDateTime endTime = LocalDateTime.now();
@@ -384,6 +399,7 @@ public class DashboardOrchestrator {
         ws.setTotal(response.getWarehousingInbound().getTotal() + response.getWarehousingOutbound().getTotal());
         response.setWarehousing(ws);
 
+        cacheHelper.putToCache(cacheKey, response);
         return response;
     }
 

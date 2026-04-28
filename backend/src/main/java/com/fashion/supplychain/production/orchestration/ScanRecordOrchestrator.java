@@ -73,7 +73,8 @@ public class ScanRecordOrchestrator {
         String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
         String lockKey = "scan:" + (orderNo != null ? orderNo : "unknown");
         return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
-            return transactionTemplate.execute(status -> {
+            // 仅核心 DB 写入在事务内
+            Map<String, Object> result = transactionTemplate.execute(status -> {
                 try {
                     return doExecute(safeParams);
                 } catch (Exception e) {
@@ -81,6 +82,10 @@ public class ScanRecordOrchestrator {
                     throw e;
                 }
             });
+            // 事务提交后执行：通知与状态提示（各自有 try/catch，失败不影响扫码结果）
+            tryNotifyNextStage(safeParams, result);
+            appendBundleStatusHints(safeParams, result);
+            return result;
         });
     }
 
@@ -93,26 +98,17 @@ public class ScanRecordOrchestrator {
         Integer qty = NumberUtils.toInt(safeParams.get("quantity"));
 
         if ("quality".equals(scanType)) {
-            Map<String, Object> r = executeQualityScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
+            return executeQualityScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
                     safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId")), safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName")), UserContext.get());
-            tryNotifyNextStage(safeParams, r);
-            appendBundleStatusHints(safeParams, r);
-            return r;
         }
 
         if ("warehouse".equals(scanType)) {
-            Map<String, Object> r = executeWarehouseScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
+            return executeWarehouseScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
                     safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId")), safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName")));
-            tryNotifyNextStage(safeParams, r);
-            appendBundleStatusHints(safeParams, r);
-            return r;
         }
 
-        Map<String, Object> r = executeProductionScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
+        return executeProductionScan(safeParams, safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId")),
                 safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId")), safeParams.get("operatorName") == null ? null : String.valueOf(safeParams.get("operatorName")), scanType, qty, autoProcess, UserContext.get());
-        tryNotifyNextStage(safeParams, r);
-        appendBundleStatusHints(safeParams, r);
-        return r;
     }
 
     private void resolveOperatorInfo(Map<String, Object> safeParams) {
