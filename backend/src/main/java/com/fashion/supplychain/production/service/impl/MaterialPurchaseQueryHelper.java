@@ -1,7 +1,6 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -14,12 +13,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Component
+@Component("materialPurchaseQueryHelperImpl")
 class MaterialPurchaseQueryHelper {
 
     @Autowired
