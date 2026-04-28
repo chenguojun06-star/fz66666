@@ -347,6 +347,17 @@ public class ProductionScanStageSupport {
         }
 
         applySubProcessRemap(order, result);
+
+        // 订单显式标记"无二次工艺"时，清空模板默认归到"二次工艺"父节点的子工序，
+        // 避免模板里的"印花"等子工序在订单关闭二次工艺时仍然拦截下游扫码
+        if (Boolean.FALSE.equals(order.getHasSecondaryProcess())) {
+            Set<String> secondary = result.get("二次工艺");
+            if (secondary != null && !secondary.isEmpty()) {
+                log.debug("订单 hasSecondaryProcess=false，清空二次工艺必做子工序: orderNo={}, cleared={}",
+                        order.getOrderNo(), secondary);
+                secondary.clear();
+            }
+        }
         return result;
     }
 
@@ -371,6 +382,9 @@ public class ProductionScanStageSupport {
                 Map<String, Object> stageCfg = (Map<String, Object>) entry.getValue();
                 boolean enabled = Boolean.TRUE.equals(stageCfg.get("enabled"));
                 if (!enabled) {
+                    // 用户在订单级显式关闭该阶段（如"无二次工艺"）→ 清空模板默认归类到该父节点的子工序，
+                    // 避免模板里的"印花"等子工序在订单已关闭二次工艺时仍然拦截下一阶段扫码
+                    requiredByParent.put(parent, new LinkedHashSet<>());
                     continue;
                 }
                 Object subProcessesObj = stageCfg.get("subProcesses");
