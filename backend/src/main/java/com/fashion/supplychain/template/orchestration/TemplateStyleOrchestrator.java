@@ -25,12 +25,6 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-/**
- * 模板与款式编排器
- *
- * 职责：协调template模块与style模块之间的数据流转
- * 实现模板应用到款式的跨模块编排
- */
 @Slf4j
 @Service
 public class TemplateStyleOrchestrator {
@@ -56,14 +50,6 @@ public class TemplateStyleOrchestrator {
     @Autowired
     private ObjectMapper objectMapper;
 
-    /**
-     * 将模板应用到目标款式
-     *
-     * @param templateId 模板ID
-     * @param targetStyleId 目标款式ID
-     * @param mode 应用模式（overwrite/merge）
-     * @return 是否成功
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean applyTemplateToStyle(String templateId, Long targetStyleId, String mode) {
         if (templateId == null || templateId.trim().isEmpty()) {
@@ -73,13 +59,11 @@ public class TemplateStyleOrchestrator {
             throw new IllegalArgumentException("targetStyleId不能为空");
         }
 
-        // 查询目标款式
         StyleInfo style = styleInfoService.getById(targetStyleId);
         if (style == null) {
             throw new NoSuchElementException("目标款号不存在");
         }
 
-        // 查询模板
         TemplateLibrary template = templateLibraryService.getById(templateId);
         if (template == null) {
             throw new NoSuchElementException("模板不存在");
@@ -96,7 +80,6 @@ public class TemplateStyleOrchestrator {
         log.info("开始应用模板到款式: templateId={}, targetStyleId={}, templateType={}, mode={}",
                 templateId, targetStyleId, templateType, mode);
 
-        // 根据模板类型执行不同的应用逻辑
         boolean result = switch (templateType) {
             case "bom" -> applyBomTemplate(template, targetStyleId, overwrite);
             case "process" -> applyProcessTemplate(template, targetStyleId, overwrite);
@@ -110,20 +93,12 @@ public class TemplateStyleOrchestrator {
         return result;
     }
 
-    /**
-     * 从款式创建模板
-     *
-     * @param sourceStyleNo 源款号
-     * @param templateTypes 模板类型列表
-     * @return 创建的模板列表
-     */
     @Transactional(rollbackFor = Exception.class)
     public List<TemplateLibrary> createTemplateFromStyle(String sourceStyleNo, List<String> templateTypes) {
         if (sourceStyleNo == null || sourceStyleNo.trim().isEmpty()) {
             throw new IllegalArgumentException("sourceStyleNo不能为空");
         }
 
-        // 查询源款式
         StyleInfo style = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStyleNo, sourceStyleNo.trim())
                 .one();
@@ -157,9 +132,6 @@ public class TemplateStyleOrchestrator {
         return created;
     }
 
-    /**
-     * 根据类型创建模板
-     */
     private TemplateLibrary createTemplateByType(String sourceStyleNo, Long styleId, String templateType) {
         String key = sourceStyleNo + "_" + templateType;
         String name = sourceStyleNo + " " + templateType + " 模板";
@@ -174,48 +146,7 @@ public class TemplateStyleOrchestrator {
                     boms.forEach(bom -> bom.setGroupName(null));
                     content = objectMapper.writeValueAsString(boms);
                 }
-                case "process" -> {
-                    List<StyleProcess> processes = styleProcessService.lambdaQuery()
-                            .eq(StyleProcess::getStyleId, styleId)
-                            .list();
-                    List<StyleSizePrice> sizePrices = styleSizePriceService.lambdaQuery()
-                            .eq(StyleSizePrice::getStyleId, styleId)
-                            .list();
-
-                    Map<String, Map<String, BigDecimal>> priceMap = new HashMap<>();
-                    Set<String> sizeSet = new LinkedHashSet<>();
-                    for (StyleSizePrice sp : sizePrices) {
-                        if (sp == null) continue;
-                        String pCode = StringUtils.hasText(sp.getProcessCode()) ? sp.getProcessCode().trim() : "";
-                        String size = StringUtils.hasText(sp.getSize()) ? sp.getSize().trim().toUpperCase() : "";
-                        if (!StringUtils.hasText(pCode) || !StringUtils.hasText(size)) continue;
-                        sizeSet.add(size);
-                        priceMap.computeIfAbsent(pCode, k -> new HashMap<>()).put(size, sp.getPrice());
-                    }
-
-                    List<Map<String, Object>> steps = new ArrayList<>();
-                    for (StyleProcess p : processes) {
-                        Map<String, Object> row = new HashMap<>();
-                        row.put("processCode", p.getProcessCode());
-                        row.put("processName", p.getProcessName());
-                        row.put("progressStage", p.getProgressStage());
-                        row.put("machineType", p.getMachineType());
-                        row.put("standardTime", p.getStandardTime());
-                        row.put("unitPrice", p.getPrice());
-                        Map<String, BigDecimal> sizePrice = priceMap.get(StringUtils.hasText(p.getProcessCode()) ? p.getProcessCode().trim() : "");
-                        if (sizePrice != null && !sizePrice.isEmpty()) {
-                            row.put("sizePrices", sizePrice);
-                        }
-                        steps.add(row);
-                    }
-
-                    Map<String, Object> payload = new HashMap<>();
-                    payload.put("steps", steps);
-                    if (!sizeSet.isEmpty()) {
-                        payload.put("sizes", new ArrayList<>(sizeSet));
-                    }
-                    content = objectMapper.writeValueAsString(payload);
-                }
+                case "process" -> content = serializeProcessTemplate(styleId);
                 case "size" -> {
                     List<StyleSize> sizes = styleSizeService.lambdaQuery()
                             .eq(StyleSize::getStyleId, styleId)
@@ -247,72 +178,65 @@ public class TemplateStyleOrchestrator {
         return null;
     }
 
-    /**
-     * 应用BOM模板
-     */
+    private String serializeProcessTemplate(Long styleId) throws Exception {
+        List<StyleProcess> processes = styleProcessService.lambdaQuery()
+                .eq(StyleProcess::getStyleId, styleId)
+                .list();
+        List<StyleSizePrice> sizePrices = styleSizePriceService.lambdaQuery()
+                .eq(StyleSizePrice::getStyleId, styleId)
+                .list();
+
+        Map<String, Map<String, BigDecimal>> priceMap = new HashMap<>();
+        Set<String> sizeSet = new LinkedHashSet<>();
+        for (StyleSizePrice sp : sizePrices) {
+            if (sp == null) continue;
+            String pCode = StringUtils.hasText(sp.getProcessCode()) ? sp.getProcessCode().trim() : "";
+            String size = StringUtils.hasText(sp.getSize()) ? sp.getSize().trim().toUpperCase() : "";
+            if (!StringUtils.hasText(pCode) || !StringUtils.hasText(size)) continue;
+            sizeSet.add(size);
+            priceMap.computeIfAbsent(pCode, k -> new HashMap<>()).put(size, sp.getPrice());
+        }
+
+        List<Map<String, Object>> steps = new ArrayList<>();
+        for (StyleProcess p : processes) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("processCode", p.getProcessCode());
+            row.put("processName", p.getProcessName());
+            row.put("progressStage", p.getProgressStage());
+            row.put("machineType", p.getMachineType());
+            row.put("standardTime", p.getStandardTime());
+            row.put("unitPrice", p.getPrice());
+            Map<String, BigDecimal> sizePrice = priceMap.get(StringUtils.hasText(p.getProcessCode()) ? p.getProcessCode().trim() : "");
+            if (sizePrice != null && !sizePrice.isEmpty()) {
+                row.put("sizePrices", sizePrice);
+            }
+            steps.add(row);
+        }
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("steps", steps);
+        if (!sizeSet.isEmpty()) {
+            payload.put("sizes", new ArrayList<>(sizeSet));
+        }
+        return objectMapper.writeValueAsString(payload);
+    }
+
     private boolean applyBomTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
         try {
-            String content = template.getTemplateContent();
-            List<StyleBom> boms = new ArrayList<>();
-
-            // 兼容两种模板格式：{"rows": [...]} 或直接 [...]
-            if (content != null && content.trim().startsWith("{")) {
-                // 新格式：{"rows": [...]}
-                JsonNode root = objectMapper.readTree(content);
-                JsonNode rowsNode = root.has("rows") ? root.get("rows") : root;
-                if (rowsNode != null && rowsNode.isArray()) {
-                    int index = 1;
-                    for (JsonNode rowNode : rowsNode) {
-                        StyleBom bom = objectMapper.convertValue(rowNode, StyleBom.class);
-                        String materialCode = String.valueOf(bom.getMaterialCode() == null ? "" : bom.getMaterialCode()).trim();
-                        if (materialCode.isEmpty()) {
-                            String codePrefix = rowNode.has("codePrefix") ? rowNode.get("codePrefix").asText("") : "";
-                            String base = String.valueOf(codePrefix == null ? "" : codePrefix).trim();
-                            if (base.isEmpty()) {
-                                base = String.valueOf(bom.getMaterialName() == null ? "BOM" : bom.getMaterialName()).trim();
-                                if (base.isEmpty()) {
-                                    base = "BOM";
-                                }
-                            }
-                            bom.setMaterialCode(base + String.format("%03d", index));
-                        }
-                        boms.add(bom);
-                        index++;
-                    }
-                }
-            } else {
-                // 旧格式：直接数组 [...]
-                List<StyleBom> parsed = objectMapper.readValue(content, new TypeReference<List<StyleBom>>() {});
-                int index = 1;
-                for (StyleBom bom : parsed) {
-                    String materialCode = String.valueOf(bom.getMaterialCode() == null ? "" : bom.getMaterialCode()).trim();
-                    if (materialCode.isEmpty()) {
-                        String base = String.valueOf(bom.getMaterialName() == null ? "BOM" : bom.getMaterialName()).trim();
-                        if (base.isEmpty()) {
-                            base = "BOM";
-                        }
-                        bom.setMaterialCode(base + String.format("%03d", index));
-                    }
-                    boms.add(bom);
-                    index++;
-                }
-            }
+            List<StyleBom> boms = parseBomContent(template.getTemplateContent());
 
             if (overwrite) {
-                // 删除现有BOM
                 styleBomService.lambdaUpdate()
                         .eq(StyleBom::getStyleId, targetStyleId)
                         .remove();
             }
 
-            // 插入新BOM
             for (StyleBom bom : boms) {
                 bom.setId(null);
                 bom.setStyleId(targetStyleId);
                 styleBomService.save(bom);
             }
 
-            // BOM数据变更后清理缓存，避免前端立即刷新读到旧缓存
             styleBomService.clearBomCache(targetStyleId);
 
             return true;
@@ -322,35 +246,63 @@ public class TemplateStyleOrchestrator {
         }
     }
 
-    /**
-     * 应用工序模板
-     */
+    private List<StyleBom> parseBomContent(String content) throws Exception {
+        List<StyleBom> boms = new ArrayList<>();
+        if (content == null || content.trim().isEmpty()) {
+            return boms;
+        }
+
+        if (content.trim().startsWith("{")) {
+            JsonNode root = objectMapper.readTree(content);
+            JsonNode rowsNode = root.has("rows") ? root.get("rows") : root;
+            if (rowsNode != null && rowsNode.isArray()) {
+                int index = 1;
+                for (JsonNode rowNode : rowsNode) {
+                    StyleBom bom = objectMapper.convertValue(rowNode, StyleBom.class);
+                    fillMissingMaterialCode(bom, rowNode, index);
+                    boms.add(bom);
+                    index++;
+                }
+            }
+        } else {
+            List<StyleBom> parsed = objectMapper.readValue(content, new TypeReference<List<StyleBom>>() {});
+            int index = 1;
+            for (StyleBom bom : parsed) {
+                fillMissingMaterialCode(bom, null, index);
+                boms.add(bom);
+                index++;
+            }
+        }
+        return boms;
+    }
+
+    private void fillMissingMaterialCode(StyleBom bom, JsonNode rowNode, int index) {
+        String materialCode = String.valueOf(bom.getMaterialCode() == null ? "" : bom.getMaterialCode()).trim();
+        if (!materialCode.isEmpty()) return;
+
+        String base = "";
+        if (rowNode != null && rowNode.has("codePrefix")) {
+            base = String.valueOf(rowNode.get("codePrefix").asText("") == null ? "" : rowNode.get("codePrefix").asText("")).trim();
+        }
+        if (base.isEmpty()) {
+            base = String.valueOf(bom.getMaterialName() == null ? "BOM" : bom.getMaterialName()).trim();
+            if (base.isEmpty()) {
+                base = "BOM";
+            }
+        }
+        bom.setMaterialCode(base + String.format("%03d", index));
+    }
+
     private boolean applyProcessTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
         try {
-            String content = template.getTemplateContent();
-            List<StyleProcess> processes;
-
-            if (content != null && content.trim().startsWith("{")) {
-                JsonNode root = objectMapper.readTree(content);
-                JsonNode stepsNode = root.has("steps") ? root.get("steps")
-                        : (root.has("rows") ? root.get("rows") : root.get("data"));
-                if (stepsNode == null || stepsNode.isMissingNode() || stepsNode.isNull()) {
-                    processes = Collections.emptyList();
-                } else {
-                    processes = objectMapper.convertValue(stepsNode, new TypeReference<List<StyleProcess>>() {});
-                }
-            } else {
-                processes = objectMapper.readValue(content, new TypeReference<List<StyleProcess>>() {});
-            }
+            List<StyleProcess> processes = parseProcessContent(template.getTemplateContent());
 
             if (overwrite) {
-                // 删除现有工序
                 styleProcessService.lambdaUpdate()
                         .eq(StyleProcess::getStyleId, targetStyleId)
                         .remove();
             }
 
-            // 插入新工序
             for (StyleProcess process : processes) {
                 process.setProcessName(fixMojibake(process.getProcessName()));
                 process.setProgressStage(fixMojibake(process.getProgressStage()));
@@ -366,87 +318,34 @@ public class TemplateStyleOrchestrator {
         }
     }
 
-    /**
-     * 应用尺寸模板
-     */
+    private List<StyleProcess> parseProcessContent(String content) throws Exception {
+        if (content == null || content.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        if (content.trim().startsWith("{")) {
+            JsonNode root = objectMapper.readTree(content);
+            JsonNode stepsNode = root.has("steps") ? root.get("steps")
+                    : (root.has("rows") ? root.get("rows") : root.get("data"));
+            if (stepsNode == null || stepsNode.isMissingNode() || stepsNode.isNull()) {
+                return Collections.emptyList();
+            }
+            return objectMapper.convertValue(stepsNode, new TypeReference<List<StyleProcess>>() {});
+        } else {
+            return objectMapper.readValue(content, new TypeReference<List<StyleProcess>>() {});
+        }
+    }
+
     private boolean applySizeTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
         try {
-            String content = template.getTemplateContent();
-            List<StyleSize> sizes;
-
-            if (content != null && content.trim().startsWith("{")) {
-                JsonNode root = objectMapper.readTree(content);
-                if (root.has("rows")) {
-                    sizes = objectMapper.convertValue(root.get("rows"), new TypeReference<List<StyleSize>>() {});
-                } else if (root.has("sizes") || root.has("parts")) {
-                    sizes = new ArrayList<>();
-                    List<String> sizeNames = new ArrayList<>();
-                    JsonNode sizesNode = root.get("sizes");
-                    if (sizesNode != null && sizesNode.isArray()) {
-                        for (JsonNode sn : sizesNode) {
-                            String name = sn == null || sn.isNull() ? "" : sn.asText("").trim();
-                            if (!name.isEmpty()) {
-                                sizeNames.add(name);
-                            }
-                        }
-                    }
-
-                    JsonNode partsNode = root.get("parts");
-                    if ((sizeNames.isEmpty()) && partsNode != null && partsNode.isArray() && partsNode.size() > 0) {
-                        JsonNode first = partsNode.get(0);
-                        JsonNode valuesNode = first == null ? null : first.get("values");
-                        if (valuesNode != null && valuesNode.isObject()) {
-                            Iterator<String> fields = valuesNode.fieldNames();
-                            while (fields.hasNext()) {
-                                String name = String.valueOf(fields.next()).trim();
-                                if (!name.isEmpty()) {
-                                    sizeNames.add(name);
-                                }
-                            }
-                        }
-                    }
-
-                    int sort = 1;
-                    if (partsNode != null && partsNode.isArray()) {
-                        for (JsonNode partNode : partsNode) {
-                            String partName = partNode.path("partName").asText(null);
-                            String measureMethod = partNode.path("measureMethod").asText(null);
-                            String tolerance = partNode.path("tolerance").asText(null);
-                            JsonNode valuesNode = partNode.get("values");
-
-                            for (String sizeName : sizeNames) {
-                                BigDecimal value = null;
-                                if (valuesNode != null && valuesNode.isObject()) {
-                                    JsonNode valueNode = valuesNode.get(sizeName);
-                                    value = parseDecimal(valueNode);
-                                }
-
-                                StyleSize size = new StyleSize();
-                                size.setPartName(partName);
-                                size.setSizeName(sizeName);
-                                size.setMeasureMethod(measureMethod);
-                                size.setTolerance(tolerance);
-                                size.setStandardValue(value);
-                                size.setSort(sort++);
-                                sizes.add(size);
-                            }
-                        }
-                    }
-                } else {
-                    sizes = objectMapper.convertValue(root, new TypeReference<List<StyleSize>>() {});
-                }
-            } else {
-                sizes = objectMapper.readValue(content, new TypeReference<List<StyleSize>>() {});
-            }
+            List<StyleSize> sizes = parseSizeContent(template.getTemplateContent());
 
             if (overwrite) {
-                // 删除现有尺寸
                 styleSizeService.lambdaUpdate()
                         .eq(StyleSize::getStyleId, targetStyleId)
                         .remove();
             }
 
-            // 插入新尺寸
             for (StyleSize size : sizes) {
                 size.setId(null);
                 size.setStyleId(targetStyleId);
@@ -458,6 +357,94 @@ public class TemplateStyleOrchestrator {
             log.error("应用尺寸模板失败", e);
             return false;
         }
+    }
+
+    private List<StyleSize> parseSizeContent(String content) throws Exception {
+        if (content == null || content.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        if (!content.trim().startsWith("{")) {
+            return objectMapper.readValue(content, new TypeReference<List<StyleSize>>() {});
+        }
+
+        JsonNode root = objectMapper.readTree(content);
+
+        if (root.has("rows")) {
+            return objectMapper.convertValue(root.get("rows"), new TypeReference<List<StyleSize>>() {});
+        }
+
+        if (root.has("sizes") || root.has("parts")) {
+            return parseSizeFromPartsFormat(root);
+        }
+
+        return objectMapper.convertValue(root, new TypeReference<List<StyleSize>>() {});
+    }
+
+    private List<StyleSize> parseSizeFromPartsFormat(JsonNode root) {
+        List<StyleSize> sizes = new ArrayList<>();
+        List<String> sizeNames = extractSizeNames(root);
+
+        JsonNode partsNode = root.get("parts");
+        if (partsNode == null || !partsNode.isArray() || partsNode.isEmpty()) {
+            return sizes;
+        }
+
+        int sort = 1;
+        for (JsonNode partNode : partsNode) {
+            String partName = partNode.path("partName").asText(null);
+            String measureMethod = partNode.path("measureMethod").asText(null);
+            String tolerance = partNode.path("tolerance").asText(null);
+            JsonNode valuesNode = partNode.get("values");
+
+            for (String sizeName : sizeNames) {
+                BigDecimal value = null;
+                if (valuesNode != null && valuesNode.isObject()) {
+                    value = parseDecimal(valuesNode.get(sizeName));
+                }
+
+                StyleSize size = new StyleSize();
+                size.setPartName(partName);
+                size.setSizeName(sizeName);
+                size.setMeasureMethod(measureMethod);
+                size.setTolerance(tolerance);
+                size.setStandardValue(value);
+                size.setSort(sort++);
+                sizes.add(size);
+            }
+        }
+        return sizes;
+    }
+
+    private List<String> extractSizeNames(JsonNode root) {
+        List<String> sizeNames = new ArrayList<>();
+        JsonNode sizesNode = root.get("sizes");
+        if (sizesNode != null && sizesNode.isArray()) {
+            for (JsonNode sn : sizesNode) {
+                String name = sn == null || sn.isNull() ? "" : sn.asText("").trim();
+                if (!name.isEmpty()) {
+                    sizeNames.add(name);
+                }
+            }
+        }
+
+        if (sizeNames.isEmpty()) {
+            JsonNode partsNode = root.get("parts");
+            if (partsNode != null && partsNode.isArray() && partsNode.size() > 0) {
+                JsonNode first = partsNode.get(0);
+                JsonNode valuesNode = first == null ? null : first.get("values");
+                if (valuesNode != null && valuesNode.isObject()) {
+                    Iterator<String> fields = valuesNode.fieldNames();
+                    while (fields.hasNext()) {
+                        String name = String.valueOf(fields.next()).trim();
+                        if (!name.isEmpty()) {
+                            sizeNames.add(name);
+                        }
+                    }
+                }
+            }
+        }
+        return sizeNames;
     }
 
     private BigDecimal parseDecimal(JsonNode node) {
@@ -512,14 +499,6 @@ public class TemplateStyleOrchestrator {
         return !hasCjk && hasLatin1;
     }
 
-    /**
-     * 批量应用BOM模板到款式
-     *
-     * @param templateId 模板ID
-     * @param targetStyleIds 目标款式ID列表
-     * @param overwrite 是否覆盖
-     * @return 成功应用的款式数
-     */
     @Transactional(rollbackFor = Exception.class)
     public int batchApplyBomTemplate(String templateId, List<Long> targetStyleIds, boolean overwrite) {
         if (templateId == null || templateId.trim().isEmpty()) {
@@ -558,14 +537,6 @@ public class TemplateStyleOrchestrator {
         return successCount;
     }
 
-    /**
-     * 批量应用工序模板到款式
-     *
-     * @param templateId 模板ID
-     * @param targetStyleIds 目标款式ID列表
-     * @param overwrite 是否覆盖
-     * @return 成功应用的款式数
-     */
     @Transactional(rollbackFor = Exception.class)
     public int batchApplyProcessTemplate(String templateId, List<Long> targetStyleIds, boolean overwrite) {
         if (templateId == null || templateId.trim().isEmpty()) {

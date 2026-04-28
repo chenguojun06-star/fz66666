@@ -37,9 +37,9 @@ public class ProcessSynonymMapping {
         map.put(PROCESS_SEWING, Set.of(
                 "车缝", "缝制", "缝纫", "车工", "整件", "生产", "制作", "车位", "车间生产"));
         map.put(PROCESS_SECONDARY, Set.of(
-                "二次工艺", "二次"));
+                "二次工艺", "二次", "绣花", "印花", "水洗"));
         map.put(PROCESS_TAIL, Set.of(
-                "尾部", "后整理", "后道"));
+                "尾部", "后整理", "后道", "大烫", "整烫", "剪线", "质检", "包装"));
         map.put(PROCESS_WAREHOUSE, Set.of(
                 "入库", "仓储", "上架", "进仓", "入仓", "验收", "成品入库"));
         SYNONYM_MAP = Collections.unmodifiableMap(map);

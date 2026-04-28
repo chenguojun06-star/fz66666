@@ -8,11 +8,14 @@ import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.entity.StyleOperationLog;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleOperationLogService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,28 +58,18 @@ public class StyleListEnrichmentHelper {
         Long readableTenantId = resolveReadableTenantId();
         boolean tenantScopedRead = isTenantScopedRead();
 
-        java.util.List<String> styleIds = new java.util.ArrayList<>();
-        java.util.Set<String> styleNos = new HashSet<>();
-        for (StyleInfo s : records) {
-            if (s == null) continue;
-            if (s.getId() != null) styleIds.add(String.valueOf(s.getId()));
-            if (StringUtils.hasText(s.getStyleNo())) styleNos.add(s.getStyleNo().trim());
-        }
-        if (styleIds.isEmpty() && styleNos.isEmpty()) return;
+        StyleKeyCollection keys = collectStyleKeys(records);
+        if (keys.styleIds.isEmpty() && keys.styleNos.isEmpty()) return;
 
-        java.util.Map<String, Integer> countByStyleId = new java.util.HashMap<>();
-        java.util.Map<String, Integer> countByStyleNo = new java.util.HashMap<>();
-        java.util.Map<String, Integer> quantityByStyleId = new java.util.HashMap<>();
-        java.util.Map<String, Integer> quantityByStyleNo = new java.util.HashMap<>();
+        Map<String, Integer> countByStyleId = new HashMap<>();
+        Map<String, Integer> countByStyleNo = new HashMap<>();
+        Map<String, Integer> quantityByStyleId = new HashMap<>();
+        Map<String, Integer> quantityByStyleNo = new HashMap<>();
 
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt", "COALESCE(SUM(order_quantity), 0) as totalQty")
                 .eq(tenantScopedRead, "tenant_id", readableTenantId)
-                .and(w -> {
-                    boolean hasPrev = false;
-                    if (!styleIds.isEmpty()) { w.in("style_id", styleIds); hasPrev = true; }
-                    if (!styleNos.isEmpty()) { if (hasPrev) w.or(); w.in("style_no", styleNos); }
-                })
+                .and(w -> buildStyleIdOrNoCondition(w, keys))
                 .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
                 .groupBy("style_id", "style_no");
         try {
@@ -96,10 +89,10 @@ public class StyleListEnrichmentHelper {
             return;
         }
 
-        java.util.Map<String, LocalDateTime> latestOrderTimeByStyleId = new java.util.HashMap<>();
-        java.util.Map<String, LocalDateTime> latestOrderTimeByStyleNo = new java.util.HashMap<>();
-        java.util.Map<String, String> latestOrderCreatorByStyleId = new java.util.HashMap<>();
-        java.util.Map<String, String> latestOrderCreatorByStyleNo = new java.util.HashMap<>();
+        Map<String, LocalDateTime> latestOrderTimeByStyleId = new HashMap<>();
+        Map<String, LocalDateTime> latestOrderTimeByStyleNo = new HashMap<>();
+        Map<String, String> latestOrderCreatorByStyleId = new HashMap<>();
+        Map<String, String> latestOrderCreatorByStyleNo = new HashMap<>();
 
         QueryWrapper<ProductionOrder> timeQw = new QueryWrapper<>();
         timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime",
@@ -109,11 +102,7 @@ public class StyleListEnrichmentHelper {
                      "AND (po2.delete_flag IS NULL OR po2.delete_flag = 0) " +
                      "ORDER BY po2.create_time DESC LIMIT 1) as latestCreator")
                     .eq(tenantScopedRead, "tenant_id", readableTenantId)
-                    .and(w -> {
-                        boolean hasPrev = false;
-                        if (!styleIds.isEmpty()) { w.in("style_id", styleIds); hasPrev = true; }
-                        if (!styleNos.isEmpty()) { if (hasPrev) w.or(); w.in("style_no", styleNos); }
-                    })
+                    .and(w -> buildStyleIdOrNoCondition(w, keys))
                     .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
                     .groupBy("style_id", "style_no");
         try {
@@ -123,9 +112,7 @@ public class StyleListEnrichmentHelper {
                 String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
                 String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
                 Object latestTimeObj = r.get("latestTime");
-                LocalDateTime latestTime = null;
-                if (latestTimeObj instanceof LocalDateTime) latestTime = (LocalDateTime) latestTimeObj;
-                else if (latestTimeObj instanceof java.sql.Timestamp) latestTime = ((java.sql.Timestamp) latestTimeObj).toLocalDateTime();
+                LocalDateTime latestTime = parseLocalDateTime(latestTimeObj);
                 String latestCreator = r.get("latestCreator") == null ? null : String.valueOf(r.get("latestCreator")).trim();
                 if (latestTime != null) {
                     if (StringUtils.hasText(sid)) { latestOrderTimeByStyleId.put(sid, latestTime); if (StringUtils.hasText(latestCreator)) latestOrderCreatorByStyleId.put(sid, latestCreator); }
@@ -158,29 +145,19 @@ public class StyleListEnrichmentHelper {
         Long readableTenantId = resolveReadableTenantId();
         boolean tenantScopedRead = isTenantScopedRead();
 
-        java.util.List<String> styleIds = new java.util.ArrayList<>();
-        java.util.Set<String> styleNos = new HashSet<>();
-        for (StyleInfo s : records) {
-            if (s == null) continue;
-            if (s.getId() != null) styleIds.add(String.valueOf(s.getId()));
-            if (StringUtils.hasText(s.getStyleNo())) styleNos.add(s.getStyleNo().trim());
-        }
-        if (styleIds.isEmpty() && styleNos.isEmpty()) return;
+        StyleKeyCollection keys = collectStyleKeys(records);
+        if (keys.styleIds.isEmpty() && keys.styleNos.isEmpty()) return;
 
         QueryWrapper<com.fashion.supplychain.production.entity.ProductWarehousing> qw = new QueryWrapper<>();
         qw.select("style_id as styleId", "style_no as styleNo", "COALESCE(SUM(unqualified_quantity), 0) as scrapQty")
             .eq(tenantScopedRead, "tenant_id", readableTenantId)
                 .eq("repair_status", "scrapped")
                 .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
-                .and(w -> {
-                    boolean hasPrev = false;
-                    if (!styleIds.isEmpty()) { w.in("style_id", styleIds); hasPrev = true; }
-                    if (!styleNos.isEmpty()) { if (hasPrev) w.or(); w.in("style_no", styleNos); }
-                })
+                .and(w -> buildStyleIdOrNoCondition(w, keys))
                 .groupBy("style_id", "style_no");
 
-        java.util.Map<String, Integer> scrapByStyleId = new java.util.HashMap<>();
-        java.util.Map<String, Integer> scrapByStyleNo = new java.util.HashMap<>();
+        Map<String, Integer> scrapByStyleId = new HashMap<>();
+        Map<String, Integer> scrapByStyleNo = new HashMap<>();
         try {
             List<Map<String, Object>> rows = productWarehousingService.listMaps(qw);
             for (Map<String, Object> r : rows) {
@@ -212,28 +189,18 @@ public class StyleListEnrichmentHelper {
         Long readableTenantId = resolveReadableTenantId();
         boolean tenantScopedRead = isTenantScopedRead();
 
-        java.util.List<String> styleIds = new java.util.ArrayList<>();
-        java.util.Set<String> styleNos = new HashSet<>();
-        for (StyleInfo s : records) {
-            if (s == null) continue;
-            if (s.getId() != null) styleIds.add(String.valueOf(s.getId()));
-            if (StringUtils.hasText(s.getStyleNo())) styleNos.add(s.getStyleNo().trim());
-        }
-        if (styleIds.isEmpty() && styleNos.isEmpty()) return;
+        StyleKeyCollection keys = collectStyleKeys(records);
+        if (keys.styleIds.isEmpty() && keys.styleNos.isEmpty()) return;
 
         QueryWrapper<com.fashion.supplychain.production.entity.ProductWarehousing> qw = new QueryWrapper<>();
         qw.select("style_id as styleId", "style_no as styleNo", "COALESCE(SUM(qualified_quantity), 0) as warehousedQty")
             .eq(tenantScopedRead, "tenant_id", readableTenantId)
             .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
-            .and(w -> {
-                boolean hasPrev = false;
-                if (!styleIds.isEmpty()) { w.in("style_id", styleIds); hasPrev = true; }
-                if (!styleNos.isEmpty()) { if (hasPrev) w.or(); w.in("style_no", styleNos); }
-            })
+            .and(w -> buildStyleIdOrNoCondition(w, keys))
             .groupBy("style_id", "style_no");
 
-        java.util.Map<String, Integer> warehousedByStyleId = new java.util.HashMap<>();
-        java.util.Map<String, Integer> warehousedByStyleNo = new java.util.HashMap<>();
+        Map<String, Integer> warehousedByStyleId = new HashMap<>();
+        Map<String, Integer> warehousedByStyleNo = new HashMap<>();
         try {
             List<Map<String, Object>> rows = productWarehousingService.listMaps(qw);
             for (Map<String, Object> r : rows) {
@@ -263,19 +230,19 @@ public class StyleListEnrichmentHelper {
     public void fillQuotationPriceFields(List<StyleInfo> records) {
         if (records == null || records.isEmpty()) return;
 
-        java.util.Set<Long> ids = new HashSet<>();
+        Set<Long> ids = new HashSet<>();
         for (StyleInfo s : records) {
             if (s != null && s.getId() != null) ids.add(s.getId());
         }
         if (styleQuotationService == null) return;
 
-        java.util.Map<Long, String> styleNoByStyleId = new java.util.HashMap<>();
+        Map<Long, String> styleNoByStyleId = new HashMap<>();
         for (StyleInfo s : records) {
             if (s == null || s.getId() == null) continue;
             if (StringUtils.hasText(s.getStyleNo())) styleNoByStyleId.put(s.getId(), s.getStyleNo().trim());
         }
 
-        java.util.Map<Long, BigDecimal> unitPriceByStyleId = styleQuotationService.resolveFinalUnitPriceByStyleIds(ids, styleNoByStyleId);
+        Map<Long, BigDecimal> unitPriceByStyleId = styleQuotationService.resolveFinalUnitPriceByStyleIds(ids, styleNoByStyleId);
 
         for (StyleInfo s : records) {
             if (s == null || s.getId() == null) continue;
@@ -302,28 +269,108 @@ public class StyleListEnrichmentHelper {
         Long readableTenantId = resolveReadableTenantId();
         boolean tenantScopedRead = isTenantScopedRead();
 
-        java.util.Set<Long> ids = new HashSet<>();
+        Set<Long> ids = new HashSet<>();
         for (StyleInfo s : records) {
             if (s != null && s.getId() != null) ids.add(s.getId());
         }
 
-        java.util.Map<Long, com.fashion.supplychain.style.entity.StyleOperationLog> latestMaintenance = new java.util.HashMap<>();
+        Map<Long, StyleOperationLog> latestMaintenance = loadLatestMaintenanceLogs(ids, readableTenantId, tenantScopedRead);
+        Map<String, PatternProduction> latestPatternByStyleKey = loadLatestPatternProductions(ids, readableTenantId, tenantScopedRead);
+        Set<String> stockedStyleKeys = loadStockedStyleKeys(ids, records, readableTenantId, tenantScopedRead);
+
+        for (StyleInfo style : records) {
+            if (style == null) continue;
+            fillMaintenanceFields(style, latestMaintenance);
+            String latestPatternStatus = resolveLatestPatternStatus(style, latestPatternByStyleKey, stockedStyleKeys);
+            style.setLatestPatternStatus(latestPatternStatus);
+
+            resolveAndSetProgressNode(style);
+        }
+    }
+
+    private void fillMaintenanceFields(StyleInfo style, Map<Long, StyleOperationLog> latestMaintenance) {
+        StyleOperationLog m = style.getId() != null ? latestMaintenance.get(style.getId()) : null;
+        style.setMaintenanceTime(m != null ? m.getCreateTime() : null);
+        style.setMaintenanceMan(m != null ? m.getOperator() : null);
+        style.setMaintenanceRemark(m != null ? m.getRemark() : null);
+    }
+
+    private String resolveLatestPatternStatus(StyleInfo style, Map<String, PatternProduction> latestPatternByStyleKey,
+            Set<String> stockedStyleKeys) {
+        PatternProduction latestPattern = style.getId() != null
+                ? latestPatternByStyleKey.get(style.getId() + "|" + (style.getColor() == null ? "" : style.getColor()).trim().toUpperCase())
+                : null;
+        if (latestPattern == null && style.getId() != null) {
+            for (Map.Entry<String, PatternProduction> entry : latestPatternByStyleKey.entrySet()) {
+                if (entry.getKey().startsWith(style.getId() + "|")) { latestPattern = entry.getValue(); break; }
+            }
+        }
+        String latestPatternStatus = latestPattern != null ? latestPattern.getStatus() : null;
+        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus)) && style.getId() != null) {
+            String styleKey = style.getId() + "|" + (style.getColor() == null ? "" : style.getColor()).trim().toUpperCase();
+            if (stockedStyleKeys.contains(styleKey)) latestPatternStatus = "COMPLETED";
+        }
+        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus)) && style.getId() != null) {
+            for (String stockKey : stockedStyleKeys) {
+                if (stockKey.startsWith(style.getId() + "|")) { latestPatternStatus = "COMPLETED"; break; }
+            }
+        }
+        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))) {
+            String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim().toUpperCase() : "";
+            if ("COMPLETED".equals(sampleStatus)) latestPatternStatus = "COMPLETED";
+        }
+        return latestPatternStatus;
+    }
+
+    private void resolveAndSetProgressNode(StyleInfo style) {
+        String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";
+        String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim() : "";
+        style.setLatestOrderNo(null);
+        style.setLatestOrderStatus(null);
+        style.setLatestProductionProgress(null);
+
+        if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
+            style.setProgressNode("开发样报废");
+            style.setCompletedTime(null);
+        } else if ("COMPLETED".equalsIgnoreCase(sampleStatus) || "PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus)) {
+            style.setProgressNode("样衣完成");
+            style.setCompletedTime(style.getSampleCompletedTime());
+        } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
+            style.setProgressNode("样衣制作中");
+            style.setCompletedTime(null);
+        } else if ("COMPLETED".equalsIgnoreCase(patternStatus)) {
+            style.setProgressNode("纸样完成");
+            style.setCompletedTime(style.getPatternCompletedTime());
+        } else if ("IN_PROGRESS".equalsIgnoreCase(patternStatus)) {
+            style.setProgressNode("纸样开发中");
+            style.setCompletedTime(null);
+        } else {
+            style.setProgressNode("未开始");
+            style.setCompletedTime(null);
+        }
+    }
+
+    private Map<Long, StyleOperationLog> loadLatestMaintenanceLogs(Set<Long> ids, Long readableTenantId, boolean tenantScopedRead) {
+        Map<Long, StyleOperationLog> latestMaintenance = new HashMap<>();
         if (!ids.isEmpty()) {
-            List<com.fashion.supplychain.style.entity.StyleOperationLog> logs = styleOperationLogService.lambdaQuery()
-                    .in(com.fashion.supplychain.style.entity.StyleOperationLog::getStyleId, ids)
-                    .eq(tenantScopedRead, com.fashion.supplychain.style.entity.StyleOperationLog::getTenantId, readableTenantId)
-                    .eq(com.fashion.supplychain.style.entity.StyleOperationLog::getBizType, "maintenance")
-                    .orderByDesc(com.fashion.supplychain.style.entity.StyleOperationLog::getCreateTime)
+            List<StyleOperationLog> logs = styleOperationLogService.lambdaQuery()
+                    .in(StyleOperationLog::getStyleId, ids)
+                    .eq(tenantScopedRead, StyleOperationLog::getTenantId, readableTenantId)
+                    .eq(StyleOperationLog::getBizType, "maintenance")
+                    .orderByDesc(StyleOperationLog::getCreateTime)
                     .list();
-            for (com.fashion.supplychain.style.entity.StyleOperationLog logEntry : logs) {
+            for (StyleOperationLog logEntry : logs) {
                 if (logEntry == null || logEntry.getStyleId() == null) continue;
                 if (!latestMaintenance.containsKey(logEntry.getStyleId())) latestMaintenance.put(logEntry.getStyleId(), logEntry);
             }
         }
+        return latestMaintenance;
+    }
 
-        java.util.Map<String, PatternProduction> latestPatternByStyleKey = new java.util.HashMap<>();
+    private Map<String, PatternProduction> loadLatestPatternProductions(Set<Long> ids, Long readableTenantId, boolean tenantScopedRead) {
+        Map<String, PatternProduction> latestPatternByStyleKey = new HashMap<>();
         if (!ids.isEmpty()) {
-            java.util.List<String> styleIdStrings = ids.stream().map(String::valueOf).collect(Collectors.toList());
+            List<String> styleIdStrings = ids.stream().map(String::valueOf).collect(Collectors.toList());
             List<PatternProduction> patterns = patternProductionService.lambdaQuery()
                     .in(PatternProduction::getStyleId, styleIdStrings)
                     .eq(tenantScopedRead, PatternProduction::getTenantId, readableTenantId)
@@ -342,11 +389,14 @@ public class StyleListEnrichmentHelper {
                 }
             }
         }
+        return latestPatternByStyleKey;
+    }
 
-        java.util.Set<String> stockedStyleKeys = new HashSet<>();
+    private Set<String> loadStockedStyleKeys(Set<Long> ids, List<StyleInfo> records, Long readableTenantId, boolean tenantScopedRead) {
+        Set<String> stockedStyleKeys = new HashSet<>();
         if (!ids.isEmpty()) {
-            java.util.List<String> styleIdStringsForStock = ids.stream().map(String::valueOf).collect(Collectors.toList());
-            java.util.List<String> styleNosForStock = records.stream()
+            List<String> styleIdStringsForStock = ids.stream().map(String::valueOf).collect(Collectors.toList());
+            List<String> styleNosForStock = records.stream()
                     .map(StyleInfo::getStyleNo).filter(StringUtils::hasText).collect(Collectors.toList());
             List<com.fashion.supplychain.stock.entity.SampleStock> stocks = sampleStockMapper.selectList(new QueryWrapper<com.fashion.supplychain.stock.entity.SampleStock>()
                     .and(wrapper -> wrapper.in("style_id", styleIdStringsForStock)
@@ -373,63 +423,34 @@ public class StyleListEnrichmentHelper {
                 }
             }
         }
+        return stockedStyleKeys;
+    }
 
-        for (StyleInfo style : records) {
-            if (style == null) continue;
-            com.fashion.supplychain.style.entity.StyleOperationLog m = style.getId() != null ? latestMaintenance.get(style.getId()) : null;
-            style.setMaintenanceTime(m != null ? m.getCreateTime() : null);
-            style.setMaintenanceMan(m != null ? m.getOperator() : null);
-            style.setMaintenanceRemark(m != null ? m.getRemark() : null);
+    private static class StyleKeyCollection {
+        final List<String> styleIds = new ArrayList<>();
+        final Set<String> styleNos = new HashSet<>();
+    }
 
-            PatternProduction latestPattern = style.getId() != null
-                    ? latestPatternByStyleKey.get(style.getId() + "|" + (style.getColor() == null ? "" : style.getColor()).trim().toUpperCase())
-                    : null;
-            if (latestPattern == null && style.getId() != null) {
-                for (Map.Entry<String, PatternProduction> entry : latestPatternByStyleKey.entrySet()) {
-                    if (entry.getKey().startsWith(style.getId() + "|")) { latestPattern = entry.getValue(); break; }
-                }
-            }
-            String latestPatternStatus = latestPattern != null ? latestPattern.getStatus() : null;
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus)) && style.getId() != null) {
-                String styleKey = style.getId() + "|" + (style.getColor() == null ? "" : style.getColor()).trim().toUpperCase();
-                if (stockedStyleKeys.contains(styleKey)) latestPatternStatus = "COMPLETED";
-            }
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus)) && style.getId() != null) {
-                for (String stockKey : stockedStyleKeys) {
-                    if (stockKey.startsWith(style.getId() + "|")) { latestPatternStatus = "COMPLETED"; break; }
-                }
-            }
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))) {
-                String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim().toUpperCase() : "";
-                if ("COMPLETED".equals(sampleStatus)) latestPatternStatus = "COMPLETED";
-            }
-            style.setLatestPatternStatus(latestPatternStatus);
-
-            String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";
-            String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim() : "";
-            style.setLatestOrderNo(null);
-            style.setLatestOrderStatus(null);
-            style.setLatestProductionProgress(null);
-            if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
-                style.setProgressNode("开发样报废");
-                style.setCompletedTime(null);
-            } else if ("COMPLETED".equalsIgnoreCase(sampleStatus) || "PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus)) {
-                style.setProgressNode("样衣完成");
-                style.setCompletedTime(style.getSampleCompletedTime());
-            } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
-                style.setProgressNode("样衣制作中");
-                style.setCompletedTime(null);
-            } else if ("COMPLETED".equalsIgnoreCase(patternStatus)) {
-                style.setProgressNode("纸样完成");
-                style.setCompletedTime(style.getPatternCompletedTime());
-            } else if ("IN_PROGRESS".equalsIgnoreCase(patternStatus)) {
-                style.setProgressNode("纸样开发中");
-                style.setCompletedTime(null);
-            } else {
-                style.setProgressNode("未开始");
-                style.setCompletedTime(null);
-            }
+    private StyleKeyCollection collectStyleKeys(List<StyleInfo> records) {
+        StyleKeyCollection keys = new StyleKeyCollection();
+        for (StyleInfo s : records) {
+            if (s == null) continue;
+            if (s.getId() != null) keys.styleIds.add(String.valueOf(s.getId()));
+            if (StringUtils.hasText(s.getStyleNo())) keys.styleNos.add(s.getStyleNo().trim());
         }
+        return keys;
+    }
+
+    private <T> void buildStyleIdOrNoCondition(com.baomidou.mybatisplus.core.conditions.AbstractWrapper<T, String, ?> w, StyleKeyCollection keys) {
+        boolean hasPrev = false;
+        if (!keys.styleIds.isEmpty()) { w.in("style_id", keys.styleIds); hasPrev = true; }
+        if (!keys.styleNos.isEmpty()) { if (hasPrev) w.or(); w.in("style_no", keys.styleNos); }
+    }
+
+    private LocalDateTime parseLocalDateTime(Object obj) {
+        if (obj instanceof LocalDateTime) return (LocalDateTime) obj;
+        if (obj instanceof java.sql.Timestamp) return ((java.sql.Timestamp) obj).toLocalDateTime();
+        return null;
     }
 
     private Long resolveReadableTenantId() {

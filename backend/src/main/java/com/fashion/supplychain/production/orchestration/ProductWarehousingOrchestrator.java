@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.ProductWarehousingQueryHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingPendingHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingPostActionHelper;
@@ -52,6 +53,9 @@ public class ProductWarehousingOrchestrator {
     private ProductWarehousingQueryHelper queryHelper;
 
     @Autowired
+    private ProductWarehousingPendingHelper pendingHelper;
+
+    @Autowired
     private ProductWarehousingRepairHelper repairHelper;
 
     @Autowired
@@ -69,15 +73,15 @@ public class ProductWarehousingOrchestrator {
     }
 
     public List<Map<String, Object>> listPendingBundles(String status) {
-        return queryHelper.listPendingBundles(status);
+        return pendingHelper.listPendingBundles(status);
     }
 
     public Map<String, Object> getBundleReadiness(String orderId) {
-        return queryHelper.getBundleReadiness(orderId);
+        return pendingHelper.getBundleReadiness(orderId);
     }
 
     public Map<String, Object> getQualityBriefing(String orderId) {
-        return queryHelper.getQualityBriefing(orderId);
+        return pendingHelper.getQualityBriefing(orderId);
     }
 
     public ProductWarehousing getById(String id) {

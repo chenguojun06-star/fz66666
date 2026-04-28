@@ -41,12 +41,10 @@ import java.util.stream.Collectors;
 public class QualityAiSuggestionOrchestrator {
 
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final long CACHE_TTL_MS = 24 * 60 * 60 * 1000L; // 24小时
+    private static final long CACHE_TTL_MS = 24 * 60 * 60 * 1000L;
 
-    /** 按款式ID缓存LLM生成的质检要点，同一款式只调一次LLM */
     private final Map<String, CachedStyleCheckpoints> styleCache = new ConcurrentHashMap<>();
 
-    /** 缓存的款式质检要点（与具体订单解耦，仅包含款式维度的信息） */
     private static class CachedStyleCheckpoints {
         final List<String> checkpoints;
         final String llmUrgentTip;
@@ -81,9 +79,6 @@ public class QualityAiSuggestionOrchestrator {
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
 
-    // ─── 规则库 ───────────────────────────────────────────────────────
-
-    /** 通用质检要点（精简4条，按方向分） */
     private static final List<String> COMMON_CHECKPOINTS = Arrays.asList(
         "🔴 面料：检查色差/污渍/破损/抽丝",
         "🔴 车缝：缝线均匀无跳线，线头修净",
@@ -91,100 +86,82 @@ public class QualityAiSuggestionOrchestrator {
         "🟡 标识：吊牌/洗标/尺码标完整正确"
     );
 
-    /** 按品类的专属质检要点（精简2条，与通用4条合计≤6条） */
     private static final Map<String, List<String>> CATEGORY_CHECKPOINTS = new HashMap<>();
     static {
-        // 上衣/衬衫
         CATEGORY_CHECKPOINTS.put("shirt", Arrays.asList(
             "🔴 领型端正左右对称，扣眼均匀",
             "🟡 袖长一致，肩缝平整无起拱"
         ));
         CATEGORY_CHECKPOINTS.put("top", CATEGORY_CHECKPOINTS.get("shirt"));
-        // 裤子
         CATEGORY_CHECKPOINTS.put("pants", Arrays.asList(
             "🔴 裤长左右允差≤0.3cm，腰头平整",
             "🟡 拉链/钮扣开合顺畅，口袋对称"
         ));
         CATEGORY_CHECKPOINTS.put("trousers", CATEGORY_CHECKPOINTS.get("pants"));
-        // 裙子
         CATEGORY_CHECKPOINTS.put("skirt", Arrays.asList(
             "🔴 裙摆下摆均匀平整，腰头均匀",
             "🟡 拉链/暗扣安装平整无外露"
         ));
-        // 连衣裙
         CATEGORY_CHECKPOINTS.put("dress", Arrays.asList(
             "🔴 腰线定位准确，领口下摆工整",
             "🟡 里布贴合无起皱，功能件顺畅"
         ));
-        // 外套/夹克
         CATEGORY_CHECKPOINTS.put("jacket", Arrays.asList(
             "🔴 驳头对称，里衬无脱层挺括",
             "🟡 口袋盖对称，拉链/扣子流畅"
         ));
         CATEGORY_CHECKPOINTS.put("coat", CATEGORY_CHECKPOINTS.get("jacket"));
         CATEGORY_CHECKPOINTS.put("outerwear", CATEGORY_CHECKPOINTS.get("jacket"));
-        // T恤
         CATEGORY_CHECKPOINTS.put("t-shirt", Arrays.asList(
             "🔴 领圈牢固弹性均匀，下摆宽窄一致",
             "🟡 印花/绣花居中无脱色偏移"
         ));
         CATEGORY_CHECKPOINTS.put("tshirt", CATEGORY_CHECKPOINTS.get("t-shirt"));
-        // 童装（增加安全合规标准）
         CATEGORY_CHECKPOINTS.put("kids", Arrays.asList(
             "🔴 GB31701/CPSC：小部件拉力≥70N防吞食",
             "🟡 绳带≤7.5cm(CPSC)，金属件无镍超标"
         ));
-        // 婴幼儿装
         CATEGORY_CHECKPOINTS.put("infant", Arrays.asList(
             "🔴 GB18401-A类：甲醛≤20mg/kg，pH4.0-7.5",
             "🟡 禁止绳带/可拆卸件，面料柔软无刺激"
         ));
         CATEGORY_CHECKPOINTS.put("baby", CATEGORY_CHECKPOINTS.get("infant"));
-        // ===== 面料类型专属要点 =====
-        // 牛仔
         CATEGORY_CHECKPOINTS.put("denim", Arrays.asList(
             "🔴 色差必查：同批次深浅对比，洗水后色牢度",
             "🟡 车缝用粗线，针距均匀，铆钉牛固"
         ));
         CATEGORY_CHECKPOINTS.put("jeans", CATEGORY_CHECKPOINTS.get("denim"));
-        // 毛衣/针织
         CATEGORY_CHECKPOINTS.put("sweater", Arrays.asList(
             "🔴 检查拉毛/起球/脱线，罗口弹性恢复",
             "🟡 缩水率≤5%，尺寸拉伸后回弹正常"
         ));
         CATEGORY_CHECKPOINTS.put("knitwear", CATEGORY_CHECKPOINTS.get("sweater"));
         CATEGORY_CHECKPOINTS.put("毛衣", CATEGORY_CHECKPOINTS.get("sweater"));
-        // 真丝
         CATEGORY_CHECKPOINTS.put("silk", Arrays.asList(
             "🔴 轻拿轻放防勾丝，禁止针粗线粗车缝",
             "🟡 擦洗变色必测，光泽均匀无水印"
         ));
         CATEGORY_CHECKPOINTS.put("真丝", CATEGORY_CHECKPOINTS.get("silk"));
-        // 色丁/缚面
         CATEGORY_CHECKPOINTS.put("satin", Arrays.asList(
             "🔴 表面禁止刺尖接触，防勾丝抽纱",
             "🟡 缝边火封处理，裁片方向一致"
         ));
         CATEGORY_CHECKPOINTS.put("色丁", CATEGORY_CHECKPOINTS.get("satin"));
-        // 蕾丝
         CATEGORY_CHECKPOINTS.put("lace", Arrays.asList(
             "🔴 花型对花对条，接缝自然无断点",
             "🟡 边缘不脱纱，底衣贴合不透光"
         ));
         CATEGORY_CHECKPOINTS.put("蕾丝", CATEGORY_CHECKPOINTS.get("lace"));
-        // 羽绒
         CATEGORY_CHECKPOINTS.put("down", Arrays.asList(
             "🔴 钻绒测试：揉压不得渗绒，接缝处密封",
             "🟡 充绒量称重核对，左右均匀无结团"
         ));
         CATEGORY_CHECKPOINTS.put("羽绒", CATEGORY_CHECKPOINTS.get("down"));
-        // 纱料/雪纺
         CATEGORY_CHECKPOINTS.put("chiffon", Arrays.asList(
             "🔴 易滑丝用特氟龙压脚，放慢车速",
             "🟡 裁片必须锁边，缝份放宽0.5cm"
         ));
         CATEGORY_CHECKPOINTS.put("雪纺", CATEGORY_CHECKPOINTS.get("chiffon"));
-        // 麻料
         CATEGORY_CHECKPOINTS.put("linen", Arrays.asList(
             "🔴 预缩必做，裁后及时码齐防变形",
             "🟡 整烫温度≤180°C，避免缝份拉豁"
@@ -192,7 +169,6 @@ public class QualityAiSuggestionOrchestrator {
         CATEGORY_CHECKPOINTS.put("麻", CATEGORY_CHECKPOINTS.get("linen"));
     }
 
-    /** 按次品类别的AI建议（精简1句话，可采纳为返修备注） */
     private static final Map<String, String> DEFECT_SUGGESTIONS = new LinkedHashMap<>();
     static {
         DEFECT_SUGGESTIONS.put("appearance_integrity",
@@ -207,58 +183,69 @@ public class QualityAiSuggestionOrchestrator {
             "拍照留档交品控主管确认。批量问题立即上报");
     }
 
-    // ─── 对外接口 ──────────────────────────────────────────────────────
+    private static final List<CategoryMatcher> CATEGORY_MATCHERS = buildCategoryMatchers();
+
+    private static List<CategoryMatcher> buildCategoryMatchers() {
+        List<CategoryMatcher> matchers = new ArrayList<>();
+        matchers.add(new CategoryMatcher("shirt", "衬", "shirt"));
+        matchers.add(new CategoryMatcher("pants", "裤", "短裤", "长裤", "pants"));
+        matchers.add(new CategoryMatcher("skirt", "裙"));
+        matchers.add(new CategoryMatcher("dress", "连衣"));
+        matchers.add(new CategoryMatcher("jacket", "外套", "夹克", "大衣", "风衣", "棉服"));
+        matchers.add(new CategoryMatcher("t-shirt", "T恤", "t恤", "polo", "POLO"));
+        matchers.add(new CategoryMatcher("kids", "童"));
+        matchers.add(new CategoryMatcher("infant", "婴", "幼", "baby", "infant", "新生"));
+        matchers.add(new CategoryMatcher("denim", "牛仔", "denim", "jeans"));
+        matchers.add(new CategoryMatcher("sweater", "毛衣", "针织", "sweater", "knitwear"));
+        matchers.add(new CategoryMatcher("silk", "真丝", "丝绸", "silk"));
+        matchers.add(new CategoryMatcher("satin", "色丁", "缎", "satin"));
+        matchers.add(new CategoryMatcher("lace", "蕾丝", "lace"));
+        matchers.add(new CategoryMatcher("down", "羽绒", "down"));
+        matchers.add(new CategoryMatcher("chiffon", "雪纺", "纱", "chiffon"));
+        matchers.add(new CategoryMatcher("linen", "麻", "linen"));
+        matchers.add(new CategoryMatcher("top", "衫", "卫衣", "上衣"));
+        return Collections.unmodifiableList(matchers);
+    }
+
+    private static class CategoryMatcher {
+        final String categoryKey;
+        final String[] keywords;
+
+        CategoryMatcher(String categoryKey, String... keywords) {
+            this.categoryKey = categoryKey;
+            this.keywords = keywords;
+        }
+
+        boolean matches(String input) {
+            for (String kw : keywords) {
+                if (input.contains(kw)) return true;
+            }
+            return false;
+        }
+    }
 
     public QualityAiSuggestionResponse getSuggestion(String orderId) {
         if (!StringUtils.hasText(orderId)) {
             return buildEmpty();
         }
 
-        // 1. 加载订单
         ProductionOrder order = productionOrderService.getById(orderId.trim());
         if (order == null) {
             return buildEmpty();
         }
 
-        // 2. 历史次品率（每次实时计算，不缓存）
-        Double historicalDefectRate = null;
-        String historicalVerdict = "good";
-        int defectRecordCount = 0;
-        try {
-            List<ProductWarehousing> records = productWarehousingService.list(
-                new LambdaQueryWrapper<ProductWarehousing>()
-                    .eq(ProductWarehousing::getOrderId, orderId.trim())
-                    .eq(ProductWarehousing::getDeleteFlag, 0)
-            );
-            defectRecordCount = records.size();
-            if (!records.isEmpty()) {
-                int totalQ  = records.stream().mapToInt(r -> r.getQualifiedQuantity()   == null ? 0 : r.getQualifiedQuantity()).sum();
-                int totalUQ = records.stream().mapToInt(r -> r.getUnqualifiedQuantity() == null ? 0 : r.getUnqualifiedQuantity()).sum();
-                int processed = totalQ + totalUQ;
-                if (processed > 0) {
-                    historicalDefectRate = (double) totalUQ / processed;
-                    if      (historicalDefectRate > 0.30) historicalVerdict = "critical";
-                    else if (historicalDefectRate > 0.15) historicalVerdict = "warn";
-                }
-            }
-        } catch (Exception e) {
-            log.warn("[QualityAI] 历史数据查询失败: orderId={}", orderId, e);
-        }
-
-        // 3. 按款式缓存：同款式质检要点只调一次LLM
+        DefectRateResult defectResult = computeHistoricalDefectRate(orderId);
         String styleId = order.getStyleId();
         if (StringUtils.hasText(styleId) && inferenceOrchestrator.isAnyModelEnabled()) {
             CachedStyleCheckpoints cached = styleCache.get(styleId);
             if (cached != null && !cached.isExpired()) {
                 log.debug("[QualityAI] 命中款式缓存: styleId={}, orderId={}", styleId, orderId);
-                return buildFromCache(cached, order, historicalDefectRate, historicalVerdict);
+                return buildFromCache(cached, order, defectResult.rate, defectResult.verdict);
             }
 
-            // 缓存未命中或已过期 → 调LLM
             try {
-                QualityAiSuggestionResponse llmResult = callLLM(order, historicalDefectRate, historicalVerdict);
+                QualityAiSuggestionResponse llmResult = callLLM(order, defectResult.rate, defectResult.verdict);
                 if (llmResult != null) {
-                    // 提取纯LLM质检要点（去除次品率警示行），存入缓存
                     List<String> pureCheckpoints = new ArrayList<>(llmResult.getCheckpoints());
                     pureCheckpoints.removeIf(cp -> cp.startsWith("🔴") || cp.startsWith("🟡"));
                     styleCache.put(styleId, new CachedStyleCheckpoints(pureCheckpoints, llmResult.getUrgentTip()));
@@ -270,29 +257,16 @@ public class QualityAiSuggestionOrchestrator {
             }
         }
 
-        // 4. 规则引擎兜底
-        return buildFromRules(order, historicalDefectRate, historicalVerdict);
+        return buildFromRules(order, defectResult.rate, defectResult.verdict);
     }
 
-    /** 从缓存的款式质检要点重建完整响应（叠加订单级次品率和急单信息） */
     private QualityAiSuggestionResponse buildFromCache(CachedStyleCheckpoints cached,
                                                         ProductionOrder order,
                                                         Double defectRate,
                                                         String verdict) {
         List<String> checkpoints = new ArrayList<>(cached.checkpoints);
-
-        // 叠加次品率警示
-        if ("critical".equals(verdict) && defectRate != null) {
-            checkpoints.add(0, "🔴 此订单历史次品率 " + Math.round(defectRate * 100) + "%（严重偏高），请严格全检，重点关注批次一致性");
-        } else if ("warn".equals(verdict) && defectRate != null) {
-            checkpoints.add(0, "🟡 此订单历史次品率 " + Math.round(defectRate * 100) + "%（偏高），需加强抽检力度");
-        }
-
-        // 急单提示：优先用LLM缓存的，否则兜底
-        String urgentTip = cached.llmUrgentTip;
-        if (urgentTip == null && "urgent".equalsIgnoreCase(order.getUrgencyLevel())) {
-            urgentTip = "⚠️ 此为急单，请优先处理！赶工不得降低质检标准，发现异常仍须如实记录。";
-        }
+        insertDefectWarning(checkpoints, verdict, defectRate);
+        String urgentTip = resolveUrgentTip(order, cached.llmUrgentTip);
 
         return QualityAiSuggestionResponse.builder()
                 .orderNo(order.getOrderNo())
@@ -308,12 +282,9 @@ public class QualityAiSuggestionOrchestrator {
                 .build();
     }
 
-    // ─── 真实 LLM 调用 ────────────────────────────────────────────────
-
     private QualityAiSuggestionResponse callLLM(ProductionOrder order,
                                                  Double defectRate,
                                                  String verdict) {
-        // 加载款式 + BOM + 工序
         StyleInfo style = null;
         List<StyleBom> boms = Collections.emptyList();
         List<StyleProcess> processes = Collections.emptyList();
@@ -366,7 +337,6 @@ public class QualityAiSuggestionOrchestrator {
                                      String verdict) {
         StringBuilder sb = new StringBuilder();
 
-        // 订单基础信息
         sb.append("【订单信息】\n");
         sb.append("订单号：").append(nvl(order.getOrderNo(), "-")).append("\n");
         sb.append("款号：").append(nvl(order.getStyleNo(), "-"))
@@ -384,7 +354,6 @@ public class QualityAiSuggestionOrchestrator {
             sb.append("历史次品率：暂无记录（首批或新款）\n");
         }
 
-        // 款式详情
         if (style != null) {
             sb.append("\n【款式详情】\n");
             if (StringUtils.hasText(style.getFabricComposition())) {
@@ -398,7 +367,6 @@ public class QualityAiSuggestionOrchestrator {
             }
         }
 
-        // BOM 物料
         if (!boms.isEmpty()) {
             sb.append("\n【物料清单（BOM）】\n");
             boms.forEach(bom -> {
@@ -416,7 +384,6 @@ public class QualityAiSuggestionOrchestrator {
             });
         }
 
-        // 工序列表
         if (!processes.isEmpty()) {
             sb.append("\n【工序流程】\n");
             String processList = processes.stream()
@@ -457,21 +424,14 @@ public class QualityAiSuggestionOrchestrator {
             }
             if (checkpoints.isEmpty()) return null;
 
-            // 次品率首行警示
-            if ("critical".equals(verdict) && defectRate != null) {
-                checkpoints.add(0, "🔴 此订单历史次品率 " + Math.round(defectRate * 100) + "%（严重偏高），请严格全检，重点关注批次一致性");
-            } else if ("warn".equals(verdict) && defectRate != null) {
-                checkpoints.add(0, "🟡 此订单历史次品率 " + Math.round(defectRate * 100) + "%（偏高），需加强抽检力度");
-            }
+            insertDefectWarning(checkpoints, verdict, defectRate);
 
             String urgentTip = null;
             if (node.has("urgentTip") && !node.get("urgentTip").isNull()) {
                 urgentTip = node.get("urgentTip").asText().trim();
                 if (urgentTip.isEmpty()) urgentTip = null;
             }
-            if (urgentTip == null && "urgent".equalsIgnoreCase(order.getUrgencyLevel())) {
-                urgentTip = "⚠️ 此为急单，请优先处理！赶工不得降低质检标准，发现异常仍须如实记录。";
-            }
+            urgentTip = resolveUrgentTip(order, urgentTip);
 
             return QualityAiSuggestionResponse.builder()
                     .orderNo(order.getOrderNo())
@@ -492,7 +452,6 @@ public class QualityAiSuggestionOrchestrator {
         }
     }
 
-    /** 从 AI 文本中提取第一个完整 JSON 对象 */
     private String extractJson(String content) {
         if (!StringUtils.hasText(content)) return null;
         int start = content.indexOf('{');
@@ -504,8 +463,6 @@ public class QualityAiSuggestionOrchestrator {
         return StringUtils.hasText(val) ? val : def;
     }
 
-    // ─── 规则引擎兜底（AI不可用时） ──────────────────────────────────
-
     private QualityAiSuggestionResponse buildFromRules(ProductionOrder order,
                                                         Double historicalDefectRate,
                                                         String historicalVerdict) {
@@ -513,22 +470,13 @@ public class QualityAiSuggestionOrchestrator {
         List<String> checkpoints = new ArrayList<>(COMMON_CHECKPOINTS);
         checkpoints.addAll(resolveCategory(category));
 
-        // 历史次品率预警插入头部
-        if ("critical".equals(historicalVerdict)) {
-            checkpoints.add(0, "🔴 历史次品率>30%，严格全检");
-        } else if ("warn".equals(historicalVerdict)) {
-            checkpoints.add(0, "🟡 次品率偏高(" + Math.round(historicalDefectRate * 100) + "%)加强抽检");
-        }
+        insertDefectWarning(checkpoints, historicalVerdict, historicalDefectRate);
 
-        // 严格限制总条数≤6条，超出截断
         if (checkpoints.size() > 6) {
             checkpoints = new ArrayList<>(checkpoints.subList(0, 6));
         }
 
-        String urgentTip = null;
-        if ("urgent".equalsIgnoreCase(order.getUrgencyLevel())) {
-            urgentTip = "⚠️ 急单优先处理，不得降低质检标准";
-        }
+        String urgentTip = resolveUrgentTip(order, null);
 
         return QualityAiSuggestionResponse.builder()
                 .orderNo(order.getOrderNo())
@@ -546,37 +494,66 @@ public class QualityAiSuggestionOrchestrator {
 
     private List<String> resolveCategory(String category) {
         if (!StringUtils.hasText(category)) return Collections.emptyList();
-        // 精确匹配
         if (CATEGORY_CHECKPOINTS.containsKey(category)) {
             return CATEGORY_CHECKPOINTS.get(category);
         }
-        // 模糊匹配
-        for (Map.Entry<String, List<String>> e : CATEGORY_CHECKPOINTS.entrySet()) {
-            if (category.contains(e.getKey()) || e.getKey().contains(category)) {
-                return e.getValue();
+        for (CategoryMatcher matcher : CATEGORY_MATCHERS) {
+            if (matcher.matches(category)) {
+                return CATEGORY_CHECKPOINTS.getOrDefault(matcher.categoryKey, Collections.emptyList());
             }
         }
-        // 中文关键词匹配
-        if (category.contains("衬") || category.contains("shirt")) return CATEGORY_CHECKPOINTS.getOrDefault("shirt", Collections.emptyList());
-        if (category.contains("裤") || category.contains("短裤") || category.contains("长裤")) return CATEGORY_CHECKPOINTS.getOrDefault("pants", Collections.emptyList());
-        if (category.contains("裙")) return CATEGORY_CHECKPOINTS.getOrDefault("skirt", Collections.emptyList());
-        if (category.contains("连衣")) return CATEGORY_CHECKPOINTS.getOrDefault("dress", Collections.emptyList());
-        if (category.contains("外套") || category.contains("夹克") || category.contains("大衣") || category.contains("风衣") || category.contains("棉服")) return CATEGORY_CHECKPOINTS.getOrDefault("jacket", Collections.emptyList());
-        if (category.contains("T恤") || category.contains("t恤") || category.contains("polo") || category.contains("POLO")) return CATEGORY_CHECKPOINTS.getOrDefault("t-shirt", Collections.emptyList());
-        if (category.contains("童")) return CATEGORY_CHECKPOINTS.getOrDefault("kids", Collections.emptyList());
-        if (category.contains("婴") || category.contains("幼") || category.contains("baby") || category.contains("infant") || category.contains("新生")) return CATEGORY_CHECKPOINTS.getOrDefault("infant", Collections.emptyList());
-        // 面料类型匹配（优先于通用上衣）
-        if (category.contains("牛仔") || category.contains("denim") || category.contains("jeans")) return CATEGORY_CHECKPOINTS.getOrDefault("denim", Collections.emptyList());
-        if (category.contains("毛衣") || category.contains("针织") || category.contains("sweater") || category.contains("knitwear")) return CATEGORY_CHECKPOINTS.getOrDefault("sweater", Collections.emptyList());
-        if (category.contains("真丝") || category.contains("丝绸") || category.contains("silk")) return CATEGORY_CHECKPOINTS.getOrDefault("silk", Collections.emptyList());
-        if (category.contains("色丁") || category.contains("缎") || category.contains("satin")) return CATEGORY_CHECKPOINTS.getOrDefault("satin", Collections.emptyList());
-        if (category.contains("蕾丝") || category.contains("lace")) return CATEGORY_CHECKPOINTS.getOrDefault("lace", Collections.emptyList());
-        if (category.contains("羽绒") || category.contains("down")) return CATEGORY_CHECKPOINTS.getOrDefault("down", Collections.emptyList());
-        if (category.contains("雪纺") || category.contains("纱") || category.contains("chiffon")) return CATEGORY_CHECKPOINTS.getOrDefault("chiffon", Collections.emptyList());
-        if (category.contains("麻") || category.contains("linen")) return CATEGORY_CHECKPOINTS.getOrDefault("linen", Collections.emptyList());
-        // 通用上衣：含"衫"（衬衫已被上面处理）、"卫衣"、"上衣"等
-        if (category.contains("衫") || category.contains("卫衣") || category.contains("上衣")) return CATEGORY_CHECKPOINTS.getOrDefault("top", Collections.emptyList());
         return Collections.emptyList();
+    }
+
+    private static class DefectRateResult {
+        final Double rate;
+        final String verdict;
+
+        DefectRateResult(Double rate, String verdict) {
+            this.rate = rate;
+            this.verdict = verdict;
+        }
+    }
+
+    private DefectRateResult computeHistoricalDefectRate(String orderId) {
+        Double rate = null;
+        String verdict = "good";
+        try {
+            List<ProductWarehousing> records = productWarehousingService.list(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getOrderId, orderId.trim())
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+            );
+            if (!records.isEmpty()) {
+                int totalQ  = records.stream().mapToInt(r -> r.getQualifiedQuantity()   == null ? 0 : r.getQualifiedQuantity()).sum();
+                int totalUQ = records.stream().mapToInt(r -> r.getUnqualifiedQuantity() == null ? 0 : r.getUnqualifiedQuantity()).sum();
+                int processed = totalQ + totalUQ;
+                if (processed > 0) {
+                    rate = (double) totalUQ / processed;
+                    if      (rate > 0.30) verdict = "critical";
+                    else if (rate > 0.15) verdict = "warn";
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[QualityAI] 历史数据查询失败: orderId={}", orderId, e);
+        }
+        return new DefectRateResult(rate, verdict);
+    }
+
+    private void insertDefectWarning(List<String> checkpoints, String verdict, Double defectRate) {
+        if ("critical".equals(verdict) && defectRate != null) {
+            checkpoints.add(0, "🔴 此订单历史次品率 " + Math.round(defectRate * 100) + "%（严重偏高），请严格全检，重点关注批次一致性");
+        } else if ("warn".equals(verdict) && defectRate != null) {
+            checkpoints.add(0, "🟡 此订单历史次品率 " + Math.round(defectRate * 100) + "%（偏高），需加强抽检力度");
+        }
+    }
+
+    private String resolveUrgentTip(ProductionOrder order, String llmUrgentTip) {
+        if (llmUrgentTip != null) return llmUrgentTip;
+        if ("urgent".equalsIgnoreCase(order.getUrgencyLevel())) {
+            return "⚠️ 此为急单，请优先处理！赶工不得降低质检标准，发现异常仍须如实记录。";
+        }
+        return null;
     }
 
     private QualityAiSuggestionResponse buildEmpty() {

@@ -73,7 +73,6 @@ public class ProductWarehousingRollbackHelper {
             color = bundle.getColor();
             size = bundle.getSize();
         } else if (StringUtils.hasText(w.getCuttingBundleId())) {
-            // bundle 对象未传入，通过 bundleId 加载
             try {
                 CuttingBundle b = cuttingBundleService.getById(w.getCuttingBundleId());
                 if (b != null) {
@@ -171,13 +170,11 @@ public class ProductWarehousingRollbackHelper {
     }
 
     private boolean rollbackQualifiedByBundleQrCode(String orderId, String cuttingBundleQrCode,
-            Integer rollbackQuantity,
-            String rollbackRemark) {
+            Integer rollbackQuantity, String rollbackRemark) {
         String qr = StringUtils.hasText(cuttingBundleQrCode) ? cuttingBundleQrCode.trim() : null;
         if (!StringUtils.hasText(qr)) {
             throw new IllegalArgumentException("请扫码对应扎号二维码");
         }
-
         int rq = rollbackQuantity == null ? 0 : rollbackQuantity;
         if (rq <= 0) {
             throw new IllegalArgumentException("回退数量必须大于0");
@@ -188,6 +185,22 @@ public class ProductWarehousingRollbackHelper {
             throw new NoSuchElementException("未找到对应的裁剪扎号");
         }
 
+        String oid = resolveRollbackOrderId(orderId, bundle);
+        ProductionOrder order = loadValidProductionOrder(oid);
+        List<ProductWarehousing> warehousingList = loadWarehousingRecords(oid, bundle);
+        validateRollbackQuantity(warehousingList, rq);
+
+        LocalDateTime now = LocalDateTime.now();
+        executeQuantityRollback(warehousingList, rq, bundle, now);
+        int qualifiedSum = productWarehousingService.sumQualifiedByOrderId(oid);
+        updateOrderAfterRollback(order, oid, qualifiedSum, now);
+        writeRollbackLog(oid, order, bundle, qr, rq, rollbackRemark, now);
+        invalidatePreviousScanRecords(oid, bundle, now);
+
+        return true;
+    }
+
+    private String resolveRollbackOrderId(String orderId, CuttingBundle bundle) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim()
                 : (StringUtils.hasText(bundle.getProductionOrderId()) ? bundle.getProductionOrderId().trim() : null);
         if (!StringUtils.hasText(oid)) {
@@ -198,12 +211,18 @@ public class ProductWarehousingRollbackHelper {
         if (bundleOid != null && !bundleOid.isEmpty() && !bundleOid.equals(oid)) {
             throw new IllegalArgumentException("扎号与订单不匹配");
         }
+        return oid;
+    }
 
+    private ProductionOrder loadValidProductionOrder(String oid) {
         ProductionOrder order = productionOrderService.getById(oid);
         if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
             throw new NoSuchElementException("订单不存在");
         }
+        return order;
+    }
 
+    private List<ProductWarehousing> loadWarehousingRecords(String oid, CuttingBundle bundle) {
         List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
                 .eq(ProductWarehousing::getOrderId, oid)
                 .eq(ProductWarehousing::getDeleteFlag, 0)
@@ -212,7 +231,10 @@ public class ProductWarehousingRollbackHelper {
         if (list == null || list.isEmpty()) {
             throw new NoSuchElementException("未找到该扎号对应的入库记录");
         }
+        return list;
+    }
 
+    private void validateRollbackQuantity(List<ProductWarehousing> list, int rq) {
         long available = 0;
         for (ProductWarehousing w : list) {
             if (w == null) {
@@ -226,8 +248,9 @@ public class ProductWarehousingRollbackHelper {
         if (available < rq) {
             throw new IllegalArgumentException("回退数量超过该扎号已入库合格数量");
         }
+    }
 
-        LocalDateTime now = LocalDateTime.now();
+    private void executeQuantityRollback(List<ProductWarehousing> list, int rq, CuttingBundle bundle, LocalDateTime now) {
         int remaining = rq;
         for (ProductWarehousing w : list) {
             if (remaining <= 0) {
@@ -244,8 +267,6 @@ public class ProductWarehousingRollbackHelper {
             if (q <= remaining) {
                 productWarehousingService.removeById(w.getId());
                 remaining -= q;
-
-                // Decrement Stock
                 if (q > 0) {
                     updateSkuStock(w, null, bundle, -q);
                 }
@@ -261,7 +282,6 @@ public class ProductWarehousingRollbackHelper {
                 patch.setUpdateTime(now);
                 productWarehousingService.updateById(patch);
 
-                // Decrement Stock
                 if (remaining > 0) {
                     updateSkuStock(w, null, bundle, -remaining);
                 }
@@ -269,8 +289,9 @@ public class ProductWarehousingRollbackHelper {
                 remaining = 0;
             }
         }
+    }
 
-        int qualifiedSum = productWarehousingService.sumQualifiedByOrderId(oid);
+    private void updateOrderAfterRollback(ProductionOrder order, String oid, int qualifiedSum, LocalDateTime now) {
         ProductionOrder orderPatch = new ProductionOrder();
         orderPatch.setId(oid);
         orderPatch.setCompletedQuantity(qualifiedSum);
@@ -288,7 +309,10 @@ public class ProductWarehousingRollbackHelper {
             orderPatch.setUpdateTime(now);
             productionOrderService.updateById(orderPatch);
         }
+    }
 
+    private void writeRollbackLog(String oid, ProductionOrder order, CuttingBundle bundle, String qr, int rq,
+            String rollbackRemark, LocalDateTime now) {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         String operatorName = ctx == null ? null : ctx.getUsername();
@@ -319,27 +343,13 @@ public class ProductWarehousingRollbackHelper {
         rollbackLog.setCreateTime(now);
         rollbackLog.setUpdateTime(now);
         scanRecordService.save(rollbackLog);
+    }
 
+    private void invalidatePreviousScanRecords(String oid, CuttingBundle bundle, LocalDateTime now) {
         try {
             List<ScanRecord> warehouseScans = scanRecordService.listByCondition(
                     oid, bundle.getId(), "warehouse", "success", "warehouse_rollback");
-            if (warehouseScans != null) {
-                List<ScanRecord> toUpdate = new ArrayList<>();
-                for (ScanRecord sr : warehouseScans) {
-                    if (sr == null || !StringUtils.hasText(sr.getId())) {
-                        continue;
-                    }
-                    ScanRecord scanPatch = new ScanRecord();
-                    scanPatch.setId(sr.getId());
-                    scanPatch.setScanResult("failure");
-                    scanPatch.setRemark("入库记录已回退作废");
-                    scanPatch.setUpdateTime(now);
-                    toUpdate.add(scanPatch);
-                }
-                if (!toUpdate.isEmpty()) {
-                    scanRecordService.batchUpdateRecords(toUpdate);
-                }
-            }
+            markScanRecordsAsFailure(warehouseScans, "入库记录已回退作废", now);
         } catch (Exception e) {
             log.warn(
                     "Failed to mark previous warehouse scan records invalid after rollback: orderId={}, cuttingBundleId={}",
@@ -350,23 +360,7 @@ public class ProductWarehousingRollbackHelper {
 
         try {
             List<ScanRecord> inspectionRecords = scanRecordService.listQualityWarehousingRecords(oid, bundle.getId());
-            if (inspectionRecords != null) {
-                List<ScanRecord> toUpdate = new ArrayList<>();
-                for (ScanRecord sr : inspectionRecords) {
-                    if (sr == null || !StringUtils.hasText(sr.getId())) {
-                        continue;
-                    }
-                    ScanRecord scanPatch = new ScanRecord();
-                    scanPatch.setId(sr.getId());
-                    scanPatch.setScanResult("failure");
-                    scanPatch.setRemark("质检入库已回退作废");
-                    scanPatch.setUpdateTime(now);
-                    toUpdate.add(scanPatch);
-                }
-                if (!toUpdate.isEmpty()) {
-                    scanRecordService.batchUpdateRecords(toUpdate);
-                }
-            }
+            markScanRecordsAsFailure(inspectionRecords, "质检入库已回退作废", now);
         } catch (Exception e) {
             log.warn(
                     "Failed to mark previous inspection scan records invalid after rollback: orderId={}, cuttingBundleId={}",
@@ -374,7 +368,22 @@ public class ProductWarehousingRollbackHelper {
                     bundle == null ? null : bundle.getId(),
                     e);
         }
+    }
 
-        return true;
+    private void markScanRecordsAsFailure(List<ScanRecord> records, String remark, LocalDateTime now) {
+        if (records == null) return;
+        List<ScanRecord> toUpdate = new ArrayList<>();
+        for (ScanRecord sr : records) {
+            if (sr == null || !StringUtils.hasText(sr.getId())) continue;
+            ScanRecord scanPatch = new ScanRecord();
+            scanPatch.setId(sr.getId());
+            scanPatch.setScanResult("failure");
+            scanPatch.setRemark(remark);
+            scanPatch.setUpdateTime(now);
+            toUpdate.add(scanPatch);
+        }
+        if (!toUpdate.isEmpty()) {
+            scanRecordService.batchUpdateRecords(toUpdate);
+        }
     }
 }

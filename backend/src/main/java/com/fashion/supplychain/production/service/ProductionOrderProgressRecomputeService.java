@@ -271,16 +271,34 @@ public class ProductionOrderProgressRecomputeService {
                     .and(w -> w.like(ScanRecord::getRequestId, "ORDER_ADVANCE:%").or().like(ScanRecord::getRequestId, "ORDER_ROLLBACK:%"))
                     .orderByDesc(ScanRecord::getScanTime).orderByDesc(ScanRecord::getCreateTime).last("limit 1"));
             if (manual != null && StringUtils.hasText(manual.getRequestId())) {
-                List<String> nodes = scanRecordDomainService.resolveProgressNodes(order.getStyleNo());
-                if (nodes != null && !nodes.isEmpty()) {
-                    String target = StringUtils.hasText(manual.getProgressStage()) ? manual.getProgressStage().trim() : (StringUtils.hasText(manual.getProcessName()) ? manual.getProcessName().trim() : null);
-                    if (StringUtils.hasText(target)) {
-                        for (int i = 0; i < nodes.size(); i++) { if (templateLibraryService.progressStageNameMatches(nodes.get(i), target)) { int pct = nodes.size() <= 1 ? 0 : scanRecordDomainService.clampPercent((int) Math.round(i * 100.0 / (nodes.size() - 1))); String rid = manual.getRequestId().trim(); if (rid.startsWith("ORDER_ADVANCE:")) newProgress = Math.max(newProgress, pct); if (rid.startsWith("ORDER_ROLLBACK:")) newProgress = Math.min(newProgress, pct); break; } }
-                    }
+                ManualProgressTarget target = findManualProgressTarget(manual, order);
+                if (target != null) {
+                    String rid = manual.getRequestId().trim();
+                    if (rid.startsWith("ORDER_ADVANCE:")) newProgress = Math.max(newProgress, target.percent);
+                    if (rid.startsWith("ORDER_ROLLBACK:")) newProgress = Math.min(newProgress, target.percent);
                 }
             }
         } catch (Exception e) { log.warn("Failed to adjust progress with manual records: orderId={}", oid, e); }
         return newProgress;
+    }
+
+    private static class ManualProgressTarget {
+        final int percent;
+        ManualProgressTarget(int percent) { this.percent = percent; }
+    }
+
+    private ManualProgressTarget findManualProgressTarget(ScanRecord manual, ProductionOrder order) {
+        List<String> nodes = scanRecordDomainService.resolveProgressNodes(order.getStyleNo());
+        if (nodes == null || nodes.isEmpty()) return null;
+        String target = StringUtils.hasText(manual.getProgressStage()) ? manual.getProgressStage().trim() : (StringUtils.hasText(manual.getProcessName()) ? manual.getProcessName().trim() : null);
+        if (!StringUtils.hasText(target)) return null;
+        for (int i = 0; i < nodes.size(); i++) {
+            if (templateLibraryService.progressStageNameMatches(nodes.get(i), target)) {
+                int pct = nodes.size() <= 1 ? 0 : scanRecordDomainService.clampPercent((int) Math.round(i * 100.0 / (nodes.size() - 1)));
+                return new ManualProgressTarget(pct);
+            }
+        }
+        return null;
     }
 
     private int resolveCompletedQuantity(String oid, ProductionOrder order, int orderQty, int packagingDone) {
@@ -326,17 +344,16 @@ public class ProductionOrderProgressRecomputeService {
             return;
         }
 
+        ensureOrderCreatedRecord(order, oid, orderQty);
+        ensureProcurementRecord(order, oid, orderQty);
+    }
+
+    private void ensureOrderCreatedRecord(ProductionOrder order, String oid, int orderQty) {
         LocalDateTime createdTime = order.getCreateTime();
         if (createdTime == null) {
             createdTime = LocalDateTime.now();
         }
 
-        // 【下单人修复】必须使用订单存储的创建人，而非回落到 UserContext
-        // ProductionDataConsistencyJob 通过 AsyncConfig.contextCopyingDecorator 把
-        // "SYSTEM_TASK:进度一致性检查" 注入到异步线程的 UserContext，若此处传 "system"，
-        // resolveOperatorName 会把 "system" 视为保留词并继续读 UserContext，
-        // 导致 t_scan_record.operator_name 被污染为系统任务标识，进而通过视图
-        // v_production_order_flow_stage_snapshot 把 order_operator_name 传给前端"下单人"列。
         String creatorId   = order.getCreatedById()   != null ? String.valueOf(order.getCreatedById()) : null;
         String creatorName = StringUtils.hasText(order.getCreatedByName()) ? order.getCreatedByName().trim() : null;
         scanRecordDomainService.upsertStageScanRecord(
@@ -352,7 +369,9 @@ public class ProductionOrderProgressRecomputeService {
                 createdTime,
                 creatorId,
                 creatorName);
+    }
 
+    private void ensureProcurementRecord(ProductionOrder order, String oid, int orderQty) {
         int r = order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
         r = scanRecordDomainService.clampPercent(r);
         int qty = (int) Math.round(orderQty * (r / 100.0));
@@ -363,6 +382,10 @@ public class ProductionOrderProgressRecomputeService {
             qty = orderQty;
         }
         if (qty > 0) {
+            LocalDateTime createdTime = order.getCreateTime();
+            if (createdTime == null) {
+                createdTime = LocalDateTime.now();
+            }
             scanRecordDomainService.upsertStageScanRecord(
                     ProductionOrderScanRecordDomainService.REQUEST_PREFIX_PROCUREMENT + oid,
                     oid,
@@ -391,24 +414,12 @@ public class ProductionOrderProgressRecomputeService {
                 return core;
             }
         }
-        if (ProcessSynonymMapping.isEquivalent("采购", pn)) {
-            return "采购";
-        }
-        if (ProcessSynonymMapping.isEquivalent("裁剪", pn)) {
-            return "裁剪";
-        }
-        if (ProcessSynonymMapping.isEquivalent("二次工艺", pn)) {
-            return "二次工艺";
-        }
-        if (ProcessSynonymMapping.isEquivalent("车缝", pn)) {
-            return "车缝";
-        }
-        if (ProcessSynonymMapping.isEquivalent("尾部", pn)) {
-            return "尾部";
-        }
-        if (ProcessSynonymMapping.isEquivalent("入库", pn)) {
-            return "入库";
-        }
+        if (ProcessSynonymMapping.isEquivalent("采购", pn)) return "采购";
+        if (ProcessSynonymMapping.isEquivalent("裁剪", pn)) return "裁剪";
+        if (ProcessSynonymMapping.isEquivalent("二次工艺", pn)) return "二次工艺";
+        if (ProcessSynonymMapping.isEquivalent("车缝", pn)) return "车缝";
+        if (ProcessSynonymMapping.isEquivalent("尾部", pn)) return "尾部";
+        if (ProcessSynonymMapping.isEquivalent("入库", pn)) return "入库";
         String mapped = processParentMappingService.resolveParentNode(pn);
         if (StringUtils.hasText(mapped)) {
             return mapped;
@@ -424,53 +435,15 @@ public class ProductionOrderProgressRecomputeService {
             return 0;
         }
 
-        LinkedHashMap<String, Long> coreDone = new LinkedHashMap<>();
-        for (Map.Entry<String, Long> e : prodDoneByProcess.entrySet()) {
-            if (e == null || !StringUtils.hasText(e.getKey())) {
-                continue;
-            }
-            String core = resolveToCoreStage(e.getKey());
-            if (core != null) {
-                long v = e.getValue() == null ? 0L : e.getValue();
-                coreDone.merge(core, v, Math::max);
-            }
-        }
-        for (Map.Entry<String, Long> e : qualityDoneByProcess.entrySet()) {
-            if (e == null || !StringUtils.hasText(e.getKey())) {
-                continue;
-            }
-            String core = resolveToCoreStage(e.getKey());
-            if (core != null) {
-                long v = e.getValue() == null ? 0L : e.getValue();
-                coreDone.merge(core, v, Math::max);
-            }
-        }
-
+        LinkedHashMap<String, Long> coreDone = buildCoreDoneMap(prodDoneByProcess, qualityDoneByProcess);
         int baseQty = actualCuttingQty > 0 ? actualCuttingQty : orderQty;
-
-        LinkedHashMap<String, Double> stageRates = new LinkedHashMap<>();
-        for (String stage : CORE_PRODUCTION_STAGES) {
-            double rate = 0.0;
-            if ("采购".equals(stage)) {
-                rate = procurementStarted ? 1.0 : 0.0;
-            } else {
-                long done = coreDone.getOrDefault(stage, 0L);
-                int stageBase = "裁剪".equals(stage) ? orderQty : baseQty;
-                rate = stageBase > 0 ? Math.min(1.0, (double) done / stageBase) : 0.0;
-            }
-            stageRates.put(stage, rate);
-        }
-
+        LinkedHashMap<String, Double> stageRates = calculateStageRates(coreDone, orderQty, baseQty, procurementStarted);
         boolean hasSecondaryProcess = stageRates.getOrDefault("二次工艺", 0.0) > 0;
 
         java.util.List<String> activeStages = new ArrayList<>();
         for (String stage : CORE_PRODUCTION_STAGES) {
-            if ("采购".equals(stage)) {
-                continue;
-            }
-            if ("二次工艺".equals(stage) && !hasSecondaryProcess) {
-                continue;
-            }
+            if ("采购".equals(stage)) continue;
+            if ("二次工艺".equals(stage) && !hasSecondaryProcess) continue;
             activeStages.add(stage);
         }
 
@@ -487,23 +460,61 @@ public class ProductionOrderProgressRecomputeService {
             progress += perWeight * stageRates.getOrDefault(stage, 0.0);
         }
 
+        if (isAllCoreStagesComplete(procurementStarted, stageRates, hasSecondaryProcess)) {
+            progress = 100.0;
+        }
+
+        return scanRecordDomainService.clampPercent((int) Math.round(progress));
+    }
+
+    private LinkedHashMap<String, Long> buildCoreDoneMap(LinkedHashMap<String, Long> prodDoneByProcess,
+            LinkedHashMap<String, Long> qualityDoneByProcess) {
+        LinkedHashMap<String, Long> coreDone = new LinkedHashMap<>();
+        for (Map.Entry<String, Long> e : prodDoneByProcess.entrySet()) {
+            if (e == null || !StringUtils.hasText(e.getKey())) continue;
+            String core = resolveToCoreStage(e.getKey());
+            if (core != null) {
+                long v = e.getValue() == null ? 0L : e.getValue();
+                coreDone.merge(core, v, Math::max);
+            }
+        }
+        for (Map.Entry<String, Long> e : qualityDoneByProcess.entrySet()) {
+            if (e == null || !StringUtils.hasText(e.getKey())) continue;
+            String core = resolveToCoreStage(e.getKey());
+            if (core != null) {
+                long v = e.getValue() == null ? 0L : e.getValue();
+                coreDone.merge(core, v, Math::max);
+            }
+        }
+        return coreDone;
+    }
+
+    private LinkedHashMap<String, Double> calculateStageRates(LinkedHashMap<String, Long> coreDone, int orderQty, int baseQty, boolean procurementStarted) {
+        LinkedHashMap<String, Double> stageRates = new LinkedHashMap<>();
+        for (String stage : CORE_PRODUCTION_STAGES) {
+            double rate = 0.0;
+            if ("采购".equals(stage)) {
+                rate = procurementStarted ? 1.0 : 0.0;
+            } else {
+                long done = coreDone.getOrDefault(stage, 0L);
+                int stageBase = "裁剪".equals(stage) ? orderQty : baseQty;
+                rate = stageBase > 0 ? Math.min(1.0, (double) done / stageBase) : 0.0;
+            }
+            stageRates.put(stage, rate);
+        }
+        return stageRates;
+    }
+
+    private boolean isAllCoreStagesComplete(boolean procurementStarted, LinkedHashMap<String, Double> stageRates, boolean hasSecondaryProcess) {
         boolean allComplete = procurementStarted;
         for (String stage : CORE_PRODUCTION_STAGES) {
-            if ("采购".equals(stage)) {
-                continue;
-            }
-            if ("二次工艺".equals(stage) && !hasSecondaryProcess) {
-                continue;
-            }
+            if ("采购".equals(stage)) continue;
+            if ("二次工艺".equals(stage) && !hasSecondaryProcess) continue;
             if (stageRates.getOrDefault(stage, 0.0) < 0.999) {
                 allComplete = false;
                 break;
             }
         }
-        if (allComplete) {
-            progress = 100.0;
-        }
-
-        return scanRecordDomainService.clampPercent((int) Math.round(progress));
+        return allComplete;
     }
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
+import com.fashion.supplychain.production.helper.TrackingPriceBatchHelper;
 import com.fashion.supplychain.production.helper.TrackingPriceSyncHelper;
 import com.fashion.supplychain.production.helper.TrackingRecordInitHelper;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
@@ -44,6 +45,9 @@ public class ProductionProcessTrackingOrchestrator {
 
     @Autowired
     private TrackingPriceSyncHelper priceSyncHelper;
+
+    @Autowired
+    private TrackingPriceBatchHelper priceBatchHelper;
 
     // ========== 委托方法：初始化与追加 ==========
 
@@ -309,28 +313,28 @@ public class ProductionProcessTrackingOrchestrator {
 
     /**
      * 批量同步所有订单的工序跟踪单价
-     * 委托给 {@link TrackingPriceSyncHelper#syncAllOrderTrackingPrices}
+     * 委托给 {@link TrackingPriceBatchHelper#syncAllOrderTrackingPrices}
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> syncAllOrderTrackingPrices() {
-        return priceSyncHelper.syncAllOrderTrackingPrices();
+        return priceBatchHelper.syncAllOrderTrackingPrices();
     }
 
     /**
      * 批量刷新所有订单的 progressWorkflowJson 中的工序单价
-     * 委托给 {@link TrackingPriceSyncHelper#refreshWorkflowPrices}
+     * 委托给 {@link TrackingPriceBatchHelper#refreshWorkflowPrices}
      */
     public Map<String, Object> refreshWorkflowPrices() {
-        return priceSyncHelper.refreshWorkflowPrices();
+        return priceBatchHelper.refreshWorkflowPrices();
     }
 
     /**
      * 补齐历史漏更新的入库工序跟踪记录
-     * 委托给 {@link TrackingPriceSyncHelper#repairWarehousingTracking}
+     * 委托给 {@link TrackingPriceBatchHelper#repairWarehousingTracking}
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> repairWarehousingTracking(String orderId) {
-        return priceSyncHelper.repairWarehousingTracking(orderId);
+        return priceBatchHelper.repairWarehousingTracking(orderId);
     }
 
     // ========== 裁剪回滚清理 ==========
