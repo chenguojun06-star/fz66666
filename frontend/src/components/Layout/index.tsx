@@ -16,7 +16,7 @@ import DailyTodoModal from './DailyTodoModal';
 import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
 import GlobalAiAssistant from '../common/GlobalAiAssistant';
 import SideMenu from './SideMenu';
-import { useLayoutAuth, normalizePath } from './useLayoutAuth';
+import { useLayoutAuth } from './useLayoutAuth';
 import { useActivePath, useActiveSectionKey, useRecentPages } from './router';
 import { menuConfig } from '../../routeConfig';
 import './styles.css';

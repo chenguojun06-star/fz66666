@@ -315,7 +315,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
       if ((Number((r as any)?.quantity) || 0) <= 0) return false;
       if (matchRecordToStage(r.progressStage, r.processName, nKey, nName)) return true;
       const stage = (r.progressStage || '').trim();
-      const process = (r.processName || '').trim();
+      const _process = (r.processName || '').trim();
       if (stage && nName && (stage.includes(nName) || nName.includes(stage))) return true;
       return false;
     });

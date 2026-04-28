@@ -23,7 +23,7 @@ import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { toSeasonCn, PrintOptions, DEFAULT_PRINT_OPTIONS, StylePrintModalProps, PrintData } from './types';
 import { buildPrintHtml } from './printTemplate';
 import { safePrint } from '@/utils/safePrint';
-import { LABEL_SIZE_MAP, parseSizeColorMatrix, resolveLabelItems, type LabelItem } from './printDataTransform';
+import { LABEL_SIZE_MAP, parseSizeColorMatrix, resolveLabelItems } from './printDataTransform';
 
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,

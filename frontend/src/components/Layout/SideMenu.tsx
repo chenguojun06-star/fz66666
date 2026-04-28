@@ -24,7 +24,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
   isMobile,
   selectedKeys,
   menuOpenKeys,
-  activeSectionKey,
+  _activeSectionKey,
   onMenuOpenChange,
   onSidebarCollapse,
   auth,

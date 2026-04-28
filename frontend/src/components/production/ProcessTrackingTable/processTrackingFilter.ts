@@ -1,4 +1,4 @@
-import { stageAliasMap, carSewingKeywords, tailProcessKeywords, canonicalizeStage } from '@/utils/productionStage';
+import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
 
 export interface ProcessTrackingRecord {
   id: string;

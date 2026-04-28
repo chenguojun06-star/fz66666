@@ -1,9 +1,6 @@
 import { useMemo, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Button } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { menuConfig } from '../../routeConfig';
-import { useAppLanguage } from '../../i18n/useAppLanguage';
 import { type AppLanguage } from '../../i18n/languagePreference';
 import { t } from '../../i18n';
 import { normalizePath } from './useLayoutAuth';
@@ -18,7 +15,7 @@ type RecentPage = {
 const recentPagesStorageKey = 'layout.header.recentPages';
 const maxRecentPages = 12;
 
-function readRecentPages(language: string): RecentPage[] {
+function readRecentPages(_language: string): RecentPage[] {
   try {
     const raw = localStorage.getItem(recentPagesStorageKey);
     if (!raw) return [];

@@ -1,14 +1,10 @@
-import { App, Form, Input, Button, Select, InputNumber, Image, Space, Tooltip } from 'antd';
+import { App, Form, Input, Button, Select, InputNumber } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { QuestionCircleOutlined } from '@ant-design/icons';
 import { StyleBom } from '@/types/style';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
-import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { materialTypeOptions } from './bomColumns';
-import type { MaterialType } from './bomColumns';
 
 export const parseSizeUsageMap = (value?: string) => {
   try {

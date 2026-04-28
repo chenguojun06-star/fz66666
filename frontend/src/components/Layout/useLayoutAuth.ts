@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
-import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
+import { resolvePermissionCode, paths } from '../../routeConfig';
 
 const normalizePath = (path: string) => path.split('?')[0];
 

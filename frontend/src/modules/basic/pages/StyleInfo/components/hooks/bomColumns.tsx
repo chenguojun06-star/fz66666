@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Tag, Space, Image, Tooltip, Button } from 'antd';
+import { Form, Tag, Space, Image, Tooltip, Button } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { StyleBom } from '@/types/style';
@@ -10,7 +10,6 @@ import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import {
   parseSizeUsageMap,
   computeConvertedUsage,
-  computeAverageMeterUsage,
   isKilogramUnit,
   isMeterUnit,
   useBomEditorHelpers,
@@ -117,7 +116,6 @@ export function useBomColumns({
     renderMaterialCodeEditor,
     renderTextEditor,
     renderDictEditor,
-    renderNumberEditor,
     renderSupplierEditor,
     renderDevUsageAmountEditor,
     renderConversionRateEditor,
