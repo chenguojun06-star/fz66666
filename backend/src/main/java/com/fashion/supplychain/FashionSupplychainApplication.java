@@ -11,7 +11,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.fashion.supplychain.style.orchestration.StyleQuotationOrchestrator;
 
-@SpringBootApplication
+@SpringBootApplication(excludeName = {
+    "org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration",
+    "org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration",
+    "org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration",
+    "org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration",
+    "org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration",
+    "org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration",
+    "org.springframework.ai.model.chat.client.autoconfigure.ChatClientAutoConfiguration"
+})
 @EnableScheduling
 @MapperScan("com.fashion.supplychain.**.mapper")
 public class FashionSupplychainApplication {

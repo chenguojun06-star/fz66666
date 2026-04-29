@@ -14,23 +14,28 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@ConditionalOnBean(name = "springAiChatClient")
+@ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true")
 public class SpringAiInferenceAdapter implements AiInferenceGateway {
 
     @Autowired
     @Qualifier("springAiChatClient")
-    private ChatClient chatClient;
+    private ObjectProvider<ChatClient> chatClientProvider;
 
     @Override
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {
         long start = System.currentTimeMillis();
+        ChatClient chatClient = chatClientProvider.getIfAvailable();
+        if (chatClient == null) {
+            return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+        }
         try {
             ChatResponse response = chatClient.prompt()
                     .system(systemPrompt)
@@ -49,6 +54,10 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     @Override
     public IntelligenceInferenceResult chat(String scene, List<AiMessage> messages, List<AiTool> tools) {
         long start = System.currentTimeMillis();
+        ChatClient chatClient = chatClientProvider.getIfAvailable();
+        if (chatClient == null) {
+            return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+        }
         try {
             ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
             for (Message msg : convertMessages(messages)) {
@@ -73,6 +82,10 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                                                    List<AiTool> tools,
                                                    StreamChunkConsumer chunkConsumer) {
         long start = System.currentTimeMillis();
+        ChatClient chatClient = chatClientProvider.getIfAvailable();
+        if (chatClient == null) {
+            return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+        }
         try {
             StringBuilder contentBuilder = new StringBuilder();
 
@@ -115,6 +128,7 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
 
     @Override
     public boolean isAvailable() {
+        ChatClient chatClient = chatClientProvider.getIfAvailable();
         return chatClient != null;
     }
 
