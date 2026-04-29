@@ -364,7 +364,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         <Table
           {...rest}
           rowKey={rowKey}
-          className={className}
+          className={`${className || ''} resizable-table` || 'resizable-table'}
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
