@@ -218,11 +218,12 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
           ['操作', '操作列', '操作区', '操作按钮'].includes(String(colRecord.title || '').trim());
 
-        const { resizable: _stripResizable, ...safeColRecord } = colRecord;
+        const { resizable: _stripResizable, width: _stripWidth, ...safeColRecord } = colRecord;
 
         return {
           ...safeColRecord,
           colId,
+          width: maybeAction ? 72 : undefined,
           fixed: allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined,
         };
       });
@@ -367,7 +368,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={tableLayout || undefined}
+          tableLayout={tableLayout || 'fixed'}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />
