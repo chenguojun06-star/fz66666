@@ -34,6 +34,7 @@ export interface StyleInfo extends Record<string, unknown> {
   patternCompletedTime?: string;
   sampleStatus?: string;
   sampleProgress?: number;
+  sampleStartTime?: string;
   sampleCompletedTime?: string;
   developmentSourceType?: 'SELF_DEVELOPED' | 'SELECTION_CENTER' | string;
   developmentSourceDetail?: string;

@@ -483,13 +483,9 @@ export const buildSecondaryStage: StageBuilder = (record) => {
 };
 
 export const buildSampleStage: StageBuilder = (record) => {
-  // 注意：productionStartTime/productionCompletedTime 是「生产制单」阶段的时间，不是样衣生产的时间。
-  // 样衣生产状态应只依赖 sampleStatus 和 sampleCompletedTime。
   const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
   const sampleProgress = clampPercent(Number(record.sampleProgress || 0));
-  // started：样衣已领取并进入制作（IN_PROGRESS）、制作完成待审（PRODUCTION_COMPLETED）或全流程完成（COMPLETED）
   const started = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
-  // done：样衣制作本身完成（PRODUCTION_COMPLETED 或 COMPLETED），进度满100%或时间字段有值时优先校验
   const done = Boolean(record.sampleCompletedTime)
     || sampleProgress >= 100
     || ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
@@ -504,12 +500,14 @@ export const buildSampleStage: StageBuilder = (record) => {
         : started
           ? '已领取生产'
           : '等待纸样',
-    startTimeLabel: '',
+    startTimeLabel: formatNodeTime(record.sampleStartTime),
     timeLabel: done
       ? (record.sampleCompletedTime
           ? formatNodeTime(record.sampleCompletedTime)
           : '已完成')
-      : '',
+      : started
+        ? formatNodeTime(record.sampleStartTime)
+        : '',
     status: done ? 'done' : started ? 'active' : 'waiting',
     progress: done ? 100 : (started && sampleProgress > 0 ? sampleProgress : started ? 36 : 0),
     actionKey: 'detail',
