@@ -1,8 +1,6 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -29,9 +27,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -109,8 +105,14 @@ public class QualityScanExecutor {
             throw new IllegalArgumentException("扫码内容不能为空");
         }
 
-        if (duplicateScanPreventer.hasRecentDuplicateScan(scanCode, "quality", qty, null)) {
-            throw new IllegalStateException("操作过快，请稍后再试（防重复扫码保护）");
+        // 提前解析 qualityStage，用于决定是否跳过防重复检查：
+        // confirm 阶段紧跟 receive 是合法的两步操作，不应被 30 秒防重复窗口拦截；
+        // receive / inspect 仍保留防重复保护，防止意外双击。
+        String qualityStage = parseQualityStageFromParams(params);
+        if (!"confirm".equals(qualityStage)) {
+            if (duplicateScanPreventer.hasRecentDuplicateScan(scanCode, "quality", qty, null)) {
+                throw new IllegalStateException("操作过快，请稍后再试（防重复扫码保护）");
+            }
         }
 
         CuttingBundle bundle = bundleLookupService.lookup(BundleLookupContext.from(params));
@@ -128,8 +130,6 @@ public class QualityScanExecutor {
         }
 
         validator.validateNotAlreadyQualityCheckedByPc(order.getId(), bundle.getId());
-
-        String qualityStage = parseQualityStageFromParams(params);
 
         // 质检确认阶段只更新已有领取记录（写 confirmTime + 质检结果），不新增扫码数量，
         // 因此跳过数量校验；否则 receive 记录的 quantity 会被重复计入 completedQty，
