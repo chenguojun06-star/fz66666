@@ -46,9 +46,9 @@ public class OrderLearningTool implements AgentTool {
     @Override
     public AiTool getToolDefinition() {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("action", schema("string", "操作类型：recommend(学习建议)/refresh_outcome(刷新单笔学习结果)/refresh_recent(刷新近期订单学习结果)/refresh_style(刷新某款历史学习样本)/explain_order(解释这单)", List.of("recommend", "refresh_outcome", "refresh_recent", "refresh_style", "explain_order")));
+        properties.put("action", schema("string", "操作类型：recommend(学习建议)/explain_order(解释这单实际价格)/refresh_outcome(刷新单笔学习结果)/refresh_recent(刷新近期订单学习结果)/refresh_style(刷新某款历史学习样本)", List.of("recommend", "explain_order", "refresh_outcome", "refresh_recent", "refresh_style")));
         properties.put("styleNo", schema("string", "款号，recommend/explain_order/refresh_style 可传"));
-        properties.put("orderNo", schema("string", "订单号，refresh_outcome/explain_order 优先传"));
+        properties.put("orderNo", schema("string", "订单号，explain_order/refresh_outcome 优先传"));
         properties.put("orderId", schema("string", "订单ID，可选"));
         properties.put("orderQuantity", schema("integer", "下单件数，可选"));
         properties.put("limit", schema("integer", "批量刷新数量上限，refresh_recent/refresh_style 可传，默认 50"));
@@ -59,8 +59,8 @@ public class OrderLearningTool implements AgentTool {
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("下单学习与事件处理工具。可以分析这单为什么贵、推荐更优生产方式和单价口径、刷新完工学习结果，也可以批量刷新近期订单或某个款号的学习样本。" +
-                "当用户说'帮我分析这单怎么下更划算'、'这单为什么成本高'、'刷新这单学习结果'、'把这个款号的学习样本重刷一下'时调用。");
+        function.setDescription("下单学习与事件处理工具。可以分析这单实际价格(工厂单价/计价方式/数量等)、为什么贵、推荐更优生产方式和单价口径、刷新完工学习结果，也可以批量刷新近期订单或某个款号的学习样本。" +
+                "当用户问'这单多少钱'、'这个订单的价格'、'实际单价多少'、'帮我分析这单怎么下更划算'、'这单为什么成本高'、'刷新这单学习结果'、'把这个款号的学习样本重刷一下'时调用。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("action"));
@@ -80,6 +80,12 @@ public class OrderLearningTool implements AgentTool {
             return MAPPER.writeValueAsString(Map.of("error", "缺少 action"));
         }
         ProductionOrder order = findOrder(args);
+        if ("explain_order".equalsIgnoreCase(action)) {
+            if (order == null) {
+                return MAPPER.writeValueAsString(Map.of("error", "解释订单时需要有效订单号或订单ID"));
+            }
+            return explainOrder(order);
+        }
         if ("refresh_outcome".equalsIgnoreCase(action)) {
             if (order == null) {
                 return MAPPER.writeValueAsString(Map.of("error", "刷新学习结果时需要有效订单号或订单ID"));
@@ -224,5 +230,42 @@ public class OrderLearningTool implements AgentTool {
             log.debug("[OrderLearning] decimalValue解析失败: value={}", value);
             return null;
         }
+    }
+
+    private String explainOrder(ProductionOrder order) throws Exception {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("orderNo", order.getOrderNo());
+        data.put("orderId", order.getId());
+        data.put("styleNo", order.getStyleNo());
+        data.put("styleName", order.getStyleName());
+        data.put("orderQuantity", order.getOrderQuantity());
+        data.put("factoryType", order.getFactoryType());
+        data.put("factoryName", order.getFactoryName());
+        data.put("pricingMode", order.getPricingMode());
+
+        BigDecimal unitPrice = order.getFactoryUnitPrice();
+        data.put("unitPrice", unitPrice);
+        if (unitPrice != null && order.getOrderQuantity() != null && order.getOrderQuantity() > 0) {
+            data.put("totalPrice", unitPrice.multiply(BigDecimal.valueOf(order.getOrderQuantity())));
+        }
+
+        data.put("completedQuantity", order.getCompletedQuantity());
+        data.put("status", order.getStatus());
+        data.put("productionProgress", order.getProductionProgress());
+        data.put("urgencyLevel", order.getUrgencyLevel());
+        data.put("productCategory", order.getProductCategory());
+        data.put("createTime", order.getCreateTime() != null ? order.getCreateTime().toString() : null);
+        data.put("actualEndDate", order.getActualEndDate() != null ? order.getActualEndDate().toString() : null);
+        data.put("createdByName", order.getCreatedByName());
+
+        data.put("summary", String.format(
+                "订单 %s（款号 %s），%s，数量 %d 件，工厂单价 %s，计价方式 %s，状态 %s，进度 %d%%",
+                order.getOrderNo(), order.getStyleNo(), order.getStyleName(),
+                order.getOrderQuantity() != null ? order.getOrderQuantity() : 0,
+                unitPrice != null ? unitPrice.toString() : "未设置",
+                order.getPricingMode() != null ? order.getPricingMode() : "未设置",
+                order.getStatus(), order.getProductionProgress() != null ? order.getProductionProgress() : 0));
+
+        return MAPPER.writeValueAsString(Map.of("success", true, "data", data));
     }
 }

@@ -52,7 +52,7 @@ public class StyleInfoTool extends AbstractAgentTool {
         props.put("id", stringProp("款式ID，update/advance_stage时必填"));
         props.put("stage", stringProp("阶段操作：pattern_start/pattern_done/sample_start/sample_done/production_start/production_done"));
         return buildToolDef(
-                "款式档案全功能AI工具：支持查询款式详情+工序列表，以及新建、更新款式和推进开发阶段。",
+                "款式档案全功能AI工具：支持查询款式详情+工序列表。返回款号、品名、品类、单价、面料成分、洗涤说明、工艺描述、纸样/样衣状态、开发进度节点、工序列表等完整信息。新建/更新款式和推进开发阶段需管理员权限。",
                 props, List.of("action"));
     }
 
@@ -92,8 +92,12 @@ public class StyleInfoTool extends AbstractAgentTool {
             data.put("styleName", info.getStyleName());
             data.put("category", info.getCategory());
             data.put("price", info.getPrice());
+            data.put("fabricComposition", info.getFabricComposition());
+            data.put("washInstructions", info.getWashInstructions());
+            data.put("description", info.getDescription());
             data.put("patternStatus", info.getPatternStatus());
             data.put("sampleStatus", info.getSampleStatus());
+            data.put("sampleReviewStatus", info.getSampleReviewStatus());
             data.put("sampleProgress", info.getSampleProgress());
             data.put("progressNode", info.getProgressNode());
 

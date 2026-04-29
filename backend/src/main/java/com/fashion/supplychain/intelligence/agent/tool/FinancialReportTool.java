@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.orchestration.FinancialReportOrchestrator;
+import com.fashion.supplychain.finance.orchestration.OrderProfitOrchestrator;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,16 +20,21 @@ public class FinancialReportTool extends AbstractAgentTool {
     @Autowired
     private FinancialReportOrchestrator financialReportOrchestrator;
 
+    @Autowired
+    private OrderProfitOrchestrator orderProfitOrchestrator;
+
     @Override
     public AiTool getToolDefinition() {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("action", stringProp("动作: profit_loss | balance_sheet | cash_flow | profit_trend(利润环比) | health_check(健康诊断)"));
+        properties.put("action", stringProp("动作: profit_loss | balance_sheet | cash_flow | profit_trend(利润环比) | health_check(健康诊断) | order_profit(单个订单利润)"));
         properties.put("startDate", stringProp("开始日期(yyyy-MM-dd)，默认本月1号"));
         properties.put("endDate", stringProp("结束日期(yyyy-MM-dd)，默认今天"));
         properties.put("asOfDate", stringProp("截止日期(yyyy-MM-dd)，资产负债表专用，默认今天"));
+        properties.put("orderNo", stringProp("订单号，order_profit时必填，例如PO2026001"));
+        properties.put("orderId", stringProp("订单ID，order_profit时可选，有orderNo则不需要"));
         return buildToolDef(
-                "财务报表：利润表(损益)、资产负债表、现金流量表、利润环比分析、财务健康诊断。" +
-                        "用户说「利润表」「损益表」「资产负债」「现金流」「财务报表」「环比」「财务健康」时必须调用。仅管理员可用。",
+                "财务报表：利润表(损益)、资产负债表、现金流量表、利润环比分析、财务健康诊断、单个订单利润明细。" +
+                        "用户说「利润表」「损益表」「资产负债」「现金流」「财务报表」「环比」「财务健康」「这单赚多少」「订单利润」「成本利润」时必须调用。仅管理员可用。",
                 properties, List.of("action"));
     }
 
@@ -55,6 +61,7 @@ public class FinancialReportTool extends AbstractAgentTool {
             case "cash_flow" -> cashFlow(args);
             case "profit_trend" -> profitTrend(args);
             case "health_check" -> healthCheck(args);
+            case "order_profit" -> orderProfit(args);
             default -> errorJson("不支持的 action: " + action);
         };
     }
@@ -352,5 +359,23 @@ public class FinancialReportTool extends AbstractAgentTool {
         String s = optionalString(args, "asOfDate");
         if (s != null) return LocalDate.parse(s);
         return LocalDate.now();
+    }
+
+    @SuppressWarnings("unchecked")
+    private String orderProfit(Map<String, Object> args) throws Exception {
+        TenantAssert.assertTenantContext();
+        if (UserContext.factoryId() != null) {
+            return errorJson("外发工厂账号无权查看订单利润");
+        }
+        String orderNo = optionalString(args, "orderNo");
+        String orderId = optionalString(args, "orderId");
+        if (!org.springframework.util.StringUtils.hasText(orderNo) && !org.springframework.util.StringUtils.hasText(orderId)) {
+            return errorJson("order_profit 需要提供 orderNo 或 orderId");
+        }
+        Map<String, Object> profitData = orderProfitOrchestrator.computeOrderProfit(orderId, orderNo);
+        if (profitData == null || profitData.isEmpty()) {
+            return errorJson("未找到该订单的利润数据，请确认订单号正确且订单已有入库记录");
+        }
+        return successJson("订单利润查询成功", profitData);
     }
 }

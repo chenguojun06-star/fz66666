@@ -41,28 +41,33 @@ public class FinishedProductStockTool implements AgentTool {
 
         Map<String, Object> styleNoProp = new HashMap<>();
         styleNoProp.put("type", "string");
-        styleNoProp.put("description", "款号关键词，例如 'FZ2024'");
+        styleNoProp.put("description", "款号精确匹配，例如 'FZ2024001'");
         properties.put("styleNo", styleNoProp);
 
         Map<String, Object> colorProp = new HashMap<>();
         colorProp.put("type", "string");
-        colorProp.put("description", "颜色，例如 '红色', '黑色'");
+        colorProp.put("description", "颜色精确匹配，例如 '红色', '黑色'。支持查询某个款某个颜色的库存");
         properties.put("color", colorProp);
 
         Map<String, Object> sizeProp = new HashMap<>();
         sizeProp.put("type", "string");
-        sizeProp.put("description", "尺码，例如 'M', 'XL'");
+        sizeProp.put("description", "尺码精确匹配，例如 'M', 'XL'。支持查询某个款某个颜色某个尺码的精确库存");
         properties.put("size", sizeProp);
 
         Map<String, Object> skuCodeProp = new HashMap<>();
         skuCodeProp.put("type", "string");
-        skuCodeProp.put("description", "SKU编码关键词");
+        skuCodeProp.put("description", "SKU编码关键词，格式如 '款号-颜色-尺码'");
         properties.put("skuCode", skuCodeProp);
+
+        Map<String, Object> limitProp = new HashMap<>();
+        limitProp.put("type", "integer");
+        limitProp.put("description", "返回最大条数，默认20，最大100");
+        properties.put("limit", limitProp);
 
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("查询成品/大货库存数据。返回款号、颜色、尺码、SKU编码、库存数量、成本价等。适用于查询已入库的成品库存情况。");
+        function.setDescription("查询成品/大货库存数据，精确到SKU级别（款号+颜色+尺码）。返回款号、颜色、尺码、SKU编码、库存数量、成本价等。适用于查询已入库的成品库存情况，支持按款号/颜色/尺码精确查询。用户问'库存还有多少'、'某个款某个色的库存'、'成品仓有什么货'时调用。");
         AiTool.AiParameters aiParams = new AiTool.AiParameters();
         aiParams.setProperties(properties);
         function.setParameters(aiParams);
@@ -87,12 +92,13 @@ public class FinishedProductStockTool implements AgentTool {
             String color = (String) args.get("color");
             String size = (String) args.get("size");
             String skuCode = (String) args.get("skuCode");
+            int limit = Math.min(100, Math.max(1, args.get("limit") instanceof Number ? ((Number) args.get("limit")).intValue() : 20));
 
             QueryWrapper<ProductSku> query = new QueryWrapper<>();
             query.gt("stock_quantity", 0);
 
             if (styleNo != null && !styleNo.isBlank()) {
-                query.like("style_no", styleNo);
+                query.eq("style_no", styleNo);
             }
             if (color != null && !color.isBlank()) {
                 query.eq("color", color);
@@ -108,7 +114,7 @@ public class FinishedProductStockTool implements AgentTool {
         Long tenantId = UserContext.tenantId();
             query.eq("tenant_id", tenantId);
 
-            query.last("LIMIT 15");
+            query.last("LIMIT " + limit);
 
             List<ProductSku> skus = productSkuService.list(query);
 
