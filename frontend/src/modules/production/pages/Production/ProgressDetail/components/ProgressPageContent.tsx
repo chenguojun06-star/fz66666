@@ -92,7 +92,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   dateSortAsc, toggleDateSort, activeStatFilter, handleStatClick,
   globalStats, showSmartErrorNotice, smartError, onFixError,
   bottleneckBannerVisible, bottleneckItems, setBottleneckBannerVisible, bottleneckLoading,
-  loading, orders, sortedOrders, sortedSmartQueueOrders, total, columns, cardColumns, cardActions, titleTags,
+  loading, orders, sortedOrders, sortedSmartQueueOrders, total, columns, cardColumns, cardActions,
   boardStatsByOrder, focusedOrderId, getOrderDomKey,
   smartQueueFilter, smartQueueOrders, smartActionItems, setSmartQueueFilter,
   fetchOrders,

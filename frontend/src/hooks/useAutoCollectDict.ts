@@ -69,7 +69,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
   /**
    * 自动收录新词汇
    */
-  const collectWord = async (word: string) => {
+  const collectWord = useCallback(async (word: string) => {
     if (!enabled || !word || word.trim() === '') return;
 
     const trimmedWord = normalizeWord(word);
@@ -104,7 +104,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
     } catch (error) {
       // 静默失败，不影响用户操作
     }
-  };
+  }, [enabled, dictType, silent]);
 
   /**
    * 带防抖的收录函数
@@ -127,7 +127,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
     }, debounceMs) as unknown as number;
 
     pendingTimers.current.set(trimmedWord, timer);
-  }, [enabled, dictType, debounceMs]);
+  }, [enabled, dictType, debounceMs, collectWord]);
 
   /**
    * 清除所有待处理的定时器

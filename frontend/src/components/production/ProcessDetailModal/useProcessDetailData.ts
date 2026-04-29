@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import api, { type ApiResult } from '@/utils/api';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { compareSizeAsc } from '@/utils/api/size';
@@ -111,9 +111,9 @@ export const useProcessDetailData = (
     if (visible && record?.id) {
       loadCuttingData();
     }
-  }, [visible, record?.id]);
+  }, [visible, record?.id, loadCuttingData]);
 
-  const loadCuttingData = async () => {
+  const loadCuttingData = useCallback(async () => {
     if (!record?.id) return;
     try {
       const res = await api.get('/production/cutting/list', {
@@ -144,7 +144,7 @@ export const useProcessDetailData = (
       console.error('加载裁剪数据失败:', error);
       setCuttingBundles([]);
     }
-  };
+  }, [record?.id, record?.orderNo]);
 
   useEffect(() => {
     if (!visible || processType !== 'warehousing' || !record?.orderNo) {

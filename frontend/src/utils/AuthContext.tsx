@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import api from './api';
-import tenantSmartFeatureService from '@/services/system/tenantSmartFeatureService';
-import { replaceSmartFeatureFlags, resetSmartFeatureFlags } from '@/smart/core/featureFlags';
+import { resetSmartFeatureFlags } from '@/smart/core/featureFlags';
 import { useSmartFeatureStore } from '@/smart/core/smartFeatureStore';
 
 export interface UserInfo extends Record<string, unknown> {

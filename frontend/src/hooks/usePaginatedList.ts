@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { message } from '@/utils/antdStatic';
 
-interface PaginatedResult<T = unknown> {
-  records?: T[];
+interface PaginatedResult<_T = unknown> {
+  records?: _T[];
   total?: number;
 }
 
-interface UsePaginatedListOptions<T, F> {
+interface UsePaginatedListOptions<F> {
   fetchList: (params: { page: number; pageSize: number } & Partial<F>) => Promise<unknown>;
   fetchStats?: () => Promise<unknown>;
   pageSize?: number;
@@ -24,7 +24,7 @@ interface UsePaginatedListResult<T, S> {
 }
 
 export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = unknown>(
-  options: UsePaginatedListOptions<T, F>,
+  options: UsePaginatedListOptions<F>,
   filters: Partial<F>
 ): UsePaginatedListResult<T, S> {
   const { fetchList, fetchStats, pageSize = 20, onError = '加载数据失败' } = options;

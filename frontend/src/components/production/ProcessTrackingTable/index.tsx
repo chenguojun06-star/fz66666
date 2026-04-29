@@ -32,7 +32,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   }, [handleManualComplete]);
 
   const filterType = nodeType || processType;
-  const safeRecords = Array.isArray(records) ? records : [];
+  const safeRecords = useMemo(() => Array.isArray(records) ? records : [], [records]);
 
   const filteredRecords = useMemo(() => {
     if (!filterType) return safeRecords;

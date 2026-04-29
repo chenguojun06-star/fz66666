@@ -108,7 +108,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       finally { setLoading(false); }
     };
     loadData();
-  }, [visible, styleId, mode, propPatternId, styleNo]);
+  }, [visible, styleId, mode, propPatternId, styleNo, cover]);
 
   const handlePrint = () => {
     const hasSelection = Object.values(options).some(v => v);
@@ -224,7 +224,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
       message.success(`已发送 ${totalLabels} 张标签到打印机`);
     } catch { message.error('标签打印失败，请重试'); }
     finally { setLabelPrinting(false); }
-  }, [labelItems, isPatternPrint, resolvedPatternId, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
+  }, [labelItems, isPatternPrint, resolvedPatternId, orderId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
 
   const getModeTitle = () => {
     switch (mode) {

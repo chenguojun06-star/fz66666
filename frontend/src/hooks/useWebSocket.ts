@@ -266,7 +266,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     setMyConnected(inst.connected);
     const unsubscribe = inst.addConnectedListener((v) => setMyConnected(v));
     return () => { unsubscribe(); };
-  }, []);
+  }, [inst]);
 
   useEffect(() => {
     inst.subscriberCount++;
