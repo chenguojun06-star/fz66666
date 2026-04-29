@@ -107,12 +107,6 @@ export const useProcessDetailData = (
     })();
   }, [visible, record?.styleId]);
 
-  useEffect(() => {
-    if (visible && record?.id) {
-      loadCuttingData();
-    }
-  }, [visible, record?.id, loadCuttingData]);
-
   const loadCuttingData = useCallback(async () => {
     if (!record?.id) return;
     try {
@@ -145,6 +139,12 @@ export const useProcessDetailData = (
       setCuttingBundles([]);
     }
   }, [record?.id, record?.orderNo]);
+
+  useEffect(() => {
+    if (visible && record?.id) {
+      loadCuttingData();
+    }
+  }, [visible, record?.id, loadCuttingData]);
 
   useEffect(() => {
     if (!visible || processType !== 'warehousing' || !record?.orderNo) {

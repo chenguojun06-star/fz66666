@@ -67,7 +67,7 @@ const StyleAttachmentsButton: React.FC<{
     } finally {
       setLoading(false);
     }
-  }, [styleId, styleNo]);
+  }, [styleId, styleNo, bizTypes, onlyActive]);
 
   React.useEffect(() => {
     if (open) fetchList();

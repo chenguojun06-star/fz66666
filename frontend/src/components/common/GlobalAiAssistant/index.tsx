@@ -149,7 +149,7 @@ const GlobalAiAssistant: React.FC = () => {
 
     window.addEventListener('ai:traceable_advice', handleAdvicePush);
     return () => window.removeEventListener('ai:traceable_advice', handleAdvicePush);
-  }, []);
+  }, [setMessages]);
 
   useEffect(() => {
     return subscribe('ai:traceable_advice', (msg: WsMessage) => {
@@ -180,7 +180,7 @@ const GlobalAiAssistant: React.FC = () => {
     };
     window.addEventListener('openAiChat', handleOpenAiChat);
     return () => window.removeEventListener('openAiChat', handleOpenAiChat);
-  }, []);
+  }, [setInputValue]);
 
   const dismissPendingItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -237,7 +237,7 @@ const GlobalAiAssistant: React.FC = () => {
       }
     };
     fetchStatus();
-  }, [hasFetchedMood]);
+  }, [hasFetchedMood, setMessages, user]);
 
   // ── 历史记录恢复 ──
   useEffect(() => { restoreHistory(); }, [restoreHistory]);

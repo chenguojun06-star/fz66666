@@ -55,6 +55,7 @@ export const useResizableModalTableScrollY = <T extends HTMLElement>(args: {
     const ro = new ResizeObserver(() => compute());
     ro.observe(el);
     return () => ro.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, ref, offset, minY, ...watch]);
 
   return scrollY;

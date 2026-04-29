@@ -31,7 +31,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
 }) => {
   const { language } = useAppLanguage();
   const {
-    isAdmin,
+    isAdmin: _isAdmin,
     isSuperAdmin,
     isFactoryAccount,
     tenantModules,
@@ -172,7 +172,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
           };
         }
       });
-  }, [localizedMenuConfig, isAdmin, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile]);
+  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules]);
 
   const handleMenuOpenChange = (openKeys: string[]) => {
     if (sidebarIsCollapsed) return;

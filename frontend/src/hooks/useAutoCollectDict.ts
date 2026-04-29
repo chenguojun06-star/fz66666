@@ -29,7 +29,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
   /**
    * 检查词汇是否已存在
    */
-  const checkWordExists = async (word: string): Promise<boolean> => {
+  const checkWordExists = useCallback(async (word: string): Promise<boolean> => {
     if (!word || word.trim() === '') return true;
 
     const trimmedWord = normalizeWord(word);
@@ -64,7 +64,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
       // API 失败时返回 true，避免重复添加
       return true;
     }
-  };
+  }, [dictType]);
 
   /**
    * 自动收录新词汇
@@ -104,7 +104,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
     } catch (error) {
       // 静默失败，不影响用户操作
     }
-  }, [enabled, dictType, silent]);
+  }, [enabled, dictType, silent, checkWordExists]);
 
   /**
    * 带防抖的收录函数
@@ -127,7 +127,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
     }, debounceMs) as unknown as number;
 
     pendingTimers.current.set(trimmedWord, timer);
-  }, [enabled, dictType, debounceMs, collectWord]);
+  }, [enabled, debounceMs, collectWord]);
 
   /**
    * 清除所有待处理的定时器

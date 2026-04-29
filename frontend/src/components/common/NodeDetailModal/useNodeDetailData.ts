@@ -117,7 +117,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     } finally {
       setLoading(false);
     }
-  }, [orderId, orderNo, addLoadWarning]);
+  }, [orderId, addLoadWarning]);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,7 +218,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     } finally {
       setTrackingLoading(false);
     }
-  }, [orderId, orderNo, addLoadWarning]);
+  }, [orderId, addLoadWarning]);
 
   const handleUndoSuccess = useCallback(() => {
     loadScanRecords();
@@ -269,7 +269,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
       setPrediction(null);
       feedbackSentKeyRef.current = '';
     }
-  }, [visible, orderId, isPatternProduction, loadFactories, loadNodeOperations, loadScanRecords, loadBundles, loadProcessTrackingData]);
+  }, [visible, orderId, isPatternProduction, loadFactories, loadUsers, loadNodeOperations, loadScanRecords, loadBundles, loadProcessTrackingData]);
 
   // 进度预测：弹窗打开且有订单ID时异步拉取
   useEffect(() => {
@@ -292,7 +292,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     if (!processList || processList.length === 0) return [] as string[];
     const names = processList.map(p => ((p as any).processName || p.name || '').trim()).filter(Boolean);
     return names;
-  }, [processList, nodeName]);
+  }, [processList]);
 
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {

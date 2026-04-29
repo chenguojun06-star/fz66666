@@ -290,7 +290,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
         globalInstance = null;
       }
     };
-  }, [options.enabled, options.userId]);
+  }, [options.enabled, options.userId, inst]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -301,13 +301,13 @@ export function useWebSocket(options: UseWebSocketOptions) {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [options.enabled, options.userId]);
+  }, [options.enabled, options.userId, inst]);
 
   const subscribe = useCallback((type: string, handler: MessageHandler): (() => void) => {
     if (!inst.listeners.has(type)) inst.listeners.set(type, new Set());
     inst.listeners.get(type)!.add(handler);
     return () => { inst.listeners.get(type)?.delete(handler); };
-  }, []);
+  }, [inst.listeners]);
 
   return { connected, subscribe };
 }

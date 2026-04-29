@@ -107,7 +107,7 @@ export function useDragSnap() {
   useEffect(() => () => cancelIdleSnap(), [cancelIdleSnap]);
 
   // 初始化时自动收纳
-  useEffect(() => { startIdleSnap(); }, []);
+  useEffect(() => { startIdleSnap(); }, [startIdleSnap]);
 
   return {
     triggerPos, isDocked, isActiveDrag, setIsActiveDrag,

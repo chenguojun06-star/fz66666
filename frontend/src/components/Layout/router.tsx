@@ -160,7 +160,7 @@ export function useRecentPages(
       writeRecentPages(next);
       return next;
     });
-  }, [effectiveFullPath, effectivePathname, getActivePath]);
+  }, [effectiveFullPath, effectivePathname, effectiveSearch, language, localizedMenuConfig, getActivePath]);
 
   useEffect(() => {
     if (!activeTabRef.current || !recentsContainerRef.current) return;

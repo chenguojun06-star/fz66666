@@ -419,7 +419,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       finishTyping();
     }
-  }, [inputValue, isTyping, user, location, advisorSessionId, speak]);
+  }, [inputValue, isTyping, user, location, advisorSessionId, speak, handleDownloadReport, isSuperAdmin]);
 
   const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

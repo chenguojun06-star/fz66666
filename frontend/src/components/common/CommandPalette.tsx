@@ -112,6 +112,18 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     return () => clearTimeout(debounceRef.current);
   }, [query, doSearch]);
 
+  // 导航到对应路径
+  const navigateTo = useCallback((item: ResultItem) => {
+    onClose();
+    if (item.kind === 'order') {
+      navigate(`/production?orderNo=${encodeURIComponent(item.data.orderNo)}`);
+    } else if (item.kind === 'style') {
+      navigate(`/style?styleNo=${encodeURIComponent(item.data.styleNo)}`);
+    } else if (item.kind === 'worker') {
+      navigate(`/system/user?name=${encodeURIComponent(item.data.name)}`);
+    }
+  }, [navigate, onClose]);
+
   // 键盘导航
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') { onClose(); return; }
@@ -124,7 +136,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     } else if (e.key === 'Enter' && items[activeIdx]) {
       navigateTo(items[activeIdx]);
     }
-  }, [items, activeIdx, onClose]);
+  }, [items, activeIdx, onClose, navigateTo]);
 
   // 滚动当前 item 到视图内
   useEffect(() => {
@@ -135,18 +147,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       activeEl.scrollIntoView({ block: 'nearest' });
     }
   }, [activeIdx]);
-
-  // 导航到对应路径
-  const navigateTo = (item: ResultItem) => {
-    onClose();
-    if (item.kind === 'order') {
-      navigate(`/production?orderNo=${encodeURIComponent(item.data.orderNo)}`);
-    } else if (item.kind === 'style') {
-      navigate(`/style?styleNo=${encodeURIComponent(item.data.styleNo)}`);
-    } else if (item.kind === 'worker') {
-      navigate(`/system/user?name=${encodeURIComponent(item.data.name)}`);
-    }
-  };
 
   if (!open) return null;
 

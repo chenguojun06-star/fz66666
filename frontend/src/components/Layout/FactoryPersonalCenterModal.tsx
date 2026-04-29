@@ -49,7 +49,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
     } finally {
       setMembersLoading(false);
     }
-  }, [factoryId]);
+  }, [factoryId, message]);
 
   useEffect(() => {
     if (open) loadMembers();

@@ -170,7 +170,7 @@ const SmartAlertBell: React.FC = () => {
       clearInterval(noticeTimer);
       abortRef.current?.abort();
     };
-  }, []);
+  }, [fetchData, fetchMyNotices]);
 
   // fetchedToday 清空后立即重拉
   useEffect(() => {
