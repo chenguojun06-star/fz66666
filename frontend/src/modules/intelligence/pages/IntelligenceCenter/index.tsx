@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { Tag, Tooltip } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -22,8 +22,6 @@ import KpiCardRow from './components/KpiCardRow';
 import ProductionOrdersCard from './components/ProductionOrdersCard';
 import FactoryOverviewCard from './components/FactoryOverviewCard';
 import OverdueRiskCard from './components/OverdueRiskCard';
-import AgentGraphPanel from '../../components/AgentGraphPanel';
-import ABTestStatsPanel from '../../components/ABTestStatsPanel';
 import StageCapsulePanel from './components/StageCapsulePanel';
 import { useKpiMetrics } from './hooks/useKpiMetrics';
 import { useKpiPopovers } from './KpiPopoverContent';
@@ -31,8 +29,13 @@ import { useRepairAction } from './hooks/useRepairAction';
 import { useTodayBrief } from './hooks/useTodayBrief';
 import { usePanelCollapse } from './hooks/usePanelCollapse';
 import { useTimerManager } from './hooks/useTimerManager';
+import { useDeviceCapability } from '@/hooks/useDeviceCapability';
+import { ConditionalRender } from '@/components/common/AdaptiveRender';
 import { paths } from '@/routeConfig';
 import './styles.css';
+
+const AgentGraphPanel = lazy(() => import('../../components/AgentGraphPanel'));
+const ABTestStatsPanel = lazy(() => import('../../components/ABTestStatsPanel'));
 
 const IntelligenceCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +45,7 @@ const IntelligenceCenter: React.FC = () => {
   const { isSuperAdmin } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const { isLowEnd, prefersReducedMotion } = useDeviceCapability();
 
   const { repairing, repairResult, handleRepair } = useRepairAction(reload);
   const todayBrief = useTodayBrief();
@@ -88,24 +92,26 @@ const IntelligenceCenter: React.FC = () => {
   };
 
   useEffect(() => {
+    const refreshInterval = isLowEnd ? 60_000 : 1000;
+    const refreshThreshold = isLowEnd ? 60 : 30;
     timers.setInterval({
       id: 'cockpit-countdown',
-      interval: 1000,
+      interval: refreshInterval,
       callback: () => {
         nowRef.current = new Date();
         countdownRef.current -= 1;
         if (countdownRef.current <= 0) {
           reload();
-          countdownRef.current = 30;
+          countdownRef.current = refreshThreshold;
           setNow(new Date());
-          setCountdown(30);
+          setCountdown(refreshThreshold);
         } else if (countdownRef.current % 5 === 0) {
           setNow(new Date());
         }
         setCountdown(countdownRef.current);
       },
     });
-  }, [reload, timers]);
+  }, [reload, timers, isLowEnd]);
 
   const handleReload = () => { reload(); setCountdown(30); };
 
@@ -234,10 +240,10 @@ const IntelligenceCenter: React.FC = () => {
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['pulse'] ? 0 : 800, transition: 'max-height 0.28s ease' }}>
             <div style={{ margin: '6px 0 4px' }}>
-              <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.quantity) || 0)} color="#00e5ff" width={340} height={52} />
-              <div className="c-sparkline-label">
+              {!isLowEnd && <Sparkline pts={(pulse?.timeline ?? []).map(p => Number(p.quantity) || 0)} color="#00e5ff" width={340} height={52} />}
+              {!isLowEnd && <div className="c-sparkline-label">
                 {(pulse?.timeline ?? []).map((p, i) => <span key={i}>{p.time.slice(-5)}</span>)}
-              </div>
+              </div>}
             </div>
             {(pulse?.factoryActivity?.length ?? 0) > 0 ? (
               <div className="c-factory-activity-list">
@@ -386,7 +392,7 @@ const IntelligenceCenter: React.FC = () => {
                   风险工序：<b style={{ color: '#e03030' }}>{heatmap.worstProcess}</b>
                   &nbsp;·&nbsp;风险工厂：<b style={{ color: '#e03030' }}>{heatmap.worstFactory}</b>
                 </div>
-                <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${(heatmap.factories || []).length}, 1fr)` }}>
+                {!isLowEnd && <div className="c-heatmap-grid" style={{ gridTemplateColumns: `52px repeat(${(heatmap.factories || []).length}, 1fr)` }}>
                   <div />
                   {(heatmap.factories || []).map(f => (
                     <Tooltip key={f} title={f} placement="top">
@@ -408,7 +414,10 @@ const IntelligenceCenter: React.FC = () => {
                       })}
                     </React.Fragment>
                   ))}
-                </div>
+                </div>}
+                {isLowEnd && <div style={{ fontSize: 12, color: '#7aaec8', padding: '8px 0' }}>
+                  共 {heatmap.totalDefects} 个缺陷，涉及 {(heatmap.processes || []).length} 个工序、{(heatmap.factories || []).length} 个工厂
+                </div>}
               </>
             ) : <div className="c-empty">暂无缺陷数据</div>}
             </div>
@@ -498,7 +507,7 @@ const IntelligenceCenter: React.FC = () => {
           </div>
         </div>
 
-        {isSuperAdmin && (
+        {isSuperAdmin && !isLowEnd && (
           <>
             <div style={{ padding: '0 24px 4px' }}>
               <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('graphmas')}>
@@ -511,7 +520,9 @@ const IntelligenceCenter: React.FC = () => {
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['graphmas'] ? 0 : 600, transition: 'max-height 0.3s ease' }}>
               <div style={{ padding: '0 24px 20px' }}>
-                <AgentGraphPanel />
+                <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: '#888' }}>加载中…</div>}>
+                  <AgentGraphPanel />
+                </Suspense>
               </div>
             </div>
 
@@ -526,7 +537,9 @@ const IntelligenceCenter: React.FC = () => {
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['abtest'] ? 0 : 400, transition: 'max-height 0.3s ease' }}>
               <div style={{ padding: '0 24px 20px' }}>
-                <ABTestStatsPanel />
+                <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: '#888' }}>加载中…</div>}>
+                  <ABTestStatsPanel />
+                </Suspense>
               </div>
             </div>
           </>
