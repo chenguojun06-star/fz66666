@@ -17,4 +17,9 @@ public interface FinishedSettlementApprovalStatusService extends IService<Finish
      * 查询审批状态，不存在返回 pending
      */
     String getApprovalStatus(String settlementId, Long tenantId);
+
+    /**
+     * 查询租户下所有已审批（status=approved）的 settlementId 集合
+     */
+    java.util.Set<String> getApprovedIds(Long tenantId);
 }

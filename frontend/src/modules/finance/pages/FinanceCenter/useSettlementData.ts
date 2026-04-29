@@ -137,7 +137,7 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     loadData(params);
   };
 
-  const handleAuditOrder = (record: FinishedSettlementRow) => {
+  const handleAuditOrder = async (record: FinishedSettlementRow) => {
     if (record.factoryType === 'INTERNAL') {
       message.warning('内部工厂订单请在「工资结算」中审核');
       return;
@@ -146,11 +146,18 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
       message.warning('该订单尚未关单，无法审核');
       return;
     }
-    onAuditNosChange(new Set([...auditedOrderNos, record.orderNo]));
-    message.success(`订单 ${record.orderNo} 已审核，可在「工厂订单汇总」进行终审推送`);
+    try {
+      // 调用后端审批接口，将审批结果持久化到 t_finished_settlement_approval
+      await api.post('/finance/finished-settlement/approve', { id: record.orderId });
+      onAuditNosChange(new Set([...auditedOrderNos, record.orderNo]));
+      message.success(`订单 ${record.orderNo} 已审核，可在「工厂订单汇总」进行终审推送`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '审核失败，请重试';
+      message.error(errMsg);
+    }
   };
 
-  const handleBatchAudit = () => {
+  const handleBatchAudit = async () => {
     const eligible = data.filter(r =>
       selectedRowKeys.includes(r.orderId) &&
       r.factoryType !== 'INTERNAL' &&
@@ -161,10 +168,16 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
       message.warning('选中订单中没有可审核的（外部工厂·已关单且未审核）');
       return;
     }
+    // 逐条调用后端审批接口并收集成功结果
+    const results = await Promise.allSettled(
+      eligible.map(r => api.post('/finance/finished-settlement/approve', { id: r.orderId }))
+    );
+    const succeeded = eligible.filter((_, i) => results[i].status === 'fulfilled');
     const newNos = new Set(auditedOrderNos);
-    eligible.forEach(r => newNos.add(r.orderId));
+    succeeded.forEach(r => newNos.add(r.orderNo)); // 正确使用 orderNo（修复：原来错用了 orderId）
     onAuditNosChange(newNos);
-    message.success(`批量审核 ${eligible.length} 个订单成功`);
+    if (succeeded.length > 0) message.success(`批量审核 ${succeeded.length} 个订单成功`);
+    if (results.some(r => r.status === 'rejected')) message.warning('部分订单审核失败，请检查');
     setSelectedRowKeys([]);
   };
 

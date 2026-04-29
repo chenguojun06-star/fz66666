@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 成品结算审批状态服务实现
@@ -62,5 +64,18 @@ public class FinishedSettlementApprovalStatusServiceImpl
             return "pending";
         }
         return record.getStatus();
+    }
+
+    @Override
+    public Set<String> getApprovedIds(Long tenantId) {
+        LambdaQueryWrapper<FinishedSettlementApprovalStatus> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(FinishedSettlementApprovalStatus::getStatus, "approved");
+        if (tenantId != null) {
+            wrapper.eq(FinishedSettlementApprovalStatus::getTenantId, tenantId);
+        }
+        return this.list(wrapper).stream()
+                .map(FinishedSettlementApprovalStatus::getSettlementId)
+                .filter(id -> id != null && !id.isEmpty())
+                .collect(Collectors.toSet());
     }
 }

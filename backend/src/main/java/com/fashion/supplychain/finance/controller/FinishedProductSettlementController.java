@@ -333,6 +333,9 @@ public class FinishedProductSettlementController {
         wrapper.last("LIMIT 5000");
         List<FinishedProductSettlement> allData = settlementService.list(wrapper);
 
+        // 查询当前租户已审批（approved）的结算单 ID 集合，用于在汇总 row 中标注 approvedOrderNos
+        Set<String> approvedSettlementIds = approvalStatusService.getApprovedIds(tenantId);
+
         // 按工厂聚合
         Map<String, Map<String, Object>> grouped = new LinkedHashMap<>();
         for (FinishedProductSettlement item : allData) {
@@ -353,6 +356,7 @@ public class FinishedProductSettlementController {
                 m.put("totalAmount", java.math.BigDecimal.ZERO);
                 m.put("totalProfit", java.math.BigDecimal.ZERO);
                 m.put("orderNos", new ArrayList<String>());
+                m.put("approvedOrderNos", new ArrayList<String>()); // 已审批的订单号，用于前端刷新后恢复审批状态
                 return m;
             });
 
@@ -380,6 +384,13 @@ public class FinishedProductSettlementController {
             List<String> orderNos = (List<String>) row.get("orderNos");
             if (StringUtils.isNotBlank(item.getOrderNo())) {
                 orderNos.add(item.getOrderNo());
+            }
+            // 若该结算单已审批，同步写入 approvedOrderNos，前端刷新后据此恢复审批状态
+            if (StringUtils.isNotBlank(item.getOrderId()) && approvedSettlementIds.contains(item.getOrderId())
+                    && StringUtils.isNotBlank(item.getOrderNo())) {
+                @SuppressWarnings("unchecked")
+                List<String> approvedNos = (List<String>) row.get("approvedOrderNos");
+                approvedNos.add(item.getOrderNo());
             }
         }
 

@@ -43,6 +43,8 @@ interface FactorySummaryRow {
   totalAmount: number;
   totalProfit: number;
   orderNos: string[];
+  /** 已审批（approved）的订单号子集，由后端 factory-summary 接口返回，用于页面刷新后自动恢复审批状态 */
+  approvedOrderNos?: string[];
   [key: string]: unknown;
 }
 
@@ -142,7 +144,17 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         { params: { ...params, factoryType: 'EXTERNAL' } }
       );
       const list = res?.data ?? res ?? [];
-      setData(Array.isArray(list) ? list : []);
+      const rows: FactorySummaryRow[] = Array.isArray(list) ? list : [];
+      setData(rows);
+      // 页面加载（包括刷新）时，从各工厂 row 的 approvedOrderNos 汇总出已审批订单号 Set
+      // 解决原来纲内存 Set 导致刷新后 Tab2 变空的问题
+      const approvedNos = new Set<string>();
+      rows.forEach(row => {
+        (row.approvedOrderNos ?? []).forEach(no => approvedNos.add(no));
+      });
+      if (approvedNos.size > 0) {
+        onAuditNosChange(approvedNos);
+      }
       if (showSmartErrorNotice) setSmartError(null);
     } catch (e: unknown) {
       const errMessage = e instanceof Error ? e.message : '获取工厂汇总失败';
@@ -152,7 +164,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, [message, onAuditNosChange, onAuditNosChange]);
 
   /** 加载已推送到收付款中心的工厂ID（防重复推送） */
   const loadPushedFactories = useCallback(async () => {
