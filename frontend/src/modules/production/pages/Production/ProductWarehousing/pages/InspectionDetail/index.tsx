@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Form } from 'antd';
-import { ArrowLeftOutlined, CheckCircleOutlined, InboxOutlined, OrderedListOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CheckCircleOutlined, InboxOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
@@ -378,13 +378,15 @@ const InspectionDetail: React.FC = () => {
 
         {/* 右侧 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Card size="small" style={{ overflow: 'auto' }}>
+          <Card size="small" style={{ overflow: 'hidden' }}>
             <Tabs
               activeKey={activeTab} onChange={setActiveTab}
+              size="small"
+              style={{ width: '100%' }}
               items={[
                 {
                   key: 'records',
-                  label: <><OrderedListOutlined /> 质检记录 {qcStats.count > 0 ? `(${qcStats.count})` : ''}</>,
+                  label: '质检记录',
                   children: (
                     <div style={{ padding: '8px 0' }}>
                       <QcRecordsPanel
@@ -403,7 +405,7 @@ const InspectionDetail: React.FC = () => {
                 },
                 {
                   key: 'bom',
-                  label: `BOM物料 (${bom.length})`,
+                  label: 'BOM物料',
                   children: (
                     <div style={{ padding: '8px 0' }}>
                       <ResizableTable
