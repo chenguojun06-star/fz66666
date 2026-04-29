@@ -355,7 +355,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={tableLayout || undefined}
+          tableLayout={tableLayout || 'fixed'}
+          style={{ wordBreak: 'break-all' }}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />
