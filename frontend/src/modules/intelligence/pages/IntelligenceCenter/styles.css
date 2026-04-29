@@ -1927,3 +1927,35 @@
 .cockpit-grid-6.kpi-flash .c-kpi {
   animation: kpi-update-flash 0.9s ease-out;
 }
+
+/* ────────────────────────────────────────────────
+   老旧设备 / 低动画偏好 降级
+─────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .cockpit-ticker-inner { animation: none !important; }
+  .c-card::before { animation: none !important; }
+}
+
+@media (max-width: 1024px) {
+  .cockpit-grid-6 { grid-template-columns: repeat(3, 1fr); }
+  .cockpit-grid-3 { grid-template-columns: 1fr 1fr; }
+  .cockpit-grid-5-7 { grid-template-columns: 1fr; }
+  .cockpit-header { padding: 10px 16px; gap: 12px; flex-wrap: wrap; }
+  .cockpit-title { font-size: 16px; }
+  .c-kpi-val { font-size: 24px; }
+  .c-stage-card-main { font-size: 26px; }
+}
+
+@media (max-width: 768px) {
+  .cockpit-grid-6 { grid-template-columns: repeat(2, 1fr); }
+  .cockpit-grid-3 { grid-template-columns: 1fr; }
+  .cockpit-grid-2 { grid-template-columns: 1fr; }
+  .c-kpi-val { font-size: 20px; }
+  .c-stage-card-main { font-size: 22px; }
+  .c-stage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

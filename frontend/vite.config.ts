@@ -36,16 +36,17 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 2000,
-    // esbuild: 内置、速度是 terser 的 10x、内存占用极低
-    // terser 在云端内存受限环境（1-2GB）压缩 ECharts 等大 chunk 时 OOM 被杀，
-    // 导致 dist/assets/ 只生成了一部分，引用这些文件的 index.html 上线后 404
     minify: 'esbuild',
-    // 生产构建时移除 console.log 和 debugger
     target: 'es2020',
-    // ⚠️ 不使用 manualChunks，让 Rollup 完全自动拆包。
-    // 手动指定 manualChunks 会把 rc-*/scheduler 等 React 内部依赖
-    // 与 react/react-dom 拆入不同 chunk，造成双 React 实例 →
-    // useLayoutEffect undefined → 白屏崩溃。
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/echarts/') || id.includes('node_modules/zrender/')) return 'vendor-echarts';
+          if (id.includes('node_modules/xlsx/')) return 'vendor-xlsx';
+          if (id.includes('node_modules/exceljs/')) return 'vendor-exceljs';
+        },
+      },
+    },
   },
   server: {
     // ================================================

@@ -13,19 +13,27 @@ export const useViewport = (options: ViewportOptions = {}) => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const onResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    let rafId = 0;
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setWidth(window.innerWidth));
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => {
+      window.removeEventListener('resize', onResize);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
-  const { isMobile, isTablet, is4K, modalWidth, tableScrollY } = useMemo(() => {
+  const { isMobile, isTablet, is4K, isLowRes, modalWidth, tableScrollY } = useMemo(() => {
     const mobile = width < mobileMax;
     const tablet = width >= mobileMax && width < tabletMax;
     const is4KScreen = width >= largeMax;
+    const lowRes = width < 1280;
     const modal = mobile ? '96vw' : is4KScreen ? '50vw' : '60vw';
     const scrollY = mobile ? 260 : is4KScreen ? 600 : 420;
-    return { isMobile: mobile, isTablet: tablet, is4K: is4KScreen, modalWidth: modal, tableScrollY: scrollY };
+    return { isMobile: mobile, isTablet: tablet, is4K: is4KScreen, isLowRes: lowRes, modalWidth: modal, tableScrollY: scrollY };
   }, [mobileMax, tabletMax, largeMax, width]);
 
-  return { width, isMobile, isTablet, is4K, modalWidth, tableScrollY };
+  return { width, isMobile, isTablet, is4K, isLowRes, modalWidth, tableScrollY };
 };
