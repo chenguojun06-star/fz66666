@@ -44,7 +44,8 @@ public class SelfConsistencyVerifier {
     }
 
     public boolean isHighRiskScene(String scene) {
-        return HIGH_RISK_SCENES.contains(scene);
+        String normalized = scene != null && scene.startsWith("tool_") ? scene.substring(5) : scene;
+        return HIGH_RISK_SCENES.contains(normalized);
     }
 
     public SelfConsistencyResult verify(String scene, List<AiMessage> messages, List<AiTool> tools) {

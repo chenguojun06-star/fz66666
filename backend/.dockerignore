@@ -7,5 +7,6 @@ logs/
 .gitignore
 *.md
 *.sh
+!docker-entrypoint.sh
 *.iml
 src/test/
