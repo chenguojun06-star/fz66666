@@ -93,10 +93,18 @@ const InspectionDetail: React.FC = () => {
   const autoInitRef = useRef(false);
   useEffect(() => {
     if (autoInitRef.current) return;
-    if (!orderId || !orderDetail) return;
+    if (!orderId) return;
     if (formHook.form.getFieldValue('orderId')) { autoInitRef.current = true; return; }
     formHook.form.setFieldValue('orderId', orderId);
-    void formHook.handleOrderChange(orderId, { data: orderDetail });
+    if (orderDetail) {
+      void formHook.handleOrderChange(orderId, { data: orderDetail });
+    } else {
+      fetchProductionOrderDetail(orderId, { acceptAnyData: true })
+        .then((detail) => {
+          if (detail) void formHook.handleOrderChange(orderId, { data: detail });
+        })
+        .catch(() => {});
+    }
     autoInitRef.current = true;
   }, [orderId, orderDetail]);
 
