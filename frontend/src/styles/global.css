@@ -994,17 +994,23 @@ body {
   overflow: clip; /* clip = 纯视觉裁剪，不创建滚动容器边界，不破坏 position:sticky */
 }
 
-/* ── 永久防护: MeasureRow/MeasureCell 高度必须为零，防止表头下方出现白色镂空 ──
-   根因：antd scroll.y 模式在 tbody 首行插入 MeasureRow 测量列宽，
-   全局 line-height / font-size 继承会使其出现实际高度，表现为表头下白色空白。
-   每次修改 line-height/font-size 全局规则时此防护自动兜底，无需重新排查。 */
+/* ── 永久防护: MeasureRow 高度必须为零，防止表头下方出现白色"空行" ──
+   根因：antd scroll.x / scroll.y 模式均会在 tbody 首行插入 MeasureRow 测量列宽；
+   拉宽/拉高页面时 antd 重新计算横向列宽并动态插入该行。
+   全局 line-height / font-size / padding 继承会使其出现实际高度，表现为表头下白色空白。
+   ⚠️ selector 用 > td（不限 .ant-table-measure-cell），捕获全部子单元格，
+      包括 scrollbar-cell 等无 .ant-table-measure-cell class 的 td，防止漏洞。
+   每次修改 line-height/font-size/padding 全局规则时此防护自动兜底，无需重新排查。 */
 .ant-table-wrapper .ant-table-tbody > tr.ant-table-measure-row {
   height: 0 !important;
+  max-height: 0 !important;
   line-height: 0 !important;
   font-size: 0 !important;
+  overflow: hidden !important;
 }
-.ant-table-wrapper .ant-table-tbody > tr.ant-table-measure-row > td.ant-table-measure-cell {
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-measure-row > td {
   height: 0 !important;
+  max-height: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   line-height: 0 !important;

@@ -170,7 +170,7 @@ const PayableTab: React.FC = () => {
         title="应付账款与业务系统深度联动"
         description="对账单审核通过、工资结算批准后，相关记录自动流入应付账款。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款。"
       />
-      <ResizableTable rowKey="id" columns={columns} dataSource={list} loading={loading} size="small"
+      <ResizableTable storageKey="finance-accounts-payable" rowKey="id" columns={columns} dataSource={list} loading={loading} size="small" scroll={{ x: 'max-content' }}
         rowClassName={rowClassName}
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }}
       />

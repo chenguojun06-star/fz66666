@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.agent.hook.ToolExecutionHook;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService.ConfirmLevel;
 import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
 import com.fashion.supplychain.intelligence.service.AiAgentIdempotencyService;
 import lombok.extern.slf4j.Slf4j;
@@ -185,7 +186,9 @@ public class AiAgentToolExecHelper {
                 try {
                     if (!hook.preToolUse(toolName, arguments)) {
                         log.info("[AiAgent] Hook 拦截工具调用: {}", toolName);
-                        rawResult = "{\"success\":false,\"needsConfirmation\":true,\"error\":\"该操作属于高风险操作，需要二次确认。请向用户确认是否要执行此操作，如果用户确认，请使用完全相同的参数再次调用该工具。\"}";
+                        ConfirmLevel level = AiAgentToolAccessService.getConfirmLevel(toolName);
+                        String label = AiAgentToolAccessService.getConfirmLabel(toolName);
+                        rawResult = buildConfirmMessage(level, label);
                         long elapsed = System.currentTimeMillis() - start;
                         return new ToolExecRecord(toolCallId, toolName, arguments, rawResult,
                                 evidenceHelper.buildToolEvidenceMessage(toolName, rawResult), elapsed);
@@ -319,5 +322,17 @@ public class AiAgentToolExecHelper {
             }
         }
         return false;
+    }
+
+    private String buildConfirmMessage(ConfirmLevel level, String label) {
+        if (level == ConfirmLevel.HIGH_RISK) {
+            return "{\"success\":false,\"needsConfirmation\":true,\"confirmLevel\":\"high_risk\","
+                    + "\"operationLabel\":\"" + label + "\","
+                    + "\"message\":\"⚠️ " + label + "为高风险操作，需要确认。请用1-2句话展示操作摘要，然后问用户是否确认。用户确认后用相同参数再次调用即可。不要长篇大论，不要重复解释风险。\"}";
+        } else {
+            return "{\"success\":false,\"needsConfirmation\":true,\"confirmLevel\":\"write\","
+                    + "\"operationLabel\":\"" + label + "\","
+                    + "\"message\":\"" + label + "需要确认。请简洁展示操作摘要，用户确认后用相同参数再次调用即可。\"}";
+        }
     }
 }

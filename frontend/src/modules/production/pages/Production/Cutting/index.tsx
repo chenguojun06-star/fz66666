@@ -292,6 +292,7 @@ const CuttingManagement: React.FC = () => {
               <ResizableTable<CuttingTask>
                 stickyHeader
                 storageKey="cutting-task-table-v2"
+                scroll={{ x: 'max-content' }}
                 columns={[
                   {
                     title: '图片',

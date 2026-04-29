@@ -195,7 +195,7 @@ const SampleInventory: React.FC = () => {
 
   const columns: ColumnsType<SampleStock> = [
     {
-      title: '样衣图片',
+      title: '图片',
       dataIndex: 'imageUrl',
       key: 'imageUrl',
       width: 72,

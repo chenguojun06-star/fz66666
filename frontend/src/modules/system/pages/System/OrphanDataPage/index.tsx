@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Button, Table, Tag, Modal, Card, Statistic, Row, Col, Empty, Spin, Popconfirm, App } from 'antd';
+import { Button, Tag, Modal, Card, Statistic, Row, Col, Empty, Spin, Popconfirm, App } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { SearchOutlined, DeleteOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 import { intelligenceApi, type OrphanDataScanResultDTO, type OrphanDataItemDTO, type OrphanDataCategoryStat } from '@/services/intelligence/intelligenceApi';
 import './OrphanDataPage.css';
@@ -196,7 +197,8 @@ const OrphanDataPage: React.FC = () => {
             </div>
           </div>
           <Spin spinning={loadingItems}>
-            <Table
+            <ResizableTable
+              storageKey="orphan-data-table"
               rowKey="id"
               columns={columns}
               dataSource={items}

@@ -10,10 +10,11 @@ interface Props {
 const OrderLinesTable: React.FC<Props> = ({ rows, loading }) => (
   <div style={{ padding: '8px 0' }}>
     <ResizableTable<OrderLineWarehousingRow>
+      storageKey="order-lines-warehousing-table"
       size="small" rowKey="key" loading={loading}
       pagination={false} dataSource={rows}
       resizableColumns={false}
-      scroll={undefined}
+      scroll={{ x: 820 }}
       style={{ fontSize: 12 }}
       columns={[
         { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },

@@ -276,7 +276,6 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       title: '操作',
       key: 'actions',
       width: 240,
-      fixed: 'right' as const,
       render: (_: unknown, record: LegacyPickupRecord) => (
         <Space size={4}>
           {record.receivableId && (

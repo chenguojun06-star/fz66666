@@ -18,8 +18,8 @@ import {
   Empty,
   Tooltip,
   message,
-  Table,
 } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined,
@@ -329,14 +329,15 @@ export default function SubProcessRemapModal({
       {parentNodes.length === 0 ? (
         <Empty description="暂无可配置的父节点" />
       ) : (
-        <Table<TableRow>
+        <ResizableTable<TableRow>
+          storageKey="subprocess-remap-table"
           dataSource={tableRows}
           columns={columns}
           pagination={false}
           size="small"
           bordered
           rowKey="key"
-          scroll={undefined}
+          scroll={{ x: 600 }}
         />
       )}
     </ResizableModal>

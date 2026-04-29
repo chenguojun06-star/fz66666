@@ -226,6 +226,7 @@ const StyleSizeTab: React.FC<Props> = ({
         loading={loading}
         rowKey="key"
         resizableColumns={false}
+        scroll={{ x: 'max-content' }}
         rowClassName={(_record, rowIndex) => {
           const row = derived.displayRows[rowIndex];
           if (!row) return '';

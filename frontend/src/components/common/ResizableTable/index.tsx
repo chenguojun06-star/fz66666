@@ -223,7 +223,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         return {
           ...safeColRecord,
           colId,
-          fixed: allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined,
+          // 操作列自动固定右侧；其他列保留原始 fixed 值（如 fixed: 'left'）；allowFixedColumns=false 时全部清除
+          fixed: allowFixedColumns ? (maybeAction ? 'right' : colRecord.fixed) : undefined,
         };
       });
     };
@@ -317,10 +318,21 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     return document.body;
   }, []);
 
+  // 检测 finalColumns 中是否存在 fixed:'left' 或 fixed:'right' 的列。
+  // allowFixedColumns=true（默认）时，操作列（key/dataIndex 包含 'action/actions/操作' 等）
+  // 会被自动设为 fixed:'right'。若存在固定列却没有 scroll，antd 会出现表头/体错位问题。
+  // 因此：只要有固定列，且调用方未显式传 scroll，就自动兜底 { x: 'max-content' }。
+  const hasFixedColumn = React.useMemo(() => {
+    if (!finalColumns) return false;
+    return (finalColumns as any[]).some(
+      (col: any) => col.fixed === 'left' || col.fixed === 'right',
+    );
+  }, [finalColumns]);
+
   const mergedScroll = React.useMemo(() => {
-    if (!scroll) return undefined;
+    if (!scroll) return hasFixedColumn ? { x: 'max-content' } : undefined;
     return typeof scroll === 'object' ? scroll : undefined;
-  }, [scroll]);
+  }, [scroll, hasFixedColumn]);
 
   const mergedComponents = React.useMemo(() => {
     const baseComponents = typeof components === 'object' && components !== null ? (components as any) : {};

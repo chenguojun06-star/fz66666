@@ -567,6 +567,7 @@ const StylePatternTab: React.FC<Props> = ({
               <Text type="secondary">BOM清单中暂无面料/里料，请先在BOM清单中添加面辅料</Text>
             ) : (
               <ResizableTable<PatternMaterialRow>
+                storageKey="style-pattern-usage-table"
                 size="small"
                 rowKey={(r) => r.id}
                 dataSource={patternRows}

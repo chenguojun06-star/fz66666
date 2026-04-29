@@ -719,7 +719,8 @@
 .dashboard-table-right {
   /* 不再继承100%高度，由内容自然撑高 */
   min-width: 0; /* 关键：grid子项默认min-width=auto会溢出 */
-  overflow: hidden; /* 防止表格溢出容器 */
+  /* overflow: hidden 已删除 —— 会截断 antd 固定列 shadow 与内部横向滚动，
+     列自适应宽度后无横向溢出，无需防溢出裁剪 */
 }
 
 .chart-item {

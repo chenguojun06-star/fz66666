@@ -213,6 +213,9 @@ public class SystemTableMigrator {
         if (!dbHelper.columnExists("t_login_log", "remark")) {
             dbHelper.execSilently("ALTER TABLE t_login_log ADD COLUMN remark VARCHAR(500) COMMENT '备注'");
         }
+        if (!dbHelper.columnExists("t_login_log", "tenant_id")) {
+            dbHelper.execSilently("ALTER TABLE t_login_log ADD COLUMN tenant_id BIGINT DEFAULT NULL COMMENT '租户ID'");
+        }
 
         dbHelper.addIndexIfAbsent("t_login_log", "idx_login_time", "login_time");
         dbHelper.addIndexIfAbsent("t_login_log", "idx_username", "username");
@@ -220,6 +223,7 @@ public class SystemTableMigrator {
         dbHelper.addIndexIfAbsent("t_login_log", "idx_log_type", "log_type");
         dbHelper.addIndexIfAbsent("t_login_log", "idx_biz", "biz_type, biz_id");
         dbHelper.addIndexIfAbsent("t_login_log", "idx_action", "action");
+        dbHelper.addIndexIfAbsent("t_login_log", "idx_login_log_tenant_id", "tenant_id");
     }
 
     private void ensureDictTable() {

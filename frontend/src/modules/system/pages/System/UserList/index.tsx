@@ -160,10 +160,12 @@ const UserList: React.FC = () => {
 
           {/* 表格区 */}
           <ResizableTable
+            storageKey="system-user-list"
             columns={columns}
             dataSource={userList}
             rowKey="id"
             loading={loading}
+            scroll={{ x: 'max-content' }}
             pagination={{
               current: queryParams.page,
               pageSize: queryParams.pageSize,

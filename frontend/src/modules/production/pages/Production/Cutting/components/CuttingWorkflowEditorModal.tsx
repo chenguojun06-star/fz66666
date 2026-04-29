@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { App, AutoComplete, Button, Input, InputNumber, Space, Spin, Table } from 'antd';
+import { App, AutoComplete, Button, Input, InputNumber, Space, Spin } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { productionOrderApi } from '@/services/production/productionApi';
@@ -232,12 +233,14 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
             新增工序行
           </Button>
         </div>
-        <Table<WorkflowRow>
+        <ResizableTable<WorkflowRow>
+          storageKey="cutting-workflow-table"
           size="small"
           columns={columns}
           dataSource={rows}
           rowKey="_key"
           pagination={false}
+          scroll={{ x: 700 }}
           locale={{ emptyText: '暂无工序，点击上方按钮添加' }}
         />
       </Spin>

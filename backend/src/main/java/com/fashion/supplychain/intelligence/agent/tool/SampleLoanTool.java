@@ -64,7 +64,7 @@ public class SampleLoanTool implements AgentTool {
 
         Map<String, Object> borrower = new LinkedHashMap<>();
         borrower.put("type", "string");
-        borrower.put("description", "借用人姓名");
+        borrower.put("description", "借用人姓名（可选，不填则默认为当前操作人）");
         properties.put("borrower", borrower);
 
         Map<String, Object> borrowerId = new LinkedHashMap<>();
@@ -79,7 +79,7 @@ public class SampleLoanTool implements AgentTool {
 
         Map<String, Object> expectedReturnDate = new LinkedHashMap<>();
         expectedReturnDate.put("type", "string");
-        expectedReturnDate.put("description", "预计归还日期，格式 yyyy-MM-dd，借调时填写");
+        expectedReturnDate.put("description", "预计归还日期，格式 yyyy-MM-dd（可选，不填则默认7天后归还）");
         properties.put("expectedReturnDate", expectedReturnDate);
 
         Map<String, Object> remark = new LinkedHashMap<>();
@@ -90,7 +90,9 @@ public class SampleLoanTool implements AgentTool {
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("样衣借调与归还操作。action=loan 借出样衣，action=return 归还样衣。操作会记录到审计日志，可通过 tool_warehouse_op_log 查询历史记录。");
+        function.setDescription("样衣借调与归还操作。action=loan 借出样衣，action=return 归还样衣。"
+            + "【重要】borrower 不填时默认为当前操作人，expectedReturnDate 不填时默认7天后归还，"
+            + "不要追问用户这两个可选参数，直接用默认值执行。操作会记录到审计日志。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("action", "quantity"));
@@ -174,7 +176,10 @@ public class SampleLoanTool implements AgentTool {
                 loan.setExpectedReturnDate(LocalDate.parse(expectedStr).atStartOfDay());
             } catch (Exception e) {
                 log.warn("[SampleLoanTool] expectedReturnDate 格式错误: {}", expectedStr);
+                loan.setExpectedReturnDate(LocalDate.now().plusDays(7).atStartOfDay());
             }
+        } else {
+            loan.setExpectedReturnDate(LocalDate.now().plusDays(7).atStartOfDay());
         }
 
         try {

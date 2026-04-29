@@ -30,7 +30,6 @@ import { useTodayBrief } from './hooks/useTodayBrief';
 import { usePanelCollapse } from './hooks/usePanelCollapse';
 import { useTimerManager } from './hooks/useTimerManager';
 import { useDeviceCapability } from '@/hooks/useDeviceCapability';
-import { ConditionalRender } from '@/components/common/AdaptiveRender';
 import { paths } from '@/routeConfig';
 import './styles.css';
 
@@ -45,7 +44,7 @@ const IntelligenceCenter: React.FC = () => {
   const { isSuperAdmin } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const { isLowEnd, prefersReducedMotion } = useDeviceCapability();
+  const { isLowEnd } = useDeviceCapability();
 
   const { repairing, repairResult, handleRepair } = useRepairAction(reload);
   const todayBrief = useTodayBrief();

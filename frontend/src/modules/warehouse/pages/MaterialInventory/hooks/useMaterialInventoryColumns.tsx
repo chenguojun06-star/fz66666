@@ -64,7 +64,6 @@ export function useMaterialInventoryColumns({
       title: '图片',
       key: 'image',
       width: 72,
-      fixed: 'left',
       align: 'center',
       render: (_, record) => (
         <div style={{ width: 48, minHeight: 28, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -86,7 +85,6 @@ export function useMaterialInventoryColumns({
       title: '物料信息',
       key: 'materialInfo',
       width: 280,
-      fixed: 'left',
       render: (_, record) => (
         <Space orientation="vertical" size={4} style={{ width: '100%' }}>
           <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
@@ -283,7 +281,6 @@ export function useMaterialInventoryColumns({
     {
       title: '操作',
       width: 180,
-      fixed: 'right',
       render: (_, record) => (
         <RowActions
           actions={[

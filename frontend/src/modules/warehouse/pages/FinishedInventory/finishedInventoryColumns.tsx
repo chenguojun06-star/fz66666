@@ -65,7 +65,6 @@ export function getMainColumns(handlers: {
       title: '图片',
       dataIndex: 'styleImage',
       width: 72,
-      fixed: 'left',
       align: 'center',
       render: (_, record) => (
         <StyleCoverThumb
@@ -79,7 +78,6 @@ export function getMainColumns(handlers: {
     {
       title: '成品信息',
       width: 220,
-      fixed: 'left',
       align: 'left' as const,
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, lineHeight: 1.5, textAlign: 'left' }}>
@@ -182,7 +180,6 @@ export function getMainColumns(handlers: {
     {
       title: '操作',
       width: 150,
-      fixed: 'right',
       render: (_, record) => (
         <RowActions
           actions={[

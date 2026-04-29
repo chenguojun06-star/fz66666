@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Form, Table } from 'antd';
+import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Form } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { ArrowLeftOutlined, CheckCircleOutlined, InboxOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
@@ -412,9 +413,10 @@ const InspectionDetail: React.FC = () => {
                   key: 'bom',
                   label: 'BOM物料',
                   children: (
-                    <Table
+                    <ResizableTable
+                      storageKey="inspection-bom-table"
                       rowKey="id" size="small" pagination={false}
-                      scroll={{ x: 'max-content' }} dataSource={bom}
+                      scroll={{ x: 650 }} dataSource={bom}
                       columns={BOM_COLUMNS}
                     />
                   ),

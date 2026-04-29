@@ -398,12 +398,14 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
         extra={<Button type="link" onClick={handleOpenInvoiceInfo}>开票信息设置</Button>}
       >
         <ResizableTable
+          storageKey="profile-my-billing"
           rowKey="id"
           dataSource={bills}
           columns={billColumns}
           loading={loading}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: <Empty description="暂无账单记录" /> }}
         />
       </Card>

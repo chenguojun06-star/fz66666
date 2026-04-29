@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Form, Input, Modal, Popconfirm, Space, Table, Tag } from 'antd';
+import { App, Button, Form, Input, Modal, Popconfirm, Space, Tag } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import type { SupplierUserItem } from '@/services/system/supplierUserApi';
 import supplierUserApi from '@/services/system/supplierUserApi';
 import { formatDateTime } from '@/utils/datetime';
@@ -176,14 +177,15 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
           <span style={{ color: '#888' }}>供应商通过 H5 页面「供应商登录」入口登录，账号由管理员创建和管理</span>
           <Button type="primary" onClick={() => setCreateOpen(true)}>新增账号</Button>
         </div>
-        <Table
+        <ResizableTable
+          storageKey="supplier-user-table"
           rowKey="id"
           columns={columns as any}
           dataSource={users}
           loading={loading}
           pagination={false}
           size="small"
-          scroll={{ x: 800 }}
+          scroll={{ x: 900 }}
         />
       </Modal>
 

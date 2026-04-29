@@ -25,6 +25,8 @@ const OverdueOrderTable: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<OverdueOrder[]>([]);
+  // 当前选中的工厂过滤器，null 表示全部
+  const [activeFactory, setActiveFactory] = useState<string | null>(null);
   const { sortField, sortOrder, handleSort } = usePersistentSort<'deliveryDate' | 'overdueDays', 'asc' | 'desc'>({
     storageKey: 'dashboard-overdue-orders',
     defaultField: 'deliveryDate',
@@ -77,6 +79,14 @@ const OverdueOrderTable: React.FC = () => {
     return sorted;
   }, [dataSource, sortField, sortOrder]);
 
+  // 按工厂过滤后的数据
+  const filteredDataSource = useMemo(() => {
+    if (!activeFactory) return sortedDataSource;
+    return sortedDataSource.filter(
+      (order) => (order.factoryName || '未分配工厂') === activeFactory,
+    );
+  }, [sortedDataSource, activeFactory]);
+
   // 按工厂统计延期订单数量，用于顶部分布汇总
   const factoryDistribution = useMemo(() => {
     const map = new Map<string, number>();
@@ -94,11 +104,11 @@ const OverdueOrderTable: React.FC = () => {
       title: '款式图',
       dataIndex: 'styleNo',
       key: 'styleCover',
-      width: 72,
+      width: 60,
       align: 'center',
       render: (_value: string, record: OverdueOrder) => (
         <div className="overdue-order-cover-cell">
-          <StyleCoverThumb styleNo={record.styleNo} size={40} borderRadius={8} fit="contain" />
+          <StyleCoverThumb styleNo={record.styleNo} size={36} borderRadius={6} fit="contain" />
         </div>
       ),
     },
@@ -106,21 +116,18 @@ const OverdueOrderTable: React.FC = () => {
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: 132,
       ellipsis: true,
     },
     {
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
-      width: 112,
       ellipsis: true,
     },
     {
       title: '数量',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 72,
       align: 'right',
       render: (value: number) => value.toLocaleString(),
     },
@@ -128,30 +135,31 @@ const OverdueOrderTable: React.FC = () => {
       title: <SortableColumnTitle title="交货日期" fieldName="deliveryDate" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
       dataIndex: 'deliveryDate',
       key: 'deliveryDate',
-      width: 104,
     },
     {
       title: <SortableColumnTitle title="延期天数" fieldName="overdueDays" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="right" />,
       dataIndex: 'overdueDays',
       key: 'overdueDays',
-      width: 84,
       align: 'right',
-      render: (value: number) => (
-        <span className="overdue-days">{value} 天</span>
-      ),
+      render: (value: number) => {
+        // 按延期严重程度分级显示颜色：≤0 橙色预警，1-7 天橙红，>7 天红色危险
+        const level = value <= 0 ? 'warn' : value <= 7 ? 'mid' : 'danger';
+        return (
+          <span className={`overdue-days overdue-days-${level}`}>{value} 天</span>
+        );
+      },
     },
     {
       title: '工厂',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 132,
       ellipsis: true,
       render: (value: string) => value || '-',
     },
     {
       title: '催单',
-      key: 'urge',
-      width: 70,
+      key: 'action',
+      width: 72,
       align: 'center' as const,
       render: (_: unknown, record: OverdueOrder) => {
         const urged = urgedIds.has(record.id);
@@ -195,12 +203,12 @@ const OverdueOrderTable: React.FC = () => {
       className="overdue-order-table-card"
       variant="borderless"
     >
-      {/* 工厂分布汇总：总数 + 各工厂订单数，点击可跳转到对应生产列表 */}
+      {/* 工厂分布汇总：点击 chip 过滤表格；点击"全部延期"标签旁边的跳转按钮才会导航 */}
       {dataSource.length > 0 && (
         <div className="overdue-factory-summary">
           <div
-            className="overdue-factory-row overdue-factory-row-total"
-            onClick={() => navigate('/production?filter=overdue')}
+            className={`overdue-factory-row overdue-factory-row-total${activeFactory === null ? ' active' : ''}`}
+            onClick={() => setActiveFactory(null)}
           >
             <span className="overdue-factory-label">全部延期</span>
             <span className="overdue-factory-count">{dataSource.length} 单</span>
@@ -208,33 +216,40 @@ const OverdueOrderTable: React.FC = () => {
           {factoryDistribution.map(({ name, count }) => (
             <div
               key={name}
-              className="overdue-factory-row"
-              onClick={() => navigate(`/production?filter=overdue&factoryName=${encodeURIComponent(name)}`)}
+              className={`overdue-factory-row${activeFactory === name ? ' active' : ''}`}
+              onClick={() => setActiveFactory(activeFactory === name ? null : name)}
             >
               <span className="overdue-factory-label">{name}</span>
               <span className="overdue-factory-count">{count} 单</span>
             </div>
           ))}
+          {/* 右侧独立跳转按钮，避免整个 chip 区变成导航 */}
+          <div className="overdue-factory-nav-btn" onClick={() => navigate('/production?filter=overdue')}>
+            查看全部 →
+          </div>
         </div>
       )}
-      <Spin spinning={loading}>
-        <ResizableTable
-          storageKey="overdue-order-dashboard-v2"
-          columns={columns}
-          dataSource={sortedDataSource}
-          rowKey="id"
-          resizableColumns={false}
-          scroll={{ y: 400 }}
-          pagination={{
-            defaultPageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
-            pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
-          }}
-          size="middle"
-          className="overdue-order-table"
-        />
-      </Spin>
+      {/* 用 div 包裹 Spin，保持 flex 链不断裂 */}
+      <div className="overdue-order-table-body">
+        <Spin spinning={loading}>
+          <ResizableTable
+            storageKey="overdue-order-dashboard-v2"
+            columns={columns}
+            dataSource={filteredDataSource}
+            rowKey="id"
+            resizableColumns={false}
+            scroll={{ x: 'max-content' }}
+            pagination={{
+              defaultPageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 条`,
+              pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
+            }}
+            size="middle"
+            className="overdue-order-table"
+          />
+        </Spin>
+      </div>
     </Card>
   );
 };

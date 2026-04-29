@@ -136,7 +136,6 @@ const OutstockRecordTab: React.FC = () => {
       title: '出库单号',
       dataIndex: 'outstockNo',
       width: 160,
-      fixed: 'left',
       render: (text) => (
         <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{text}</span>
       ),
@@ -298,7 +297,6 @@ const OutstockRecordTab: React.FC = () => {
       title: '操作',
       key: 'actions',
       width: 160,
-      fixed: 'right',
       render: (_, record) => {
         const actions: RowAction[] = [];
         if (record.approvalStatus !== 'approved') {

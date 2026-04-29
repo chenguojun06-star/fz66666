@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { App, Button, Card, Input, Select, Space, Switch, Tabs } from 'antd';
+import { App, Button, Card, Input, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -10,6 +10,7 @@ import WageSlipPrintModal from './WageSlipPrintModal';
 import { PrinterOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePayrollData, toNumberOrZero, toMoneyText, getDetailRowKey, getDetailApprovalId, isDetailAudited } from './usePayrollData';
+import { statusMap } from '@/modules/finance/pages/FinanceCenter/useSettlementData';
 import { usePayrollActions } from './usePayrollActions';
 import WorkerEfficiencyTab from './WorkerEfficiencyTab';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
@@ -43,12 +44,148 @@ const PayrollOperatorSummary: React.FC = () => {
     });
 
     const internalOrderColumns = useMemo(() => [
-        { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
-        { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 },
-        { title: '工厂', dataIndex: 'factoryName', key: 'factoryName', width: 140 },
-        { title: '总数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 100, align: 'right' as const },
-        { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, align: 'right' as const, render: (v: number) => toNumberOrZero(v).toFixed(2) },
-        { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+        {
+            title: '订单号',
+            dataIndex: 'orderNo',
+            key: 'orderNo',
+            width: 160,
+        },
+        {
+            title: '款号',
+            dataIndex: 'styleNo',
+            key: 'styleNo',
+            width: 120,
+        },
+        {
+            title: '工厂',
+            dataIndex: 'factoryName',
+            key: 'factoryName',
+            width: 180,
+            render: (_text: string, record: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
+                    <span>{record.factoryName || '-'}</span>
+                </div>
+            ),
+        },
+        {
+            title: '状态',
+            dataIndex: 'status',
+            key: 'status',
+            width: 90,
+            render: (status: string) => {
+                const info = statusMap[status] || { text: status || '-', color: 'var(--neutral-text-secondary)' };
+                return (
+                    <span style={{ padding: '2px 8px', fontSize: 12, backgroundColor: `${info.color}15`, color: info.color, fontWeight: 500 }}>
+                        {info.text}
+                    </span>
+                );
+            },
+        },
+        {
+            title: '完成时间',
+            dataIndex: 'completeTime',
+            key: 'completeTime',
+            width: 150,
+            render: (val: string) => val ? val.replace('T', ' ').slice(0, 16) : '-',
+        },
+        {
+            title: '颜色',
+            dataIndex: 'colors',
+            key: 'colors',
+            width: 100,
+            render: (val: string) => val || '-',
+        },
+        {
+            title: '下单数',
+            dataIndex: 'orderQuantity',
+            key: 'orderQuantity',
+            width: 90,
+            align: 'right' as const,
+            render: (val: number) => val != null ? val.toLocaleString() : '-',
+        },
+        {
+            title: '入库数',
+            dataIndex: 'warehousedQuantity',
+            key: 'warehousedQuantity',
+            width: 90,
+            align: 'right' as const,
+            render: (val: number) => val != null ? val.toLocaleString() : '-',
+        },
+        {
+            title: '次品数',
+            dataIndex: 'defectQuantity',
+            key: 'defectQuantity',
+            width: 90,
+            align: 'right' as const,
+            render: (val: number) => (
+                <span style={{ color: val > 0 ? 'var(--color-danger)' : '#666' }}>
+                    {val != null ? val.toLocaleString() : '-'}
+                </span>
+            ),
+        },
+        {
+            title: (<Tooltip title="面辅料采购总成本（状态：已收货/已完成）"><span>面辅料成本</span></Tooltip>),
+            dataIndex: 'materialCost',
+            key: 'materialCost',
+            width: 120,
+            align: 'right' as const,
+            render: (val: number) => `¥${(val ?? 0).toFixed(2)}`,
+        },
+        {
+            title: (<Tooltip title="物料采购单价 = 面辅料成本 ÷ 入库数"><span>物料单价</span></Tooltip>),
+            key: 'materialUnitCost',
+            width: 100,
+            align: 'right' as const,
+            render: (_: unknown, record: any) => {
+                const qty = Number(record.warehousedQuantity) || 0;
+                const cost = Number(record.materialCost) || 0;
+                if (qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+                return `¥${(cost / qty).toFixed(2)}`;
+            },
+        },
+        {
+            title: (<Tooltip title="生产过程中工序扫码成本总计"><span>生产成本</span></Tooltip>),
+            dataIndex: 'productionCost',
+            key: 'productionCost',
+            width: 110,
+            align: 'right' as const,
+            render: (val: number) => `¥${(val ?? 0).toFixed(2)}`,
+        },
+        {
+            title: (<Tooltip title="整件衣服车缝单价 = 生产成本 ÷ 入库数"><span>车缝单价</span></Tooltip>),
+            key: 'sewingUnitCost',
+            width: 100,
+            align: 'right' as const,
+            render: (_: unknown, record: any) => {
+                const qty = Number(record.warehousedQuantity) || 0;
+                const cost = Number(record.productionCost) || 0;
+                if (qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+                return `¥${(cost / qty).toFixed(2)}`;
+            },
+        },
+        {
+            title: (<Tooltip title="次品报废损失 = 次品数 × 单件成本"><span>报废损失</span></Tooltip>),
+            dataIndex: 'defectLoss',
+            key: 'defectLoss',
+            width: 110,
+            align: 'right' as const,
+            render: (val: number) => (
+                <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
+                    {val > 0 ? '-' : ''}¥{(val ?? 0).toFixed(2)}
+                </span>
+            ),
+        },
+        {
+            title: '总金额',
+            dataIndex: 'totalAmount',
+            key: 'totalAmount',
+            width: 120,
+            align: 'right' as const,
+            render: (val: number) => (
+                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{(val ?? 0).toFixed(2)}</span>
+            ),
+        },
     ], []);
 
     const {

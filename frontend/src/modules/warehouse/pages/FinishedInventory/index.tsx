@@ -48,7 +48,7 @@ const _FinishedInventory: React.FC = () => {
           label: '库存管理',
           children: (<>
           <Card size="small">
-            <ResizableTable columns={columns} dataSource={pagedDataSource} rowKey={(r: FinishedInventory) => `${r.orderNo}_${r.styleNo}`} loading={loading} pagination={false} scroll={{ x: 'max-content' }} />
+            <ResizableTable storageKey="warehouse-finished-inventory" columns={columns} dataSource={pagedDataSource} rowKey={(r: FinishedInventory) => `${r.orderNo}_${r.styleNo}`} loading={loading} pagination={false} scroll={{ x: 'max-content' }} />
             <StandardPagination current={pagination.pagination.current} pageSize={pagination.pagination.pageSize} total={totalRecords} onChange={(page, _pageSize) => pagination.gotoPage(page)} />
           </Card>
           <StandardModal title={`出库 - ${outboundModal.data?.styleNo || ''}`} open={outboundModal.visible} onOk={handleOutboundConfirm} onCancel={outboundModal.close} okText="确认出库" width={800}>

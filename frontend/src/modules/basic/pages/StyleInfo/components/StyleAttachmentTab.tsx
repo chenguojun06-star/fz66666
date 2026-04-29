@@ -351,7 +351,10 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
 
   return (
     <div className="style-attachment">
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <span style={{ color: 'var(--neutral-text-lighter)', fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>
+          {'单个文件不超过10MB，一次最多上传4个'}
+        </span>
         <Upload
           multiple
           accept="*"
@@ -375,18 +378,17 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
         >
           <Button type="primary" disabled={Boolean(readOnly)}>{uploadText || '上传附件'}</Button>
         </Upload>
-        <span style={{ marginLeft: 16, color: 'var(--neutral-text-lighter)', fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>
-          {'单个文件不超过10MB，一次最多上传4个'}
-        </span>
       </div>
 
       <ResizableTable
+        storageKey="style-attachment-table"
         columns={columns as any}
         dataSource={data}
         rowKey="id"
         loading={loading}
         pagination={false}
         size="small"
+        scroll={{ x: 'max-content' }}
       />
     </div>
   );

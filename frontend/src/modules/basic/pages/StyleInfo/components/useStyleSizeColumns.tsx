@@ -265,7 +265,7 @@ export function useStyleSizeColumns({
         </span>
       ),
       dataIndex: sn,
-      width: 40,
+      width: 60,
       align: 'center' as const,
       render: (_: any, record: MatrixRow) => {
         const v = record.cells[sn]?.value;

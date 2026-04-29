@@ -10,7 +10,8 @@
  * 路由挂载：intelligence/platform-dashboard（通过 routeConfig.ts 注册）
  */
 import React, { useState, useCallback } from 'react';
-import { Card, Col, Row, Select, Spin, Statistic, Table, Tag, Typography, Alert } from 'antd';
+import { Card, Col, Row, Select, Spin, Statistic, Tag, Typography, Alert } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { useUser } from '@/utils/AuthContext';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 
@@ -181,12 +182,14 @@ export const PlatformDashboard: React.FC = () => {
 
         {/* 工具表现 */}
         <Card title="工具表现明细" style={{ marginBottom: 16 }} size="small">
-          <Table<ToolRow>
+          <ResizableTable<ToolRow>
+            storageKey="platform-tool-table"
             dataSource={tools}
             columns={toolColumns}
             rowKey={r => String(r.toolName ?? Math.random())}
             size="small"
             pagination={{ pageSize: 15 }}
+            scroll={{ x: 600 }}
             locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
           />
         </Card>
@@ -195,24 +198,28 @@ export const PlatformDashboard: React.FC = () => {
         <Row gutter={16}>
           <Col span={12}>
             <Card title="决策采纳率（场景维度）" size="small">
-              <Table<AdoptionRow>
+              <ResizableTable<AdoptionRow>
+                storageKey="platform-adoption-table"
                 dataSource={adoptions}
                 columns={adoptionColumns}
                 rowKey={r => String(r.scene ?? Math.random())}
                 size="small"
                 pagination={{ pageSize: 10 }}
+                scroll={{ x: 500 }}
                 locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
               />
             </Card>
           </Col>
           <Col span={12}>
             <Card title="巡检关闭循环 MTTR" size="small">
-              <Table<MttrRow>
+              <ResizableTable<MttrRow>
+                storageKey="platform-mttr-table"
                 dataSource={mttrs}
                 columns={mttrColumns}
                 rowKey={r => String(r.issueType ?? Math.random())}
                 size="small"
                 pagination={{ pageSize: 10 }}
+                scroll={{ x: 600 }}
                 locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
               />
             </Card>

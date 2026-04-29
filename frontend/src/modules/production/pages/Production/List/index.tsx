@@ -294,6 +294,7 @@ const ProductionList: React.FC = () => {
               dataSource={sortedProductionList}
               rowKey="id"
               loading={loading}
+              scroll={{ x: 3500 }}
               rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
               rowSelection={{
                 selectedRowKeys,

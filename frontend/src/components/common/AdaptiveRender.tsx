@@ -8,7 +8,7 @@ interface AdaptiveRenderProps {
   fallback?: React.ReactNode;
 }
 
-export const AdaptiveRender: React.FC<AdaptiveRenderProps> = ({ high, medium, low, fallback }) => {
+export const AdaptiveRender: React.FC<AdaptiveRenderProps> = ({ high, medium, low, fallback: _fallback }) => {
   const { tier } = useDeviceCapability();
 
   const content = useMemo(() => {

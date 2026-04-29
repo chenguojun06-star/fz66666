@@ -28,7 +28,7 @@ interface StyleBomToolbarProps {
 const toolbarStyle = {
   marginBottom: 16,
   display: 'flex',
-  justifyContent: 'space-between',
+  justifyContent: 'flex-end',
   alignItems: 'center',
   gap: 12,
   flexWrap: 'wrap',
@@ -61,9 +61,9 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
 
   return (
     <div style={toolbarStyle}>
-      <Space>
+      <Space wrap>
         <Button onClick={onCheckStock} disabled={!dataLength || loading} loading={checkingStock}>
-          🔍 检查库存
+          检查库存
         </Button>
         <Button
           type="primary"
@@ -71,11 +71,8 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
           disabled={locked || !dataLength || loading}
           loading={loading}
         >
-          📦 生成采购单
+          生成采购单
         </Button>
-      </Space>
-
-      <Space wrap>
         <Button
           type={tableEditable ? 'primary' : 'default'}
           onClick={onToggleEdit}

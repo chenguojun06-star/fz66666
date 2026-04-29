@@ -132,8 +132,74 @@ public class AiAgentToolAccessService {
             "tool_secondary_process", "tool_material_picking", "tool_material_quality_issue"
     );
 
+    private static final Set<String> WRITE_OPERATION_TOOLS = Set.of(
+            "tool_procurement",
+            "tool_order_factory_transfer_undo",
+            "tool_sample_loan",
+            "tool_order_contact_urge",
+            "tool_defective_board",
+            "tool_material_quality_issue"
+    );
+
+    public enum ConfirmLevel { READ_ONLY, WRITE, HIGH_RISK }
+
     public static boolean isHighRisk(String toolName) {
         return toolName != null && HIGH_RISK_TOOLS.contains(toolName);
+    }
+
+    public static boolean isWriteOperation(String toolName) {
+        if (toolName == null) return false;
+        return HIGH_RISK_TOOLS.contains(toolName) || WRITE_OPERATION_TOOLS.contains(toolName);
+    }
+
+    public static ConfirmLevel getConfirmLevel(String toolName) {
+        if (toolName == null) return ConfirmLevel.READ_ONLY;
+        if (HIGH_RISK_TOOLS.contains(toolName)) return ConfirmLevel.HIGH_RISK;
+        if (WRITE_OPERATION_TOOLS.contains(toolName)) return ConfirmLevel.WRITE;
+        return ConfirmLevel.READ_ONLY;
+    }
+
+    private static final Map<String, String> TOOL_CONFIRM_LABELS = Map.ofEntries(
+            Map.entry("tool_sample_loan", "样衣借调"),
+            Map.entry("tool_scan_undo", "扫码撤回"),
+            Map.entry("tool_cutting_task_create", "裁剪单创建"),
+            Map.entry("tool_order_edit", "订单编辑"),
+            Map.entry("tool_order_batch_close", "批量关单"),
+            Map.entry("tool_payroll_approve", "工资审批"),
+            Map.entry("tool_action_executor", "操作执行"),
+            Map.entry("tool_bundle_split_transfer", "拆菲转派"),
+            Map.entry("tool_create_production_order", "创建订单"),
+            Map.entry("tool_change_approval", "变更审批"),
+            Map.entry("tool_order_factory_transfer", "订单转厂"),
+            Map.entry("tool_order_factory_transfer_undo", "撤回转厂"),
+            Map.entry("tool_finance_workflow", "财务操作"),
+            Map.entry("tool_quality_inbound", "质检入库"),
+            Map.entry("tool_finished_outbound", "成品出库"),
+            Map.entry("tool_sample_workflow", "样衣流程"),
+            Map.entry("tool_style_template", "模板操作"),
+            Map.entry("tool_team_dispatch", "协同派单"),
+            Map.entry("tool_material_doc_receive", "单据收货"),
+            Map.entry("tool_material_receive", "面辅料收货"),
+            Map.entry("tool_material_audit", "面辅料审核"),
+            Map.entry("tool_material_reconciliation", "物料对账"),
+            Map.entry("tool_invoice", "发票操作"),
+            Map.entry("tool_financial_report", "财务报表"),
+            Map.entry("tool_style_quotation", "款式报价"),
+            Map.entry("tool_order_transfer", "订单转单"),
+            Map.entry("tool_pattern_revision", "样衣改版"),
+            Map.entry("tool_inventory_check", "盘点操作"),
+            Map.entry("tool_order_contact_urge", "催单通知"),
+            Map.entry("tool_production_exception", "生产异常"),
+            Map.entry("tool_secondary_process", "二次工序"),
+            Map.entry("tool_material_picking", "领料操作"),
+            Map.entry("tool_material_quality_issue", "质量问题"),
+            Map.entry("tool_procurement", "采购操作"),
+            Map.entry("tool_defective_board", "次品操作")
+    );
+
+    public static String getConfirmLabel(String toolName) {
+        if (toolName == null) return "操作";
+        return TOOL_CONFIRM_LABELS.getOrDefault(toolName, "操作");
     }
 
     private static final long APPROVAL_TOKEN_TTL_MS = 30 * 60 * 1000L;

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Alert, Tag, Form, InputNumber, Input, Select, Space, Row, Col, Card, Spin, Popconfirm, Typography, Tooltip, Table } from 'antd';
+import { Button, Alert, Tag, Form, InputNumber, Input, Select, Space, Row, Col, Card, Spin, Popconfirm, Typography, Tooltip } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { ToolOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { BatchSelectBundleRow } from '../../types';
 import { isBundleBlockedForWarehousing } from '../../utils';
@@ -64,10 +65,11 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
             {bundlesLoading ? <Spin spinning tip="正在加载菲号..."><div /></Spin> : '该订单暂无裁剪菲号'}
           </div>
         ) : (
-          <Table<BatchSelectBundleRow>
+          <ResizableTable<BatchSelectBundleRow>
+            storageKey="inspect-bundle-table"
             size="small" rowKey="qr" pagination={false}
             dataSource={batchSelectRows}
-            scroll={{ x: 'max-content' }}
+            scroll={{ x: 680 }}
             rowSelection={{
               selectedRowKeys: batchSelectedBundleQrs,
               onChange: (keys, rows) => handleBatchSelectionChange(keys, rows as BatchSelectBundleRow[]),

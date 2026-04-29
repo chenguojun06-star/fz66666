@@ -1,5 +1,6 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
-import { Card, Row, Col, Statistic, Spin, DatePicker, Table, Typography, App } from 'antd';
+import { Card, Row, Col, Statistic, Spin, DatePicker, Typography, App } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import {
   WarningOutlined,
   CheckCircleOutlined,
@@ -193,12 +194,14 @@ const PaymentDashboard: React.FC = () => {
       </Row>
 
       <Card size="small" title="账龄明细">
-        <Table
+        <ResizableTable
+          storageKey="payment-aging-table"
           columns={agingColumns}
           dataSource={agingData}
           rowKey="range"
           size="small"
           pagination={false}
+          scroll={{ x: 600 }}
         />
       </Card>
     </Spin>

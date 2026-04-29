@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Tag, Button, Space, Input, Modal, message, Card, Row, Col, Statistic } from 'antd';
+import { Tag, Button, Space, Input, Modal, message, Card, Row, Col, Statistic } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined, CloseCircleOutlined, MessageOutlined } from '@ant-design/icons';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
 import { formatDateTime } from '@/utils/datetime';
@@ -117,13 +118,15 @@ const WageFeedbackTab: React.FC = () => {
         </Col>
       </Row>
 
-      <Table
+      <ResizableTable
+        storageKey="wage-feedback-table"
         columns={columns}
         dataSource={list}
         rowKey="id"
         size="small"
         loading={loading}
         pagination={{ pageSize: 20 }}
+        scroll={{ x: 900 }}
       />
 
       <Modal
