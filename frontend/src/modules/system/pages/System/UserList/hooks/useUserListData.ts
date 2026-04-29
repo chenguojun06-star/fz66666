@@ -10,6 +10,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { readPageSize } from '@/utils/pageSizeStore';
 import type { useModal } from '@/hooks';
+import organizationApi from '@/services/system/organizationApi';
 
 interface UseUserListDataDeps {
   user: any;
@@ -22,7 +23,7 @@ interface UseUserListDataDeps {
 }
 
 export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userModal, logModal, navigate }: UseUserListDataDeps) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const canManageUsers = isSuperAdmin || isTenantOwner;
 
   // ---- 数据状态 ----
@@ -417,6 +418,19 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     }
   };
 
+  const handleResetPassword = (record: UserType) => {
+    modal.confirm({
+      title: '重置密码',
+      content: `确定将「${record.name || record.username}」的密码重置为 123456？重置后该成员需使用新密码重新登录。`,
+      okText: '确定重置',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        await organizationApi.ownerResetMemberPwd(String(record.id));
+        message.success('密码已重置为 123456');
+      },
+    });
+  };
+
   return {
     // 数据状态
     queryParams, setQueryParams, userList, total, loading, submitLoading,
@@ -433,6 +447,6 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     getUserList, openDialog, closeDialog, handleGenerateInvite,
     openRemarkModal, handleRemarkConfirm, openLogModal,
     toggleUserStatus, applyRoleToUser, handleSubmit, savePerms,
-    loadPermTreeAndChecked,
+    loadPermTreeAndChecked, handleResetPassword,
   };
 }

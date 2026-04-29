@@ -56,6 +56,8 @@ interface UseUserListColumnsProps {
   setAccountModalOpen: (v: boolean) => void;
   openLogModal: (type: string, id: string, title: string) => void;
   toggleUserStatus: (id: string, status: UserType['status']) => void;
+  isTenantOwner?: boolean;
+  onResetPassword?: (record: UserType) => void;
 }
 
 // ============================================================
@@ -71,6 +73,8 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
     setAccountModalOpen,
     openLogModal,
     toggleUserStatus,
+    isTenantOwner,
+    onResetPassword,
   } = props;
 
   const columns = [
@@ -208,6 +212,11 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
                 title: '日志',
                 onClick: () => openLogModal('user', String(record.id || ''), `人员 ${record.name || record.username} 操作日志`),
               },
+              ...(isTenantOwner ? [{
+                key: 'resetPwd',
+                label: '重置密码',
+                onClick: () => onResetPassword?.(record),
+              }] : []),
               {
                 key: 'toggle',
                 label: toggleLabel,

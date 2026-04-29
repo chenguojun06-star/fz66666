@@ -198,6 +198,11 @@ public class UserOrchestrator {
         permissionHelper.adminResetMemberPassword(userId, newPassword);
     }
 
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void ownerResetMemberPasswordToDefault(String userId) {
+        permissionHelper.ownerResetMemberPasswordToDefault(userId);
+    }
+
     private void syncRoleFields(User user) {
         if (user != null && user.getRoleId() != null) {
             Role role = roleService.getById(user.getRoleId());

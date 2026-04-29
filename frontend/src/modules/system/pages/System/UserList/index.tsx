@@ -45,7 +45,7 @@ const UserList: React.FC = () => {
     getUserList, openDialog, closeDialog, handleGenerateInvite,
     openRemarkModal: _openRemarkModal, handleRemarkConfirm, openLogModal,
     toggleUserStatus, applyRoleToUser, handleSubmit, savePerms,
-    loadPermTreeAndChecked,
+    loadPermTreeAndChecked, handleResetPassword,
   } = useUserListData({ user, isSuperAdmin, isTenantOwner, form, userModal, logModal, navigate });
 
   const [usernameInput, setUsernameInput] = useState(queryParams.username || '');
@@ -71,6 +71,8 @@ const UserList: React.FC = () => {
     setAccountModalOpen,
     openLogModal,
     toggleUserStatus,
+    isTenantOwner,
+    onResetPassword: handleResetPassword,
   });
 
   return (

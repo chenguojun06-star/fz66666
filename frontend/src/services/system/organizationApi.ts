@@ -62,6 +62,9 @@ export const organizationApi = {
   /** 管理员为工厂成员重置密码（无需旧密码） */
   adminResetMemberPwd: (userId: string, newPassword: string) =>
     api.post<void>('/system/user/admin-reset-member-pwd', { userId, newPassword }),
+  /** 租户主账号（老板）将任意员工密码重置为默认值 123456 */
+  ownerResetMemberPwd: (userId: string) =>
+    api.post<void>('/system/user/owner-reset-member-pwd', { userId }),
 };
 
 export default organizationApi;

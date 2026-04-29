@@ -107,6 +107,39 @@ public class UserPermissionHelper {
         saveOperationLog("user", String.valueOf(target.getId()), target.getUsername(), "ADMIN_RESET_PASSWORD", "管理员重置工厂成员密码");
     }
 
+    /**
+     * 租户主账号（老板）重置同租户下任意子账号密码为默认值 123456
+     * 规则：
+     *   - 调用者必须是 isTenantOwner 或 isSuperAdmin
+     *   - 目标用户必须属于同一租户
+     *   - 不能重置主账号（isTenantOwner=true）的密码（避免循环授权混乱）
+     *   - 不能重置自己的密码（应走 changePassword 流程）
+     */
+    public void ownerResetMemberPasswordToDefault(String userId) {
+        if (!UserContext.isTenantOwner() && !UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("仅租户主账号或超管可执行此操作");
+        }
+        if (!StringUtils.hasText(userId)) throw new IllegalArgumentException("用户ID不能为空");
+        Long tenantId = UserContext.tenantId();
+        User target = userService.getById(Long.valueOf(userId));
+        if (target == null) throw new NoSuchElementException("用户不存在");
+        if (!java.util.Objects.equals(target.getTenantId(), tenantId)) {
+            throw new AccessDeniedException("无权操作其他租户的用户");
+        }
+        if (Boolean.TRUE.equals(target.getIsTenantOwner())) {
+            throw new IllegalArgumentException("不能重置主账号的密码，请联系超管操作");
+        }
+        String callerUserId = UserContext.userId();
+        if (userId.equals(callerUserId)) {
+            throw new IllegalArgumentException("不能重置自己的密码，请使用修改密码功能");
+        }
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        target.setPassword(encoder.encode("123456"));
+        userService.updateById(target);
+        loginHelper.incrementPwdVersion(target.getId());
+        saveOperationLog("user", userId, target.getUsername(), "OWNER_RESET_PASSWORD", "主账号重置员工密码为默认值");
+    }
+
     public void resetTenantOwnerPassword(Long tenantId, String newPassword) {
         if (!UserContext.isTopAdmin()) throw new AccessDeniedException("仅超管可重置租户密码");
         QueryWrapper<User> q = new QueryWrapper<>();

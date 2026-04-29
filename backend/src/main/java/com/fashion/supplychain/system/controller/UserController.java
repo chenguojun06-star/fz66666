@@ -390,4 +390,18 @@ public class UserController {
         userOrchestrator.adminResetMemberPassword(userId, newPassword);
         return Result.successMessage("密码已重置");
     }
+
+    /**
+     * 租户主账号（老板）重置任意员工密码为默认值 123456
+     * 无需旧密码，不可重置主账号或超管账号
+     */
+    @PostMapping("/owner-reset-member-pwd")
+    public Result<Void> ownerResetMemberPwd(@RequestBody java.util.Map<String, String> body) {
+        String userId = body.get("userId");
+        if (userId == null || userId.isBlank()) {
+            return Result.fail("userId 不能为空");
+        }
+        userOrchestrator.ownerResetMemberPasswordToDefault(userId);
+        return Result.successMessage("密码已重置为 123456");
+    }
 }
