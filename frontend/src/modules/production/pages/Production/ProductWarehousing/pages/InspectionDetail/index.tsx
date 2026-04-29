@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Form } from 'antd';
+import { Card, Spin, Button, Alert, Descriptions, Tag, Image, Typography, Form, Table } from 'antd';
 import { ArrowLeftOutlined, CheckCircleOutlined, InboxOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
-import ResizableTable from '@/components/common/ResizableTable';
 import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -17,8 +16,6 @@ import { qualityAiApi } from '@/services/production/productionApi';
 import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
 import InspectFormPanel from './InspectFormPanel';
 import AiQualityHelperCard from './AiQualityHelperCard';
-import OrderLinesTable from './OrderLinesTable';
-import QcRecordsPanel from './QcRecordsPanel';
 import WarehousingActionPanel from './WarehousingActionPanel';
 import ProductionSheetPanel from './ProductionSheetPanel';
 
@@ -61,11 +58,9 @@ const InspectionDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const defaultTab = searchParams.get('tab') || 'records';
-  const highlightWhNo = searchParams.get('warehousingNo') || '';
 
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<QualityBriefingData | null>(null);
-  const [activeTab, setActiveTab] = useState(defaultTab);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [qcRecords, setQcRecords] = useState<WarehousingDetailRecord[]>([]);
   const [aiSuggestion, setAiSuggestion] = useState<QualityAiSuggestionResult | null>(null);
@@ -377,74 +372,90 @@ const InspectionDetail: React.FC = () => {
         </div>
 
         {/* 右侧 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Card size="small" style={{ overflow: 'hidden' }}>
-            <Tabs
-              activeKey={activeTab} onChange={setActiveTab}
-              size="small"
-              style={{ width: '100%' }}
-              items={[
-                {
-                  key: 'records',
-                  label: '质检记录',
-                  children: (
-                    <div style={{ padding: '8px 0' }}>
-                      <QcRecordsPanel
-                        qcRecords={qcRecords}
-                        qcStats={qcStats}
-                        recordsLoading={recordsLoading}
-                        highlightWhNo={highlightWhNo}
-                      />
-                    </div>
-                  ),
-                },
-                {
-                  key: 'orderLines',
-                  label: '入库进度',
-                  children: <OrderLinesTable rows={orderLineWarehousingRows} loading={orderDetailLoading} />,
-                },
-                {
-                  key: 'bom',
-                  label: 'BOM物料',
-                  children: (
-                    <div style={{ padding: '8px 0' }}>
-                      <ResizableTable
-                        rowKey="id" size="small" pagination={false}
-                        resizableColumns={false} scroll={undefined} dataSource={bom}
-                        columns={BOM_COLUMNS}
-                      />
-                    </div>
-                  ),
-                },
-                {
-                  key: 'sizeChart',
-                  label: '尺寸表',
-                  children: (
-                    <div style={{ padding: '8px 0' }}>
-                      {styleId ? (
-                        <StyleSizeTab styleId={styleId} readOnly simpleView />
-                      ) : (
-                        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
-                          暂无尺寸表数据
-                        </div>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'productionSheet',
-                  label: '生产制单',
-                  children: (
-                    <ProductionSheetPanel
-                      description={style?.description || ''}
-                      reviewStatus={style?.sampleReviewStatus}
-                      reviewComment={style?.sampleReviewComment}
-                      reviewer={style?.sampleReviewer}
-                      reviewTime={style?.sampleReviewTime}
-                    />
-                  ),
-                },
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflow: 'auto', maxWidth: '100%' }}>
+          <Card size="small" title="质检记录" style={{ overflow: 'auto' }}>
+            <Table
+              size="small" pagination={false}
+              dataSource={qcRecords}
+              rowKey="id"
+              scroll={{ x: 'max-content' }}
+              columns={[
+                { title: '质检入库号', dataIndex: 'warehousingNo', width: 130, ellipsis: true },
+                { title: '菲号', dataIndex: 'cuttingBundleQrCode', width: 100, ellipsis: true },
+                { title: '颜色', dataIndex: 'color', width: 60 },
+                { title: '尺码', dataIndex: 'size', width: 50 },
+                { title: '质检数', dataIndex: 'warehousingQuantity', width: 60 },
+                { title: '合格数', dataIndex: 'qualifiedQuantity', width: 60 },
+                { title: '不合格数', dataIndex: 'unqualifiedQuantity', width: 70 },
+                { title: '质检状态', dataIndex: 'qualityStatus', width: 70, render: (v: string) => {
+                  const s = String(v || '').trim().toLowerCase();
+                  if (s === 'qualified') return <Tag color="green">合格</Tag>;
+                  if (s === 'unqualified') return <Tag color="red">不合格</Tag>;
+                  if (s === 'partial') return <Tag color="orange">部分合格</Tag>;
+                  return <Tag>{v || '-'}</Tag>;
+                }},
+                { title: '仓库', dataIndex: 'warehouse', width: 80, ellipsis: true },
+                { title: '次品类别', dataIndex: 'defectCategory', width: 80, ellipsis: true },
+                { title: '处理方式', dataIndex: 'repairStatus', width: 80, ellipsis: true },
+                { title: '质检时间', dataIndex: 'createTime', width: 140, render: (v: string) => v || '-' },
               ]}
+            />
+            {qcStats.count > 0 && (
+              <div style={{ marginTop: 8, display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: '#666' }}>
+                <span>质检次数: {qcStats.count}</span>
+                <span>质检总数: {qcStats.total}</span>
+                <span>合格数: {qcStats.qualified}</span>
+                <span>不合格数: {qcStats.unqualified}</span>
+                <span>已入库: {qcStats.warehoused}</span>
+                <span>待入库: {qcStats.pendingWarehouse}</span>
+              </div>
+            )}
+          </Card>
+
+          <Card size="small" title="入库进度" style={{ overflow: 'auto' }}>
+            <Table
+              size="small" pagination={false}
+              dataSource={orderLineWarehousingRows}
+              rowKey="key"
+              scroll={{ x: 'max-content' }}
+              columns={[
+                { title: '订单号', dataIndex: 'orderNo', width: 110, ellipsis: true },
+                { title: '款号', dataIndex: 'styleNo', width: 90, ellipsis: true },
+                { title: '颜色', dataIndex: 'color', width: 60 },
+                { title: '尺码', dataIndex: 'size', width: 50 },
+                { title: '订单数量', dataIndex: 'quantity', width: 70 },
+                { title: '已入库', dataIndex: 'warehousedQuantity', width: 60 },
+                { title: '不合格', dataIndex: 'unqualifiedQuantity', width: 60 },
+                { title: '待入库', dataIndex: 'unwarehousedQuantity', width: 60 },
+              ]}
+            />
+          </Card>
+
+          <Card size="small" title="BOM物料" style={{ overflow: 'auto' }}>
+            <Table
+              size="small" pagination={false}
+              dataSource={bom}
+              rowKey="id"
+              scroll={{ x: 'max-content' }}
+              columns={BOM_COLUMNS}
+            />
+          </Card>
+
+          <Card size="small" title="尺寸表" style={{ overflow: 'auto' }}>
+            {styleId ? (
+              <StyleSizeTab styleId={styleId} readOnly simpleView />
+            ) : (
+              <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>暂无尺寸表数据</div>
+            )}
+          </Card>
+
+          <Card size="small" title="生产制单" style={{ overflow: 'auto' }}>
+            <ProductionSheetPanel
+              description={style?.description || ''}
+              reviewStatus={style?.sampleReviewStatus}
+              reviewComment={style?.sampleReviewComment}
+              reviewer={style?.sampleReviewer}
+              reviewTime={style?.sampleReviewTime}
             />
           </Card>
 
