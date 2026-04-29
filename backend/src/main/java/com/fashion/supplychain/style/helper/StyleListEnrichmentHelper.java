@@ -286,6 +286,8 @@ public class StyleListEnrichmentHelper {
             String latestPatternStatus = resolveLatestPatternStatus(style, latestPatternByStyleKey, stockedStyleKeys);
             style.setLatestPatternStatus(latestPatternStatus);
 
+            fillSampleStartTime(style, latestPatternByStyleKey);
+
             resolveAndSetProgressNode(style);
         }
     }
@@ -295,6 +297,21 @@ public class StyleListEnrichmentHelper {
         style.setMaintenanceTime(m != null ? m.getCreateTime() : null);
         style.setMaintenanceMan(m != null ? m.getOperator() : null);
         style.setMaintenanceRemark(m != null ? m.getRemark() : null);
+    }
+
+    private void fillSampleStartTime(StyleInfo style, Map<String, PatternProduction> latestPatternByStyleKey) {
+        if (style.getSampleStartTime() != null) return;
+        PatternProduction latestPattern = style.getId() != null
+                ? latestPatternByStyleKey.get(style.getId() + "|" + (style.getColor() == null ? "" : style.getColor()).trim().toUpperCase())
+                : null;
+        if (latestPattern == null && style.getId() != null) {
+            for (Map.Entry<String, PatternProduction> entry : latestPatternByStyleKey.entrySet()) {
+                if (entry.getKey().startsWith(style.getId() + "|")) { latestPattern = entry.getValue(); break; }
+            }
+        }
+        if (latestPattern != null && latestPattern.getReceiveTime() != null) {
+            style.setSampleStartTime(latestPattern.getReceiveTime());
+        }
     }
 
     private String resolveLatestPatternStatus(StyleInfo style, Map<String, PatternProduction> latestPatternByStyleKey,

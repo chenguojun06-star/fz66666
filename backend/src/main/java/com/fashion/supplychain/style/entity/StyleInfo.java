@@ -253,6 +253,9 @@ public class StyleInfo {
     private Integer sampleProgress;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sampleStartTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime sampleCompletedTime;
 
     /** 样衣审核状态：PASS / REWORK / REJECT，null 表示未审核 */

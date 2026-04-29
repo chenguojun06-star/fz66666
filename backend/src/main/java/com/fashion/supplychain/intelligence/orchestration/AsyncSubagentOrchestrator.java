@@ -22,6 +22,7 @@ public class AsyncSubagentOrchestrator {
 
     private final List<SpecialistAgent> specialistAgents;
     private final AgentCheckpointService checkpointService;
+    private final AgentCardService agentCardService;
 
     public AgentState dispatchSubagents(AgentState state, boolean parallel) {
         String route = state.getRoute();
@@ -33,6 +34,12 @@ public class AsyncSubagentOrchestrator {
             log.warn("[AsyncSubagent] No matching agents for route={}", route);
             return state;
         }
+
+        try {
+            Long tid = UserContext.tenantId();
+            var discovered = agentCardService.discoverAgents(tid, route);
+            log.debug("[AsyncSubagent] A2A discovery: route={}, local={}, registry={}", route, targets.size(), discovered.size());
+        } catch (Exception ignored) {}
 
         if (!parallel || targets.size() == 1) {
             for (SpecialistAgent agent : targets) {

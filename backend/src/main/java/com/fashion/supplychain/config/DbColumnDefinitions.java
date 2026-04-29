@@ -88,6 +88,7 @@ public final class DbColumnDefinitions {
         add("t_style_info", "sample_status", "VARCHAR(20) DEFAULT NULL COMMENT '样衣状态'");
         add("t_style_info", "sample_progress", "INT DEFAULT NULL COMMENT '样衣进度'");
         add("t_style_info", "sample_completed_time", "DATETIME DEFAULT NULL COMMENT '样衣完成时间'");
+        add("t_style_info", "sample_start_time", "DATETIME DEFAULT NULL COMMENT '样衣生产开始时间'");
         add("t_style_info", "sample_no", "VARCHAR(100) DEFAULT NULL COMMENT '样衣编号'");
         add("t_style_info", "vehicle_supplier", "VARCHAR(100) DEFAULT NULL COMMENT '车缝供应商'");
         add("t_style_info", "sample_supplier", "VARCHAR(100) DEFAULT NULL COMMENT '纸样师'");

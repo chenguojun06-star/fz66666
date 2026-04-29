@@ -7,6 +7,8 @@ import com.fashion.supplychain.intelligence.mapper.AgentMemoryArchivalMapper;
 import com.fashion.supplychain.intelligence.mapper.AgentMemoryCoreMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +26,10 @@ public class AgentMemoryService {
 
     private final AgentMemoryCoreMapper coreMapper;
     private final AgentMemoryArchivalMapper archivalMapper;
+    private final StringRedisTemplate redisTemplate;
+
+    private static final String WORKING_MEMORY_PREFIX = "agent:wm:";
+    private static final long WORKING_MEMORY_TTL_HOURS = 24;
 
     public String getCoreMemory(Long tenantId, String agentId, String key) {
         AgentMemoryCore core = coreMapper.selectOne(
@@ -125,6 +131,16 @@ public class AgentMemoryService {
         return updated;
     }
 
+    @Scheduled(cron = "0 0 3 * * *")
+    public void scheduledDecayCurve() {
+        try {
+            int updated = applyDecayCurve(null);
+            log.info("[MemoryDecay] Scheduled decay completed: {} entries updated", updated);
+        } catch (Exception e) {
+            log.warn("[MemoryDecay] Scheduled decay failed: {}", e.getMessage());
+        }
+    }
+
     public String compileContext(Long tenantId, String agentId, int coreLimit, int archivalLimit) {
         StringBuilder sb = new StringBuilder();
 
@@ -147,5 +163,52 @@ public class AgentMemoryService {
         }
 
         return sb.toString();
+    }
+
+    public void setWorkingMemory(Long tenantId, String sessionId, String key, String value) {
+        try {
+            String redisKey = WORKING_MEMORY_PREFIX + tenantId + ":" + sessionId + ":" + key;
+            redisTemplate.opsForValue().set(redisKey, value, java.time.Duration.ofHours(WORKING_MEMORY_TTL_HOURS));
+        } catch (Exception e) {
+            log.debug("[WorkingMemory] set failed: {}", e.getMessage());
+        }
+    }
+
+    public String getWorkingMemory(Long tenantId, String sessionId, String key) {
+        try {
+            String redisKey = WORKING_MEMORY_PREFIX + tenantId + ":" + sessionId + ":" + key;
+            return redisTemplate.opsForValue().get(redisKey);
+        } catch (Exception e) {
+            log.debug("[WorkingMemory] get failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public java.util.Map<String, String> getAllWorkingMemory(Long tenantId, String sessionId) {
+        try {
+            String pattern = WORKING_MEMORY_PREFIX + tenantId + ":" + sessionId + ":*";
+            var keys = redisTemplate.keys(pattern);
+            if (keys == null || keys.isEmpty()) return java.util.Collections.emptyMap();
+            java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+            for (String k : keys) {
+                String shortKey = k.substring(k.lastIndexOf(':') + 1);
+                String val = redisTemplate.opsForValue().get(k);
+                if (val != null) result.put(shortKey, val);
+            }
+            return result;
+        } catch (Exception e) {
+            log.debug("[WorkingMemory] getAll failed: {}", e.getMessage());
+            return java.util.Collections.emptyMap();
+        }
+    }
+
+    public void clearWorkingMemory(Long tenantId, String sessionId) {
+        try {
+            String pattern = WORKING_MEMORY_PREFIX + tenantId + ":" + sessionId + ":*";
+            var keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) redisTemplate.delete(keys);
+        } catch (Exception e) {
+            log.debug("[WorkingMemory] clear failed: {}", e.getMessage());
+        }
     }
 }

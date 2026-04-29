@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
+import com.fashion.supplychain.intelligence.dto.XiaoyunStructuredResponse;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import lombok.Builder;
 import lombok.Getter;
@@ -79,5 +80,12 @@ public class AgentLoopContext {
                 .map(r -> r.evidence)
                 .reduce((a, b) -> a + " " + b)
                 .orElse("");
+    }
+
+    @Getter
+    private XiaoyunStructuredResponse structuredResponse;
+
+    public void setStructuredResponse(XiaoyunStructuredResponse response) {
+        this.structuredResponse = response;
     }
 }

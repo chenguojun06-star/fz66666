@@ -16,6 +16,7 @@ import com.fashion.supplychain.intelligence.orchestration.FollowUpSuggestionEngi
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.XiaoyunInsightCardOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.XiaoyunResponseParser;
 import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.EntityFactChecker;
@@ -48,6 +49,7 @@ public class AgentLoopEngine {
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
     @Autowired private SelfConsistencyVerifier selfConsistencyVerifier;
+    @Autowired private XiaoyunResponseParser xiaoyunResponseParser;
 
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         cb.onThinking(0, "开始思考...");
@@ -292,6 +294,12 @@ public class AgentLoopEngine {
             } catch (Exception e) {
                 log.debug("[AgentLoop] 状态完成跳过: {}", e.getMessage());
             }
+        }
+        try {
+            var structured = xiaoyunResponseParser.parse(content);
+            ctx.setStructuredResponse(structured);
+        } catch (Exception e) {
+            log.debug("[AgentLoop] 结构化解析跳过: {}", e.getMessage());
         }
     }
 
