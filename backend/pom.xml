@@ -92,6 +92,12 @@
             <artifactId>spring-ai-openai</artifactId>
         </dependency>
 
+        <!-- spring-ai-client-chat 提供 ChatClient API（spring-ai-openai 1.0.0 不传递引入此模块） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-client-chat</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
