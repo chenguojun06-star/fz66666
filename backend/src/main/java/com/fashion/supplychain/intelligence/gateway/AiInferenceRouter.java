@@ -10,10 +10,12 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Primary
 public class AiInferenceRouter implements AiInferenceGateway {
 
     @Value("${ai.gateway.routing-strategy:legacy}")
