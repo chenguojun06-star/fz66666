@@ -274,8 +274,14 @@ public class TenantOrchestrator {
         tenant.setStorageQuotaMb((Long) planDef.get("storageQuotaMb"));
         tenant.setMaxUsers(maxUsersOverride != null ? maxUsersOverride : (Integer) planDef.get("maxUsers"));
         tenant.setBillingCycle("MONTHLY");
-        if ("TRIAL".equals(normalizedPlan)) { tenant.setPaidStatus("TRIAL"); if (initializeExpireTime) tenant.setExpireTime(LocalDateTime.now().plusDays(30)); }
-        else { tenant.setPaidStatus("PAID"); if (initializeExpireTime) tenant.setExpireTime(LocalDateTime.now().plusMonths(1)); }
+        if ("TRIAL".equals(normalizedPlan)) {
+            tenant.setPaidStatus("TRIAL");
+            if (initializeExpireTime) tenant.setExpireTime(LocalDateTime.now().plusDays(30));
+        } else {
+            tenant.setPaidStatus("PAID");
+            if (initializeExpireTime) tenant.setExpireTime(LocalDateTime.now().plusMonths(1));
+            tenant.setEnabledModules(null);
+        }
     }
 
     private void assertSuperAdmin() { if (!UserContext.isSuperAdmin()) throw new AccessDeniedException("仅超级管理员可执行此操作"); }

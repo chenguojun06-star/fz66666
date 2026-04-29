@@ -109,7 +109,7 @@ public class OrganizationUnitOrchestrator {
 
     private static final java.util.Set<String> PRODUCTION_KEYWORDS = java.util.Set.of(
             "生产", "车间", "裁剪", "缝制", "后整", "工序", "车缝", "尾部",
-            "整烫", "包装", "质检", "工艺", "班组", "产线", "绣花", "印花", "洗水"
+            "整烫", "包装", "质检", "工艺", "班组", "产线", "绣花", "印花", "洗水", "部"
     );
 
     private boolean isProductionRelated(OrganizationUnit unit) {
