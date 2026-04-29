@@ -30,8 +30,6 @@ import {
   normalizePageSizeOptions,
   hashString,
   buildColumnsSignature,
-  clamp,
-  parseWidthPx,
   isLeafColumn,
   getColumnId,
   readArrayStorage,
@@ -42,22 +40,15 @@ import {
 type ResizableTableProps<T extends object> = TableProps<T> & {
   storageKey?: string;
   resizableColumns?: boolean;
-  autoFixedColumns?: boolean;
   allowFixedColumns?: boolean;
   reorderableColumns?: boolean;
   stickyFooter?: boolean;
   stickyHeader?: boolean | { offsetHeader?: number };
-  minColumnWidth?: number;
-  maxColumnWidth?: number;
-  defaultColumnWidth?: number;
   autoScrollY?: boolean;
 };
 
 const SortableHeaderCell: React.FC<any> = (props) => {
   const {
-    width: colWidth,
-    onResize,
-    resizable: canResize,
     'data-col-id': colId,
     children,
     className,
@@ -73,37 +64,6 @@ const SortableHeaderCell: React.FC<any> = (props) => {
     transition,
     isDragging,
   } = useSortable({ id: colId || '' });
-
-  const resizeRef = React.useRef<{
-    active: boolean;
-    startX: number;
-    startWidth: number;
-  }>({ active: false, startX: 0, startWidth: 0 });
-
-  const handleResizePointerDown = React.useCallback((e: React.PointerEvent) => {
-    if (!canResize || typeof colWidth !== 'number') return;
-    e.preventDefault();
-    e.stopPropagation();
-    resizeRef.current = { active: true, startX: e.clientX, startWidth: colWidth };
-    try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
-  }, [canResize, colWidth]);
-
-  const handleResizePointerMove = React.useCallback((e: React.PointerEvent) => {
-    if (!resizeRef.current.active) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const delta = e.clientX - resizeRef.current.startX;
-    const newWidth = Math.max(60, Math.min(800, resizeRef.current.startWidth + delta));
-    onResize?.(newWidth);
-  }, [onResize]);
-
-  const handleResizePointerUp = React.useCallback((e: React.PointerEvent) => {
-    if (!resizeRef.current.active) return;
-    e.preventDefault();
-    e.stopPropagation();
-    resizeRef.current.active = false;
-    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
-  }, []);
 
   const transformStyle: React.CSSProperties = transform
     ? {
@@ -125,77 +85,6 @@ const SortableHeaderCell: React.FC<any> = (props) => {
       {...restProps}
     >
       {children}
-      {canResize && typeof colWidth === 'number' && (
-        <div
-          className="resizable-handle"
-          onPointerDown={handleResizePointerDown}
-          onPointerMove={handleResizePointerMove}
-          onPointerUp={handleResizePointerUp}
-          onPointerCancel={handleResizePointerUp}
-        />
-      )}
-    </th>
-  );
-};
-
-const ResizableHeaderCell: React.FC<any> = (props) => {
-  const {
-    width: colWidth,
-    onResize,
-    resizable: canResize,
-    children,
-    className,
-    style,
-    ...restProps
-  } = props;
-
-  const resizeRef = React.useRef<{
-    active: boolean;
-    startX: number;
-    startWidth: number;
-  }>({ active: false, startX: 0, startWidth: 0 });
-
-  const handleResizePointerDown = React.useCallback((e: React.PointerEvent) => {
-    if (!canResize || typeof colWidth !== 'number') return;
-    e.preventDefault();
-    e.stopPropagation();
-    resizeRef.current = { active: true, startX: e.clientX, startWidth: colWidth };
-    try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
-  }, [canResize, colWidth]);
-
-  const handleResizePointerMove = React.useCallback((e: React.PointerEvent) => {
-    if (!resizeRef.current.active) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const delta = e.clientX - resizeRef.current.startX;
-    const newWidth = Math.max(60, Math.min(800, resizeRef.current.startWidth + delta));
-    onResize?.(newWidth);
-  }, [onResize]);
-
-  const handleResizePointerUp = React.useCallback((e: React.PointerEvent) => {
-    if (!resizeRef.current.active) return;
-    e.preventDefault();
-    e.stopPropagation();
-    resizeRef.current.active = false;
-    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
-  }, []);
-
-  return (
-    <th
-      className={className}
-      style={{ ...style, position: 'relative' }}
-      {...restProps}
-    >
-      {children}
-      {canResize && typeof colWidth === 'number' && (
-        <div
-          className="resizable-handle"
-          onPointerDown={handleResizePointerDown}
-          onPointerMove={handleResizePointerMove}
-          onPointerUp={handleResizePointerUp}
-          onPointerCancel={handleResizePointerUp}
-        />
-      )}
     </th>
   );
 };
@@ -208,22 +97,16 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     tableLayout,
     pagination: paginationProp,
     storageKey: storageKeyProp,
-    resizableColumns = true,
-    autoFixedColumns: _autoFixedColumns = true,
+    resizableColumns,
     allowFixedColumns = true,
     reorderableColumns = true,
     stickyFooter: stickyFooterProp,
     stickyHeader: stickyHeaderProp,
-    minColumnWidth = 60,
-    maxColumnWidth = 800,
-    defaultColumnWidth = 120,
     autoScrollY = true,
     className,
     rowKey,
     ...rest
   } = props;
-
-  const actionColumnWidth = 72;
 
   const resolvedStorageKey = React.useMemo(() => {
     if (storageKeyProp) return storageKeyProp;
@@ -283,11 +166,6 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     } as any;
   }, [pageSizeStorageKey, paginationProp]);
 
-  const mergedClassName = React.useMemo(() => {
-    const next = [className, resizableColumns ? 'resizable-table' : ''].filter(Boolean).join(' ');
-    return next || undefined;
-  }, [className, resizableColumns]);
-
   const orderStorageKey = React.useMemo(() => {
     if (!resolvedStorageKey) return null;
     return `${resolvedStorageKey}:order`;
@@ -314,69 +192,9 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     writeArrayStorage(orderStorageKey, uniqueStrings(columnOrder));
   }, [columnOrder, orderStorageKey]);
 
-  const widthStorageKey = React.useMemo(() => {
-    if (!resolvedStorageKey) return null;
-    return `${resolvedStorageKey}:widths`;
-  }, [resolvedStorageKey]);
-
-  const [columnWidths, setColumnWidths] = React.useState<Record<string, number>>(() => {
-    if (typeof window === 'undefined' || !widthStorageKey) return {};
-    try {
-      const raw = localStorage.getItem(widthStorageKey);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  React.useEffect(() => {
-    if (!widthStorageKey) return;
-    try {
-      localStorage.setItem(widthStorageKey, JSON.stringify(columnWidths));
-    } catch {}
-  }, [columnWidths, widthStorageKey]);
-
-  const handleColumnResize = React.useCallback((colId: string, newWidth: number) => {
-    const clamped = Math.max(minColumnWidth, Math.min(maxColumnWidth, Math.round(newWidth)));
-    setColumnWidths(prev => {
-      if (prev[colId] === clamped) return prev;
-      return { ...prev, [colId]: clamped };
-    });
-  }, [minColumnWidth, maxColumnWidth]);
-
   const preparedColumns = React.useMemo(() => {
     if (!columns) return columns;
     const rawCols = (Array.isArray(columns) ? columns : []) as any[];
-
-    const getSmartDefaultWidth = (colRecord: any) => {
-      const titleText = typeof colRecord.title === 'string' ? colRecord.title : '';
-      const keyText = colRecord.key == null ? '' : String(colRecord.key);
-      const dataIndexText = Array.isArray(colRecord.dataIndex)
-        ? colRecord.dataIndex.join('.')
-        : colRecord.dataIndex == null ? '' : String(colRecord.dataIndex);
-
-      const title = titleText.trim().toLowerCase();
-      const key = keyText.toLowerCase();
-      const dataIdx = dataIndexText.toLowerCase();
-
-      const narrowKeywords = ['数量', '件数', '码数', '尺码', '码', 'size', 'qty', 'quantity', 'num', 'count', '序号', 'no', 'id'];
-      if (narrowKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-        return 40;
-      }
-      const mediumKeywords = ['颜色', '状态', '类型', '仓库', '单位', 'color', 'status', 'type', 'warehouse', 'unit', 'tag'];
-      if (mediumKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-        return 60;
-      }
-      const wideKeywords = ['订单', '款号', '款名', '名称', '编号', 'order', 'style', 'name', 'code', 'no', 'qr', '菲号'];
-      if (wideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-        return 100;
-      }
-      const extraWideKeywords = ['备注', '描述', '说明', 'remark', 'desc', 'description', 'note'];
-      if (extraWideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
-        return 150;
-      }
-      return defaultColumnWidth;
-    };
 
     const mapColumns = (cols: any[]): any[] => {
       return cols.map((col) => {
@@ -390,7 +208,6 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
         const colId = getColumnId(colRecord, [rawCols.indexOf(colRecord)]);
 
-        const titleText = typeof colRecord.title === 'string' ? colRecord.title : '';
         const keyText = colRecord.key == null ? '' : String(colRecord.key);
         const dataIndexText = Array.isArray(colRecord.dataIndex)
           ? colRecord.dataIndex.join('.')
@@ -399,35 +216,20 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         const maybeAction =
           ['action', 'actions', 'operation', 'operate', 'op'].includes(keyText.toLowerCase()) ||
           ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
-          ['操作', '操作列', '操作区', '操作按钮'].includes(titleText.trim());
-
-        const explicitWidth = parseWidthPx(colRecord.width);
-        const persistedWidth = columnWidths[colId];
-        const smartDefaultWidth = getSmartDefaultWidth(colRecord);
-        const isResizable = resizableColumns && !maybeAction;
-        const baseWidth = (isResizable ? persistedWidth : undefined)
-          ?? explicitWidth
-          ?? (maybeAction ? actionColumnWidth : smartDefaultWidth);
-        const clampedWidth = typeof baseWidth === 'number'
-          ? clamp(baseWidth, minColumnWidth, maxColumnWidth)
-          : clamp(smartDefaultWidth, minColumnWidth, maxColumnWidth);
-
-        const fixed = allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined;
+          ['操作', '操作列', '操作区', '操作按钮'].includes(String(colRecord.title || '').trim());
 
         const { resizable: _stripResizable, ...safeColRecord } = colRecord;
 
         return {
           ...safeColRecord,
-          width: clampedWidth,
           colId,
-          _resizable: isResizable,
-          fixed,
+          fixed: allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined,
         };
       });
     };
 
     return mapColumns(rawCols);
-  }, [columns, resizableColumns, allowFixedColumns, minColumnWidth, maxColumnWidth, defaultColumnWidth, columnWidths]);
+  }, [columns, allowFixedColumns]);
 
   const orderedColumns = React.useMemo(() => {
     if (!preparedColumns || columnOrder.length === 0) return preparedColumns;
@@ -462,7 +264,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   const finalColumns = React.useMemo(() => {
     if (!orderedColumns) return orderedColumns;
     return (orderedColumns as any[]).map((col: any) => {
-      const { colId, _resizable, ...cleanCol } = col;
+      const { colId, ...cleanCol } = col;
       const originalOnHeaderCell = cleanCol.onHeaderCell;
       return {
         ...cleanCol,
@@ -472,17 +274,12 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
             : {};
           return {
             ...originalProps,
-            width: column.width,
-            resizable: _resizable,
             'data-col-id': colId,
-            onResize: _resizable
-              ? (newWidth: number) => handleColumnResize(colId, newWidth)
-              : undefined,
           };
         },
       };
     });
-  }, [orderedColumns, handleColumnResize]);
+  }, [orderedColumns]);
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, {
@@ -543,7 +340,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   const mergedComponents = React.useMemo(() => {
     const baseComponents = typeof components === 'object' && components !== null ? (components as any) : {};
-    const cellComponent = reorderableColumns ? SortableHeaderCell : ResizableHeaderCell;
+
+    if (!reorderableColumns) return baseComponents;
 
     return {
       ...baseComponents,
@@ -551,7 +349,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         ...(typeof baseComponents.header === 'object' && baseComponents.header !== null
           ? baseComponents.header
           : {}),
-        cell: cellComponent,
+        cell: SortableHeaderCell,
       },
     } as any;
   }, [components, reorderableColumns]);
@@ -569,7 +367,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         <Table
           {...rest}
           rowKey={rowKey}
-          className={mergedClassName}
+          className={className}
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}

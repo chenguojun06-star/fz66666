@@ -292,7 +292,6 @@ const CuttingManagement: React.FC = () => {
               <ResizableTable<CuttingTask>
                 stickyHeader
                 storageKey="cutting-task-table-v2"
-                autoFixedColumns={false}
                 columns={[
                   {
                     title: '图片',
@@ -489,7 +488,6 @@ const CuttingManagement: React.FC = () => {
                 dataSource={tasks.sortedTaskList}
                 rowKey={(row) => row.id || row.productionOrderId}
                 loading={tasks.taskLoading}
-                minColumnWidth={70}
                 pagination={{
                   current: tasks.taskQuery.page,
                   pageSize: tasks.taskQuery.pageSize,

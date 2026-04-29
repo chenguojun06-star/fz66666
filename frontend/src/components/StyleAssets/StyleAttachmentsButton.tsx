@@ -183,7 +183,6 @@ const StyleAttachmentsButton: React.FC<{
               pagination={false}
               scroll={{ x: 'max-content', y: tableScrollY }}
               storageKey={storageKey}
-              minColumnWidth={70}
             />
           </div>
         </div>

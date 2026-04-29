@@ -560,7 +560,6 @@ const StyleBomTab: React.FC<Props> = ({
             rowKey="id"
             scroll={{ x: 'max-content' }}
             storageKey={`style-bom-v2-${String(styleId)}`}
-            minColumnWidth={70}
           />
         )}
       </Form>
