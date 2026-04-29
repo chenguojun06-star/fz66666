@@ -22,6 +22,18 @@ server:
     max-keep-alive-requests: 200
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-placeholder-for-spring-ai-compatibility}
+      chat:
+        enabled: true
   main:
     allow-circular-references: true
   threads:
