@@ -322,18 +322,14 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     const defaultY = 'max(300px, calc(100vh - 330px))';
 
     if (!autoScrollY) {
-      if (!scroll) return { x: 'max-content' as const };
+      if (!scroll) return undefined;
       const nextScroll = { ...baseScroll };
-      if (!('x' in nextScroll)) {
-        nextScroll.x = 'max-content';
-      }
-      return nextScroll;
+      return Object.keys(nextScroll).length ? nextScroll : undefined;
     }
 
-    if (!scroll) return { x: 'max-content' as const, y: defaultY };
+    if (!scroll) return { y: defaultY };
     return {
       ...baseScroll,
-      x: baseScroll.x ?? 'max-content',
       y: baseScroll.y ?? defaultY,
     };
   }, [autoScrollY, scroll]);
