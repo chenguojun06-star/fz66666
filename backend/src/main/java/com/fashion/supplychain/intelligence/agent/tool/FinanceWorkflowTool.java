@@ -64,7 +64,7 @@ public class FinanceWorkflowTool implements AgentTool {
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("处理财务常见审批和付款中心动作。支持查看待付款、查看待审批报销与成品结算、直接批准/驳回报销、批准成品结算、发起付款、确认线下付款、驳回付款项。用户说“帮我看看财务待审批”“把这张报销通过”“发起这张物料对账付款”时必须调用。");
+        function.setDescription("处理财务常见审批和付款中心动作。支持查看待付款、查看待审批报销与成品结算、直接批准/驳回报销、批准成品结算、发起付款、确认线下付款、驳回付款项。用户说“帮我看看财务待审批”“把这张报销通过”“发起这张物料对账付款”时必须调用。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("action"));

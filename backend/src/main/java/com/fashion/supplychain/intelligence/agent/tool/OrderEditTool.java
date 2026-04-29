@@ -85,7 +85,7 @@ public class OrderEditTool implements AgentTool {
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
         function.setDescription("订单编辑工具。当用户说'修改订单备注'、'更新出货日期'、'把订单改为加急'、'修改交货日期'、'修改客户'时调用。" +
-                "必须提供订单ID和要修改的字段。");
+                "必须提供订单ID和要修改的字段。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
 
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);

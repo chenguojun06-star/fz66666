@@ -107,7 +107,7 @@ public class QualityInboundTool implements AgentTool {
         function.setDescription(
                 "成品质检入库。用户说'帮我做入库'、'这单入库'、'质检完成入库'、'你去做入库'时调用。" +
                 "先用 query_pending 确认待入库菲号，再用 submit 执行入库。" +
-                "submit 需要 orderNo 和 qualifiedQuantity，入库成功后系统自动更新订单进度和财务记录。");
+                "submit 需要 orderNo 和 qualifiedQuantity，入库成功后系统自动更新订单进度和财务记录。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("action"));

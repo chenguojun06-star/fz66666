@@ -88,7 +88,7 @@ public class CuttingTaskTool implements AgentTool {
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
         function.setDescription("裁剪单创建工具。当用户说'帮我建一个裁剪单'、'新增裁剪任务 款号XXX'、'开一个裁剪单'时调用。" +
-                "必须提供款号和至少一行颜色+尺码+数量。");
+                "必须提供款号和至少一行颜色+尺码+数量。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
 
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);

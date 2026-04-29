@@ -80,7 +80,7 @@ public class FinishedOutboundTool implements AgentTool {
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("成品大货出库操作。按SKU指定出库数量，支持同时关联订单号和快递信息。操作自动写入审计日志，可通过 tool_warehouse_op_log 查询历史。");
+        function.setDescription("成品大货出库操作。按SKU指定出库数量，支持同时关联订单号和快递信息。操作自动写入审计日志，可通过 tool_warehouse_op_log 查询历史。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("items"));

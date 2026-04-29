@@ -48,7 +48,7 @@ public class MaterialReceiveTool implements AgentTool {
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("处理面辅料到货、入库、领取和智能收货。支持查看智能收货预览、一键智能收货、单条领取、仓库单项领取、更新到货数量、到货并入库、撤回收货。当用户说“看看这单能不能智能收货”“把这张采购单登记到货”“这张面料直接到货入库”“帮我一键收完这单面辅料”时必须调用。");
+        function.setDescription("处理面辅料到货、入库、领取和智能收货。支持查看智能收货预览、一键智能收货、单条领取、仓库单项领取、更新到货数量、到货并入库、撤回收货。当用户说“看看这单能不能智能收货”“把这张采购单登记到货”“这张面料直接到货入库”“帮我一键收完这单面辅料”时必须调用。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("action"));

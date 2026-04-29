@@ -80,17 +80,26 @@ public class AiAdvisorChatResponseOrchestrator {
         return charts;
     }
 
-    /** 功能 G：从 toolRecords 中筛出高风险工具，生成二次确认条目 */
+    /** 双重确认：从 toolRecords 中筛出需确认的工具，生成确认条目 */
     private List<HighRiskActionInfo> extractHighRiskActions(List<AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
         List<HighRiskActionInfo> actions = new ArrayList<>();
         if (toolRecords == null || toolRecords.isEmpty()) return actions;
         for (AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
             if (rec == null || rec.toolName == null) continue;
-            if (AiAgentToolAccessService.isHighRisk(rec.toolName)) {
+            if (AiAgentToolAccessService.isWriteOperation(rec.toolName)) {
                 HighRiskActionInfo info = new HighRiskActionInfo();
                 info.setToolName(rec.toolName);
-                info.setDescription("工具 " + rec.toolName + " 为高风险操作，执行前请再次确认");
-                info.setSeverity("warn");
+                String label = AiAgentToolAccessService.getConfirmLabel(rec.toolName);
+                AiAgentToolAccessService.ConfirmLevel level = AiAgentToolAccessService.getConfirmLevel(rec.toolName);
+                info.setConfirmLevel(level.name().toLowerCase());
+                info.setOperationLabel(label);
+                if (level == AiAgentToolAccessService.ConfirmLevel.HIGH_RISK) {
+                    info.setDescription(label + "为高风险操作，执行前请确认");
+                    info.setSeverity("warn");
+                } else {
+                    info.setDescription(label + "需要确认后执行");
+                    info.setSeverity("info");
+                }
                 Map<String, Object> payload = new LinkedHashMap<>();
                 payload.put("arguments", rec.args);
                 payload.put("resultPreview", rec.rawResult != null

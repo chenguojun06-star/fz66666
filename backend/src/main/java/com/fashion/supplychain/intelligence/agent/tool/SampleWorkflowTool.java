@@ -62,7 +62,7 @@ public class SampleWorkflowTool implements AgentTool {
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("处理样衣开发与样板生产。支持查看样衣开发状态、启动/完成样衣阶段、更新样衣进度、提交样衣审核、推送到下单管理、执行样板领取/完成/入库/审核。用户说“把这款样衣开工”“把样衣进度改到80%”“样衣审核通过”“把这款推到下单管理”“让样板入库”时必须调用。");
+        function.setDescription("处理样衣开发与样板生产。支持查看样衣开发状态、启动/完成样衣阶段、更新样衣进度、提交样衣审核、推送到下单管理、执行样板领取/完成/入库/审核。用户说“把这款样衣开工”“把样衣进度改到80%”“样衣审核通过”“把这款推到下单管理”“让样板入库”时必须调用。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("action"));

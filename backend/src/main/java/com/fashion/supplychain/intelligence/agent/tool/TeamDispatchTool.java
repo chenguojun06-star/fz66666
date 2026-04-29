@@ -43,7 +43,7 @@ public class TeamDispatchTool implements AgentTool {
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
         function.setDescription("把任务分派给真实员工处理。会自动识别责任岗位、匹配系统内人员并发送站内通知。"
-                + "也支持查询协同状态、接单、开始处理、完成回写。当用户说“通知跟单跟进”“安排采购处理缺料”“找财务确认回款”“帮我找人处理这单”“谁在处理这单”“我接单了”“我处理完成了”时调用。");
+                + "也支持查询协同状态、接单、开始处理、完成回写。当用户说“通知跟单跟进”“安排采购处理缺料”“找财务确认回款”“帮我找人处理这单”“谁在处理这单”“我接单了”“我处理完成了”时调用。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         function.setParameters(parameters);
