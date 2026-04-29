@@ -138,9 +138,49 @@ const SystemStatusTab: React.FC = () => {
               { title: '租户ID', dataIndex: 'tenantId', width: 80 },
               { title: '租户名称', dataIndex: 'tenantName', ellipsis: true },
               {
-                title: '人员数量', dataIndex: 'userCount', width: 120,
+                title: '人员数量',
+                width: 180,
                 sorter: (a: any, b: any) => a.userCount - b.userCount,
-                render: (v: number) => <Text strong style={{ color: v > 0 ? undefined : '#999' }}>{v}</Text>,
+                render: (_: any, r: any) => (
+                  <Space size={4}>
+                    <Text strong style={{ color: r.userCount > 0 ? undefined : '#999' }}>{r.userCount}</Text>
+                    {(r.pendingUsers ?? 0) > 0 && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        （{r.activeUsers ?? 0} 活跃 + {r.pendingUsers} 待审）
+                      </Text>
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                title: '人员上限',
+                dataIndex: 'maxUsers',
+                width: 90,
+                render: (v: number) =>
+                  (!v || v <= 0 || v >= 9999)
+                    ? <Text type="secondary">不限</Text>
+                    : <Text>{v}</Text>,
+              },
+              {
+                title: '使用率',
+                width: 160,
+                render: (_: any, r: any) => {
+                  const max = r.maxUsers;
+                  if (!max || max <= 0 || max >= 9999) return <Text type="secondary">-</Text>;
+                  const active = r.activeUsers ?? r.userCount;
+                  const pct = Math.min(100, Math.round((active / max) * 100));
+                  return (
+                    <Space size={6}>
+                      <Progress
+                        percent={pct}
+                        size="small"
+                        status={pct >= 100 ? 'exception' : pct >= 80 ? 'active' : undefined}
+                        style={{ width: 80 }}
+                      />
+                      <Text type="secondary" style={{ fontSize: 12 }}>{active}/{max}</Text>
+                    </Space>
+                  );
+                },
               },
             ]}
           />

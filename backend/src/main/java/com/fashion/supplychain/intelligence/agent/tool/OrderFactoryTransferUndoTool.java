@@ -1,7 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;

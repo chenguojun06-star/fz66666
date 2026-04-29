@@ -11,6 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/finance/period")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class FinancePeriodController {
 
     private final FinancePeriodOrchestrator periodOrchestrator;

@@ -1,0 +1,32 @@
+page {
+  --xiaoyun-primary: #1677ff;
+  --xiaoyun-primary-bg: #e6f4ff;
+  --xiaoyun-primary-border: #91caff;
+  --xiaoyun-success: #52c41a;
+  --xiaoyun-success-bg: #f6ffed;
+  --xiaoyun-success-border: #b7eb8f;
+  --xiaoyun-warning: #fa8c16;
+  --xiaoyun-warning-bg: #fff7e6;
+  --xiaoyun-warning-border: #ffd591;
+  --xiaoyun-danger: #ff4d4f;
+  --xiaoyun-danger-bg: #fff1f0;
+  --xiaoyun-danger-border: #ffa39e;
+  --xiaoyun-text-primary: rgba(0,0,0,0.88);
+  --xiaoyun-text-secondary: rgba(0,0,0,0.65);
+  --xiaoyun-text-tertiary: rgba(0,0,0,0.45);
+  --xiaoyun-bg-card: #ffffff;
+  --xiaoyun-bg-page: #f5f5f5;
+  --xiaoyun-border-card: #f0f0f0;
+  --xiaoyun-radius-sm: 6px;
+  --xiaoyun-radius-md: 8px;
+  --xiaoyun-radius-lg: 12px;
+  --xiaoyun-font-xs: 20rpx;
+  --xiaoyun-font-sm: 22rpx;
+  --xiaoyun-font-base: 24rpx;
+  --xiaoyun-font-lg: 28rpx;
+  --xiaoyun-font-xl: 34rpx;
+  --xiaoyun-spacing-xs: 8rpx;
+  --xiaoyun-spacing-sm: 16rpx;
+  --xiaoyun-spacing-md: 24rpx;
+  --xiaoyun-spacing-lg: 32rpx;
+}

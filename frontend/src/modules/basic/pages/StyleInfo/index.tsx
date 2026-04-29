@@ -196,7 +196,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 disabled: !currentStyle?.id,
                 children: (
                   <StyleBomTab
-                    styleId={currentStyle?.id}
+                    styleId={currentStyle?.id ?? ''}
                     sizeColorConfig={colorSize.sizeColorConfig}
                     readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
                     bomAssignee={(currentStyle as any)?.bomAssignee}
@@ -212,7 +212,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 disabled: !currentStyle?.id,
                 children: (
                   <StylePatternTab
-                    styleId={currentStyle?.id}
+                    styleId={currentStyle?.id ?? ''}
                     sizeColorConfig={colorSize.sizeColorConfig}
                     readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
                     patternAssignee={(currentStyle as any)?.patternAssignee}
@@ -233,8 +233,8 @@ const StyleInfoDetailPage: React.FC = () => {
                 disabled: !currentStyle?.id,
                 children: (
                   <StyleProductionTab
-                    styleId={currentStyle?.id}
-                    styleNo={currentStyle?.styleNo}
+                    styleId={currentStyle?.id ?? ''}
+                    styleNo={currentStyle?.styleNo ?? ''}
                     productionReqRows={production.productionReqRows}
                     productionReqRowCount={production.productionReqRowCount}
                     productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
@@ -269,8 +269,8 @@ const StyleInfoDetailPage: React.FC = () => {
                 disabled: !currentStyle?.id,
                 children: (
                   <StyleSecondaryProcessTab
-                    styleId={currentStyle?.id}
-                    styleNo={currentStyle?.styleNo}
+                    styleId={currentStyle?.id ?? ''}
+                    styleNo={currentStyle?.styleNo ?? ''}
                     readOnly={Boolean((currentStyle as any)?.secondaryCompletedTime)}
                     secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
                     secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
@@ -286,8 +286,8 @@ const StyleInfoDetailPage: React.FC = () => {
                 disabled: !currentStyle?.id,
                 children: (
                   <StyleProcessTab
-                    styleId={currentStyle?.id}
-                    styleNo={currentStyle?.styleNo}
+                    styleId={currentStyle?.id ?? ''}
+                    styleNo={currentStyle?.styleNo ?? ''}
                     readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
                     processAssignee={(currentStyle as any)?.processAssignee}
                     processStartTime={(currentStyle as any)?.processStartTime}
@@ -300,13 +300,13 @@ const StyleInfoDetailPage: React.FC = () => {
                 key: '3',
                 label: '报价单',
                 disabled: !currentStyle?.id,
-                children: <StyleQuotationTab styleId={currentStyle?.id} styleNo={currentStyle?.styleNo} totalQty={colorSize.totalMatrixQty} />
+                children: <StyleQuotationTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} totalQty={colorSize.totalMatrixQty} />
               },
               {
                 key: '4',
                 label: '附件文件',
                 disabled: !currentStyle?.id,
-                children: <StyleAttachmentTab styleId={currentStyle?.id} styleNo={currentStyle?.styleNo} />
+                children: <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
               }
             ]}
           />

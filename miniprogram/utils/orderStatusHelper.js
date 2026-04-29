@@ -87,7 +87,7 @@ function getStatusColor(status) {
     canceled: COLOR_ERROR,
     paused: COLOR_WARNING,
     returned: COLOR_ERROR,
-    closed: COLOR_DEFAULT,
+    closed: COLOR_SUCCESS,
     archived: COLOR_DEFAULT,
   };
   return colorMap[s] || COLOR_FALLBACK;

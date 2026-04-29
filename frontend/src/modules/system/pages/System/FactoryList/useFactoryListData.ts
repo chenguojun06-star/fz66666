@@ -102,7 +102,7 @@ export function useFactoryListData() {
     form.setFieldsValue({ factoryCode: factoryModal.data?.factoryCode, factoryName: factoryModal.data?.factoryName, contactPerson: factoryModal.data?.contactPerson, contactPhone: factoryModal.data?.contactPhone, managerId: factoryModal.data?.managerId, address: factoryModal.data?.address, dailyCapacity: factoryModal.data?.dailyCapacity, status: factoryModal.data?.status || 'inactive', supplierType: factoryModal.data?.supplierType || 'MATERIAL', factoryType: factoryModal.data?.factoryType || 'INTERNAL', parentOrgUnitId: factoryModal.data?.parentOrgUnitId, businessLicense: (factoryModal.data as any)?.businessLicense });
   }, [activeTab, dialogMode, factoryModal.data, factoryModal.visible, form]);
 
-  const openDialog = useCallback((mode: DialogMode, factory?: FactoryType) => { setDialogMode(mode); factoryModal.open(factory || null); }, [factoryModal]);
+  const openDialog = useCallback((mode: DialogMode, factory?: FactoryType) => { setDialogMode(mode); factoryModal.open(factory ?? undefined); }, [factoryModal]);
   const closeDialog = useCallback(() => { factoryModal.close(); form.resetFields(); }, [factoryModal, form]);
 
   const openRemarkModal = useCallback((title: string, okText: string, okButtonProps: any, onConfirm: (remark: string) => Promise<void>) => {

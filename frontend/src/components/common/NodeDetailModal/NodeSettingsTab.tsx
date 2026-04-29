@@ -156,7 +156,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           min={0}
           precision={0}
           value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
-          onChange={(v) => updateNodeData('assigneeQuantity', v)}
+          onChange={(v) => updateNodeData('assigneeQuantity', v ?? undefined)}
           disabled={disableEdit}
           style={{ width: '100%', minWidth: 0 }}
         />
@@ -224,7 +224,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
       {currentNodeData.history && currentNodeData.history.length > 0 ? (
         <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, padding: '10px' }}>
           {currentNodeData.history.slice().reverse().map((h, idx) => (
-            <div key={`${h.time}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: idx === currentNodeData.history.length - 1 ? 'none' : '1px solid var(--color-border)' }}>
+            <div key={`${h.time}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: idx === currentNodeData.history!.length - 1 ? 'none' : '1px solid var(--color-border)' }}>
               <div style={{ color: 'var(--color-text-primary)' }}>{h.operatorName || '-'}</div>
               <div style={{ color: 'var(--color-text-secondary)' }}>{formatDelegationTime(h.time)}</div>
               <div style={{ color: 'var(--color-text-secondary)', flex: 1 }}>{h.changes || '-'}</div>

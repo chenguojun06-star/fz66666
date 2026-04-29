@@ -12,10 +12,8 @@ import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrde
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.style.entity.ProductSku;
-import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
-import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

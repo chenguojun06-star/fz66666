@@ -124,7 +124,7 @@ export const useProcessDetailData = (
           pageSize: 999,
         },
       });
-      let records = [];
+      let records: CuttingBundle[] = [];
       if (res.code === 200 && res.data?.records) {
         records = res.data.records;
       } else if (Array.isArray(res.data)) {

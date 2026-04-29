@@ -1,0 +1,153 @@
+<!-- 质检验收弹窗（2026-06 恢复弹窗模式，原已改为页面跳转） -->
+<view wx:if="{{qualityModal.show}}" class="modal-backdrop" catchtap="closeQualityModal">
+  <view class="modal-wrap quality-modal" catchtap="stopPropagation">
+    <view class="modal-container">
+
+      <!-- 头部 -->
+      <view class="modal-header">
+        <text class="modal-title">质检验收</text>
+        <view class="modal-close modal-close-hover" bindtap="closeQualityModal">✕</view>
+      </view>
+
+      <!-- 菲号 / 订单信息 -->
+      <view wx:if="{{qualityModal.detail}}" class="modal-body">
+        <view class="qm-info-row">
+          <view class="qm-info-item">
+            <text class="qm-info-label">订单</text>
+            <text class="qm-info-value">{{qualityModal.detail.orderNo}}</text>
+          </view>
+          <view wx:if="{{qualityModal.detail.bundleNo}}" class="qm-info-item">
+            <text class="qm-info-label">菲号</text>
+            <text class="qm-info-value">{{qualityModal.detail.bundleNo}}</text>
+          </view>
+          <view wx:if="{{qualityModal.detail.styleNo}}" class="qm-info-item">
+            <text class="qm-info-label">款号</text>
+            <text class="qm-info-value">{{qualityModal.detail.styleNo}}</text>
+          </view>
+          <view class="qm-info-item">
+            <text class="qm-info-label">数量</text>
+            <text class="qm-info-value">{{qualityModal.detail.quantity}}件</text>
+          </view>
+        </view>
+
+        <!-- 质检结果 -->
+        <view class="qm-section">
+          <text class="qm-section-title">质检结果 <text class="required-star">*</text></text>
+          <view class="qm-radio-group">
+            <view
+              class="qm-radio {{qualityModal.result === 'qualified' ? 'active qualified' : ''}}"
+              hover-class="qm-radio-hover"
+              data-field="result"
+              data-value="qualified"
+              bindtap="onSelectQualityResult">
+              <view class="qm-radio-icon">✓</view>
+              <text>合格</text>
+            </view>
+            <view
+              class="qm-radio {{qualityModal.result === 'unqualified' ? 'active unqualified' : ''}}"
+              hover-class="qm-radio-hover"
+              data-field="result"
+              data-value="unqualified"
+              bindtap="onSelectQualityResult">
+              <view class="qm-radio-icon">✗</view>
+              <text>不合格</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 不合格明细（仅不合格时显示） -->
+        <view wx:if="{{qualityModal.result === 'unqualified'}}" class="qm-section qm-defective">
+
+          <!-- 不合格数量 -->
+          <view class="qm-field">
+            <text class="qm-field-label">不合格件数（不填则默认全部）</text>
+            <input
+              class="qm-input"
+              type="number"
+              placeholder="输入次品件数"
+              value="{{qualityModal.unqualifiedQuantity}}"
+              bindinput="onDefectiveQuantityInput"
+            />
+          </view>
+
+          <!-- 缺陷类别 -->
+          <view class="qm-field">
+            <text class="qm-field-label">缺陷类别</text>
+            <picker
+              mode="selector"
+              range="{{defectCategories}}"
+              value="{{qualityModal.defectCategory}}"
+              bindchange="onQmSelectorTap"
+              data-field="defectCategory">
+              <view class="qm-picker-view">
+                <text>{{defectCategories[qualityModal.defectCategory]}}</text>
+                <text class="qm-picker-arrow">›</text>
+              </view>
+            </picker>
+          </view>
+
+          <!-- 处理方式 -->
+          <view class="qm-field">
+            <text class="qm-field-label">处理方式</text>
+            <picker
+              mode="selector"
+              range="{{handleMethods}}"
+              value="{{qualityModal.handleMethod}}"
+              bindchange="onQmSelectorTap"
+              data-field="handleMethod">
+              <view class="qm-picker-view">
+                <text>{{handleMethods[qualityModal.handleMethod]}}</text>
+                <text class="qm-picker-arrow">›</text>
+              </view>
+            </picker>
+          </view>
+
+          <!-- 不良品照片 -->
+          <view class="qm-field">
+            <text class="qm-field-label">照片（可选，最多5张）</text>
+            <view class="qm-images">
+              <view wx:for="{{qualityModal.images}}" wx:key="*this" class="qm-image-item">
+                <image class="qm-image" src="{{item}}" mode="aspectFill" />
+                <view class="qm-image-del" data-index="{{index}}" bindtap="onDeleteQualityImage">×</view>
+              </view>
+              <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload qm-image-upload-hover" bindtap="onUploadQualityImage">
+                <text class="qm-upload-icon">📷</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 备注 -->
+        <view class="qm-field">
+          <text class="qm-field-label">备注</text>
+          <textarea
+            class="qm-textarea"
+            value="{{qualityModal.remark}}"
+            bindinput="onRemarkInput"
+            placeholder="可填写质检备注"
+            maxlength="500"
+            auto-height
+          />
+        </view>
+
+      </view>
+
+      <!-- 底部按钮 -->
+      <view class="modal-footer">
+        <view
+          class="modal-btn cancel"
+          hover-class="modal-btn-hover"
+          bindtap="closeQualityModal">
+          取消
+        </view>
+        <view
+          class="modal-btn confirm {{!qualityModal.result ? 'confirm-disabled' : ''}}"
+          hover-class="modal-btn-hover confirm-hover"
+          bindtap="submitQualityResult">
+          提交质检
+        </view>
+      </view>
+
+    </view>
+  </view>
+</view>

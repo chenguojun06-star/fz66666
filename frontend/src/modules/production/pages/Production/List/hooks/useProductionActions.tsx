@@ -91,7 +91,7 @@ export function useProductionActions({
       const urgencyLevel: ProductionOrder['urgencyLevel'] =
         values.urgencyLevel === 'urgent' ? 'urgent' : 'normal';
       await productionOrderApi.quickEdit({
-        id: editData?.id,
+        id: String(editData?.id ?? ''),
         ...values,
         urgencyLevel,
       });

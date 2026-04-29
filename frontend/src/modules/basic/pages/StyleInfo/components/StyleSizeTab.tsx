@@ -177,7 +177,7 @@ const StyleSizeTab: React.FC<Props> = ({
           startTime={sizeStartTime}
           completedTime={sizeCompletedTime}
           readOnly={readOnly}
-          onRefresh={onRefresh}
+          onRefresh={onRefresh ?? (() => {})}
           onBeforeComplete={async () => {
             if (!sizeColumns.length || !rows.length) {
               message.error('请先配置尺寸数据');

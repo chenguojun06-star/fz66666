@@ -7,8 +7,9 @@ import { isOrderFrozenByStatus } from '@/utils/api';
 
 /** 与卡片视图 getStatus 完全一致的 variant 计算 */
 function getRowVariant(record: ProductionOrder): 'normal' | 'warning' | 'danger' | 'scrapped' {
+  const s = String(record.status || '').trim().toLowerCase();
+  if (s === 'completed' || s === 'closed') return 'normal';
   if (isOrderFrozenByStatus(record)) return 'scrapped';
-  if (record.status === 'completed') return 'normal'; // 已完成用绿色 normal
   return getProgressColorStatus(record.plannedEndDate, record.status);
 }
 

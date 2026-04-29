@@ -254,7 +254,7 @@ const StyleProductionTab: React.FC<Props> = ({
         assignee={productionAssignee}
         startTime={productionStartTime}
         completedTime={productionCompletedTime}
-        onRefresh={onRefresh}
+        onRefresh={onRefresh ?? (() => {})}
       />
 
       {/* ===== 样衣审核区域 ===== */}

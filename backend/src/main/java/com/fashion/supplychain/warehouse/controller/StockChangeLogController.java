@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/warehouse/change-log")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class StockChangeLogController {
 
     private final StockChangeLogOrchestrator changeLogOrchestrator;

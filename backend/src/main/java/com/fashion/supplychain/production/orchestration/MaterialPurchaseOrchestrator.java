@@ -72,6 +72,9 @@ public class MaterialPurchaseOrchestrator {
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.ProcurementIntelligenceOrchestrator procurementIntelligenceOrchestrator;
+
     // ── Query ───────────────────────────────────────────────
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
@@ -86,7 +89,22 @@ public class MaterialPurchaseOrchestrator {
     }
 
     public Map<String, Object> listWithEnrichment(Map<String, Object> params) {
-        return helper.listWithEnrichment(params);
+        Map<String, Object> result = helper.listWithEnrichment(params);
+        appendProcurementIntelligenceSafely(result);
+        return result;
+    }
+
+    private void appendProcurementIntelligenceSafely(Map<String, Object> result) {
+        if (procurementIntelligenceOrchestrator == null || result == null) return;
+        try {
+            List<Map<String, Object>> scorecard = procurementIntelligenceOrchestrator.getSupplierScorecard();
+            if (scorecard != null && !scorecard.isEmpty()) {
+                result.put("supplierScorecard", scorecard);
+            }
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(getClass())
+                    .debug("[ProcurementIntel] 采购智能附加失败(不阻断): {}", e.getMessage());
+        }
     }
 
     public MaterialPurchase getById(String id) {

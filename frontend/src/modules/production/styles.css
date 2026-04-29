@@ -330,6 +330,7 @@
   align-items: stretch;
   position: relative;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
+  overflow: visible;
 }
 
 .progress-row:hover {
@@ -369,9 +370,8 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  /* overflow-x 滚动时必须让子元素高度包含底部标签（44px padding已在内层轨道div中），
-     wrapper 需要足够高度让 align-items:center 能正确居中 */
   overflow: visible;
+  padding-bottom: 40px;
 }
 
 /* ── 操作栏：hover 行时右上角横向胶囊浮层（与样衣开发一致） ─── */

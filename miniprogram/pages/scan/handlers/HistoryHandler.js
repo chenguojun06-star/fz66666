@@ -215,6 +215,11 @@ function _addRecordToGroup(group, record) {
     cuttingBundleId: record.cuttingBundleId || '',
     coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
     styleImage: getAuthedImageUrl(record.styleImage || record.coverImage || ''),
+    // 质检领取待处理：质检扫码 + quality_receive + 尚未确认（confirmTime 为空）
+    // 决定 scan-history.wxml 中"处理"按钮是否显示
+    isQualityReceive: String(record.scanType || '').toLowerCase() === 'quality'
+      && record.processCode === 'quality_receive'
+      && !record.confirmTime,
   });
 }
 

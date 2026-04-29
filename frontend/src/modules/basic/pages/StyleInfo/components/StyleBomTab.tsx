@@ -441,7 +441,7 @@ const StyleBomTab: React.FC<Props> = ({
         startTime={bomStartTime}
         completedTime={bomCompletedTime}
         readOnly={readOnly}
-        onRefresh={onRefresh}
+        onRefresh={onRefresh ?? (() => {})}
         onBeforeComplete={async () => {
           if (!data || data.length === 0) {
             message.error('请先配置BOM物料');

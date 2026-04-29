@@ -91,7 +91,7 @@ groups:
           summary: "JVM线程数过多"
           description: "实例 {{ $labels.instance }} 活跃线程数 {{ $value }} 超过400，持续5分钟"
 
-      - alert: RedisConnectionFailure
+      - alert: DatabaseConnectionTimeout
         expr: increase(hikaricp_connections_timeout_total[5m]) > 0
         for: 1m
         labels:
@@ -99,6 +99,15 @@ groups:
         annotations:
           summary: "数据库连接超时"
           description: "实例 {{ $labels.instance }} 最近5分钟内发生 {{ $value }} 次连接超时"
+
+      - alert: RedisConnectionFailure
+        expr: increase(lettuce_command_latency_duration_seconds_count{exception!=""}[5m]) > 0 or (redis_up == 0)
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis连接异常"
+          description: "实例 {{ $labels.instance }} Redis连接出现异常，请检查Redis服务状态"
 
       - alert: TooMany4xxErrors
         expr: rate(http_server_requests_seconds_count{status=~"4.."}[5m]) > 10

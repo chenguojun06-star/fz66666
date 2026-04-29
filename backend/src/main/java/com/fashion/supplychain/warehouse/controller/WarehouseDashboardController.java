@@ -3,6 +3,7 @@ package com.fashion.supplychain.warehouse.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.warehouse.dto.*;
 import com.fashion.supplychain.warehouse.orchestration.WarehouseDashboardOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.WarehouseIntelligenceOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +22,9 @@ public class WarehouseDashboardController {
 
     @Autowired
     private WarehouseDashboardOrchestrator orchestrator;
+
+    @Autowired(required = false)
+    private WarehouseIntelligenceOrchestrator warehouseIntelligenceOrchestrator;
 
     /**
      * 获取仓库统计数据
@@ -64,5 +68,29 @@ public class WarehouseDashboardController {
             @RequestParam(defaultValue = "fabric") String type) {
         log.debug("获取趋势数据, range={}, type={}", range, type);
         return Result.success(orchestrator.getTrendData(range, type));
+    }
+
+    @GetMapping("/intelligence/safety-stock-alerts")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> getSafetyStockAlerts() {
+        if (warehouseIntelligenceOrchestrator == null) return Result.success(java.util.Collections.emptyList());
+        try {
+            return Result.success(warehouseIntelligenceOrchestrator.checkSafetyStockAlerts());
+        } catch (Exception e) {
+            log.warn("[WarehouseIntel] 安全库存预警查询失败: {}", e.getMessage());
+            return Result.success(java.util.Collections.emptyList());
+        }
+    }
+
+    @GetMapping("/intelligence/expiry-alerts")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> getExpiryAlerts() {
+        if (warehouseIntelligenceOrchestrator == null) return Result.success(java.util.Collections.emptyList());
+        try {
+            return Result.success(warehouseIntelligenceOrchestrator.checkExpiryAlerts());
+        } catch (Exception e) {
+            log.warn("[WarehouseIntel] 过期预警查询失败: {}", e.getMessage());
+            return Result.success(java.util.Collections.emptyList());
+        }
     }
 }

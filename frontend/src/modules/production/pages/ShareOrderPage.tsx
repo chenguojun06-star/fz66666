@@ -145,7 +145,7 @@ const ShareOrderPage: React.FC = () => {
   }
 
   const ai = data.aiPrediction;
-  const riskColor = RISK_COLOR[ai?.riskLevel] ?? '#999';
+  const riskColor = RISK_COLOR[ai?.riskLevel ?? ''] ?? '#999';
   const smartNarrative = buildSmartNarrative(data);
   const daysLeft = getDaysLeft(data.plannedEndDate);
   const pageRiskTone = daysLeft != null && daysLeft < 0
@@ -277,21 +277,21 @@ const ShareOrderPage: React.FC = () => {
         )}
 
         {/* 最近扫码记录 */}
-        {data.recentScans?.length > 0 && (
+        {data.recentScans && data.recentScans.length > 0 && (
           <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 14 }}>最近生产记录</div>
-            {data.recentScans.map((s, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+            {data.recentScans.map((s: ScanEntry, i: number) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans!.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(57,255,20,0.14)', color: '#39ff14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
 
                   </div>
                   <div>
                     <div style={{ fontSize: 13, color: '#dff5ff', fontWeight: 500 }}>{s.processName || '工序'}</div>
-                    <div style={{ fontSize: 11, color: '#7fa7c2' }}>{formatTime(s.scanTime)}</div>
+                    <div style={{ fontSize: 11, color: '#7fa7c2' }}>{formatTime(s.scanTime as string | null | undefined)}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#00e5ff' }}>×{s.quantity}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#00e5ff' }}>×{s.quantity as React.ReactNode}</div>
               </div>
             ))}
           </div>

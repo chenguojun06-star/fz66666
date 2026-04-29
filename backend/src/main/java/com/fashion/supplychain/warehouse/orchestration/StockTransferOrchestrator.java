@@ -55,7 +55,7 @@ public class StockTransferOrchestrator {
         return Result.success(result);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<StockTransfer> create(StockTransfer transfer) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -88,7 +88,7 @@ public class StockTransferOrchestrator {
         return Result.success(transfer);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<StockTransfer> approve(String id) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -116,7 +116,7 @@ public class StockTransferOrchestrator {
         return Result.success(transfer);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<StockTransfer> complete(String id) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -144,7 +144,7 @@ public class StockTransferOrchestrator {
         return Result.success(transfer);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<Void> cancel(String id) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();

@@ -329,8 +329,9 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
   } = ctx;
   return (_: any, record: ProductionOrder) => {
     const frozen = isOrderFrozenByStatus(record);
-    const isClosed = record.status === 'scrapped' || String(record.status || '') === 'closed';
-    const ns = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
+    const isCompletedOrClosed = record.status === 'completed' || String(record.status || '') === 'closed';
+    const ns = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes))
+      .filter(n => !isDirectCuttingOrder(record) || !/采购|物料|备料|辅料|面料/.test(n.name || ''));
     const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
     const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
     const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
@@ -347,17 +348,19 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
     return (
       <div style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'stretch',
         justifyContent: 'flex-start',
         width: '100%',
+        alignSelf: 'stretch',
       }}>
         <div style={{
           display: 'flex',
           flex: 1,
           gap: 0,
           alignItems: 'stretch',
-          padding: '8px 12px 44px 12px',
+          padding: '0 12px',
           minWidth: progressTrackMinWidth,
+          overflow: 'visible',
         }}>
         {(() => {
           const orderLines = parseProductionOrderLines(record);
@@ -385,7 +388,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
           });
           const matrixPopoverContent = <ColorSizeMatrixPopoverContent model={orderMatrix} />;
           return (
-            <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0' }}>
+            <div style={{ display: 'flex', alignItems: 'stretch', flex: '1 1 0' }}>
               <Popover
                 content={matrixPopoverContent}
                 trigger="hover"
@@ -398,50 +401,51 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  width: 76,
+                  width: 78,
                   flex: '0 0 auto',
                   justifyContent: 'center',
-                  padding: 4,
                   position: 'relative',
                   cursor: orderMatrix.hasData ? 'pointer' : 'default',
                 }}>
                   <LiquidProgressLottie progress={100} size={68} nodeName="下单"
-                    paused={false} color1="#52c41a" color2="#95de64" />
+                    paused={frozen} color1={isCompletedOrClosed ? '#52c41a' : (frozen ? '#9ca3af' : '#52c41a')} color2={isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : '#95de64')} />
                   <div style={{
                     position: 'absolute',
-                    top: 'calc(100% + 4px)',
+                    top: 'calc(50% + 39px)',
                     left: 0,
                     right: 0,
-                    fontSize: 11,
-                    color: '#10b981',
-                    fontWeight: 600,
-                    lineHeight: 1.25,
-                    textAlign: 'center',
-                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
                   }}>
-                    {record.createTime ? dayjs(record.createTime as string).format('MM-DD') : '--'}
-                  </div>
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 20px)',
-                    left: 0,
-                    right: 0,
-                    fontSize: 11,
-                    color: '#555',
-                    fontWeight: 500,
-                    lineHeight: 1.2,
-                    textAlign: 'center',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    下单
+                    <div style={{
+                      fontSize: 14,
+                      color: '#333',
+                      fontWeight: 700,
+                      lineHeight: 1.2,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      下单
+                    </div>
+                    <div style={{
+                      fontSize: 11,
+                      color: '#6b7280',
+                      lineHeight: 1.2,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {record.createTime ? dayjs(record.createTime as string).format('MM-DD') : '--'}
+                    </div>
                   </div>
                 </div>
               </Popover>
-              <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
-                <div style={{ flex: 1, position: 'relative', height: 2, borderRadius: 999,
-                  background: colorWithAlpha('#52c41a', 0.28), overflow: 'hidden' }}>
+              <div style={{ flex: 1, alignSelf: 'center', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
+                <div style={{ flex: 1, position: 'relative', height: 1, borderRadius: 999,
+                  background: colorWithAlpha(isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : '#52c41a'), 0.28), overflow: 'hidden' }}>
                   <div style={{ width: '100%', height: '100%', borderRadius: 999,
-                    background: '#52c41a', transition: 'width 0.25s ease' }} />
+                    background: isCompletedOrClosed ? '#52c41a' : (frozen ? '#9ca3af' : '#52c41a'), transition: 'width 0.25s ease' }} />
                 </div>
               </div>
             </div>
@@ -465,11 +469,12 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
             ? (Number((record as any)?.warehousingQualifiedQuantity) || 0)
             : (nodeDoneMap?.[nodeName] || 0);
           const isProcureNode = /采购|物料|备料|辅料|面料/.test(nodeName);
-          const percent = isProcureNode
+          const rawPercent = isProcureNode
             ? (completedQty > 0 ? 100 : 0)
             : totalQty > 0
               ? Math.min(100, Math.round((completedQty / totalQty) * 100))
               : 0;
+          const percent = isCompletedOrClosed ? 100 : rawPercent;
           const remaining = totalQty - completedQty;
           const completionTime = isProcureNode
             ? ((record as any).procurementConfirmedAt
@@ -479,19 +484,39 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
              : (nodeTimeMap?.[nodeName]
                || (percent >= 100
                 ? getOrderStageCompletionTimeFallback(record, nodeName, String(node.progressStage || '').trim())
-                : '')
+                : (() => {
+                    const stageKey = String(node.progressStage || '').trim().toLowerCase();
+                    const nameKey = nodeName.toLowerCase();
+                    if (stageKey === 'tailprocess' || stageKey === 'tail' || nameKey.includes('尾部') || nameKey.includes('尾工')) {
+                      return (record as any).packagingEndTime || (record as any).ironingEndTime || '';
+                    }
+                    return '';
+                  })())
               );
+          const startTime = isProcureNode
+            ? ((record as any).procurementStartTime || '')
+            : (() => {
+                const stageKey = String(node.progressStage || '').trim().toLowerCase();
+                const nameKey = nodeName.toLowerCase();
+                if (stageKey === 'cutting' || nameKey.includes('裁剪')) return (record as any).cuttingStartTime || '';
+                if (stageKey === 'sewing' || stageKey === 'carsewing' || nameKey.includes('车缝')) return (record as any).sewingStartTime || (record as any).carSewingStartTime || '';
+                if (stageKey === 'secondaryprocess' || stageKey === 'secondary' || nameKey.includes('二次工艺')) return (record as any).secondaryProcessStartTime || '';
+                if (stageKey === 'warehousing' || nameKey.includes('入库')) return (record as any).warehousingStartTime || '';
+                if (stageKey === 'quality' || nameKey.includes('质检')) return (record as any).qualityStartTime || '';
+                if (stageKey === 'tailprocess' || stageKey === 'tail' || nameKey.includes('尾部') || nameKey.includes('尾工')) return (record as any).packagingStartTime || (record as any).ironingStartTime || '';
+                return '';
+              })();
           const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
           const segmentProgress = Math.min(1, percent / 100);
-          const nodePrimaryColor = isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate);
-          const nodeSecondaryColor = isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true);
+          const nodePrimaryColor = isCompletedOrClosed ? '#52c41a' : (frozen ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate));
+          const nodeSecondaryColor = isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true));
 
           return (
             <div
               key={node.id || index}
               style={{
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'stretch',
                 flex: '1 1 0',
               }}
             >
@@ -500,12 +525,11 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  width: 76,
+                  width: 78,
                   flex: '0 0 auto',
                   justifyContent: 'center',
                   cursor: frozen ? 'default' : 'pointer',
-                  padding: 4,
-                  opacity: isClosed ? 0.6 : percent >= 100 ? 0.75 : 1,
+                  opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : percent >= 100 ? 0.75 : 1),
                   position: 'relative',
                   zIndex: 1,
                 }}
@@ -577,38 +601,6 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   ? `${nodeLabel} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
                   : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeLabel} 详情`}
               >
-                {completionTime ? (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 4px)',
-                    left: 0,
-                    right: 0,
-                    fontSize: 11,
-                    color: percent >= 100 ? '#10b981' : '#6b7280',
-                    fontWeight: percent >= 100 ? 600 : 400,
-                    lineHeight: 1.25,
-                    textAlign: 'center',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {formatCompletionTime(completionTime)}
-                  </div>
-                ) : (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, fontSize: 11, color: '#d1d5db', lineHeight: 1.25, textAlign: 'center' }}>--</div>
-                )}
-                <div style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 20px)',
-                  left: 0,
-                  right: 0,
-                  fontSize: 11,
-                  color: '#333',
-                  fontWeight: 500,
-                  lineHeight: 1.2,
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {nodeLabel}
-                </div>
                 {(nodeType === 'quality' || nodeType === 'warehousing') ? (
                   <DefectTracePopover
                     orderId={String(record.id || '')}
@@ -616,7 +608,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   >
                     <LiquidProgressLottie
                       progress={percent}
-                      size={nodeType === 'quality' ? 80 : 68}
+                      size={nodeType === 'quality' ? 78 : 68}
                       nodeName={nodeName}
                       text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
                       subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}
@@ -637,14 +629,44 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                     color2={nodeSecondaryColor}
                   />
                 )}
+                <div style={{
+                  position: 'absolute',
+                  top: nodeType === 'quality' ? 'calc(50% + 44px)' : 'calc(50% + 39px)',
+                  left: 0,
+                  right: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                }}>
+                  <div style={{
+                    fontSize: 14,
+                    color: '#333',
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {nodeLabel}
+                  </div>
+                  <div style={{
+                    fontSize: 11,
+                    color: '#6b7280',
+                    lineHeight: 1.2,
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {startTime ? formatCompletionTime(startTime) : '--'} ~ {completionTime ? formatCompletionTime(completionTime) : '--'}
+                  </div>
+                </div>
               </div>
               {index < ns.length - 1 ? (
-                <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2 }}>
+                <div style={{ flex: 1, alignSelf: 'center', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2 }}>
                   <div
                     style={{
                       flex: 1,
                       position: 'relative',
-                      height: 2,
+                      height: 1,
                       borderRadius: 999,
                       background: colorWithAlpha(nodeSecondaryColor, 0.28),
                       overflow: 'hidden',

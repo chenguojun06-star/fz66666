@@ -8,8 +8,26 @@
 var api = require('../../../utils/api');
 var { DEBUG_MODE } = require('../../../config');
 
+/** 扫码结果通知停留时长：20 分钟 */
+var RESULT_DISMISS_MS = 20 * 60 * 1000;
+
 module.exports = {
   methods: {
+    /**
+     * 启动扫码结果 20 分钟自动消失定时器。
+     * 每次扫码（成功/失败/完成/离线缓存）后调用；再次扫码时旧 timer 被清除，实现"覆盖"语义。
+     */
+    _startResultDismissTimer: function() {
+      var self = this;
+      if (self._resultDismissTimer) clearTimeout(self._resultDismissTimer);
+      self._resultDismissTimer = setTimeout(function() {
+        self._resultDismissTimer = null;
+        if (self && self.data && self.data.lastResult) {
+          self.setData({ lastResult: null });
+        }
+      }, RESULT_DISMISS_MS);
+    },
+
     refreshMy: function() { this.loadMyPanel(true); },
 
     loadMyPanel: function(refresh) {
@@ -40,6 +58,8 @@ module.exports = {
       for (var k in result) { if (result.hasOwnProperty(k)) formattedResult[k] = result[k]; }
       var localRecord = { orderNo: result.orderNo || '', processCode: result.processCode || '', processName: result.processName || '', quantity: result.quantity || 0, success: true, time: new Date().toLocaleTimeString() };
       this.setData({ lastResult: formattedResult, lastLocalScanRecord: localRecord, quantity: '' });
+      wx.pageScrollTo({ scrollTop: 0, duration: 300 });
+      this._startResultDismissTimer();
       this.addToLocalHistory(formattedResult);
       this.startUndoTimer(formattedResult);
       try {
@@ -63,6 +83,8 @@ module.exports = {
       var errorResult = { success: false, message: msg, displayTime: new Date().toLocaleTimeString(), statusText: '失败', statusClass: 'error', errorAction: errorAction };
       var localRecord = { orderNo: error.orderNo || '', processCode: error.processCode || '', processName: error.processName || '', quantity: error.quantity || 0, success: false, time: new Date().toLocaleTimeString() };
       this.setData({ lastResult: errorResult, lastLocalScanRecord: localRecord });
+      wx.pageScrollTo({ scrollTop: 0, duration: 300 });
+      this._startResultDismissTimer();
     }
   }
 };

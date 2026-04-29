@@ -74,7 +74,7 @@ const RoleList: React.FC = () => {
   }, [fetchRoles]);
 
   const openDialog = (role?: Role) => {
-    roleModal.open(role || null);
+    roleModal.open(role ?? undefined);
     form.setFieldsValue({
       roleName: String(role?.roleName || ''),
       roleCode: String(role?.roleCode || ''),

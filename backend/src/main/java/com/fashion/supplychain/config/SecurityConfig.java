@@ -102,6 +102,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .requestMatchers("/api/system/tenant/apply").permitAll()
                         .requestMatchers("/api/system/tenant/public-list").permitAll()
                         .requestMatchers("/api/system/user/login").permitAll()
+                        .requestMatchers("/api/system/user/refresh-token").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register").permitAll()
                         // 文件下载：旧公共下载保持 permitAll（无租户信息），租户隔离文件要求认证
@@ -259,6 +260,15 @@ public class SecurityConfig implements WebMvcConfigurer {
             }
             if (!org.springframework.util.StringUtils.hasText(dsPass)) {
                 log.warn("数据库密码未配置，将使用空密码尝试连接");
+            }
+
+            String piiKey = environment == null ? null : environment.getProperty("app.security.pii-encryption-key");
+            String pk = piiKey == null ? "" : piiKey.trim();
+            if (!org.springframework.util.StringUtils.hasText(pk) || "defaultKeyChangeMe12345678".equals(pk)) {
+                throw new IllegalStateException("app.security.pii-encryption-key 未配置或使用默认值，请通过 APP_SECURITY_PII_ENCRYPTION_KEY 环境变量设置安全密钥");
+            }
+            if (pk.length() < 24) {
+                throw new IllegalStateException("app.security.pii-encryption-key 长度过短，至少 24 位");
             }
         };
     }

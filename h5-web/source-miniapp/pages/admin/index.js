@@ -9,13 +9,13 @@ const i18n = require('../../utils/i18n/index');
 
 function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName: _currentLanguageName }) {
   const items = [
-    { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/change-password/index' },
+    { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' },
     { id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' },
-    { id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/feedback/index' },
+    { id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/misc/feedback/index' },
   ];
 
   if (showInviteSection) {
-    items.splice(2, 0, { id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/invite/index' });
+    items.splice(2, 0, { id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/misc/invite/index' });
   }
 
   if (showApprovalEntry) {

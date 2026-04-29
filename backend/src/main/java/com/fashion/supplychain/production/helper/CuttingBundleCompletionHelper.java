@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
-import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;

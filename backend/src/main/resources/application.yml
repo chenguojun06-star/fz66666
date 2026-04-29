@@ -15,14 +15,18 @@ server:
   shutdown: graceful
   tomcat:
     threads:
-      max: 400        # 支持500+ VU（默认200，高并发时不足）
-      min-spare: 50   # 预热50个线程，减少冷启动延迟
-    accept-count: 500 # 等待队列增至500（默认100）
-    max-connections: 6000 # 最大连接数（NIO默认8192，适当限制）
+      max: 400
+      min-spare: 50
+    accept-count: 500
+    max-connections: 6000
+    max-keep-alive-requests: 200
 
 spring:
   main:
     allow-circular-references: true
+  threads:
+    virtual:
+      enabled: true
   servlet:
     multipart:
       max-file-size: 50MB
@@ -76,7 +80,7 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   flyway:
-    enabled: ${FLYWAY_ENABLED:false}
+    enabled: ${FLYWAY_ENABLED:true}
     baseline-on-migrate: true
     baseline-version: 1
     validate-on-migrate: false
@@ -169,6 +173,8 @@ fashion:
 app:
   auth:
     jwt-secret: ${APP_AUTH_JWT_SECRET:}
+    jwt-ttl-hours: ${APP_AUTH_JWT_TTL_HOURS:4}
+    refresh-token-ttl-hours: ${APP_AUTH_REFRESH_TOKEN_TTL_HOURS:72}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
     sms-login:
       code-ttl-seconds: ${APP_AUTH_SMS_LOGIN_CODE_TTL_SECONDS:300}
@@ -309,8 +315,18 @@ ai:
     api-url: https://ark.cn-beijing.volces.com/api/v3/chat/completions
     model: ${DOUBAO_MODEL:doubao-1-5-vision-pro-32k-250115}
     timeout-seconds: 60
+  spring-ai:
+    enabled: ${AI_SPRING_AI_ENABLED:true}
+    chat:
+      default-provider: ${AI_SPRING_AI_CHAT_DEFAULT_PROVIDER:deepseek}
+      options:
+        temperature: ${AI_SPRING_AI_CHAT_TEMPERATURE:0.7}
+        max-tokens: ${AI_SPRING_AI_CHAT_MAX_TOKENS:1024}
+    embedding:
+      enabled: ${AI_SPRING_AI_EMBEDDING_ENABLED:false}
+      default-provider: ${AI_SPRING_AI_EMBEDDING_DEFAULT_PROVIDER:voyage}
   gateway:
-    routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:direct}   # direct / failover / weighted
+    routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:legacy}   # legacy / spring-ai / failover / weighted
     fallback-enabled: ${AI_GATEWAY_FALLBACK_ENABLED:true}
     litellm:
       enabled: ${AI_LITELLM_ENABLED:false}
@@ -357,6 +373,14 @@ xiaoyun:
 serpapi:
   api-key: ${SERPAPI_KEY:}
   enabled: ${SERPAPI_ENABLED:false}
+
+# Spring AI 适配器配置（标准化层，渐进替换自研 AgentLoop）
+spring-ai:
+  adapter:
+    enabled: ${SPRING_AI_ADAPTER_ENABLED:true}
+    base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: ${SPRING_AI_ADAPTER_MODEL:deepseek-chat}
 
 tts:
   provider: ${TTS_PROVIDER:edge}

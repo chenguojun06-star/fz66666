@@ -12,7 +12,7 @@ import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -39,6 +39,9 @@ public class UserPermissionHelper {
 
     @Autowired
     private LoginLogService loginLogService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public Map<String, Object> me() {
         User user = resolveCurrentUser();
@@ -100,8 +103,7 @@ public class UserPermissionHelper {
         if (target == null) throw new NoSuchElementException("用户不存在");
         if (!java.util.Objects.equals(target.getTenantId(), tenantId)) throw new AccessDeniedException("无权操作其他租户的用户");
         if (target.getFactoryId() == null) throw new IllegalArgumentException("只能重置外发工厂成员的密码");
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        target.setPassword(encoder.encode(newPassword.trim()));
+        target.setPassword(passwordEncoder.encode(newPassword.trim()));
         userService.updateById(target);
         loginHelper.incrementPwdVersion(target.getId());
         saveOperationLog("user", String.valueOf(target.getId()), target.getUsername(), "ADMIN_RESET_PASSWORD", "管理员重置工厂成员密码");
@@ -133,8 +135,7 @@ public class UserPermissionHelper {
         if (userId.equals(callerUserId)) {
             throw new IllegalArgumentException("不能重置自己的密码，请使用修改密码功能");
         }
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        target.setPassword(encoder.encode("123456"));
+        target.setPassword(passwordEncoder.encode("123456"));
         userService.updateById(target);
         loginHelper.incrementPwdVersion(target.getId());
         saveOperationLog("user", userId, target.getUsername(), "OWNER_RESET_PASSWORD", "主账号重置员工密码为默认值");
@@ -145,9 +146,22 @@ public class UserPermissionHelper {
         QueryWrapper<User> q = new QueryWrapper<>();
         q.eq("tenant_id", tenantId).eq("is_tenant_owner", true).last("LIMIT 1");
         User owner = userService.getOne(q, false);
+        if (owner == null && tenantService != null) {
+            Tenant tenant = tenantService.getById(tenantId);
+            if (tenant != null && tenant.getOwnerUserId() != null) {
+                owner = userService.getById(tenant.getOwnerUserId());
+                if (owner != null && !java.util.Objects.equals(owner.getTenantId(), tenantId)) {
+                    owner = null;
+                }
+                if (owner != null && !Boolean.TRUE.equals(owner.getIsTenantOwner())) {
+                    owner.setIsTenantOwner(true);
+                    userService.updateById(owner);
+                    log.info("[resetTenantOwnerPassword] 修复 is_tenant_owner 标记: userId={}", owner.getId());
+                }
+            }
+        }
         if (owner == null) throw new NoSuchElementException("未找到该租户主账号");
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        owner.setPassword(encoder.encode(newPassword));
+        owner.setPassword(passwordEncoder.encode(newPassword));
         userService.updateById(owner);
         loginHelper.incrementPwdVersion(owner.getId());
         saveOperationLog("user", String.valueOf(owner.getId()), owner.getUsername(), "RESET_PASSWORD", "超管重置租户主账号密码: tenantId=" + tenantId);

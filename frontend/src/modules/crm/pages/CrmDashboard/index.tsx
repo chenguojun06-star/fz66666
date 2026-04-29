@@ -244,9 +244,9 @@ const CustomerManagement: React.FC = () => {
     setLoading(true);
     try {
       const res: ApiResult = await customerApi.list({ page, pageSize: pagination.pageSize, keyword: kw, status: st });
-      const data = res?.data ?? res;
-      setCustomers(data?.records ?? []);
-      setTotal(data?.total ?? 0);
+      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
+      setCustomers((data?.records as Customer[]) ?? []);
+      setTotal((data?.total as number) ?? 0);
     } catch {
       message.error('加载客户列表失败');
     } finally {
@@ -257,8 +257,8 @@ const CustomerManagement: React.FC = () => {
   const fetchStats = useCallback(async () => {
     try {
       const res: ApiResult = await customerApi.getStats();
-      const data = res?.data ?? res;
-      setStats({ total: data?.total ?? 0, activeCount: data?.activeCount ?? 0, newThisMonth: data?.newThisMonth ?? 0, vip: data?.vip ?? 0 });
+      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
+      setStats({ total: (data?.total as number) ?? 0, activeCount: (data?.activeCount as number) ?? 0, newThisMonth: (data?.newThisMonth as number) ?? 0, vip: (data?.vip as number) ?? 0 });
     } catch { /* 统计失败不影响主流程 */ }
   }, []);
 

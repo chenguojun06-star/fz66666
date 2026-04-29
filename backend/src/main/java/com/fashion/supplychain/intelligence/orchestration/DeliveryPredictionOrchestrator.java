@@ -56,6 +56,7 @@ public class DeliveryPredictionOrchestrator {
     private JdbcTemplate jdbcTemplate;
 
     private volatile Boolean predictionLogExtraColumnsReady;
+    private final java.util.concurrent.locks.ReentrantLock schemaCheckLock = new java.util.concurrent.locks.ReentrantLock();
 
     public DeliveryPredictionResponse predict(DeliveryPredictionRequest request) {
         DeliveryPredictionResponse resp = new DeliveryPredictionResponse();
@@ -272,7 +273,8 @@ public class DeliveryPredictionOrchestrator {
         if (predictionLogExtraColumnsReady != null) {
             return predictionLogExtraColumnsReady;
         }
-        synchronized (this) {
+        schemaCheckLock.lock();
+        try {
             if (predictionLogExtraColumnsReady != null) {
                 return predictionLogExtraColumnsReady;
             }
@@ -293,6 +295,8 @@ public class DeliveryPredictionOrchestrator {
                 predictionLogExtraColumnsReady = false;
             }
             return predictionLogExtraColumnsReady;
+        } finally {
+            schemaCheckLock.unlock();
         }
     }
 }

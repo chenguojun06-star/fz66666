@@ -38,6 +38,8 @@ import com.fashion.supplychain.production.helper.ScanRecordEnrichHelper;
 import com.fashion.supplychain.production.helper.UnitPriceResolver;
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
 import com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.ScanPrecheckFeedbackOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.OrderRiskTrackingOrchestrator;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 
 @Service
@@ -66,6 +68,8 @@ public class ScanRecordOrchestrator {
     @Autowired private ProductWarehousingHelper warehousingHelper;
     @Autowired private ScanUndoHelper scanUndoHelper;
     @Autowired private ScanRescanHelper scanRescanHelper;
+    @Autowired(required = false) private ScanPrecheckFeedbackOrchestrator scanPrecheckFeedbackOrchestrator;
+    @Autowired(required = false) private OrderRiskTrackingOrchestrator orderRiskTrackingOrchestrator;
 
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -85,6 +89,7 @@ public class ScanRecordOrchestrator {
             // 事务提交后执行：通知与状态提示（各自有 try/catch，失败不影响扫码结果）
             tryNotifyNextStage(safeParams, result);
             appendBundleStatusHints(safeParams, result);
+            recordScanFeedbackSafely(safeParams, result);
             return result;
         });
     }
@@ -390,4 +395,22 @@ public class ScanRecordOrchestrator {
     }
 
     private boolean hasText(String value) { return value != null && !value.trim().isEmpty(); }
+
+    private void recordScanFeedbackSafely(Map<String, Object> params, Map<String, Object> result) {
+        try {
+            if (result == null || !Boolean.TRUE.equals(result.get("success"))) return;
+            if (scanPrecheckFeedbackOrchestrator == null) return;
+            String orderNo = TextUtils.safeText(params.get("orderNo"));
+            String scanType = TextUtils.safeText(params.get("scanType"));
+            String userAction = "accepted";
+            Object precheckWarning = result.get("precheckWarning");
+            if (precheckWarning != null && hasText(String.valueOf(precheckWarning))) {
+                userAction = "warning_accepted";
+            }
+            scanPrecheckFeedbackOrchestrator.recordFeedback(orderNo, scanType,
+                    Collections.emptyList(), userAction, null);
+        } catch (Exception e) {
+            log.debug("[ScanFeedback] 扫码预检反馈记录失败（不阻断）: {}", e.getMessage());
+        }
+    }
 }

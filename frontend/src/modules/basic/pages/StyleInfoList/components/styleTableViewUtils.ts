@@ -14,6 +14,7 @@ export interface SmartStage {
   key: string;
   label: string;
   helper: string;
+  startTimeLabel: string;
   timeLabel: string;
   status: StageStatus;
   progress: number;
@@ -390,6 +391,7 @@ export const buildDevelopmentStage: StageBuilder = (record) => {
     key: 'development',
     label: '开发资料',
     helper: doneCount === checkpoints.length ? '资料齐套' : `待补 ${pendingLabels.slice(0, 2).join(' / ') || '资料'}`,
+    startTimeLabel: '',
     timeLabel: getLatestTimeLabel(checkpoints.map((item) => item.time)),
     status: doneCount === checkpoints.length ? 'done' : doneCount > 0 ? 'active' : 'waiting',
     progress: doneCount === checkpoints.length ? 100 : Math.max(clampPercent((doneCount / checkpoints.length) * 100), doneCount > 0 ? 24 : 0),
@@ -413,6 +415,7 @@ export const buildPatternStage: StageBuilder = (record) => {
     key: 'pattern',
     label: '纸样开发',
     helper: patternDone ? '纸样已完成' : record.patternAssignee ? `负责人 ${String(record.patternAssignee)}` : '等待处理',
+    startTimeLabel: formatNodeTime(record.patternStartTime),
     timeLabel: patternDone
       ? formatStageTimeRange(record.patternStartTime, record.patternCompletedTime)
       : formatNodeTime(record.patternStartTime),
@@ -438,6 +441,7 @@ export const buildSizePriceStage: StageBuilder = (record) => {
     key: 'sizePrice',
     label: '码数单价',
     helper: done ? '单价已锁定' : record.sizePriceAssignee ? `负责人 ${String(record.sizePriceAssignee)}` : '等待维护',
+    startTimeLabel: formatNodeTime(record.sizePriceStartTime),
     timeLabel: done
       ? formatStageTimeRange(record.sizePriceStartTime, record.sizePriceCompletedTime)
       : formatNodeTime(record.sizePriceStartTime),
@@ -463,6 +467,7 @@ export const buildSecondaryStage: StageBuilder = (record) => {
     key: 'secondary',
     label: '二次工艺',
     helper: done ? '工艺已锁定' : record.secondaryAssignee ? `负责人 ${String(record.secondaryAssignee)}` : '待安排',
+    startTimeLabel: formatNodeTime(record.secondaryStartTime),
     timeLabel: done
       ? formatStageTimeRange(record.secondaryStartTime, record.secondaryCompletedTime)
       : formatNodeTime(record.secondaryStartTime),
@@ -499,6 +504,7 @@ export const buildSampleStage: StageBuilder = (record) => {
         : started
           ? '已领取生产'
           : '等待纸样',
+    startTimeLabel: '',
     timeLabel: done
       ? (record.sampleCompletedTime
           ? formatNodeTime(record.sampleCompletedTime)
@@ -542,6 +548,7 @@ export const buildConfirmStage: StageBuilder = (record) => {
             : started
               ? '等待结果'
               : '未开始',
+    startTimeLabel: formatNodeTime(record.sampleReviewTime),
     timeLabel: done
       ? formatStageTimeRange(record.sampleReviewTime, record.completedTime)
       : formatNodeTime(record.sampleReviewTime || record.sampleCompletedTime),

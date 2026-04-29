@@ -2,14 +2,11 @@ package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
-import com.fashion.supplychain.production.mapper.ScanRecordMapper;
-import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +21,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**

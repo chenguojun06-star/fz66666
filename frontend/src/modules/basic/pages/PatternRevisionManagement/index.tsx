@@ -15,7 +15,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
-import RowActions from '@/components/common/RowActions';
+import RowActions, { type RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
@@ -409,10 +409,11 @@ const PatternRevisionManagement: React.FC = () => {
       fixed: isMobile ? undefined : 'right',
       width: 200,
       render: (_, record) => {
-        const actions = [];
+        const actions: RowAction[] = [];
 
         // 查看
         actions.push({
+          key: 'view',
           label: '查看',
           onClick: () => handleView(record),
         });
@@ -420,6 +421,7 @@ const PatternRevisionManagement: React.FC = () => {
         // 编辑（仅草稿）
         if (record.status === 'DRAFT') {
           actions.push({
+            key: 'edit',
             label: '编辑',
             onClick: () => handleEdit(record),
           });
@@ -428,6 +430,7 @@ const PatternRevisionManagement: React.FC = () => {
         // 提交审核（仅草稿）
         if (record.status === 'DRAFT') {
           actions.push({
+            key: 'submit',
             label: '提交',
             onClick: () => handleSubmit(record),
           });
@@ -436,10 +439,12 @@ const PatternRevisionManagement: React.FC = () => {
         // 审核操作（仅已提交）
         if (record.status === 'SUBMITTED') {
           actions.push({
+            key: 'approve',
             label: '通过',
             onClick: () => handleApprove(record),
           });
           actions.push({
+            key: 'reject',
             label: '拒绝',
             onClick: () => handleReject(record),
             danger: true,
@@ -449,6 +454,7 @@ const PatternRevisionManagement: React.FC = () => {
         // 完成（仅已审核）
         if (record.status === 'APPROVED') {
           actions.push({
+            key: 'complete',
             label: '完成',
             onClick: () => handleComplete(record),
           });
@@ -457,6 +463,7 @@ const PatternRevisionManagement: React.FC = () => {
         // 删除（仅草稿）
         if (record.status === 'DRAFT') {
           actions.push({
+            key: 'delete',
             label: '删除',
             onClick: () => handleDelete(record),
             danger: true,

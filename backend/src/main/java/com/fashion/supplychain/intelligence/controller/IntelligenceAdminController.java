@@ -58,6 +58,25 @@ public class IntelligenceAdminController {
     @Autowired
     private com.fashion.supplychain.intelligence.service.AgentStateStore agentStateStore;
 
+    @Autowired
+    private com.fashion.supplychain.intelligence.gateway.AiInferenceRouter aiInferenceRouter;
+
+    @Autowired
+    private AgentCheckpointService checkpointService;
+
+    @Autowired
+    private AgentMemoryService memoryService;
+
+    @Autowired
+    private AgentCardService agentCardService;
+
+    // ── AI推理路由状态 ──
+
+    @GetMapping("/inference-gateway/status")
+    public Result<Map<String, Object>> getInferenceGatewayStatus() {
+        return Result.success(aiInferenceRouter.getRoutingStatus());
+    }
+
     // ── 孤儿数据 ──
 
     @GetMapping("/orphan-data/scan")
@@ -277,5 +296,72 @@ public class IntelligenceAdminController {
     public Result<List<com.fashion.supplychain.intelligence.entity.AgentMeeting>> listMeetings(
             @RequestParam(defaultValue = "10") int limit) {
         return Result.success(agentMeetingOrchestrator.listByTenant(UserContext.tenantId(), limit));
+    }
+
+    // ── Checkpoint 管理 ──
+
+    @GetMapping("/checkpoint/history")
+    public Result<List<com.fashion.supplychain.intelligence.entity.AgentCheckpoint>> getCheckpointHistory(
+            @RequestParam String threadId) {
+        return Result.success(checkpointService.getCheckpointHistory(UserContext.tenantId(), threadId));
+    }
+
+    @PostMapping("/checkpoint/restore")
+    public Result<AgentState> restoreFromCheckpoint(@RequestParam String threadId) {
+        AgentState state = checkpointService.restoreFromCheckpoint(UserContext.tenantId(), threadId);
+        if (state == null) {
+            return Result.fail("未找到可恢复的检查点");
+        }
+        return Result.success(state);
+    }
+
+    // ── Agent Memory 管理 ──
+
+    @GetMapping("/memory/core")
+    public Result<List<com.fashion.supplychain.intelligence.entity.AgentMemoryCore>> getCoreMemory(
+            @RequestParam String agentId) {
+        return Result.success(memoryService.getAllCoreMemory(UserContext.tenantId(), agentId));
+    }
+
+    @PostMapping("/memory/core")
+    public Result<Void> setCoreMemory(@RequestBody Map<String, String> body) {
+        memoryService.setCoreMemory(UserContext.tenantId(),
+                body.get("agentId"), body.get("key"), body.get("value"));
+        return Result.success(null);
+    }
+
+    @GetMapping("/memory/archival")
+    public Result<List<com.fashion.supplychain.intelligence.entity.AgentMemoryArchival>> getArchivalMemory(
+            @RequestParam String agentId,
+            @RequestParam(required = false) String contentType,
+            @RequestParam(defaultValue = "20") int limit) {
+        return Result.success(memoryService.recallArchival(UserContext.tenantId(), agentId, contentType, limit));
+    }
+
+    @PostMapping("/memory/decay")
+    public Result<Integer> applyDecayCurve() {
+        return Result.success(memoryService.applyDecayCurve(UserContext.tenantId()));
+    }
+
+    @GetMapping("/memory/context")
+    public Result<String> getCompiledContext(
+            @RequestParam String agentId,
+            @RequestParam(defaultValue = "10") int coreLimit,
+            @RequestParam(defaultValue = "5") int archivalLimit) {
+        return Result.success(memoryService.compileContext(UserContext.tenantId(), agentId, coreLimit, archivalLimit));
+    }
+
+    // ── Agent Card 管理 ──
+
+    @GetMapping("/agent-card/discover")
+    public Result<List<com.fashion.supplychain.intelligence.entity.AgentCard>> discoverAgents(
+            @RequestParam(required = false) String skill) {
+        return Result.success(agentCardService.discoverAgents(UserContext.tenantId(), skill));
+    }
+
+    @GetMapping("/agent-card/{agentId}")
+    public Result<com.fashion.supplychain.intelligence.entity.AgentCard> getAgentCard(
+            @PathVariable String agentId) {
+        return Result.success(agentCardService.getAgent(UserContext.tenantId(), agentId));
     }
 }

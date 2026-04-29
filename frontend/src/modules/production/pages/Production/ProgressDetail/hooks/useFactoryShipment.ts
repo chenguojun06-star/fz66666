@@ -35,9 +35,9 @@ export function useFactoryShipment({ message }: {
     // 并发拉取：可发数量 + 已发明细汇总 + 历史记录
     try {
       const [shippableRes, detailSumRes, historyRes] = await Promise.allSettled([
-        factoryShipmentApi.shippable(record.id),
-        factoryShipmentApi.getOrderDetailSum(record.id),
-        factoryShipmentApi.listByOrder(record.id),
+        factoryShipmentApi.shippable(String(record.id)),
+        factoryShipmentApi.getOrderDetailSum(String(record.id)),
+        factoryShipmentApi.listByOrder(String(record.id)),
       ]);
       if (shippableRes.status === 'fulfilled' && shippableRes.value?.data) {
         setShippableInfo(shippableRes.value.data);
@@ -59,7 +59,7 @@ export function useFactoryShipment({ message }: {
       const values = await shipForm.validateFields();
       setShipLoading(true);
       const res = await factoryShipmentApi.ship({
-        orderId: shipModalOrder.id,
+        orderId: String(shipModalOrder.id),
         details,
         shipMethod: values.shipMethod,
         trackingNo: values.shipMethod === 'EXPRESS' ? values.trackingNo : undefined,

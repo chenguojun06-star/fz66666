@@ -242,15 +242,28 @@ export function usePayrollActions(deps: PayrollActionDeps) {
             params.endDate = dayjs(dateRange[1]).format('YYYY-MM-DD');
         }
         const qs = new URLSearchParams(params).toString();
-        const token = localStorage.getItem('token') || '';
-        const url = `/api/finance/tax-export/payroll-detail?${qs}&token=${encodeURIComponent(token)}`;
-        const link = document.createElement('a');
-        link.href = url;
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        message.success('财税导出已开始下载');
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+        fetch(`/api/finance/tax-export/payroll-detail?${qs}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` },
+        })
+            .then(res => {
+                if (!res.ok) throw new Error(`导出失败: ${res.status}`);
+                const filename = res.headers.get('Content-Disposition')?.match(/filename\*?=(?:UTF-8'')?(.+)/)?.[1] || 'payroll-export.xlsx';
+                return res.blob().then(blob => ({ blob, filename: decodeURIComponent(filename) }));
+            })
+            .then(({ blob, filename }) => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                message.success('财税导出已开始下载');
+            })
+            .catch(err => message.error(err.message || '导出失败'));
     };
 
     const handlePrintWageSlips = () => {

@@ -153,7 +153,7 @@ const InspectionDetail: React.FC = () => {
     if (!orderId) return;
     setAiLoading(true);
     qualityAiApi.getSuggestion(orderId)
-      .then((res: ApiResult) => { setAiSuggestion(res?.data ?? null); })
+      .then((res: ApiResult) => { setAiSuggestion((res?.data ?? null) as QualityAiSuggestionResult | null); })
       .catch(() => { message.warning('AI质检建议加载失败'); })
       .finally(() => setAiLoading(false));
   }, [orderId]);

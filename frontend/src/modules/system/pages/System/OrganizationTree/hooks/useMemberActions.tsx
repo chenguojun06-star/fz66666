@@ -107,7 +107,7 @@ export function useMemberActions(
         try {
           await organizationApi.removeMember(userId, remarkValue.trim());
           message.success('已移出');
-          organizationApi.members().then((m: Record<string, User[]>) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
+          organizationApi.members().then((m: Record<string, User[]>) => setMembersMap(m && typeof m === 'object' ? m : {})).catch((e) => { console.warn('[OrgTree] 成员列表刷新失败:', e?.message); });
         } catch (error: unknown) {
           message.error(error instanceof Error ? error.message : '移出失败');
         }
@@ -115,14 +115,13 @@ export function useMemberActions(
     });
   }, [modal, message, setMembersMap]);
 
-  // 设置外发工厂主账号（老板）
   const handleSetFactoryOwner = useCallback(async (user: User) => {
     if (!user.factoryId || !user.id) return;
     setSetOwnerLoading(String(user.id));
     try {
       await organizationApi.setFactoryOwner(String(user.id), String(user.factoryId));
       message.success(`已设置「${user.name || user.username}」为工厂主账号（老板）`);
-      organizationApi.members().then((m: Record<string, User[]>) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
+      organizationApi.members().then((m: Record<string, User[]>) => setMembersMap(m && typeof m === 'object' ? m : {})).catch((e) => { console.warn('[OrgTree] 成员列表刷新失败:', e?.message); });
     } catch (e: unknown) {
       const err = e as { message?: string };
       message.error(err?.message || '设置失败');

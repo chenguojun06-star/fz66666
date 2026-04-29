@@ -5,6 +5,7 @@ export interface SmartStage {
   key: string;
   label: string;
   helper: string;
+  startTimeLabel: string;
   timeLabel: string;
   status: StageStatus;
   progress: number;

@@ -79,6 +79,7 @@ export const useProgressColumns = ({
       title: '',
       key: 'progressNodes',
       align: 'left' as const,
+      onCell: () => ({ style: { overflow: 'visible' } }),
       render: createProgressNodesRender({
         progressNodesByStyleNo,
         boardStatsByOrder,

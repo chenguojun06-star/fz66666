@@ -7,6 +7,8 @@ import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
+import com.fashion.supplychain.intelligence.gateway.StreamChunkConsumer;
 import com.fashion.supplychain.intelligence.orchestration.AiCriticOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
@@ -32,7 +34,7 @@ import java.util.Set;
 @Component
 public class AgentLoopEngine {
 
-    @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+    @Autowired private AiInferenceGateway inferenceGateway;
     @Autowired private AiAgentToolExecHelper toolExecHelper;
     @Autowired private AiAgentEvidenceHelper evidenceHelper;
     @Autowired private AiCriticOrchestrator criticOrchestrator;
@@ -65,14 +67,14 @@ public class AgentLoopEngine {
                     || (iter == 1 && ctx.getMaxIterations() <= 3);
 
             if (isLikelyFinalRound && cb instanceof StreamingAgentLoopCallback) {
-                result = inferenceOrchestrator.chatStream("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools(),
+                result = inferenceGateway.chatStream("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools(),
                         (chunk, done) -> {
                             if (!chunk.isEmpty()) {
                                 cb.onAnswerChunk(chunk);
                             }
                         });
             } else {
-                result = inferenceOrchestrator.chat(
+                result = inferenceGateway.chat(
                         "agent-loop", ctx.getMessages(), ctx.getVisibleApiTools());
             }
 

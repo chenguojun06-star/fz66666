@@ -30,7 +30,7 @@ public class OrderDecisionSnapshot {
 
     private String factoryMode;
 
-    private String factoryId;
+    private Long factoryId;
 
     private String factoryName;
 
@@ -50,11 +50,11 @@ public class OrderDecisionSnapshot {
 
     private BigDecimal quotationUnitPrice;
 
-    private BigDecimal aiRecommendedUnitPrice;
-
     private String aiRecommendedPricingMode;
 
     private String aiRecommendedFactoryMode;
+
+    private BigDecimal aiRecommendedUnitPrice;
 
     private Integer orderQuantity;
 
@@ -67,6 +67,18 @@ public class OrderDecisionSnapshot {
     private String recommendationReason;
 
     private String pricingContextJson;
+
+    private String decisionType;
+
+    private String decisionData;
+
+    private String aiSuggestion;
+
+    private BigDecimal aiConfidence;
+
+    private String userChoice;
+
+    private String userModifiedFields;
 
     private String createdBy;
 

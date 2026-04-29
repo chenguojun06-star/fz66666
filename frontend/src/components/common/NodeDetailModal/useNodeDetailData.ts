@@ -233,8 +233,8 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     setRepairLoading(true);
     try {
       const res = await api.post<ApiResult>(`/production/process-tracking/${orderId}/repair-warehousing`);
-      const data = res?.data || {};
-      const repaired = data.repaired ?? 0;
+      const data = (res?.data ?? {}) as Record<string, unknown>;
+      const repaired = (data.repaired as number) ?? 0;
       if (repaired > 0) {
         message.success(`同步成功，已修复 ${repaired} 条入库跟踪记录`);
         loadProcessTrackingData();

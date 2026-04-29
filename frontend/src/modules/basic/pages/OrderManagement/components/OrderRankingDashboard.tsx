@@ -46,7 +46,7 @@ const RankingItem = memo(({ item, idx, onOrderClick }: {
       <div className="tooltip-item"><AppstoreOutlined /> 下单总件数: <b>{item.totalOrderQuantity || 0}件</b></div>
       <div className="tooltip-item"><UserOutlined /> 最新下单人: {item.latestOrderCreator || '-'}</div>
       <div className="tooltip-item"><CalendarOutlined /> 最新下单: {item.latestOrderTime ? dayjs(item.latestOrderTime).format('MM-DD') : '-'}</div>
-      {item.avgOrderCycle > 0 && (
+      {(item.avgOrderCycle ?? 0) > 0 && (
         <div className="tooltip-item"><ClockCircleOutlined /> 平均下单周期: <b>{item.avgOrderCycle}天</b></div>
       )}
       <div className="tooltip-hint"><TrophyOutlined /> 点击卡片快速下单</div>

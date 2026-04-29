@@ -69,11 +69,12 @@ export function renderStageProgressCell(
   const completed = Math.round((rate || 0) * total / 100);
   const percent = rate || 0;
   const frozen = isOrderFrozenByStatus(record);
-  const colorStatus = frozen ? 'default' : 'normal';
+  const isCompletedOrClosed = record.status === 'completed' || String(record.status || '') === 'closed';
+  const colorStatus = isCompletedOrClosed ? 'normal' : (frozen ? 'default' : 'normal');
 
   return (
     <div
-      style={{ ...PROGRESS_CELL_BASE, cursor: frozen ? 'default' : 'pointer', opacity: frozen ? 0.6 : 1 }}
+      style={{ ...PROGRESS_CELL_BASE, cursor: frozen ? 'default' : 'pointer', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
       onClick={(e) => {
         e.stopPropagation();
         if (frozen) return;
@@ -172,8 +173,10 @@ export function renderWarehousingCell(record: ProductionOrder, openProcessDetail
   const total = Number(record.cuttingQuantity || record.orderQuantity) || 1;
   const rate = Math.min(100, Math.round((qualified / total) * 100));
   const frozen = isOrderFrozenByStatus(record);
+  const isCompletedOrClosed = record.status === 'completed' || String(record.status || '') === 'closed';
 
   const getColor = () => {
+    if (isCompletedOrClosed) return 'var(--color-success)';
     if (frozen) return 'var(--color-border)';
     if (rate === 100) return 'var(--color-success)';
     if (rate > 0) return 'var(--color-primary)';
@@ -182,7 +185,7 @@ export function renderWarehousingCell(record: ProductionOrder, openProcessDetail
 
   return (
     <div
-      style={{ display: 'flex', flexDirection: 'column', cursor: frozen ? 'default' : 'pointer', padding: '4px 0', opacity: frozen ? 0.6 : 1 }}
+      style={{ display: 'flex', flexDirection: 'column', cursor: frozen ? 'default' : 'pointer', padding: '4px 0', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
       onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'warehousing'); }}
     >
       {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}

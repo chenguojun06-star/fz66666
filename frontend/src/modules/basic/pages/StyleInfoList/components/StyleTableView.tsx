@@ -92,7 +92,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   };
 
   const isStageDoneRow = (record: StyleInfo) => {
-    return buildConfirmStage(record as StyleRecord).status === 'done';
+    return buildConfirmStage(record as StyleRecord)?.status === 'done';
   };
 
   const hasPushedOrder = (record: StyleInfo) => Boolean((record as any).pushedToOrder);
@@ -335,7 +335,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                             ));
                           }}
                         >
-                          <div className="style-smart-stage__time">{stage.timeLabel}</div>
                           <div className="style-smart-stage__node">
                             <span className="style-smart-stage__ring" />
                             <span className="style-smart-stage__orbit" />
@@ -343,6 +342,11 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                             <span className="style-smart-stage__check" />
                           </div>
                           <div className="style-smart-stage__label">{stage.label}</div>
+                          <div className="style-smart-stage__time-combined">
+                            <span className="style-smart-stage__time-start-inline">{stage.startTimeLabel || '--'}</span>
+                            <span className="style-smart-stage__time-sep"> ~ </span>
+                            <span className="style-smart-stage__time-end-inline">{stage.timeLabel || '--'}</span>
+                          </div>
                         </button>
                       ))}
                     </div>

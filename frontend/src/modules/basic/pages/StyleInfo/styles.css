@@ -95,6 +95,7 @@
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06);
   align-items: stretch;
   position: relative;
+  overflow: visible;
 }
 
 .style-smart-row--normal {
@@ -359,8 +360,8 @@
 .style-smart-row__timeline-shell {
   position: relative;
   min-width: 0;
-  overflow-x: hidden;
-  padding: 10px 0 4px;
+  overflow: visible;
+  padding: 0 0 40px;
   align-self: center;
   width: 100%;
 }
@@ -368,8 +369,8 @@
 .style-smart-row__timeline-track,
 .style-smart-row__timeline-progress {
   position: absolute;
-  top: 59px;
-  height: 2px;
+  top: 84px;
+  height: 1px;
   border-radius: 999px;
 }
 
@@ -400,26 +401,58 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   text-align: center;
-  padding: 0 8px;
+  padding: 60px 8px 0;
   border: 0;
   background: transparent;
   cursor: pointer;
+  justify-content: flex-start;
+  overflow: visible;
 }
 
 .style-smart-stage__time {
-  min-height: 22px;
-  color: var(--color-text-tertiary);
-  font-size: 13px;
+  min-height: 16px;
+  color: #10b981;
+  font-size: 12px;
   line-height: 1.45;
+  font-weight: 600;
+}
+
+.style-smart-stage__time-start {
+  min-height: 16px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.style-smart-stage__time-combined {
+  min-height: 16px;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.style-smart-stage__time-start-inline {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.style-smart-stage__time-sep {
+  color: #9ca3af;
+  margin: 0 1px;
+}
+
+.style-smart-stage__time-end-inline {
+  color: #10b981;
   font-weight: 600;
 }
 
 .style-smart-stage__node {
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -469,13 +502,13 @@
 
 .style-smart-stage__label {
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .style-smart-stage__helper {
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -489,20 +522,19 @@
 }
 
 .style-smart-stage--done .style-smart-stage__ring {
-  border-color: #86efac;
-  background: linear-gradient(180deg, #effcf4 0%, #dcfce7 100%);
+  border-color: #52c41a;
+  background: #ffffff;
+  border-width: 3px;
+  box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.08);
 }
 
 .style-smart-stage--done .style-smart-stage__orbit {
-  inset: 9px;
-  background: conic-gradient(from 0deg, rgba(34, 197, 94, 0.96) 0deg, rgba(34, 197, 94, 0.96) 360deg);
-  animation: none;
-  box-shadow: none;
+  display: none;
 }
 
 .style-smart-stage--done .style-smart-stage__core {
-  width: 18px;
-  height: 18px;
+  width: 60%;
+  height: 60%;
   background: #ffffff;
   border: 0;
   box-shadow: none;
@@ -512,6 +544,8 @@
 .style-smart-stage--done .style-smart-stage__check {
   opacity: 1;
   transform: translateY(-2px) rotate(45deg) scale(0.9);
+  border-right: 2.5px solid #52c41a;
+  border-bottom: 2.5px solid #52c41a;
 }
 
 .style-smart-stage--active .style-smart-stage__time,

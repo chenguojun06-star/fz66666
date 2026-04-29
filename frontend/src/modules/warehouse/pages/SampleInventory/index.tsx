@@ -471,7 +471,7 @@ const SampleInventory: React.FC = () => {
 
         <LoanModal
           visible={loanModal.visible}
-          stock={loanModal.data}
+          stock={loanModal.data ?? undefined}
           onCancel={loanModal.close}
           onSuccess={() => {
             loanModal.close();
@@ -481,7 +481,7 @@ const SampleInventory: React.FC = () => {
 
         <LoanHistoryModal
           visible={historyDrawer.visible}
-          stock={historyDrawer.data}
+          stock={historyDrawer.data ?? undefined}
           onClose={historyDrawer.close}
           onRefresh={loadData}
         />

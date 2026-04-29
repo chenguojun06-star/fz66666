@@ -295,7 +295,8 @@ export function useProductionColumns({
       render: (rate: number, record: ProductionOrder) => {
         const directCutting = isDirectCuttingOrder(record as any);
         const frozen = isOrderFrozenByStatus(record);
-        const colorStatus = frozen ? 'default' : 'normal';
+        const isCompletedOrClosed = record.status === 'completed' || String(record.status || '') === 'closed';
+        const colorStatus = isCompletedOrClosed ? 'normal' : (frozen ? 'default' : 'normal');
 
         if (directCutting) {
           return (
@@ -317,8 +318,17 @@ export function useProductionColumns({
         const procurePercent = (rate || 0) > 0 ? 100 : 0;
         return (
           <div
-            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'procurement'); }}
+            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (frozen) return;
+              if (openNodeDetail) {
+                const procureCompleted = (rate || 0) > 0 ? 1 : 0;
+                openNodeDetail(record, 'procurement', '采购', { done: procureCompleted, total: 1, percent: procurePercent, remaining: procureCompleted > 0 ? 0 : 1 });
+              } else {
+                openProcessDetail(record, 'procurement');
+              }
+            }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >

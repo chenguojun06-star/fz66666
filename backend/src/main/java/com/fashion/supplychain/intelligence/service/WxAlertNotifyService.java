@@ -98,18 +98,28 @@ public class WxAlertNotifyService {
         return data;
     }
 
-    /** 带缓存获取 access_token（90 分钟 TTL，首次失败返回 null） */
-    private synchronized String getOrRefreshToken() {
+    private final java.util.concurrent.locks.ReentrantLock tokenLock = new java.util.concurrent.locks.ReentrantLock();
+
+    private String getOrRefreshToken() {
         if (StringUtils.hasText(cachedToken)
                 && System.currentTimeMillis() < tokenExpireAt) {
             return cachedToken;
         }
-        String token = wxClient.fetchAccessToken();
-        if (StringUtils.hasText(token)) {
-            cachedToken   = token;
-            tokenExpireAt = System.currentTimeMillis() + 90L * 60 * 1000;
+        tokenLock.lock();
+        try {
+            if (StringUtils.hasText(cachedToken)
+                    && System.currentTimeMillis() < tokenExpireAt) {
+                return cachedToken;
+            }
+            String token = wxClient.fetchAccessToken();
+            if (StringUtils.hasText(token)) {
+                cachedToken   = token;
+                tokenExpireAt = System.currentTimeMillis() + 90L * 60 * 1000;
+            }
+            return StringUtils.hasText(token) ? token : null;
+        } finally {
+            tokenLock.unlock();
         }
-        return StringUtils.hasText(token) ? token : null;
     }
 
     private String trunc(String s, int max) {

@@ -34,7 +34,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     data.forEach((row, idx) => { if (row.processName && row.id) setTimeout(() => fetchPriceHint(row.id!, row.processName, row.standardTime ?? undefined), idx * 150); });
   }, [readOnly, editMode, processStartTime, data, message]);
 
-  const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh, enterEdit });
+  const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly: readOnly ?? false, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh: onRefresh ?? (() => {}), enterEdit });
 
   const { aiOpen, setAiOpen, aiCategory, setAiCategory, aiLoading, priceHints, priceHintLoading, categoryOptions, fetchPriceHint, handleAiTemplate } = useStyleProcessAi({ styleId, data, editMode, enterEdit });
 
@@ -52,7 +52,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         stageName="工序单价" styleId={styleId} apiPath="process"
         status={processCompletedTime ? 'COMPLETED' : processStartTime ? 'IN_PROGRESS' : 'NOT_STARTED'}
         assignee={processAssignee} startTime={processStartTime} completedTime={processCompletedTime}
-        readOnly={readOnly} onRefresh={onRefresh}
+        readOnly={readOnly} onRefresh={onRefresh ?? (() => {})}
         onBeforeComplete={async () => { if (!data || data.length === 0) { message.error('请先配置工序单价'); return false; } return true; }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

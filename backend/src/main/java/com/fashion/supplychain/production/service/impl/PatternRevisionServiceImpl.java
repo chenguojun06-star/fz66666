@@ -29,7 +29,7 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     private AuthTokenService authTokenService;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean submitForApproval(String id) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -57,7 +57,7 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean approve(String id, String comment) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -86,7 +86,7 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean reject(String id, String comment) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -115,7 +115,7 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean complete(String id) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");

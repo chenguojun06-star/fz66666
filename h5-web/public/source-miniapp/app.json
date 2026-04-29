@@ -51,19 +51,9 @@
       "pages": ["index", "service/index"]
     },
     {
-      "root": "pages/admin/change-password",
-      "name": "pkg-admin-changepwd",
-      "pages": ["index"]
-    },
-    {
-      "root": "pages/admin/feedback",
-      "name": "pkg-admin-feedback",
-      "pages": ["index"]
-    },
-    {
-      "root": "pages/admin/invite",
-      "name": "pkg-admin-invite",
-      "pages": ["index"]
+      "root": "pages/admin/misc",
+      "name": "pkg-admin-misc",
+      "pages": ["change-password/index", "feedback/index", "invite/index"]
     },
     {
       "root": "pages/work/bundle-split",
@@ -118,9 +108,9 @@
   ],
   "preloadRule": {
     "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops"] },
-    "pages/work/index":  { "network": "wifi", "packages": ["pkg-work-inbox", "pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
+    "pages/work/index":  { "network": "wifi", "packages": ["pkg-work-inbox", "pkg-work-ai", "pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
     "pages/scan/index":  { "network": "wifi", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
-    "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
+    "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-misc"] }
   },
   "tabBar": {
     "color": "#999999",

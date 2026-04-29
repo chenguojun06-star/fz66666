@@ -193,7 +193,10 @@ Page({
           return api.common.uploadImage(f.tempFilePath);
         });
         Promise.all(tasks).then(function (urls) {
-          self.setData({ images: self.data.images.concat(urls.filter(Boolean)) });
+          // 上传后返回的是相对路径 /api/file/tenant-download/...，
+          // <image> 标签无法发送 Authorization header，必须在 URL 追加 ?token=xxx
+          var authedUrls = urls.filter(Boolean).map(function (u) { return getAuthedImageUrl(u); });
+          self.setData({ images: self.data.images.concat(authedUrls) });
         }).catch(function () {
           toast.error('图片上传失败');
         });

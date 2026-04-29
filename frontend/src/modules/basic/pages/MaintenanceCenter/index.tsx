@@ -238,7 +238,7 @@ const MaintenanceCenter: React.FC = () => {
                         return (
                           <div key={record.id ?? record.styleNo} className="maintenance-card">
                             <div className="maintenance-card__cover">
-                              <AttachmentThumb styleId={record.id} width="100%" height="100%" />
+                              <AttachmentThumb styleId={record.id ?? ''} width="100%" height="100%" />
                               <div className="maintenance-card__overlay">
                                 <div className="maintenance-card__overlay-grid">
                                   {stages.map((stage) => (

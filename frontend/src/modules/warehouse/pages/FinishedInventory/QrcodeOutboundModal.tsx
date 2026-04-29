@@ -87,7 +87,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         next[idx] = {
           ...next[idx],
           scanCount: nextScan,
-          quantity: next[idx].stock != null ? Math.min(nextQty, Math.max(next[idx].stock, 1)) : nextQty,
+          quantity: next[idx].stock != null ? Math.min(nextQty, Math.max(next[idx].stock as number, 1)) : nextQty,
         };
         return next;
       }

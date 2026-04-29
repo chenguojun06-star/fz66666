@@ -207,9 +207,9 @@ const ReceivableDetailModal: React.FC<{
     setLoading(true);
     void receivableApi.detail(receivableId)
       .then((res: ApiResult) => {
-        const data = res?.data ?? res;
-        setDetail(data?.receivable ?? null);
-        setLogs(Array.isArray(data?.receiptLogs) ? data.receiptLogs : []);
+        const data = (res?.data ?? res) as Record<string, unknown> | undefined;
+        setDetail((data?.receivable as Receivable | null) ?? null);
+        setLogs(Array.isArray(data?.receiptLogs) ? (data.receiptLogs as ReceivableReceiptLog[]) : []);
       })
       .catch(() => {
         message.error('加载应收详情失败');
@@ -306,9 +306,9 @@ const ReceivableList: React.FC = () => {
         sourceBizType: bizType || undefined,
         sourceBizNo: bizNo || undefined,
       });
-      const data = res?.data ?? res;
-      setRecords(data?.records ?? []);
-      setTotal(data?.total ?? 0);
+      const data = (res?.data ?? res) as Record<string, unknown> | undefined;
+      setRecords((data?.records as Receivable[]) ?? []);
+      setTotal((data?.total as number) ?? 0);
     } catch {
       message.error('加载应收账款列表失败');
     } finally {
@@ -319,7 +319,7 @@ const ReceivableList: React.FC = () => {
   const fetchStats = useCallback(async () => {
     try {
       const res: ApiResult = await receivableApi.stats();
-      const data = res?.data ?? res;
+      const data = (res?.data ?? res) as ReceivableStats | undefined;
       setStats(data ?? { totalPending: 0, totalOverdue: 0, overdueCount: 0, newThisMonth: 0 });
     } catch { /* 不影响主流程 */ }
   }, []);

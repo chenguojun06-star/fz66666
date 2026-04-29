@@ -29,7 +29,7 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
         warehouseLocation: record.warehouseLocation,
       });
     }
-    inboundModal.open(record || null);
+    inboundModal.open(record ?? undefined);
   };
 
   const handleInboundConfirm = async () => {

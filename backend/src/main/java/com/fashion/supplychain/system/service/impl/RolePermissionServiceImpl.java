@@ -29,7 +29,7 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean replaceRolePermissions(Long roleId, List<Long> permissionIds) {
         if (roleId == null) {
             return false;

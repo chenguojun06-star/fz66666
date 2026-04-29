@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 
 import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -63,20 +64,16 @@ public class AiAgentMemoryHelper {
         if (userId == null || userId.isBlank()) return List.of();
         List<AiMessage> history = conversationMemory.getIfPresent(memoryKey(userId, tenantId));
         if (history == null) return List.of();
-        synchronized (history) {
-            return new ArrayList<>(history);
-        }
+        return new ArrayList<>(history);
     }
 
     public void saveConversationTurn(String userId, Long tenantId, String userMsg, String assistantMsg) {
         String key = memoryKey(userId, tenantId);
-        List<AiMessage> history = conversationMemory.get(key, k -> new ArrayList<>());
-        synchronized (history) {
-            history.add(AiMessage.user(userMsg));
-            history.add(AiMessage.assistant(assistantMsg));
-            while (history.size() > MAX_MEMORY_TURNS * 2) {
-                history.remove(0);
-            }
+        List<AiMessage> history = conversationMemory.get(key, k -> Collections.synchronizedList(new ArrayList<>()));
+        history.add(AiMessage.user(userMsg));
+        history.add(AiMessage.assistant(assistantMsg));
+        while (history.size() > MAX_MEMORY_TURNS * 2) {
+            history.remove(0);
         }
     }
 

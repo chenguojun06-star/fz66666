@@ -101,9 +101,9 @@ const OrderFlow: React.FC = () => {
             loading={loading} data={data} order={order} isFactoryUser={isFactoryUser}
             enrichedStages={enrichedStages} stageColumns={stageColumns}
             orderLines={orderLines} orderLineColumns={orderLineColumns}
-            cuttingSizeItems={cuttingSizeItems}
+            cuttingSizeItems={cuttingSizeItems ?? []}
             styleProcessDescriptionMap={styleProcessDescriptionMap}
-            secondaryProcessDescriptionMap={secondaryProcessDescriptionMap}
+            secondaryProcessDescriptionMap={secondaryProcessDescriptionMap ?? new Map<string, string>()}
           />
         </PageLayout>
     </>

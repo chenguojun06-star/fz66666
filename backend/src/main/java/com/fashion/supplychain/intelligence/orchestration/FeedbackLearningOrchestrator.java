@@ -48,13 +48,11 @@ public class FeedbackLearningOrchestrator {
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
-    private volatile Boolean feedbackRecordTableReady;
-
     /**
      * 建议类型采纳统计： suggestionType → [accepted, rejected, total]
      * 用于 ActionCenter 排序权重动态调整
      */
-    private final ConcurrentHashMap<String, int[]> typeStats = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicIntegerArray> typeStats = new ConcurrentHashMap<>();
 
     public FeedbackResponse acceptFeedback(FeedbackRequest request) {
         FeedbackResponse response = new FeedbackResponse();
@@ -162,11 +160,15 @@ public class FeedbackLearningOrchestrator {
      * 历史环境中 t_intelligence_feedback 曾被旧版执行引擎占用为另一套表结构。
      * 这里仅在当前学习闭环所需列齐全且 id 为数值主键时才写入，避免运行时持续报 SQL 错。
      */
+    private volatile Boolean feedbackRecordTableReady = null;
+    private final java.util.concurrent.locks.ReentrantLock schemaCheckLock = new java.util.concurrent.locks.ReentrantLock();
+
     private boolean isFeedbackRecordTableReady() {
         if (feedbackRecordTableReady != null) {
             return feedbackRecordTableReady;
         }
-        synchronized (this) {
+        schemaCheckLock.lock();
+        try {
             if (feedbackRecordTableReady != null) {
                 return feedbackRecordTableReady;
             }
@@ -200,6 +202,8 @@ public class FeedbackLearningOrchestrator {
                 feedbackRecordTableReady = false;
             }
             return feedbackRecordTableReady;
+        } finally {
+            schemaCheckLock.unlock();
         }
     }
 
@@ -238,20 +242,18 @@ public class FeedbackLearningOrchestrator {
      */
     public double getTaskTypeWeight(String taskType) {
         if (taskType == null) return 1.0;
-        int[] s = typeStats.getOrDefault(taskType, new int[]{0, 0, 0});
-        if (s[2] < 3) return 1.0;
-        double acceptRatio = (double) s[0] / s[2];
+        java.util.concurrent.atomic.AtomicIntegerArray s = typeStats.get(taskType);
+        if (s == null || s.get(2) < 3) return 1.0;
+        double acceptRatio = (double) s.get(0) / s.get(2);
         return Math.max(0.5, Math.min(1.5, 0.5 + acceptRatio));
     }
 
     /** 更新指定类型的采纳/拒绝计数（线程安全） */
     private void updateTypeStats(String type, boolean accepted) {
         if (type == null || type.isBlank()) return;
-        int[] stats = typeStats.computeIfAbsent(type, k -> new int[]{0, 0, 0});
-        synchronized (stats) {
-            if (accepted) stats[0]++;
-            else stats[1]++;
-            stats[2]++;
-        }
+        java.util.concurrent.atomic.AtomicIntegerArray stats = typeStats.computeIfAbsent(type, k -> new java.util.concurrent.atomic.AtomicIntegerArray(3));
+        if (accepted) stats.incrementAndGet(0);
+        else stats.incrementAndGet(1);
+        stats.incrementAndGet(2);
     }
 }

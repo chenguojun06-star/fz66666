@@ -9,7 +9,7 @@ import { getFullAuthedFileUrl } from '../../utils/fileUrl';
 import { useAppLanguage } from '../../i18n/useAppLanguage';
 import { t } from '../../i18n';
 import SmartGuideBar from '@/smart/components/SmartGuideBar';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import { isSmartFeatureEnabled, triggerSmartFeatureRefresh } from '@/smart/core/featureFlags';
 import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
 import SmartAlertBell from './SmartAlertBell';
 import DailyTodoModal from './DailyTodoModal';
@@ -92,6 +92,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       if (menuOpenKeys.length) setMenuOpenKeys([]);
     }
   }, [isMobile, menuOpenKeys.length]);
+
+  useEffect(() => {
+    triggerSmartFeatureRefresh();
+    const timer = setInterval(triggerSmartFeatureRefresh, 5 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (isMobile) return;

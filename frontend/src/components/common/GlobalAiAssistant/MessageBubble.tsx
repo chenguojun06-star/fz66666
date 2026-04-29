@@ -94,7 +94,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   key={`${card.title ?? 'insight'}-${i}`}
                   compact
                   card={card}
-                  onNavigate={(path) => onSafeNavigate(path)}
+                  onNavigate={(path) => onSafeNavigate(path ?? '')}
                 />
               ))}
             </div>
@@ -110,7 +110,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <TeamStatusCardWidget
                   key={`${card.orderNo ?? 'team'}-${i}`}
                   card={card}
-                  onNavigate={(path) => onSafeNavigate(path)}
+                  onNavigate={(path) => onSafeNavigate(path ?? '')}
                 />
               ))}
             </div>

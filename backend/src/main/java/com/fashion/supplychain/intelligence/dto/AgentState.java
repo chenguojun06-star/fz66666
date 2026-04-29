@@ -3,9 +3,9 @@ package com.fashion.supplychain.intelligence.dto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 多代理图共享执行状态 — 贯穿 Plan→Act→Reflect-Critique 全生命周期的上下文载体。
@@ -52,7 +52,7 @@ public class AgentState {
     private String question;
 
     /** 各 Specialist 分析结果（route → analysisText） */
-    private Map<String, String> specialistResults = new HashMap<>();
+    private Map<String, String> specialistResults = new ConcurrentHashMap<>();
 
     /** 数字孪生快照（JSON 格式的订单聚合数据） */
     private String digitalTwinSnapshot;
@@ -62,6 +62,9 @@ public class AgentState {
 
     /** 唯一执行ID（用于日志关联） */
     private String executionId;
+
+    /** 会话线程ID（用于Checkpoint持久化与恢复） */
+    private String threadId;
 
     // ── 工具方法 ──────────────────────────────────────────────────────────
 

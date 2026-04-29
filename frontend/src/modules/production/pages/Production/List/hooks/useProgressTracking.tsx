@@ -259,8 +259,8 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
       void triggerPredict({
         orderId,
         orderNo: String(record.orderNo || '').trim() || undefined,
-        stageName: String(stageKeyword || '').trim() || undefined,
-        currentProgress,
+        stageName: String(stageKeyword || '').trim() || '',
+        currentProgress: currentProgress ?? 0,
       });
     };
 

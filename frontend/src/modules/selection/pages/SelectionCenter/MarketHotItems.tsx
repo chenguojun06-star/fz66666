@@ -266,7 +266,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
       <div style={{ width: SMART_CARD_CONTENT_WIDTH, maxWidth: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
         <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 6 }}>市场判断</div>
         <DecisionInsightCard compact insight={insight} />
-        {analysis?.avgPrice > 0 && (
+        {analysis && analysis.avgPrice > 0 && (
           <div style={{ marginTop: 8, fontSize: 11, color: '#595959', lineHeight: 1.6 }}>
             价格区间：¥{analysis.minPrice.toFixed(0)} ~ ¥{analysis.maxPrice.toFixed(0)}（均价 ¥{analysis.avgPrice.toFixed(0)}）
           </div>

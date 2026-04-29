@@ -67,7 +67,7 @@ public class OrderDecisionCaptureOrchestrator {
             snapshot.setStyleName(order.getStyleName());
             snapshot.setStyleCategory(order.getProductCategory());
             snapshot.setFactoryMode(normalizeFactoryMode(order.getFactoryType()));
-            snapshot.setFactoryId(order.getFactoryId());
+            snapshot.setFactoryId(parseLong(order.getFactoryId()));
             snapshot.setFactoryName(order.getFactoryName());
             snapshot.setSelectedPricingMode(emptyToDefault(order.getPricingMode(), "PROCESS"));
             snapshot.setSelectedOrderUnitPrice(order.getFactoryUnitPrice());
@@ -149,6 +149,17 @@ public class OrderDecisionCaptureOrchestrator {
 
     private String emptyToDefault(String value, String defaultValue) {
         return StringUtils.hasText(value) ? value : defaultValue;
+    }
+
+    private Long parseLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private BigDecimal computeScatterExtra(ProductionOrder order) {

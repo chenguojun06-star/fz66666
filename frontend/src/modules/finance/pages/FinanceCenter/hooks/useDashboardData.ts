@@ -34,7 +34,7 @@ export const useDashboardData = () => {
   useEffect(() => {
     if (healthFetchedRef.current) return;
     healthFetchedRef.current = true;
-    intelligenceApi.getHealthIndex().then((res: any) => { if (res?.code === 200 && res.data) setHealthData(res.data); }).catch(() => {});
+    intelligenceApi.getHealthIndex().then((res: any) => { if (res?.code === 200 && res.data) setHealthData(res.data); }).catch((e) => { console.warn('[Dashboard] 健康指数加载失败:', e?.message); });
   }, []);
 
   const loadFactories = useCallback(async () => {
@@ -54,7 +54,7 @@ export const useDashboardData = () => {
         const uniqueFactories = Array.from(new Map(productionFactories.map(f => [f.factoryName, f])).values());
         setFactories(uniqueFactories);
       }
-    } catch {}
+    } catch (e) { console.warn('[Dashboard] 工厂列表加载失败:', e instanceof Error ? e.message : String(e)); }
   }, []);
 
   useEffect(() => { loadFactories(); }, [loadFactories]);

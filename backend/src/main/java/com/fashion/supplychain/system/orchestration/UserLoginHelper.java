@@ -246,12 +246,15 @@ public class UserLoginHelper {
             }
         }
         subject.setPwdVersion(pwdVersion);
-        String token = authTokenService == null ? null : authTokenService.issueToken(subject, Duration.ofHours(12));
+        String token = authTokenService == null ? null : authTokenService.issueToken(subject, null);
+        String refreshToken = authTokenService == null ? null : authTokenService.issueRefreshToken(subject);
         if (!StringUtils.hasText(token)) {
             throw new IllegalStateException("生成登录令牌失败");
         }
         Map<String, Object> payload = new HashMap<>();
         payload.put("token", token);
+        payload.put("refreshToken", refreshToken);
+        payload.put("tokenTtlHours", authTokenService != null ? authTokenService.getJwtTtlHours() : 4);
         payload.put("user", user);
         return payload;
     }

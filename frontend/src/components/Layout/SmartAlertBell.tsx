@@ -305,7 +305,7 @@ const SmartAlertBell: React.FC = () => {
                 </div>
                 <div
                 className="sap-priority-card"
-                onClick={() => goTo(`/production?orderNo=${brief.topPriorityOrder.orderNo}`)}
+                onClick={() => goTo(`/production?orderNo=${brief.topPriorityOrder?.orderNo ?? ''}`)}
                 style={{ cursor: 'pointer', position: 'relative' }}
                 title="点击查看该订单"
               >

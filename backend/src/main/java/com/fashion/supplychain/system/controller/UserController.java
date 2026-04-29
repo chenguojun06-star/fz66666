@@ -183,6 +183,24 @@ public class UserController {
         return Result.success(userOrchestrator.sendLoginSmsCode(phone, tenantId));
     }
 
+    @PostMapping("/refresh-token")
+    @PreAuthorize("permitAll()")
+    public Result<?> refreshToken(@RequestBody java.util.Map<String, Object> body) {
+        String refreshToken = body == null ? null : safeTrim(String.valueOf(body.getOrDefault("refreshToken", "")));
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return Result.fail("refreshToken 不能为空");
+        }
+        try {
+            java.util.Map<String, Object> result = userOrchestrator.refreshAccessToken(refreshToken);
+            if (result == null || result.get("token") == null) {
+                return Result.fail("refreshToken 已失效或过期，请重新登录");
+            }
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.fail("刷新令牌失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/login/sms")
     @PreAuthorize("permitAll()")
     public Result<?> loginBySms(@RequestBody java.util.Map<String, Object> body, HttpServletRequest request) {

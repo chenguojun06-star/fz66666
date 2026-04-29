@@ -3,7 +3,6 @@ package com.fashion.supplychain.intelligence.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.GraphExecutionResult;
@@ -32,6 +31,7 @@ public class MultiAgentGraphController {
 
     @Autowired private MultiAgentGraphOrchestrator graphOrchestrator;
     @Autowired private AgentExecutionLogMapper logMapper;
+    @Autowired private com.fashion.supplychain.intelligence.orchestration.AgentCheckpointService checkpointService;
 
     /** 同步执行多代理图分析 */
     @PostMapping("/run")
@@ -125,5 +125,24 @@ public class MultiAgentGraphController {
             log.warn("[AbStats] 查询失败（表可能不存在）: {}", e.getMessage());
             return Result.success(List.of());
         }
+    }
+
+    /** 从Checkpoint恢复执行 */
+    @PostMapping("/resume")
+    public Result<GraphExecutionResult> resumeFromCheckpoint(@RequestParam String threadId) {
+        com.fashion.supplychain.intelligence.dto.AgentState state =
+                checkpointService.restoreFromCheckpoint(UserContext.tenantId(), threadId);
+        if (state == null) {
+            return Result.fail("未找到可恢复的检查点: " + threadId);
+        }
+        GraphExecutionResult result = new GraphExecutionResult();
+        result.setSuccess(true);
+        result.setRoute(state.getRoute());
+        result.setConfidenceScore(state.getConfidenceScore());
+        result.setContextSummary(state.getContextSummary());
+        result.setSpecialistResults(state.getSpecialistResults());
+        result.setNodeTrace(state.getNodeTrace());
+        result.setExecutionId(state.getExecutionId());
+        return Result.success(result);
     }
 }

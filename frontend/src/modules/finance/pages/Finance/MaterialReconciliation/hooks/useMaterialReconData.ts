@@ -26,7 +26,7 @@ export const useMaterialReconData = () => {
 
   const fetchFinanceAudit = useCallback(async () => {
     setAuditLoading(true);
-    try { const res: ApiResult = await intelligenceApi.getFinanceAudit(); if (res?.data) setFinanceAudit(res.data); }
+    try { const res: ApiResult = await intelligenceApi.getFinanceAudit(); if (res?.data) setFinanceAudit(res.data as FinanceAuditResponse); }
     catch { /* 静默失败 */ }
     finally { setAuditLoading(false); }
   }, []);

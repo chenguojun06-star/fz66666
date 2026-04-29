@@ -1,3 +1,5 @@
+import { isSmartFeatureEnabledFromStore, refreshIfNeeded } from './smartFeatureStore';
+
 export type SmartFeatureKey =
   | 'smart.guide.enabled'
   | 'smart.dict.autocollect.enabled'
@@ -64,8 +66,16 @@ export const replaceSmartFeatureFlags = (
 };
 
 export const isSmartFeatureEnabled = (key: SmartFeatureKey): boolean => {
-  const flags = getSmartFeatureFlags();
-  return Boolean(flags[key]);
+  try {
+    return isSmartFeatureEnabledFromStore(key);
+  } catch {
+    const flags = getSmartFeatureFlags();
+    return Boolean(flags[key]);
+  }
+};
+
+export const triggerSmartFeatureRefresh = (): void => {
+  refreshIfNeeded().catch(() => {});
 };
 
 export const setSmartFeatureFlag = (key: SmartFeatureKey, enabled: boolean): Record<SmartFeatureKey, boolean> => {

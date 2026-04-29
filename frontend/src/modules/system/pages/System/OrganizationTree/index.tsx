@@ -208,7 +208,7 @@ const OrganizationTreePage: React.FC = () => {
   const handleShowQRCode = useCallback(async (node: OrganizationUnit) => {
     let tenantCode = '';
     try {
-      const res: ApiResult<{ tenantCode?: string }> = await (tenantService as any).myTenant();
+      const res = await (tenantService as any).myTenant() as ApiResult<{ tenantCode?: string }> & { tenantCode?: string };
       tenantCode = res?.data?.tenantCode || res?.tenantCode || '';
     } catch { /* 静默，二维码依然可以展示 */ }
     setQrModal({ open: true, unit: node, tenantCode });

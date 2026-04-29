@@ -171,7 +171,7 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
 
     // 获取扫码记录
     try {
-      const res = await productionScanApi.listByOrderId(record.id, { page: 1, pageSize: 1000 });
+      const res = await productionScanApi.listByOrderId(String(record.id), { page: 1, pageSize: 1000 });
       if (res.code === 200 && Array.isArray((res.data as any)?.records)) {
         setProcessDetailScanRecords((res.data as any).records);
       } else if (res.code === 200 && Array.isArray(res.data)) {
@@ -186,7 +186,7 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
 
     // 获取委派记录
     try {
-      const res = await productionOrderApi.getNodeOperations(record.id);
+      const res = await productionOrderApi.getNodeOperations(String(record.id));
       if (res.code === 200 && res.data) {
         const raw = res.data;
         const parsed = typeof raw === 'string' ? (() => {
@@ -296,7 +296,7 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
       });
 
       const updateRes = await productionOrderApi.quickEdit({
-        id: record.id,
+        id: String(record.id),
         progressWorkflowJson,
       });
 

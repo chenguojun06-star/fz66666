@@ -5,14 +5,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.Role;
-import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -20,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -46,6 +43,49 @@ public class UserOrchestrator {
     private UserApprovalHelper approvalHelper;
     @Autowired
     private com.fashion.supplychain.system.helper.UserPermissionHelper permissionHelper;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private com.fashion.supplychain.auth.AuthTokenService authTokenService;
+
+    public java.util.Map<String, Object> refreshAccessToken(String refreshToken) {
+        String userId = com.fashion.supplychain.common.UserContext.userId();
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalStateException("无法识别当前用户");
+        }
+        User user = userService.getById(Long.valueOf(userId));
+        if (user == null) {
+            throw new IllegalStateException("用户不存在");
+        }
+        com.fashion.supplychain.auth.TokenSubject currentSubject = new com.fashion.supplychain.auth.TokenSubject();
+        currentSubject.setUserId(String.valueOf(user.getId()));
+        currentSubject.setUsername(user.getName() != null ? user.getName() : user.getUsername());
+        currentSubject.setRoleId(user.getRoleId() == null ? null : String.valueOf(user.getRoleId()));
+        currentSubject.setRoleName(user.getRoleName());
+        currentSubject.setPermissionRange(user.getPermissionRange());
+        currentSubject.setFactoryId(user.getFactoryId());
+        currentSubject.setTenantId(user.getTenantId());
+        currentSubject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
+        currentSubject.setSuperAdmin(Boolean.TRUE.equals(user.getIsSuperAdmin()));
+        long pwdVersion = 0L;
+        if (stringRedisTemplate != null && user.getId() != null) {
+            try {
+                String v = stringRedisTemplate.opsForValue().get("pwd:ver:" + user.getId());
+                if (v != null) pwdVersion = Long.parseLong(v);
+            } catch (Exception ignored) {}
+        }
+        currentSubject.setPwdVersion(pwdVersion);
+        String newToken = authTokenService.refreshAccessToken(refreshToken, currentSubject);
+        if (newToken == null) {
+            return null;
+        }
+        String newRefreshToken = authTokenService.issueRefreshToken(currentSubject);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("token", newToken);
+        result.put("refreshToken", newRefreshToken);
+        result.put("tokenTtlHours", authTokenService.getJwtTtlHours());
+        return result;
+    }
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status) {
         return list(page, pageSize, username, name, roleName, status, null);
@@ -172,9 +212,8 @@ public class UserOrchestrator {
     public void changePassword(String oldPassword, String newPassword) {
         User current = resolveCurrentUser();
         if (current == null) throw new NoSuchElementException("用户不存在");
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        if (!encoder.matches(oldPassword, current.getPassword())) throw new IllegalArgumentException("原密码错误");
-        current.setPassword(encoder.encode(newPassword));
+        if (!passwordEncoder.matches(oldPassword, current.getPassword())) throw new IllegalArgumentException("原密码错误");
+        current.setPassword(passwordEncoder.encode(newPassword));
         userService.updateById(current);
         loginHelper.incrementPwdVersion(current.getId());
         saveOperationLog("user", String.valueOf(current.getId()), current.getUsername(), "CHANGE_PASSWORD", "用户修改密码");

@@ -6,6 +6,7 @@
   gap: 14px;
   grid-template-columns: 130px minmax(0, 1fr) auto;
   border-radius: 14px;
+  overflow: visible;
 }
 
 .ef-compact .style-smart-row__cover {
@@ -77,7 +78,7 @@
 /* ── 三栏布局微调 ── */
 .ef-compact .style-smart-row__layout {
   gap: 8px;
-  align-items: start;
+  align-items: center;
 }
 
 /* ── 身份信息区 ── */
@@ -156,29 +157,48 @@
 
 /* ── 时间轴：线条只在节点球之间 ── */
 .ef-compact .style-smart-row__timeline-shell {
-  padding: 6px 0 2px;
+  padding: 0 0 40px;
+  overflow: visible;
+}
+
+.ef-compact .style-smart-stage {
+  padding-top: 60px;
 }
 
 .ef-compact .style-smart-row__timeline-track,
 .ef-compact .style-smart-row__timeline-progress {
-  top: 48px;
+  top: 82px;
   left: calc(100% / var(--ef-stage-count) / 2);
   right: calc(100% / var(--ef-stage-count) / 2);
   width: auto;
 }
 
 .ef-compact .style-smart-stage__time {
+  font-size: 12px;
+  min-height: 16px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.ef-compact .style-smart-stage__time-start {
+  font-size: 12px;
+  min-height: 16px;
+  color: #6b7280;
+}
+
+.ef-compact .style-smart-stage__time-combined {
   font-size: 11px;
-  min-height: 18px;
+  min-height: 16px;
+  white-space: nowrap;
 }
 
 .ef-compact .style-smart-stage__node {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
 }
 
 .ef-compact .style-smart-stage__label {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ─── 操作按钮区：悬停卡片时才显示 ─── */

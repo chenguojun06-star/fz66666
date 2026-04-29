@@ -102,7 +102,7 @@ public class SystemStatusController {
     }
 
     /**
-     * 租户人员统计（每个租户的用户数量）
+     * 租户人员统计（每个租户的用户数量、上限、活跃/待审批分类）
      */
     @GetMapping("/tenant-user-stats")
     public Result<?> tenantUserStats() {
@@ -111,13 +111,28 @@ public class SystemStatusController {
         long totalUsers = 0;
 
         for (Tenant tenant : tenants) {
+            // 总用户数（含待审批，以 tenantId 为准）
             long userCount = userService.count(
                 new LambdaQueryWrapper<User>().eq(User::getTenantId, tenant.getId()));
+            // 活跃用户数（registrationStatus = ACTIVE）
+            long activeCount = userService.count(new LambdaQueryWrapper<User>()
+                .eq(User::getTenantId, tenant.getId())
+                .eq(User::getRegistrationStatus, "ACTIVE"));
+            // 待审批用户数（registrationStatus = PENDING）
+            long pendingCount = userService.count(new LambdaQueryWrapper<User>()
+                .eq(User::getTenantId, tenant.getId())
+                .eq(User::getRegistrationStatus, "PENDING"));
+
             totalUsers += userCount;
+
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("tenantId", tenant.getId());
             item.put("tenantName", tenant.getTenantName());
             item.put("userCount", userCount);
+            item.put("activeUsers", activeCount);
+            item.put("pendingUsers", pendingCount);
+            // maxUsers: null 或 0 表示不限制，9999 表示超管账号（也视为不限制）
+            item.put("maxUsers", tenant.getMaxUsers() != null ? tenant.getMaxUsers() : 0);
             result.add(item);
         }
 

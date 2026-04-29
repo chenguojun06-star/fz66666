@@ -329,7 +329,7 @@ const DictManage: React.FC = () => {
 
   // 新建
   const handleAdd = () => {
-    dictModal.open(null);
+    dictModal.open(null as unknown as DictItem | undefined);
   };
 
   // 编辑

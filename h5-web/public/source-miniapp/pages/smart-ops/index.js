@@ -115,7 +115,8 @@ Page({
     this._startTimer();
   },
 
-  onShow: function () { this._updateTime(); },
+  onShow: function () { this._updateTime(); if (!this._timer) this._startTimer(); },
+  onHide: function () { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
   onPullDownRefresh: function () { this._refreshAll(); wx.stopPullDownRefresh(); },
   onUnload: function () { if (this._timer) clearInterval(this._timer); },
 

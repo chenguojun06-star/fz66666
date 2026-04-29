@@ -33,12 +33,12 @@ public class SupervisorAgentOrchestrator {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final List<String> VALID_ROUTES =
-        Arrays.asList("delivery_risk", "sourcing", "compliance", "logistics", "full");
+        Arrays.asList("delivery_risk", "sourcing", "compliance", "logistics", "production", "cost", "full");
 
     private static final String ROUTE_SYS_PROMPT =
         "你是服装供应链AI监督专家。根据订单状态和用户场景，决定最优分析路由。" +
         "请输出JSON：{\"route\":\"...\",\"reason\":\"...\"}。" +
-        "路由选项：delivery_risk=货期风险, sourcing=采购供应商, compliance=合规DPP, logistics=物流碳排, full=全面分析。";
+        "路由选项：delivery_risk=货期风险, sourcing=采购供应商, compliance=合规DPP, logistics=物流碳排, production=生产工序, cost=成本核算, full=全面分析。";
 
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
@@ -120,8 +120,12 @@ public class SupervisorAgentOrchestrator {
                 "你是DPP合规分析专家。分析订单合规状态，输出：风险点、整改优先级。100字以内。";
             case "logistics" ->
                 "你是物流优化专家。分析运输路线，输出：可优化节点、碳排降低方案。100字以内。";
+            case "production" ->
+                "你是生产管理专家。分析产能瓶颈和工序进度，输出：瓶颈工序、排产建议。100字以内。";
+            case "cost" ->
+                "你是成本核算专家。分析工序成本和工资结构，输出：成本热点、优化方向。100字以内。";
             default ->
-                "你是供应链全面分析专家。从货期、采购、合规三个维度综合评估，输出核心建议。150字以内。";
+                "你是供应链全面分析专家。从货期、采购、合规、生产、成本五个维度综合评估，输出核心建议。150字以内。";
         };
     }
 
@@ -173,9 +177,11 @@ public class SupervisorAgentOrchestrator {
     private String pickAlternativeRoute(String current) {
         return switch (current == null ? "" : current) {
             case "delivery_risk" -> "full";
-            case "sourcing"      -> "delivery_risk";
+            case "sourcing"      -> "production";
             case "compliance"    -> "sourcing";
             case "logistics"     -> "compliance";
+            case "production"    -> "cost";
+            case "cost"          -> "sourcing";
             default              -> "delivery_risk";
         };
     }

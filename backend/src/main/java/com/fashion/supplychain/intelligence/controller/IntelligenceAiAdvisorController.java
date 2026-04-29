@@ -19,8 +19,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.List;
-
 /**
  * AI 顾问端点 — 对话/流式/文件分析/信号/记忆/学习闭环/预测/沙盘
  */

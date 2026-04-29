@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS t_ai_operation_audit (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT NOT NULL,
+    session_id VARCHAR(64),
+    tool_name VARCHAR(64) NOT NULL,
+    risk_level VARCHAR(16) DEFAULT 'low',
+    input_summary TEXT,
+    output_summary TEXT,
+    approval_status VARCHAR(16) DEFAULT 'auto_approved',
+    approved_by VARCHAR(64),
+    approved_at DATETIME,
+    execution_time_ms INT DEFAULT 0,
+    success TINYINT(1) DEFAULT 1,
+    error_message VARCHAR(512),
+    operator_id BIGINT,
+    operator_name VARCHAR(64),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_aoa_tenant_created (tenant_id, created_at),
+    INDEX idx_aoa_tenant_tool (tenant_id, tool_name),
+    INDEX idx_aoa_tenant_risk (tenant_id, risk_level),
+    INDEX idx_aoa_approval_status (approval_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -15,11 +15,11 @@ function navigateToLogin() {
   }
 }
 
-export type ApiResult<T = any> = {
+export type ApiResult<T = unknown> = {
   code: number;
   data: T;
   message?: string;
-  [key: string]: any;
+  requestId?: string;
 };
 
 export type ApiClient = Omit<AxiosInstance, 'request' | 'get' | 'delete' | 'head' | 'options' | 'post' | 'put' | 'patch'> & {
@@ -162,7 +162,7 @@ export const createApiClient = (): ApiClient => {
 
   // 请求拦截器
   client.interceptors.request.use(
-    config => {
+    async config => {
       const headers = (config.headers || {}) as any & {
         set?: (key: string, value: string) => void;
         get?: (key: string) => unknown;
@@ -205,14 +205,46 @@ export const createApiClient = (): ApiClient => {
         const token = String(localStorage.getItem('authToken') || '').trim();
         if (token) {
           if (isJwtExpired(token)) {
-            try {
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('userId');
-            } catch { /* ignore */ }
-            navigateToLogin();
-            return Promise.reject(new Error('登录已过期，请重新登录'));
+            const savedRefresh = localStorage.getItem('refreshToken');
+            if (savedRefresh) {
+              try {
+                const refreshClient = axios.create({ baseURL: resolveApiBaseUrl(), timeout: 10000 });
+                const refreshRes = await refreshClient.post('/system/user/refresh-token', { refreshToken: savedRefresh });
+                if (refreshRes.data?.code === 200 && refreshRes.data?.data?.token) {
+                  const newToken = String(refreshRes.data.data.token).trim();
+                  const newRefresh = String(refreshRes.data.data.refreshToken || '').trim();
+                  localStorage.setItem('authToken', newToken);
+                  if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
+                  setHeader('Authorization', `Bearer ${newToken}`);
+                } else {
+                  try {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('userId');
+                  } catch { /* ignore */ }
+                  navigateToLogin();
+                  return Promise.reject(new Error('登录已过期，请重新登录'));
+                }
+              } catch {
+                try {
+                  localStorage.removeItem('authToken');
+                  localStorage.removeItem('refreshToken');
+                  localStorage.removeItem('userId');
+                } catch { /* ignore */ }
+                navigateToLogin();
+                return Promise.reject(new Error('登录已过期，请重新登录'));
+              }
+            } else {
+              try {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+              } catch { /* ignore */ }
+              navigateToLogin();
+              return Promise.reject(new Error('登录已过期，请重新登录'));
+            }
+          } else {
+            setHeader('Authorization', `Bearer ${token}`);
           }
-          setHeader('Authorization', `Bearer ${token}`);
         }
       } catch {
         // Ignore localStorage errors
@@ -245,6 +277,7 @@ export const createApiClient = (): ApiClient => {
       const config = error.config as (AxiosRequestConfig & {
         retry?: number;
         __retryCount?: number;
+        _isRefreshAttempt?: boolean;
       }) | undefined;
 
       const status = Number(error?.response?.status || 0);
@@ -255,8 +288,8 @@ export const createApiClient = (): ApiClient => {
         config.retry = 2; // 默认重试2次
       }
 
-      if (config && shouldRetryError && (config.__retryCount || 0) < (config.retry || 0)) {
-        config.__retryCount = (config.__retryCount || 0) + 1;
+      if (config && shouldRetryError && (config.__retryCount ?? 0) < (config.retry ?? 0)) {
+        config.__retryCount = (config.__retryCount ?? 0) + 1;
 
         // 仅重试 GET 请求（幂等）；POST/PUT/DELETE 哪怕网络错误也不重试，防止重复创建/结算
         const isGetRequest = config.method === 'get' || config.method === 'GET';
@@ -264,7 +297,7 @@ export const createApiClient = (): ApiClient => {
         if (isGetRequest) {
           // 指数退避延迟：1s, 2s, 4s...
           const backoff = new Promise((resolve) => {
-            setTimeout(() => resolve(true), (1000 * Math.pow(2, config.__retryCount - 1)));
+            setTimeout(() => resolve(true), (1000 * Math.pow(2, (config.__retryCount ?? 1) - 1)));
           });
 
           await backoff;
@@ -284,16 +317,37 @@ export const createApiClient = (): ApiClient => {
           case 400:
             errorMessage = msg || '请求参数错误';
             break;
-          case 401:
+          case 401: {
             errorMessage = '登录已过期，请重新登录';
+            const savedRefresh = localStorage.getItem('refreshToken');
+            if (savedRefresh && !config?._isRefreshAttempt) {
+              try {
+                const refreshClient = axios.create({ baseURL: resolveApiBaseUrl(), timeout: 10000 });
+                const refreshRes = await refreshClient.post('/system/user/refresh-token', { refreshToken: savedRefresh });
+                if (refreshRes.data?.code === 200 && refreshRes.data?.data?.token) {
+                  const newToken = String(refreshRes.data.data.token).trim();
+                  const newRefresh = String(refreshRes.data.data.refreshToken || '').trim();
+                  localStorage.setItem('authToken', newToken);
+                  if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
+                  if (config) {
+                    (config as Record<string, unknown>)._isRefreshAttempt = true;
+                    return client(config);
+                  }
+                }
+              } catch {
+                // refresh failed, fall through to logout
+              }
+            }
             try {
               localStorage.removeItem('authToken');
+              localStorage.removeItem('refreshToken');
               localStorage.removeItem('userId');
             } catch {
               // Ignore
             }
             navigateToLogin();
             break;
+          }
           case 403: {
             const isExpiredByMessage = msg && (msg.includes('过期') || msg.includes('expired') || msg.includes('invalid token'));
             const isExpiredByJwt = (() => {

@@ -220,7 +220,7 @@ const FactoryList: React.FC = () => {
 
   const openDialog = (mode: DialogMode, factory?: FactoryType) => {
     setDialogMode(mode);
-    factoryModal.open(factory || null);
+    factoryModal.open(factory ?? undefined);
   };
   const closeDialog = () => {
     factoryModal.close();

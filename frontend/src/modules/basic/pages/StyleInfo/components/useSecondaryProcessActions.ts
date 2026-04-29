@@ -71,7 +71,7 @@ export function useSecondaryProcessActions(
         validateStatus: (status: number) => status < 500,
       });
       if (res && isApiSuccess(res)) {
-        setDataSource(res?.data || []);
+        setDataSource((res?.data ?? []) as SecondaryProcess[]);
       } else {
         setDataSource([]);
       }

@@ -382,7 +382,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
         message.error(getApiMessage(res, '同步失败'));
         return false;
       }
-      const result = res?.data || {};
+      const result = (res?.data || {}) as Record<string, unknown>;
       message.success(
         `${result.scopeLabel || '同步完成'}：${result.totalOrders || 0} 个订单，更新 ${result.totalSynced || 0} 条跟踪单价，刷新 ${result.workflowUpdatedNodes || 0} 个订单工价节点`
       );

@@ -263,7 +263,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const { columns } = useProgressColumns({
     orderSortField, orderSortOrder, handleOrderSort,
-    boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
+    boardStatsByOrder: boardStatsByOrder as Record<string, Record<string, number>>, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
     setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal, stagnantOrderIds, deliveryRiskMap,

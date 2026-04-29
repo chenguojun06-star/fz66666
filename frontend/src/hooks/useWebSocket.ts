@@ -83,11 +83,11 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
   globalInstance = inst;
 
   const buildUrl = () => {
-    const opts = inst.currentOptions;
-    const loc = window.location;
-    const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}&token=${opts.token ?? ''}`;
-  };
+      const opts = inst.currentOptions;
+      const loc = window.location;
+      const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}`;
+    };
 
   const dispatchMessage = (msg: WsMessage) => {
     const handlers = inst.listeners.get(msg.type);
@@ -203,6 +203,9 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
         if (import.meta.env.DEV) console.debug('[WebSocket] 连接成功');
         setConnected(true);
         inst.reconnectCount = 0;
+        if (opts.token) {
+          ws.send(JSON.stringify({ type: 'auth', token: opts.token }));
+        }
         startHeartbeat(ws);
       };
       ws.onmessage = (event) => {

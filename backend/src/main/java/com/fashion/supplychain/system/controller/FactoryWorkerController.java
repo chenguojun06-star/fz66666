@@ -49,6 +49,7 @@ public class FactoryWorkerController {
             wrapper.eq("status", status);
         }
         wrapper.orderByAsc("worker_no", "worker_name");
+        wrapper.last("LIMIT 5000");
 
         return Result.success(factoryWorkerService.list(wrapper));
     }

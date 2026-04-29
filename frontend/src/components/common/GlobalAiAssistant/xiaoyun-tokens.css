@@ -1,0 +1,86 @@
+:root {
+  --xiaoyun-primary: #1677ff;
+  --xiaoyun-primary-hover: #0958d9;
+  --xiaoyun-primary-bg: #e6f4ff;
+  --xiaoyun-primary-border: #91caff;
+
+  --xiaoyun-success: #52c41a;
+  --xiaoyun-success-bg: #f6ffed;
+  --xiaoyun-success-border: #b7eb8f;
+
+  --xiaoyun-warning: #fa8c16;
+  --xiaoyun-warning-bg: #fff7e6;
+  --xiaoyun-warning-border: #ffd591;
+
+  --xiaoyun-danger: #ff4d4f;
+  --xiaoyun-danger-bg: #fff1f0;
+  --xiaoyun-danger-border: #ffa39e;
+
+  --xiaoyun-info: #1677ff;
+  --xiaoyun-info-bg: #f0f5ff;
+  --xiaoyun-info-border: #adc6ff;
+
+  --xiaoyun-text-primary: rgba(0, 0, 0, 0.88);
+  --xiaoyun-text-secondary: rgba(0, 0, 0, 0.65);
+  --xiaoyun-text-tertiary: rgba(0, 0, 0, 0.45);
+
+  --xiaoyun-bg-card: #ffffff;
+  --xiaoyun-bg-page: #f5f5f5;
+  --xiaoyun-bg-ai-bubble: #ffffff;
+  --xiaoyun-bg-user-bubble: #1677ff;
+
+  --xiaoyun-border-card: #f0f0f0;
+  --xiaoyun-border-radius-sm: 6px;
+  --xiaoyun-border-radius-md: 8px;
+  --xiaoyun-border-radius-lg: 12px;
+
+  --xiaoyun-shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  --xiaoyun-shadow-hover: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+
+  --xiaoyun-font-size-xs: 12px;
+  --xiaoyun-font-size-sm: 13px;
+  --xiaoyun-font-size-base: 14px;
+  --xiaoyun-font-size-lg: 16px;
+  --xiaoyun-font-size-xl: 20px;
+
+  --xiaoyun-spacing-xs: 4px;
+  --xiaoyun-spacing-sm: 8px;
+  --xiaoyun-spacing-md: 12px;
+  --xiaoyun-spacing-lg: 16px;
+  --xiaoyun-spacing-xl: 24px;
+
+  --xiaoyun-chart-1: #1677ff;
+  --xiaoyun-chart-2: #52c41a;
+  --xiaoyun-chart-3: #fa8c16;
+  --xiaoyun-chart-4: #ff4d4f;
+  --xiaoyun-chart-5: #722ed1;
+  --xiaoyun-chart-6: #13c2c2;
+  --xiaoyun-chart-7: #eb2f96;
+}
+
+:root[data-theme="dark"] {
+  --xiaoyun-text-primary: rgba(255, 255, 255, 0.88);
+  --xiaoyun-text-secondary: rgba(255, 255, 255, 0.65);
+  --xiaoyun-text-tertiary: rgba(255, 255, 255, 0.45);
+
+  --xiaoyun-bg-card: #1f1f1f;
+  --xiaoyun-bg-page: #141414;
+  --xiaoyun-bg-ai-bubble: #1f1f1f;
+  --xiaoyun-bg-user-bubble: #1677ff;
+
+  --xiaoyun-border-card: #303030;
+
+  --xiaoyun-primary-bg: #111d2c;
+  --xiaoyun-primary-border: #15325b;
+  --xiaoyun-success-bg: #162312;
+  --xiaoyun-success-border: #274916;
+  --xiaoyun-warning-bg: #2b2111;
+  --xiaoyun-warning-border: #594214;
+  --xiaoyun-danger-bg: #2a1215;
+  --xiaoyun-danger-border: #58181c;
+  --xiaoyun-info-bg: #111d2c;
+  --xiaoyun-info-border: #15325b;
+
+  --xiaoyun-shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 1px 6px -1px rgba(0, 0, 0, 0.15);
+  --xiaoyun-shadow-hover: 0 3px 6px -4px rgba(0, 0, 0, 0.35), 0 6px 16px 0 rgba(0, 0, 0, 0.25);
+}

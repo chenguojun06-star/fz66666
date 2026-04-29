@@ -79,14 +79,6 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
           borderRadius={8}
         />
         <div className="ef-cover-below">
-          <div className="ef-cover-tags">
-            <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
-            {record.urgencyLevel === 'urgent' && <Tag color="red">急单</Tag>}
-            {record.plateType === 'REORDER' && <Tag color="blue">翻单</Tag>}
-            <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`}>
-              {deliveryMeta.label}
-            </span>
-          </div>
           <div className="ef-date-stack" />
         </div>
       </div>
@@ -130,6 +122,15 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               <span className="ef-field-label">交期</span>
               <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
             </div>
+            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 2, alignItems: 'center' }}>
+              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 11, fontWeight: 600 }}>
+                {deliveryMeta.label}
+              </span>
+            </div>
           </div>
 
           <div className="style-smart-row__timeline-shell" style={{ '--ef-stage-count': stages.length + 1 } as React.CSSProperties}>
@@ -150,7 +151,6 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                 getPopupContainer={() => document.body}
               >
                 <div className="style-smart-stage style-smart-stage--done" style={{ cursor: sizeMatrix.hasData ? 'pointer' : 'default' }}>
-                  <div className="style-smart-stage__time">{fmtTime(record.createTime)}</div>
                   <div className="style-smart-stage__node">
                     <span className="style-smart-stage__ring" />
                     <span className="style-smart-stage__orbit" />
@@ -158,6 +158,11 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                     <span className="style-smart-stage__check" />
                   </div>
                   <div className="style-smart-stage__label">下单</div>
+                  <div className="style-smart-stage__time-combined">
+                    <span className="style-smart-stage__time-start-inline">{fmtTime(record.createTime) || '--'}</span>
+                    <span className="style-smart-stage__time-sep"> ~ </span>
+                    <span className="style-smart-stage__time-end-inline">{fmtTime(record.createTime) || '--'}</span>
+                  </div>
                 </div>
               </Popover>
               {stages.map(stage => (

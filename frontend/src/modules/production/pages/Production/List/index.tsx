@@ -27,6 +27,7 @@ import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useModal } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
+import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 import {
   useColumnSettings,
   useProductionTransfer,
@@ -337,22 +338,37 @@ const ProductionList: React.FC = () => {
                 [
                   { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
                   { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
-                  {
-                    label: '剩',
-                    key: 'remainingDays',
-                    render: (val: unknown, record: Record<string, unknown>) => {
-                      const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
-                      // 已完成/已报废/已关单 的状态已由进度条展示，此处不重复显示
-                      if (text === '已完成' || text === '已报废' || text === '已关单') return <span style={{ color: '#999', fontSize: '10px' }}>-</span>;
-                      return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>;
-                    }
-                  }
+                ],
+                [
+                  { label: '', key: 'statusTags', render: (_val: unknown, record: Record<string, unknown>) => {
+                    const status = ORDER_STATUS_LABEL[String(record?.status || '').trim().toLowerCase()] || String(record?.status || '-');
+                    const statusColor = ORDER_STATUS_COLOR[String(record?.status || '').trim().toLowerCase()] || 'default';
+                    const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
+                    return (
+                      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Tag color={statusColor} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
+                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+                        {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
+                          && <Tag style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
+                      </div>
+                    );
+                  }},
                 ]
               ]}
               progressConfig={{
                 calculate: calcCardProgress,
-                getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate, record.status)),
-                isCompleted: (record: ProductionOrder) => record.status === 'completed',
+                getStatus: (record: ProductionOrder) => {
+                  const s = String(record.status || '').trim().toLowerCase();
+                  if (s === 'completed' || s === 'closed') return 'normal' as const;
+                  if (isOrderFrozenByStatus(record)) return 'default' as const;
+                  return getProgressColorStatus(record.plannedEndDate, record.status);
+                },
+                isCompleted: (record: ProductionOrder) => {
+                  const s = String(record.status || '').trim().toLowerCase();
+                  return s === 'completed' || s === 'closed';
+                },
                 minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
                 show: true,
                 type: 'liquid',
@@ -375,13 +391,7 @@ const ProductionList: React.FC = () => {
               ].filter(Boolean);
               }}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
-              titleTags={(record) => (
-                <>
-                  {(record as any).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
-                  {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
-                  {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
-                </>
-              )}
+              titleTags={undefined}
             />
             {/* 卡片视图分页器 */}
             <StandardPagination
@@ -420,21 +430,21 @@ const ProductionList: React.FC = () => {
           closeNodeDetail={closeNodeDetail}
           nodeDetailOrder={nodeDetailOrder}
           nodeDetailType={nodeDetailType}
-          nodeDetailName={nodeDetailName}
+          nodeDetailName={nodeDetailName ?? ''}
           nodeDetailStats={nodeDetailStats}
-          nodeDetailUnitPrice={nodeDetailUnitPrice}
-          nodeDetailProcessList={nodeDetailProcessList}
+          nodeDetailUnitPrice={nodeDetailUnitPrice ?? 0}
+          nodeDetailProcessList={nodeDetailProcessList ?? []}
           transferModalVisible={transferModalVisible}
           transferRecord={transferRecord}
           transferType={transferType}
           setTransferType={setTransferType}
-          transferUserId={transferUserId}
+          transferUserId={transferUserId ?? ''}
           setTransferUserId={setTransferUserId}
           transferMessage={transferMessage}
           setTransferMessage={setTransferMessage}
           transferUsers={transferUsers}
           transferSearching={transferSearching}
-          transferFactoryId={transferFactoryId}
+          transferFactoryId={transferFactoryId ?? ''}
           setTransferFactoryId={setTransferFactoryId}
           transferFactoryMessage={transferFactoryMessage}
           setTransferFactoryMessage={setTransferFactoryMessage}

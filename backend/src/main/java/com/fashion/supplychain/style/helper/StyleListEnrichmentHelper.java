@@ -360,6 +360,7 @@ public class StyleListEnrichmentHelper {
                     .eq(tenantScopedRead, StyleOperationLog::getTenantId, readableTenantId)
                     .eq(StyleOperationLog::getBizType, "maintenance")
                     .orderByDesc(StyleOperationLog::getCreateTime)
+                    .last("LIMIT 5000")
                     .list();
             for (StyleOperationLog logEntry : logs) {
                 if (logEntry == null || logEntry.getStyleId() == null) continue;
@@ -379,6 +380,7 @@ public class StyleListEnrichmentHelper {
                     .eq(PatternProduction::getDeleteFlag, 0)
                     .orderByDesc(PatternProduction::getUpdateTime)
                     .orderByDesc(PatternProduction::getCreateTime)
+                    .last("LIMIT 5000")
                     .list();
             for (PatternProduction pattern : patterns) {
                 if (pattern == null || !StringUtils.hasText(pattern.getStyleId())) continue;

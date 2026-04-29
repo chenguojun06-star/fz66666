@@ -507,7 +507,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
                     if (urlsStr) {
                       try { urls = JSON.parse(urlsStr); } catch {}
                     }
-                    urls.push(url);
+                    urls.push(url as never);
                     form.setFieldsValue({ invoiceUrls: JSON.stringify(urls) });
                     onSuccess(res);
                   } else {

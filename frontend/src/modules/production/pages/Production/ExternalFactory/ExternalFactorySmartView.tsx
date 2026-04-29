@@ -3,6 +3,7 @@ import { Empty, Skeleton } from 'antd';
 import dayjs from 'dayjs';
 import StandardPagination from '@/components/common/StandardPagination';
 import { ProductionOrder } from '@/types/production';
+import { isDirectCuttingOrder } from '@/utils/api';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getOrderStatusConfig } from '@/components/common/OrderStatusTag';
 import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
@@ -15,14 +16,14 @@ import './externalFactory.css';
 const STAGE_MIN_SLOT_WIDTH = 128;
 
 const PRODUCTION_STAGES: readonly {
-  key: string; label: string; rateField: string; startField: string; endField: string;
+  key: string; label: string; rateField: string; startFields: string[]; endFields: string[];
 }[] = [
-  { key: 'procurement', label: '采购', rateField: 'procurementCompletionRate', startField: 'procurementStartTime', endField: 'procurementEndTime' },
-  { key: 'cutting', label: '裁剪', rateField: 'cuttingCompletionRate', startField: 'cuttingStartTime', endField: 'cuttingEndTime' },
-  { key: 'secondary', label: '二次工艺', rateField: 'secondaryProcessCompletionRate', startField: 'secondaryProcessStartTime', endField: 'secondaryProcessEndTime' },
-  { key: 'sewing', label: '车缝', rateField: 'carSewingCompletionRate', startField: 'sewingStartTime', endField: 'sewingEndTime' },
-  { key: 'tail', label: '尾部', rateField: 'tailProcessRate', startField: '', endField: '' },
-  { key: 'warehousing', label: '入库', rateField: 'warehousingCompletionRate', startField: 'warehousingStartTime', endField: 'warehousingEndTime' },
+  { key: 'procurement', label: '采购', rateField: 'procurementCompletionRate', startFields: ['procurementStartTime'], endFields: ['procurementConfirmedAt', 'procurementEndTime'] },
+  { key: 'cutting', label: '裁剪', rateField: 'cuttingCompletionRate', startFields: ['cuttingStartTime'], endFields: ['cuttingEndTime'] },
+  { key: 'secondary', label: '二次工艺', rateField: 'secondaryProcessCompletionRate', startFields: ['secondaryProcessStartTime'], endFields: ['secondaryProcessEndTime'] },
+  { key: 'sewing', label: '车缝', rateField: 'carSewingCompletionRate', startFields: ['sewingStartTime', 'carSewingStartTime'], endFields: ['sewingEndTime', 'carSewingEndTime'] },
+  { key: 'tail', label: '尾部', rateField: 'tailProcessRate', startFields: ['packagingStartTime', 'ironingStartTime'], endFields: ['packagingEndTime', 'ironingEndTime'] },
+  { key: 'warehousing', label: '入库', rateField: 'warehousingCompletionRate', startFields: ['warehousingStartTime'], endFields: ['warehousingEndTime'] },
 ];
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
@@ -47,9 +48,10 @@ function buildStages(r: ProductionOrder, isOverdue: boolean): SmartStage[] {
   const stages: SmartStage[] = [];
   for (const def of PRODUCTION_STAGES) {
     if (def.key === 'secondary' && r.hasSecondaryProcess === false) continue;
+    if (def.key === 'procurement' && isDirectCuttingOrder(r)) continue;
     const rate = clamp(Number((r as any)[def.rateField]) || 0);
-    const start: string | undefined = def.startField ? (r as any)[def.startField] : undefined;
-    const end: string | undefined = def.endField ? (r as any)[def.endField] : undefined;
+    const start: string | undefined = def.startFields.reduce<string | undefined>((acc, f) => acc || (r as any)[f], undefined);
+    const end: string | undefined = def.endFields.reduce<string | undefined>((acc, f) => acc || (r as any)[f], undefined);
     let status: StageStatus;
     if (isScrapped) status = 'scrapped';
     else if (rate >= 100) status = 'done';
@@ -59,7 +61,8 @@ function buildStages(r: ProductionOrder, isOverdue: boolean): SmartStage[] {
       key: def.key,
       label: def.label,
       helper: rate > 0 && rate < 100 ? `${rate}%` : '',
-      timeLabel: end ? fmtTime(end) : start ? fmtTime(start) : '',
+      startTimeLabel: start ? fmtTime(start) : '',
+      timeLabel: end ? fmtTime(end) : '',
       status,
       progress: rate,
     });

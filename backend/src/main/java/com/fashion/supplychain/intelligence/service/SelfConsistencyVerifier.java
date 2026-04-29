@@ -3,7 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
-import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
+import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,10 +37,10 @@ public class SelfConsistencyVerifier {
             r -> { Thread t = new Thread(r, "sc-verify"); t.setDaemon(true); return t; }
     );
 
-    private final IntelligenceInferenceOrchestrator inferenceOrchestrator;
+    private final AiInferenceGateway inferenceGateway;
 
-    public SelfConsistencyVerifier(IntelligenceInferenceOrchestrator inferenceOrchestrator) {
-        this.inferenceOrchestrator = inferenceOrchestrator;
+    public SelfConsistencyVerifier(AiInferenceGateway inferenceGateway) {
+        this.inferenceGateway = inferenceGateway;
     }
 
     public boolean isHighRiskScene(String scene) {
@@ -58,7 +58,7 @@ public class SelfConsistencyVerifier {
 
         for (int i = 0; i < n; i++) {
             futures.add(executor.submit(() ->
-                    inferenceOrchestrator.chat(scene + ":sc-verify", messages, tools)));
+                    inferenceGateway.chat(scene + ":sc-verify", messages, tools)));
         }
 
         for (Future<IntelligenceInferenceResult> f : futures) {

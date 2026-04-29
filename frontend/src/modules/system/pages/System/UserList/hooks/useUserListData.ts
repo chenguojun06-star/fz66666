@@ -284,7 +284,7 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
 
   const openDialog = (editUser?: UserType, initialTab: 'base' | 'perm' = 'base') => {
     setActiveEditTab(initialTab);
-    userModal.open(editUser || null);
+    userModal.open(editUser ?? undefined);
     if (roleOptions.length === 0 && !roleOptionsLoading) fetchRoleOptions();
   };
 

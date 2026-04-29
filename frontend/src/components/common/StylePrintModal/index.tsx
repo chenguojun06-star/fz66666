@@ -52,7 +52,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
 
   const labelItems = useMemo(() => {
-    return resolveLabelItems(sizeDetails, data.productionSheet, color, quantity ?? 0);
+    return resolveLabelItems(sizeDetails, data.productionSheet, color ?? '', quantity ?? 0);
   }, [sizeDetails, data.productionSheet, color, quantity]);
 
   useEffect(() => { setResolvedCover(cover || null); }, [cover]);

@@ -156,6 +156,8 @@ function getNodeRateFromOrder(nodeName, order) {
 function buildProcessNodesWithRates(order) {
   var nodes = resolveNodesFromOrder(order);
   if (!nodes || !nodes.length) return [];
+  var orderStatus = (order.status || '').trim().toLowerCase();
+  var isCompletedOrClosed = orderStatus === 'completed' || orderStatus === 'closed';
   var progress = Number(order.productionProgress) || 0;
   var hasAnyRate = false;
   var hasRealRate = false;
@@ -180,6 +182,11 @@ function buildProcessNodesWithRates(order) {
     }
     return { name: name, percent: -1, bundleInfo: bundleInfo };
   });
+  if (isCompletedOrClosed) {
+    return result.map(function (r) {
+      return { name: r.name, percent: 100, bundleInfo: r.bundleInfo };
+    });
+  }
   if (hasAnyRate && hasRealRate) {
     return result.map(function (r) {
       return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo };
@@ -222,7 +229,7 @@ function calcOrderProgress(order) {
   if (!order) return 0;
   var dbProgress = clampPercent(Number(order.productionProgress) || 0);
   var status = (order.status || '').trim().toLowerCase();
-  if (status === 'completed') {
+  if (status === 'completed' || status === 'closed') {
     var completedQty = Number(order.completedQuantity) || 0;
     var totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
                    || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;

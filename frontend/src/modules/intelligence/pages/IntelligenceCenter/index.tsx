@@ -129,7 +129,7 @@ const IntelligenceCenter: React.FC = () => {
   const { scanPop, factoryPop, healthPop, stagnantPop, shortagePop, notifyPop } = useKpiPopovers({ data, currentKpiMetrics, now });
 
   const heatmapCellMap = useMemo(() => {
-    const m = new Map<string, (typeof heatmap.cells)[number]>();
+    const m = new Map<string, NonNullable<typeof heatmap>['cells'][number]>();
     (heatmap?.cells || []).forEach(c => m.set(`${c.process}|${c.factory}`, c));
     return m;
   }, [heatmap?.cells]);

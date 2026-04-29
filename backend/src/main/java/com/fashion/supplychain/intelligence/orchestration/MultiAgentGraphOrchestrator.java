@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -42,11 +43,12 @@ public class MultiAgentGraphOrchestrator {
     @Autowired private AgentExecutionLogMapper logMapper;
     @Autowired private List<SpecialistAgent> specialistAgents;
     @Autowired private com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper promptHelper;
+    @Autowired private AgentCheckpointService checkpointService;
+    @Autowired private AgentMemoryService memoryService;
 
     /**
      * 同步执行：Plan→DigitalTwin→Supervisor→Specialist(并行)→Reflect→[重路由]→Result
      */
-    @Transactional(rollbackFor = Exception.class)
     public GraphExecutionResult runGraph(MultiAgentRequest req) {
         long start = System.currentTimeMillis();
         AgentState state = initState(req);
@@ -70,37 +72,39 @@ public class MultiAgentGraphOrchestrator {
     public void runGraphStreaming(MultiAgentRequest req, SseEmitter emitter) {
         long start = System.currentTimeMillis();
         AgentState state = initState(req);
+        String threadId = "thread-" + UUID.randomUUID().toString().substring(0, 8);
+        state.setThreadId(threadId);
         try {
-            emitSse(emitter, "graph_start", Map.of("scene", state.getScene()));
+            emitSse(emitter, "graph_start", Map.of("scene", state.getScene(), "threadId", threadId));
 
-            // Step 1: 数字孪生
             digitalTwin.buildSnapshot(state);
+            checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "digital_twin", "数字孪生", state, 0);
             emitSse(emitter, "node_done", Map.of("node", "digital_twin", "snapshot", state.getDigitalTwinSnapshot() != null ? state.getDigitalTwinSnapshot() : "{}"));
 
-            // Step 2: Supervisor 路由
             supervisor.analyzeAndRoute(state);
             state.getNodeTrace().add("supervisor");
+            checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "supervisor", "监督路由", state, 1);
             emitSse(emitter, "node_done", Map.of("node", "supervisor", "route", state.getRoute(), "contextSummary", truncate(state.getContextSummary(), 200)));
 
-            // Step 3: Specialist(s)
             dispatchSpecialists(state);
+            checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "specialists", "专家分析", state, 2);
             emitSse(emitter, "node_done", Map.of("node", "specialists", "results", state.getSpecialistResults()));
 
-            // Step 4: Reflection
             reflector.critiqueAndReflect(state);
             state.getNodeTrace().add("reflection");
+            checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "reflection", "反思引擎", state, 3);
             emitSse(emitter, "node_done", Map.of("node", "reflection", "confidence", state.getConfidenceScore()));
 
-            // Step 5: 重路由（如需）
             if (state.getConfidenceScore() < CONFIDENCE_THRESHOLD) {
                 supervisor.reRouteWithReflection(state);
                 reflector.critiqueAndReflect(state);
                 state.getNodeTrace().add("re_route");
+                checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "re_route", "重路由", state, 4);
                 emitSse(emitter, "node_done", Map.of("node", "re_route", "newRoute", state.getRoute(), "confidence", state.getConfidenceScore()));
             }
 
-            // Step 6: 决策闭环
             recordDecisionSafely(state);
+            checkpointService.markThreadCompleted(state.getTenantId(), threadId);
 
             long latency = System.currentTimeMillis() - start;
             persistLog(state, "SUCCESS", latency);
@@ -128,19 +132,39 @@ public class MultiAgentGraphOrchestrator {
     // ── 图执行管线 ────────────────────────────────────────────────────────
 
     private void executeGraphPipeline(AgentState state) {
+        String threadId = "thread-" + (state.getExecutionId() != null ? state.getExecutionId() : UUID.randomUUID().toString().substring(0, 8));
+        state.setThreadId(threadId);
+
         digitalTwin.buildSnapshot(state);
+        checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "digital_twin", "数字孪生", state, 0);
+
         supervisor.analyzeAndRoute(state);
         state.getNodeTrace().add("supervisor");
+        checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "supervisor", "监督路由", state, 1);
+
         dispatchSpecialists(state);
+        checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "specialists", "专家分析", state, 2);
+
         reflector.critiqueAndReflect(state);
         state.getNodeTrace().add("reflection");
+        checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "reflection", "反思引擎", state, 3);
+
         if (state.getConfidenceScore() < CONFIDENCE_THRESHOLD) {
             supervisor.reRouteWithReflection(state);
             reflector.critiqueAndReflect(state);
             state.getNodeTrace().add("re_route");
+            checkpointService.saveCheckpointAsync(state.getTenantId(), threadId, "re_route", "重路由", state, 4);
         }
-        // ★ 决策闭环：自动记录本次决策
+
         recordDecisionSafely(state);
+
+        memoryService.storeArchival(state.getTenantId(), "graph_mas",
+                String.format("route=%s conf=%d suggestion=%s",
+                        state.getRoute(), state.getConfidenceScore(),
+                        truncate(state.getOptimizationSuggestion(), 200)),
+                "decision_lesson");
+
+        checkpointService.markThreadCompleted(state.getTenantId(), threadId);
     }
 
     /**

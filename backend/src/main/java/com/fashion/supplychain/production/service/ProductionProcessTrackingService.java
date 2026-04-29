@@ -35,6 +35,7 @@ public class ProductionProcessTrackingService extends ServiceImpl<ProductionProc
                 .eq(ProductionProcessTracking::getTenantId, tenantId)
                 .orderByAsc(ProductionProcessTracking::getBundleNo)
                 .orderByAsc(ProductionProcessTracking::getProcessOrder)
+                .last("LIMIT 2000")
                 .list();
     }
 

@@ -168,22 +168,22 @@
       "packageName": "pkg-privacy"
     },
     {
-      "source": "pages/admin/change-password/index",
+      "source": "pages/admin/misc/change-password/index",
       "h5Path": "/admin/change-password",
       "type": "subpackage",
-      "packageName": "pkg-admin-changepwd"
+      "packageName": "pkg-admin-misc"
     },
     {
-      "source": "pages/admin/feedback/index",
+      "source": "pages/admin/misc/feedback/index",
       "h5Path": "/admin/feedback",
       "type": "subpackage",
-      "packageName": "pkg-admin-feedback"
+      "packageName": "pkg-admin-misc"
     },
     {
-      "source": "pages/admin/invite/index",
+      "source": "pages/admin/misc/invite/index",
       "h5Path": "/admin/invite",
       "type": "subpackage",
-      "packageName": "pkg-admin-invite"
+      "packageName": "pkg-admin-misc"
     },
     {
       "source": "pages/work/bundle-split/index",

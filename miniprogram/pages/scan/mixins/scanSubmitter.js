@@ -130,6 +130,8 @@ module.exports = {
           lastLocalScanRecord: { orderNo: e.orderNo || '', processName: '全部工序已完成', processCode: '', quantity: 0, success: true, time: new Date().toLocaleTimeString() },
           loading: false
         });
+        wx.pageScrollTo({ scrollTop: 0, duration: 300 });
+        this._startResultDismissTimer();
         return;
       }
       if (e.isOfflineQueued) {
@@ -138,6 +140,8 @@ module.exports = {
           lastResult: { success: false, queued: true, message: '📶 无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
           offlinePendingCount: e.offlineCount || 0
         });
+        wx.pageScrollTo({ scrollTop: 0, duration: 300 });
+        this._startResultDismissTimer();
         return;
       }
       var errorMsg = e.errMsg || e.message || '系统异常';

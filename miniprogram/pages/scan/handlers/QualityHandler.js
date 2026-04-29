@@ -7,38 +7,49 @@ const { getUserInfo } = require('../../../utils/storage');
 const toast = require('../../../utils/uiHelper').toast;
 
 /**
- * 显示质检弹窗
+ * 跳转到质检录入页面
  */
 function showQualityModal(page, detail) {
-  // 跳转独立页面（原弹窗已转为页面）
-  getApp().globalData.qualityData = detail;
+  var app = getApp();
+  app.globalData.qualityData = detail;
   wx.navigateTo({ url: '/pages/scan/quality/index' });
 }
 
+/**
+ * 关闭质检弹窗（页面跳转模式下为空操作，兼容调用方）
+ */
 function closeQualityModal(page) {
-  page.setData({ 'qualityModal.show': false });
+  // 页面跳转模式，无弹窗需要关闭
 }
 
 /**
- * 通用内联选择器点击处理（替代原生 picker）
- * @param {Object} page - Page 上下文
- * @param {Object} e - 事件对象，包含 data-index 和 data-field
+ * 质检结果选择（合格/不合格）
  */
-function onQmSelectorTap(page, e) {
-  const { index, field } = e.currentTarget.dataset;
-  if (field && index !== undefined) {
-    page.setData({ [`qualityModal.${field}`]: Number(index) });
-  }
-}
-
 function onSelectQualityResult(page, e) {
   page.setData({ 'qualityModal.result': e.currentTarget.dataset.value });
 }
 
+/**
+ * 不合格件数输入
+ */
 function onDefectiveQuantityInput(page, e) {
   page.setData({ 'qualityModal.unqualifiedQuantity': e.detail.value });
 }
 
+/**
+ * 选择器 tap（inline-selector 用）
+ */
+function onQmSelectorTap(page, e) {
+  const field = e.currentTarget.dataset.field;
+  const index = e.currentTarget.dataset.index;
+  if (field !== undefined && index !== undefined) {
+    page.setData({ [`qualityModal.${field}`]: Number(index) });
+  }
+}
+
+/**
+ * 备注输入
+ */
 function onRemarkInput(page, e) {
   page.setData({ 'qualityModal.remark': e.detail.value });
 }

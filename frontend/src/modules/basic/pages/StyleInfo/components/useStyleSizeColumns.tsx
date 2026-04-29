@@ -216,11 +216,11 @@ export function useStyleSizeColumns({
         render: (_: any, record: MatrixRow) => {
           const zones = normalizeGradingZones(record.gradingZones || [], sizeColumns);
           const summary = zones.map((zone) => {
-            const frontInfo = (zone.frontSizes || []).length > 0
-              ? `前:${zone.frontSizes.join('/')}↓${toNumberSafe(zone.frontStep)}`
+            const frontInfo = (zone.frontSizes ?? ([] || [])).length > 0
+              ? `前:${(zone.frontSizes ?? []).join('/')}↓${toNumberSafe(zone.frontStep)}`
               : '';
-            const backInfo = (zone.backSizes || []).length > 0
-              ? `后:${zone.backSizes.join('/')}↑${toNumberSafe(zone.backStep)}`
+            const backInfo = (zone.backSizes ?? ([] || [])).length > 0
+              ? `后:${(zone.backSizes ?? []).join('/')}↑${toNumberSafe(zone.backStep)}`
               : '';
             const extraInfo = (zone.sizeStepColumns || []).map((col, idx) => {
               if ((col.sizes || []).length === 0) return '';

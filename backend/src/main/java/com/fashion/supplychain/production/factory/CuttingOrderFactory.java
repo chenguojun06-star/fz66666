@@ -1,10 +1,8 @@
 package com.fashion.supplychain.production.factory;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.CuttingFactoryContextHelper;

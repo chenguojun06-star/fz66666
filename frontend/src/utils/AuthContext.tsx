@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useMe
 import api from './api';
 import tenantSmartFeatureService from '@/services/system/tenantSmartFeatureService';
 import { replaceSmartFeatureFlags, resetSmartFeatureFlags } from '@/smart/core/featureFlags';
+import { useSmartFeatureStore } from '@/smart/core/smartFeatureStore';
 
 export interface UserInfo extends Record<string, unknown> {
   id: string;
@@ -92,6 +93,7 @@ export const getWorkspaceRole = (user?: Partial<UserInfo> | null): WorkspaceRole
 
 // ── 常量（提取到模块级，避免组件内重复创建）──────────────────────────
 const TOKEN_STORAGE_KEY = 'authToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_STORAGE_KEY = 'userInfo';
 const FALLBACK_THEME = 'white';
 
@@ -104,8 +106,7 @@ const applyThemeValue = (nextTheme: string | null | undefined) => {
 
 const loadTenantSmartFlags = async () => {
   try {
-    const flags = await tenantSmartFeatureService.list();
-    replaceSmartFeatureFlags(flags);
+    await useSmartFeatureStore.getState().fetchFromServer();
   } catch {
     // Ignore smart feature bootstrap failures and keep local fallback.
   }
@@ -196,9 +197,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     defaultErrorMessage: string,
   ): Promise<{ success: boolean; user?: UserInfo }> => {
     const token = String(response?.data?.token || '').trim();
+    const refreshToken = String((response?.data as Record<string, unknown>)?.refreshToken || '').trim();
     const u = response?.data?.user || response?.data || null;
     if (response?.code === 200 && token && u) {
-      const keysToRemove = [TOKEN_STORAGE_KEY, USER_STORAGE_KEY, 'user-storage', 'userId'];
+      const keysToRemove = [TOKEN_STORAGE_KEY, REFRESH_TOKEN_KEY, USER_STORAGE_KEY, 'user-storage', 'userId'];
       keysToRemove.forEach(k => {
         try { localStorage.removeItem(k); } catch { /* ignore */ }
       });
@@ -233,6 +235,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(baseUser));
       setUser(baseUser);
       setIsAuthenticated(true);
@@ -315,6 +318,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(() => {
     const keysToRemove = [
       TOKEN_STORAGE_KEY,
+      REFRESH_TOKEN_KEY,
       USER_STORAGE_KEY,
       'user-storage',
       'userId',
@@ -365,13 +369,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
 
         if (isJwtExpired(token)) {
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
-          localStorage.removeItem('userId');
-          resetSmartFeatureFlags();
-          setUser(null);
-          setIsAuthenticated(false);
-          setLoading(false);
-          return;
+          const savedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+          if (savedRefreshToken) {
+            try {
+              const refreshRes = (await api.post('/system/user/refresh-token', { refreshToken: savedRefreshToken })) as { code?: number; data?: Record<string, unknown> };
+              if (refreshRes?.code === 200 && refreshRes.data?.token) {
+                const newToken = String(refreshRes.data.token).trim();
+                const newRefresh = String(refreshRes.data.refreshToken || '').trim();
+                localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
+                if (newRefresh) localStorage.setItem(REFRESH_TOKEN_KEY, newRefresh);
+              } else {
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+                localStorage.removeItem(REFRESH_TOKEN_KEY);
+                localStorage.removeItem('userId');
+                resetSmartFeatureFlags();
+                setUser(null);
+                setIsAuthenticated(false);
+                setLoading(false);
+                return;
+              }
+            } catch {
+              localStorage.removeItem(TOKEN_STORAGE_KEY);
+              localStorage.removeItem(REFRESH_TOKEN_KEY);
+              localStorage.removeItem('userId');
+              resetSmartFeatureFlags();
+              setUser(null);
+              setIsAuthenticated(false);
+              setLoading(false);
+              return;
+            }
+          } else {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+            localStorage.removeItem('userId');
+            resetSmartFeatureFlags();
+            setUser(null);
+            setIsAuthenticated(false);
+            setLoading(false);
+            return;
+          }
         }
 
         const restoreUserTheme = (userId: string) => {

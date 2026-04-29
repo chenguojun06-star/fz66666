@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, App, Button, Popconfirm, Space, Spin, Tabs, Tag } from 'antd';
+import type { TabsProps } from 'antd';
 import { FileTextOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ResizableModal from '../ResizableModal';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
@@ -359,7 +360,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                     factories={factories || []}
                     users={users || []}
                     orderSummary={orderSummary}
-                    orderNo={orderNo}
+                    orderNo={orderNo ?? ''}
                     unitPrice={unitPrice}
                     cuttingSizeItems={cuttingSizeItems}
                     updateNodeData={updateNodeData}
@@ -401,7 +402,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                   </div>
                 ),
               },
-            ].filter(Boolean);
+            ].filter(Boolean) as NonNullable<TabsProps['items']>;
           })()}
         />
       </Spin>

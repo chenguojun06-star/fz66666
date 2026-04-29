@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/warehouse/transfer")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class StockTransferController {
 
     private final StockTransferOrchestrator transferOrchestrator;

@@ -20,6 +20,12 @@ public class AuthTokenService {
 
     private final byte[] secret;
 
+    @Value("${app.auth.jwt-ttl-hours:4}")
+    private int jwtTtlHours;
+
+    @Value("${app.auth.refresh-token-ttl-hours:72}")
+    private int refreshTokenTtlHours;
+
     public AuthTokenService(@Value("${app.auth.jwt-secret:}") String secret) {
         String s = secret == null ? "" : secret.trim();
         if (!StringUtils.hasText(s)) {
@@ -38,7 +44,7 @@ public class AuthTokenService {
         if (subject == null) {
             return null;
         }
-        Duration safeTtl = ttl == null ? Duration.ofHours(12) : ttl;
+        Duration safeTtl = ttl != null ? ttl : Duration.ofHours(jwtTtlHours);
         long nowMillis = System.currentTimeMillis();
 
         Map<String, Object> payload = new HashMap<>();
@@ -59,6 +65,57 @@ public class AuthTokenService {
         payload.put("exp", new Date(nowMillis + safeTtl.toMillis()));
 
         return JWT.create().addPayloads(payload).setKey(secret).sign();
+    }
+
+    public String issueRefreshToken(TokenSubject subject) {
+        if (subject == null) {
+            return null;
+        }
+        long nowMillis = System.currentTimeMillis();
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("uid", subject.getUserId());
+        payload.put("type", "refresh");
+        payload.put("pwdVer", subject.getPwdVersion() != null ? subject.getPwdVersion() : 0L);
+        payload.put("iat", new Date(nowMillis));
+        payload.put("exp", new Date(nowMillis + Duration.ofHours(refreshTokenTtlHours).toMillis()));
+        return JWT.create().addPayloads(payload).setKey(secret).sign();
+    }
+
+    public boolean isRefreshToken(String token) {
+        String t = token == null ? "" : token.trim();
+        if (!StringUtils.hasText(t)) return false;
+        try {
+            JWT jwt = JWT.of(t).setKey(secret);
+            if (!jwt.verify() || !jwt.validate(0)) return false;
+            Object type = jwt.getPayload("type");
+            return "refresh".equals(type != null ? String.valueOf(type) : null);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public String refreshAccessToken(String refreshToken, TokenSubject currentSubject) {
+        if (!isRefreshToken(refreshToken)) {
+            return null;
+        }
+        if (currentSubject == null) {
+            return null;
+        }
+        Object pwdVerObj = JWT.of(refreshToken.trim()).setKey(secret).getPayload("pwdVer");
+        long tokenPwdVer = 0L;
+        if (pwdVerObj != null) {
+            try { tokenPwdVer = Long.valueOf(String.valueOf(pwdVerObj)); } catch (NumberFormatException ignored) {}
+        }
+        long currentPwdVer = currentSubject.getPwdVersion() != null ? currentSubject.getPwdVersion() : 0L;
+        if (tokenPwdVer != currentPwdVer) {
+            log.warn("[RefreshToken] 密码版本不匹配, tokenPwdVer={}, currentPwdVer={}, userId={}", tokenPwdVer, currentPwdVer, currentSubject.getUserId());
+            return null;
+        }
+        return issueToken(currentSubject, Duration.ofHours(jwtTtlHours));
+    }
+
+    public int getJwtTtlHours() {
+        return jwtTtlHours;
     }
 
     public TokenSubject verifyAndParse(String token) {

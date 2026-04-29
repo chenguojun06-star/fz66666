@@ -7,7 +7,6 @@ import com.fashion.supplychain.intelligence.dto.ExecutionDecision;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;

@@ -47,8 +47,6 @@ public class LearningLoopOrchestrator {
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
-    private volatile Boolean feedbackRecordTableReady;
-
     // ──────────────────────────────────────────────────────────────
 
     /**
@@ -190,11 +188,15 @@ public class LearningLoopOrchestrator {
         };
     }
 
+    private volatile Boolean feedbackRecordTableReady = null;
+    private final java.util.concurrent.locks.ReentrantLock schemaCheckLock = new java.util.concurrent.locks.ReentrantLock();
+
     private boolean isFeedbackRecordTableReady() {
         if (feedbackRecordTableReady != null) {
             return feedbackRecordTableReady;
         }
-        synchronized (this) {
+        schemaCheckLock.lock();
+        try {
             if (feedbackRecordTableReady != null) {
                 return feedbackRecordTableReady;
             }
@@ -216,6 +218,8 @@ public class LearningLoopOrchestrator {
                 feedbackRecordTableReady = false;
             }
             return feedbackRecordTableReady;
+        } finally {
+            schemaCheckLock.unlock();
         }
     }
 }

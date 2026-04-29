@@ -55,6 +55,9 @@ public class OrderDeliveryRiskOrchestrator {
     @Autowired
     private ProcessStatsEngine processStatsEngine;
 
+    @Autowired(required = false)
+    private OrderRiskTrackingOrchestrator orderRiskTrackingOrchestrator;
+
     public DeliveryRiskResponse assess(DeliveryRiskRequest request) {
         DeliveryRiskResponse response = new DeliveryRiskResponse();
         TenantAssert.assertTenantContext();
@@ -85,6 +88,8 @@ public class OrderDeliveryRiskOrchestrator {
                 "overdue", 0, "danger", 1, "warning", 2, "safe", 3);
         response.getOrders().sort(Comparator.comparingInt(
                 i -> riskOrder.getOrDefault(i.getRiskLevel(), 9)));
+
+        trackHighRiskOrdersSafely(response);
 
         return response;
     }
@@ -223,6 +228,29 @@ public class OrderDeliveryRiskOrchestrator {
         } catch (Exception e) {
             log.debug("[OrderDeliveryRisk] toLocalDate失败: dateObj={}", dateObj);
             return null;
+        }
+    }
+
+    private void trackHighRiskOrdersSafely(DeliveryRiskResponse response) {
+        if (orderRiskTrackingOrchestrator == null) return;
+        try {
+            for (DeliveryRiskItem item : response.getOrders()) {
+                if ("overdue".equals(item.getRiskLevel()) || "danger".equals(item.getRiskLevel())) {
+                    try {
+                        orderRiskTrackingOrchestrator.createRisk(
+                                item.getOrderNo(),
+                                item.getRiskLevel(),
+                                List.of(item.getRiskDescription()),
+                                null
+                        );
+                    } catch (Exception e) {
+                        log.debug("[RiskTracking] 风险追踪创建失败(不阻断): orderNo={}, {}",
+                                item.getOrderNo(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[RiskTracking] 风险追踪批量处理失败(不阻断): {}", e.getMessage());
         }
     }
 }

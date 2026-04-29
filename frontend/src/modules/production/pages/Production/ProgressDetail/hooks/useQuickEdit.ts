@@ -24,7 +24,7 @@ export const useQuickEdit = ({ message, fetchOrders }: UseQuickEditOptions) => {
   const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null; urgencyLevel: 'normal' | 'urgent' }) => {
     setQuickEditSaving(true);
     try {
-      await productionOrderApi.quickEdit({ id: quickEditRecord?.id, ...values });
+      await productionOrderApi.quickEdit({ id: quickEditRecord?.id ?? '', ...values });
       message.success('编辑成功');
       setQuickEditVisible(false);
       setQuickEditRecord(null);

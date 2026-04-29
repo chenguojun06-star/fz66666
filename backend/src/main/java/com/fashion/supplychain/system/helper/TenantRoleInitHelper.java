@@ -10,7 +10,7 @@ import com.fashion.supplychain.system.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -52,7 +52,8 @@ public class TenantRoleInitHelper {
     @Autowired
     private FactoryWorkerService factoryWorkerService;
 
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private void assertSuperAdmin() {
         if (!UserContext.isSuperAdmin()) {
@@ -446,6 +447,15 @@ public class TenantRoleInitHelper {
             throw new IllegalArgumentException("用户名已存在: " + username);
         }
 
+        // maxUsers 检查：注册时预检（统计租户下所有用户，包括 PENDING，避免名额被塞满）
+        if (tenant.getMaxUsers() != null && tenant.getMaxUsers() > 0) {
+            int currentCount = tenantService.countTenantUsers(tenant.getId());
+            if (currentCount >= tenant.getMaxUsers()) {
+                throw new IllegalArgumentException(
+                    "该工厂人员名额已满（上限 " + tenant.getMaxUsers() + " 人），请联系管理员");
+            }
+        }
+
         // 查找租户的 "工人" 角色
         LambdaQueryWrapper<Role> roleQuery = new LambdaQueryWrapper<>();
         roleQuery.eq(Role::getTenantId, tenant.getId())
@@ -597,6 +607,21 @@ public class TenantRoleInitHelper {
             if (role != null) {
                 user.setRoleId(role.getId());
                 user.setRoleName(role.getRoleName());
+            }
+        }
+
+        // maxUsers 检查：审批通过前严格检查活跃用户数（ACTIVE 才真正占用名额）
+        Long effectiveTenantId = user.getTenantId() != null ? user.getTenantId() : tenantId;
+        if (effectiveTenantId != null) {
+            Tenant userTenant = tenantService.getById(effectiveTenantId);
+            if (userTenant != null && userTenant.getMaxUsers() != null && userTenant.getMaxUsers() > 0) {
+                long activeCount = userService.count(new LambdaQueryWrapper<User>()
+                    .eq(User::getTenantId, effectiveTenantId)
+                    .eq(User::getRegistrationStatus, "ACTIVE"));
+                if (activeCount >= userTenant.getMaxUsers()) {
+                    throw new IllegalStateException(
+                        "该租户活跃人员已达上限（" + userTenant.getMaxUsers() + " 人），无法审批通过");
+                }
             }
         }
 

@@ -5,6 +5,8 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchResponse;
+import com.fashion.supplychain.intelligence.entity.CollaborationTask;
+import com.fashion.supplychain.intelligence.mapper.CollaborationTaskMapper;
 import com.fashion.supplychain.service.RedisService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -25,6 +27,7 @@ public class CollaborationTaskLifecycleOrchestrator {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    @Autowired private CollaborationTaskMapper collaborationTaskMapper;
     @Autowired private RedisService redisService;
 
     public void initialize(CollaborationDispatchRequest request, CollaborationDispatchResponse response) {
@@ -38,21 +41,28 @@ public class CollaborationTaskLifecycleOrchestrator {
         appendHistory(response, "dispatch", UserContext.username(), response.getCurrentStage(), request.getInstruction());
         applyTiming(state);
         String key = resolveKey(request.getOrderNo(), response.getOwnerRole());
-        save(key, state);
+        saveToDb(request.getOrderNo(), response.getOwnerRole(), state);
+        saveToRedis(key, state);
         addToIndex(key);
     }
 
     public CollaborationDispatchResponse query(String orderNo, String targetRole) {
-        TaskState state = load(resolveKey(orderNo, targetRole));
+        TaskState state = loadFromDb(orderNo, targetRole);
+        if (state == null) {
+            state = loadFromRedis(resolveKey(orderNo, targetRole));
+        }
         if (state == null) return null;
         applyTiming(state);
-        save(resolveKey(orderNo, targetRole), state);
+        String key = resolveKey(orderNo, targetRole);
+        saveToRedis(key, state);
         return state.getResponse();
     }
 
     public CollaborationDispatchResponse update(String orderNo, String targetRole, String targetUser, String action, String remark) {
-        String key = resolveKey(orderNo, targetRole);
-        TaskState state = load(key);
+        TaskState state = loadFromDb(orderNo, targetRole);
+        if (state == null) {
+            state = loadFromRedis(resolveKey(orderNo, targetRole));
+        }
         if (state == null || state.getResponse() == null) return null;
         String actor = StringUtils.hasText(targetUser) ? targetUser.trim() : UserContext.username();
         List<CollaborationDispatchResponse.Recipient> recipients = state.getResponse().getRecipients();
@@ -69,22 +79,31 @@ public class CollaborationTaskLifecycleOrchestrator {
         recomputeState(state);
         appendHistory(state.getResponse(), action, actor, state.getResponse().getCurrentStage(), remark);
         applyTiming(state);
-        save(key, state);
+        String key = resolveKey(orderNo, targetRole);
+        saveToDb(orderNo, targetRole, state);
+        saveToRedis(key, state);
         addToIndex(key);
         return state.getResponse();
     }
 
     public List<CollaborationDispatchResponse> listTasks(String orderNo, String targetRole, int limit) {
-        List<String> keys = loadIndex();
+        Long tenantId = UserContext.tenantId();
+        List<CollaborationTask> tasks;
+        if (StringUtils.hasText(orderNo) && StringUtils.hasText(targetRole)) {
+            CollaborationTask single = collaborationTaskMapper.findByTenantAndOrderAndRole(tenantId, orderNo.trim(), targetRole.trim());
+            tasks = single != null ? List.of(single) : List.of();
+        } else if (StringUtils.hasText(orderNo)) {
+            tasks = collaborationTaskMapper.findByTenantAndOrder(tenantId, orderNo.trim(), Math.max(limit, 50));
+        } else {
+            tasks = collaborationTaskMapper.findRecentByTenant(tenantId, Math.max(limit, 50));
+        }
         List<CollaborationDispatchResponse> result = new ArrayList<>();
-        for (String key : keys) {
-            TaskState state = load(key);
+        for (CollaborationTask task : tasks) {
+            TaskState state = deserializeTaskState(task);
             if (state == null || state.getResponse() == null) continue;
-            CollaborationDispatchResponse response = state.getResponse();
-            if (StringUtils.hasText(orderNo) && !orderNo.trim().equalsIgnoreCase(nullSafe(response.getOrderNo()))) continue;
-            if (StringUtils.hasText(targetRole) && !targetRole.trim().equalsIgnoreCase(nullSafe(response.getOwnerRole()))) continue;
+            if (StringUtils.hasText(targetRole) && !targetRole.trim().equalsIgnoreCase(nullSafe(state.getResponse().getOwnerRole()))) continue;
             applyTiming(state);
-            result.add(response);
+            result.add(state.getResponse());
             if (result.size() >= Math.max(limit, 1)) break;
         }
         return result;
@@ -190,10 +209,49 @@ public class CollaborationTaskLifecycleOrchestrator {
         return "collab:lifecycle:" + tenantId + ":" + normalizedOrder + ":" + normalizedRole;
     }
 
-    private void save(String key, TaskState state) {
+    private void saveToDb(String orderNo, String targetRole, TaskState state) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            CollaborationTask existing = collaborationTaskMapper.findByTenantAndOrderAndRole(
+                    tenantId,
+                    StringUtils.hasText(orderNo) ? orderNo.trim() : "general",
+                    StringUtils.hasText(targetRole) ? targetRole.trim() : "general"
+            );
+            String json = MAPPER.writeValueAsString(state);
+            if (existing != null) {
+                existing.setDispatchResponseJson(json);
+                existing.setCurrentStage(state.getResponse().getCurrentStage());
+                existing.setNextStep(state.getResponse().getNextStep());
+                existing.setUpdatedAt(state.getUpdatedAt());
+                existing.setDueAt(state.getDueAt());
+                existing.setOverdue(state.getDueAt() != null && state.getDueAt().isBefore(LocalDateTime.now()));
+                collaborationTaskMapper.updateById(existing);
+            } else {
+                CollaborationTask task = new CollaborationTask();
+                task.setTenantId(tenantId);
+                task.setOrderNo(StringUtils.hasText(orderNo) ? orderNo.trim() : "general");
+                task.setTargetRole(StringUtils.hasText(targetRole) ? targetRole.trim() : "general");
+                task.setCurrentStage(state.getResponse().getCurrentStage());
+                task.setNextStep(state.getResponse().getNextStep());
+                task.setInstruction(null);
+                task.setDueHint(state.getResponse().getDueHint());
+                task.setDispatchResponseJson(json);
+                task.setUpdatedAt(state.getUpdatedAt());
+                task.setDueAt(state.getDueAt());
+                task.setOverdue(false);
+                collaborationTaskMapper.insert(task);
+            }
+        } catch (Exception e) {
+            log.warn("[CollaborationTask] saveToDb failed: {}", e.getMessage());
+        }
+    }
+
+    private void saveToRedis(String key, TaskState state) {
         try {
             redisService.set(key, MAPPER.writeValueAsString(state), 7, TimeUnit.DAYS);
-        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+        } catch (Exception e) {
+            log.debug("Non-critical Redis write error: {}", e.getMessage());
+        }
     }
 
     private void addToIndex(String taskKey) {
@@ -208,13 +266,38 @@ public class CollaborationTaskLifecycleOrchestrator {
         } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
     }
 
-    private TaskState load(String key) {
+    private TaskState loadFromDb(String orderNo, String targetRole) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            CollaborationTask task = collaborationTaskMapper.findByTenantAndOrderAndRole(
+                    tenantId,
+                    StringUtils.hasText(orderNo) ? orderNo.trim() : "general",
+                    StringUtils.hasText(targetRole) ? targetRole.trim() : "general"
+            );
+            return deserializeTaskState(task);
+        } catch (Exception e) {
+            log.debug("[CollaborationTask] loadFromDb failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private TaskState loadFromRedis(String key) {
         try {
             String value = redisService.get(key);
             if (!StringUtils.hasText(value)) return null;
             return MAPPER.readValue(value, TaskState.class);
         } catch (Exception e) {
-            log.debug("[CollaborationTask] loadTaskState失败: key={}", key);
+            log.debug("[CollaborationTask] loadFromRedis failed: key={}", key);
+            return null;
+        }
+    }
+
+    private TaskState deserializeTaskState(CollaborationTask task) {
+        if (task == null || !StringUtils.hasText(task.getDispatchResponseJson())) return null;
+        try {
+            return MAPPER.readValue(task.getDispatchResponseJson(), TaskState.class);
+        } catch (Exception e) {
+            log.warn("[CollaborationTask] deserialize failed: id={}", task.getId());
             return null;
         }
     }

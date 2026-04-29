@@ -109,10 +109,10 @@ const OrdersTab: React.FC = () => {
       if (filterStatus !== undefined) params.status = filterStatus;
       if (keyword) params.keyword = keyword;
       const res = await api.post<ApiResult>('/ecommerce/orders/list', params);
-      const d = res?.data ?? {};
-      const records: EcOrder[] = d.records ?? [];
+      const d = (res?.data ?? {}) as Record<string, unknown>;
+      const records: EcOrder[] = (d.records as EcOrder[]) ?? [];
       setData(records);
-      setTotal(d.total ?? 0);
+      setTotal((d.total as number) ?? 0);
       // 异步加载款式图片，不阻塞主流程
       fetchStyleImages(records);
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载失败'); }
@@ -467,9 +467,9 @@ const PricingTab: React.FC = () => {
       const params: Record<string, unknown> = { page, pageSize: 20 };
       if (styleNo) params.styleNo = styleNo;
       const res = await api.get<ApiResult>('/style/sku/list', { params });
-      const d = res?.data ?? {};
-      setData(d.records ?? []);
-      setTotal(d.total ?? 0);
+      const d = (res?.data ?? {}) as Record<string, unknown>;
+      setData(((d.records as Sku[]) ?? []));
+      setTotal((d.total as number) ?? 0);
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载SKU失败'); }
     finally { setLoading(false); }
   }, [page, styleNo]);

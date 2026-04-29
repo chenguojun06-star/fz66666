@@ -67,6 +67,7 @@ public class ScanRecordController {
      * 用法：与 /execute 发同样的请求体，返回每步的诊断结果
      */
     @PostMapping("/diagnose")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('TENANT_OWNER')")
     public Result<?> diagnose(@RequestBody Map<String, Object> params) {
         Map<String, Object> report = new LinkedHashMap<>();
         report.put("step0_params", params);

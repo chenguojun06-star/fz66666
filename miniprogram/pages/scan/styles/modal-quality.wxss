@@ -273,3 +273,52 @@
   color: var(--color-text-disabled);
   line-height: 1;
 }
+
+/* 确认按钮禁用状态（用于 view 元素） */
+.modal-btn.confirm-disabled {
+  background: var(--color-border-light);
+  color: var(--color-text-disabled);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* 订单信息行 */
+.qm-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 8px;
+}
+.qm-info-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.qm-info-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}
+.qm-info-value {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+/* native picker 触发区域 */
+.qm-picker-view {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--color-bg-input, #f5f5f5);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+}
+.qm-picker-arrow {
+  font-size: var(--font-size-md);
+  color: var(--color-text-disabled);
+}

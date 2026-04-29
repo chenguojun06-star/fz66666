@@ -7,8 +7,6 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
-import com.fashion.supplychain.production.service.ProcessParentMappingService;
-import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

@@ -8,7 +8,7 @@ import com.fashion.supplychain.system.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -32,7 +32,7 @@ public class TenantOrchestrator {
     @Autowired private RolePermissionService rolePermissionService;
     @Autowired private TenantPermissionCeilingService ceilingService;
     @Autowired private TenantBillingRecordService billingRecordService;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private TenantBillingHelper billingHelper;
     @Autowired private TenantRoleInitHelper roleInitHelper;
     @Autowired private TenantApplicationHelper applicationHelper;
@@ -223,6 +223,33 @@ public class TenantOrchestrator {
                     if (t.getOwnerUserId() != null) {
                         User owner = ownerMap.get(t.getOwnerUserId());
                         if (owner != null) t.setOwnerUsername(owner.getUsername());
+                    }
+                }
+            }
+            java.util.List<Tenant> missingOwner = result.getRecords().stream()
+                    .filter(t -> t.getOwnerUserId() == null && "active".equals(t.getStatus()))
+                    .toList();
+            if (!missingOwner.isEmpty()) {
+                java.util.Set<Long> tenantIds = missingOwner.stream().map(Tenant::getId).collect(java.util.stream.Collectors.toSet());
+                QueryWrapper<User> ownerFallback = new QueryWrapper<>();
+                ownerFallback.in("tenant_id", tenantIds).eq("is_tenant_owner", true);
+                java.util.Map<Long, User> tenantOwnerMap = userService.list(ownerFallback).stream()
+                        .collect(java.util.stream.Collectors.toMap(User::getTenantId, u -> u, (a, b) -> a));
+                for (Tenant t : missingOwner) {
+                    User owner = tenantOwnerMap.get(t.getId());
+                    if (owner != null) {
+                        t.setOwnerUserId(owner.getId());
+                        t.setOwnerUsername(owner.getUsername());
+                        try {
+                            Tenant update = new Tenant();
+                            update.setId(t.getId());
+                            update.setOwnerUserId(owner.getId());
+                            update.setUpdateTime(LocalDateTime.now());
+                            tenantService.updateById(update);
+                            log.info("[doListTenants] 修复 ownerUserId: tenantId={}, ownerUserId={}", t.getId(), owner.getId());
+                        } catch (Exception e) {
+                            log.warn("[doListTenants] 修复 ownerUserId 失败: tenantId={}", t.getId(), e);
+                        }
                     }
                 }
             }

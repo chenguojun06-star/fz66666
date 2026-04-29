@@ -167,7 +167,7 @@ const TenantListTab: React.FC = () => {
       </SmallModal>
 
       <SmallModal open={resetPwdModal.visible} title={`重置主账号密码 - ${resetPwdModal.data?.tenantName || ''}`} onCancel={() => { resetPwdModal.close(); resetPwdForm.resetFields(); }} footer={<Space><Button onClick={() => { resetPwdModal.close(); resetPwdForm.resetFields(); }}>取消</Button><Button type="default" danger loading={resettingPwd} onClick={handleResetOwnerPassword}>确认重置</Button></Space>}>
-        <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>主账号：<strong style={{ color: 'var(--primary-color)' }}>{resetPwdModal.data?.ownerUsername || '-'}</strong></div>
+        <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>主账号：<strong style={{ color: 'var(--primary-color)' }}>{resetPwdModal.data?.ownerUsername || resetPwdModal.data?.applyUsername || '-'}</strong></div>
         <Form form={resetPwdForm} layout="vertical"><Form.Item label="新密码" name="newPassword" rules={[{ required: true, min: 6, message: '密码不能少于6位' }]}><Input.Password placeholder="请输入新密码（至少6位）" autoComplete="new-password" /></Form.Item><Form.Item label="确认新密码" name="confirmPassword" rules={[{ required: true, message: '请再次输入新密码' }]}><Input.Password placeholder="请再次输入新密码" autoComplete="new-password" /></Form.Item></Form>
       </SmallModal>
 

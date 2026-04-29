@@ -10,8 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -59,7 +57,7 @@ public class EdgeTtsService {
         String muid = generateMuid();
 
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        List<byte[]> audioChunks = Collections.synchronizedList(new ArrayList<>());
+        List<byte[]> audioChunks = new java.util.concurrent.CopyOnWriteArrayList<>();
         String finalText = trimmed;
 
         try {

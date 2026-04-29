@@ -7,6 +7,7 @@
 
 @import './styles/design-tokens.wxss';
 @import './styles/line-icons.wxss';
+@import './styles/xiaoyun-tokens.wxss';
 
 page {
   background: var(--color-bg-page);

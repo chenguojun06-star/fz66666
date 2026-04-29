@@ -104,7 +104,6 @@ const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty, openNode
           );
         }}
       >
-        <div className="style-smart-stage__time">{stage.timeLabel}</div>
         <div className="style-smart-stage__node">
           <span className="style-smart-stage__ring" />
           <span className="style-smart-stage__orbit" />
@@ -113,6 +112,11 @@ const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty, openNode
         </div>
         <div className="style-smart-stage__label">{stage.label}</div>
         {stage.helper && <div className="style-smart-stage__helper">{stage.helper}</div>}
+        <div className="style-smart-stage__time-combined">
+          <span className="style-smart-stage__time-start-inline">{stage.startTimeLabel || '--'}</span>
+          <span className="style-smart-stage__time-sep"> ~ </span>
+          <span className="style-smart-stage__time-end-inline">{stage.timeLabel || '--'}</span>
+        </div>
       </div>
     </Popover>
   );

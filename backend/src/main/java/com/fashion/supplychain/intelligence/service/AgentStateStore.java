@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fashion.supplychain.common.UserContext;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.entity.AgentCheckpoint;
 import com.fashion.supplychain.intelligence.entity.AgentEvent;
@@ -41,12 +42,18 @@ public class AgentStateStore {
 
     public void saveCheckpoint(String sessionId, int iteration, Object messages, Object toolRecords, int totalTokens) {
         try {
+            Long tid = UserContext.tenantId();
             AgentCheckpoint cp = new AgentCheckpoint();
-            cp.setSessionId(sessionId);
-            cp.setIteration(iteration);
-            cp.setMessagesJson(objectMapper.writeValueAsString(messages));
-            cp.setToolCallsJson(toolRecords != null ? objectMapper.writeValueAsString(toolRecords) : "[]");
-            cp.setTotalTokens(totalTokens);
+            cp.setTenantId(tid != null ? tid : 0L);
+            cp.setThreadId(sessionId);
+            cp.setNodeId("iteration_" + iteration);
+            cp.setNodeName("迭代 #" + iteration);
+            cp.setStateJson(objectMapper.writeValueAsString(messages));
+            cp.setMetadataJson(objectMapper.writeValueAsString(
+                    java.util.Map.of("totalTokens", totalTokens, "toolCalls", toolRecords != null ? toolRecords : "[]")));
+            cp.setStepIndex(iteration);
+            cp.setStatus("ACTIVE");
+            cp.setCreatedAt(LocalDateTime.now());
             checkpointMapper.insert(cp);
         } catch (Exception e) {
             log.warn("[AgentStateStore] saveCheckpoint failed: {}", e.getMessage());
@@ -54,18 +61,23 @@ public class AgentStateStore {
     }
 
     public AgentCheckpoint loadLatestCheckpoint(String sessionId) {
+        Long tid = UserContext.tenantId();
         return checkpointMapper.selectOne(
                 new LambdaQueryWrapper<AgentCheckpoint>()
-                        .eq(AgentCheckpoint::getSessionId, sessionId)
-                        .orderByDesc(AgentCheckpoint::getIteration)
+                        .eq(tid != null, AgentCheckpoint::getTenantId, tid)
+                        .eq(AgentCheckpoint::getThreadId, sessionId)
+                        .eq(AgentCheckpoint::getStatus, "ACTIVE")
+                        .orderByDesc(AgentCheckpoint::getStepIndex)
                         .last("LIMIT 1"));
     }
 
     public void rollbackToCheckpoint(String sessionId, int targetIteration) {
+        Long tid = UserContext.tenantId();
         checkpointMapper.delete(
                 new LambdaQueryWrapper<AgentCheckpoint>()
-                        .eq(AgentCheckpoint::getSessionId, sessionId)
-                        .gt(AgentCheckpoint::getIteration, targetIteration));
+                        .eq(tid != null, AgentCheckpoint::getTenantId, tid)
+                        .eq(AgentCheckpoint::getThreadId, sessionId)
+                        .gt(AgentCheckpoint::getStepIndex, targetIteration));
         eventMapper.delete(
                 new LambdaQueryWrapper<AgentEvent>()
                         .eq(AgentEvent::getSessionId, sessionId)
@@ -86,27 +98,23 @@ public class AgentStateStore {
     }
 
     public void completeSession(String sessionId, String finalAnswer, int totalTokens, int totalIterations) {
-        AgentSession patch = new AgentSession();
         AgentSession existing = sessionMapper.selectById(sessionId);
         if (existing == null) return;
-        patch.setId(sessionId);
-        patch.setStatus("completed");
-        patch.setFinalAnswer(finalAnswer);
-        patch.setTotalTokens(totalTokens);
-        patch.setTotalIterations(totalIterations);
-        patch.setUpdatedAt(LocalDateTime.now());
-        sessionMapper.updateById(patch);
+        existing.setStatus("completed");
+        existing.setFinalAnswer(finalAnswer);
+        existing.setTotalTokens(totalTokens);
+        existing.setTotalIterations(totalIterations);
+        existing.setUpdatedAt(LocalDateTime.now());
+        sessionMapper.updateById(existing);
     }
 
     public void failSession(String sessionId, String errorMessage) {
-        AgentSession patch = new AgentSession();
         AgentSession existing = sessionMapper.selectById(sessionId);
         if (existing == null) return;
-        patch.setId(sessionId);
-        patch.setStatus("failed");
-        patch.setFinalAnswer(errorMessage);
-        patch.setUpdatedAt(LocalDateTime.now());
-        sessionMapper.updateById(patch);
+        existing.setStatus("failed");
+        existing.setFinalAnswer(errorMessage);
+        existing.setUpdatedAt(LocalDateTime.now());
+        sessionMapper.updateById(existing);
     }
 
     public AgentSession getSession(String sessionId) {
@@ -114,9 +122,11 @@ public class AgentStateStore {
     }
 
     public List<AgentCheckpoint> getCheckpoints(String sessionId) {
+        Long tid = UserContext.tenantId();
         return checkpointMapper.selectList(
                 new LambdaQueryWrapper<AgentCheckpoint>()
-                        .eq(AgentCheckpoint::getSessionId, sessionId)
-                        .orderByAsc(AgentCheckpoint::getIteration));
+                        .eq(tid != null, AgentCheckpoint::getTenantId, tid)
+                        .eq(AgentCheckpoint::getThreadId, sessionId)
+                        .orderByAsc(AgentCheckpoint::getStepIndex));
     }
 }

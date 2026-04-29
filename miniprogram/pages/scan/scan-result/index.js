@@ -49,10 +49,10 @@ Page({
         checked: true
       }];
     }
-    var isWarehouseStage = raw.progressStage === 'warehouse' || raw.progressStage === '入库'
+    var isWarehouseStage = !!(raw.progressStage === 'warehouse' || raw.progressStage === '入库'
       || raw.scanType === 'warehouse'
       || (raw.stageResult && raw.stageResult.scanType === 'warehouse')
-      || raw.showWarehouse;
+      || raw.showWarehouse);
     if (processOptions.length === 0 && isWarehouseStage) {
       processOptions = [{
         label: '入库',
@@ -69,7 +69,20 @@ Page({
       processOptions[0].checked = true;
     }
     var summary = this._buildSummary(processOptions, selectedNames);
-    var isQualityReceive = raw.progressStage === 'quality' || raw.progressStage === '质检';
+    var isQualityReceive = raw.progressStage === 'quality' || raw.progressStage === '质检'
+      || raw.scanType === 'quality'
+      || (raw.stageResult && raw.stageResult.scanType === 'quality');
+    // 扩展检测：processOptions 全部为质检工序时也触发质检录入流程
+    // （progressStage 未正确设为 quality 时的兜底，常见于工序列表来源的质检）
+    if (!isQualityReceive && processOptions.length > 0) {
+      var qualityKeywords = ['质检', '质量检验', '终检'];
+      var allAreQuality = processOptions.every(function(o) {
+        return o.scanType === 'quality' || qualityKeywords.indexOf(o.value) >= 0 || qualityKeywords.indexOf(o.label) >= 0;
+      });
+      if (allAreQuality) {
+        isQualityReceive = true;
+      }
+    }
 
     var coverImage = '';
     if (raw.orderDetail && raw.orderDetail.coverImage) {
@@ -315,6 +328,35 @@ Page({
   async submitScanResult() {
     if (this.data.loading) return;
     var raw = this._scanContext;
+
+    // 质检一步到位：直接跳转录入页，quality/index 内部自动处理 receive+confirm
+    if (this.data.isQualityReceive) {
+      var detail = this.data.detail;
+      var orderDetail = raw.orderDetail || {};
+      // processName 兜底：若 raw 中没有，从已选质检工序名取第一个
+      var qualityProcessName = raw.processName || detail.processName || '';
+      if (!qualityProcessName && this.data.selectedNames.length > 0) {
+        qualityProcessName = this.data.selectedNames[0];
+      }
+      getApp().globalData.qualityData = {
+        orderNo:       raw.orderNo || '',
+        orderItemId:   raw.orderItemId || '',
+        bundleNo:      raw.bundleNo   || detail.bundleNo      || '',
+        styleNo:       raw.styleNo   || detail.styleNo        || orderDetail.styleNo || '',
+        color:         raw.color     || detail.color          || '',
+        size:          raw.size      || raw.sizeSpec          || detail.size || '',
+        processName:   qualityProcessName,
+        progressStage: raw.progressStage || detail.progressStage || 'quality',
+        quantity:      raw.quantity  || detail.displayQuantity || 0,
+        operatorName:  raw.operatorName  || '',
+        scanCode:      raw.scanCode  || raw.orderNo || '',
+        coverImage:    orderDetail.coverImage || orderDetail.styleImage || '',
+        orderId:       raw.orderId   || ''
+      };
+      wx.navigateTo({ url: '/pages/scan/quality/index' });
+      return;
+    }
+
     var selectedNames = this.data.selectedNames;
     var processOptions = this.data.processOptions;
     var quantity = this.data.quantity;
@@ -346,7 +388,7 @@ Page({
         // 质检工序强制路由为 quality，避免 normalizeScanType 因传入 'production' 直接返回
         // 而跳过质检分支（Bug #1: 'production' 是标准值会被直接返回，不会检查 progressStage）
         var effectiveScanType = option.scanType || 'production';
-        if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
+        if (raw.progressStage === 'quality' || raw.progressStage === '质检' || raw.scanType === 'quality') {
           effectiveScanType = 'quality';
         }
         var scanPayload = Object.assign({}, raw.scanData || {}, {
@@ -354,7 +396,7 @@ Page({
           processName: option.value,
           quantity: quantity
         });
-        if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
+        if (raw.progressStage === 'quality' || raw.progressStage === '质检' || raw.scanType === 'quality') {
           // qualityStage 优先使用 StageDetector 已计算的值（在 raw.scanData / raw.qualityStage 中），
           // 未传入时兜底为 'receive'（领取），避免跳过领取步骤导致后端 400
           scanPayload.qualityStage = scanPayload.qualityStage || raw.qualityStage || 'receive';
@@ -388,18 +430,8 @@ Page({
       }
 
       if (failedItems.length === 0) {
-        if (this.data.isQualityReceive) {
-          wx.showModal({
-            title: '已领取质检任务',
-            content: '请在小云待办中点击该任务，录入质检结果（合格/不合格）。',
-            showCancel: false,
-            confirmText: '知道了',
-            success: function() { wx.navigateBack(); }
-          });
-        } else {
-          toast.success('已完成 ' + successCount + ' 个工序扫码');
-          wx.navigateBack();
-        }
+        toast.success('已完成 ' + successCount + ' 个工序扫码');
+        wx.navigateBack();
       } else if (successCount > 0) {
         this.setData({ loading: false });
         var failNames = failedItems.map(function(f) { return f.processName; }).join('、');

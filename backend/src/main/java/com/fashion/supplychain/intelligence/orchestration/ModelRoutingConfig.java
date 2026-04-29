@@ -37,8 +37,12 @@ public class ModelRoutingConfig {
                 "你是一名服装合规审计专家，擅长DPP数字产品护照和质检标准。");
         register("logistics", null, 0.4, 1000,
                 "你是一名仓储物流优化专家，擅长库存周转和发货调度。");
+        register("production", null, 0.3, 1000,
+                "你是一名服装生产管理专家，擅长产能分析和工序瓶颈识别。");
+        register("cost", null, 0.2, 800,
+                "你是一名服装成本核算专家，擅长工资结算和工序成本分析。");
         register("full", null, 0.5, 1500,
-                "你是一名全面的服装供应链顾问，涵盖交期、采购、合规、物流。");
+                "你是一名全面的服装供应链顾问，涵盖交期、采购、合规、物流、生产、成本。");
     }
 
     public RouteProfile getProfile(String scene) {
