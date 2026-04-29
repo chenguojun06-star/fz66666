@@ -246,7 +246,6 @@ export const useWarehousingApi = (
 
   const initCreateForm = async (defaultOrderNo?: string, orderOptions?: ProductionOrder[]) => {
     await fetchOrderOptions();
-    form.resetFields();
     form.setFieldsValue({
       unqualifiedQuantity: 0,
       qualifiedQuantity: undefined,
@@ -258,10 +257,8 @@ export const useWarehousingApi = (
     });
     setUnqualifiedFileList([]);
     if (defaultOrderNo && orderOptions) {
-      setTimeout(() => {
-        const matchOrder = orderOptions.find((o: any) => String(o?.orderNo || '').trim() === defaultOrderNo);
-        if (matchOrder) form.setFieldsValue({ orderId: (matchOrder as any).id });
-      }, 500);
+      const matchOrder = orderOptions.find((o: any) => String(o?.orderNo || '').trim() === defaultOrderNo);
+      if (matchOrder) form.setFieldsValue({ orderId: (matchOrder as any).id });
     }
   };
 
