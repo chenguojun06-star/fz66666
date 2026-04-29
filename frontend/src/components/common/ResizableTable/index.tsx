@@ -39,12 +39,14 @@ import {
 
 type ResizableTableProps<T extends object> = TableProps<T> & {
   storageKey?: string;
+  /** @deprecated 无操作，保留仅兼容旧调用 */
   resizableColumns?: boolean;
+  /** @deprecated 无操作，保留仅兼容旧调用 */
+  autoScrollY?: boolean;
   allowFixedColumns?: boolean;
   reorderableColumns?: boolean;
   stickyFooter?: boolean;
   stickyHeader?: boolean | { offsetHeader?: number };
-  autoScrollY?: boolean;
 };
 
 const SortableHeaderCell: React.FC<any> = (props) => {
@@ -97,12 +99,10 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     tableLayout,
     pagination: paginationProp,
     storageKey: storageKeyProp,
-    resizableColumns,
     allowFixedColumns = true,
     reorderableColumns = true,
     stickyFooter: stickyFooterProp,
     stickyHeader: stickyHeaderProp,
-    autoScrollY = true,
     className,
     rowKey,
     ...rest
@@ -218,12 +218,11 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
           ['操作', '操作列', '操作区', '操作按钮'].includes(String(colRecord.title || '').trim());
 
-        const { resizable: _stripResizable, width: _stripWidth, ...safeColRecord } = colRecord;
+        const { resizable: _stripResizable, ...safeColRecord } = colRecord;
 
         return {
           ...safeColRecord,
           colId,
-          width: maybeAction ? 72 : undefined,
           fixed: allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined,
         };
       });
@@ -319,21 +318,9 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   }, []);
 
   const mergedScroll = React.useMemo(() => {
-    const baseScroll = typeof scroll === 'object' && scroll !== null ? (scroll as any) : {};
-    const defaultY = 'max(300px, calc(100vh - 330px))';
-
-    if (!autoScrollY) {
-      if (!scroll) return undefined;
-      const nextScroll = { ...baseScroll };
-      return Object.keys(nextScroll).length ? nextScroll : undefined;
-    }
-
-    if (!scroll) return { y: defaultY };
-    return {
-      ...baseScroll,
-      y: baseScroll.y ?? defaultY,
-    };
-  }, [autoScrollY, scroll]);
+    if (!scroll) return undefined;
+    return typeof scroll === 'object' ? scroll : undefined;
+  }, [scroll]);
 
   const mergedComponents = React.useMemo(() => {
     const baseComponents = typeof components === 'object' && components !== null ? (components as any) : {};
@@ -368,7 +355,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={tableLayout || 'fixed'}
+          tableLayout={tableLayout || undefined}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />
