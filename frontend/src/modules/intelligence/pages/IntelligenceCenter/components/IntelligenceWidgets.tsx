@@ -135,12 +135,14 @@ export const AnimatedNum: React.FC<{ val: number | string; color?: string; class
     const prev = prevRef.current;
     const pNum = typeof prev === 'number' ? prev : parseFloat(String(prev));
     const cNum = typeof val  === 'number' ? val  : parseFloat(String(val));
+    let animTimer: ReturnType<typeof setTimeout> | null = null;
     if (!isNaN(pNum) && !isNaN(cNum) && cNum !== pNum) {
       setDelta(cNum > pNum ? 'up' : 'down');
-      setTimeout(() => setDelta(null), 1800);
+      animTimer = setTimeout(() => setDelta(null), 1800);
     }
     prevRef.current = val;
     setDisplay(val);
+    return () => { if (animTimer) clearTimeout(animTimer); };
   }, [val]);
   return (
     <span className={className} style={color ? { color } : undefined}>

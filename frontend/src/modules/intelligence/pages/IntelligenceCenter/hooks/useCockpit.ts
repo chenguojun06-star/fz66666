@@ -12,6 +12,7 @@ import type { ProductionOrder } from '@/types/production';
 import { useAuth } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import type { WsMessage } from '@/hooks/useWebSocket';
+import { useTimerManager } from './useTimerManager';
 
 export interface CockpitData {
   pulse:        LivePulseResponse | null;
@@ -39,6 +40,7 @@ const INITIAL: CockpitData = {
 export function useCockpit() {
   const { user, isAuthenticated } = useAuth();
   const [data, setData] = useState<CockpitData>(INITIAL);
+  const timers = useTimerManager();
 
   const loadingRef = useRef(false);
 
@@ -107,17 +109,13 @@ export function useCockpit() {
     } catch { /* silent */ }
   }, []);
 
-  const pulseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
-    pulseIntervalRef.current = setInterval(fetchPulseOnly, 15_000);
-    return () => {
-      if (pulseIntervalRef.current) {
-        clearInterval(pulseIntervalRef.current);
-        pulseIntervalRef.current = null;
-      }
-    };
-  }, [fetchPulseOnly]);
+    timers.setInterval({
+      id: 'cockpit-pulse',
+      interval: 15_000,
+      callback: fetchPulseOnly,
+    });
+  }, [fetchPulseOnly, timers]);
 
   /* WebSocket: 扫码事件 → todayScanQty 立刻跳 + 2s 防抖刷新工厂心跳 */
   const { subscribe } = useWebSocket({
@@ -126,7 +124,6 @@ export function useCockpit() {
     enabled: isAuthenticated && !!user?.id,
     token: localStorage.getItem('authToken') ?? '',
   });
-  const wsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return subscribe('scan:realtime', (msg: WsMessage) => {
@@ -139,44 +136,39 @@ export function useCockpit() {
           return { ...prev, pulse: { ...prev.pulse, todayScanQty: newQty } };
         });
       }
-      if (wsDebounceRef.current) clearTimeout(wsDebounceRef.current);
-      wsDebounceRef.current = setTimeout(() => fetchPulseOnly(), 3000);
+      timers.setTimeout('cockpit-ws-debounce', 3000, () => fetchPulseOnly());
     });
-  }, [subscribe, fetchPulseOnly]);
+  }, [subscribe, fetchPulseOnly, timers]);
 
   /* 每分钟本地递增 minutesSinceLastScan / minutesSilent */
-  const minuteIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
-    minuteIntervalRef.current = setInterval(() => {
-      setData(prev => {
-        if (!prev.pulse) return prev;
-        const updatedFactory = (prev.pulse.factoryActivity ?? []).map(f => ({
-          ...f,
-          minutesSinceLastScan: f.minutesSinceLastScan + 1,
-          active: (f.minutesSinceLastScan + 1) < 30,
-        }));
-        const updatedStagnant = (prev.pulse.stagnantFactories ?? []).map(sf => ({
-          ...sf,
-          minutesSilent: sf.minutesSilent + 1,
-        }));
-        const changed =
-          updatedFactory.some((f, i) => f.minutesSinceLastScan !== prev.pulse!.factoryActivity?.[i]?.minutesSinceLastScan) ||
-          updatedStagnant.some((sf, i) => sf.minutesSilent !== prev.pulse!.stagnantFactories?.[i]?.minutesSilent);
-        if (!changed) return prev;
-        return {
-          ...prev,
-          pulse: { ...prev.pulse, factoryActivity: updatedFactory, stagnantFactories: updatedStagnant },
-        };
-      });
-    }, 60_000);
-    return () => {
-      if (minuteIntervalRef.current) {
-        clearInterval(minuteIntervalRef.current);
-        minuteIntervalRef.current = null;
-      }
-    };
-  }, []);
+    timers.setInterval({
+      id: 'cockpit-minute-tick',
+      interval: 60_000,
+      callback: () => {
+        setData(prev => {
+          if (!prev.pulse) return prev;
+          const updatedFactory = (prev.pulse.factoryActivity ?? []).map(f => ({
+            ...f,
+            minutesSinceLastScan: f.minutesSinceLastScan + 1,
+            active: (f.minutesSinceLastScan + 1) < 30,
+          }));
+          const updatedStagnant = (prev.pulse.stagnantFactories ?? []).map(sf => ({
+            ...sf,
+            minutesSilent: sf.minutesSilent + 1,
+          }));
+          const changed =
+            updatedFactory.some((f, i) => f.minutesSinceLastScan !== prev.pulse!.factoryActivity?.[i]?.minutesSinceLastScan) ||
+            updatedStagnant.some((sf, i) => sf.minutesSilent !== prev.pulse!.stagnantFactories?.[i]?.minutesSilent);
+          if (!changed) return prev;
+          return {
+            ...prev,
+            pulse: { ...prev.pulse, factoryActivity: updatedFactory, stagnantFactories: updatedStagnant },
+          };
+        });
+      },
+    });
+  }, [timers]);
 
   return { data, reload: load };
 }

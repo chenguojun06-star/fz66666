@@ -30,6 +30,7 @@ import { useKpiPopovers } from './KpiPopoverContent';
 import { useRepairAction } from './hooks/useRepairAction';
 import { useTodayBrief } from './hooks/useTodayBrief';
 import { usePanelCollapse } from './hooks/usePanelCollapse';
+import { useTimerManager } from './hooks/useTimerManager';
 import { paths } from '@/routeConfig';
 import './styles.css';
 
@@ -45,8 +46,8 @@ const IntelligenceCenter: React.FC = () => {
   const { repairing, repairResult, handleRepair } = useRepairAction(reload);
   const todayBrief = useTodayBrief();
   const { collapsedPanels, toggleCollapse } = usePanelCollapse();
+  const timers = useTimerManager();
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
   const nowRef   = useRef(new Date());
   const countdownRef = useRef(30);
@@ -87,21 +88,24 @@ const IntelligenceCenter: React.FC = () => {
   };
 
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      nowRef.current = new Date();
-      countdownRef.current -= 1;
-      if (countdownRef.current <= 0) {
-        reload();
-        countdownRef.current = 30;
-        setNow(new Date());
-        setCountdown(30);
-      } else if (countdownRef.current % 5 === 0) {
-        setNow(new Date());
-      }
-      setCountdown(countdownRef.current);
-    }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [reload]);
+    timers.setInterval({
+      id: 'cockpit-countdown',
+      interval: 1000,
+      callback: () => {
+        nowRef.current = new Date();
+        countdownRef.current -= 1;
+        if (countdownRef.current <= 0) {
+          reload();
+          countdownRef.current = 30;
+          setNow(new Date());
+          setCountdown(30);
+        } else if (countdownRef.current % 5 === 0) {
+          setNow(new Date());
+        }
+        setCountdown(countdownRef.current);
+      },
+    });
+  }, [reload, timers]);
 
   const handleReload = () => { reload(); setCountdown(30); };
 

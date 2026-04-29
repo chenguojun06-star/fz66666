@@ -8,9 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import type { CockpitData } from '../hooks/useCockpit';
 import type { KpiMetricSnapshot, KpiHistoryStore } from '../kpiTypes';
 import { EMPTY_KPI_METRICS, EMPTY_KPI_HISTORY, KPI_HISTORY_WINDOW_MS } from '../kpiTypes';
+import { useTimerManager } from './useTimerManager';
 
 export function useKpiMetrics(data: CockpitData) {
   const navigate = useNavigate();
+  const timers = useTimerManager();
   const { pulse, health, notify, workers: _workers, heatmap: _heatmap, ranking, shortage, healing, bottleneck, orders, factoryCapacity, productionStats } = data;
 
   const [kpiFlash, setKpiFlash] = useState(false);
@@ -22,9 +24,8 @@ export function useKpiMetrics(data: CockpitData) {
   useEffect(() => {
     if (!data.ts) return;
     setKpiFlash(true);
-    const t = setTimeout(() => setKpiFlash(false), 900);
-    return () => clearTimeout(t);
-  }, [data.ts]);
+    timers.setTimeout('kpi-flash', 900, () => setKpiFlash(false));
+  }, [data.ts, timers]);
 
   /* 工厂产能 Map */
   const factoryCapMap = useMemo(() => {

@@ -66,6 +66,13 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  // 组件卸载时清理 debounce 定时器
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const doSearch = useCallback(async (q: string) => {
     if (!q || q.trim().length < 1) {
       setResult(null);
