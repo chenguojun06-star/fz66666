@@ -10,9 +10,9 @@ export const MODULE_SECTIONS = [
   { key: 'selection', title: '选品中心', paths: [{ path: '/selection', label: '选品批次' }] },
   { key: 'basic', title: '样衣管理', paths: [
     { path: '/style-info', label: '样衣开发' },
-    { path: '/data-center', label: '资料中心' },
-    { path: '/basic/template-center', label: '单价维护' },
+    { path: '/basic/maintenance-center', label: '资料单价' },
     { path: '/warehouse/sample', label: '样衣库存' },
+    { path: '/order-management', label: '下单管理' },
   ]},
   { key: 'procurement', title: '物料管理', paths: [
     { path: '/production/material', label: '物料采购' },
@@ -20,9 +20,10 @@ export const MODULE_SECTIONS = [
     { path: '/warehouse/material-database', label: '物料新增' },
   ]},
   { key: 'production', title: '生产管理', paths: [
-    { path: '/production', label: '订单管理' },
+    { path: '/production', label: '我的订单' },
     { path: '/production/cutting', label: '裁剪管理' },
     { path: '/production/progress-detail', label: '工序跟进' },
+    { path: '/production/external-factory', label: '外发工厂' },
     { path: '/production/warehousing', label: '质检入库' },
   ]},
   { key: 'supplierManagement', title: '供应商管理', paths: [
@@ -54,6 +55,7 @@ export const MODULE_SECTIONS = [
     { path: '/system/logs', label: '系统日志' },
     { path: '/system/tutorial', label: '系统教学' },
     { path: '/system/data-import', label: '数据导入' },
+    { path: '/system/orphan-data', label: '孤立数据' },
   ]},
   { key: 'intelligence', title: '智能运营中心', paths: [
     { path: '/intelligence/center', label: '智能运营中心' },
