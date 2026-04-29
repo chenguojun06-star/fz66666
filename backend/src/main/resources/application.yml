@@ -31,9 +31,12 @@ spring:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:sk-placeholder-for-spring-ai-compatibility}
+      api-key: ${DEEPSEEK_API_KEY:sk-placeholder}
+      base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
       chat:
         enabled: true
+        options:
+          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-chat}
   main:
     allow-circular-references: true
   threads:
