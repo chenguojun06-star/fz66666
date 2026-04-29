@@ -9,7 +9,7 @@ import { productionOrderApi, type FactoryCapacityItem } from '@/services/product
 
 export type CuttingFactoryMode = 'INTERNAL' | 'EXTERNAL';
 
-const INTERNAL_UNIT_KEYWORDS = ['组', '车间', '班组', '产线', '裁剪', '车缝', '缝制', '尾部', '后整', '整烫', '包装', '质检', '工艺', '部', '生产'];
+const INTERNAL_UNIT_KEYWORDS = ['组', '车间', '班组', '产线', '裁剪', '车缝', '缝制', '尾部', '后整', '整烫', '包装', '质检', '工艺', '生产'];
 
 const isSelectableInternalUnit = (unit: OrganizationUnit) => {
   if (unit.nodeType !== 'DEPARTMENT') {
