@@ -32,7 +32,8 @@
         "QDRANT_URL": "{{QDRANT_URL}}",
         "QDRANT_API_KEY": "{{QDRANT_API_KEY}}",
         "WECHAT_MP_APPID": "{{WECHAT_MP_APPID}}",
-        "WECHAT_MP_SECRET": "{{WECHAT_MP_SECRET}}"
+        "WECHAT_MP_SECRET": "{{WECHAT_MP_SECRET}}",
+        "APP_SECURITY_PII_ENCRYPTION_KEY": "{{PII_ENCRYPTION_KEY}}"
       }
     }
   ],

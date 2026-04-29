@@ -69,6 +69,8 @@ app:
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:https://*.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com,https://www.webyszl.cn,https://webyszl.cn,https://api.webyszl.cn,https://h5.webyszl.cn}
     allow-credentials: true
+  security:
+    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:}
 
 # 生产环境隐藏健康检查详情
 management:
