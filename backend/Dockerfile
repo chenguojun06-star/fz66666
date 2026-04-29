@@ -37,7 +37,7 @@ RUN (sed -i 's@archive.ubuntu.com@mirrors.aliyun.com@g' /etc/apt/sources.list 2>
 ENV TZ=Asia/Shanghai
 COPY --from=build /app/target/*.jar ./app.jar
 EXPOSE 8088
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
   CMD curl -f http://localhost:8088/actuator/health || exit 1
 ENV SPRING_PROFILES_ACTIVE=prod
 # 移除 -Djavax.net.ssl.trustStore：该文件由 ca-certificates-java 创建，
