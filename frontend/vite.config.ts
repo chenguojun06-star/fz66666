@@ -35,15 +35,43 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 600,
     minify: 'esbuild',
     target: 'es2020',
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/echarts/') || id.includes('node_modules/zrender/')) return 'vendor-echarts';
-          if (id.includes('node_modules/xlsx/')) return 'vendor-xlsx';
-          if (id.includes('node_modules/exceljs/')) return 'vendor-exceljs';
+          if (id.includes('node_modules/')) {
+            if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
+            if (id.includes('exceljs/')) return 'vendor-exceljs';
+            if (id.includes('xlsx/')) return 'vendor-xlsx';
+            if (id.includes('antd/es/date-picker') || id.includes('rc-picker')) return 'vendor-antd-datepicker';
+            if (id.includes('antd/es/table') || id.includes('rc-table')) return 'vendor-antd-table';
+            if (id.includes('antd/es/vc-image') || id.includes('rc-image')) return 'vendor-antd-image';
+            if (id.includes('antd/es/form') || id.includes('rc-field-form') || id.includes('rc-input')) return 'vendor-antd-form';
+            if (id.includes('antd/es/upload') || id.includes('rc-upload')) return 'vendor-antd-upload';
+            if (id.includes('antd/es/modal') || id.includes('rc-dialog')) return 'vendor-antd-modal';
+            if (id.includes('antd/es/select') || id.includes('rc-select')) return 'vendor-antd-select';
+            if (id.includes('antd/es/drawer') || id.includes('rc-drawer')) return 'vendor-antd-drawer';
+            if (id.includes('antd/es/tabs') || id.includes('rc-tabs')) return 'vendor-antd-tabs';
+            if (id.includes('antd/es/descriptions') || id.includes('rc-descriptions')) return 'vendor-antd-desc';
+            if (id.includes('antd/es/statistic') || id.includes('rc-statistic')) return 'vendor-antd-statistic';
+            if (id.includes('antd/es/steps') || id.includes('rc-steps')) return 'vendor-antd-steps';
+            if (id.includes('antd/es/progress') || id.includes('rc-progress')) return 'vendor-antd-progress';
+            if (id.includes('antd/es/notification') || id.includes('rc-notification')) return 'vendor-antd-notification';
+            if (id.includes('antd/es/popover') || id.includes('rc-tooltip')) return 'vendor-antd-popover';
+            if (id.includes('antd/es/config-provider') || id.includes('@ant-design/cssinjs') || id.includes('@ant-design/static-function')) return 'vendor-antd-core';
+            if (id.includes('@ant-design/icons')) return 'vendor-antd-icons';
+            if (id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')) return 'vendor-antd';
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) return 'vendor-react';
+            if (id.includes('react-router') || id.includes('@remix-run/')) return 'vendor-router';
+            if (id.includes('dayjs/')) return 'vendor-dayjs';
+            if (id.includes('axios/')) return 'vendor-axios';
+            if (id.includes('@dnd-kit/')) return 'vendor-dndkit';
+            if (id.includes('dompurify/')) return 'vendor-dompurify';
+            if (id.includes('qrcode')) return 'vendor-qrcode';
+            if (id.includes('zustand/')) return 'vendor-zustand';
+          }
         },
       },
     },
