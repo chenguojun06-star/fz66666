@@ -75,9 +75,7 @@
         "pkg-admin-approval",
         "pkg-payroll",
         "pkg-privacy",
-        "pkg-admin-changepwd",
-        "pkg-admin-feedback",
-        "pkg-admin-invite"
+        "pkg-admin-misc"
       ]
     }
   },
