@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Alert, Button, Space, Typography } from 'antd';
+import { Card, Alert, Button, Space, Typography, Tag } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -56,7 +56,8 @@ const WarehousingActionPanel: React.FC<Props> = ({
       <Card size="small" title="选择仓库并确认入库">
         <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           <div>
-            <Text strong style={{ marginRight: 12 }}>入库仓库：</Text>
+            <Text strong style={{ marginRight: 8 }}>入库仓库：</Text>
+            <Tag color="blue" style={{ marginRight: 8 }}>成品仓</Tag>
             <DictAutoComplete
               dictType="warehouse_location"
               placeholder="请选择或输入仓库"
