@@ -22,16 +22,16 @@ public class ProcurementIntelligenceOrchestrator {
         if (jdbcTemplate == null) return scorecards;
         try {
             Long tenantId = UserContext.tenantId();
-            String sql = "SELECT s.supplier_name, s.contact_person, "
+            String sql = "SELECT f.factory_name AS supplier_name, f.contact_person, "
                     + "COUNT(p.id) AS total_orders, "
                     + "SUM(CASE WHEN p.delivery_status = 'on_time' THEN 1 ELSE 0 END) AS on_time_count, "
                     + "ROUND(AVG(CASE WHEN p.quality_score IS NOT NULL THEN p.quality_score ELSE 0 END), 1) AS avg_quality, "
                     + "ROUND(AVG(p.unit_price), 2) AS avg_price, "
                     + "ROUND(SUM(CASE WHEN p.delivery_status = 'on_time' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(p.id), 0), 1) AS on_time_rate "
-                    + "FROM t_supplier s "
-                    + "LEFT JOIN t_material_purchase_record p ON s.id = p.supplier_id AND p.tenant_id = ? "
-                    + "WHERE s.tenant_id = ? "
-                    + "GROUP BY s.id, s.supplier_name, s.contact_person "
+                    + "FROM t_factory f "
+                    + "LEFT JOIN t_material_purchase p ON f.id = p.factory_id AND p.tenant_id = ? "
+                    + "WHERE f.tenant_id = ? AND f.factory_type IN ('supplier', 'both') "
+                    + "GROUP BY f.id, f.factory_name, f.contact_person "
                     + "HAVING total_orders > 0 "
                     + "ORDER BY on_time_rate DESC, avg_quality DESC "
                     + "LIMIT 20";
@@ -68,8 +68,8 @@ public class ProcurementIntelligenceOrchestrator {
                     + "ROUND(MIN(p.unit_price), 2) AS min_price, "
                     + "ROUND(MAX(p.unit_price), 2) AS max_price, "
                     + "COUNT(*) AS sample_count "
-                    + "FROM t_material_purchase_record p "
-                    + "JOIN t_material_info m ON p.material_id = m.id "
+                    + "FROM t_material_purchase p "
+                    + "JOIN t_material_database m ON p.material_id = m.id "
                     + "WHERE p.tenant_id = ? "
                     + "AND m.material_code = ? "
                     + "AND p.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH) "

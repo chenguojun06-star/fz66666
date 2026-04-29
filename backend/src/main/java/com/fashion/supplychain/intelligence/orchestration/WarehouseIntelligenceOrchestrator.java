@@ -23,11 +23,11 @@ public class WarehouseIntelligenceOrchestrator {
         try {
             Long tenantId = UserContext.tenantId();
             String sql = "SELECT m.material_name, m.material_code, m.specification, "
-                    + "COALESCE(SUM(i.quantity), 0) AS current_stock, "
+                    + "COALESCE(SUM(s.quantity), 0) AS current_stock, "
                     + "COALESCE(AVG(d.daily_consumption), 0) AS avg_daily_consumption, "
                     + "COALESCE(AVG(d.lead_time_days), 14) AS avg_lead_time_days "
-                    + "FROM t_material_info m "
-                    + "LEFT JOIN t_material_inventory i ON m.id = i.material_id AND i.tenant_id = ? "
+                    + "FROM t_material_database m "
+                    + "LEFT JOIN t_material_stock s ON m.id = s.material_id AND s.tenant_id = ? "
                     + "LEFT JOIN ( "
                     + "  SELECT material_id, AVG(daily_qty) AS daily_consumption, AVG(lead_days) AS lead_time_days "
                     + "  FROM ( "
@@ -35,7 +35,7 @@ public class WarehouseIntelligenceOrchestrator {
                     + "      GREATEST(1, DATEDIFF(COALESCE(MAX(created_at), NOW()), MIN(created_at))) AS span_days, "
                     + "      SUM(quantity) AS daily_qty, "
                     + "      14 AS lead_days "
-                    + "    FROM t_material_purchase_record WHERE tenant_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
+                    + "    FROM t_material_purchase WHERE tenant_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
                     + "    GROUP BY material_id "
                     + "  ) sub "
                     + ") d ON m.id = d.material_id "
@@ -75,15 +75,15 @@ public class WarehouseIntelligenceOrchestrator {
         if (jdbcTemplate == null) return alerts;
         try {
             Long tenantId = UserContext.tenantId();
-            String sql = "SELECT m.material_name, m.material_code, i.batch_no, "
-                    + "i.quantity, i.expiry_date, i.warehouse_location "
-                    + "FROM t_material_inventory i "
-                    + "JOIN t_material_info m ON i.material_id = m.id "
-                    + "WHERE i.tenant_id = ? "
-                    + "AND i.expiry_date IS NOT NULL "
-                    + "AND i.expiry_date <= DATE_ADD(NOW(), INTERVAL 30 DAY) "
-                    + "AND i.quantity > 0 "
-                    + "ORDER BY i.expiry_date ASC "
+            String sql = "SELECT m.material_name, m.material_code, s.batch_no, "
+                    + "s.quantity, s.expiry_date, s.warehouse_location "
+                    + "FROM t_material_stock s "
+                    + "JOIN t_material_database m ON s.material_id = m.id "
+                    + "WHERE s.tenant_id = ? "
+                    + "AND s.expiry_date IS NOT NULL "
+                    + "AND s.expiry_date <= DATE_ADD(NOW(), INTERVAL 30 DAY) "
+                    + "AND s.quantity > 0 "
+                    + "ORDER BY s.expiry_date ASC "
                     + "LIMIT 20";
 
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId);

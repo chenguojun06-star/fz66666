@@ -68,6 +68,9 @@ public class ProductionOrderFinanceOrchestrationService {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
+
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
         assertCompletePermission();
@@ -158,6 +161,11 @@ public class ProductionOrderFinanceOrchestrationService {
         update.setUpdateTime(LocalDateTime.now());
         productionOrderService.updateById(update);
         log.info("[FinanceOrch] 订单已标记完成: orderId={}, qualifiedSum={}, previousStatus={}", oid, qualifiedSum, previousStatus);
+        if (orderLearningOutcomeOrchestrator != null) {
+            try { orderLearningOutcomeOrchestrator.refreshByOrderId(oid); } catch (Exception ex) {
+                log.warn("[FinanceOrch] 订单学习结果刷新失败: orderId={}", oid, ex);
+            }
+        }
     }
 
     private void pushCompletionWebhook(ProductionOrder order, long qualifiedSum, int orderQty) {
