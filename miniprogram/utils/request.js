@@ -247,7 +247,35 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
  * 处理HTTP错误（非2xx状态码）
  */
 function handleHttpError({ statusCode, serverMessage, body, url, method, reject }) {
-  const errMsg = serverMessage || `HTTP ${statusCode}`;
+  const httpStatusMessages = {
+    400: '请求参数错误，请检查输入信息',
+    404: '请求的资源不存在',
+    405: '请求方法不允许',
+    406: '服务器无法处理请求的格式',
+    408: '请求超时',
+    409: '请求冲突',
+    410: '请求的资源已永久删除',
+    415: '不支持的媒体类型',
+    422: '请求参数校验失败',
+    429: '请求过于频繁，请稍后重试',
+    500: '服务器内部错误，请稍后重试',
+    502: '网关错误，请稍后重试',
+    503: '服务暂不可用，请稍后重试',
+    504: '网关超时，请稍后重试',
+  };
+
+  let detailMsg = serverMessage || '';
+
+  if (statusCode === 400 && body && typeof body === 'object') {
+    if (body.errors && Array.isArray(body.errors)) {
+      const fieldErrors = body.errors.map(function(e) { return e.defaultMessage || e.message }).filter(Boolean);
+      if (fieldErrors.length > 0) {
+        detailMsg = fieldErrors.join('；');
+      }
+    }
+  }
+
+  const errMsg = detailMsg || httpStatusMessages[statusCode] || '请求失败，请稍后重试';
   const errType = statusCode >= 500 ? 'server' : 'http';
   reject(createError(errMsg, { type: errType, statusCode, data: body, url, method }));
 }
@@ -302,6 +330,26 @@ function mapNetworkErrorMessage(errMsg, isDevEnv) {
     return isDevEnv
       ? 'HTTPS 证书或 TLS 版本不符合要求，请改用合法 https 域名或本地代理'
       : 'HTTPS 证书或 TLS 版本不符合要求';
+  }
+
+  if (lower.includes('timeout') || lower.includes('超时')) {
+    return '请求超时，请检查网络连接';
+  }
+
+  if (lower.includes('network') || lower.includes('network') || lower.includes('网络')) {
+    return '网络异常，请检查网络连接';
+  }
+
+  if (lower.includes('dns') || lower.includes('resolve')) {
+    return '域名解析失败，请检查网络设置';
+  }
+
+  if (lower.includes('refused') || lower.includes('拒绝') || lower.includes('connect')) {
+    return '服务器连接被拒绝，请稍后重试';
+  }
+
+  if (lower.includes('abort') || lower.includes('cancel')) {
+    return '请求已取消';
   }
 
   return errMsg;
