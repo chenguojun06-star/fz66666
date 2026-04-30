@@ -17,8 +17,8 @@
  */
 
 import React from 'react';
-import type { XiaoyunMood } from '../../services/intelligence/xiaoyunUnifiedHandler';
-import { getMoodIcon, getMoodMessage, formatElapsed } from '../../services/intelligence/xiaoyunUnifiedHandler';
+import type { XiaoyunMood } from '../../../services/intelligence/xiaoyunUnifiedHandler';
+import { getMoodIcon, getMoodMessage, formatElapsed } from '../../../services/intelligence/xiaoyunUnifiedHandler';
 
 // ===== Props =====
 
