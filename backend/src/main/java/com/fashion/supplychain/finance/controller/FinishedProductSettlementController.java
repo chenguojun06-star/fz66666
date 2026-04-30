@@ -461,8 +461,16 @@ public class FinishedProductSettlementController {
         LambdaQueryWrapper<ProductionOrder> orderWrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .select(ProductionOrder::getId)
                 .eq(StringUtils.isNotBlank(parentOrgUnitId), ProductionOrder::getParentOrgUnitId, parentOrgUnitId)
-                .eq(StringUtils.isNotBlank(factoryType), ProductionOrder::getFactoryType, factoryType)
                 .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0));
+
+        // INTERNAL=本厂内部(null factoryType)，EXTERNAL=外发工厂
+        if ("INTERNAL".equals(factoryType)) {
+            orderWrapper.and(w -> w.isNull(ProductionOrder::getFactoryType)
+                    .or().eq(ProductionOrder::getFactoryType, "")
+                    .or().eq(ProductionOrder::getFactoryType, "INTERNAL"));
+        } else if (StringUtils.isNotBlank(factoryType)) {
+            orderWrapper.eq(ProductionOrder::getFactoryType, factoryType);
+        }
 
         // 使用 @InterceptorIgnore 方法绕过 TenantInterceptor，避免超管（tenantId=null）被注入
         // AND tenant_id IS NULL 而导致查不到任何业务订单。租户隔离由 orderWrapper 中
