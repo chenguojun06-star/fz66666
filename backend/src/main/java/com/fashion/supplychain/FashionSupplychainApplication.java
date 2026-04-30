@@ -18,7 +18,13 @@ import com.fashion.supplychain.style.orchestration.StyleQuotationOrchestrator;
     "org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration",
     "org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration",
     "org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration",
-    "org.springframework.ai.model.chat.client.autoconfigure.ChatClientAutoConfiguration"
+    "org.springframework.ai.model.chat.client.autoconfigure.ChatClientAutoConfiguration",
+    "org.springframework.ai.retry.autoconfigure.SpringAiRetryAutoConfiguration",
+    "org.springframework.ai.model.tool.autoconfigure.ToolCallingAutoConfiguration",
+    "org.springframework.ai.model.chat.memory.autoconfigure.ChatMemoryAutoConfiguration",
+    "org.springframework.ai.model.chat.observation.autoconfigure.ChatObservationAutoConfiguration",
+    "org.springframework.ai.model.embedding.observation.autoconfigure.EmbeddingObservationAutoConfiguration",
+    "org.springframework.ai.model.image.observation.autoconfigure.ImageObservationAutoConfiguration"
 })
 @EnableScheduling
 @MapperScan("com.fashion.supplychain.**.mapper")
@@ -41,7 +47,6 @@ public class FashionSupplychainApplication {
         }
     }
 
-    /** 修复历史脏数据：other_cost 被老 bug 错误写入了二次工艺总价 */
     @Bean
     @Profile("!test")
     public ApplicationRunner fixBuggyOtherCost(final StyleQuotationOrchestrator styleQuotationOrchestrator) {

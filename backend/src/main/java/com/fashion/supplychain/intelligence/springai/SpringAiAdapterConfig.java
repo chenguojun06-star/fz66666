@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true")
 public class SpringAiAdapterConfig {
 
-    @Value("${spring-ai.adapter.base-url:}")
+    @Value("${spring-ai.adapter.base-url:https://api.deepseek.com}")
     private String baseUrl;
 
     @Value("${spring-ai.adapter.api-key:}")
@@ -26,6 +26,9 @@ public class SpringAiAdapterConfig {
 
     @Bean
     public OpenAiApi springAiOpenAiApi() {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("[SpringAiAdapter] API key is empty, Spring AI adapter will not function properly");
+        }
         return OpenAiApi.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)
@@ -33,9 +36,9 @@ public class SpringAiAdapterConfig {
     }
 
     @Bean
-    public OpenAiChatModel springAiChatModel(OpenAiApi api) {
+    public OpenAiChatModel springAiChatModel(OpenAiApi springAiOpenAiApi) {
         return OpenAiChatModel.builder()
-                .openAiApi(api)
+                .openAiApi(springAiOpenAiApi)
                 .defaultOptions(OpenAiChatOptions.builder()
                         .model(model)
                         .temperature(0.3)
@@ -45,7 +48,7 @@ public class SpringAiAdapterConfig {
     }
 
     @Bean
-    public ChatClient springAiChatClient(OpenAiChatModel chatModel) {
-        return ChatClient.builder(chatModel).build();
+    public ChatClient springAiChatClient(OpenAiChatModel springAiChatModel) {
+        return ChatClient.builder(springAiChatModel).build();
     }
 }
