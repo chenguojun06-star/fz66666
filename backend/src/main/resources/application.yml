@@ -22,6 +22,21 @@ server:
     max-keep-alive-requests: 200
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+  ai:
+    openai:
+      api-key: ${DEEPSEEK_API_KEY:sk-placeholder}
+      base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
+      chat:
+        enabled: true
+        options:
+          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
   main:
     allow-circular-references: true
   threads:
@@ -316,7 +331,7 @@ ai:
     model: ${DOUBAO_MODEL:doubao-1-5-vision-pro-32k-250115}
     timeout-seconds: 60
   spring-ai:
-    enabled: ${AI_SPRING_AI_ENABLED:false}
+    enabled: ${AI_SPRING_AI_ENABLED:true}
     chat:
       default-provider: ${AI_SPRING_AI_CHAT_DEFAULT_PROVIDER:deepseek}
       options:
@@ -374,10 +389,13 @@ serpapi:
   api-key: ${SERPAPI_KEY:}
   enabled: ${SERPAPI_ENABLED:false}
 
-# Spring AI 适配器配置（暂时禁用，依赖移除）
+# Spring AI 适配器配置（默认禁用，需配置DEEPSEEK_API_KEY后手动开启SPRING_AI_ADAPTER_ENABLED=true）
 spring-ai:
   adapter:
-    enabled: false
+    enabled: ${SPRING_AI_ADAPTER_ENABLED:false}
+    base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: ${SPRING_AI_ADAPTER_MODEL:deepseek-chat}
 
 tts:
   provider: ${TTS_PROVIDER:edge}
