@@ -1,47 +1,155 @@
 <view class="login-page">
-  <view class="login-bg" aria-hidden="true">
-    <view class="tech-grid"></view>
-    <view class="tech-map"></view>
-    <view class="tech-glow tech-glow-left"></view>
-    <view class="tech-glow tech-glow-right"></view>
-    <view class="tech-arc tech-arc-1"></view>
-    <view class="tech-arc tech-arc-2"></view>
-    <view class="tech-arc tech-arc-3"></view>
-    <view class="tech-node tech-node-1"></view>
-    <view class="tech-node tech-node-2"></view>
-    <view class="tech-node tech-node-3"></view>
-    <view class="tech-node tech-node-4"></view>
-    <view class="tech-node tech-node-5"></view>
+  <!-- Pencil texture filter -->
+  <view class="pencil-filters" aria-hidden="true">
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <filter id="pencil-texture" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="5" seed="3" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.0" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+    </svg>
   </view>
 
+  <!-- Pencil-sketch garments background -->
+  <view class="login-garments" aria-hidden="true">
+    <!-- Dress -->
+    <svg class="garment garment-dress" viewBox="0 0 60 100" fill="none">
+      <path d="M24 6C24 6 20 4 18 2L16 0L22 0L26 2L30 1L34 2L38 0L44 0L42 2C40 4 36 6 36 6" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M36 6L38 16L40 24" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M24 6L22 16L20 24" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M20 24L16 44L12 66L14 80L18 90L22 96L30 100L38 96L42 90L46 80L48 66L44 44L40 24" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22 24L30 26L38 24" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 2" stroke-linecap="round"/>
+      <path d="M26 6L26 24" stroke="currentColor" stroke-width="0.4" stroke-dasharray="1.5 2" opacity="0.5"/>
+      <path d="M34 6L34 24" stroke="currentColor" stroke-width="0.4" stroke-dasharray="1.5 2" opacity="0.5"/>
+      <path d="M30 26L30 96" stroke="currentColor" stroke-width="0.3" stroke-dasharray="3 4" opacity="0.3"/>
+    </svg>
+    <!-- Coat -->
+    <svg class="garment garment-coat" viewBox="0 0 90 110" fill="none">
+      <path d="M32 8L28 2L34 0L40 2L45 0L50 2L56 0L62 2L58 8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M58 8L62 14L70 10L82 20L72 30L66 26" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M32 8L28 14L20 10L8 20L18 30L24 26" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M66 26L66 104L24 104L24 26" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M45 16L45 104" stroke="currentColor" stroke-width="0.6" stroke-dasharray="4 3" opacity="0.5"/>
+      <path d="M30 26L60 26" stroke="currentColor" stroke-width="0.4" stroke-dasharray="2 2" opacity="0.4"/>
+      <path d="M36 26L36 56" stroke="currentColor" stroke-width="0.4" opacity="0.4"/>
+      <circle cx="36" cy="58" r="1.5" stroke="currentColor" stroke-width="0.4" opacity="0.4"/>
+      <path d="M54 26L54 56" stroke="currentColor" stroke-width="0.4" opacity="0.4"/>
+      <circle cx="54" cy="58" r="1.5" stroke="currentColor" stroke-width="0.4" opacity="0.4"/>
+      <path d="M28 40L38 42" stroke="currentColor" stroke-width="0.3" stroke-dasharray="1.5 2" opacity="0.3"/>
+      <path d="M52 42L62 40" stroke="currentColor" stroke-width="0.3" stroke-dasharray="1.5 2" opacity="0.3"/>
+      <path d="M30 80L60 80" stroke="currentColor" stroke-width="0.3" stroke-dasharray="2 3" opacity="0.25"/>
+    </svg>
+    <!-- Shirt -->
+    <svg class="garment garment-shirt" viewBox="0 0 80 80" fill="none">
+      <path d="M28 4L24 0L30 0L34 2L40 0L46 2L50 0L56 0L52 4" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M52 4L56 8L64 4L76 14L68 22L62 18" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M28 4L24 8L16 4L4 14L12 22L18 18" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M62 18L62 74L18 74L18 18" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M40 4L40 74" stroke="currentColor" stroke-width="0.4" stroke-dasharray="3 4" opacity="0.3"/>
+      <path d="M34 4C34 3 36 1 40 1C44 1 46 3 46 4" stroke="currentColor" stroke-width="0.6" stroke-linecap="round"/>
+      <path d="M36 10L36 18L40 20L44 18L44 10" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="40" cy="14" r="1" stroke="currentColor" stroke-width="0.4" opacity="0.5"/>
+      <path d="M36 24L44 24" stroke="currentColor" stroke-width="0.3" stroke-dasharray="1.5 2" opacity="0.35"/>
+      <path d="M36 32L44 32" stroke="currentColor" stroke-width="0.3" stroke-dasharray="1.5 2" opacity="0.35"/>
+      <path d="M36 40L44 40" stroke="currentColor" stroke-width="0.3" stroke-dasharray="1.5 2" opacity="0.3"/>
+      <path d="M18 74L40 76L62 74" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 2" stroke-linecap="round"/>
+    </svg>
+    <!-- T-shirt -->
+    <svg class="garment garment-tshirt" viewBox="0 0 80 70" fill="none">
+      <path d="M0 18L12 6L20 10L26 8L40 6L54 8L60 10L68 6L80 18" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M68 6L66 14L62 26L66 22" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 6L14 14L18 26L14 22" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M62 26L62 64L18 64L18 26" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M18 64L40 66L62 64" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 2" stroke-linecap="round"/>
+      <path d="M40 8L40 64" stroke="currentColor" stroke-width="0.3" stroke-dasharray="3 4" opacity="0.25"/>
+      <path d="M34 6C34 4 36 2 40 2C44 2 46 4 46 6" stroke="currentColor" stroke-width="0.6" stroke-linecap="round"/>
+      <path d="M22 30L58 30" stroke="currentColor" stroke-width="0.3" stroke-dasharray="2 3" opacity="0.3"/>
+    </svg>
+    <!-- Skirt -->
+    <svg class="garment garment-skirt" viewBox="0 0 70 70" fill="none">
+      <path d="M14 6L18 0L26 2L35 0L44 2L52 0L56 6L54 10" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 6L12 10" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M12 10L16 20L20 34L24 48L22 58L18 66L14 70" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M54 10L58 20L62 34L60 48L58 58L54 66L50 70" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 70L32 68L50 70" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M35 10L35 68" stroke="currentColor" stroke-width="0.3" stroke-dasharray="3 4" opacity="0.25"/>
+      <path d="M18 24L52 24" stroke="currentColor" stroke-width="0.3" stroke-dasharray="2 3" opacity="0.3"/>
+      <path d="M22 40L48 40" stroke="currentColor" stroke-width="0.3" stroke-dasharray="2 3" opacity="0.25"/>
+      <path d="M20 10L28 12L36 10L44 12L52 10" stroke="currentColor" stroke-width="0.4" stroke-dasharray="1.5 2" opacity="0.4"/>
+    </svg>
+    <!-- Vest -->
+    <svg class="garment garment-vest" viewBox="0 0 70 80" fill="none">
+      <path d="M22 4L18 0L24 0L28 2L35 0L42 2L46 0L52 0L48 4" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M48 4L52 10L56 6L60 12L56 16" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22 4L18 10L14 6L10 12L14 16" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M56 16L54 30L52 50L50 66L48 76L46 80" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 16L16 30L18 50L20 66L22 76L24 80" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M24 80L35 78L46 80" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M28 16L28 70" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+      <path d="M42 16L42 70" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+      <path d="M28 16L42 16" stroke="currentColor" stroke-width="0.4" stroke-dasharray="2 2" opacity="0.4"/>
+      <path d="M28 20L42 20" stroke="currentColor" stroke-width="0.3" stroke-dasharray="1.5 2" opacity="0.3"/>
+      <path d="M28 40L42 40" stroke="currentColor" stroke-width="0.3" stroke-dasharray="1.5 2" opacity="0.25"/>
+      <path d="M30 24L30 36" stroke="currentColor" stroke-width="0.3" opacity="0.3"/>
+      <circle cx="30" cy="37" r="1.2" stroke="currentColor" stroke-width="0.3" opacity="0.3"/>
+      <path d="M40 24L40 36" stroke="currentColor" stroke-width="0.3" opacity="0.3"/>
+      <circle cx="40" cy="37" r="1.2" stroke="currentColor" stroke-width="0.3" opacity="0.3"/>
+    </svg>
+    <!-- Hangers -->
+    <svg class="garment hanger hanger-1" viewBox="0 0 80 36" fill="none">
+      <path d="M38 4C38 1.8 39.8 0 42 0C44.2 0 46 1.8 46 4C46 5.2 45.2 6.2 44 6.8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M44 6.8L76 28L74 32L42 16L10 32L6 28L40 6.8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="42" cy="4" r="1.5" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+    </svg>
+    <svg class="garment hanger hanger-2" viewBox="0 0 80 36" fill="none">
+      <path d="M38 4C38 1.8 39.8 0 42 0C44.2 0 46 1.8 46 4C46 5.2 45.2 6.2 44 6.8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M44 6.8L76 28L74 32L42 16L10 32L6 28L40 6.8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="42" cy="4" r="1.5" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+    </svg>
+    <svg class="garment hanger hanger-3" viewBox="0 0 80 36" fill="none">
+      <path d="M38 4C38 1.8 39.8 0 42 0C44.2 0 46 1.8 46 4C46 5.2 45.2 6.2 44 6.8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M44 6.8L76 28L74 32L42 16L10 32L6 28L40 6.8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="42" cy="4" r="1.5" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+    </svg>
+    <!-- Scissors -->
+    <svg class="garment garment-accessory scissors" viewBox="0 0 50 60" fill="none">
+      <circle cx="14" cy="48" r="8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <circle cx="36" cy="48" r="8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M14 40L24 8L26 4" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M36 40L26 8L24 4" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="25" cy="38" r="2" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+    </svg>
+    <!-- Background grid (subtle) -->
+    <view class="login-subtle-grid"></view>
+    <view class="login-soft-glow"></view>
+  </view>
+
+  <!-- Form panel -->
   <view class="login-shell">
     <view class="login-panel">
-      <view class="login-card-accent login-card-accent-top"></view>
-      <view class="login-card-accent login-card-accent-bottom"></view>
-
+      <!-- Header: cloud mascot + title -->
       <view class="login-header">
         <view class="login-title-row">
-          <view class="login-title">{{i18nTexts.brand}}</view>
-          <view class="login-title-cloud">
-            <view class="login-title-cloud-scale">
-              <view class="tech-cloud-glow"></view>
-              <view class="tech-cloud">
-                <view class="tech-cloud-part tech-cloud-part-left"></view>
-                <view class="tech-cloud-part tech-cloud-part-center"></view>
-                <view class="tech-cloud-part tech-cloud-part-right"></view>
-                <view class="tech-cloud-base"></view>
-                <view class="tech-cloud-eye tech-cloud-eye-left">
-                  <view class="tech-cloud-eye-highlight"></view>
-                </view>
-                <view class="tech-cloud-eye tech-cloud-eye-right">
-                  <view class="tech-cloud-eye-highlight"></view>
-                </view>
-                <view class="tech-cloud-smile"></view>
-                <view class="tech-cloud-spark tech-cloud-spark-left"></view>
-                <view class="tech-cloud-spark tech-cloud-spark-right"></view>
+          <view class="login-cloud-wrap">
+            <view class="login-cloud-glow"></view>
+            <view class="login-cloud">
+              <view class="login-cloud-part login-cloud-part-left"></view>
+              <view class="login-cloud-part login-cloud-part-center"></view>
+              <view class="login-cloud-part login-cloud-part-right"></view>
+              <view class="login-cloud-base"></view>
+              <view class="login-cloud-eye login-cloud-eye-left">
+                <view class="login-cloud-eye-dot"></view>
               </view>
+              <view class="login-cloud-eye login-cloud-eye-right">
+                <view class="login-cloud-eye-dot"></view>
+              </view>
+              <view class="login-cloud-smile"></view>
+              <view class="login-cloud-spark login-cloud-spark-left"></view>
+              <view class="login-cloud-spark login-cloud-spark-right"></view>
             </view>
           </view>
+          <view class="login-title">{{i18nTexts.brand}}</view>
         </view>
         <view class="login-subtitle">有问题找小云｜多端协同更轻松</view>
       </view>
@@ -57,10 +165,10 @@
           <text class="invite-banner-text">{{inviteBanner}}</text>
         </view>
 
+        <!-- Company search (no label) -->
         <view class="login-field">
-          <view class="login-label"><text class="login-label-required">*</text>{{i18nTexts.company}}</view>
           <view class="login-input-wrap">
-            <text class="login-input-icon">⌕</text>
+            <text class="login-input-icon login-input-icon-search">⌕</text>
             <input
               class="login-input"
               placeholder="{{tenantsLoading ? i18nTexts.loading : i18nTexts.companySearchPlaceholder}}"
@@ -73,67 +181,38 @@
           </view>
           <view wx:if="{{selectedTenantName}}" class="tenant-selected-tag">{{i18nTexts.companySelectedPrefix}}{{selectedTenantName}}</view>
           <view wx:if="{{showTenantResults && filteredTenants.length > 0}}" class="tenant-results">
-            <view
-              wx:for="{{filteredTenants}}"
-              wx:key="id"
-              class="tenant-result-item"
-              data-index="{{index}}"
-              bindtap="onTenantSelect"
-              hover-class="tenant-result-item-hover"
-              hover-stay-time="50"
-            >{{item.tenantName}}</view>
+            <view wx:for="{{filteredTenants}}" wx:key="id" class="tenant-result-item" data-index="{{index}}" bindtap="onTenantSelect" hover-class="tenant-result-item-hover" hover-stay-time="50">{{item.tenantName}}</view>
           </view>
           <view wx:if="{{showTenantResults && filteredTenants.length === 0 && tenantSearchText}}" class="tenant-results">
             <view class="tenant-result-empty">{{i18nTexts.companyNotFound}}</view>
           </view>
         </view>
 
+        <!-- Username (no label) -->
         <view class="login-field">
-          <view class="login-label"><text class="login-label-required">*</text>{{i18nTexts.username}}</view>
           <view class="login-input-wrap">
-            <text class="login-input-icon">◌</text>
-            <input
-              class="login-input"
-              placeholder="{{i18nTexts.usernamePlaceholder}}"
-              value="{{username}}"
-              bindinput="onUsernameInput"
-              disabled="{{loading}}"
-            />
+            <text class="login-input-icon login-input-icon-user">◌</text>
+            <input class="login-input" placeholder="{{i18nTexts.usernamePlaceholder}}" value="{{username}}" bindinput="onUsernameInput" disabled="{{loading}}" />
           </view>
         </view>
 
+        <!-- Password (no label) -->
         <view class="login-field">
-          <view class="login-label"><text class="login-label-required">*</text>{{i18nTexts.password}}</view>
           <view class="login-input-wrap">
-            <text class="login-input-icon">◐</text>
-            <input
-              class="login-input"
-              placeholder="{{i18nTexts.passwordPlaceholder}}"
-              password="{{!showPassword}}"
-              value="{{password}}"
-              bindinput="onPasswordInput"
-              disabled="{{loading}}"
-            />
+            <text class="login-input-icon login-input-icon-lock">◐</text>
+            <input class="login-input" placeholder="{{i18nTexts.passwordPlaceholder}}" password="{{!showPassword}}" value="{{password}}" bindinput="onPasswordInput" disabled="{{loading}}" />
             <text class="login-input-eye" bindtap="togglePassword">{{showPassword ? '隐' : '显'}}</text>
           </view>
         </view>
 
         <view class="login-btn-wrap">
-          <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin" hover-class="login-btn-hover" hover-stay-time="50">
-            {{loading ? i18nTexts.submitting : i18nTexts.submit}}
-          </view>
+          <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin" hover-class="login-btn-hover" hover-stay-time="50">{{loading ? i18nTexts.submitting : i18nTexts.submit}}</view>
         </view>
 
         <view wx:if="{{showDevFields}}" class="login-field login-field-dev">
-          <view class="login-label">{{i18nTexts.serverUrl}}</view>
           <view class="login-input-wrap">
-            <text class="login-input-icon">◎</text>
-            <input
-              class="login-input"
-              placeholder="{{i18nTexts.serverUrlPlaceholder}}"
-              value="{{apiBaseUrl}}"
-              bindinput="onApiBaseUrlInput"
-            />
+            <text class="login-input-icon login-input-icon-dev">◎</text>
+            <input class="login-input" placeholder="{{i18nTexts.serverUrlPlaceholder}}" value="{{apiBaseUrl}}" bindinput="onApiBaseUrlInput" />
           </view>
         </view>
 
@@ -141,7 +220,6 @@
           <view class="login-register-link" bindtap="onManualRegister" hover-class="login-register-link-hover" hover-stay-time="50">{{i18nTexts.noAccount}}{{i18nTexts.registerNow}}</view>
         </view>
       </block>
-
     </view>
   </view>
 </view>
