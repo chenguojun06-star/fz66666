@@ -146,14 +146,9 @@ Page({
 
     wx.showLoading({ title: '处理中...', mask: true });
     try {
-      await api.system.approveUser(currentUser.id);
-      await api.system.updateUser(currentUser.id, {
-        roleId: Number(selectedRoleId),
-        status: 'active',
-        approvalStatus: 'approved',
-      });
+      await api.system.approveUser(currentUser.id, { roleId: Number(selectedRoleId) });
       wx.hideLoading();
-      toast.success('已批准');
+      toast.success('已批准并分配角色');
       this.setData({ showApprovalModal: false, currentUser: null, selectedRoleId: '' });
       this.loadPendingUsers(true);
     } catch (e) {
