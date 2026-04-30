@@ -114,6 +114,8 @@ public class AiAgentToolAccessService {
         register("tool_dict", "数据字典：查看字典列表、按类型查询字典项", false, ToolDomain.SYSTEM);
         // ── GENERAL 新增 ── 技能链
         register("tool_skill_execute", "执行预定义技能工作流：一句话触发多步操作，如月底财务结算、质检批量处理、风险订单巡检", false, ToolDomain.GENERAL);
+        // ── ANALYSIS 新增 ── 顾问
+        register("tool_hyper_advisor", "高级供应链AI顾问：风险量化、延期推演、产能模拟、策略建议，适合深度分析与专业建议", false, ToolDomain.ANALYSIS);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
