@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -251,11 +252,18 @@ public class NlQueryOrchestrator {
             return dataHandlers.handleCompareQuery(tenantId, factoryId);
         }
 
-        // 22) 帮助
-        if (containsAny(question, "帮助", "能做什么", "你会什么", "功能", "怎么用", "你好")) {
-            return dataHandlers.handleHelpQuery();
+        // 22) 直达操作（发工资/改状态/审批/派工 — 路由到小云AI执行）
+        if (containsAny(question, "给", "帮", "把") && containsAny(question,
+                "发工资", "审批", "通过", "驳回", "改", "改成", "加急", "紧急", "派", "分配", "关单", "取消", "删除", "备注", "标记")) {
+            NlQueryResponse resp = new NlQueryResponse();
+            resp.setIntent("ai_action");
+            resp.setAnswer("好的，正在为您处理「" + question + "」⏳\n\n请在AI对话框中确认执行，小云将使用对应工具完成操作。");
+            resp.setConfidence(95);
+            resp.setData(Map.of("routeToAi", true, "prefill", question));
+            resp.setSuggestions(Arrays.asList("确认执行", "查看详情", "取消操作"));
+            return resp;
         }
-        // 23) 总览/概况
+        // 23) 帮助
         if (containsAny(question, "总览", "概况", "汇总", "情况", "怎么样", "报告", "整体")) {
             return dataHandlers.handleSummaryQuery(tenantId, factoryId);
         }

@@ -726,7 +726,7 @@ public class NlQuerySmartHandlers {
             sb.append("• 月度工资汇总 — 说「这个月工资总额」\n");
             resp.setAnswer(sb.toString().trim());
             resp.setConfidence(85);
-            resp.setSuggestions(Arrays.asList("我的工资", "工资异常检测", "上个月总工资"));
+            resp.setSuggestions(Arrays.asList("给张三发工资", "工资异常检测", "上个月总工资", "导出工资单"));
         } catch (Exception e) {
             fallback(resp, "工资", e);
         }
