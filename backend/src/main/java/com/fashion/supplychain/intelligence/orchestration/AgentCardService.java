@@ -53,7 +53,7 @@ public class AgentCardService {
             agentCardMapper.insert(card);
             log.info("[AgentCard] Registered: {} ({})", agentId, agentName);
         } catch (Exception e) {
-            log.warn("[AgentCard] Register failed: {}", e.getMessage());
+            log.warn("[AgentCard] Register failed: agentId={}, error={}", agentId, e.getMessage(), e);
         }
     }
 

@@ -21,7 +21,6 @@ public class OrderRiskTracking {
 
     private String riskLevel;
 
-    @TableField(jdbcType = org.apache.ibatis.type.JdbcType.VARCHAR)
     private String riskFactors;
 
     private String assignedTo;

@@ -168,8 +168,45 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
 /**
  * 处理HTTP错误（非2xx状态码）
  */
+function isHtmlString(val) {
+  if (!val || typeof val !== 'string') return false;
+  return /^<!DOCTYPE\s+html|<html|<head|<title/i.test(val) || /<\/html>|<\/body>|<hr>/i.test(val);
+}
+
 function handleHttpError({ statusCode, serverMessage, body, url, method, reject }) {
-  const errMsg = serverMessage || `HTTP ${statusCode}`;
+  const httpStatusMessages = {
+    400: '请求参数错误，请检查输入信息',
+    404: '请求的资源不存在',
+    405: '请求方法不允许',
+    406: '服务器无法处理请求的格式',
+    408: '请求超时',
+    409: '请求冲突',
+    410: '请求的资源已永久删除',
+    415: '不支持的媒体类型',
+    422: '请求参数校验失败',
+    429: '请求过于频繁，请稍后重试',
+    500: '服务器内部错误，请稍后重试',
+    502: '网关错误，服务可能正在重启中，请稍后重试',
+    503: '服务暂不可用，请稍后重试',
+    504: '网关超时，请稍后重试',
+  };
+
+  let detailMsg = serverMessage || '';
+
+  if (isHtmlString(detailMsg)) {
+    detailMsg = '';
+  }
+
+  if (statusCode === 400 && body && typeof body === 'object') {
+    if (body.errors && Array.isArray(body.errors)) {
+      const fieldErrors = body.errors.map(function(e) { return e.defaultMessage || e.message }).filter(Boolean);
+      if (fieldErrors.length > 0) {
+        detailMsg = fieldErrors.join('；');
+      }
+    }
+  }
+
+  const errMsg = detailMsg || httpStatusMessages[statusCode] || '请求失败，请稍后重试';
   const errType = statusCode >= 500 ? 'server' : 'http';
   reject(createError(errMsg, { type: errType, statusCode, data: body, url, method }));
 }

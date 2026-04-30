@@ -191,9 +191,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           )}
           {msg.agentCommandId && (
             <div className={msgStyles.quickActionsRow}>
-              <button className={styles.actionBtn} onClick={() => void onShowAgentTrace(msg.agentCommandId)}>查看执行轨迹</button>
-              <button className={styles.actionBtn} onClick={() => onOpenTraceCenter(msg.agentCommandId)}>打开独立页</button>
-              <button className={styles.actionBtn} onClick={() => void onShowRecentTraces()}>最近执行记录</button>
+              <button className={styles.actionBtn} onClick={() => void onShowRecentTraces()}>最近小云执行记录</button>
             </div>
           )}
           {msg.agentTraceCard && (

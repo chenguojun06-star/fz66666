@@ -246,6 +246,11 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
 /**
  * 处理HTTP错误（非2xx状态码）
  */
+function isHtmlString(val) {
+  if (!val || typeof val !== 'string') return false;
+  return /^<!DOCTYPE\s+html|<html|<head|<title/i.test(val) || /<\/html>|<\/body>|<hr>/i.test(val);
+}
+
 function handleHttpError({ statusCode, serverMessage, body, url, method, reject }) {
   const httpStatusMessages = {
     400: '请求参数错误，请检查输入信息',
@@ -259,12 +264,16 @@ function handleHttpError({ statusCode, serverMessage, body, url, method, reject 
     422: '请求参数校验失败',
     429: '请求过于频繁，请稍后重试',
     500: '服务器内部错误，请稍后重试',
-    502: '网关错误，请稍后重试',
+    502: '网关错误，服务可能正在重启中，请稍后重试',
     503: '服务暂不可用，请稍后重试',
     504: '网关超时，请稍后重试',
   };
 
   let detailMsg = serverMessage || '';
+
+  if (isHtmlString(detailMsg)) {
+    detailMsg = '';
+  }
 
   if (statusCode === 400 && body && typeof body === 'object') {
     if (body.errors && Array.isArray(body.errors)) {

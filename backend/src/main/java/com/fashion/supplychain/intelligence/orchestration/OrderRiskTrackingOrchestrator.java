@@ -48,7 +48,7 @@ public class OrderRiskTrackingOrchestrator {
             log.info("[订单风险闭环] 风险已创建: orderNo={}, level={}, assignedTo={}", orderNo, riskLevel, assignedTo);
             return tracking.getId();
         } catch (Exception e) {
-            log.warn("[订单风险闭环] 创建风险失败: {}", e.getMessage());
+            log.warn("[订单风险闭环] 创建风险失败: orderNo={}, error={}", orderNo, e.getMessage(), e);
             return null;
         }
     }
@@ -66,7 +66,7 @@ public class OrderRiskTrackingOrchestrator {
             log.info("[订单风险闭环] 风险已处理: id={}, status=resolved", riskId);
             return true;
         } catch (Exception e) {
-            log.warn("[订单风险闭环] 处理风险失败: {}", e.getMessage());
+            log.warn("[订单风险闭环] 处理风险失败: id={}, error={}", riskId, e.getMessage(), e);
             return false;
         }
     }
@@ -81,7 +81,7 @@ public class OrderRiskTrackingOrchestrator {
             log.info("[订单风险闭环] 风险已升级: id={}, newAssignee={}", riskId, newAssignedTo);
             return true;
         } catch (Exception e) {
-            log.warn("[订单风险闭环] 升级风险失败: {}", e.getMessage());
+            log.warn("[订单风险闭环] 升级风险失败: id={}, error={}", riskId, e.getMessage(), e);
             return false;
         }
     }
