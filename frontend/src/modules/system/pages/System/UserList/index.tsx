@@ -98,7 +98,7 @@ const UserList: React.FC = () => {
                       size="small"
                       type="primary"
                       onClick={() => {
-                        navigate(isSuperAdmin ? '/system/user-approval' : '/system/tenant?tab=registrations');
+                        navigate('/system/user-approval');
                       }}
                     >
                       立即审批
