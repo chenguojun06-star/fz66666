@@ -79,7 +79,7 @@ public class CuttingTaskOrchestrator {
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .and(w -> w.eq(ProductionOrder::getFactoryId, ctxFactoryId).or().isNull(ProductionOrder::getFactoryId))
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
@@ -123,7 +123,7 @@ public class CuttingTaskOrchestrator {
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getFactoryId, ctxFactoryId)
+                            .and(w -> w.eq(ProductionOrder::getFactoryId, ctxFactoryId).or().isNull(ProductionOrder::getFactoryId))
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());

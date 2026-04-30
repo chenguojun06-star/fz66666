@@ -164,7 +164,7 @@ public class ProductionOrderQueryService {
         }
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
-            wrapper.eq("factory_id", ctxFactoryId);
+            wrapper.and(w -> w.eq("factory_id", ctxFactoryId).or().isNull("factory_id"));
         } else if (org.springframework.util.StringUtils.hasText(qp.factoryId)) {
             wrapper.eq("factory_id", qp.factoryId);
         }
