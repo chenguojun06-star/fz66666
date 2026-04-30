@@ -50,8 +50,6 @@ public class AgentCardService {
             card.setEndpointUrl(endpointUrl);
             card.setProtocol("A2A");
             card.setStatus("ACTIVE");
-            card.setCreatedAt(LocalDateTime.now());
-            card.setUpdatedAt(LocalDateTime.now());
             agentCardMapper.insert(card);
             log.info("[AgentCard] Registered: {} ({})", agentId, agentName);
         } catch (Exception e) {

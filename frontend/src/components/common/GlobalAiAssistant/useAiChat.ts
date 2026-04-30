@@ -299,16 +299,20 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             finishTyping();
           }
           if (accumulatedText) speak(accumulatedText);
-          intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText).then(resp => {
-            const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
-              ? (resp as any).data : ((resp as any)?.data || resp) as HyperAdvisorResponse;
-            if (!ha) return;
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? {
-              ...m, riskIndicators: ha.riskIndicators, simulation: ha.simulation,
-              needsClarification: ha.needsClarification, traceId: ha.traceId,
-              advisorSessionId: ha.sessionId, userQuery: text,
-            } : m));
-          }).catch((e) => { console.warn('[AiChat] 顾问请求失败:', e); });
+
+          const needsRiskAnalysis = /风险|延期|逾期|交期|超期|risk|overdue|delay|模拟|推演|what.?if|预测|forecast/i.test(text);
+          if (needsRiskAnalysis) {
+            intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText).then(resp => {
+              const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
+                ? (resp as any).data : ((resp as any)?.data || resp) as HyperAdvisorResponse;
+              if (!ha) return;
+              setMessages(prev => prev.map(m => m.id === aiMsgId ? {
+                ...m, riskIndicators: ha.riskIndicators, simulation: ha.simulation,
+                needsClarification: ha.needsClarification, traceId: ha.traceId,
+                advisorSessionId: ha.sessionId, userQuery: text,
+              } : m));
+            }).catch((e) => { console.warn('[AiChat] 顾问请求失败:', e); });
+          }
 
           setMessages(prev => {
             const msg = prev.find(m => m.id === aiMsgId);
