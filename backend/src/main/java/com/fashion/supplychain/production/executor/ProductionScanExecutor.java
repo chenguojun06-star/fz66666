@@ -578,8 +578,14 @@ public class ProductionScanExecutor {
         if (hasText(order.getStyleId())) {
             try {
                 com.fashion.supplychain.style.entity.StyleInfo si = styleInfoService.getById(order.getStyleId());
-                if (si != null && hasText(si.getDescription())) info.put("description", si.getDescription());
-            } catch (Exception e) { log.warn("buildOrderInfo查询款式描述失败: styleId={}", order.getStyleId(), e); }
+                if (si != null) {
+                    if (hasText(si.getDescription())) info.put("description", si.getDescription());
+                    if (hasText(si.getCover())) {
+                        info.put("coverImage", si.getCover());
+                        info.put("styleImage", si.getCover());
+                    }
+                }
+            } catch (Exception e) { log.warn("buildOrderInfo查询款式信息失败: styleId={}", order.getStyleId(), e); }
             try {
                 Long styleIdLong = null;
                 try { styleIdLong = Long.valueOf(order.getStyleId()); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }

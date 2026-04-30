@@ -428,6 +428,8 @@ public class MaterialPurchaseOrchestratorHelper {
         String trimmed = code.trim();
         if (trimmed.startsWith("PO")) return trimmed;
         if (trimmed.startsWith("P0")) return "PO" + trimmed.substring(2);
+        if (trimmed.startsWith("CUT")) return trimmed;
+        if (trimmed.startsWith("ORD")) return trimmed;
         return null;
     }
 
