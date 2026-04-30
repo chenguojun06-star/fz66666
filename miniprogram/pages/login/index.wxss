@@ -190,7 +190,7 @@ page {
 }
 
 .login-subtitle {
-  font-size: 24rpx; color: #8a96a6; margin-top: 8rpx;
+  font-size: 24rpx; color: #5a6a7e; margin-top: 8rpx;
   letter-spacing: 1rpx;
 }
 
@@ -241,8 +241,8 @@ page {
 }
 .login-input::placeholder { color: #b0b8c4; }
 
-.login-input-clear { font-size: 28rpx; color: #b0b8c4; padding: 8rpx; }
-.login-input-eye { font-size: 24rpx; color: #8a96a6; padding: 8rpx; }
+.login-input-clear { font-size: 28rpx; color: #b0b8c4; padding: 16rpx 12rpx; min-width: 60rpx; text-align: center; }
+.login-input-eye { font-size: 24rpx; color: #8a96a6; padding: 16rpx 12rpx; min-width: 60rpx; text-align: center; }
 
 .tenant-selected-tag {
   margin-top: 12rpx; font-size: 24rpx; color: #1f75ea;
