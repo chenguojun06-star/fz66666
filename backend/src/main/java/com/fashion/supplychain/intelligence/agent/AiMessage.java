@@ -16,6 +16,7 @@ public class AiMessage {
     private String name;
     private String tool_call_id;
     private List<AiToolCall> tool_calls;
+    private String reasoning_content;
 
     public static AiMessage system(String txt) {
         AiMessage m = new AiMessage();
