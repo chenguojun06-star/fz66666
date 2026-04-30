@@ -53,7 +53,8 @@ public class RoleOrchestrator {
         if (!success) {
             throw new IllegalStateException("新增失败");
         }
-        saveOperationLog("role", role == null ? null : String.valueOf(role.getId()), "CREATE", null);
+        String roleName = role != null ? role.getRoleName() : null;
+        saveOperationLog("role", role == null ? null : String.valueOf(role.getId()), roleName, "CREATE", null);
         return true;
     }
 
@@ -65,11 +66,12 @@ public class RoleOrchestrator {
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
+        String roleName = role != null ? role.getRoleName() : null;
         boolean success = roleService.updateById(role);
         if (!success) {
             throw new IllegalStateException("更新失败");
         }
-        saveOperationLog("role", role == null ? null : String.valueOf(role.getId()), "UPDATE", remark);
+        saveOperationLog("role", role == null ? null : String.valueOf(role.getId()), roleName, "UPDATE", remark);
         return true;
     }
 
@@ -85,15 +87,18 @@ public class RoleOrchestrator {
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
+        // 删除前取快照，确保操作日志能记录角色名称
+        Role snapshot = roleService.getById(id);
+        String roleName = snapshot != null ? snapshot.getRoleName() : null;
         boolean success = roleService.removeById(id);
         if (!success) {
-            if (roleService.getById(id) == null) {
+            if (snapshot == null) {
                 log.warn("[ROLE-DELETE] id={} already deleted, idempotent success", id);
                 return true;
             }
             throw new IllegalStateException("删除失败");
         }
-        saveOperationLog("role", id == null ? null : String.valueOf(id), "DELETE", normalized);
+        saveOperationLog("role", id == null ? null : String.valueOf(id), roleName, "DELETE", normalized);
         return true;
     }
 
@@ -115,11 +120,13 @@ public class RoleOrchestrator {
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
+        Role role = roleService.getById(id);
+        String roleName = role != null ? role.getRoleName() : null;
         boolean success = rolePermissionService.replaceRolePermissions(id, permissionIds);
         if (!success) {
             throw new IllegalStateException("保存失败");
         }
-        saveOperationLog("role", String.valueOf(id), "PERMISSION_UPDATE", normalized);
+        saveOperationLog("role", String.valueOf(id), roleName, "PERMISSION_UPDATE", normalized);
         // Bug1修复: 驱逐角色权限缓存及所有用户权限缓存，确保变更立即生效，无需等待30分钟TTL
         try {
             permissionEngine.evictRolePermissionCache(id);
@@ -133,11 +140,11 @@ public class RoleOrchestrator {
 
     // 使用TextUtils.safeText()替代
 
-    private void saveOperationLog(String bizType, String bizId, String action, String remark) {
+    private void saveOperationLog(String bizType, String bizId, String targetName, String action, String remark) {
         try {
             UserContext ctx = UserContext.get();
             String operator = (ctx != null ? ctx.getUsername() : null);
-            loginLogService.recordOperation(bizType, bizId, action, operator, remark);
+            loginLogService.recordOperation(bizType, bizId, targetName, action, operator, remark);
         } catch (Exception e) {
             log.warn("[RoleOrch] 记录操作日志失败: {}", e.getMessage());
         }
