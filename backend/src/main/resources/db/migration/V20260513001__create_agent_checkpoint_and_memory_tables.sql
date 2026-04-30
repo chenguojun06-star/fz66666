@@ -1,7 +1,9 @@
 SET @dbname = DATABASE();
 
+SET @tenant_col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=@dbname AND TABLE_NAME='t_agent_checkpoint' AND COLUMN_NAME='tenant_id');
 SET @col_check = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=@dbname AND TABLE_NAME='t_agent_checkpoint' AND COLUMN_NAME='thread_id');
-SET @alter_sql = IF(@col_check=0, 'ALTER TABLE t_agent_checkpoint ADD COLUMN thread_id VARCHAR(128) NOT NULL DEFAULT '''' AFTER tenant_id, ADD COLUMN node_id VARCHAR(128) NOT NULL DEFAULT '''' AFTER thread_id, ADD COLUMN node_name VARCHAR(256) AFTER node_id, ADD COLUMN state_json MEDIUMTEXT AFTER node_name, ADD COLUMN metadata_json TEXT AFTER state_json, ADD COLUMN step_index INT NOT NULL DEFAULT 0 AFTER metadata_json, ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT ''ACTIVE'' AFTER step_index, ADD INDEX idx_acp_tenant_thread (tenant_id, thread_id), ADD INDEX idx_acp_thread_step (thread_id, step_index), ADD INDEX idx_acp_status (status)', 'SELECT 1');
+SET @after_col = IF(@tenant_col>0, 'AFTER tenant_id', 'FIRST');
+SET @alter_sql = IF(@col_check=0, CONCAT('ALTER TABLE t_agent_checkpoint ADD COLUMN thread_id VARCHAR(128) NOT NULL DEFAULT '''' ', @after_col, ', ADD COLUMN node_id VARCHAR(128) NOT NULL DEFAULT '''' AFTER thread_id, ADD COLUMN node_name VARCHAR(256) AFTER node_id, ADD COLUMN state_json MEDIUMTEXT AFTER node_name, ADD COLUMN metadata_json TEXT AFTER state_json, ADD COLUMN step_index INT NOT NULL DEFAULT 0 AFTER metadata_json, ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT ''ACTIVE'' AFTER step_index, ADD INDEX idx_acp_tenant_thread (tenant_id, thread_id), ADD INDEX idx_acp_thread_step (thread_id, step_index), ADD INDEX idx_acp_status (status)'), 'SELECT 1');
 PREPARE stmt FROM @alter_sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @col_check2 = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=@dbname AND TABLE_NAME='t_agent_checkpoint' AND COLUMN_NAME='session_id');

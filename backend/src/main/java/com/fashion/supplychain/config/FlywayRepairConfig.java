@@ -34,7 +34,7 @@ public class FlywayRepairConfig {
                 log.info("[FlywayRepair] Migrate complete.");
             } catch (org.flywaydb.core.internal.exception.FlywayMigrateException e) {
                 String msg = e.getMessage();
-                if (msg != null && (msg.contains("Duplicate column") || msg.contains("Duplicate key") || msg.contains("already exists") || msg.contains("Table") && msg.contains("already exists"))) {
+                if (msg != null && (msg.contains("Duplicate column") || msg.contains("Duplicate key") || msg.contains("already exists") || msg.contains("Unknown column") || msg.contains("Table") && msg.contains("already exists"))) {
                     log.warn("[FlywayRepair] 幂等冲突（列/表已存在），retry after repair: {}", msg);
                     try {
                         flyway.repair();
