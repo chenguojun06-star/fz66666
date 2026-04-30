@@ -1,7 +1,7 @@
 const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../utils/permission');
-const { isTenantOwner } = require('../../utils/storage');
+const { isTenantOwner, isTokenExpired } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 
 /**
@@ -51,6 +51,9 @@ Page({
       greeting: getGreeting(),
       menuItems: buildMenuItems(),
     });
+    // requireAuth 在 onLoad 阶段提前守卫：有 token 且未过期才初始化用户信息
+    const app = getApp();
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._loadUserName();
     this._computeDateInfo();
   },
@@ -118,8 +121,9 @@ Page({
     if (Object.keys(patch).length) this.setData(patch);
 
     if (!forceRemote && this._loadedUserNameFromRemote) return;
-    // 无 token 时跳过远程接口，防止 onLoad 阶段（token 未就绪）触发 401
-    if (!(wx.getStorageSync('auth_token') || '')) return;
+    // 无 token 或 token 已过期时跳过远程接口，防止 onLoad 阶段触发 401
+    const authToken = wx.getStorageSync('auth_token') || '';
+    if (!authToken || isTokenExpired()) return;
     this._loadedUserNameFromRemote = true;
     api.system.getMe()
       .then(res => {
