@@ -365,13 +365,13 @@ ai:
       api-key: ${COHERE_API_KEY:}                   # Cohere API Key（https://cohere.com）
       model: ${AI_COHERE_RERANK_MODEL:rerank-v3.5}  # rerank-v3.5（多语言，推荐）/ rerank-multilingual-v3.0
       top-n: ${AI_COHERE_RERANK_TOP_N:5}            # 精排后返回条数（候选池 15 → 精排后 top-n）
-	  consortium:
-	    enabled: ${AI_CONSORTIUM_ENABLED:true}
-	  model:
-	    fast: ${AI_MODEL_FAST:deepseek-chat}
-	    reasoning: ${AI_MODEL_REASONING:deepseek-reasoner}
-	    vision: ${AI_MODEL_VISION:doubao-1-5-vision-pro-32k-250115}
-	    default: ${AI_MODEL_DEFAULT:deepseek-chat}
+      consortium:
+        enabled: ${AI_CONSORTIUM_ENABLED:true}
+      model:
+        fast: ${AI_MODEL_FAST:deepseek-chat}
+        reasoning: ${AI_MODEL_REASONING:deepseek-reasoner}
+        vision: ${AI_MODEL_VISION:doubao-1-5-vision-pro-32k-250115}
+        default: ${AI_MODEL_DEFAULT:deepseek-chat}
 
 # Qdrant 向量库配置（QdrantService @Value 读取）
 intelligence:
