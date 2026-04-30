@@ -76,6 +76,9 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> ragCtx = supplyAsync(() -> contextProvider.buildRagContext(tenantId, userMessage));
         CompletableFuture<String> userBehavior = supplyAsync(contextProvider::buildUserBehaviorHint);
         CompletableFuture<String> activePatrol = supplyAsync(contextProvider::buildActivePatrolBlock);
+        CompletableFuture<String> exceptionReport = isManager
+                ? supplyAsync(() -> contextProvider.buildExceptionReport(tenantId))
+                : CompletableFuture.completedFuture("");
 
         String intelligenceContext = safeJoin(intelligenceCtx, "实时经营上下文");
         String workerProfileBlock = safeJoin(workerProfile, "工人画像");
@@ -85,6 +88,7 @@ public class AiAgentPromptHelper {
         String ragContext = safeJoin(ragCtx, "RAG检索");
         String userBehaviorBlock = safeJoin(userBehavior, "行为画像");
         String activePatrolBlock = safeJoinWithTimeout(activePatrol, 800, "巡查风险");
+        String exceptionReportBlock = safeJoin(exceptionReport, "异常报告");
 
         String masInsightBlock = buildMasInsightBlock();
         String contextBlock = buildContextBlock(userName, userRole, isSuperAdmin, isTenantOwner, isManager);
@@ -93,7 +97,7 @@ public class AiAgentPromptHelper {
         String domainHint = buildDomainHint(visibleTools);
         String roleBlock = buildRoleBlock(isManager, workerProfileBlock, mgmtInsightBlock);
 
-        String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, activePatrolBlock,
+        String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, exceptionReportBlock, activePatrolBlock,
                 masInsightBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
                 userBehaviorBlock, toolGuide, domainHint);
 
@@ -239,7 +243,8 @@ public class AiAgentPromptHelper {
     }
 
     private String assemblePrompt(String contextBlock, String pageCtxBlock, String roleBlock,
-            String activePatrolBlock, String masInsightBlock, String intelligenceContext,
+            String exceptionReportBlock, String activePatrolBlock,
+            String masInsightBlock, String intelligenceContext,
             String longTermMemBlock, String memoryContext, String ragContext,
             String userBehaviorBlock, String toolGuide, String domainHint) {
         String identity = promptTemplateLoader.getBaseIdentity();
@@ -251,6 +256,7 @@ public class AiAgentPromptHelper {
                 contextBlock + "\n" +
                 pageCtxBlock +
                 roleBlock +
+                exceptionReportBlock +
                 activePatrolBlock +
                 masInsightBlock +
                 intelligenceContext + "\n" +

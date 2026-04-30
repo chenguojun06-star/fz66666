@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceSignalOrchestrator;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +43,7 @@ public class PromptContextProvider {
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
     @Autowired(required = false) private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired(required = false) private PatrolClosedLoopOrchestrator patrolClosedLoopOrchestrator;
+    @Autowired(required = false) private IntelligenceSignalOrchestrator intelligenceSignalOrchestrator;
 
     public String buildIntelligenceContext() {
         try {
@@ -217,6 +220,44 @@ public class PromptContextProvider {
             }
         } catch (Exception e) { log.debug("[AiAgent-Worker] 预警注入跳过"); }
         return wc.toString();
+    }
+
+    /**
+     * 异常报告：只返回需要处理的异常事件，替代全量仪表盘。
+     * 工厂工人打开小云时自动注入：仅当有实际异常/预警时才输出，空则不占token。
+     */
+    public String buildExceptionReport(Long tenantId) {
+        StringBuilder report = new StringBuilder();
+        int alertCount = 0;
+        // 1. 巡查风险
+        try {
+            String patrolBlock = buildActivePatrolBlock();
+            if (patrolBlock != null && !patrolBlock.isBlank()) {
+                report.append(patrolBlock);
+                alertCount++;
+            }
+        } catch (Exception e) { log.debug("[ExceptionReport] 巡查风险获取跳过"); }
+        // 2. 智能信号：未处理的高优先级信号
+        try {
+            if (intelligenceSignalOrchestrator != null && tenantId != null) {
+                List<IntelligenceSignal> openSignals = intelligenceSignalOrchestrator.getOpenSignals(tenantId, 70);
+                if (openSignals != null && !openSignals.isEmpty()) {
+                    List<IntelligenceSignal> top = openSignals.stream()
+                            .filter(s -> s.getPriorityScore() != null && s.getPriorityScore() >= 70)
+                            .limit(5).toList();
+                    if (!top.isEmpty()) {
+                        report.append("\n⚠️ 待处理预警信号：\n");
+                        for (IntelligenceSignal s : top) {
+                            report.append("- [").append(s.getPriorityScore()).append("分] ").append(s.getSignalTitle()).append("\n");
+                        }
+                        alertCount++;
+                    }
+                }
+            }
+        } catch (Exception e) { log.debug("[ExceptionReport] 信号获取跳过"); }
+        if (alertCount == 0) return "";
+        return "📋 **当前需关注事项：**\n" + report.toString()
+                + "\n回答时请优先处理上述异常，简洁说明建议。对无异常的事项可一句话带过。\n\n";
     }
 
     public String buildActivePatrolBlock() {

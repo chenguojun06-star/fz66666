@@ -1,5 +1,8 @@
 package com.fashion.supplychain.intelligence.helper;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
@@ -12,14 +15,18 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,11 +39,16 @@ public class AiAgentMemoryHelper {
     private static final int MAX_MEMORY_TURNS = 6;
     private static final int MAX_USERS_CACHED = 500;
     private static final int COMPACT_THRESHOLD_TURNS = 12;
+    private static final String REDIS_MEMORY_PREFIX = "fashion:chat:memory:";
+    private static final long REDIS_MEMORY_TTL_HOURS = 24;
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
     @Autowired private AiMemoryOrchestrator aiMemoryOrchestrator;
     @Autowired private KnowledgeBaseMapper knowledgeBaseMapper;
+    @Autowired(required = false) private StringRedisTemplate stringRedisTemplate;
 
     private final Cache<String, List<AiMessage>> conversationMemory = Caffeine.newBuilder()
             .maximumSize(MAX_USERS_CACHED)
@@ -62,19 +74,70 @@ public class AiAgentMemoryHelper {
 
     public List<AiMessage> getConversationHistory(String userId, Long tenantId) {
         if (userId == null || userId.isBlank()) return List.of();
-        List<AiMessage> history = conversationMemory.getIfPresent(memoryKey(userId, tenantId));
-        if (history == null) return List.of();
-        return new ArrayList<>(history);
+        String key = memoryKey(userId, tenantId);
+        // L1: Caffeine
+        List<AiMessage> history = conversationMemory.getIfPresent(key);
+        if (history != null && !history.isEmpty()) return new ArrayList<>(history);
+        // L2: Redis
+        history = loadFromRedis(key);
+        if (history != null && !history.isEmpty()) {
+            conversationMemory.put(key, Collections.synchronizedList(new ArrayList<>(history)));
+            return history;
+        }
+        return List.of();
     }
 
     public void saveConversationTurn(String userId, Long tenantId, String userMsg, String assistantMsg) {
         String key = memoryKey(userId, tenantId);
+        // L1: Caffeine
         List<AiMessage> history = conversationMemory.get(key, k -> Collections.synchronizedList(new ArrayList<>()));
         history.add(AiMessage.user(userMsg));
         history.add(AiMessage.assistant(assistantMsg));
         while (history.size() > MAX_MEMORY_TURNS * 2) {
             history.remove(0);
         }
+        // L2: Redis async
+        persistToRedisAsync(key, new ArrayList<>(history));
+    }
+
+    private List<AiMessage> loadFromRedis(String cacheKey) {
+        if (stringRedisTemplate == null) return List.of();
+        try {
+            String json = stringRedisTemplate.opsForValue().get(REDIS_MEMORY_PREFIX + cacheKey);
+            if (json == null || json.isBlank()) return List.of();
+            List<Map<String, Object>> raw = JSON_MAPPER.readValue(json, new TypeReference<>() {});
+            List<AiMessage> msgs = new ArrayList<>();
+            for (Map<String, Object> m : raw) {
+                AiMessage msg = new AiMessage();
+                msg.setRole((String) m.get("role"));
+                msg.setContent((String) m.get("content"));
+                msgs.add(msg);
+            }
+            log.debug("[AiAgentMemory] Redis L2命中: key={}, turns={}", cacheKey, msgs.size() / 2);
+            return msgs;
+        } catch (Exception e) {
+            log.debug("[AiAgentMemory] Redis读取失败（不影响主流程）: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private void persistToRedisAsync(String cacheKey, List<AiMessage> history) {
+        if (stringRedisTemplate == null || history.isEmpty()) return;
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, String>> payload = new ArrayList<>();
+                for (AiMessage m : history) {
+                    Map<String, String> item = new java.util.LinkedHashMap<>();
+                    item.put("role", m.getRole());
+                    item.put("content", m.getContent() != null ? m.getContent() : "");
+                    payload.add(item);
+                }
+                String json = JSON_MAPPER.writeValueAsString(payload);
+                stringRedisTemplate.opsForValue().set(REDIS_MEMORY_PREFIX + cacheKey, json, Duration.ofHours(REDIS_MEMORY_TTL_HOURS));
+            } catch (Exception e) {
+                log.debug("[AiAgentMemory] Redis写入失败（不影响主流程）: {}", e.getMessage());
+            }
+        }, memoryExecutor);
     }
 
     public List<AiMessage> compactConversationHistory(List<AiMessage> history) {

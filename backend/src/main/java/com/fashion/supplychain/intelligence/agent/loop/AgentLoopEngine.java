@@ -202,7 +202,10 @@ public class AgentLoopEngine {
         revisedContent = evidenceHelper.appendReportPreviewCards(revisedContent, ctx.getReportPreviewCards());
         revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, ctx.getXiaoyunInsightCards());
 
-        runDataTruthGuards(ctx, revisedContent);
+        String guardWarnings = runDataTruthGuards(ctx, revisedContent);
+        if (!guardWarnings.isEmpty()) {
+            revisedContent += guardWarnings;
+        }
 
         boolean usedHighRiskTool = ctx.getAllExecRecords().stream()
                 .anyMatch(r -> selfConsistencyVerifier.isHighRiskScene(r.toolName));
@@ -239,24 +242,31 @@ public class AgentLoopEngine {
         return revisedContent;
     }
 
-    private void runDataTruthGuards(AgentLoopContext ctx, String content) {
+    private String runDataTruthGuards(AgentLoopContext ctx, String content) {
         String toolEvidence = ctx.getToolEvidence();
+        StringBuilder warnings = new StringBuilder();
         DataTruthGuard.TruthCheckResult truthCheck = dataTruthGuard.checkAiOutputTruth(content, toolEvidence);
         if (!truthCheck.isPassed()) {
             log.warn("[AgentLoop] 数据真实性校验未通过: {}", truthCheck.getReason());
+            warnings.append("\n> ⚠️ 数据校验提示：").append(truthCheck.getReason());
         }
         DataTruthGuard.NumericConsistencyResult numCheck = dataTruthGuard.checkNumericConsistency(content, toolEvidence);
-        if (!numCheck.isConsistent()) {
+        if (!numCheck.isConsistent() && numCheck.getMismatches() != null && !numCheck.getMismatches().isEmpty()) {
             log.warn("[AgentLoop] 数字一致性校验异常: {}", numCheck.getMismatches());
+            warnings.append("\n> ⚠️ 以下数字在工具返回结果中未找到，可能不准确：").append(String.join("、", numCheck.getMismatches()));
         }
         EntityFactChecker.FactCheckResult factCheck = entityFactChecker.verifyEntities(content);
-        if (!factCheck.allVerified()) {
+        if (!factCheck.allVerified() && factCheck.phantomEntities() != null && !factCheck.phantomEntities().isEmpty()) {
             log.warn("[AgentLoop] 实体事实校验发现不存在的实体: {}", factCheck.phantomEntities());
+            warnings.append("\n> ⚠️ 以下引用的实体在系统中不存在：").append(String.join("、", factCheck.phantomEntities()));
         }
         GroundedGenerationGuard.GroundingResult grounding = groundedGenerationGuard.verify(content, ctx.getAllExecRecords());
         if (!grounding.passed()) {
             log.warn("[AgentLoop] 接地率检查未通过: rate={}", grounding.groundingRate());
+            String gw = grounding.toWarningText();
+            if (gw != null && !gw.isEmpty()) warnings.append("\n> ⚠️ ").append(gw);
         }
+        return warnings.toString();
     }
 
     private void recordPrmMetrics(String commandId, int iteration, List<AiAgentToolExecHelper.ToolExecRecord> execRecords) {

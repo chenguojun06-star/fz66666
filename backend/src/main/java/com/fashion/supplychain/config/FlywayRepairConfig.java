@@ -22,10 +22,19 @@ public class FlywayRepairConfig {
     public FlywayMigrationStrategy flywayMigrationStrategy() {
         return flyway -> {
             log.info("[FlywayRepair] Running repair to remove failed migration entries...");
-            flyway.repair();
-            log.info("[FlywayRepair] Repair complete. Starting migrate...");
-            flyway.migrate();
-            log.info("[FlywayRepair] Migrate complete.");
+            try {
+                flyway.repair();
+                log.info("[FlywayRepair] Repair complete. Starting migrate...");
+            } catch (Exception e) {
+                log.warn("[FlywayRepair] Repair failed (可能因历史版本号含非法字符)，跳过repair直接migrate: {}", e.getMessage());
+            }
+            try {
+                flyway.migrate();
+                log.info("[FlywayRepair] Migrate complete.");
+            } catch (Exception e) {
+                log.error("[FlywayRepair] Migrate failed: {}", e.getMessage(), e);
+                throw e;
+            }
         };
     }
 }
