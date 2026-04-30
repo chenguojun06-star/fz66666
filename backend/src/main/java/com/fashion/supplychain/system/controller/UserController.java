@@ -342,11 +342,12 @@ public class UserController {
         if (remark == null) {
             remark = body == null ? null : body.getOperationRemark();
         }
+        Long roleId = body == null ? null : body.getRoleId();
 
         // 智能路由到对应的Orchestrator方法
         switch (action.toLowerCase()) {
             case "approve":
-                userOrchestrator.approveUser(id, remark);
+                userOrchestrator.approveUser(id, remark, roleId);
                 return Result.successMessage("用户已批准");
             case "reject":
                 userOrchestrator.rejectUser(id, remark);

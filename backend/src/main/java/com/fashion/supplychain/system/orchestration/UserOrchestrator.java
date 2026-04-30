@@ -232,6 +232,7 @@ public class UserOrchestrator {
     public Page<User> listPendingUsers(Long page, Long pageSize) { return approvalHelper.listPendingUsers(page, pageSize); }
     public boolean approveUser(Long id) { return approvalHelper.approveUser(id); }
     public boolean approveUser(Long id, String remark) { return approvalHelper.approveUser(id, remark); }
+    public boolean approveUser(Long id, String remark, Long roleId) { return approvalHelper.approveUser(id, remark, roleId); }
     public boolean rejectUser(Long id, String remark) { return approvalHelper.rejectUser(id, remark); }
 
     public List<String> permissionsByRole(Long roleId) {

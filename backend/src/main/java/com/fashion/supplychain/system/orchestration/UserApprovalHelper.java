@@ -24,6 +24,9 @@ public class UserApprovalHelper {
     @Autowired
     private LoginLogService loginLogService;
 
+    @Autowired
+    private com.fashion.supplychain.system.service.RoleService roleService;
+
     public Page<User> listPendingUsers(Long page, Long pageSize) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
@@ -50,10 +53,14 @@ public class UserApprovalHelper {
     }
 
     public boolean approveUser(Long id) {
-        return approveUser(id, null);
+        return approveUser(id, null, null);
     }
 
     public boolean approveUser(Long id, String remark) {
+        return approveUser(id, remark, null);
+    }
+
+    public boolean approveUser(Long id, String remark, Long roleId) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
@@ -64,6 +71,16 @@ public class UserApprovalHelper {
         String normalized = TextUtils.safeText(remark);
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
+        }
+        // 同时分配角色：一步完成审批+赋权，避免小程序两次请求的不一致问题
+        if (roleId != null) {
+            Role role = roleService.getById(roleId);
+            if (role == null) {
+                throw new IllegalArgumentException("指定的角色不存在");
+            }
+            user.setRoleId(roleId);
+            user.setRoleName(role.getRoleName());
+            user.setPermissionRange("all".equals(role.getDataScope()) ? "all" : "self");
         }
         user.setApprovalStatus("approved");
         user.setApprovalTime(LocalDateTime.now());
