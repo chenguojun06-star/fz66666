@@ -424,9 +424,15 @@ public class ViewMigrator implements ApplicationRunner {
     }
 
     private List<String> extractExpectedColumns(String createSql) {
+        // 跳过 "CREATE VIEW xxx AS SELECT" 前缀，只解析 SELECT 列别名部分
+        // 避免把 "AS SELECT" 中的 SQL 关键字误抓为列名
+        String upper = createSql.toUpperCase();
+        int selectIdx = upper.indexOf("AS SELECT");
+        String selectPart = selectIdx >= 0 ? createSql.substring(selectIdx + "AS SELECT".length()) : createSql;
+
         List<String> cols = new ArrayList<>();
         Pattern aliasPattern = Pattern.compile("(?i)\\bAS\\s+(`?)([a-z_][a-z0-9_]*)\\1\\s*(?:,|\\n|\\r|$)");
-        Matcher m = aliasPattern.matcher(createSql);
+        Matcher m = aliasPattern.matcher(selectPart);
         while (m.find()) {
             String col = m.group(2);
             if (col != null && !cols.contains(col)) {
