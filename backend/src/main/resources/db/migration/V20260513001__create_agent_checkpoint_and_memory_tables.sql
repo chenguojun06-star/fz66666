@@ -5,8 +5,16 @@ SET @alter_sql = IF(@col_check=0, 'ALTER TABLE t_agent_checkpoint ADD COLUMN thr
 PREPARE stmt FROM @alter_sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @col_check2 = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=@dbname AND TABLE_NAME='t_agent_checkpoint' AND COLUMN_NAME='session_id');
-SET @drop_sql = IF(@col_check2>0, 'ALTER TABLE t_agent_checkpoint DROP COLUMN session_id, DROP COLUMN iteration, DROP COLUMN messages_json, DROP COLUMN tool_calls_json, DROP COLUMN total_tokens, DROP INDEX idx_ac_session_iter, DROP FOREIGN KEY t_agent_checkpoint_ibfk_1', 'SELECT 1');
+SET @drop_sql = IF(@col_check2>0, 'ALTER TABLE t_agent_checkpoint DROP COLUMN session_id, DROP COLUMN iteration, DROP COLUMN messages_json, DROP COLUMN tool_calls_json, DROP COLUMN total_tokens', 'SELECT 1');
 PREPARE stmt2 FROM @drop_sql; EXECUTE stmt2; DEALLOCATE PREPARE stmt2;
+
+SET @fk_check = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA=@dbname AND TABLE_NAME='t_agent_checkpoint' AND CONSTRAINT_NAME='t_agent_checkpoint_ibfk_1' AND CONSTRAINT_TYPE='FOREIGN KEY');
+SET @drop_fk_sql = IF(@fk_check>0, 'ALTER TABLE t_agent_checkpoint DROP FOREIGN KEY t_agent_checkpoint_ibfk_1', 'SELECT 1');
+PREPARE stmt2b FROM @drop_fk_sql; EXECUTE stmt2b; DEALLOCATE PREPARE stmt2b;
+
+SET @idx_check = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=@dbname AND TABLE_NAME='t_agent_checkpoint' AND INDEX_NAME='idx_ac_session_iter');
+SET @drop_idx_sql = IF(@idx_check>0, 'ALTER TABLE t_agent_checkpoint DROP INDEX idx_ac_session_iter', 'SELECT 1');
+PREPARE stmt2c FROM @drop_idx_sql; EXECUTE stmt2c; DEALLOCATE PREPARE stmt2c;
 
 SET @c1 = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=@dbname AND TABLE_NAME='t_agent_memory_core');
 SET @s1 = IF(@c1=0, 'CREATE TABLE t_agent_memory_core (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, agent_id VARCHAR(128) NOT NULL, memory_key VARCHAR(256) NOT NULL, memory_value TEXT NOT NULL, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, UNIQUE INDEX idx_amc_tenant_agent_key (tenant_id, agent_id, memory_key)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci', 'SELECT 1');
