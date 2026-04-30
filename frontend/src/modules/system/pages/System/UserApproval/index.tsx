@@ -343,7 +343,7 @@ const UserApproval: React.FC = () => {
                   onChange: (p, ps) => { setPage(p); setPageSize(ps); },
                 }}
                 stickyHeader
-                scroll={{ x: isMobile ? 'max-content' : undefined }}
+                scroll={{ x: 'max-content' }}
               />
             </>
           )}
@@ -374,7 +374,7 @@ const UserApproval: React.FC = () => {
                 loading={factoryLoading}
                 pagination={false}
                 stickyHeader
-                scroll={{ x: isMobile ? 'max-content' : undefined }}
+                scroll={{ x: 'max-content' }}
               />
             </>
           )}
