@@ -29,6 +29,8 @@ public class AiAgentPromptHelper {
     @Autowired private PromptContextProvider contextProvider;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
     @Autowired private PromptTemplateLoader promptTemplateLoader;
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.XiaoyunCoreUpgrade coreUpgrade;
 
     private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
             4, 8, 60L, TimeUnit.SECONDS,
@@ -91,14 +93,17 @@ public class AiAgentPromptHelper {
         String exceptionReportBlock = safeJoin(exceptionReport, "异常报告");
 
         String masInsightBlock = buildMasInsightBlock();
+        String digitalTwinBlock = buildDigitalTwinBlock();
         String contextBlock = buildContextBlock(userName, userRole, isSuperAdmin, isTenantOwner, isManager);
         String pageCtxBlock = buildPageContextBlock(pageContext);
-        String toolGuide = aiAgentToolAccessService.buildToolGuide(visibleTools);
-        String domainHint = buildDomainHint(visibleTools);
+        // 智能工具筛选：工具太多时用 RAG 选最相关的
+        List<AgentTool> effectiveTools = applyToolDiscovery(visibleTools, userMessage, pageContext);
+        String toolGuide = aiAgentToolAccessService.buildToolGuide(effectiveTools);
+        String domainHint = buildDomainHint(effectiveTools);
         String roleBlock = buildRoleBlock(isManager, workerProfileBlock, mgmtInsightBlock);
 
         String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, exceptionReportBlock, activePatrolBlock,
-                masInsightBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
+                masInsightBlock, digitalTwinBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
                 userBehaviorBlock, toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
@@ -126,6 +131,32 @@ public class AiAgentPromptHelper {
             }
         }
         return prompt;
+    }
+
+    /**
+     * 构建数字孪生提示词块（全模块实时快照）。
+     */
+    private String buildDigitalTwinBlock() {
+        if (coreUpgrade == null) return "";
+        try {
+            return coreUpgrade.buildDigitalTwinPrompt();
+        } catch (Exception e) {
+            log.debug("[AiAgent-DT] 数字孪生构建跳过: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 工具智能筛选 — 工具超过阈值时用 RAG 选最相关的。
+     */
+    private List<AgentTool> applyToolDiscovery(List<AgentTool> visibleTools, String userMessage, String pageContext) {
+        if (coreUpgrade == null || visibleTools == null) return visibleTools;
+        try {
+            return coreUpgrade.filterTools(visibleTools, userMessage, pageContext);
+        } catch (Exception e) {
+            log.debug("[AiAgent-ToolDisc] 工具筛选跳过: {}", e.getMessage());
+            return visibleTools;
+        }
     }
 
     private CompletableFuture<String> supplyAsync(Supplier<String> supplier) {
@@ -244,7 +275,7 @@ public class AiAgentPromptHelper {
 
     private String assemblePrompt(String contextBlock, String pageCtxBlock, String roleBlock,
             String exceptionReportBlock, String activePatrolBlock,
-            String masInsightBlock, String intelligenceContext,
+            String masInsightBlock, String digitalTwinBlock, String intelligenceContext,
             String longTermMemBlock, String memoryContext, String ragContext,
             String userBehaviorBlock, String toolGuide, String domainHint) {
         String identity = promptTemplateLoader.getBaseIdentity();
@@ -259,6 +290,7 @@ public class AiAgentPromptHelper {
                 exceptionReportBlock +
                 activePatrolBlock +
                 masInsightBlock +
+                digitalTwinBlock +
                 intelligenceContext + "\n" +
                 longTermMemBlock +
                 memoryContext +
