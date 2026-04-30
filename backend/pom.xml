@@ -32,19 +32,7 @@
         <maven.compiler.version>3.13.0</maven.compiler.version>
         <maven.jar.version>3.3.0</maven.jar.version>
         <maven.dependency.version>3.9.0</maven.dependency.version>
-        <spring-ai.version>1.0.0</spring-ai.version>
     </properties>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.ai</groupId>
-                <artifactId>spring-ai-bom</artifactId>
-                <version>${spring-ai.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
     <dependencies>
         <!-- Spring Boot 核心依赖 -->
         <dependency>
@@ -87,16 +75,7 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai</artifactId>
-        </dependency>
-
-        <!-- spring-ai-client-chat 提供 ChatClient API（spring-ai-openai 1.0.0 不传递引入此模块） -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-client-chat</artifactId>
-        </dependency>
+        <!-- spring-ai 暂时移除，自动配置与生产环境冲突导致502，legacy adapter可正常工作 -->
 
         <dependency>
             <groupId>org.springdoc</groupId>

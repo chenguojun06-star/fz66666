@@ -25,9 +25,6 @@ public class AiInferenceRouter implements AiInferenceGateway {
     private LegacyInferenceAdapter legacyAdapter;
 
     @Autowired(required = false)
-    private SpringAiInferenceAdapter springAiAdapter;
-
-    @Autowired(required = false)
     private AiCostTrackingOrchestrator aiCostTrackingOrchestrator;
 
     @Autowired(required = false)
@@ -70,30 +67,6 @@ public class AiInferenceRouter implements AiInferenceGateway {
     }
 
     private AiInferenceGateway resolveGateway(String scene) {
-        return switch (routingStrategy) {
-            case "spring-ai" -> resolveSpringAi();
-            case "failover" -> resolveFailover();
-            case "legacy" -> legacyAdapter;
-            default -> legacyAdapter;
-        };
-    }
-
-    private AiInferenceGateway resolveSpringAi() {
-        if (springAiAdapter != null && springAiAdapter.isAvailable()) {
-            return springAiAdapter;
-        }
-        log.warn("[AiInferenceRouter] spring-ai unavailable, falling back to legacy");
-        return legacyAdapter;
-    }
-
-    private AiInferenceGateway resolveFailover() {
-        if (legacyAdapter.isAvailable()) {
-            return legacyAdapter;
-        }
-        if (springAiAdapter != null && springAiAdapter.isAvailable()) {
-            log.warn("[AiInferenceRouter] legacy unavailable, using spring-ai as failover");
-            return springAiAdapter;
-        }
         return legacyAdapter;
     }
 
@@ -135,8 +108,8 @@ public class AiInferenceRouter implements AiInferenceGateway {
         return Map.of(
             "strategy", routingStrategy,
             "legacyAvailable", legacyAdapter.isAvailable(),
-            "springAiAvailable", springAiAdapter != null && springAiAdapter.isAvailable(),
-            "activeProvider", resolveGateway(null).getProviderName()
+            "springAiAvailable", false,
+            "activeProvider", legacyAdapter.getProviderName()
         );
     }
 }
