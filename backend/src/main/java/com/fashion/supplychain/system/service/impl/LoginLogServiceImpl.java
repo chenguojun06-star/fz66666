@@ -71,6 +71,7 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
     public void recordOperation(String bizType, String bizId, String targetName, String action, String operator, String remark) {
         LoginLog loginLog = new LoginLog();
         loginLog.setLogType("OPERATION");
+        loginLog.setIp("0.0.0.0");            // 操作日志无真实登录IP，给占位值满足 NOT NULL 约束
         loginLog.setBizType(bizType);
         loginLog.setBizId(bizId);
         loginLog.setAction(action);

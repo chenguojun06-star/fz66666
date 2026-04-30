@@ -151,9 +151,9 @@ public class UserLoginHelper {
             loginLog.setLogType("LOGIN");
             loginLog.setUsername(safeTrim(username));
             loginLog.setName(safeTrim(name));
-            loginLog.setIp(safeTrim(ip));
+            loginLog.setIp(StringUtils.hasText(ip) ? ip.trim() : "0.0.0.0");
             loginLog.setLoginTime(LocalDateTime.now());
-            loginLog.setLoginStatus(safeTrim(status));
+            loginLog.setLoginStatus(StringUtils.hasText(status) ? status.trim() : "UNKNOWN");
             loginLog.setMessage(safeTrim(message));
             loginLog.setUserAgent(safeTrim(userAgent));
             Long tenantId = UserContext.tenantId();

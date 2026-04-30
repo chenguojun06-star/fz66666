@@ -22,9 +22,23 @@ public class OrderRiskTrackingOrchestrator {
     @Autowired private OrderRiskTrackingMapper riskTrackingMapper;
 
     public Long createRisk(String orderNo, String riskLevel, List<String> riskFactors, String assignedTo) {
+        // 守卫：必填字段不能为空（表列 NOT NULL 约束）
+        if (orderNo == null || orderNo.isBlank()) {
+            log.warn("[订单风险闭环] orderNo为空，跳过创建");
+            return null;
+        }
+        if (riskLevel == null || riskLevel.isBlank()) {
+            log.warn("[订单风险闭环] riskLevel为空，跳过创建");
+            return null;
+        }
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            log.warn("[订单风险闭环] tenantId为空（非请求线程？），跳过创建");
+            return null;
+        }
         try {
             OrderRiskTracking tracking = new OrderRiskTracking();
-            tracking.setTenantId(UserContext.tenantId());
+            tracking.setTenantId(tenantId);
             tracking.setOrderNo(orderNo);
             tracking.setRiskLevel(riskLevel);
             tracking.setRiskFactors(MAPPER.writeValueAsString(riskFactors));
