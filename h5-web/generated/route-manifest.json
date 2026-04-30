@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-21T13:13:38.856Z",
+  "generatedAt": "2026-04-30T10:48:37.821Z",
   "tabBar": {
     "color": "#999999",
     "selectedColor": "#3b82f6",
@@ -53,6 +53,7 @@
       "network": "wifi",
       "packages": [
         "pkg-work-inbox",
+        "pkg-work-ai",
         "pkg-bundle-split",
         "pkg-cutting",
         "pkg-procurement"
@@ -136,6 +137,12 @@
       "packageName": "pkg-payroll"
     },
     {
+      "source": "pages/payroll/feedback/index",
+      "h5Path": "/payroll/feedback",
+      "type": "subpackage",
+      "packageName": "pkg-payroll"
+    },
+    {
       "source": "pages/admin/user-approval/index",
       "h5Path": "/admin/user-approval",
       "type": "subpackage",
@@ -167,19 +174,19 @@
     },
     {
       "source": "pages/admin/misc/change-password/index",
-      "h5Path": "/admin/change-password",
+      "h5Path": "/admin/misc/change-password",
       "type": "subpackage",
       "packageName": "pkg-admin-misc"
     },
     {
       "source": "pages/admin/misc/feedback/index",
-      "h5Path": "/admin/feedback",
+      "h5Path": "/admin/misc/feedback",
       "type": "subpackage",
       "packageName": "pkg-admin-misc"
     },
     {
       "source": "pages/admin/misc/invite/index",
-      "h5Path": "/admin/invite",
+      "h5Path": "/admin/misc/invite",
       "type": "subpackage",
       "packageName": "pkg-admin-misc"
     },

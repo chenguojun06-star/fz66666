@@ -36,6 +36,7 @@ public class WeChatMiniProgramAuthOrchestrator {
     /** Redis key 前缀：wx:invite:{token} = tenantId:tenantName */
     private static final String INVITE_TOKEN_PREFIX = "wx:invite:";
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
     public WeChatMiniProgramAuthOrchestrator(

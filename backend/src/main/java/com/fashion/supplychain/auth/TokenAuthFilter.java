@@ -83,7 +83,7 @@ public class TokenAuthFilter extends OncePerRequestFilter {
                         long expected = storedVer == null ? 0L : Long.parseLong(storedVer);
                         Long tokenVer = subject.getPwdVersion();
                         if (tokenVer == null || tokenVer < expected) {
-                            log.debug("[TokenAuthFilter] token已失效（密码已更改），userId={}", subject.getUserId());
+                            log.warn("[TokenAuthFilter] token已失效（密码版本不匹配），tokenPwdVer={}, redisPwdVer={}, userId={}", tokenVer, expected, subject.getUserId());
                             subject = null; // token 已失效，视作未认证
                         }
                         redisFailedSince.set(0L); // 连接恢复，重置熔断
