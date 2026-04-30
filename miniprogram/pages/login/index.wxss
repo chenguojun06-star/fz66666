@@ -22,7 +22,6 @@ page {
 }
 
 /* ----- Pencil texture + garments ----- */
-.pencil-filters { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 .login-garments {
   position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
@@ -32,35 +31,35 @@ page {
 
 .garment-dress {
   width: 56px; top: 8%; left: 42%;
-  transform: rotate(-18deg); filter: url(#pencil-texture);
+  transform: rotate(-18deg); filter: none;
   color: rgba(128, 140, 162, 0.28);
 }
 .garment-coat {
   width: 72px; top: 22%; left: 8%;
-  transform: rotate(14deg); filter: url(#pencil-texture);
+  transform: rotate(14deg); filter: none;
   color: rgba(118, 130, 152, 0.32);
 }
 .garment-shirt {
   width: 64px; top: 48%; right: 4%;
-  transform: rotate(-10deg); filter: url(#pencil-texture);
+  transform: rotate(-10deg); filter: none;
   color: rgba(135, 145, 168, 0.30);
 }
 .garment-tshirt {
   width: 96px; bottom: 28%; left: 2%;
-  transform: rotate(5deg); filter: url(#pencil-texture);
+  transform: rotate(5deg); filter: none;
   color: rgba(105, 118, 140, 0.36);
 }
 .garment-skirt {
   width: 110px; bottom: 6%; left: 38%;
-  transform: translateX(-50%) rotate(-3deg); filter: url(#pencil-texture);
+  transform: translateX(-50%) rotate(-3deg); filter: none;
   color: rgba(90, 105, 130, 0.44);
 }
 .garment-vest {
   width: 54px; top: 10%; right: 12%;
-  transform: rotate(-8deg); filter: url(#pencil-texture);
+  transform: rotate(-8deg); filter: none;
   color: rgba(125, 138, 160, 0.28);
 }
-.garment-accessory { filter: url(#pencil-texture); }
+.garment-accessory { filter: none; }
 .scissors {
   width: 36px; top: 32%; left: 18%;
   transform: rotate(25deg); color: rgba(140, 150, 170, 0.18);

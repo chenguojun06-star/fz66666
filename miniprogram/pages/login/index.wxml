@@ -1,17 +1,5 @@
 <view class="login-page">
-  <!-- Pencil texture filter -->
-  <view class="pencil-filters" aria-hidden="true">
-    <svg width="0" height="0" style="position:absolute">
-      <defs>
-        <filter id="pencil-texture" x="-5%" y="-5%" width="110%" height="110%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="5" seed="3" result="noise"/>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.0" xChannelSelector="R" yChannelSelector="G"/>
-        </filter>
-      </defs>
-    </svg>
-  </view>
-
-  <!-- Pencil-sketch garments background -->
+  <!-- Pencil-sketch garments background (SVG line drawings) -->
   <view class="login-garments" aria-hidden="true">
     <!-- Dress -->
     <svg class="garment garment-dress" viewBox="0 0 60 100" fill="none">
