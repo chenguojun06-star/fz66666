@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
@@ -155,7 +156,7 @@ public class ProductionOrderLifecycleHelper {
         }
         TenantAssert.assertBelongsToCurrentTenant(existed.getTenantId(), "生产订单");
         String st = helper.safeText(existed.getStatus()).toLowerCase();
-        if ("completed".equals(st)) { throw new IllegalStateException("订单已完成，无法报废"); }
+        if (OrderStatusConstants.isTerminal(st)) { throw new IllegalStateException("订单已终态(" + st + ")，无法报废"); }
 
         long receivedCount = materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getOrderId, oid)

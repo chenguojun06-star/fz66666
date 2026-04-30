@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
+import com.fashion.supplychain.production.constants.ProductionConstants;
 import org.springframework.util.StringUtils;
 
 /**
@@ -39,8 +41,8 @@ public class FactoryBottleneckOrchestrator {
     @Autowired
     private ScanRecordService scanRecordService;
 
-    /** 五大工序标签（与前端 STAGE_FIELDS 保持一致） */
-    private static final String[] STAGE_LABELS = {"采购", "裁剪", "车缝", "质检", "入库"};
+    /** 六大固定工序节点（与 ProductionConstants 保持一致） */
+    private static final String[] STAGE_LABELS = ProductionConstants.FIXED_PRODUCTION_NODES_ARRAY;
 
     @Data
     public static class WorstOrderItem {
@@ -212,28 +214,27 @@ public class FactoryBottleneckOrchestrator {
     }
 
     /**
-     * 将扫码记录的 progressStage / scanType 映射到五大标准工序标签。
-     * 优先用 scanType，再用 progressStage 文本匹配。
+     * 将扫码记录的 progressStage / scanType 映射到六大固定工序节点。
+     * 使用 ProcessSynonymMapping（与 ProcessStageDetector 保持一致）做同义词归一化。
      */
     private String mapToStageLabel(String progressStage, String scanType) {
-        // 优先按 scanType 判断（语义最准确）
+        // scanType 精确映射（优先级最高）
         if (scanType != null) {
             switch (scanType) {
                 case "procurement": case "material": return "采购";
                 case "cutting":                      return "裁剪";
-                case "quality": case "quality_check": return "质检";
                 case "warehouse": case "warehousing": return "入库";
-                case "production":                   break; // 继续按 progressStage 判断
+                // production/sewing/quality → 需要 progressStage 进一步区分
             }
         }
-        // 按 progressStage 文本匹配
         if (progressStage == null) return null;
-        if (progressStage.contains("采购"))                                          return "采购";
-        if (progressStage.contains("裁剪"))                                          return "裁剪";
-        if (progressStage.contains("车缝") || progressStage.contains("尾部")
-                || progressStage.contains("二次") || progressStage.contains("缝制"))  return "车缝";
-        if (progressStage.contains("质检") || progressStage.contains("验收"))         return "质检";
-        if (progressStage.contains("入库") || progressStage.contains("仓库"))        return "入库";
+        // 用 ProcessSynonymMapping 做同义词归一化 → 得到标准父节点名
+        String normalized = ProcessSynonymMapping.normalize(progressStage.trim());
+        if (normalized == null) return null;
+        // 验证归一化结果是否是 6 大固定节点之一
+        for (String node : ProductionConstants.FIXED_PRODUCTION_NODES_ARRAY) {
+            if (node.equals(normalized)) return node;
+        }
         return null;
     }
 }

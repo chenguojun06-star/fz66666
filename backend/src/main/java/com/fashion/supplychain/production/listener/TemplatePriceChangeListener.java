@@ -1,6 +1,6 @@
 package com.fashion.supplychain.production.listener;
 
-import com.fashion.supplychain.production.controller.InternalMaintenanceController;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.orchestration.StyleQuotationOrchestrator;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -23,7 +23,7 @@ import org.springframework.util.StringUtils;
 public class TemplatePriceChangeListener implements ApplicationListener<TemplatePriceChangedEvent> {
 
     @Autowired
-    private InternalMaintenanceController maintenanceController;
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired
     private StyleQuotationOrchestrator styleQuotationOrchestrator;
@@ -74,19 +74,19 @@ public class TemplatePriceChangeListener implements ApplicationListener<Template
             log.warn("[自动同步] Step 1: 开始同步订单工序单价（progressWorkflowJson）");
             long startTime = System.currentTimeMillis();
 
-            var workflowResult = maintenanceController.refreshWorkflowPrices();
+            var workflowResult = processTrackingOrchestrator.refreshWorkflowPrices();
 
             long workflowDuration = System.currentTimeMillis() - startTime;
-            log.warn("[自动同步] Step 1 完成 - 耗时: {}ms, 结果: {}", workflowDuration, workflowResult.getData());
+            log.warn("[自动同步] Step 1 完成 - 耗时: {}ms, 结果: {}", workflowDuration, workflowResult);
 
             // Step 2: 同步工序跟踪表的 unit_price
             log.warn("[自动同步] Step 2: 开始同步工序跟踪表单价（t_production_process_tracking）");
             startTime = System.currentTimeMillis();
 
-            var trackingResult = maintenanceController.refreshTrackingPrices();
+            var trackingResult = processTrackingOrchestrator.syncAllOrderTrackingPrices();
 
             long trackingDuration = System.currentTimeMillis() - startTime;
-            log.warn("[自动同步] Step 2 完成 - 耗时: {}ms, 结果: {}", trackingDuration, trackingResult.getData());
+            log.warn("[自动同步] Step 2 完成 - 耗时: {}ms, 结果: {}", trackingDuration, trackingResult);
 
             // Step 3: 同步报价单 + StyleInfo.price（向下兼容）
             // 从单价维护(模板)向下同步到：报价单 → StyleInfo.price → 结算单价
@@ -109,8 +109,8 @@ public class TemplatePriceChangeListener implements ApplicationListener<Template
             // 汇总日志
             log.warn("[自动同步] 价格同步完成 - styleNo: {}, workflow: {}, tracking: {}, quotation: {}",
                     styleNo,
-                    workflowResult.getData(),
-                    trackingResult.getData(),
+                    workflowResult,
+                    trackingResult,
                     quotationSynced);
 
         } catch (Exception e) {

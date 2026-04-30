@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
@@ -69,8 +70,8 @@ public class ProductionOrderCreationHelper {
             }
             TenantAssert.assertBelongsToCurrentTenant(existed.getTenantId(), "生产订单");
             String st = helper.safeText(existed.getStatus()).toLowerCase();
-            if ("completed".equals(st)) {
-                throw new IllegalStateException("订单已完成，无法编辑");
+            if (OrderStatusConstants.isTerminal(st)) {
+                throw new IllegalStateException("订单已终态(" + st + ")，无法编辑");
             }
             String operRemark = productionOrder.getOperationRemark();
             remarkForLog = StringUtils.hasText(operRemark) ? operRemark.trim() : "";

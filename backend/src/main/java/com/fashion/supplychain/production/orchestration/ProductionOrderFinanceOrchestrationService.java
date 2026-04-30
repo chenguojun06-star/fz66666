@@ -5,6 +5,7 @@ import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrat
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
@@ -112,7 +113,7 @@ public class ProductionOrderFinanceOrchestrationService {
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equals(st)) throw new IllegalArgumentException("订单已完成");
+        if (OrderStatusConstants.isTerminal(st)) throw new IllegalArgumentException("订单已终态(" + st + ")");
         return order;
     }
 

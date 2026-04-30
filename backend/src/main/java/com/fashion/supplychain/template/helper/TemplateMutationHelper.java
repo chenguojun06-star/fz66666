@@ -555,13 +555,30 @@ public class TemplateMutationHelper {
         if (!isAdmin && !isFactory) {
             throw new AccessDeniedException("无权限操作");
         }
+        // 删除前取快照（删除后 LogicDelete 标记导致查询不到）
+        TemplateLibrary snapshot = templateLibraryService.getById(id);
         boolean ok = templateLibraryService.removeById(id);
         if (!ok) {
-            if (templateLibraryService.getById(id) == null) {
+            if (snapshot == null) {
                 log.warn("[TEMPLATE-DELETE] id={} already deleted, idempotent success", id);
                 return true;
             }
             throw new IllegalStateException("删除失败");
+        }
+        // 若是工序模板，发布价格变更事件让下游订单同步清理
+        if (snapshot != null && "process".equalsIgnoreCase(snapshot.getTemplateType())) {
+            try {
+                eventPublisher.publishEvent(new TemplatePriceChangedEvent(
+                    this,
+                    snapshot.getSourceStyleNo(),
+                    snapshot.getTemplateType(),
+                    UserContext.username()
+                ));
+                log.info("[价格变更事件] 模板删除已发布事件 - styleNo: {}, operator: {}",
+                    snapshot.getSourceStyleNo(), UserContext.username());
+            } catch (Exception e) {
+                log.warn("[价格变更事件] 模板删除事件发布失败，删除已生效不影响 - id={}", id, e);
+            }
         }
         return true;
     }

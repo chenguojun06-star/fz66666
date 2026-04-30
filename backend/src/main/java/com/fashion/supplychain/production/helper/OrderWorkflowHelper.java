@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.helper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
@@ -57,8 +58,8 @@ public class OrderWorkflowHelper {
         }
 
         String st = existed.getStatus() == null ? "" : existed.getStatus().trim();
-        if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已完成，无法操作");
+        if (OrderStatusConstants.isTerminal(st)) {
+            throw new IllegalStateException("订单已终态(" + st + ")，无法操作");
         }
 
         Integer locked = existed.getProgressWorkflowLocked();

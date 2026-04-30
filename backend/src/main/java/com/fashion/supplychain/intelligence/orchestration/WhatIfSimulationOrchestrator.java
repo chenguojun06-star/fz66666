@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.WhatIfRequest;
 import com.fashion.supplychain.intelligence.dto.WhatIfResponse;
@@ -15,10 +16,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,8 +42,8 @@ public class WhatIfSimulationOrchestrator {
         @Autowired
         private FactoryCapacityOrchestrator factoryCapacityOrchestrator;
 
-        private static final Set<String> TERMINAL_STATUSES = new LinkedHashSet<>(
-            Arrays.asList("completed", "cancelled", "scrapped", "closed"));
+        // 复用规范终态定义（包含 archived），保证与 OrderStatusConstants 一致
+        private static final Set<String> TERMINAL_STATUSES = OrderStatusConstants.TERMINAL_STATUSES;
 
     // ──────────────────────────────────────────────────────────────────
     // 公共入口
