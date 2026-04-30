@@ -2,7 +2,7 @@
   <!-- 顶部问候 -->
     <view class="header">
       <view class="greeting-name">{{userName}}，{{greeting}}</view>
-      <view class="greeting-sub">欢迎使用衣智链</view>
+      <view class="greeting-sub">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
     </view>
 
   <!-- 日期卡片 -->

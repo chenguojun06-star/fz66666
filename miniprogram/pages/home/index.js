@@ -38,6 +38,7 @@ Page({
     statusBarHeight: 0,
     greeting: '',
     userName: '',
+    orgName: '',      // 工厂名（工厂账号）或公司名（租户主），用于首页欢迎语
     menuItems: [],
     unreadNoticeCount: 0,
     dateInfo: { icon: '', date: '', day: '', season: '', dailyTip: '' },
@@ -109,9 +110,12 @@ Page({
     const cacheInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
     const info = Object.assign({}, cacheInfo, globalInfo);
     const name = info.realName || info.name || info.nickName || info.nickname || '用户';
-    if (name !== this.data.userName) {
-      this.setData({ userName: name });
-    }
+    // 工厂账号优先显示工厂名，其次显示租户/公司名
+    const orgName = info.factoryName || info.tenantName || '';
+    const patch = {};
+    if (name !== this.data.userName) patch.userName = name;
+    if (orgName !== this.data.orgName) patch.orgName = orgName;
+    if (Object.keys(patch).length) this.setData(patch);
 
     if (!forceRemote && this._loadedUserNameFromRemote) return;
     // 无 token 时跳过远程接口，防止 onLoad 阶段（token 未就绪）触发 401
@@ -121,9 +125,11 @@ Page({
       .then(res => {
         const me = (res && res.data) || res || {};
         const remoteName = me.realName || me.name || me.nickName || me.nickname;
-        if (remoteName && remoteName !== this.data.userName) {
-          this.setData({ userName: remoteName });
-        }
+        const remoteOrgName = me.factoryName || me.tenantName || '';
+        const remotePatch = {};
+        if (remoteName && remoteName !== this.data.userName) remotePatch.userName = remoteName;
+        if (remoteOrgName !== this.data.orgName) remotePatch.orgName = remoteOrgName;
+        if (Object.keys(remotePatch).length) this.setData(remotePatch);
       })
       .catch(e => { console.warn('[home] _loadUserName失败:', e.message || e); });
   },

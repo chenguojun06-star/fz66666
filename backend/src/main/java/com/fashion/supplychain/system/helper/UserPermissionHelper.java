@@ -2,10 +2,12 @@ package com.fashion.supplychain.system.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.orchestration.PermissionCalculationEngine;
 import com.fashion.supplychain.system.orchestration.UserLoginHelper;
+import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
@@ -43,6 +45,9 @@ public class UserPermissionHelper {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired(required = false)
+    private FactoryService factoryService;
+
     public Map<String, Object> me() {
         User user = resolveCurrentUser();
         if (user == null) throw new NoSuchElementException("用户不存在");
@@ -63,6 +68,17 @@ public class UserPermissionHelper {
         result.put("isSuperAdmin", Boolean.TRUE.equals(user.getIsSuperAdmin()));
         if (user.getFactoryId() != null && !user.getFactoryId().isBlank()) {
             result.put("factoryId", user.getFactoryId());
+            // 补充工厂名，供小程序首页欢迎语显示
+            if (factoryService != null) {
+                try {
+                    Factory factory = factoryService.getById(user.getFactoryId());
+                    if (factory != null && StringUtils.hasText(factory.getFactoryName())) {
+                        result.put("factoryName", factory.getFactoryName());
+                    }
+                } catch (Exception ex) {
+                    log.debug("[UserPermissionHelper] 查询工厂名失败: {}", ex.getMessage());
+                }
+            }
         }
         if (user.getTenantId() != null && tenantService != null) {
             try {
