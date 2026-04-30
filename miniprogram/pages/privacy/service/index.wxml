@@ -1,6 +1,6 @@
 <scroll-view class="page" scroll-y="{{true}}" enhanced="{{true}}">
   <view class="section">
-    <text class="title">云裳智链 用户服务协议</text>
+    <text class="title">衣智链 用户服务协议</text>
     <text class="update-date">更新日期：2026年4月15日</text>
   </view>
 
@@ -40,6 +40,6 @@
   </view>
 
   <view class="footer">
-    <text>© 2026 云裳智链. 保留所有权利.</text>
+    <text>© 2026 衣智链. 保留所有权利.</text>
   </view>
 </scroll-view>
