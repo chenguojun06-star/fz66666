@@ -298,8 +298,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           if (!answerReceived) {
             finishTyping();
           }
-          if (accumulatedText) speak(accumulatedText);
-
+          // auto-speak removed: 用户通过喇叭按钮手动触发，避免与手动点击冲突导致重复朗读
           const needsRiskAnalysis = /风险|延期|逾期|交期|超期|risk|overdue|delay|模拟|推演|what.?if|预测|forecast/i.test(text);
           if (needsRiskAnalysis) {
             intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText).then(resp => {
@@ -367,7 +366,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
               return [...prev, { id: aiMsgId, role: 'ai' as const, ...msgData }];
             });
-            speak(displayAnswer || displayText);
+            // sync fallback 也不自动朗读，统一由用户点击喇叭按钮触发
           } catch (syncErr) {
             console.error('Sync fallback also failed:', syncErr);
             const syncErrMsg = (syncErr as any)?.message || String(syncErr);

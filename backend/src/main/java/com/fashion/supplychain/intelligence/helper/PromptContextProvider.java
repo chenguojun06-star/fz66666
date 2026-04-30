@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PromptContextProvider {
 
-    @Value("${xiaoyun.agent.rag.recall-top-k:3}")
+    @Value("${xiaoyun.agent.rag.recall-top-k:5}")
     private int ragRecallTopK;
 
     @Value("${xiaoyun.agent.rag.similarity-threshold:0.45}")
