@@ -293,6 +293,8 @@ public class ProductionOrderQueryService {
             String cover = coverByStyleNo.get(order.getStyleNo());
             if (StringUtils.hasText(cover)) {
                 order.setStyleCover(cover);
+                order.setCoverImage(cover);
+                order.setStyleImage(cover);
             }
         }
 
@@ -341,6 +343,8 @@ public class ProductionOrderQueryService {
             String attachCover = attachCoverByStyleId.get(sid);
             if (StringUtils.hasText(attachCover)) {
                 order.setStyleCover(attachCover);
+                order.setCoverImage(attachCover);
+                order.setStyleImage(attachCover);
             }
         }
     }
@@ -376,6 +380,8 @@ public class ProductionOrderQueryService {
             String templateCover = coverByTemplateStyleNo.get(order.getStyleNo());
             if (StringUtils.hasText(templateCover)) {
                 order.setStyleCover(templateCover);
+                order.setCoverImage(templateCover);
+                order.setStyleImage(templateCover);
             }
         }
     }

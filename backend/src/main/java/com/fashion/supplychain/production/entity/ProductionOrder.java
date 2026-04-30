@@ -284,6 +284,12 @@ public class ProductionOrder {
     private String styleCover;
 
     @TableField(exist = false)
+    private String coverImage;
+
+    @TableField(exist = false)
+    private String styleImage;
+
+    @TableField(exist = false)
     private Integer cuttingQuantity;
 
     @TableField(exist = false)

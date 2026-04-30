@@ -93,7 +93,7 @@ public class ProductionOrderController {
         if (params.containsKey("orderNo") && params.size() <= 3) { // orderNo + page + size
             String orderNo = params.get("orderNo").toString();
             // 如果看起来是完整订单号（如PO开头），尝试精确匹配
-            if (orderNo.startsWith("PO") && orderNo.length() >= 10) {
+            if ((orderNo.startsWith("PO") || orderNo.startsWith("CUT")) && orderNo.length() >= 10) {
                 try {
                     ProductionOrder detail = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
                     if (detail != null) {
