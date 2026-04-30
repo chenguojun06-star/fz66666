@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class AiCostTrackingOrchestrator {
 
     private static final Map<String, BigDecimal> MODEL_PRICING = Map.of(
-            "deepseek-chat", new BigDecimal("0.00014"),
+            "deepseek-v4-flash", new BigDecimal("0.00014"),
             "doubao-1-5-vision-pro-32k-250115", new BigDecimal("0.00050"),
             "qwen-plus", new BigDecimal("0.00040"),
             "gpt-4o-mini", new BigDecimal("0.00015")

@@ -54,7 +54,7 @@ public class IntelligenceInferenceOrchestrator {
 
     @Value("${ai.deepseek.api-key:}") private String directApiKey;
     @Value("${ai.deepseek.api-url:https://api.deepseek.com/v1/chat/completions}") private String directApiUrl;
-    @Value("${ai.deepseek.model:deepseek-chat}") private String directModel;
+    @Value("${ai.deepseek.model:deepseek-v4-flash}") private String directModel;
     @Value("${ai.deepseek.timeout-seconds:90}") private int directTimeoutSeconds;
     @Value("${ai.doubao.api-key:}") private String doubaoApiKey;
     @Value("${ai.doubao.api-url:https://ark.cn-beijing.volces.com/api/v3/chat/completions}") private String doubaoApiUrl;

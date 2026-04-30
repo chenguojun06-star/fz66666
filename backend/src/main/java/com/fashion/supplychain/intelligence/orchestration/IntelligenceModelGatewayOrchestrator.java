@@ -45,7 +45,7 @@ public class IntelligenceModelGatewayOrchestrator {
     @Value("${ai.gateway.fallback-enabled:true}")
     private boolean fallbackEnabled;
 
-    @Value("${ai.deepseek.model:deepseek-chat}")
+    @Value("${ai.deepseek.model:deepseek-v4-flash}")
     private String directModel;
 
     public IntelligenceBrainSnapshotResponse.ModelGatewaySummary getGatewaySummary() {

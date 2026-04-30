@@ -36,7 +36,7 @@ spring:
       chat:
         enabled: true
         options:
-          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-chat}
+          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
   main:
     allow-circular-references: true
   threads:
@@ -322,7 +322,7 @@ ai:
   deepseek:
     api-key: ${DEEPSEEK_API_KEY:}          # 生产/云端：在环境变量中设置
     api-url: https://api.deepseek.com/v1/chat/completions
-    model: deepseek-chat
+    model: deepseek-v4-flash
     max-tokens: 1024
     timeout-seconds: 90
   doubao:
@@ -395,7 +395,7 @@ spring-ai:
     enabled: ${SPRING_AI_ADAPTER_ENABLED:false}
     base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
     api-key: ${DEEPSEEK_API_KEY:}
-    model: ${SPRING_AI_ADAPTER_MODEL:deepseek-chat}
+    model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
 
 tts:
   provider: ${TTS_PROVIDER:edge}

@@ -21,7 +21,7 @@ public class SpringAiAdapterConfig {
     @Value("${spring-ai.adapter.api-key:}")
     private String apiKey;
 
-    @Value("${spring-ai.adapter.model:deepseek-chat}")
+    @Value("${spring-ai.adapter.model:deepseek-v4-flash}")
     private String model;
 
     @Bean
