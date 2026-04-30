@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
 import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator;
@@ -109,6 +110,9 @@ public class WagePaymentController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/initiate")
     public Result<WagePayment> initiatePayment(@RequestBody PaymentInitiateRequest request) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可发起支付");
+        }
         if (request.getPayeeId() == null || request.getPayeeId().trim().isEmpty()) {
             return Result.fail("收款方不能为空");
         }
@@ -145,6 +149,9 @@ public class WagePaymentController {
     public Result<WagePayment> confirmOffline(
             @PathVariable String id,
             @RequestBody ConfirmOfflineRequest request) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可确认线下支付");
+        }
         WagePayment payment = wagePaymentOrchestrator.confirmOfflinePayment(
             id, request.getProofUrl(), request.getRemark()
         );
@@ -244,6 +251,9 @@ public class WagePaymentController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/initiate-with-callback")
     public Result<WagePayment> initiateWithCallback(@RequestBody PaymentInitiateRequest request) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可发起支付");
+        }
         if (request.getPayeeId() == null || request.getPayeeId().trim().isEmpty()) {
             return Result.fail("收款方不能为空");
         }
@@ -280,6 +290,9 @@ public class WagePaymentController {
     public Result<WagePayment> confirmOfflineWithCallback(
             @PathVariable String id,
             @RequestBody ConfirmOfflineRequest request) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可确认线下支付");
+        }
         WagePayment payment = wagePaymentOrchestrator.confirmOfflineWithCallback(
             id, request.getProofUrl(), request.getRemark()
         );
@@ -293,6 +306,9 @@ public class WagePaymentController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payment/create-payable")
     public Result<WagePayment> createPayable(@RequestBody CreatePayableRequest request) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可创建待付款记录");
+        }
         if (request.getPayeeName() == null || request.getPayeeName().trim().isEmpty()) {
             return Result.fail("收款方名称不能为空");
         }
@@ -342,6 +358,9 @@ public class WagePaymentController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/reject")
     public Result<Void> rejectPayable(@RequestBody RejectPayableRequest request) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可驳回付款");
+        }
         if (request.getBizType() == null || request.getBizType().trim().isEmpty()) {
             return Result.fail("业务类型不能为空");
         }

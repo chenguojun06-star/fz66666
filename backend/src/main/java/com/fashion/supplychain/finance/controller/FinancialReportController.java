@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.FinancialReportOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -23,6 +24,9 @@ public class FinancialReportController {
     public Result<Map<String, Object>> profitLoss(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可查看财务报表");
+        }
         return Result.success(financialReportOrchestrator.generateProfitLoss(startDate, endDate));
     }
 
@@ -30,6 +34,9 @@ public class FinancialReportController {
     @GetMapping("/balance-sheet")
     public Result<Map<String, Object>> balanceSheet(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOfDate) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可查看财务报表");
+        }
         return Result.success(financialReportOrchestrator.generateBalanceSheet(asOfDate));
     }
 
@@ -38,6 +45,9 @@ public class FinancialReportController {
     public Result<Map<String, Object>> cashFlow(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可查看财务报表");
+        }
         return Result.success(financialReportOrchestrator.generateCashFlow(startDate, endDate));
     }
 
@@ -45,6 +55,9 @@ public class FinancialReportController {
     @GetMapping("/aging-analysis")
     public Result<Map<String, Object>> agingAnalysis(
             @RequestParam(required = false, defaultValue = "RECEIVABLE") String type) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可查看财务报表");
+        }
         return Result.success(financialReportOrchestrator.generateAgingAnalysis(type));
     }
 }

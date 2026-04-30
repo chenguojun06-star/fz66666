@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.FinancePeriodOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +26,9 @@ public class FinancePeriodController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/lock")
     public Result<?> lock(@RequestBody Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可锁定会计期间");
+        }
         Integer year = (Integer) params.get("year");
         Integer month = (Integer) params.get("month");
         String remark = (String) params.get("remark");
@@ -37,6 +41,9 @@ public class FinancePeriodController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/unlock")
     public Result<?> unlock(@RequestBody Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可解锁会计期间");
+        }
         Integer year = (Integer) params.get("year");
         Integer month = (Integer) params.get("month");
         if (year == null || month == null) {

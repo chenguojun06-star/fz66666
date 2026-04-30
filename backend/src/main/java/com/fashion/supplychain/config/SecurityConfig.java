@@ -264,12 +264,18 @@ public class SecurityConfig implements WebMvcConfigurer {
 
             String piiKey = environment == null ? null : environment.getProperty("app.security.pii-encryption-key");
             String pk = piiKey == null ? "" : piiKey.trim();
-            // PII密钥验证改为警告而非启动失败：AesEncryptor已有独立fallback，不应因此key缺失导致502
-            // 若key是未解析的cloudbaserc模板变量（如{{PII_ENCRYPTION_KEY}}）也仅警告
+            String activeProfile = environment == null ? "" : String.valueOf(environment.getProperty("spring.profiles.active", ""));
+            boolean isProd = activeProfile.contains("prod");
             if (!org.springframework.util.StringUtils.hasText(pk) || "defaultKeyChangeMe12345678".equals(pk)
                     || (pk.startsWith("{{") && pk.endsWith("}}"))) {
+                if (isProd) {
+                    throw new IllegalStateException("[Security] 生产环境必须配置 app.security.pii-encryption-key（通过 APP_PII_ENCRYPTION_KEY 环境变量设置），当前使用默认值不安全");
+                }
                 log.warn("[Security] app.security.pii-encryption-key 未配置或使用占位值，PII加密将使用内置默认密钥（建议通过 APP_SECURITY_PII_ENCRYPTION_KEY 环境变量配置专属密钥）");
             } else if (pk.length() < 24) {
+                if (isProd) {
+                    throw new IllegalStateException("[Security] 生产环境 app.security.pii-encryption-key 长度不足24位（当前" + pk.length() + "位），存在安全隐患");
+                }
                 log.warn("[Security] app.security.pii-encryption-key 长度仅{}位，建议至少24位以提高安全性", pk.length());
             }
         };

@@ -126,7 +126,9 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
                 response.setHeader("X-RateLimit-Reset", String.valueOf(windowSeconds));
             }
         } catch (Exception e) {
-            log.warn("[GlobalRateLimit] Redis异常，放行请求(fail-open): key={}, error={}", key, e.getMessage());
+            log.warn("[GlobalRateLimit] Redis异常，拒绝请求(fail-closed): key={}, error={}", key, e.getMessage());
+            sendRateLimitResponse(response, maxRequests, windowSeconds);
+            return;
         }
 
         filterChain.doFilter(request, response);

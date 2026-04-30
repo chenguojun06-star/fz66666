@@ -2,9 +2,14 @@ package com.fashion.supplychain.intelligence.gateway;
 
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -14,6 +19,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -25,13 +31,21 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true")
 public class SpringAiInferenceAdapter implements AiInferenceGateway {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Autowired
     @Qualifier("springAiChatClient")
     private ObjectProvider<ChatClient> chatClientProvider;
 
+    @Autowired
+    private AiAgentTokenBudgetService tokenBudgetService;
+
     @Override
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {
         long start = System.currentTimeMillis();
+        IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
+        if (budgetCheck != null) return budgetCheck;
+
         ChatClient chatClient = chatClientProvider.getIfAvailable();
         if (chatClient == null) {
             return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
@@ -43,7 +57,9 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                     .options(buildOptions(scene))
                     .call()
                     .chatResponse();
-            return convertResult(response, start);
+            IntelligenceInferenceResult result = convertResult(response, start);
+            recordTokenUsage(result);
+            return result;
         } catch (Exception e) {
             log.warn("[SpringAiAdapter] chat failed: {}", e.getMessage());
             return buildErrorResult(e, start);
@@ -53,6 +69,9 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     @Override
     public IntelligenceInferenceResult chat(String scene, List<AiMessage> messages, List<AiTool> tools) {
         long start = System.currentTimeMillis();
+        IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
+        if (budgetCheck != null) return budgetCheck;
+
         ChatClient chatClient = chatClientProvider.getIfAvailable();
         if (chatClient == null) {
             return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
@@ -66,9 +85,22 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                     requestSpec = requestSpec.user(um.getText());
                 }
             }
-            requestSpec = requestSpec.options(buildOptions(scene));
+            OpenAiChatOptions options = buildOptions(scene);
+            if (tools != null && !tools.isEmpty()) {
+                List<OpenAiApi.FunctionTool> functionTools = convertToOpenAiTools(tools);
+                options = OpenAiChatOptions.builder()
+                        .model(options.getModel())
+                        .temperature(options.getTemperature())
+                        .maxTokens(options.getMaxTokens())
+                        .tools(functionTools)
+                        .build();
+            }
+            requestSpec = requestSpec.options(options);
             ChatResponse response = requestSpec.call().chatResponse();
-            return convertResult(response, start);
+            IntelligenceInferenceResult result = convertResult(response, start);
+            extractToolCalls(response, result);
+            recordTokenUsage(result);
+            return result;
         } catch (Exception e) {
             log.warn("[SpringAiAdapter] chat with messages failed: {}", e.getMessage());
             return buildErrorResult(e, start);
@@ -80,6 +112,9 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                                                    List<AiTool> tools,
                                                    StreamChunkConsumer chunkConsumer) {
         long start = System.currentTimeMillis();
+        IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
+        if (budgetCheck != null) return budgetCheck;
+
         ChatClient chatClient = chatClientProvider.getIfAvailable();
         if (chatClient == null) {
             return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
@@ -115,6 +150,11 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             result.setContent(contentBuilder.toString());
             result.setLatencyMs(System.currentTimeMillis() - start);
             result.setResponseChars(contentBuilder.length());
+            int estimatedPrompt = messages.toString().length() / 4;
+            int estimatedCompletion = contentBuilder.length() / 2;
+            result.setPromptTokens(estimatedPrompt);
+            result.setCompletionTokens(estimatedCompletion);
+            recordTokenUsage(result);
             return result;
         } catch (Exception e) {
             log.warn("[SpringAiAdapter] chatStream failed: {}", e.getMessage());
@@ -131,6 +171,26 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     @Override
     public String getProviderName() {
         return "spring-ai";
+    }
+
+    private IntelligenceInferenceResult checkTokenBudget(long startMs) {
+        if (!tokenBudgetService.canInvoke()) {
+            IntelligenceInferenceResult r = new IntelligenceInferenceResult();
+            r.setSuccess(false);
+            r.setProvider("spring-ai");
+            r.setErrorMessage("tenant-daily-token-quota-exceeded");
+            r.setContent("当前租户今日 AI 调用已达上限（" + tokenBudgetService.getDailyLimit() + " tokens），请明日再试或联系管理员调整额度。");
+            r.setTraceId(UUID.randomUUID().toString());
+            r.setLatencyMs(System.currentTimeMillis() - startMs);
+            return r;
+        }
+        return null;
+    }
+
+    private void recordTokenUsage(IntelligenceInferenceResult result) {
+        if (result != null && result.isSuccess()) {
+            tokenBudgetService.recordUsage(result.getPromptTokens(), result.getCompletionTokens());
+        }
     }
 
     private OpenAiChatOptions buildOptions(String scene) {
@@ -217,5 +277,44 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         result.setLatencyMs(System.currentTimeMillis() - startMs);
         result.setTraceId(UUID.randomUUID().toString());
         return result;
+    }
+
+    private List<OpenAiApi.FunctionTool> convertToOpenAiTools(List<AiTool> aiTools) {
+        List<OpenAiApi.FunctionTool> result = new ArrayList<>();
+        for (AiTool tool : aiTools) {
+            if (tool.getFunction() == null) continue;
+            AiTool.AiFunction fn = tool.getFunction();
+            Map<String, Object> paramsMap = null;
+            if (fn.getParameters() != null) {
+                paramsMap = MAPPER.convertValue(fn.getParameters(), Map.class);
+            }
+            OpenAiApi.FunctionTool.Function function = new OpenAiApi.FunctionTool.Function(
+                    fn.getDescription(),
+                    fn.getName(),
+                    paramsMap,
+                    null
+            );
+            result.add(new OpenAiApi.FunctionTool(function));
+        }
+        return result;
+    }
+
+    private void extractToolCalls(ChatResponse response, IntelligenceInferenceResult result) {
+        if (response == null || response.getResult() == null) return;
+        var output = response.getResult().getOutput();
+        if (output == null || !output.hasToolCalls()) return;
+        List<AiToolCall> toolCalls = new ArrayList<>();
+        for (var tc : output.getToolCalls()) {
+            AiToolCall call = new AiToolCall();
+            call.setId(tc.id());
+            call.setType(tc.type());
+            AiToolCall.AiFunctionCall fn = new AiToolCall.AiFunctionCall();
+            fn.setName(tc.name());
+            fn.setArguments(tc.arguments());
+            call.setFunction(fn);
+            toolCalls.add(call);
+        }
+        result.setToolCalls(toolCalls);
+        result.setToolCallCount(toolCalls.size());
     }
 }

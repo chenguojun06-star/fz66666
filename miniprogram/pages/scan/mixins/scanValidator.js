@@ -38,13 +38,13 @@ module.exports = {
 
   methods: {
     checkLoginStatus: function() {
-      const { getToken, getUserInfo, getStorageValue, isTokenExpired, clearToken } = require('../../../utils/storage');
+      const { getToken, getUserInfo, getStorageValue, isTokenExpired, clearToken, clearRefreshToken } = require('../../../utils/storage');
       const { toastAndRedirect } = require('../../../utils/uiHelper');
       const token = getToken();
       const user = getUserInfo();
       const factory = getStorageValue('currentFactory');
       if (!token || !user) { toastAndRedirect('请先登录', '/pages/login/index'); return false; }
-      if (isTokenExpired()) { clearToken(); toastAndRedirect('登录已过期，请重新登录', '/pages/login/index'); return false; }
+      if (isTokenExpired()) { clearToken(); clearRefreshToken(); toastAndRedirect('登录已过期，请重新登录', '/pages/login/index'); return false; }
       var updates = {};
       if (JSON.stringify(user) !== JSON.stringify(this.data.currentUser)) updates.currentUser = user;
       if (JSON.stringify(factory) !== JSON.stringify(this._currentFactory)) this._currentFactory = factory;

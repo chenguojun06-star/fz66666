@@ -51,6 +51,12 @@ public class UserOrchestrator {
     public java.util.Map<String, Object> refreshAccessToken(String refreshToken) {
         String userId = com.fashion.supplychain.common.UserContext.userId();
         if (userId == null || userId.isBlank()) {
+            com.fashion.supplychain.auth.TokenSubject parsed = authTokenService.verifyAndParse(refreshToken);
+            if (parsed != null && parsed.getUserId() != null && !parsed.getUserId().isBlank()) {
+                userId = parsed.getUserId();
+            }
+        }
+        if (userId == null || userId.isBlank()) {
             throw new IllegalStateException("无法识别当前用户");
         }
         User user = userService.getById(Long.valueOf(userId));

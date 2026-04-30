@@ -40,7 +40,7 @@ public class AgentLoopContextBuilder {
     @Autowired private AgentStateStore agentStateStore;
     @Autowired private List<AgentTool> registeredTools;
 
-    @Value("${xiaoyun.agent.token-budget:60000}")
+    @Value("${xiaoyun.agent.token-budget:30000}")
     private int tokenBudget;
 
     public AgentLoopContext build(String userMessage, String pageContext) {

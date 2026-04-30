@@ -188,6 +188,9 @@ public class PayrollSettlementOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public PayrollSettlement generate(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new org.springframework.security.access.AccessDeniedException("仅主管及以上可生成工资结算单");
+        }
         PayrollQuery q = parseQuery(params, false, false);
         if (!StringUtils.hasText(q.orderId) && !StringUtils.hasText(q.orderNo)
                 && q.startTime == null && q.endTime == null) {

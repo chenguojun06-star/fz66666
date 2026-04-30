@@ -229,6 +229,9 @@ public class FinishedProductSettlementController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/approve")
     public Result<?> approve(@RequestBody Map<String, String> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可审批结算");
+        }
         String id = params.get("id");
 
         if (StringUtils.isBlank(id)) {
@@ -579,6 +582,9 @@ public class FinishedProductSettlementController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable String id) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可取消结算单");
+        }
         TenantAssert.assertTenantContext();
         if (StringUtils.isBlank(id)) {
             return Result.fail("结算单ID不能为空");

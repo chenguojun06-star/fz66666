@@ -1,5 +1,6 @@
 package com.fashion.supplychain.finance.controller;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.FinanceTaxExportOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -36,6 +37,9 @@ public class FinanceTaxExportController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return ResponseEntity.status(403).build();
+        }
 
         String start = (startDate != null && !startDate.isBlank()) ? startDate
                 : LocalDate.now().withDayOfMonth(1).toString();
@@ -66,6 +70,9 @@ public class FinanceTaxExportController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return ResponseEntity.status(403).build();
+        }
 
         String start = (startDate != null && !startDate.isBlank()) ? startDate
                 : LocalDate.now().withDayOfMonth(1).toString();
@@ -91,6 +98,9 @@ public class FinanceTaxExportController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return ResponseEntity.status(403).build();
+        }
 
         String start = (startDate != null && !startDate.isBlank()) ? startDate
                 : LocalDate.now().withDayOfMonth(1).toString();
@@ -117,6 +127,9 @@ public class FinanceTaxExportController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return ResponseEntity.status(403).build();
+        }
 
         String start = (startDate != null && !startDate.isBlank()) ? startDate
                 : LocalDate.now().withDayOfMonth(1).toString();
@@ -143,6 +156,9 @@ public class FinanceTaxExportController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "STANDARD") String format) throws IOException {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return ResponseEntity.status(403).build();
+        }
 
         String start = (startDate != null && !startDate.isBlank()) ? startDate
                 : LocalDate.now().withDayOfMonth(1).toString();

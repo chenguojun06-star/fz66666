@@ -36,7 +36,7 @@ spring:
       chat:
         enabled: true
         options:
-          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
+          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-chat}
   main:
     allow-circular-references: true
   threads:

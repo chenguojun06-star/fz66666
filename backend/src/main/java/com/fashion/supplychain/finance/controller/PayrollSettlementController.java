@@ -108,6 +108,9 @@ public class PayrollSettlementController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/detail-approval/{approvalId}/approve")
     public Result<Void> approveDetail(@PathVariable String approvalId) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可审核工资明细");
+        }
         String normalized = approvalId == null ? null : approvalId.trim();
         if (normalized == null || normalized.isEmpty()) {
             return Result.fail("审批ID不能为空");
@@ -133,6 +136,9 @@ public class PayrollSettlementController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/approve")
     public Result<Void> approve(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可审核工资结算单");
+        }
         String remark = params == null ? null : (String) params.get("remark");
         payrollSettlementOrchestrator.approve(id, remark);
         return Result.success(null);
@@ -148,6 +154,9 @@ public class PayrollSettlementController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可取消工资结算单");
+        }
         String remark = params == null ? null : (String) params.get("remark");
         payrollSettlementOrchestrator.cancel(id, remark);
         return Result.success(null);
@@ -162,6 +171,9 @@ public class PayrollSettlementController {
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可删除工资结算单");
+        }
         payrollSettlementOrchestrator.delete(id);
         return Result.success(null);
     }

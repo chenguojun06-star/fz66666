@@ -1,6 +1,7 @@
 package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.WageSettlementFeedback;
 import com.fashion.supplychain.finance.orchestration.WageSettlementFeedbackOrchestrator;
 import lombok.AllArgsConstructor;
@@ -30,11 +31,17 @@ public class WageSettlementFeedbackController {
 
     @PostMapping("/list")
     public Result<List<WageSettlementFeedback>> listAllFeedback(@RequestBody(required = false) Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可查看所有反馈");
+        }
         return Result.success(feedbackOrchestrator.listAllFeedback(params != null ? params : Map.of()));
     }
 
     @GetMapping("/stats")
     public Result<Map<String, Object>> getFeedbackStats() {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可查看反馈统计");
+        }
         return Result.success(feedbackOrchestrator.getFeedbackStats());
     }
 
@@ -42,6 +49,9 @@ public class WageSettlementFeedbackController {
     public Result<WageSettlementFeedback> resolveFeedback(
             @PathVariable String id,
             @RequestBody Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可处理反馈");
+        }
         return Result.success(feedbackOrchestrator.resolveFeedback(id, params));
     }
 }
