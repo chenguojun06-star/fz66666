@@ -151,7 +151,7 @@
           </view>
           <view class="login-title">{{i18nTexts.brand}}</view>
         </view>
-        <view class="login-subtitle">有问题找小云｜多端协同更轻松</view>
+        <view class="login-subtitle">衣智链小云</view>
       </view>
 
       <view wx:if="{{wechatChecking}}" class="wechat-checking">
