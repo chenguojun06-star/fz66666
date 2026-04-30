@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fashion.supplychain.intelligence.agent.loop.EnhancedStreamingCallback;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.agent.tool.McpToolScanner;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDiscoveryRag;
@@ -133,13 +132,8 @@ public class XiaoyunCoreUpgrade {
     }
 
     // ===== 增强流式 =====
-
-    /**
-     * 创建增强流式回调（在 StreamingAgentLoopCallback 基础上增加进度/动画/时间预算）。
-     */
-    public EnhancedStreamingCallback createEnhancedCallback() {
-        return new EnhancedStreamingCallback();
-    }
+    // EnhancedStreamingCallback 由 AgentLoopEngine 直接创建（需要 SseEmitter、AgentLoopContext 等依赖），
+    // 不通过本服务工厂方法创建。
 
     // ===== 状态查询（供管理面板） =====
 

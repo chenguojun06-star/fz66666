@@ -113,7 +113,7 @@ public class McpToolScanner {
             // 优先使用已有的 tool definition
             var def = tool.getToolDefinition();
             if (def != null && def.getFunction() != null && def.getFunction().getParameters() != null) {
-                return def.getFunction().getParameters();
+                return objectMapper.writeValueAsString(def.getFunction().getParameters());
             }
         } catch (Exception e) {
             log.debug("[McpScanner] getToolDefinition 不可用，使用自动生成 schema: {}", e.getMessage());
