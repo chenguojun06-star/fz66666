@@ -38,6 +38,9 @@ public class AiInferenceRouter implements AiInferenceGateway {
     @Autowired(required = false)
     private AiOperationAuditOrchestrator aiOperationAuditOrchestrator;
 
+    @Autowired(required = false)
+    private ModelConsortiumRouter modelConsortiumRouter;
+
     private final AtomicInteger springAiConsecutiveFailures = new AtomicInteger(0);
     private final AtomicLong springAiCircuitOpenSince = new AtomicLong(0);
 
@@ -214,13 +217,39 @@ public class AiInferenceRouter implements AiInferenceGateway {
     }
 
     public Map<String, Object> getRoutingStatus() {
-        return Map.of(
-            "strategy", routingStrategy,
-            "legacyAvailable", legacyAdapter.isAvailable(),
-            "springAiAvailable", springAiAdapter != null && springAiAdapter.isAvailable(),
-            "springAiCircuitOpen", isSpringAiCircuitOpen(),
-            "springAiConsecutiveFailures", springAiConsecutiveFailures.get(),
-            "activeProvider", resolveGateway(null).getProviderName()
-        );
+        Map<String, Object> status = new java.util.LinkedHashMap<>();
+        status.put("strategy", routingStrategy);
+        status.put("legacyAvailable", legacyAdapter.isAvailable());
+        status.put("springAiAvailable", springAiAdapter != null && springAiAdapter.isAvailable());
+        status.put("springAiCircuitOpen", isSpringAiCircuitOpen());
+        status.put("springAiConsecutiveFailures", springAiConsecutiveFailures.get());
+        status.put("activeProvider", resolveGateway(null).getProviderName());
+        if (modelConsortiumRouter != null) {
+            status.put("consortium", modelConsortiumRouter.getConfig());
+        }
+        return status;
+    }
+
+    /**
+     * 模型智能路由 — 根据用户查询复杂度选择最优模型。
+     * 可在上层（AiAgentOrchestrator）调用此方法获取推荐模型，传递给推理适配器。
+     */
+    public String recommendModel(String userMessage, boolean hasImage, int toolCount) {
+        if (modelConsortiumRouter != null) {
+            return modelConsortiumRouter.selectModel(userMessage, hasImage, toolCount);
+        }
+        return "deepseek-chat"; // 默认
+    }
+
+    /**
+     * 获取模型推荐参数（temperature、maxTokens、timeout）。
+     */
+    public ModelConsortiumRouter.ModelParams recommendModelParams(String userMessage, boolean hasImage, int toolCount) {
+        if (modelConsortiumRouter != null) {
+            ModelConsortiumRouter.Complexity complexity = modelConsortiumRouter.classifyComplexity(
+                    userMessage, hasImage, toolCount);
+            return modelConsortiumRouter.getModelParams(complexity);
+        }
+        return new ModelConsortiumRouter.ModelParams(0.5, 1024, 30);
     }
 }

@@ -383,6 +383,33 @@ xiaoyun:
     rag:
       recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:3}
       similarity-threshold: ${XIAOYUN_RAG_SIMILARITY_THRESHOLD:0.45}
+    # 工具发现RAG — 工具数量超过此阈值时启用智能筛选
+    tool-discovery:
+      enabled: ${XIAOYUN_TOOL_DISCOVERY_ENABLED:true}
+      min-tool-count-for-rag: ${XIAOYUN_TOOL_DISCOVERY_MIN_COUNT:30}
+      top-k: ${XIAOYUN_TOOL_DISCOVERY_TOP_K:10}
+  # 数字孪生全模块快照
+  digital-twin:
+    enabled: ${XIAOYUN_DIGITAL_TWIN_ENABLED:true}
+    cache-ttl-seconds: ${XIAOYUN_DIGITAL_TWIN_CACHE_TTL:60}
+    build-timeout-seconds: ${XIAOYUN_DIGITAL_TWIN_BUILD_TIMEOUT:8}
+  # 增强流式推送
+  streaming:
+    enhanced-events: ${XIAOYUN_STREAMING_ENHANCED:true}
+    step-progress: ${XIAOYUN_STREAMING_STEP_PROGRESS:true}
+    tool-animation: ${XIAOYUN_STREAMING_TOOL_ANIMATION:true}
+    mood-updates: ${XIAOYUN_STREAMING_MOOD:true}
+    time-budget: ${XIAOYUN_STREAMING_TIME_BUDGET:true}
+
+# AI 模型智能路由（降本提速）
+ai:
+  consortium:
+    enabled: ${AI_CONSORTIUM_ENABLED:true}
+  model:
+    fast: ${AI_MODEL_FAST:deepseek-chat}
+    reasoning: ${AI_MODEL_REASONING:deepseek-reasoner}
+    vision: ${AI_MODEL_VISION:doubao-1-5-vision-pro-32k-250115}
+    default: ${AI_MODEL_DEFAULT:deepseek-chat}
 
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:
