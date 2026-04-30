@@ -52,6 +52,9 @@ public class TenantRoleInitHelper {
     @Autowired
     private FactoryWorkerService factoryWorkerService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.system.service.FactoryService factoryService;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -453,6 +456,15 @@ public class TenantRoleInitHelper {
             if (currentCount >= tenant.getMaxUsers()) {
                 throw new IllegalArgumentException(
                     "该工厂人员名额已满（上限 " + tenant.getMaxUsers() + " 人），请联系管理员");
+            }
+        }
+
+        // 校验工厂ID（防止注册时传入无效值，如租户ID误当工厂ID）
+        if (org.springframework.util.StringUtils.hasText(factoryId)) {
+            com.fashion.supplychain.system.entity.Factory factory = factoryService.getById(factoryId);
+            if (factory == null || !java.util.Objects.equals(factory.getTenantId(), tenant.getId())) {
+                log.warn("[WorkerRegister] 无效工厂ID, 已忽略: factoryId={}, tenantId={}", factoryId, tenant.getId());
+                factoryId = null;
             }
         }
 
