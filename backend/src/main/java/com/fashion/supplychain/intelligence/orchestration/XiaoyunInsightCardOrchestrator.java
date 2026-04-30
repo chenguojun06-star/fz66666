@@ -70,6 +70,14 @@ public class XiaoyunInsightCardOrchestrator {
                 addIfPresent(insightCards, buildAvgCompletionTimeCard(root));
                 return;
             }
+            if ("tool_financial_payroll".equals(toolName)) {
+                addIfPresent(insightCards, buildPayrollSummaryCard(root));
+                return;
+            }
+            if ("tool_management_dashboard".equals(toolName)) {
+                addIfPresent(insightCards, buildDashboardOverviewCard(root));
+                return;
+            }
         } catch (Exception e) {
             log.debug("[XiaoyunCard] 解析工具结果失败: tool={}, err={}", toolName, e.getMessage());
         }
@@ -414,6 +422,46 @@ public class XiaoyunInsightCardOrchestrator {
             case "GREEN" -> "success";
             default -> "info";
         };
+    }
+
+    private JsonNode buildPayrollSummaryCard(JsonNode root) {
+        ObjectNode card = JSON.createObjectNode();
+        card.put("level", "info");
+        card.put("title", "工资汇总");
+        if (root.path("totalAmount").isNumber()) {
+            card.put("summary", String.format("本月总工资：¥%s", root.path("totalAmount").asText()));
+        } else if (root.has("data")) {
+            card.put("summary", "已获取工资明细数据");
+        } else {
+            card.put("summary", root.path("message").asText("工资数据已返回"));
+        }
+        if (root.path("operatorName").asText("").length() > 0) {
+            card.put("painPoint", "当前员工：" + root.path("operatorName").asText());
+        }
+        card.put("source", "工资结算");
+        return card;
+    }
+
+    private JsonNode buildDashboardOverviewCard(JsonNode root) {
+        ObjectNode card = JSON.createObjectNode();
+        card.put("level", "info");
+        card.put("title", "经营总览");
+        if (root.has("totalOrders")) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("订单").append(root.path("totalOrders").asText()).append("单");
+            if (root.has("totalRevenue")) sb.append(" | 营收¥").append(root.path("totalRevenue").asText());
+            if (root.has("pendingTasks")) sb.append(" | 待办").append(root.path("pendingTasks").asText());
+            card.put("summary", sb.toString());
+        } else if (root.has("summary")) {
+            card.put("summary", root.path("summary").asText());
+        } else {
+            card.put("summary", "已获取经营数据");
+        }
+        if (root.has("riskItems") && root.path("riskItems").asInt() > 0) {
+            card.put("painPoint", String.format("⚠️ %d项风险需关注", root.path("riskItems").asInt()));
+        }
+        card.put("source", "经营仪表盘");
+        return card;
     }
 
     private String truncate(String text, int maxLength) {

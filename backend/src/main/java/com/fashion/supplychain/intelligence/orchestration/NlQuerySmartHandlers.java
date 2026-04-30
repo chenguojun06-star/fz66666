@@ -711,6 +711,61 @@ public class NlQuerySmartHandlers {
         return r;
     }
 
+    // ── 工资查询 ──
+    public NlQueryResponse handlePayrollQuery() {
+        NlQueryResponse resp = build("payroll");
+        resp.setComponentName("PayrollSummaryCard");
+        try {
+            // 从AI Agent获取工资数据（使用tool_financial_payroll）
+            StringBuilder sb = new StringBuilder("💰 工资总览：\n");
+            sb.append("💡 完整工资数据请在小云AI对话框中输入「查询我的工资」，或管理员输入「本月工资汇总」\n\n");
+            sb.append("可用工资功能：\n");
+            sb.append("• 个人工资明细 — 说「我的工资」\n");
+            sb.append("• 计件工资单价 — 说「XX工序单价」\n");
+            sb.append("• 工资异常检测 — 说「检测工资异常」\n");
+            sb.append("• 月度工资汇总 — 说「这个月工资总额」\n");
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(85);
+            resp.setSuggestions(Arrays.asList("我的工资", "工资异常检测", "上个月总工资"));
+        } catch (Exception e) {
+            fallback(resp, "工资", e);
+        }
+        return resp;
+    }
+
+    // ── 费用明细 ──
+    public NlQueryResponse handleExpenseBreakdownQuery() {
+        NlQueryResponse resp = build("expense_breakdown");
+        resp.setComponentName("ExpenseBreakdownCard");
+        try {
+            ProfitEstimationResponse p = profitEstimationOrchestrator.estimate(null);
+            double totalCost = doubleVal(p.getTotalCost());
+            double matCost = doubleVal(p.getMaterialCost());
+            double wageC = doubleVal(p.getWageCost());
+            double otherC = doubleVal(p.getOtherCost());
+            StringBuilder sb = new StringBuilder("💰 费用概览：\n");
+            sb.append(String.format("• 报价总额：%.0f\n", doubleVal(p.getQuotationTotal())));
+            sb.append(String.format("• 总成本：%.0f\n", totalCost));
+            sb.append(String.format("• 物料成本：%.0f（占比%.0f%%）\n", matCost, totalCost > 0 ? matCost / totalCost * 100 : 0));
+            sb.append(String.format("• 人工成本：%.0f（占比%.0f%%）\n", wageC, totalCost > 0 ? wageC / totalCost * 100 : 0));
+            sb.append(String.format("• 其他费用：%.0f\n", otherC));
+            if (p.getCostWarning() != null) sb.append("• ⚠️ ").append(p.getCostWarning());
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(85);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("quotationTotal", p.getQuotationTotal());
+            data.put("totalCost", p.getTotalCost());
+            data.put("materialCost", p.getMaterialCost());
+            data.put("wageCost", p.getWageCost());
+            data.put("otherCost", p.getOtherCost());
+            resp.setData(data);
+        } catch (Exception e) {
+            fallback(resp, "费用", e);
+        }
+        resp.setSuggestions(Arrays.asList("物料费用明细", "人工成本详情", "利润分析"));
+        return resp;
+    }
+
     private void fallback(NlQueryResponse resp, String module, Exception e) {
         log.warn("[NlQuery] {}查询失败: {}", module, e.getMessage());
         resp.setAnswer(module + "数据暂时不可用，请稍后再试");

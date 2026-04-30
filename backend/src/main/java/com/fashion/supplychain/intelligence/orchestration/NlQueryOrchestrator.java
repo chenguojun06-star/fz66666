@@ -238,6 +238,18 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "资金异常", "资金流向", "资金分析", "财务分析", "回款异常", "对账")) {
             return smartHandlers.handleCostQuery();
         }
+        // 21.6) 工资/薪资/人工费
+        if (containsAny(question, "工资", "薪资", "薪酬", "人工费", "工钱", "发工资")) {
+            return smartHandlers.handlePayrollQuery();
+        }
+        // 21.7) 费用明细/花了多少钱
+        if (containsAny(question, "费用明细", "花多少钱", "花了多少", "总支出", "开支", "物料费")) {
+            return smartHandlers.handleExpenseBreakdownQuery();
+        }
+        // 21.8) 上周/这周/本周/本月对比
+        if (containsAny(question, "上周", "本周", "这周", "这个月", "上个月", "环比")) {
+            return dataHandlers.handleCompareQuery(tenantId, factoryId);
+        }
 
         // 22) 帮助
         if (containsAny(question, "帮助", "能做什么", "你会什么", "功能", "怎么用", "你好")) {
@@ -270,7 +282,8 @@ public class NlQueryOrchestrator {
             "self_healing", "learning", "root_cause", "pattern", "goal", "meeting",
             "quote", "supplier_scorecard", "smart_assignment",
             "execution", "finance_audit", "help", "summary",
-            "personnel_delay", "sample_delay", "delay_trend", "inventory_check"
+            "personnel_delay", "sample_delay", "delay_trend", "inventory_check",
+            "payroll", "expense_breakdown"
     );
 
     private static final String LLM_INTENT_PROMPT =
@@ -312,7 +325,9 @@ public class NlQueryOrchestrator {
             + "sample_delay - 样板延期分析/打样延期/交板延期/样衣延期\n"
             + "delay_trend - 延期趋势分析/逐周延期走势/延期统计\n"
             + "help - 帮助/功能/你能做什么\n"
-            + "summary - 总览/概况/汇总/整体情况\n";
+            + "summary - 总览/概况/汇总/整体情况\n"
+            + "payroll - 工资/薪资/薪酬/人工费\n"
+            + "expense_breakdown - 费用明细/花了多少钱/总支出/物料费\n";
 
     /** 调用 DeepSeek 进行意图分类，失败返回 null */
     private String classifyIntentByLlm(String question, Long tenantId, String contextPrompt) {
@@ -371,6 +386,8 @@ public class NlQueryOrchestrator {
             case "sample_delay":     return smartHandlers.handleSampleDelayQuery();
             case "delay_trend":      return smartHandlers.handleDelayTrendQuery();
             case "inventory_check":  return smartHandlers.handleInventoryCheckQuery();
+            case "payroll":          return smartHandlers.handlePayrollQuery();
+            case "expense_breakdown":return smartHandlers.handleExpenseBreakdownQuery();
             default:                  return null;
         }
     }
