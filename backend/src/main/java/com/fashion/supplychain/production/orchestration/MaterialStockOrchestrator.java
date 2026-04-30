@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
 import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -53,6 +55,9 @@ public class MaterialStockOrchestrator {
 
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired
+    private DistributedLockService distributedLockService;
 
     private final AtomicInteger outboundSequence = new AtomicInteger(0);
 
@@ -175,18 +180,6 @@ public class MaterialStockOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public String manualOutbound(
-            String stockId,
-            Integer quantity,
-            String reason,
-            String orderNo,
-            String styleNo,
-            String factoryId,
-            String factoryName,
-            String factoryType,
-            String receiverId,
-            String receiverName,
-            String pickupType,
-            String usageType) {
         if (!StringUtils.hasText(stockId)) {
             throw new IllegalArgumentException("库存记录不能为空");
         }
@@ -215,7 +208,12 @@ public class MaterialStockOrchestrator {
         }
         com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(stock.getTenantId(), "物料库存");
 
-        materialStockService.decreaseStockById(stockId, quantity);
+        // 分布式锁：防止同一库存并发出库导致超卖
+        String lockKey = "material:outbound:" + stockId;
+        distributedLockService.executeWithStrictLock(lockKey, 10, TimeUnit.SECONDS, () -> {
+            materialStockService.decreaseStockById(stockId, quantity);
+            return null;
+        });
 
         LocalDateTime outboundTime = LocalDateTime.now();
         String issuerId = StringUtils.hasText(UserContext.userId()) ? UserContext.userId().trim() : null;

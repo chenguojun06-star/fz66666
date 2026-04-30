@@ -126,13 +126,27 @@ jobs:
       run: |
         mvn clean compile checkstyle:check -q
 
-    - name: 运行后端单元测试（全量，排除integration组）
+    - name: 运行后端单元测试 + Jacoco覆盖率报告
       working-directory: ./backend
       run: |
-        mvn test \
+        mvn test jacoco:report \
           -Dspring.profiles.active=test \
           -DexcludedGroups=integration \
           -Dsurefire.failIfNoSpecifiedTests=false
+
+    - name: 输出测试统计
+      working-directory: ./backend
+      run: |
+        TEST_COUNT=$(find target/surefire-reports -name "*.xml" 2>/dev/null | wc -l)
+        if [ "$TEST_COUNT" -gt 0 ]; then
+          echo "✅ 共找到 ${TEST_COUNT} 个测试报告"
+          grep -h "testcase" target/surefire-reports/*.xml 2>/dev/null | wc -l | xargs echo "✅ 测试用例总数:"
+        else
+          echo "⚠️  当前没有测试用例（surefire-reports 为空）"
+        fi
+        if [ -f target/site/jacoco/index.html ]; then
+          echo "📊 Jacoco覆盖率报告: target/site/jacoco/index.html"
+        fi
 
   frontend-lint:
     name: 前端代码规范检查 (ESLint + TypeScript)
