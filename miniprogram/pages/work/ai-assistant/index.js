@@ -123,6 +123,7 @@ Page({
       messages: initMsgs,
       visibleMessages: initMsgs,
     });
+    if (!(wx.getStorageSync('auth_token') || '')) return;
     this._loadDynamicSuggestions();
   },
 

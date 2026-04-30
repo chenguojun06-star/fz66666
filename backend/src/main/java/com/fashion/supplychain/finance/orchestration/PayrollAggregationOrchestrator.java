@@ -60,6 +60,15 @@ public class PayrollAggregationOrchestrator {
         Long tenantId = TenantAssert.requireTenantId();
         qw.eq("tenant_id", tenantId);
 
+        // 数据权限隔离：普通员工只能查看自己的工资记录（防止工人互查工资）
+        // 管理员 / 主管及以上 / 租户主账号 可查看全体人员数据
+        if (!UserContext.isSupervisorOrAbove()) {
+            String currentUserId = UserContext.userId();
+            if (currentUserId != null && !currentUserId.isEmpty()) {
+                qw.eq("operator_id", currentUserId);
+            }
+        }
+
         if (orderNo != null && !orderNo.trim().isEmpty()) {
             qw.eq("order_no", orderNo.trim());
         }

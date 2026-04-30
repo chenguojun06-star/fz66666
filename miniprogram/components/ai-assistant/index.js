@@ -324,6 +324,8 @@ Component({
     },
 
     _loadDynamicSuggestions() {
+      // 未登录或 token 不存在时跳过，避免触发 401 请求
+      if (!(wx.getStorageSync('auth_token') || '')) return;
       var self = this;
       api.intelligence.getMyPendingTaskSummary().then(function (res) {
         var data = res && res.data ? res.data : res;
@@ -359,6 +361,8 @@ Component({
     },
 
     async loadTasks() {
+      // 未登录或 token 不存在时跳过，避免在登录前触发 8 个并发 401 请求
+      if (!(wx.getStorageSync('auth_token') || '')) return;
       if (this.data.taskLoading) return;
       this.setData({ taskLoading: true });
       try {

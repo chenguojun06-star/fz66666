@@ -18,10 +18,15 @@ Page({
   },
 
   onLoad() {
+    // 未登录时拒绝访问：裁剪任务页需要身份验证
+    var app = getApp();
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadTasks();
   },
 
   onShow() {
+    var app = getApp();
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadTasks();
     this._bindWsEvents();
   },

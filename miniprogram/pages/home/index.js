@@ -114,6 +114,8 @@ Page({
     }
 
     if (!forceRemote && this._loadedUserNameFromRemote) return;
+    // 无 token 时跳过远程接口，防止 onLoad 阶段（token 未就绪）触发 401
+    if (!(wx.getStorageSync('auth_token') || '')) return;
     this._loadedUserNameFromRemote = true;
     api.system.getMe()
       .then(res => {

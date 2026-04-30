@@ -102,6 +102,8 @@ Page({
     this._records = [];
     this._patternRecords = [];
     this._updateMonthDisplay();
+    // 未登录时跳过数据加载，避免触发 401 请求
+    if (!(wx.getStorageSync('auth_token') || '')) return;
     this.loadData(true);
   },
 
