@@ -8,7 +8,6 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.GraphExecutionResult;
 import com.fashion.supplychain.intelligence.dto.MultiAgentRequest;
 import com.fashion.supplychain.intelligence.entity.AgentExecutionLog;
-import com.fashion.supplychain.intelligence.mapper.AgentExecutionLogMapper;
 import com.fashion.supplychain.intelligence.orchestration.MultiAgentGraphOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +29,6 @@ import java.util.Map;
 public class MultiAgentGraphController {
 
     @Autowired private MultiAgentGraphOrchestrator graphOrchestrator;
-    @Autowired private AgentExecutionLogMapper logMapper;
     @Autowired private com.fashion.supplychain.intelligence.orchestration.AgentCheckpointService checkpointService;
 
     /** 同步执行多代理图分析 */
@@ -86,7 +84,7 @@ public class MultiAgentGraphController {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         int safeSize = Math.min(size, 50);
-        List<AgentExecutionLog> logs = logMapper.selectList(
+        List<AgentExecutionLog> logs = graphOrchestrator.listExecutionLogs(
                 new LambdaQueryWrapper<AgentExecutionLog>()
                         .eq(AgentExecutionLog::getTenantId, tenantId)
                         .orderByDesc(AgentExecutionLog::getCreateTime)
@@ -103,7 +101,7 @@ public class MultiAgentGraphController {
         if (executionId == null || score == null || score < 1 || score > 5) {
             return Result.fail("executionId 和 score(1-5) 必填");
         }
-        logMapper.update(null, new LambdaUpdateWrapper<AgentExecutionLog>()
+        graphOrchestrator.updateExecutionLog(new LambdaUpdateWrapper<AgentExecutionLog>()
                 .eq(AgentExecutionLog::getId, executionId)
                 .eq(AgentExecutionLog::getTenantId, UserContext.tenantId())
                 .set(AgentExecutionLog::getUserFeedback, score)
@@ -119,7 +117,7 @@ public class MultiAgentGraphController {
             TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
             int safeDays = Math.min(Math.max(days, 1), 90);
-            List<Map<String, Object>> stats = logMapper.selectAbStatsByScene(tenantId, safeDays);
+            List<Map<String, Object>> stats = graphOrchestrator.getAbStatsByScene(tenantId, safeDays);
             return Result.success(stats);
         } catch (Exception e) {
             log.warn("[AbStats] 查询失败（表可能不存在）: {}", e.getMessage());

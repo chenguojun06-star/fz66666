@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -94,6 +95,7 @@ public class FactoryOrchestrator {
         return factory;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean save(Factory factory) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
@@ -140,6 +142,7 @@ public class FactoryOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(Factory factory) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
@@ -166,10 +169,12 @@ public class FactoryOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
         return delete(id, null);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id, String remark) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
@@ -265,6 +270,7 @@ public class FactoryOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean approveAdmission(String id, String action, String reason) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
@@ -295,6 +301,7 @@ public class FactoryOrchestrator {
         return ok;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateContract(String id, Factory contractFields) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");

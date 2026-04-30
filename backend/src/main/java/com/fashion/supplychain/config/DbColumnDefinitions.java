@@ -211,12 +211,12 @@ public final class DbColumnDefinitions {
         add("t_scan_record", "settlement_status", "VARCHAR(20) DEFAULT NULL COMMENT '结算状态'");
         add("t_scan_record", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
         add("t_scan_record", "current_progress_stage", "VARCHAR(64) DEFAULT NULL COMMENT '当前工序阶段'");
-        add("t_scan_record", "progress_node_unit_prices", "TEXT DEFAULT NULL COMMENT '工序节点单价列表JSON'");
+        add("t_scan_record", "progress_node_unit_prices", "JSON DEFAULT NULL COMMENT '工序节点单价列表JSON'");
         add("t_scan_record", "cumulative_scan_count", "INT DEFAULT NULL COMMENT '累计扫码次数'");
         add("t_scan_record", "total_scan_count", "INT DEFAULT NULL COMMENT '总扫码次数'");
         add("t_scan_record", "progress_percentage", "DECIMAL(5,2) DEFAULT NULL COMMENT '进度百分比'");
-        add("t_scan_record", "total_piece_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '总成本'");
-        add("t_scan_record", "average_piece_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '平均成本'");
+        add("t_scan_record", "total_piece_cost", "DECIMAL(10,2) DEFAULT NULL COMMENT '总成本'");
+        add("t_scan_record", "average_piece_cost", "DECIMAL(10,4) DEFAULT NULL COMMENT '平均成本'");
         add("t_scan_record", "assignment_id", "VARCHAR(64) DEFAULT NULL COMMENT '工序指派ID'");
         add("t_scan_record", "assigned_operator_name", "VARCHAR(64) DEFAULT NULL COMMENT '指派操作员名称'");
         add("t_scan_record", "receive_time", "DATETIME DEFAULT NULL COMMENT '领取/开始时间'");
@@ -390,6 +390,10 @@ public final class DbColumnDefinitions {
         add("t_material_purchase", "inbound_record_id", "VARCHAR(64) DEFAULT NULL COMMENT '入库记录ID'");
         add("t_material_purchase", "color", "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
         add("t_material_purchase", "size", "VARCHAR(50) DEFAULT NULL COMMENT '尺码'");
+
+        // t_material_roll（V202704271320 修复 tenant_id 类型为 BIGINT）
+        add("t_material_roll", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID，多租户数据隔离'");
+        add("t_material_roll", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标志'");
         add("t_material_purchase", "expected_arrival_date", "DATETIME DEFAULT NULL COMMENT '预计到货日期'");
         add("t_material_purchase", "actual_arrival_date", "DATETIME DEFAULT NULL COMMENT '实际到货日期'");
         add("t_material_purchase", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");

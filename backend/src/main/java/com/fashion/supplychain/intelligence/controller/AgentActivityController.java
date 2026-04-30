@@ -6,8 +6,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
-import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
-import com.fashion.supplychain.intelligence.mapper.IntelligenceSignalMapper;
+import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,10 +24,7 @@ import java.util.stream.Collectors;
 public class AgentActivityController {
 
     @Autowired
-    private IntelligenceAuditLogMapper auditLogMapper;
-
-    @Autowired
-    private IntelligenceSignalMapper signalMapper;
+    private AiAgentTraceOrchestrator traceOrchestrator;
 
     private static final List<AgentDefinition> AGENT_DEFINITIONS = List.of(
             new AgentDefinition("order-manager", "订单管家", "production", "#1677ff",
@@ -229,7 +225,7 @@ public class AgentActivityController {
                  .orderByAsc("created_at")
                  .last("LIMIT 200");
 
-            List<IntelligenceAuditLog> logs = auditLogMapper.selectList(query);
+            List<IntelligenceAuditLog> logs = traceOrchestrator.listAuditLogs(query);
             int step = 0;
             for (IntelligenceAuditLog logEntry : logs) {
                 String action = logEntry.getAction() != null ? logEntry.getAction() : "";
@@ -312,7 +308,7 @@ public class AgentActivityController {
                  .eq("status", "open")
                  .orderByDesc("priority_score")
                  .last("LIMIT 20");
-            List<IntelligenceSignal> signals = signalMapper.selectList(query);
+            List<IntelligenceSignal> signals = traceOrchestrator.listSignals(query);
 
             for (IntelligenceSignal signal : signals) {
                 Map<String, Object> alert = new LinkedHashMap<>();
@@ -341,7 +337,7 @@ public class AgentActivityController {
                  .ge("created_at", since)
                  .orderByDesc("created_at")
                  .last("LIMIT 500");
-            List<IntelligenceAuditLog> allLogs = auditLogMapper.selectList(query);
+            List<IntelligenceAuditLog> allLogs = traceOrchestrator.listAuditLogs(query);
 
             Map<String, List<IntelligenceAuditLog>> logsByAgent = new LinkedHashMap<>();
             for (IntelligenceAuditLog logEntry : allLogs) {

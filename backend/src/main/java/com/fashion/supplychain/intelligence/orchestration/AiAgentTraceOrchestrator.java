@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
+import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
+import com.fashion.supplychain.intelligence.mapper.IntelligenceSignalMapper;
 import com.fashion.supplychain.intelligence.service.AsyncIntelligenceAuditService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,6 +28,8 @@ public class AiAgentTraceOrchestrator {
 
     @Autowired
     private IntelligenceAuditLogMapper auditLogMapper;
+    @Autowired
+    private IntelligenceSignalMapper signalMapper;
     @Autowired
     private AsyncIntelligenceAuditService asyncAuditService;
 
@@ -313,5 +317,15 @@ public class AiAgentTraceOrchestrator {
             }
         } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         return null;
+    }
+
+    // ========== 委托查询方法（供 Controller 使用，避免 Controller 直接注入 Mapper） ==========
+
+    public List<IntelligenceAuditLog> listAuditLogs(QueryWrapper<IntelligenceAuditLog> query) {
+        return auditLogMapper.selectList(query);
+    }
+
+    public List<IntelligenceSignal> listSignals(QueryWrapper<IntelligenceSignal> query) {
+        return signalMapper.selectList(query);
     }
 }

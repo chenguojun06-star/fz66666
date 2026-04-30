@@ -1,5 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.AgentState;
@@ -291,5 +293,19 @@ public class MultiAgentGraphOrchestrator {
 
     private String truncate(String s, int max) {
         return s != null && s.length() > max ? s.substring(0, max) + "..." : s;
+    }
+
+    // ========== 委托查询方法（供 Controller 使用，避免 Controller 直接注入 Mapper） ==========
+
+    public List<AgentExecutionLog> listExecutionLogs(LambdaQueryWrapper<AgentExecutionLog> query) {
+        return logMapper.selectList(query);
+    }
+
+    public int updateExecutionLog(LambdaUpdateWrapper<AgentExecutionLog> updateWrapper) {
+        return logMapper.update(null, updateWrapper);
+    }
+
+    public List<Map<String, Object>> getAbStatsByScene(Long tenantId, int days) {
+        return logMapper.selectAbStatsByScene(tenantId, days);
     }
 }

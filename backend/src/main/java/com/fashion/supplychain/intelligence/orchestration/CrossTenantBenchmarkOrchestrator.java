@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,6 +46,7 @@ public class CrossTenantBenchmarkOrchestrator {
     // 公共入口
     // ──────────────────────────────────────────────────────────────────
 
+    @Transactional(rollbackFor = Exception.class)
     public CrossTenantBenchmarkResponse getBenchmark() {
         Long myTenantId = UserContext.tenantId();
         LocalDate today = LocalDate.now();
