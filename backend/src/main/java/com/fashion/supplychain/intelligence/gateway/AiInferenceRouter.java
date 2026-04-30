@@ -20,10 +20,10 @@ import org.springframework.stereotype.Service;
 @Primary
 public class AiInferenceRouter implements AiInferenceGateway {
 
-    private static final int CIRCUIT_OPEN_THRESHOLD = 5;
-    private static final long CIRCUIT_RESET_MS = 60_000L;
+    private static final int CIRCUIT_OPEN_THRESHOLD = 3;
+    private static final long CIRCUIT_RESET_MS = 30_000L;
 
-    @Value("${ai.gateway.routing-strategy:legacy}")
+    @Value("${ai.gateway.routing-strategy:failover}")
     private String routingStrategy;
 
     @Autowired
@@ -98,9 +98,9 @@ public class AiInferenceRouter implements AiInferenceGateway {
     private AiInferenceGateway resolveGateway(String scene) {
         return switch (routingStrategy) {
             case "spring-ai" -> resolveSpringAi();
-            case "failover" -> resolveFailover();
+            case "failover" -> resolveFailover(scene);
             case "legacy" -> legacyAdapter;
-            default -> legacyAdapter;
+            default -> resolveFailover(scene);
         };
     }
 
@@ -116,15 +116,31 @@ public class AiInferenceRouter implements AiInferenceGateway {
         return legacyAdapter;
     }
 
-    private AiInferenceGateway resolveFailover() {
+    private AiInferenceGateway resolveFailover(String scene) {
+        // 短查询/非Agent场景优先走 Spring AI（更快、工具调用更新）
+        boolean preferSpringAi = isShortQueryScene(scene);
+        if (preferSpringAi && !isSpringAiCircuitOpen()
+                && springAiAdapter != null && springAiAdapter.isAvailable()) {
+            log.debug("[AiInferenceRouter] 短查询场景={}，优先使用 Spring AI", scene);
+            return springAiAdapter;
+        }
+        // Agent主循环优先Spring AI（流式+tool_calls更好），熔断时降级
+        if (!isSpringAiCircuitOpen() && springAiAdapter != null && springAiAdapter.isAvailable()) {
+            return springAiAdapter;
+        }
         if (legacyAdapter.isAvailable()) {
             return legacyAdapter;
         }
-        if (!isSpringAiCircuitOpen() && springAiAdapter != null && springAiAdapter.isAvailable()) {
-            log.warn("[AiInferenceRouter] legacy unavailable, using spring-ai as failover");
+        if (!isSpringAiCircuitOpen() && springAiAdapter != null) {
             return springAiAdapter;
         }
         return legacyAdapter;
+    }
+
+    private boolean isShortQueryScene(String scene) {
+        return scene != null && (
+            "nl-intent".equals(scene) || "daily-brief".equals(scene) ||
+            "critic_review".equals(scene) || scene.startsWith("memory"));
     }
 
     private boolean isSpringAiCircuitOpen() {
@@ -154,6 +170,17 @@ public class AiInferenceRouter implements AiInferenceGateway {
 
     private void recordCostAndAudit(String scene, IntelligenceInferenceResult result) {
         if (result == null) return;
+        // 统一性能日志：方便排查双AI引擎表现
+        log.info("[AiInference] engine={}, scene={}, success={}, latency={}ms, tokens={}/{}, fallback={}",
+                result.getProvider() != null ? result.getProvider() : "unknown",
+                scene != null ? scene : "default",
+                result.isSuccess(),
+                result.getLatencyMs(),
+                result.getPromptTokens(), result.getCompletionTokens(),
+                Boolean.TRUE.equals(result.isFallbackUsed()));
+        if (!result.isSuccess()) {
+            log.warn("[AiInference] engine={}, scene={}, error={}", result.getProvider(), scene, result.getErrorMessage());
+        }
         try {
             if (aiCostTrackingOrchestrator != null) {
                 aiCostTrackingOrchestrator.recordAsync(

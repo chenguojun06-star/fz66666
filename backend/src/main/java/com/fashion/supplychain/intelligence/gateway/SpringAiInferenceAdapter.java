@@ -72,39 +72,61 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
         if (budgetCheck != null) return budgetCheck;
 
-        ChatClient chatClient = chatClientProvider.getIfAvailable();
-        if (chatClient == null) {
-            return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
-        }
-        try {
-            ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
-            for (Message msg : convertMessages(messages)) {
-                if (msg instanceof SystemMessage sm) {
-                    requestSpec = requestSpec.system(sm.getText());
-                } else if (msg instanceof UserMessage um) {
-                    requestSpec = requestSpec.user(um.getText());
+        Exception lastError = null;
+        for (int attempt = 0; attempt < 2; attempt++) {
+            try {
+                ChatClient chatClient = chatClientProvider.getIfAvailable();
+                if (chatClient == null) {
+                    return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+                }
+                ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
+                for (Message msg : convertMessages(messages)) {
+                    if (msg instanceof SystemMessage sm) {
+                        requestSpec = requestSpec.system(sm.getText());
+                    } else if (msg instanceof UserMessage um) {
+                        requestSpec = requestSpec.user(um.getText());
+                    }
+                }
+                OpenAiChatOptions options = buildOptions(scene);
+                if (tools != null && !tools.isEmpty()) {
+                    List<OpenAiApi.FunctionTool> functionTools = convertToOpenAiTools(tools);
+                    options = OpenAiChatOptions.builder()
+                            .model(options.getModel())
+                            .temperature(options.getTemperature())
+                            .maxTokens(options.getMaxTokens())
+                            .tools(functionTools)
+                            .build();
+                }
+                requestSpec = requestSpec.options(options);
+                ChatResponse response = requestSpec.call().chatResponse();
+                IntelligenceInferenceResult result = convertResult(response, start);
+                extractToolCalls(response, result);
+                recordTokenUsage(result);
+                return result;
+            } catch (Exception e) {
+                lastError = e;
+                if (isRetryable(e) && attempt == 0) {
+                    long backoffMs = 1000 + (long)(Math.random() * 500);
+                    log.warn("[SpringAiAdapter] chat failed (attempt={}), retrying in {}ms: {}", attempt + 1, backoffMs, e.getMessage());
+                    try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                } else {
+                    break;
                 }
             }
-            OpenAiChatOptions options = buildOptions(scene);
-            if (tools != null && !tools.isEmpty()) {
-                List<OpenAiApi.FunctionTool> functionTools = convertToOpenAiTools(tools);
-                options = OpenAiChatOptions.builder()
-                        .model(options.getModel())
-                        .temperature(options.getTemperature())
-                        .maxTokens(options.getMaxTokens())
-                        .tools(functionTools)
-                        .build();
-            }
-            requestSpec = requestSpec.options(options);
-            ChatResponse response = requestSpec.call().chatResponse();
-            IntelligenceInferenceResult result = convertResult(response, start);
-            extractToolCalls(response, result);
-            recordTokenUsage(result);
-            return result;
-        } catch (Exception e) {
-            log.warn("[SpringAiAdapter] chat with messages failed: {}", e.getMessage());
-            return buildErrorResult(e, start);
         }
+        log.warn("[SpringAiAdapter] chat with messages failed after retries: {}", lastError != null ? lastError.getMessage() : "unknown");
+        return buildErrorResult(lastError, start);
+    }
+
+    private boolean isRetryable(Exception e) {
+        if (e == null) return false;
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        // 429限流、5xx服务端错误、网络超时可重试
+        if (msg.contains("429") || msg.contains("rate") || msg.contains("too many")) return true;
+        if (msg.contains("500") || msg.contains("502") || msg.contains("503") || msg.contains("504")) return true;
+        if (msg.contains("timeout") || msg.contains("timed out") || msg.contains("connection")) return true;
+        // reasoning_content之类的400错误不可重试（需要修数据）
+        return false;
     }
 
     @Override

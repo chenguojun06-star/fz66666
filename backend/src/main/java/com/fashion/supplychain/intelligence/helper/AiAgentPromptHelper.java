@@ -19,7 +19,7 @@ import java.util.concurrent.*;
 @Slf4j
 public class AiAgentPromptHelper {
 
-    @Value("${xiaoyun.agent.max-system-prompt-chars:10000}")
+    @Value("${xiaoyun.agent.max-system-prompt-chars:12000}")
     private int maxSystemPromptChars;
 
     private volatile String masAnalysisCache = "";
@@ -67,7 +67,7 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> intelligenceCtx = supplyAsync(() -> contextProvider.buildIntelligenceContext());
         CompletableFuture<String> workerProfile = isManager
                 ? CompletableFuture.completedFuture("")
-                : supplyAsync(() -> contextProvider.buildWorkerProfile(userName));
+                : supplyAsync(() -> contextProvider.buildWorkerContext(userName));
         CompletableFuture<String> mgmtInsight = isManager
                 ? supplyAsync(() -> contextProvider.buildManagementInsight(tenantId))
                 : CompletableFuture.completedFuture("");
@@ -98,8 +98,28 @@ public class AiAgentPromptHelper {
                 userBehaviorBlock, toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
-            log.warn("[AiAgent] systemPrompt过长({}字符)，截断至{}", prompt.length(), maxSystemPromptChars);
-            prompt = prompt.substring(0, maxSystemPromptChars) + "\n...(系统提示词已截断，请用工具查询补充信息)";
+            // 按优先级保住核心内容，先从低优先级块开始缩减
+            int excess = prompt.length() - maxSystemPromptChars;
+            log.warn("[AiAgent] systemPrompt过长({}字符 > {}上限)，超出{}字符，按优先级缩减", prompt.length(), maxSystemPromptChars, excess);
+            String[] lowPriorityBlocks = {userBehaviorBlock, longTermMemBlock, masInsightBlock};
+            for (String lowBlock : lowPriorityBlocks) {
+                if (prompt.length() <= maxSystemPromptChars) break;
+                if (lowBlock != null && prompt.contains(lowBlock)) {
+                    prompt = prompt.replace(lowBlock, (lowBlock.length() > 200 ? lowBlock.substring(0, 200) + "…\n" : lowBlock));
+                }
+            }
+            // 如果还是超，做最终硬截断（保护工具指南不出现在截断尾部）
+            if (prompt.length() > maxSystemPromptChars) {
+                int cutPoint = prompt.lastIndexOf(toolGuide);
+                if (cutPoint > 0) {
+                    int available = maxSystemPromptChars - (prompt.length() - cutPoint) - 100;
+                    if (available > 500) {
+                        prompt = prompt.substring(0, available) + "\n...(上下文已截断)..." + prompt.substring(cutPoint);
+                    }
+                } else {
+                    prompt = prompt.substring(0, maxSystemPromptChars) + "\n...(系统提示词已截断，请用工具查询补充信息)";
+                }
+            }
         }
         return prompt;
     }
@@ -135,12 +155,31 @@ public class AiAgentPromptHelper {
     private String buildContextBlock(String userName, String userRole, boolean isSuperAdmin, boolean isTenantOwner, boolean isManager) {
         String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String currentDate = LocalDate.now().toString();
-        return "【当前环境】\n" +
-                "- 当前时间：" + currentTime + "\n" +
-                "- 今日日期：" + currentDate + "\n" +
-                "- 当前用户：" + (userName != null ? userName : "未知") + "\n" +
-                "- 用户角色：" + (userRole != null ? userRole : "普通用户") +
-                (isSuperAdmin ? "（超级管理员）" : isTenantOwner ? "（租户老板）" : isManager ? "（管理人员）" : "（生产员工）") + "\n";
+        String dayOfWeek = LocalDate.now().getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.CHINESE);
+        StringBuilder ctx = new StringBuilder();
+        ctx.append("【当前环境】\n")
+            .append("- 当前时间：").append(currentTime).append(" (").append(dayOfWeek).append(")\n")
+            .append("- 今日日期：").append(currentDate).append("\n")
+            .append("- 当前用户：").append(userName != null ? userName : "未知").append("\n")
+            .append("- 用户角色：").append(userRole != null ? userRole : "普通用户")
+            .append(isSuperAdmin ? "（超级管理员）" : isTenantOwner ? "（租户老板）" : isManager ? "（管理人员）" : "（生产员工）").append("\n");
+        // 注入工厂上下文
+        String factoryId = UserContext.factoryId();
+        if (factoryId != null && !factoryId.isBlank()) {
+            ctx.append("- 所属工厂ID：").append(factoryId).append("（你是外发工厂账号，只能操作本工厂的生产数据）\n");
+        }
+        // 注入租户名称（如果有）
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId != null) {
+                ctx.append("- 当前租户ID：").append(tenantId).append("\n");
+            }
+        } catch (Exception ignore) {}
+        // 非管理员简化回答提示
+        if (!isManager) {
+            ctx.append("⚠️ 你是生产员工，回答应简洁明了，多用短句和数字，少用技术术语。\n");
+        }
+        return ctx.toString();
     }
 
     private String buildPageContextBlock(String pageContext) {

@@ -157,7 +157,7 @@ public class PromptContextProvider {
                         for (int ri = 0; ri < relevant.size(); ri++) {
                             IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
                             String c = item.getContent();
-                            if (c != null && c.length() > 150) c = c.substring(0, 150) + "…";
+                            if (c != null && c.length() > 400) c = c.substring(0, 400) + "…";
                             rag.append(String.format("  %d. [%s/%s] %s（融合分%.2f，采纳%d次）\n     %s\n",
                                     ri + 1,
                                     item.getMemoryType() != null ? item.getMemoryType() : "case",
@@ -199,6 +199,24 @@ public class PromptContextProvider {
             log.debug("[AiAgent-Behavior] 用户行为画像注入跳过: {}", e.getMessage());
             return "";
         }
+    }
+
+    public String buildWorkerContext(String userName) {
+        // 工人专用：注入个人相关预警 + 简要画像
+        StringBuilder wc = new StringBuilder();
+        // 效率画像
+        String profile = buildWorkerProfile(userName);
+        if (profile != null && !profile.isBlank() && !profile.contains("暂时不可用")) {
+            wc.append(profile);
+        }
+        // 预警注入：简单列出待处理任务提醒（不占太多token）
+        try {
+            String patrolBlock = buildActivePatrolBlock();
+            if (patrolBlock != null && !patrolBlock.isBlank()) {
+                wc.append("\n📋 当前与你相关的风险提醒：\n").append(patrolBlock);
+            }
+        } catch (Exception e) { log.debug("[AiAgent-Worker] 预警注入跳过"); }
+        return wc.toString();
     }
 
     public String buildActivePatrolBlock() {

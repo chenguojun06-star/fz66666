@@ -224,7 +224,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
             rrfScoreMap.put(item.getItem(), item.getScore());
         }
 
-        int candidateLimit = (cohereRerankService != null && cohereRerankService.isAvailable()) ? 15 : 5;
+        int candidateLimit = (cohereRerankService != null && cohereRerankService.isAvailable()) ? 15 : 10;
         List<KnowledgeHit> candidateHits = new ArrayList<>();
         for (RrfFusion.RankedItem<String> fused : fusedResults.stream().limit(candidateLimit).collect(Collectors.toList())) {
             KnowledgeBase kb = candidateMap.get(fused.getItem());
