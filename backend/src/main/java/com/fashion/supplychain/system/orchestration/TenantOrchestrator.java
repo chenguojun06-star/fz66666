@@ -194,7 +194,7 @@ public class TenantOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean setTenantCeiling(Long tenantId, List<Long> permissionIds) { roleInitHelper.setTenantCeiling(tenantId, permissionIds); return true; }
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> workerRegister(String name, String phone, String username, String password, String factoryName, String tenantCode, String roleId) { return roleInitHelper.workerRegister(username, password, name, phone, factoryName, tenantCode, roleId); }
+    public Map<String, Object> workerRegister(String username, String password, String name, String phone, String tenantCode, String factoryId, String orgUnitId) { return roleInitHelper.workerRegister(username, password, name, phone, tenantCode, factoryId, orgUnitId); }
     public Page<User> listPendingRegistrations(Long page, Long pageSize) { return roleInitHelper.listPendingRegistrations(page, pageSize); }
     public Page<User> listFactoryPendingRegistrations(Long page, Long pageSize) { return roleInitHelper.listFactoryPendingRegistrations(page, pageSize); }
     @Transactional(rollbackFor = Exception.class)
