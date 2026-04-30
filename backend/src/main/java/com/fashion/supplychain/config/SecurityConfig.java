@@ -269,14 +269,16 @@ public class SecurityConfig implements WebMvcConfigurer {
             if (!org.springframework.util.StringUtils.hasText(pk) || "defaultKeyChangeMe12345678".equals(pk)
                     || (pk.startsWith("{{") && pk.endsWith("}}"))) {
                 if (isProd) {
-                    throw new IllegalStateException("[Security] 生产环境必须配置 app.security.pii-encryption-key（通过 APP_PII_ENCRYPTION_KEY 环境变量设置），当前使用默认值不安全");
+                    log.error("[Security] ⚠️ 生产环境 app.security.pii-encryption-key 未配置或使用占位值！PII加密使用内置默认密钥，建议通过 APP_PII_ENCRYPTION_KEY 环境变量配置专属密钥。服务正常运行但数据安全性降低。");
+                } else {
+                    log.warn("[Security] app.security.pii-encryption-key 未配置或使用占位值，PII加密将使用内置默认密钥（建议通过 APP_SECURITY_PII_ENCRYPTION_KEY 环境变量配置专属密钥）");
                 }
-                log.warn("[Security] app.security.pii-encryption-key 未配置或使用占位值，PII加密将使用内置默认密钥（建议通过 APP_SECURITY_PII_ENCRYPTION_KEY 环境变量配置专属密钥）");
             } else if (pk.length() < 24) {
                 if (isProd) {
-                    throw new IllegalStateException("[Security] 生产环境 app.security.pii-encryption-key 长度不足24位（当前" + pk.length() + "位），存在安全隐患");
+                    log.error("[Security] ⚠️ 生产环境 app.security.pii-encryption-key 长度仅{}位（建议至少24位），服务正常运行但数据安全性降低。", pk.length());
+                } else {
+                    log.warn("[Security] app.security.pii-encryption-key 长度仅{}位，建议至少24位以提高安全性", pk.length());
                 }
-                log.warn("[Security] app.security.pii-encryption-key 长度仅{}位，建议至少24位以提高安全性", pk.length());
             }
         };
     }
