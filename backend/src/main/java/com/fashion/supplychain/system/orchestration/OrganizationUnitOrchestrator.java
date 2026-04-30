@@ -59,6 +59,9 @@ public class OrganizationUnitOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.system.service.RoleService roleService;
+
     public List<OrganizationUnit> tree() {
         // 对于超级管理员（平台方），如果不传递特定租户，应该允许他查看“当前自己”能看到的数据（系统层级），或者直接绕过租户限制查看全部数据。
         // 但前端组织架构树一般是基于单个租户构建的，混合展示会导致父子节点关系错乱。
@@ -534,6 +537,23 @@ public class OrganizationUnitOrchestrator {
         if (userService.count(uq) > 0) {
             throw new IllegalArgumentException("用户名已存在: " + username);
         }
+        // 查找外发工厂管理角色（优先factory_owner，兜底fallback）
+        com.fashion.supplychain.system.entity.Role factoryRole = null;
+        if (roleService != null) {
+            factoryRole = roleService.getOne(new LambdaQueryWrapper<com.fashion.supplychain.system.entity.Role>()
+                    .eq(com.fashion.supplychain.system.entity.Role::getTenantId, tenantId)
+                    .eq(com.fashion.supplychain.system.entity.Role::getRoleCode, "factory_owner")
+                    .eq(com.fashion.supplychain.system.entity.Role::getStatus, "active")
+                    .last("LIMIT 1"), false);
+            if (factoryRole == null) {
+                factoryRole = roleService.getOne(new LambdaQueryWrapper<com.fashion.supplychain.system.entity.Role>()
+                        .eq(com.fashion.supplychain.system.entity.Role::getTenantId, tenantId)
+                        .like(com.fashion.supplychain.system.entity.Role::getRoleName, "工厂")
+                        .eq(com.fashion.supplychain.system.entity.Role::getStatus, "active")
+                        .last("LIMIT 1"), false);
+            }
+        }
+
         User user = new User();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
@@ -544,7 +564,15 @@ public class OrganizationUnitOrchestrator {
         user.setIsFactoryOwner(true);
         user.setIsTenantOwner(false);
         user.setStatus("active");
-        user.setPermissionRange("self");
+        user.setApprovalStatus("approved");
+        user.setRegistrationStatus("ACTIVE");
+        if (factoryRole != null) {
+            user.setRoleId(factoryRole.getId());
+            user.setRoleName(factoryRole.getRoleName());
+            user.setPermissionRange("all".equals(factoryRole.getDataScope()) ? "all" : "own");
+        } else {
+            user.setPermissionRange("own");
+        }
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
         userService.lambdaUpdate()
