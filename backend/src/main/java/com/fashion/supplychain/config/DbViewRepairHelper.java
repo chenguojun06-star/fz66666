@@ -84,7 +84,6 @@ final class DbViewRepairHelper {
                         + " ) `scan` ON `po`.`order_no`=`scan`.`order_no`"
                         + " WHERE `po`.`delete_flag`=0"
                         + "   AND `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','废弃','已取消')"
-                        + "   AND `po`.`order_no` NOT LIKE 'CUT%'"
                         + " ORDER BY `po`.`create_time` DESC";
                     stmt.executeUpdate(createView);
                 }
