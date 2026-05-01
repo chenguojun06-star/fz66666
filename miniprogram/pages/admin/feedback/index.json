@@ -1,7 +1,0 @@
-{
-  "navigationStyle": "custom",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
-    "empty-state": "/components/empty-state/empty-state"
-  }
-}

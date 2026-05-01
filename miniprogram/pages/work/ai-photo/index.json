@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "AI拍照助手",
-  "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
-  }
-}
