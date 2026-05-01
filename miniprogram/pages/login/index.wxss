@@ -256,6 +256,7 @@ page {
   background: #fff; border-radius: 12rpx;
   box-shadow: 0 8px 28px rgba(0,0,0,0.08);
   max-height: 320rpx; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tenant-result-item {
   padding: 22rpx 28rpx; font-size: 28rpx; color: #22384a;
@@ -291,7 +292,10 @@ page {
   margin-top: 32rpx; text-align: center;
 }
 .login-register-link {
-  font-size: 26rpx; color: #a0aab7;
+  font-size: 26rpx; color: #666;
+  padding: 16rpx 24rpx;
+  min-height: 88rpx;
+  display: flex; align-items: center; justify-content: center;
 }
 .login-register-link-hover { color: #1f75ea; }
 

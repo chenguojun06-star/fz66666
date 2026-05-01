@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.job;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import com.fashion.supplychain.intelligence.entity.CollaborationTask;
 import com.fashion.supplychain.intelligence.mapper.CollaborationTaskMapper;
@@ -10,6 +11,7 @@ import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestr
 import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.SmartEscalationOrchestrator;
+import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -79,6 +81,9 @@ public class AiPatrolJob {
 
     @Autowired(required = false)
     private SmartEscalationOrchestrator smartEscalationOrchestrator;
+
+    @Autowired(required = false)
+    private ProcessStatsEngine processStatsEngine;
 
     /**
      * 跨模块读取生产数据（只读，不涉及事务，Job 层允许跨模块调用 Service）。
@@ -364,44 +369,67 @@ public class AiPatrolJob {
             log.debug("[AiPatrolJob-TaskEscalation] CollaborationTaskMapper 未注入，跳过");
             return;
         }
-        try {
-            List<CollaborationTask> overdueTasks = collaborationTaskMapper.findOverdueNotEscalated(50);
-            if (overdueTasks.isEmpty()) return;
+        List<Long> tenants = processStatsEngine != null
+                ? processStatsEngine.findActiveTenantIds()
+                : null;
+        if (tenants == null || tenants.isEmpty()) {
+            log.debug("[AiPatrolJob-TaskEscalation] 无活跃租户，跳过");
+            return;
+        }
+        int totalEscalated = 0;
+        for (Long tenantId : tenants) {
+            UserContext previous = UserContext.get();
+            try {
+                UserContext ctx = new UserContext();
+                ctx.setTenantId(tenantId);
+                ctx.setUsername("system");
+                ctx.setUserId("system");
+                UserContext.set(ctx);
 
-            int escalated = 0;
-            for (CollaborationTask task : overdueTasks) {
-                if (task.getCreatedAt() == null) continue;
-                long hoursSinceCreation = java.time.Duration.between(task.getCreatedAt(), LocalDateTime.now()).toHours();
-                if (hoursSinceCreation < ESCALATION_HOURS_THRESHOLD) continue;
+                List<CollaborationTask> overdueTasks = collaborationTaskMapper.findOverdueNotEscalated(tenantId, 50);
+                if (overdueTasks.isEmpty()) continue;
 
-                String escalationLevel = smartEscalationOrchestrator != null
-                        ? smartEscalationOrchestrator.escalationByRisk("overdue")
-                        : "L3";
+                int escalated = 0;
+                for (CollaborationTask task : overdueTasks) {
+                    if (task.getCreatedAt() == null) continue;
+                    long hoursSinceCreation = java.time.Duration.between(task.getCreatedAt(), LocalDateTime.now()).toHours();
+                    if (hoursSinceCreation < ESCALATION_HOURS_THRESHOLD) continue;
 
-                String escalatedTo = resolveEscalationTarget(task);
-                collaborationTaskMapper.escalateTask(task.getId(), escalatedTo);
+                    String escalationLevel = smartEscalationOrchestrator != null
+                            ? smartEscalationOrchestrator.escalationByRisk("overdue")
+                            : "L3";
 
-                String issue = String.format(
-                        "协作任务[%s] 逾期%d小时未处理（订单:%s, 岗位:%s），已自动升级至%s",
-                        task.getId(), hoursSinceCreation,
-                        task.getOrderNo() != null ? task.getOrderNo() : "无",
-                        task.getTargetRole() != null ? task.getTargetRole() : "未知",
-                        escalatedTo);
-                patrolOrchestrator.createAction(
-                        "TASK_ESCALATION_JOB", issue, "COLLAB_TASK_OVERDUE",
-                        "HIGH", "collab_task", String.valueOf(task.getId()),
-                        "{\"action\":\"escalate_task\",\"taskId\":" + task.getId() + ",\"level\":\"" + escalationLevel + "\"}",
-                        BigDecimal.valueOf(0.9), "NEED_APPROVAL"
-                );
-                log.warn("[AiPatrolJob-TaskEscalation] {}", issue);
-                escalated++;
+                    String escalatedTo = resolveEscalationTarget(task);
+                    collaborationTaskMapper.escalateTask(task.getId(), escalatedTo);
+
+                    String issue = String.format(
+                            "协作任务[%s] 逾期%d小时未处理（订单:%s, 岗位:%s），已自动升级至%s",
+                            task.getId(), hoursSinceCreation,
+                            task.getOrderNo() != null ? task.getOrderNo() : "无",
+                            task.getTargetRole() != null ? task.getTargetRole() : "未知",
+                            escalatedTo);
+                    patrolOrchestrator.createAction(
+                            "TASK_ESCALATION_JOB", issue, "COLLAB_TASK_OVERDUE",
+                            "HIGH", "collab_task", String.valueOf(task.getId()),
+                            "{\"action\":\"escalate_task\",\"taskId\":" + task.getId() + ",\"level\":\"" + escalationLevel + "\"}",
+                            BigDecimal.valueOf(0.9), "NEED_APPROVAL"
+                    );
+                    log.warn("[AiPatrolJob-TaskEscalation] {}", issue);
+                    escalated++;
+                }
+                totalEscalated += escalated;
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob-TaskEscalation] 租户 {} 扫描异常: {}", tenantId, e.getMessage());
+            } finally {
+                if (previous != null) {
+                    UserContext.set(previous);
+                } else {
+                    UserContext.clear();
+                }
             }
-
-            if (escalated > 0) {
-                log.info("[AiPatrolJob-TaskEscalation] ===== 任务升级扫描完成，升级 {} 个逾期任务 =====", escalated);
-            }
-        } catch (Exception e) {
-            log.warn("[AiPatrolJob-TaskEscalation] 扫描异常: {}", e.getMessage());
+        }
+        if (totalEscalated > 0) {
+            log.info("[AiPatrolJob-TaskEscalation] ===== 任务升级扫描完成，升级 {} 个逾期任务 =====", totalEscalated);
         }
     }
 

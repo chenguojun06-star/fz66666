@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 import com.fashion.supplychain.production.helper.OrderProgressFillHelper;
 import com.fashion.supplychain.production.helper.OrderStageBundleStatsFillHelper;
+import com.fashion.supplychain.production.helper.ProcessParentNodeResolver;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -73,6 +74,9 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ProcessParentNodeResolver processParentNodeResolver;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -563,6 +567,14 @@ public class ProductionOrderQueryService {
 
     /**
      * 批量填充"款式是否配置二次工艺"标记，用于前端列表显示二次工艺进度列
+     * <p>
+     * 检测策略（"或"逻辑，按优先级）：
+     * <ol>
+     *   <li>flow stage 数据：实际已扫码的二次工艺（secondaryProcessStartTime/EndTime 非空）</li>
+     *   <li>工序节点数据：progressNodeUnitPrices 中任一节点的 progressStage 为"二次工艺"，
+     *       或节点名称经父节点映射解析为"二次工艺"</li>
+     *   <li>t_secondary_process 表：仅当 progressNodeUnitPrices 为空（订单尚未生成生产流程）时兜底</li>
+     * </ol>
      */
     private void fillHasSecondaryProcess(List<ProductionOrder> orders) {
         if (orders == null || orders.isEmpty()) return;
@@ -575,25 +587,58 @@ public class ProductionOrderQueryService {
                 })
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
-        if (styleIds.isEmpty()) return;
-        // 一次查询：找出哪些 styleId 在 t_secondary_process 表中有记录
-        Set<Long> hasSecIds = new HashSet<>(
-                secondaryProcessService.lambdaQuery()
-                        .in(SecondaryProcess::getStyleId, styleIds)
-                        .list()
-                        .stream()
-                        .map(SecondaryProcess::getStyleId)
-                        .collect(Collectors.toSet())
-        );
+        // 三级：t_secondary_process 表查询
+        Set<Long> hasSecIds = new HashSet<>();
+        if (!styleIds.isEmpty()) {
+            hasSecIds = new HashSet<>(
+                    secondaryProcessService.lambdaQuery()
+                            .in(SecondaryProcess::getStyleId, styleIds)
+                            .list()
+                            .stream()
+                            .map(SecondaryProcess::getStyleId)
+                            .collect(Collectors.toSet())
+            );
+        }
         // 回填到每个订单
         for (ProductionOrder o : orders) {
-            try {
-                Long sid = (o.getStyleId() != null && !o.getStyleId().isBlank())
-                        ? Long.parseLong(o.getStyleId()) : null;
-                o.setHasSecondaryProcess(sid != null && hasSecIds.contains(sid));
-            } catch (NumberFormatException e) {
-                o.setHasSecondaryProcess(false);
+            boolean hasSec = false;
+            // 一级：flow stage 实际扫码数据
+            if (o.getSecondaryProcessStartTime() != null || o.getSecondaryProcessEndTime() != null) {
+                hasSec = true;
             }
+            // 二级：progressNodeUnitPrices 节点→父节点映射
+            if (!hasSec) {
+                List<Object> nodes = o.getProgressNodeUnitPrices();
+                if (nodes != null && !nodes.isEmpty()) {
+                    for (Object nodeObj : nodes) {
+                        if (nodeObj instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> node = (Map<String, Object>) nodeObj;
+                            String stage = (String) node.getOrDefault("progressStage", "");
+                            if ("二次工艺".equals(stage)) {
+                                hasSec = true;
+                                break;
+                            }
+                            String name = (String) node.getOrDefault("name",
+                                    node.getOrDefault("processName", ""));
+                            if (StringUtils.hasText(name) && processParentNodeResolver.isParentNodeMatch(name.trim(), "二次工艺")) {
+                                hasSec = true;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // 三级：progressNodeUnitPrices 为空，降级到 t_secondary_process 表
+                    try {
+                        Long sid = (o.getStyleId() != null && !o.getStyleId().isBlank())
+                                ? Long.parseLong(o.getStyleId()) : null;
+                        hasSec = (sid != null && hasSecIds.contains(sid));
+                    } catch (NumberFormatException e) {
+                        hasSec = false;
+                    }
+                }
+            }
+            o.setHasSecondaryProcess(hasSec);
         }
     }
 

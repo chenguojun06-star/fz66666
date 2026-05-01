@@ -86,7 +86,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
       const opts = inst.currentOptions;
       const loc = window.location;
       const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-      return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}`;
+      return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}&token=${encodeURIComponent(opts.token ?? '')}`;
     };
 
   const dispatchMessage = (msg: WsMessage) => {

@@ -16,8 +16,8 @@ export function hasSecondaryProcessForOrder(record: ProductionOrder): boolean {
   const nodes = record.progressNodeUnitPrices;
   if (!Array.isArray(nodes) || nodes.length === 0) return false;
   return nodes.some((n: any) => {
-    const name = String(n.name || n.processName || '').trim();
-    return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
+    if (String(n.parentNode || '').trim() === '二次工艺') return true;
+    return false;
   });
 }
 

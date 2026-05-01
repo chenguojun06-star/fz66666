@@ -1,7 +1,6 @@
 const api = require('../../utils/api');
 const { syncManager } = require('../../utils/syncManager');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
-const { getCurrentFactoryId } = require('../../utils/permission');
 const { eventBus, Events } = require('../../utils/eventBus');
 
 
@@ -15,7 +14,6 @@ const OrderListHandler = require('./handlers/OrderListHandler');
 
 Page({
   data: {
-    isFactory: false, // 是否为外发工厂账号（隐藏非工厂相关模块）
     globalSearch: {
       keyword: '',
       hasSearched: false,
@@ -85,7 +83,6 @@ Page({
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
-    this.setData({ isFactory: !!getCurrentFactoryId() });
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
       if (nextTab) {

@@ -199,7 +199,7 @@ const WarehouseSizeTable: React.FC<{
             <ResizableTable.Summary.Cell index={0} colSpan={2}>
               <span style={{ fontWeight: 600 }}>合计</span>
             </ResizableTable.Summary.Cell>
-            <ResizableTable.Summary.Cell index={1} align="right">
+            <ResizableTable.Summary.Cell index={2} align="right">
               <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>{total} 件</span>
             </ResizableTable.Summary.Cell>
           </ResizableTable.Summary.Row>

@@ -26,8 +26,8 @@ public interface CollaborationTaskMapper extends BaseMapper<CollaborationTask> {
     @Select("SELECT * FROM t_collaboration_task WHERE tenant_id = #{tenantId} AND task_status = #{status} ORDER BY FIELD(priority, 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'), due_at ASC LIMIT #{limit}")
     List<CollaborationTask> findByTenantAndStatus(@Param("tenantId") Long tenantId, @Param("status") String status, @Param("limit") int limit);
 
-    @Select("SELECT * FROM t_collaboration_task WHERE overdue = 1 AND task_status IN ('PENDING', 'ACCEPTED', 'IN_PROGRESS') AND escalated_at IS NULL ORDER BY priority ASC, due_at ASC LIMIT #{limit}")
-    List<CollaborationTask> findOverdueNotEscalated(@Param("limit") int limit);
+    @Select("SELECT * FROM t_collaboration_task WHERE tenant_id = #{tenantId} AND overdue = 1 AND task_status IN ('PENDING', 'ACCEPTED', 'IN_PROGRESS') AND escalated_at IS NULL ORDER BY priority ASC, due_at ASC LIMIT #{limit}")
+    List<CollaborationTask> findOverdueNotEscalated(@Param("tenantId") Long tenantId, @Param("limit") int limit);
 
     @Select("SELECT COUNT(*) FROM t_collaboration_task WHERE tenant_id = #{tenantId} AND task_status = #{status}")
     int countByTenantAndStatus(@Param("tenantId") Long tenantId, @Param("status") String status);
