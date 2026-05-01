@@ -129,7 +129,7 @@ const OverdueFactoryCardWidget: React.FC<{
               <div
                 key={`order-${fi}-${oi}`}
                 className={styles.overdueOrderItem}
-                onClick={() => onNavigate(`/production?orderNo=${encodeURIComponent(order.orderNo)}`)}
+                onClick={() => onNavigate(`/production/order-flow?orderNo=${encodeURIComponent(order.orderNo)}`)}
               >
                 <div className={styles.overdueOrderLeft}>
                   <span

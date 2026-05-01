@@ -164,7 +164,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             onClick={(e) => {
               const el = (e.target as HTMLElement).closest?.('[data-orderno]') as HTMLElement | null;
               const orderNo = el?.dataset?.orderno;
-              if (orderNo) onSafeNavigate(`/production?orderNo=${encodeURIComponent(orderNo)}`);
+              if (orderNo) onSafeNavigate(`/production/order-flow?orderNo=${encodeURIComponent(orderNo)}`);
             }}
             dangerouslySetInnerHTML={{
               __html: sanitizeHtml(renderSimpleMarkdown(

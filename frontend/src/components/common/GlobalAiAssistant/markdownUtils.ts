@@ -58,7 +58,7 @@ function inlineFmt(s: string): string {
   return escHtml(s)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-    .replace(/\b(PO\d{8,15})\b/g, '<a class="order-link" data-orderno="$1">$1</a>');
+    .replace(/\b((?:PO|CUT|PAT|ORD)\d{6,20})\b/g, '<a class="order-link" data-orderno="$1">$1</a>');
 }
 
 function escHtml(s: string): string {

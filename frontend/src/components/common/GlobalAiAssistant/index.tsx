@@ -470,7 +470,7 @@ const GlobalAiAssistant: React.FC = () => {
                         if (params.length) p += (p.includes('?') ? '&' : '?') + params.join('&');
                         return p;
                       })()
-                    : `/production?orderNo=${encodeURIComponent(item.orderNo || '')}`;
+                    : `/production/order-flow?orderNo=${encodeURIComponent(item.orderNo || '')}`;
                   return (
                     <div key={item.id || item.orderNo} className={msgStyles.pendingItem} style={{position:'relative'}}
                       onClick={() => { setIsOpen(false); onSafeNavigate(navPath); }}
