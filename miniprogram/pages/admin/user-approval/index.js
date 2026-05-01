@@ -57,6 +57,7 @@ Page({
     }
     if (ownerFlag || factoryOwnerFlag) {
       this.loadTenantRegistrations();
+      this.loadRoleOptions();
     }
   },
 
@@ -146,11 +147,20 @@ Page({
 
     wx.showLoading({ title: '处理中...', mask: true });
     try {
-      await api.system.approveUser(currentUser.id, { roleId: Number(selectedRoleId) });
+      const isRegistration = currentUser.registrationStatus === 'PENDING';
+      if (isRegistration) {
+        await api.tenant.approveRegistration(currentUser.id, { roleId: Number(selectedRoleId) });
+      } else {
+        await api.system.approveUser(currentUser.id, { roleId: Number(selectedRoleId) });
+      }
       wx.hideLoading();
       toast.success('已批准并分配角色');
       this.setData({ showApprovalModal: false, currentUser: null, selectedRoleId: '' });
-      this.loadPendingUsers(true);
+      if (isRegistration) {
+        this.loadTenantRegistrations();
+      } else {
+        this.loadPendingUsers(true);
+      }
     } catch (e) {
       wx.hideLoading();
       toast.error(e.errMsg || e.message || '审批失败');
@@ -180,11 +190,20 @@ Page({
 
     wx.showLoading({ title: '处理中...', mask: true });
     try {
-      await api.system.rejectUser(currentUser.id, { approvalRemark: rejectReason });
+      const isRegistration = currentUser.registrationStatus === 'PENDING';
+      if (isRegistration) {
+        await api.tenant.rejectRegistration(currentUser.id, { reason: rejectReason });
+      } else {
+        await api.system.rejectUser(currentUser.id, { approvalRemark: rejectReason });
+      }
       wx.hideLoading();
       toast.success('已拒绝');
       this.setData({ showRejectModal: false, currentUser: null, rejectReason: '' });
-      this.loadPendingUsers(true);
+      if (isRegistration) {
+        this.loadTenantRegistrations();
+      } else {
+        this.loadPendingUsers(true);
+      }
     } catch (e) {
       wx.hideLoading();
       toast.error(e.errMsg || e.message || '拒绝失败');
@@ -206,29 +225,9 @@ Page({
   },
 
   onTenantApprove(e) {
-    const { user } = e.currentTarget.dataset;
+    const user = e.currentTarget.dataset.user;
     if (!user) return;
-
-    wx.showModal({
-      title: '批准工人注册',
-      content: `确定批准"${user.name || user.username}"加入工厂吗？`,
-      confirmText: '批准',
-      cancelText: '取消',
-      success: async (res) => {
-        if (res.confirm) {
-          wx.showLoading({ title: '处理中...', mask: true });
-          try {
-            await api.tenant.approveRegistration(user.id, { roleId: this.data.factorySelectedRole });
-            wx.hideLoading();
-            toast.success('已批准');
-            this.loadTenantRegistrations();
-          } catch (error) {
-            wx.hideLoading();
-            toast.error(error?.message || '批准失败');
-          }
-        }
-      },
-    });
+    this.setData({ currentUser: user, showApprovalModal: true, selectedRoleId: '' });
   },
 
   onTenantReject(e) {
