@@ -17,7 +17,7 @@
 
 ### 2.2 逻辑混乱与代码结构问题
 *   **后端（Java）**：
-    *   **优点**：已采用 `Orchestrator` 模式（**86个编排器**跨11个领域模块）分离 Controller 与 Service，架构分层清晰。
+    *   **优点**：已采用 `Orchestrator` 模式（**105个业务编排器+130个AI编排器**跨14个领域模块）分离 Controller 与 Service，架构分层清晰。
     *   **缺陷**：部分 Controller（如 `ProductionOrderController`）仍承担了过多的参数校验逻辑，未完全下沉到 Service 层。
 *   **前端（React）**：
     *   **缺陷**：`Dashboard` 等页面组件中包含了大量内联的 API 调用和数据处理逻辑，未完全抽离为 Custom Hooks 或 Service。

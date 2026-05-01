@@ -2,7 +2,7 @@
 
 ## 📦 模块概览
 
-本框架提供统一的支付和物流接口，采用适配器模式设计，方便后期接入真实的第三方API。
+本框架提供统一的支付和物流接口，采用适配器模式设计，所有适配器均已实现。
 
 ### 目录结构
 
@@ -13,16 +13,16 @@ integration/
 │   ├── PaymentRequest.java           # 支付请求DTO
 │   ├── PaymentResponse.java          # 支付响应DTO
 │   └── impl/
-│       ├── AlipayAdapter.java        # 支付宝适配器（待实现）
-│       └── WechatPayAdapter.java     # 微信支付适配器（待实现）
+│       ├── AlipayAdapter.java        # ✅ 支付宝适配器（已实现，需配置密钥）
+│       └── WechatPayAdapter.java     # ✅ 微信支付适配器（已实现，需配置密钥）
 └── logistics/            # 物流模块
     ├── LogisticsService.java          # 物流接口定义
     ├── ShippingRequest.java           # 物流请求DTO
     ├── ShippingResponse.java          # 物流响应DTO
     ├── TrackingInfo.java              # 追踪信息DTO
     └── impl/
-        ├── SFExpressAdapter.java      # 顺丰适配器（待实现）
-        └── STOAdapter.java            # 申通适配器（待实现）
+        ├── SFExpressAdapter.java      # 顺丰适配器（已实现）
+        └── STOAdapter.java            # 申通适配器（已实现）
 ```
 
 ## 💳 支付模块
@@ -376,8 +376,8 @@ log.info("创建支付订单");
 
 ✅ **框架结构已完成**  
 ✅ **所有接口和DTO已定义**  
-✅ **适配器基础代码已创建**  
-⏳ **等待接入真实API**（需要申请密钥和文档）
+✅ **适配器已实现（含模拟数据）**  
+⏳ **切换真实API**（配置密钥后即可切换）
 
 ### 模拟数据说明
 

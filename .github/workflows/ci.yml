@@ -10,33 +10,42 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 门禁：Entity-Flyway 对齐检查
+  # 规则：每新增 @TableField("xxx") 必须有对应 Flyway 脚本，否则阻断整个 CI
+  # ──────────────────────────────────────────────────────────────────────────
   entity-flyway-check:
     name: Entity-Flyway 字段对齐门禁
     runs-on: ubuntu-latest
 
     steps:
     - name: 检出代码（含上一次提交，diff 对比用）
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 2
+        fetch-depth: 2          # 需要 HEAD~1 做基准
 
     - name: 检查新增 @TableField 是否有 Flyway 迁移脚本
       run: python3 scripts/check-entity-flyway.py
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # 门禁：生产配置安全扫描
+  # 检查：弱密钥、硬编码密码、不安全CORS、测试配置泄漏等
+  # ──────────────────────────────────────────────────────────────────────────
   security-config-scan:
     name: 生产配置安全扫描
     runs-on: ubuntu-latest
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: 扫描不安全配置
       run: |
         echo "🔍 开始生产配置安全扫描..."
         ERRORS=0
 
+        # 1. 检查生产CORS是否包含localhost或http
         if grep -q "localhost" backend/src/main/resources/application-prod.yml 2>/dev/null; then
           echo "❌ 生产CORS配置包含localhost"
           ERRORS=$((ERRORS + 1))
@@ -46,21 +55,25 @@ jobs:
           ERRORS=$((ERRORS + 1))
         fi
 
+        # 2. 检查生产配置是否使用弱JWT密钥
         if grep -q "ThisIsA_LocalJwtSecret" backend/src/main/resources/application-prod.yml 2>/dev/null; then
           echo "❌ 生产环境使用开发JWT密钥"
           ERRORS=$((ERRORS + 1))
         fi
 
+        # 3. 检查生产配置是否使用弱数据库密码
         if grep -q "changeme" backend/src/main/resources/application-prod.yml 2>/dev/null; then
           echo "❌ 生产环境使用弱数据库密码"
           ERRORS=$((ERRORS + 1))
         fi
 
+        # 4. 检查生产环境是否开启微信Mock
         if grep -q "mock-enabled: true" backend/src/main/resources/application-prod.yml 2>/dev/null; then
           echo "❌ 生产环境开启了微信Mock模式"
           ERRORS=$((ERRORS + 1))
         fi
 
+        # 5. 检查前端是否有localhost硬编码（排除配置文件和构建脚本）
         FOUND_LOCALHOST=$(grep -rn "localhost:5173\|localhost:8080\|localhost:8088" \
           frontend/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "vite.config\|.env\|node_modules" || true)
         if [ -n "$FOUND_LOCALHOST" ]; then
@@ -69,10 +82,12 @@ jobs:
           ERRORS=$((ERRORS + 1))
         fi
 
+        # 6. 检查回调URL占位符
         if grep -q "你的域名" backend/src/main/resources/application-prod.yml 2>/dev/null; then
           echo "⚠️  生产配置中存在'你的域名'占位符"
         fi
 
+        # 7. 检查前端是否有生产环境不应有的console.log（非DEV守卫）
         BARE_CONSOLE=$(grep -rn "console\.log" frontend/src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
           | grep -v "isDev\|import.meta.env.DEV\|logger\|errorHandling\|wrap(\|//.*console\|console\.log(res\|console\.log(stats\|console\.log(config" || true)
         if [ -n "$BARE_CONSOLE" ]; then
@@ -95,12 +110,12 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 设置 JDK 21
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '21'
         distribution: 'temurin'
@@ -111,27 +126,41 @@ jobs:
       run: |
         mvn clean compile checkstyle:check -q
 
-    - name: 运行后端单元测试（全量，排除integration组）
+    - name: 运行后端单元测试 + Jacoco覆盖率报告
       working-directory: ./backend
       run: |
-        mvn test \
+        mvn test jacoco:report \
           -Dspring.profiles.active=test \
           -DexcludedGroups=integration \
           -Dsurefire.failIfNoSpecifiedTests=false
 
-  frontend-check-and-build:
-    name: 前端检查 + 构建
+    - name: 输出测试统计
+      working-directory: ./backend
+      run: |
+        TEST_COUNT=$(find target/surefire-reports -name "*.xml" 2>/dev/null | wc -l)
+        if [ "$TEST_COUNT" -gt 0 ]; then
+          echo "✅ 共找到 ${TEST_COUNT} 个测试报告"
+          grep -h "testcase" target/surefire-reports/*.xml 2>/dev/null | wc -l | xargs echo "✅ 测试用例总数:"
+        else
+          echo "⚠️  当前没有测试用例（surefire-reports 为空）"
+        fi
+        if [ -f target/site/jacoco/index.html ]; then
+          echo "📊 Jacoco覆盖率报告: target/site/jacoco/index.html"
+        fi
+
+  frontend-lint:
+    name: 前端代码规范检查 (ESLint + TypeScript)
     runs-on: ubuntu-latest
     needs: [entity-flyway-check, security-config-scan]
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 设置 Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '20'
         cache: 'npm'
@@ -139,7 +168,7 @@ jobs:
 
     - name: 安装依赖
       working-directory: ./frontend
-      run: npm ci --legacy-peer-deps
+      run: npm install --legacy-peer-deps
 
     - name: ESLint 代码规范检查
       working-directory: ./frontend
@@ -149,12 +178,34 @@ jobs:
       working-directory: ./frontend
       run: npx tsc --noEmit
 
+  frontend-build:
+    name: 前端构建
+    runs-on: ubuntu-latest
+    needs: [entity-flyway-check, frontend-lint]
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 设置 Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
+
+    - name: 安装依赖
+      working-directory: ./frontend
+      run: npm install --legacy-peer-deps
+
     - name: 运行构建
       working-directory: ./frontend
       run: npm run build
 
     - name: 上传构建产物
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-dist
         path: frontend/dist
@@ -163,12 +214,12 @@ jobs:
   deploy:
     name: 部署到微信云托管
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-check-and-build]
+    needs: [backend-test, frontend-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -196,7 +247,7 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
@@ -219,7 +270,7 @@ jobs:
   notify:
     name: 通知结果
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-check-and-build, deploy]
+    needs: [backend-test, frontend-build, deploy]
     if: always()
 
     steps:
@@ -227,5 +278,5 @@ jobs:
       run: |
         echo "CI/CD Pipeline 完成"
         echo "后端测试: ${{ needs.backend-test.result }}"
-        echo "前端构建: ${{ needs.frontend-check-and-build.result }}"
+        echo "前端构建: ${{ needs.frontend-build.result }}"
         echo "部署结果: ${{ needs.deploy.result }}"
