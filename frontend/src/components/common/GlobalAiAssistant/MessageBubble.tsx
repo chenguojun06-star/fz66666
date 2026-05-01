@@ -172,28 +172,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               ))
             }}
           />
-          {msg.text.includes('【推荐追问】：') && (
-            <div className={msgStyles.recommendWrapper}>
-              <div className={msgStyles.recommendTitle}>你可以接着问：</div>
-              <div className={msgStyles.recommendPills}>
-                {msg.text.split('【推荐追问】：')[1].split('|').map((q, idx) => {
-                  const question = q.trim();
-                  if (!question) return null;
-                  return <div key={idx} className={msgStyles.recommendPill} onClick={() => onSend(question)}>{question}</div>;
-                })}
-              </div>
-            </div>
-          )}
+
           {msg.intent && (
             <div className={msgStyles.intentWidgetHint} onClick={() => onJumpToIntelligence(msg.text)}>
               <ExportOutlined /> 在智能驾驶舱展开查看完整图表
             </div>
           )}
-          {msg.agentCommandId && (
-            <div className={msgStyles.quickActionsRow}>
-              <button className={styles.actionBtn} onClick={() => void onShowRecentTraces()}>最近小云执行记录</button>
-            </div>
-          )}
+
           {msg.agentTraceCard && (
             <div className={msgStyles.teamStatusWrapper}><AiTraceCardWidget card={msg.agentTraceCard} /></div>
           )}

@@ -41,6 +41,7 @@ public class SystemOverviewTool implements AgentTool {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+    private static final java.util.Set<String> TERMINAL_STATUSES_UPPER = java.util.Set.of("COMPLETED", "CANCELLED", "SCRAPPED", "ARCHIVED", "CLOSED");
 
     @Override
     public String getName() {
@@ -158,22 +159,21 @@ public class SystemOverviewTool implements AgentTool {
     private Map<String, Object> buildRiskStats(Long tenantId, String factoryId) {
         Map<String, Object> risk = new LinkedHashMap<>();
 
-        // 逾期订单（planned_end_date < now 且未完成）
+        // 逾期订单（planned_end_date < now 且未完成），按逾期天数降序
         QueryWrapper<ProductionOrder> overdueQuery = new QueryWrapper<>();
         overdueQuery.eq("delete_flag", 0)
-                .notIn("status", TERMINAL_STATUSES)
+                .notIn("status", TERMINAL_STATUSES_UPPER)
                 .isNotNull("planned_end_date")
-                .lt("planned_end_date", LocalDateTime.now());
+                .lt("planned_end_date", LocalDateTime.now())
+                .orderByAsc("planned_end_date");
         overdueQuery.eq("tenant_id", tenantId);
         overdueQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         List<ProductionOrder> overdueOrders = productionOrderService.list(overdueQuery);
         risk.put("overdueCount", overdueOrders.size());
 
-        // 展示前5个逾期订单
+        // 全部展示（AI提示最多返回，Dashboard前端自行截断）
         List<Map<String, Object>> overdueList = new ArrayList<>();
-        int limit = Math.min(overdueOrders.size(), 5);
-        for (int i = 0; i < limit; i++) {
-            ProductionOrder o = overdueOrders.get(i);
+        for (ProductionOrder o : overdueOrders) {
             Map<String, Object> dto = new LinkedHashMap<>();
             dto.put("orderNo", o.getOrderNo());
             dto.put("styleName", o.getStyleName());
@@ -286,7 +286,7 @@ public class SystemOverviewTool implements AgentTool {
 
         // 已逾期订单 — 最高优先级
         QueryWrapper<ProductionOrder> overdueQ = new QueryWrapper<>();
-        overdueQ.eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES)
+        overdueQ.eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES_UPPER)
                 .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
         overdueQ.eq("tenant_id", tenantId);
         overdueQ.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
