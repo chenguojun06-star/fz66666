@@ -229,9 +229,8 @@ public class AgentLoopEngine {
         cb.onAnswer(revisedContent, ctx.getCommandId());
         cb.onToolExecRecords(ctx.getAllExecRecords());
 
-        // 手机/PC端均不需要追问按钮——直接给答案更清爽
         try {
-            List<FollowUpAction> followUps = List.of();
+            List<FollowUpAction> followUps = followUpSuggestionEngine.generate(ctx.getAllExecRecords(), ctx.getUserMessage());
             if (!followUps.isEmpty()) {
                 cb.onFollowUpActions(followUps);
             }

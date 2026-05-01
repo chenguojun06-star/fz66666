@@ -389,17 +389,17 @@ public class IntelligenceInferenceOrchestrator {
         if (userMessage == null || userMessage.isBlank()) return null;
         String msg = userMessage.toLowerCase();
         if (msg.contains("订单") && (msg.contains("进度") || msg.contains("状态")))
-            return "请前往「生产管理」→「订单列表」查看订单进度详情。";
+            return "正在为您查询订单进度，请稍候…";
         if (msg.contains("延期") || msg.contains("逾期"))
-            return "请前往「智能大脑」→「交付风险」查看延期订单分析。";
+            return "正在为您分析延期订单，请稍候…";
         if (msg.contains("扫码") || msg.contains("产量"))
-            return "请前往「扫码工作台」查看今日扫码统计。";
+            return "正在为您统计扫码数据，请稍候…";
         if (msg.contains("工资") || msg.contains("结算"))
-            return "请前往「财务结算」→「工资单」查看结算详情。";
+            return "正在为您汇总结算信息，请稍候…";
         if (msg.contains("库存") || msg.contains("入库"))
-            return "请前往「仓储管理」查看库存和入库记录。";
+            return "正在为您查询库存信息，请稍候…";
         if (msg.contains("瓶颈") || msg.contains("堵塞"))
-            return "请前往「智能大脑」→「瓶颈分析」查看生产瓶颈。";
+            return "正在为您分析瓶颈数据，请稍候…";
         if (msg.contains("帮助") || msg.contains("怎么"))
             return "您可以问我关于订单进度、扫码统计、工资结算、库存查询等问题。";
         return null;
