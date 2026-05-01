@@ -448,7 +448,7 @@ public class OrderProfitOrchestrator {
                 BigDecimal up = p.getUnitPrice();
                 if (up != null) {
                     int pq = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity().intValue();
-                    int aq = p.getArrivedQuantity() == null ? 0 : p.getArrivedQuantity();
+                    int aq = p.getArrivedQuantity() == null ? 0 : p.getArrivedQuantity().intValue();
                     int eff = materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq);
                     if (eff <= 0) continue;
                     amt = up.multiply(BigDecimal.valueOf(eff));

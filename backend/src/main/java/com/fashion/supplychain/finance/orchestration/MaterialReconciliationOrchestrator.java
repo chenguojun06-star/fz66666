@@ -124,7 +124,7 @@ public class MaterialReconciliationOrchestrator {
                             data.unitPriceByPurchaseId.put(pid, p.getUnitPrice());
                         }
                         if (p.getArrivedQuantity() != null) {
-                            data.arrivedQuantityByPurchaseId.put(pid, p.getArrivedQuantity());
+                            data.arrivedQuantityByPurchaseId.put(pid, p.getArrivedQuantity().intValue());
                         }
                         if (StringUtils.hasText(p.getSourceType())) {
                             data.sourceTypeByPurchaseId.put(pid, p.getSourceType().trim());
@@ -652,7 +652,7 @@ public class MaterialReconciliationOrchestrator {
         if (purchase == null) {
             return 0;
         }
-        int aq = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
+        int aq = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity().intValue();
         int pq = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
         if (pq > 0) {
             try {

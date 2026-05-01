@@ -403,7 +403,8 @@ public class OpenApiMaterialHelper {
                     purchase.setSpecifications(OpenApiParseUtils.valueAsString(item.get("specifications"), null));
                     purchase.setUnit(OpenApiParseUtils.valueAsString(item.get("unit"), "米"));
                     purchase.setPurchaseQuantity(purchaseQuantity != null ? new BigDecimal(purchaseQuantity) : null);
-                    purchase.setArrivedQuantity(OpenApiParseUtils.parseInteger(item.get("arrivedQuantity")) == null ? 0 : OpenApiParseUtils.parseInteger(item.get("arrivedQuantity")));
+                    Integer aqi = OpenApiParseUtils.parseInteger(item.get("arrivedQuantity"));
+                    purchase.setArrivedQuantity(aqi != null ? aqi : 0);
                     purchase.setSupplierName(OpenApiParseUtils.valueAsString(item.get("supplierName"), app.getAppName()));
                     purchase.setRemark(OpenApiParseUtils.valueAsString(item.get("remark"), "[OpenAPI批量上传]"));
                     purchase.setStatus(OpenApiParseUtils.valueAsString(item.get("status"), "pending"));
