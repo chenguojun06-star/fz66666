@@ -174,6 +174,8 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     .replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '')
     .replace(/【OVERDUE_FACTORY】[\s\S]*?【\/OVERDUE_FACTORY】/g, '')
     .replace(/【REPORT_PREVIEW】[\s\S]*?【\/REPORT_PREVIEW】/g, '')
+    // 推荐追问内容不纳入 AI 上下文历史，只用于前端展示
+    .replace(/【推荐追问】：[\s\S]*$/, '')
     .trim();
 
   return {
