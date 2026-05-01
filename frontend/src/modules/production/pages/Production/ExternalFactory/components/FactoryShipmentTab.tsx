@@ -17,7 +17,9 @@ interface FactoryShipmentTabProps {
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
   pending: { color: 'orange', label: '待收货' },
-  received: { color: 'green', label: '已收货' },
+  received: { color: 'blue', label: '已收货' },
+  quality_checked: { color: 'purple', label: '已质检' },
+  partially_returned: { color: 'red', label: '部分退回返修' },
 };
 
 const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactoryId }) => {
@@ -166,7 +168,9 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
     }
     setReceiveLoading(true);
     try {
-      await factoryShipmentApi.receive(receiveRecord.id!, receiveQty === receiveRecord.shipQuantity ? undefined : receiveQty);
+      await factoryShipmentApi.receive(receiveRecord.id!, {
+        receivedQuantity: receiveQty === receiveRecord.shipQuantity ? undefined : receiveQty,
+      });
       message.success('收货成功');
       setReceiveModalOpen(false);
       fetchShipments();

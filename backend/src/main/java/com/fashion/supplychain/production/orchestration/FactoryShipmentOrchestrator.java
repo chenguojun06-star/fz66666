@@ -18,12 +18,30 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * 外发工厂发货/收货/质检 Orchestrator。
+ * <p>
+ * 闭环流程：
+ * <ol>
+ *   <li>外发工厂发货 (ship) → 创建发货单，状态 pending</li>
+ *   <li>租户收货确认 (receive) → 确认物流到货，状态 received</li>
+ *   <li>质检扫码 (qualityCheck) → 分出合格品/次品，状态 quality_checked</li>
+ *   <li>合格品走成品入库 → 现有 ProductWarehousing 流程</li>
+ *   <li>次品退回外发厂 → 外发厂返修 → 重新发货 → 回到步骤 1</li>
+ * </ol>
+ * </p>
+ *
+ * <p>关键规则：
+ * <ul>
+ *   <li>发货/收货不做库存变更 — 库存变更由成品入库(warehousing)负责</li>
+ *   <li>收货由租户（本厂）操作，非外发工厂账号</li>
+ *   <li>发货量不能超过裁剪总量</li>
+ * </ul>
+ * </p>
+ */
 @Service
 @Slf4j
 public class FactoryShipmentOrchestrator {
@@ -39,6 +57,12 @@ public class FactoryShipmentOrchestrator {
     @Autowired
     private ProductSkuService productSkuService;
 
+    // ===== 发货 =====
+
+    /**
+     * 外发工厂发货 — 创建发货单（仅物流记录，不影响库存）。
+     * SKU 库存变更由成品入库(warehousing)负责。
+     */
     @Transactional(rollbackFor = Exception.class)
     public Result<FactoryShipment> ship(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -51,6 +75,7 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+        // 发货权限：外发工厂账号只能发自己工厂的订单；租户管理员可代为发货
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(order.getFactoryId())) {
             return Result.fail("无权操作其他工厂的订单");
@@ -68,7 +93,7 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("发货数量明细总量必须大于 0");
         }
 
-        // 裁剪总量（上限）
+        // 裁剪总量上限校验
         Map<String, Object> summary = cuttingBundleService.summarize(order.getOrderNo(), orderId);
         int cuttingTotal = summary != null ? (int) summary.getOrDefault("totalQuantity", 0) : 0;
         int alreadyShipped = factoryShipmentService.sumShippedByOrderId(orderId);
@@ -95,19 +120,26 @@ public class FactoryShipmentOrchestrator {
         fs.setShipMethod((String) params.get("shipMethod"));
         fs.setRemark((String) params.get("remark"));
         fs.setReceiveStatus("pending");
+        fs.setReceivedQuantity(0);
 
         factoryShipmentService.save(fs);
         factoryShipmentDetailService.saveDetails(fs.getId(), details, UserContext.tenantId());
 
-        deductSkuStockOnShip(fs.getStyleNo(), details);
-
-        log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={} skuLines={}",
-                fs.getShipmentNo(), orderId, shipQuantity, details.size());
+        // 发货不扣库存！库存变更由成品入库负责
+        log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={} skuLines={} factory={}",
+                fs.getShipmentNo(), orderId, shipQuantity, details.size(), order.getFactoryName());
         return Result.success(fs);
     }
 
+    // ===== 收货确认（物流级） =====
+
+    /**
+     * 租户收货确认 — 仅确认物流到货，不做库存变更。
+     * 收货后需走质检→成品入库流程才会增加库存。
+     */
     @Transactional(rollbackFor = Exception.class)
-    public Result<FactoryShipment> receive(String shipmentId, Integer receivedQuantity) {
+    public Result<FactoryShipment> receive(String shipmentId, Integer receivedQuantity,
+                                           List<Map<String, Object>> receiveDetails) {
         if (!StringUtils.hasText(shipmentId)) {
             return Result.fail("缺少发货单 ID");
         }
@@ -115,19 +147,32 @@ public class FactoryShipmentOrchestrator {
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
-        if ("received".equals(fs.getReceiveStatus())) {
-            return Result.fail("该发货单已收货，请勿重复操作");
-        }
-        String ctxFactoryId = UserContext.factoryId();
-        if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(fs.getFactoryId())) {
-            return Result.fail("无权操作其他工厂的发货单");
+        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
+        if (!"pending".equals(fs.getReceiveStatus())) {
+            return Result.fail("该发货单状态为 " + fs.getReceiveStatus() + "，无法收货");
         }
 
-        int actualQty = (receivedQuantity != null && receivedQuantity > 0)
-                ? receivedQuantity : fs.getShipQuantity();
+        // 收货由租户（本厂）操作，非外发工厂
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            return Result.fail("外发工厂账号不可操作收货，请使用本厂账号");
+        }
+
+        int actualQty = 0;
+        if (receiveDetails != null && !receiveDetails.isEmpty()) {
+            // 颜色/尺码粒度收货
+            actualQty = receiveDetails.stream()
+                    .mapToInt(d -> d.get("quantity") instanceof Number ? ((Number) d.get("quantity")).intValue() : 0)
+                    .sum();
+            factoryShipmentDetailService.updateReceivedDetails(shipmentId, receiveDetails);
+        } else if (receivedQuantity != null && receivedQuantity > 0) {
+            actualQty = receivedQuantity;
+        } else {
+            actualQty = fs.getShipQuantity();
+        }
+
         if (actualQty > fs.getShipQuantity()) {
-            return Result.fail("实际到货数量不能超过发货数量(" + fs.getShipQuantity() + ")");
+            return Result.fail("实际到货数量(" + actualQty + ")不能超过发货数量(" + fs.getShipQuantity() + ")");
         }
 
         fs.setReceiveStatus("received");
@@ -142,6 +187,90 @@ public class FactoryShipmentOrchestrator {
         return Result.success(fs);
     }
 
+    // ===== 质检 =====
+
+    /**
+     * 质检 — 区分合格品/次品数量。
+     * 合格品后续走成品入库流程增加库存。
+     * 次品如需退回外发厂返修，调用 returnDefective。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Result<FactoryShipment> qualityCheck(String shipmentId, int qualifiedQty, int defectiveQty,
+                                                 List<Map<String, Object>> qualityDetails) {
+        if (!StringUtils.hasText(shipmentId)) {
+            return Result.fail("缺少发货单 ID");
+        }
+        FactoryShipment fs = factoryShipmentService.getById(shipmentId);
+        if (fs == null) {
+            return Result.fail("发货单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
+        if (!"received".equals(fs.getReceiveStatus())) {
+            return Result.fail("仅已收货状态可质检，当前状态: " + fs.getReceiveStatus());
+        }
+
+        int total = qualifiedQty + defectiveQty;
+        if (total > fs.getReceivedQuantity()) {
+            return Result.fail("质检总数量(" + total + ")超过收货数量(" + fs.getReceivedQuantity() + ")");
+        }
+
+        fs.setReceiveStatus("quality_checked");
+        factoryShipmentService.updateById(fs);
+
+        // 记录质检明细（颜色/尺码级别的合格/次品数量）
+        if (qualityDetails != null && !qualityDetails.isEmpty()) {
+            factoryShipmentDetailService.updateQualityDetails(shipmentId, qualityDetails);
+        }
+
+        log.info("[FactoryShipment] 质检完成 shipmentId={} qualified={} defective={}",
+                shipmentId, qualifiedQty, defectiveQty);
+        return Result.success(fs);
+    }
+
+    // ===== 次品退回返修 =====
+
+    /**
+     * 次品退回外发厂返修 — 创建返修记录，允许工厂重新发货。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Result<FactoryShipment> returnDefective(String shipmentId, int returnQty,
+                                                    List<Map<String, Object>> returnDetails) {
+        if (!StringUtils.hasText(shipmentId)) {
+            return Result.fail("缺少发货单 ID");
+        }
+        FactoryShipment fs = factoryShipmentService.getById(shipmentId);
+        if (fs == null) {
+            return Result.fail("发货单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
+        if (!"quality_checked".equals(fs.getReceiveStatus())
+                && !"received".equals(fs.getReceiveStatus())) {
+            return Result.fail("当前状态不可退回返修: " + fs.getReceiveStatus());
+        }
+
+        if (returnQty <= 0) {
+            return Result.fail("返修数量须大于0");
+        }
+
+        // 记录返修明细
+        if (returnDetails != null && !returnDetails.isEmpty()) {
+            factoryShipmentDetailService.markReturned(shipmentId, returnDetails);
+        }
+
+        // 退回后状态回退到 pending，允许工厂重新发货
+        // 已收货数量 = 减去退回的（剩余是未退回的合格品）
+        int remaining = Math.max(0, fs.getReceivedQuantity() - returnQty);
+        fs.setReceiveStatus("partially_returned");
+        fs.setReceivedQuantity(remaining);
+        factoryShipmentService.updateById(fs);
+
+        log.info("[FactoryShipment] 次品退回返修 shipmentId={} returnQty={} remainingQty={}",
+                shipmentId, returnQty, remaining);
+        return Result.success(fs);
+    }
+
+    // ===== 删除发货单 =====
+
     @Transactional(rollbackFor = Exception.class)
     public Result<Void> deleteShipment(String shipmentId) {
         if (!StringUtils.hasText(shipmentId)) {
@@ -151,9 +280,9 @@ public class FactoryShipmentOrchestrator {
         if (fs == null) {
             return Result.fail("发货单不存在");
         }
-        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
-        if ("received".equals(fs.getReceiveStatus())) {
-            return Result.fail("已收货的发货单不可删除");
+        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
+        if ("received".equals(fs.getReceiveStatus()) || "quality_checked".equals(fs.getReceiveStatus())) {
+            return Result.fail("已收货/已质检的发货单不可删除，请走退货返修流程");
         }
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(fs.getFactoryId())) {
@@ -162,36 +291,58 @@ public class FactoryShipmentOrchestrator {
         FactoryShipment patch = new FactoryShipment();
         patch.setId(shipmentId);
         patch.setDeleteFlag(1);
-        patch.setUpdateTime(java.time.LocalDateTime.now());
+        patch.setUpdateTime(LocalDateTime.now());
         factoryShipmentService.updateById(patch);
-
-        restoreSkuStockOnDelete(fs);
 
         log.info("[FactoryShipment] 软删除发货单 shipmentId={}", shipmentId);
         return Result.success(null);
     }
 
+    // ===== 查询 =====
+
     /**
-     * 获取某订单所有发货单中明细的颜色×尺码汇总，用于进度表 发货数量 列展示。
-     * 返回格式：[{color, sizes:[{sizeName, quantity}], total}]
+     * 获取可发货信息（裁剪总量 / 已发 / 剩余）。
+     */
+    public Map<String, Object> getShippableInfo(String orderId) {
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId)
+                .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
+        int cuttingTotal = 0;
+        if (order != null) {
+            Map<String, Object> summary = cuttingBundleService.summarize(order.getOrderNo(), orderId);
+            cuttingTotal = summary != null ? (int) summary.getOrDefault("totalQuantity", 0) : 0;
+        }
+        int shipped = factoryShipmentService.sumShippedByOrderId(orderId);
+
+        Map<String, Object> info = new HashMap<>();
+        info.put("cuttingTotal", cuttingTotal);
+        info.put("shippedTotal", shipped);
+        info.put("remaining", Math.max(0, cuttingTotal - shipped));
+        return info;
+    }
+
+    /**
+     * 获取某订单所有发货单中明细的颜色×尺码汇总。
      */
     public List<Map<String, Object>> getOrderShipmentDetailSum(String orderId) {
         List<FactoryShipment> shipments = factoryShipmentService.lambdaQuery()
                 .eq(FactoryShipment::getOrderId, orderId)
                 .eq(FactoryShipment::getDeleteFlag, 0)
                 .list();
-        java.util.Set<String> shipmentIds = shipments.stream()
+        Set<String> shipmentIds = shipments.stream()
                 .map(FactoryShipment::getId)
-                .collect(java.util.stream.Collectors.toSet());
-        java.util.Map<String, List<FactoryShipmentDetail>> detailMap = shipmentIds.isEmpty()
-                ? java.util.Collections.emptyMap()
+                .collect(Collectors.toSet());
+        Map<String, List<FactoryShipmentDetail>> detailMap = shipmentIds.isEmpty()
+                ? Collections.emptyMap()
                 : factoryShipmentDetailService.lambdaQuery()
                         .in(FactoryShipmentDetail::getShipmentId, shipmentIds)
                         .list().stream()
-                        .collect(java.util.stream.Collectors.groupingBy(FactoryShipmentDetail::getShipmentId));
+                        .collect(Collectors.groupingBy(FactoryShipmentDetail::getShipmentId));
         Map<String, Map<String, Integer>> colorSizeMap = new LinkedHashMap<>();
         for (FactoryShipment fs : shipments) {
-            List<FactoryShipmentDetail> details = detailMap.getOrDefault(fs.getId(), java.util.Collections.emptyList());
+            List<FactoryShipmentDetail> details = detailMap.getOrDefault(fs.getId(), Collections.emptyList());
             for (FactoryShipmentDetail d : details) {
                 String color = d.getColor() != null ? d.getColor() : "";
                 String size  = d.getSizeName() != null ? d.getSizeName() : "";
@@ -217,69 +368,5 @@ public class FactoryShipmentOrchestrator {
             result.add(row);
         }
         return result;
-    }
-
-    public Map<String, Object> getShippableInfo(String orderId) {
-        ProductionOrder order = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getId, orderId)
-                .eq(ProductionOrder::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .one();
-        int cuttingTotal = 0;
-        if (order != null) {
-            Map<String, Object> summary = cuttingBundleService.summarize(order.getOrderNo(), orderId);
-            cuttingTotal = summary != null ? (int) summary.getOrDefault("totalQuantity", 0) : 0;
-        }
-        int shipped = factoryShipmentService.sumShippedByOrderId(orderId);
-
-        Map<String, Object> info = new HashMap<>();
-        info.put("cuttingTotal", cuttingTotal);
-        info.put("shippedTotal", shipped);
-        info.put("remaining", Math.max(0, cuttingTotal - shipped));
-        return info;
-    }
-
-    private void deductSkuStockOnShip(String styleNo, List<Map<String, Object>> details) {
-        if (!StringUtils.hasText(styleNo) || details == null || details.isEmpty()) {
-            return;
-        }
-        for (Map<String, Object> d : details) {
-            String color = (String) d.getOrDefault("color", "");
-            String sizeName = (String) d.getOrDefault("sizeName", "");
-            int qty = d.get("quantity") instanceof Number ? ((Number) d.get("quantity")).intValue() : 0;
-            if (qty <= 0 || !StringUtils.hasText(color) || !StringUtils.hasText(sizeName)) {
-                continue;
-            }
-            String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), sizeName.trim());
-            try {
-                productSkuService.updateStock(skuCode, -qty);
-            } catch (Exception e) {
-                log.warn("[FactoryShipment] SKU库存扣减失败: skuCode={}, qty={}, error={}", skuCode, qty, e.getMessage());
-            }
-        }
-    }
-
-    private void restoreSkuStockOnDelete(FactoryShipment fs) {
-        if (fs == null || !StringUtils.hasText(fs.getStyleNo())) {
-            return;
-        }
-        List<FactoryShipmentDetail> details = factoryShipmentDetailService.listByShipmentId(fs.getId());
-        if (details == null || details.isEmpty()) {
-            return;
-        }
-        for (FactoryShipmentDetail d : details) {
-            String color = d.getColor();
-            String sizeName = d.getSizeName();
-            int qty = d.getQuantity() != null ? d.getQuantity() : 0;
-            if (qty <= 0 || !StringUtils.hasText(color) || !StringUtils.hasText(sizeName)) {
-                continue;
-            }
-            String skuCode = String.format("%s-%s-%s", fs.getStyleNo().trim(), color.trim(), sizeName.trim());
-            try {
-                productSkuService.updateStock(skuCode, qty);
-            } catch (Exception e) {
-                log.warn("[FactoryShipment] SKU库存恢复失败: skuCode={}, qty={}, error={}", skuCode, qty, e.getMessage());
-            }
-        }
     }
 }
