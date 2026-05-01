@@ -78,7 +78,8 @@
             <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
             <view class="bubble">
               <image class="msg-image" src="{{item.imageUrl}}" mode="widthFix" catchtap="previewImage" data-src="{{item.imageUrl}}" wx:if="{{item.imageUrl}}" />
-              <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
+              <text class="message-text" user-select wx:elif="{{item.content && item.role === 'user'}}">{{item.content}}</text>
+              <rich-text class="message-text" nodes="{{item.richContent || item.content}}" wx:elif="{{item.content && item.role === 'ai'}}"></rich-text>
               <view class="action-cards" wx:if="{{item.actions && item.actions.length > 0}}">
                 <view class="action-card" wx:for="{{item.actions}}" wx:for-item="act" wx:key="label">
                   <view class="action-card-body">

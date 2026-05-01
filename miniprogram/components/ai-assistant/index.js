@@ -2,6 +2,36 @@ const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
 
+// 简单markdown转html，供rich-text渲染
+function mdToHtml(text) {
+  if (!text) return '';
+  var t = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  var lines = t.split('\n');
+  var result = [];
+  var inList = false;
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i];
+    var trimmed = l.trim();
+    if (trimmed.match(/^[-*]\s/)) {
+      if (!inList) { result.push('<ul>'); inList = true; }
+      result.push('<li>' + trimmed.replace(/^[-*]\s/, '') + '</li>');
+    } else if (trimmed.match(/^\d+[\.\\)]\s/)) {
+      if (!inList) { result.push('<ul>'); inList = true; }
+      result.push('<li>' + trimmed.replace(/^\d+[\.\\)]\s/, '') + '</li>');
+    } else {
+      if (inList) { result.push('</ul>'); inList = false; }
+      if (l) result.push('<p>' + (trimmed || '') + '</p>');
+    }
+  }
+  if (inList) result.push('</ul>');
+  return result.join('');
+}
+
 var TOOL_NAMES = {
   tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
   tool_query_warehouse_stock: '库存查询', tool_finished_product_stock: '成品库存',
@@ -161,7 +191,7 @@ Component({
         } catch (_e) { /* ignore unreadable chat history */ }
 
         var initMsgs = savedMessages.length > 0 ? savedMessages : [{
-          id: Date.now(), role: 'ai', content: greeting,
+          id: Date.now(), role: 'ai', content: greeting, richContent: mdToHtml(greeting),
         }];
         this._setMessages(initMsgs, {
           isManager, triggerX: tx, triggerY: ty, edgeSide: edge,
@@ -504,6 +534,7 @@ Component({
             }
             var completedAiMsg = {
               id: aiMsgId, role: 'ai', content: parsed.text,
+              richContent: mdToHtml(parsed.text),
               recommendPills: recommendPills,
               actions: actions,
               insightCards: parsed.insightCards || [],
@@ -517,7 +548,7 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              var streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              var streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText, richContent: mdToHtml(accumulatedText) };
               self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
@@ -564,6 +595,7 @@ Component({
               var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
               var syncAiMsg = {
                 id: aiMsgId, role: 'ai', content: parsed.text,
+                richContent: mdToHtml(parsed.text),
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
                 insightCards: parsed.insightCards || [],
@@ -573,7 +605,7 @@ Component({
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
-              var errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。' };
+              var errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。', richContent: '服务暂时无法响应，请稍后再试。' };
               self._setMessages([].concat(self.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
             }
