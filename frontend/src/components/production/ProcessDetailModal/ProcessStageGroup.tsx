@@ -42,6 +42,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
         stageName={stageName}
         processCount={processes.length}
         stageTotal={stageTotal}
+        cuttingQty={cuttingQty}
         procurementStatus={procurementStatus}
         processStatus={processStatus}
         orderNo={orderNo}
@@ -112,24 +113,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
           },
         ]}
         pagination={false}
-        size="small"
-        summary={() => (
-          <ResizableTable.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
-            <ResizableTable.Summary.Cell index={0} colSpan={5} align="right">
-              <span style={{ fontWeight: 600 }}>合计</span>
-            </ResizableTable.Summary.Cell>
-            <ResizableTable.Summary.Cell index={1} align="right">
-              <span style={{ fontWeight: 700, color: '#dc2626' }}>
-                ¥{stageTotal.toFixed(2)}
-              </span>
-            </ResizableTable.Summary.Cell>
-            <ResizableTable.Summary.Cell index={2} align="right">
-              <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
-                ¥{(stageTotal * cuttingQty).toFixed(2)}
-              </span>
-            </ResizableTable.Summary.Cell>
-          </ResizableTable.Summary.Row>
-        )}
+        size="middle"
       />
     </div>
   );
@@ -140,11 +124,12 @@ const StageHeader: React.FC<{
   stageName: string;
   processCount: number;
   stageTotal: number;
+  cuttingQty: number;
   procurementStatus?: any;
   processStatus?: any;
   orderNo?: string;
   onNavigateToPayroll: (processName: string) => void;
-}> = ({ stageKey, stageName, processCount, stageTotal, procurementStatus, processStatus, orderNo, onNavigateToPayroll }) => (
+}> = ({ stageKey, stageName, processCount, stageTotal, cuttingQty, procurementStatus, processStatus, orderNo, onNavigateToPayroll }) => (
   <div style={{
     background: '#f3f4f6',
     padding: '10px 16px',
@@ -167,9 +152,14 @@ const StageHeader: React.FC<{
         <CuttingStatus status={processStatus.cutting} />
       )}
     </div>
-    <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>
-      小计: ¥{stageTotal.toFixed(2)}
-    </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>
+        小计: ¥{stageTotal.toFixed(2)}
+      </span>
+      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-success)' }}>
+        总工资: ¥{(stageTotal * cuttingQty).toFixed(2)}
+      </span>
+    </div>
   </div>
 );
 
