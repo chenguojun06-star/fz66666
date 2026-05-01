@@ -390,7 +390,12 @@ public class AiPatrolJob {
                 ctx.setUserId("system");
                 UserContext.set(ctx);
 
-                List<CollaborationTask> overdueTasks = collaborationTaskMapper.findOverdueNotEscalated(tenantId, 50);
+                List<CollaborationTask> overdueTasks = collaborationTaskMapper.selectList(
+                        new QueryWrapper<CollaborationTask>()
+                                .eq("overdue", true)
+                                .in("task_status", "PENDING", "ACCEPTED", "IN_PROGRESS")
+                                .isNull("escalated_at")
+                                .last("ORDER BY FIELD(priority, 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'), due_at ASC LIMIT 50"));
                 if (overdueTasks.isEmpty()) continue;
 
                 int escalated = 0;
