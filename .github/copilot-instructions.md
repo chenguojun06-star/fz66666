@@ -1355,9 +1355,12 @@ SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ```
 
-1. 🚨 **`SET @s = IF(...)`** **块内的 SQL 字符串禁止使用** **`COMMENT ''text''`**\
-   Flyway SQL 解析器把第一个 `''` 当作字符串结束符，`COMMENT` 之后的内容被视为下一条语句 → `ALTER TABLE` 整句被截断 → `PREPARE stmt FROM @s` 执行的是被截断后的 `SELECT 1`，Flyway 不报错但列**永远不被添加**（Silent failure）。\
-   字段注释应写在 `.sql` 文件的行注释 `--` 里，不要放进动态 SQL 字符串。
+1. 🚨 **`SET @s = IF(...)`** **块内的 SQL 字符串禁止包含任何字符串字面量**（含 `COMMENT ''text''` 和 `DEFAULT ''value''` 等）\
+   Flyway SQL 解析器把第一个 `''` 当作字符串结束符，整个 `ALTER TABLE` 语句被截断 → `PREPARE stmt FROM @s` 执行的是截断后的 `SELECT 1`，Flyway 不报错但列**永远不被添加**（Silent failure）。\
+   - ❌ **所有字符串字面量都不能放入动态 SQL 字符串**：`DEFAULT ''PENDING''`、`DEFAULT ''MEDIUM''`、`COMMENT ''text''` 均触发此 bug\
+   - ✅ **正确**：`DEFAULT NULL`（或数值 `DEFAULT 0`）+ 在动态 SQL **外部**写独立 `UPDATE` 语句回填值\
+   - ✅ 字段注释写在 `.sql` 文件的行注释 `--` 里\
+   - ⚠️ **2026-05-02 事故**：`V202605020930` 中 `DEFAULT ''PENDING''` 导致 `task_status`/`priority` 列静默未添加，定时任务持续报错 `Unknown column 'task_status'`，需要 `V202605021000` 二次补偿
 2. 脚本本地执行通过后再 push，不再需要手动在控制台执行（Flyway 会自动迁移）
 
 **或者**通过容器内执行（如有 SSH/终端权限）：
@@ -2879,10 +2882,12 @@ Flyway 修复（V202607192304，无 COMMENT，全部幂等）：
 
 验证结果：✅ mvn clean compile -q 退出码 = 0 | commit: 65e3d4e7
 
-永久规律（新增）：
+永久规律（扩展版，2026-05-02）：
 ❌ 禁止：SET @s = IF(... 'ALTER TABLE ... COMMENT ''text'''...)
-Flyway 会把 '' 当字符串边界，截断 SQL 导致列永远不被添加
-✅ 正确：ADD COLUMN 语句完全不带 COMMENT（字段注释写在 Flyway .sql 文件注释里即可）
+❌ 禁止：SET @s = IF(... 'ALTER TABLE ... DEFAULT ''PENDING'''...)  ← 2026-05-02 新增案例
+Flyway 会把 '' 当字符串边界，截断 SQL 导致列永远不被添加（Silent failure）
+✅ 正确：动态SQL字符串内只用 DEFAULT NULL / DEFAULT 0，不带任何 '' 字符串字面量
+✅ 正确：字符串回填值通过动态SQL外部的独立 UPDATE 语句写入
 
 ```
 
