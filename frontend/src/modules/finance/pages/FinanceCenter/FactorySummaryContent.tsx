@@ -14,6 +14,7 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { FactoryRank } from '@/services/intelligence/intelligenceApi';
 import ResizableTable from '@/components/common/ResizableTable';
 import FactoryStatementPrintModal from './FactoryStatementPrintModal';
+import FactoryOrderDrilldown from './FactoryOrderDrilldown';
 import dayjs from 'dayjs';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
@@ -68,6 +69,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   const [lbLoading, setLbLoading] = useState(false);
   const [lbCollapsed, setLbCollapsed] = useState(false);
   const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [drilldownOpen, setDrilldownOpen] = useState(false);
+  const [drilldownTarget, setDrilldownTarget] = useState<FactorySummaryRow | null>(null);
 
   const handlePrintStatement = () => {
     if (selectedRowKeys.length === 0) {
@@ -403,8 +406,12 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       key: 'totalAmount',
       width: 120,
       align: 'right',
-      render: (v: unknown) => (
-        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
+      render: (v: unknown, record: FactorySummaryRow) => (
+        <span
+          style={{ fontWeight: 600, color: 'var(--primary-color)', cursor: 'pointer', textDecoration: 'underline' }}
+          title="点击查看订单明细"
+          onClick={() => { setDrilldownTarget(record); setDrilldownOpen(true); }}
+        >
           ¥{toMoney(v)}
         </span>
       ),
@@ -675,6 +682,23 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         factoryData={getPrintData()}
         dateRange={printModalVisible ? getDateRange() : ['-', '-']}
       />
+
+      {drilldownTarget && (
+        <FactoryOrderDrilldown
+          open={drilldownOpen}
+          factoryName={drilldownTarget.factoryName}
+          factoryType={drilldownTarget.factoryType}
+          orderNos={drilldownTarget.orderNos || []}
+          totalAmount={drilldownTarget.totalAmount}
+          totalMaterialCost={drilldownTarget.totalMaterialCost}
+          totalProductionCost={drilldownTarget.totalProductionCost}
+          totalProfit={drilldownTarget.totalProfit}
+          totalDefectQuantity={drilldownTarget.totalDefectQuantity}
+          totalOrderQuantity={drilldownTarget.totalOrderQuantity}
+          totalWarehousedQuantity={drilldownTarget.totalWarehousedQuantity}
+          onClose={() => { setDrilldownOpen(false); setDrilldownTarget(null); }}
+        />
+      )}
     </div>
   );
 };
