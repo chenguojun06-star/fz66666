@@ -26,7 +26,7 @@ public class EntityFactChecker {
     private FactoryService factoryService;
 
     private static final Pattern ORDER_NO_PATTERN = Pattern.compile(
-            "(?:PO[-_]?|订单[号#]?\\s*|order[-_]?no[.:]?\\s*)[A-Za-z0-9][-A-Za-z0-9]{4,30}",
+            "(?:PO[-_]?|ORD[-_]?|CUT[-_]?|订单[号#]?\\s*|order[-_]?no[.:]?\\s*)[A-Za-z0-9][-A-Za-z0-9]{4,30}",
             Pattern.CASE_INSENSITIVE);
 
     public record FactCheckResult(boolean allVerified, List<String> phantomEntities) {
@@ -65,8 +65,9 @@ public class EntityFactChecker {
         List<String> results = new ArrayList<>();
         Matcher m = ORDER_NO_PATTERN.matcher(text);
         while (m.find()) {
-            String raw = m.group().replaceAll("^(?:PO[-_]?|订单[号#]?\\s*|order[-_]?no[.:]?\\s*)", "");
-            if (!raw.isBlank()) results.add(raw);
+            // 保留PO/ORD/CUT前缀（实际订单号格式），仅去掉中文标签
+            var cleaned = m.group().replaceAll("^(?:订单[号#]?\\s*|order[-_]?no[.:]?\\s*)", "");
+            if (!cleaned.isBlank()) results.add(cleaned);
         }
         return results.stream().distinct().limit(10).toList();
     }

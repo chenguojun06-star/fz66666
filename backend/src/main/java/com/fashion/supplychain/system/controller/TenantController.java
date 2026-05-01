@@ -473,8 +473,14 @@ public class TenantController {
     @PostMapping("/registrations/{userId}/approve")
     public Result<Boolean> approveRegistration(@PathVariable Long userId,
                                                 @RequestBody(required = false) Map<String, Object> params) {
-        Long roleId = params != null && params.get("roleId") != null
-                ? Long.valueOf(params.get("roleId").toString()) : null;
+        Long roleId = null;
+        if (params != null && params.get("roleId") != null) {
+            String roleStr = params.get("roleId").toString().trim();
+            if (!roleStr.isEmpty()) {
+                try { roleId = Long.valueOf(roleStr); }
+                catch (NumberFormatException e) { log.warn("roleId格式非法: {}", roleStr); }
+            }
+        }
         return Result.success(tenantOrchestrator.approveRegistration(userId, roleId));
     }
 
