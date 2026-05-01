@@ -67,8 +67,6 @@ public class AiPatrolJob {
     /** 超时任务升级阈值：逾期超过此小时数后自动升级 */
     private static final int ESCALATION_HOURS_THRESHOLD = 4;
 
-    private volatile boolean collaborationTaskSchemaReady = true;
-
     @Autowired
     private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired
@@ -371,9 +369,6 @@ public class AiPatrolJob {
             log.debug("[AiPatrolJob-TaskEscalation] CollaborationTaskMapper 未注入，跳过");
             return;
         }
-        if (!collaborationTaskSchemaReady) {
-            return;
-        }
         List<Long> tenants = processStatsEngine != null
                 ? processStatsEngine.findActiveTenantIds()
                 : null;
@@ -428,15 +423,7 @@ public class AiPatrolJob {
                 }
                 totalEscalated += escalated;
             } catch (Exception e) {
-                String msg = e.getMessage() != null ? e.getMessage() : "";
-                if (msg.contains("Unknown column") || msg.contains("setting parameters")) {
-                    collaborationTaskSchemaReady = false;
-                    log.error("[AiPatrolJob-TaskEscalation] t_collaboration_task 表缺少必要列" +
-                            "（task_status/priority/escalated_at），请确认 Flyway 迁移脚本已执行。" +
-                            "后续扫描将跳过直到应用重启。原始错误: {}", msg);
-                    break;
-                }
-                log.warn("[AiPatrolJob-TaskEscalation] 租户 {} 扫描异常: {}", tenantId, msg);
+                log.warn("[AiPatrolJob-TaskEscalation] 租户 {} 扫描异常: {}", tenantId, e.getMessage(), e);
             } finally {
                 if (previous != null) {
                     UserContext.set(previous);
