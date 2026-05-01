@@ -148,6 +148,22 @@ page {
   margin-right: 4px;
 }
 
+.menu-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 16rpx;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 1;
+  margin-right: 8rpx;
+}
+
 .menu-arrow {
   font-size: var(--font-size-lg);
   color: var(--color-text-disabled);

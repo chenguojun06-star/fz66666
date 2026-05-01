@@ -31,6 +31,7 @@
         <view class="line-icon {{item.iconClass}}"></view>
       </view>
       <text class="menu-label">{{item.label}}</text>
+      <text wx:if="{{item.badge > 0}}" class="menu-badge">{{item.badge > 99 ? '99+' : item.badge}}</text>
       <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
       <text class="menu-arrow">›</text>
     </view>

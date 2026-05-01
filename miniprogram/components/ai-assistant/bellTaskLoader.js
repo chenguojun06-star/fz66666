@@ -315,14 +315,13 @@ async function loadAllTasks(ctx) {
     const isSuperAdmin = isAdmin && !canManageRegistrations;
     ctx.setData({ isAdmin, isTenantOwner: canManageRegistrations });
 
-    const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders] = await Promise.all([
+    const [cutting, procurement, quality, repair, timeouts, pending, overdueOrders] = await Promise.all([
       loadCuttingTasks(),
       loadProcurementTasks(),
       loadQualityTasks(),
       loadRepairTasks(),
       loadTimeoutReminders(),
       isSuperAdmin ? loadPendingUsers() : Promise.resolve([]),
-      canManageRegistrations ? loadTenantPendingRegistrations() : Promise.resolve([]),
       loadOverdueOrders(),
     ]);
 
@@ -339,7 +338,6 @@ async function loadAllTasks(ctx) {
       repair.length +
       timeouts.length +
       pending.length +
-      tenantRegistrations.length +
       overdueOrders.length;
 
     ctx.setData({
@@ -350,7 +348,6 @@ async function loadAllTasks(ctx) {
       repairTasks: repair,       // 次品待返修列表
       timeoutReminders: timeouts,
       pendingUsers: pending,
-      pendingRegistrations: tenantRegistrations,
       overdueOrders,
       overdueSummary,
       totalCount,

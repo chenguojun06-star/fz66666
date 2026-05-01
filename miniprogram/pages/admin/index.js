@@ -7,7 +7,7 @@ const { safeNavigate } = require('../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const i18n = require('../../utils/i18n/index');
 
-function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName: _currentLanguageName }) {
+function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName: _currentLanguageName, approvalPending }) {
   const items = [
     { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' },
     { id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' },
@@ -20,7 +20,7 @@ function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageN
 
   if (showApprovalEntry) {
     items.push(
-      { id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pages/admin/user-approval/index' },
+      { id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pages/admin/user-approval/index', badge: approvalPending || 0 },
     );
   }
 
@@ -77,14 +77,27 @@ Page({
     this.refreshMenuItems();
   },
 
-  refreshMenuItems() {
+  refreshMenuItems(pendingCount) {
+    const approvalPending = pendingCount !== undefined ? pendingCount : this.data.approvalPending;
     this.setData({
+      approvalPending: approvalPending,
       menuItems: buildMenuItems({
         showInviteSection: this._showInviteSection || false,
         showApprovalEntry: this.data.showApprovalEntry,
         currentLanguageName: this.data.currentLanguageName,
+        approvalPending: approvalPending,
       }),
     });
+  },
+
+  async loadPendingApprovalCount() {
+    try {
+      const res = await api.tenant.listPendingRegistrations({ page: 1, pageSize: 1 });
+      const total = res?.total || 0;
+      this.refreshMenuItems(total);
+    } catch (e) {
+      console.warn('[Admin] 获取待审批数失败', e);
+    }
   },
 
   onMenuTap(e) {
@@ -183,7 +196,12 @@ Page({
       patch.showApprovalEntry = showApprovalEntry;
     }
     this.setData(patch);
-    this.refreshMenuItems();
+    this.refreshMenuItems(showApprovalEntry);
+
+    // 如果显示审批入口，加载待审批数量（角标）
+    if (showApprovalEntry) {
+      this.loadPendingApprovalCount();
+    }
 
     // 后台静默刷新用户信息（PC端改头像后小程序自动同步）
     api.system.getMe().then(res => {
