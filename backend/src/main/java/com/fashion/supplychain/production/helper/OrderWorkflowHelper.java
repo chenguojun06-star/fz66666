@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomai
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -211,10 +212,15 @@ public class OrderWorkflowHelper {
                     unitPrice = java.math.BigDecimal.ZERO;
                 }
 
-                outNodes.add(Map.of(
-                        "id", id,
-                        "name", name,
-                        "unitPrice", unitPrice));
+                String progressStage = n.hasNonNull("progressStage") ? n.get("progressStage").asText("") : "";
+                progressStage = StringUtils.hasText(progressStage) ? progressStage.trim() : name;
+
+                Map<String, Object> nodeMap = new LinkedHashMap<>();
+                nodeMap.put("id", id);
+                nodeMap.put("name", name);
+                nodeMap.put("unitPrice", unitPrice);
+                nodeMap.put("progressStage", progressStage);
+                outNodes.add(nodeMap);
             }
 
             if (outNodes.isEmpty()) {

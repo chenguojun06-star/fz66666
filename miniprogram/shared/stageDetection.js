@@ -55,7 +55,7 @@ function isTailStageKey(k) {
 function isSecondaryProcessStageKey(k) {
   var n = normalizeStageKey(k);
   if (!n) return false;
-  return n.includes('二次工艺') || n.includes('二次') || n.includes('绣花') || n.includes('印花') || n.includes('水洗') || n.includes('压花');
+  return n.includes('二次工艺') || n.includes('二次') || n.includes('绣花') || n.includes('印花') || n.includes('水洗') || n.includes('压花') || n.includes('打揽') || n.includes('烫钻');
 }
 
 function isIroningStageKey(k) {

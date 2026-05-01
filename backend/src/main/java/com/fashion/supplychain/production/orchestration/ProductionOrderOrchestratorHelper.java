@@ -210,10 +210,15 @@ public class ProductionOrderOrchestratorHelper {
                     unitPrice = BigDecimal.ZERO;
                 }
 
-                outNodes.add(Map.of(
-                        "id", id,
-                        "name", name,
-                        "unitPrice", unitPrice));
+                String progressStage = n.hasNonNull("progressStage") ? n.get("progressStage").asText("") : "";
+                progressStage = StringUtils.hasText(progressStage) ? progressStage.trim() : name;
+
+                Map<String, Object> nodeMap = new LinkedHashMap<>();
+                nodeMap.put("id", id);
+                nodeMap.put("name", name);
+                nodeMap.put("unitPrice", unitPrice);
+                nodeMap.put("progressStage", progressStage);
+                outNodes.add(nodeMap);
             }
 
             if (outNodes.isEmpty()) {

@@ -259,6 +259,27 @@ public class TrackingPriceBatchHelper {
         List<Map<String, Object>> nodes = (List<Map<String, Object>>) workflow.get("nodes");
         if (nodes == null || nodes.isEmpty()) return false;
 
+        boolean isLocked = order.getProgressWorkflowLocked() != null && order.getProgressWorkflowLocked() == 1;
+        boolean changed = false;
+
+        if (isLocked) {
+            changed = syncPricesOnly(nodes, priceMap, codeMap);
+        } else {
+            changed = rebuildNodesFromTemplate(workflow, priceMap, codeMap);
+        }
+
+        if (changed) {
+            String updatedJson = OBJECT_MAPPER.writeValueAsString(workflow);
+            productionOrderService.lambdaUpdate()
+                    .eq(ProductionOrder::getId, order.getId())
+                    .set(ProductionOrder::getProgressWorkflowJson, updatedJson)
+                    .update();
+        }
+        return changed;
+    }
+
+    private boolean syncPricesOnly(List<Map<String, Object>> nodes, Map<String, BigDecimal> priceMap,
+                                    Map<String, String> codeMap) {
         boolean changed = false;
         for (Map<String, Object> node : nodes) {
             String nodeName = String.valueOf(node.getOrDefault("name", "")).trim();
@@ -282,14 +303,62 @@ public class TrackingPriceBatchHelper {
                 }
             }
         }
+        return changed;
+    }
 
-        if (changed) {
-            String updatedJson = OBJECT_MAPPER.writeValueAsString(workflow);
-            productionOrderService.lambdaUpdate()
-                    .eq(ProductionOrder::getId, order.getId())
-                    .set(ProductionOrder::getProgressWorkflowJson, updatedJson)
-                    .update();
+    private boolean rebuildNodesFromTemplate(Map<String, Object> workflow, Map<String, BigDecimal> priceMap,
+                                              Map<String, String> codeMap) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> existingNodes = (List<Map<String, Object>>) workflow.get("nodes");
+        if (existingNodes == null) existingNodes = new ArrayList<>();
+
+        Map<String, Map<String, Object>> existingByName = new LinkedHashMap<>();
+        for (Map<String, Object> n : existingNodes) {
+            String name = String.valueOf(n.getOrDefault("name", "")).trim();
+            if (StringUtils.hasText(name)) existingByName.put(name, n);
         }
+
+        List<Map<String, Object>> newNodes = new ArrayList<>();
+        boolean changed = false;
+
+        for (Map.Entry<String, BigDecimal> entry : priceMap.entrySet()) {
+            String templateName = entry.getKey();
+            BigDecimal templatePrice = entry.getValue();
+            String templateCode = codeMap.getOrDefault(templateName, templateName);
+
+            Map<String, Object> existing = existingByName.get(templateName);
+            if (existing != null) {
+                String progressStage = String.valueOf(existing.getOrDefault("progressStage", templateName)).trim();
+                Object currentPriceObj = existing.get("unitPrice");
+                BigDecimal currentPrice = BigDecimal.ZERO;
+                if (currentPriceObj instanceof Number) currentPrice = BigDecimal.valueOf(((Number) currentPriceObj).doubleValue());
+                Object currentIdObj = existing.get("id");
+                String currentId = currentIdObj == null ? "" : String.valueOf(currentIdObj).trim();
+
+                Map<String, Object> nodeMap = new LinkedHashMap<>();
+                nodeMap.put("id", templateCode);
+                nodeMap.put("name", templateName);
+                nodeMap.put("unitPrice", templatePrice);
+                nodeMap.put("progressStage", progressStage);
+                newNodes.add(nodeMap);
+
+                if (templatePrice.compareTo(currentPrice) != 0 || !templateCode.equals(currentId)) {
+                    changed = true;
+                }
+            } else {
+                Map<String, Object> nodeMap = new LinkedHashMap<>();
+                nodeMap.put("id", templateCode);
+                nodeMap.put("name", templateName);
+                nodeMap.put("unitPrice", templatePrice);
+                nodeMap.put("progressStage", templateName);
+                newNodes.add(nodeMap);
+                changed = true;
+            }
+        }
+
+        if (newNodes.size() != existingNodes.size()) changed = true;
+
+        workflow.put("nodes", newNodes);
         return changed;
     }
 }

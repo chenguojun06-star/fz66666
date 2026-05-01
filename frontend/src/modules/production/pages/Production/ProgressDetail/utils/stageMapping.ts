@@ -215,5 +215,5 @@ export const isSecondaryProcessSubNode = (nodeName: string, progressStage?: stri
   if (dynamic === '二次工艺') return true;
   const canonical = canonicalStageKey(n);
   if (canonical === '二次工艺') return true;
-  return ['绣花', '印花', '水洗', '染色', '压花', '烫钻', '烫画', '贴标', '钉珠', '贴绣', '烫金', '数码印', '打孔', '激光', '转印', '植绒', '涂层', '磨毛'].includes(n);
+  return ['绣花', '印花', '水洗', '染色', '压花', '烫钻', '打揽', '烫画', '贴标', '钉珠', '贴绣', '烫金', '数码印', '打孔', '激光', '转印', '植绒', '涂层', '磨毛'].includes(n);
 };

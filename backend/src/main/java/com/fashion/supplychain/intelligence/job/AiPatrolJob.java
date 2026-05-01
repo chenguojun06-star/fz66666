@@ -378,6 +378,10 @@ public class AiPatrolJob {
         }
         int totalEscalated = 0;
         for (Long tenantId : tenants) {
+            if (tenantId == null) {
+                log.debug("[AiPatrolJob-TaskEscalation] 跳过空租户ID");
+                continue;
+            }
             UserContext previous = UserContext.get();
             try {
                 UserContext ctx = new UserContext();
@@ -419,7 +423,7 @@ public class AiPatrolJob {
                 }
                 totalEscalated += escalated;
             } catch (Exception e) {
-                log.warn("[AiPatrolJob-TaskEscalation] 租户 {} 扫描异常: {}", tenantId, e.getMessage());
+                log.warn("[AiPatrolJob-TaskEscalation] 租户 {} 扫描异常: {}", tenantId, e.getMessage(), e);
             } finally {
                 if (previous != null) {
                     UserContext.set(previous);
