@@ -295,7 +295,26 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, render: (v: unknown) => v || '-' },
                   { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
                   { title: '参考公斤数', key: 'referenceKilograms', width: 120, align: 'right' as const, render: (_: unknown, r: MaterialPurchaseType) => formatReferenceKilograms(r.purchaseQuantity, r.conversionRate, r.unit) },
-                  { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
+                  { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 110, align: 'right' as const,
+                    render: (v: unknown, r: MaterialPurchaseType) => {
+                      const qty = Number(v ?? 0);
+                      const purchased = Number(r.purchaseQuantity ?? 0);
+                      const canReceive = purchased > qty;
+                      return (
+                        <span
+                          style={{
+                            color: canReceive ? '#1890ff' : undefined,
+                            cursor: canReceive ? 'pointer' : undefined,
+                            textDecoration: canReceive ? 'underline' : undefined,
+                          }}
+                          title={canReceive ? '点击到货入库' : undefined}
+                          onClick={() => { if (canReceive) onReceive(r); }}
+                        >
+                          {formatMaterialQuantity(v)}
+                        </span>
+                      );
+                    },
+                  },
                   {
                     title: '仓库库存',
                     key: 'warehouseStock',
@@ -304,8 +323,22 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                     render: (_: unknown, r: MaterialPurchaseType) => {
                       const stock = stockMap[String(r.id)];
                       if (stock == null) return <span style={{ color: '#bbb' }}>-</span>;
+                      const hasStock = stock > 0;
                       return (
-                        <span style={{ color: stock > 0 ? '#52c41a' : '#bbb' }}>
+                        <span
+                          style={{
+                            color: hasStock ? '#1890ff' : '#bbb',
+                            cursor: hasStock ? 'pointer' : undefined,
+                            textDecoration: hasStock ? 'underline' : undefined,
+                          }}
+                          title={hasStock ? '点击出库领取' : undefined}
+                          onClick={() => {
+                            if (hasStock && onWarehousePick) {
+                              const pickQty = Math.min(stock, Number(r.purchaseQuantity || 0));
+                              onWarehousePick(r, pickQty);
+                            }
+                          }}
+                        >
                           {stock}{r.unit ? ` ${r.unit}` : ''}
                         </span>
                       );
