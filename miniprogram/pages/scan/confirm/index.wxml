@@ -34,6 +34,39 @@
     </view>
   </view>
 
+  <!-- ===== 工艺制单（基于实际款式数据动态展示） ===== -->
+  <view wx:if="{{description}}" class="section-card">
+    <text class="section-title">工艺制单</text>
+    <view class="description-content">
+      <text class="description-text">{{description}}</text>
+    </view>
+  </view>
+
+  <!-- ===== 二次工艺详情（重点突出特殊工序） ===== -->
+  <view wx:if="{{secondaryProcesses.length > 0}}" class="section-card process-highlight-card">
+    <text class="section-title process-highlight-title">二次工艺（{{secondaryProcesses.length}}项）</text>
+    <view class="process-list">
+      <view wx:for="{{secondaryProcesses}}" wx:key="id" class="process-item">
+        <view class="process-item-header">
+          <text wx:if="{{item.processTypeCN}}" class="process-type-tag">{{item.processTypeCN}}</text>
+          <text class="process-name">{{item.processName || item.processTypeCN || '-'}}</text>
+          <text class="process-status {{item.status === 'completed' ? 'status-done' : 'status-active'}}">{{item.statusCN}}</text>
+        </view>
+        <view wx:if="{{item.description}}" class="process-item-desc">
+          <text class="process-desc-text">{{item.description}}</text>
+        </view>
+        <view class="process-item-detail">
+          <text wx:if="{{item.quantity}}" class="process-detail-text">数量 {{item.quantity}}</text>
+          <text wx:if="{{item.unitPrice}}" class="process-detail-text">单价 ¥{{item.unitPrice}}</text>
+          <text wx:if="{{item.factoryName}}" class="process-detail-text">工厂 {{item.factoryName}}</text>
+        </view>
+        <view wx:if="{{item.remark}}" class="process-item-remark">
+          <text class="process-remark-text">备注：{{item.remark}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- ===== 采购模式：面辅料明细 ===== -->
   <block wx:if="{{isProcurement}}">
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
@@ -90,46 +123,37 @@
     </view>
   </block>
 
-  <!-- ===== 裁剪模式：任务领取 ===== -->
-  <block wx:elif="{{isCutting}}">
-    <view class="section-card">
-      <text class="section-title">裁剪任务信息</text>
-      <view wx:if="{{cuttingTask}}" class="cutting-info">
-        <view class="cutting-row">
-          <text class="cutting-lbl">款号</text>
-          <text class="cutting-val">{{cuttingTask.styleNo || detail.styleNo || '-'}}</text>
-        </view>
-        <view class="cutting-row">
-          <text class="cutting-lbl">颜色</text>
-          <text class="cutting-val">{{cuttingTask.color || '全部颜色'}}</text>
-        </view>
-        <view class="cutting-row">
-          <text class="cutting-lbl">数量</text>
-          <text class="cutting-val">{{cuttingTask.orderQuantity || detail.quantity || 0}} 件</text>
-        </view>
-        <view class="cutting-row">
-          <text class="cutting-lbl">状态</text>
-          <text class="cutting-val {{cuttingTask.status === 'pending' || cuttingTask.status === 'not_started' ? 'status-pending' : 'status-received'}}">{{cuttingTask.statusText || '待领取'}}</text>
-        </view>
-        <view wx:if="{{cuttingTask.receiverName}}" class="cutting-row">
-          <text class="cutting-lbl">领取人</text>
-          <text class="cutting-val">{{cuttingTask.receiverName}}</text>
-        </view>
+  <!-- ===== 普通 + 裁剪：统一 SKU 显示 ===== -->
+  <block wx:elif="{{!isProcurement}}">
+
+    <!-- 裁剪模式：订单基本信息（款号/订单号/颜色/下单数量） -->
+    <view wx:if="{{isCutting}}" class="section-card cutting-order-info">
+      <text class="section-title">订单信息</text>
+      <view class="cutting-row">
+        <text class="cutting-lbl">订单号</text>
+        <text class="cutting-val">{{detail.orderNo || '-'}}</text>
       </view>
-      <view wx:else class="empty-cutting">
-        <text class="empty-cutting-text">暂无裁剪任务</text>
-        <text class="empty-cutting-hint">请等待任务分配后扫码领取</text>
+      <view class="cutting-row">
+        <text class="cutting-lbl">款号</text>
+        <text class="cutting-val">{{detail.styleNo || '-'}}</text>
+      </view>
+      <view class="cutting-row">
+        <text class="cutting-lbl">颜色</text>
+        <text class="cutting-val">{{cuttingTask.color || '全部颜色'}}</text>
+      </view>
+      <view class="cutting-row">
+        <text class="cutting-lbl">下单数量</text>
+        <text class="cutting-val">{{cuttingTask.orderQuantity || detail.quantity || 0}} 件</text>
+      </view>
+      <view wx:if="{{cuttingTask}}" class="cutting-row">
+        <text class="cutting-lbl">任务状态</text>
+        <text class="cutting-val {{cuttingTask.status === 'pending' || cuttingTask.status === 'not_started' ? 'status-pending' : 'status-received'}}">{{cuttingTask.statusText || '待领取'}}</text>
+      </view>
+      <view wx:if="{{cuttingTask && cuttingTask.receiverName}}" class="cutting-row">
+        <text class="cutting-lbl">领取人</text>
+        <text class="cutting-val">{{cuttingTask.receiverName}}</text>
       </view>
     </view>
-
-    <view class="tip-card">
-      <text class="tip-icon">📋</text>
-      <text class="tip-text">领取后请到「小云助手」任务列表中点击任务进行分扎，生成菲号</text>
-    </view>
-  </block>
-
-  <!-- ===== 普通模式：SKU输入 ===== -->
-  <block wx:else>
 
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
       <text class="warn-icon">⚠️</text>
@@ -145,9 +169,10 @@
             <text class="sku-total">订单 {{item.totalQuantity}} 件</text>
           </view>
           <view class="sku-qty-wrap">
-            <input class="sku-qty-input" type="number"
+            <input class="sku-qty-input {{isCutting ? 'sku-qty-readonly' : ''}}" type="number"
                    value="{{item.inputQuantity}}"
                    data-index="{{index}}" bindinput="onSkuInput"
+                   disabled="{{isCutting}}"
                    placeholder="数量" />
             <text class="sku-unit">件</text>
           </view>
@@ -160,10 +185,19 @@
         <text class="summary-label">总数量</text>
         <text class="summary-value">{{summary.totalQuantity}} 件</text>
       </view>
-      <view wx:if="{{summary.totalAmount > 0}}" class="summary-row">
+      <view wx:if="{{isCutting && cuttingUnitPrice > 0}}" class="summary-row">
+        <text class="summary-label">裁剪单价</text>
+        <text class="summary-value amount">¥{{cuttingUnitPrice}} / 件</text>
+      </view>
+      <view wx:if="{{!isCutting && summary.totalAmount > 0}}" class="summary-row">
         <text class="summary-label">预估工价</text>
         <text class="summary-value amount">¥{{money.toFixed2(summary.totalAmount)}}</text>
       </view>
+    </view>
+
+    <view wx:if="{{isCutting}}" class="tip-card">
+      <text class="tip-icon">📋</text>
+      <text class="tip-text">领取后请到「小云帮助中心」任务列表中点击任务进行分扎，生成菲号</text>
     </view>
   </block>
 

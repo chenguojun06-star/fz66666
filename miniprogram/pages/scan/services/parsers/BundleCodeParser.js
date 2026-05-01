@@ -69,7 +69,11 @@ class BundleCodeParser {
    * @returns {number} 索引，未找到返回-1
    */
   static findOrderIndex(parts) {
-    return ParserUtils.findIndexByPrefix(parts, 'PO');
+    const idx = ParserUtils.findIndexByPrefix(parts, 'PO');
+    if (idx >= 0) return idx;
+    const cutIdx = ParserUtils.findIndexByPrefix(parts, 'CUT');
+    if (cutIdx >= 0) return cutIdx;
+    return ParserUtils.findIndexByPrefix(parts, 'ORD');
   }
 
   /**

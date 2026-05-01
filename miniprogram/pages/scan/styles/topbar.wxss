@@ -1,93 +1,3 @@
-/* ===== 顶部标签栏 ===== */
-.top-bar {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  padding: 8px;
-  margin-bottom: 8px;
-  border: 1px solid var(--color-border);
-}
-
-.auto-detect-switch {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  gap: 8px;
-}
-
-.switch-label {
-  font-size: var(--font-size-sm); /* 菜单字体 */
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.auto-mode-tip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  background: var(--gradient-primary-solid);
-  border-radius: var(--radius-md);
-  gap: 8px;
-}
-
-.tip-icon {
-  font-size: var(--font-size-xl); /* 一级标题/图标 */
-}
-
-.tip-text {
-  font-size: var(--font-size-sm); /* 菜单字体 */
-  color: var(--color-primary);
-  font-weight: 500;
-}
-
-.type-tabs {
-  display: flex;
-  gap: 4px;
-}
-.tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 10px;
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
-}
-.tab.on {
-  background: var(--gradient-primary-alpha);
-  color: var(--color-text-primary);
-  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
-}
-.tab-hover {
-  opacity: 0.8;
-  transform: scale(0.98);
-}
-.tab-ico {
-  width: 16px;
-  height: 16px;
-  margin-bottom: 2px;
-}
-.tab.on .tab-ico {
-  filter: none;
-}
-.tab.more {
-  max-width: 32px;
-  justify-content: center;
-}
-.more-dot {
-  font-size: var(--font-size-base);
-  letter-spacing: -2px;
-  color: var(--color-text-disabled);
-}
-
 /* ===== 今日统计卡片（顶部） ===== */
 .today-stats-card {
   background: var(--color-bg-card);
@@ -124,10 +34,10 @@
   background: var(--color-bg-light);
 }
 .refresh-icon {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 .refresh-text {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 .tsc-refresh {
@@ -193,7 +103,7 @@
   opacity: 1;
 }
 .qe-icon {
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
   flex-shrink: 0;
 }
 .qe-text {
@@ -202,14 +112,14 @@
   gap: 1px;
 }
 .qe-title {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-primary-light);
-  line-height: 1.2;
+  line-height: var(--line-height-tight);
 }
 .qe-desc {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  line-height: 1.2;
+  line-height: var(--line-height-tight);
 }
 

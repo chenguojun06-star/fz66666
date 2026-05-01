@@ -61,10 +61,10 @@
 
       <!-- 底部操作 -->
       <view class="card-footer">
-        <view wx:if="{{item.canReceive}}" class="btn-action btn-primary" catchtap="onReceive" data-task="{{item}}">
+        <view wx:if="{{item.canReceive}}" class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100" catchtap="onReceive" data-task="{{item}}">
           领取任务
         </view>
-        <view wx:elif="{{item.canOperate}}" class="btn-action btn-primary" catchtap="goDetail" data-task="{{item}}">
+        <view wx:elif="{{item.canOperate}}" class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100" catchtap="goDetail" data-task="{{item}}">
           开始裁剪
         </view>
         <view wx:else class="btn-action btn-disabled">

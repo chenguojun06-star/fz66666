@@ -13,7 +13,7 @@
   padding: 0 12px;
   height: 40px;
   background: var(--color-bg-light);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1.5px solid var(--color-bg-gray);
   box-sizing: border-box;
 }
@@ -24,13 +24,13 @@
 }
 
 .dp-value {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary);
   flex: 1;
 }
 
 .dp-placeholder {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-disabled);
   flex: 1;
 }
@@ -42,7 +42,7 @@
 }
 
 .dp-clear {
-  font-size: 16px;
+  font-size: var(--font-size-md-lg);
   color: var(--color-text-disabled);
   line-height: 1;
   padding: 2px 4px;
@@ -56,7 +56,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 9999;
+  z-index: var(--z-notification);
 }
 
 /* ===== 底部浮层面板 ===== */
@@ -71,7 +71,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10000;
+  z-index: var(--z-float-trigger);
   background: var(--color-bg-card);
   border-radius: 16px 16px 0 0;
   transform: translateY(0);
@@ -90,21 +90,21 @@
 }
 
 .dp-sheet-cancel {
-  font-size: 16px;
+  font-size: var(--font-size-md-lg);
   color: var(--color-text-secondary);
   padding: 4px 0;
   min-width: 48px;
 }
 
 .dp-sheet-preview {
-  font-size: 17px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
   letter-spacing: 1px;
 }
 
 .dp-sheet-confirm {
-  font-size: 16px;
+  font-size: var(--font-size-md-lg);
   font-weight: 600;
   color: var(--color-primary, var(--color-primary-light));
   padding: 4px 0;
@@ -128,7 +128,7 @@
   align-items: center;
   justify-content: center;
   height: 48px;
-  font-size: 17px;
+  font-size: var(--font-size-lg);
   color: var(--color-text-primary);
   line-height: 48px;
 }

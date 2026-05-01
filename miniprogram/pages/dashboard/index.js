@@ -6,55 +6,39 @@
  * 底部：完整订单列表（带封面图、工序进度明细、颜色尺码矩阵，可展开收起）
  *
  * 数据来源：
- *   dashboard.get()         → overdueOrderCount / todayScanCount / sampleDevelopmentCount
- *   dashboard.getTopStats() → warehousingInbound/outbound .day/.week
- *   production.listOrders   → 订单列表 + 状态计数
+ *   dashboard.get()            → overdueOrderCount / todayScanCount / sampleDevelopmentCount
+ *   dashboard.getTopStats()    → warehousingInbound/outbound .day/.week
+ *   production.orderStats()    → 订单统计（与H5进度看板一致）
+ *   production.listOrders      → 订单列表 + 状态计数
  */
-const api = require('../../utils/api');
-const { transformOrderData } = require('../work/utils/orderTransform');
-const { resolveNodesFromOrder, clampPercent } = require('../work/utils/progressNodes');
-const { isAdminOrSupervisor } = require('../../utils/permission');
-const { isTenantOwner } = require('../../utils/storage');
+var api = require('../../utils/api');
+var { transformOrderData } = require('../work/utils/orderTransform');
+var { buildProcessNodesWithRates, calcOrderProgress } = require('../work/utils/progressNodes');
+var { isAdminOrSupervisor } = require('../../utils/permission');
+var { isTenantOwner } = require('../../utils/storage');
+var { eventBus, Events } = require('../../utils/eventBus');
 
-const app = getApp();
+var app = getApp();
 
 /* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
-const STATUS_FILTERS = [
+var STATUS_FILTERS = [
   { key: 'all',           label: '全部',   value: '' },
   { key: 'in_production', label: '生产中', value: 'production' },
   { key: 'completed',     label: '已完成', value: 'completed' },
   { key: 'overdue',       label: '延期',   value: '' },
 ];
 
-/**
- * 根据订单整体进度 + 工序节点，计算每道工序的进度百分比
- * 每个节点均匀分摊进度区间，按比例映射到 0-100%
- */
 function buildProcessNodes(order) {
-  const nodes = resolveNodesFromOrder(order);
-  if (!nodes || !nodes.length) return [];
-  const progress = Number(order.productionProgress) || 0;
-  const len = nodes.length;
-  const perNode = 100 / len;
-  return nodes.map(function (n, i) {
-    const nodeStart = i * perNode;
-    const nodeEnd = (i + 1) * perNode;
-    let pct = 0;
-    if (progress >= nodeEnd) {
-      pct = 100;
-    } else if (progress > nodeStart) {
-      pct = Math.round(((progress - nodeStart) / perNode) * 100);
-    }
-    return { name: n.name || n, percent: clampPercent(pct) };
-  });
+  return buildProcessNodesWithRates(order);
 }
 
 /** 为订单注入看板所需的扩展字段 */
 function enrichForDashboard(order) {
-  const completed = Number(order.completedQuantity) || 0;
-  const total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+  var completed = Number(order.completedQuantity) || 0;
+  var total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
   order.processNodes = buildProcessNodes(order);
   order.remainQuantity = Math.max(0, total - completed);
+  order.calculatedProgress = calcOrderProgress(order);
   order.expanded = false;
   return order;
 }
@@ -82,7 +66,8 @@ Page({
   },
 
   onLoad: function () {
-    // 进度看板仅限租户老板/管理员/主管/跟单，普通工厂工人无权访问
+    var app = getApp();
+    if (app.requireAuth && !app.requireAuth()) return;
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
       wx.showToast({ title: '无权限访问', icon: 'none', duration: 1500 });
       wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/home/index' }); } });
@@ -94,45 +79,59 @@ Page({
   },
 
   onShow: function () {
+    var app = getApp();
+    if (app.requireAuth && !app.requireAuth()) return;
     if (this._loaded) {
       this.refreshCards();
       this.loadOrders(true);
     }
     this._loaded = true;
     this._loadUnreadCount();
+    this._bindWsEvents();
   },
 
   onPullDownRefresh: function () {
     Promise.all([this.refreshCards(), this.loadOrders(true)]).then(function () {
       wx.stopPullDownRefresh();
-    });
+    }).catch(function (e) { console.warn('[dashboard] 下拉刷新失败:', e.message || e); wx.stopPullDownRefresh(); });
   },
 
   onReachBottom: function () {
     this.loadOrders(false);
   },
 
-  /* ======== 刷新摘要卡片（4 个并发请求） ======== */
+  onHide: function () {
+    clearTimeout(this._searchTimer);
+    this._searchTimer = null;
+    this._unbindWsEvents();
+  },
+
+  onUnload: function () {
+    clearTimeout(this._searchTimer);
+    this._searchTimer = null;
+    this._unbindWsEvents();
+  },
+
+  /* ======== 刷新摘要卡片（3 个并发请求，与H5进度看板一致） ======== */
   refreshCards: function () {
-    const that = this;
+    var that = this;
     that.setData({ loading: true });
 
+    var apiFailCount = 0;
+    var orderStatsFn = api.production && typeof api.production.orderStats === 'function'
+      ? api.production.orderStats : null;
+    if (!orderStatsFn) {
+      var prodKeys = api.production ? Object.keys(api.production).join(',') : 'undefined';
+      console.warn('[Dashboard] api.production.orderStats 不可用，跳过订单统计。production keys:', prodKeys);
+    }
     return Promise.all([
-      api.dashboard.get().catch(function () { return {}; }),
-      api.dashboard.getTopStats().catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'completed',  page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.dashboard.get().catch(function (e) { console.warn('[Dashboard] dash API失败:', e.message || e); apiFailCount++; return {}; }),
+      api.dashboard.getTopStats().catch(function (e) { console.warn('[Dashboard] topStats API失败:', e.message || e); apiFailCount++; return {}; }),
+      orderStatsFn ? orderStatsFn({}).catch(function (e) { console.warn('[Dashboard] orderStats API失败:', e.message || e); apiFailCount++; return {}; }) : Promise.resolve({}),
     ]).then(function (res) {
-      const dash     = res[0] || {};
-      const topStats = res[1] || {};
-      const prodRes  = res[2] || {};
-      const compRes  = res[3] || {};
-
-      const prodRecords = (prodRes && prodRes.records) || [];
-      let totalPieces = 0;
-      for (let i = 0; i < prodRecords.length; i++) {
-        totalPieces += Number(prodRecords[i].orderQuantity) || 0;
-      }
+      var dash     = res[0] || {};
+      var topStats = res[1] || {};
+      var stats    = res[2] || {};
 
       that.setData({
         loading: false,
@@ -140,12 +139,12 @@ Page({
         cards: {
           sample: {
             developing: Number(dash.sampleDevelopmentCount) || 0,
-            completed:  compRes.total || 0,
+            completed:  Number(stats.completedOrders) || 0,
           },
           production: {
-            total:   prodRes.total || 0,
-            overdue: Number(dash.overdueOrderCount) || 0,
-            pieces:  totalPieces,
+            total:   Number(stats.activeOrders) || 0,
+            overdue: Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0,
+            pieces:  Number(stats.activeQuantity) || 0,
           },
           inbound: {
             today: (topStats.warehousingInbound && topStats.warehousingInbound.day) || 0,
@@ -157,6 +156,11 @@ Page({
           },
         },
       });
+      if (apiFailCount >= 3) {
+        wx.showToast({ title: '数据加载失败，请下拉刷新', icon: 'none', duration: 2500 });
+      } else if (apiFailCount > 0) {
+        wx.showToast({ title: '部分数据加载失败', icon: 'none', duration: 2000 });
+      }
     }).catch(function (err) {
       console.error('[Dashboard] refreshCards error:', err);
       that.setData({ loading: false });
@@ -165,12 +169,12 @@ Page({
 
   /* ======== 加载订单列表（分页 + 封面图 + 工序明细） ======== */
   loadOrders: function (reset) {
-    const that = this;
-    const activeKey = this.data.activeFilter;
-    const isOverdue = activeKey === 'overdue';
-    let filterVal = '';
+    var that = this;
+    var activeKey = this.data.activeFilter;
+    var isOverdue = activeKey === 'overdue';
+    var filterVal = '';
     if (!isOverdue) {
-      for (let i = 0; i < STATUS_FILTERS.length; i++) {
+      for (var i = 0; i < STATUS_FILTERS.length; i++) {
         if (STATUS_FILTERS[i].key === activeKey) {
           filterVal = STATUS_FILTERS[i].value;
           break;
@@ -179,53 +183,53 @@ Page({
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      // 延期订单加大 pageSize 弥补客户端过滤损失
-      const params = { deleteFlag: 0, page: p.page, pageSize: isOverdue ? 50 : p.pageSize };
+      var params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize, excludeTerminal: 'true' };
       if (isOverdue) {
         params.status = 'production';
       } else if (filterVal) {
         params.status = filterVal;
       }
-      const searchKey = that.data.searchKey;
+      var searchKey = that.data.searchKey;
       if (searchKey) params.orderNo = searchKey;
       return api.production.listOrders(params);
     }, function (r) {
       return enrichForDashboard(transformOrderData(r));
     }).then(function () {
-      // 延期筛选：客户端根据交期过滤
       if (isOverdue) {
-        const filtered = (that.data.orders.list || []).filter(function (o) {
+        var filtered = (that.data.orders.list || []).filter(function (o) {
           return o.remainDaysClass === 'days-overdue';
         });
         that.setData({ 'orders.list': filtered });
       }
       if (reset) that._refreshStatCounts();
-    });
+    }).catch(function (e) { console.warn('[dashboard] loadOrders失败:', e.message || e); });
   },
 
   /* ======== 刷新状态计数 ======== */
   _refreshStatCounts: function () {
-    const that = this;
+    var that = this;
+    var orderStatsFn2 = api.production && typeof api.production.orderStats === 'function'
+      ? api.production.orderStats : null;
     Promise.all([
-      api.production.listOrders({ deleteFlag: 0, page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      orderStatsFn2 ? orderStatsFn2({}).catch(function () { return {}; }) : Promise.resolve({}),
       api.dashboard.get().catch(function () { return {}; }),
     ]).then(function (res) {
+      var stats = res[0] || {};
+      var dash  = res[1] || {};
       that.setData({
         statCounts: {
-          all:            (res[0] && res[0].total) || 0,
-          in_production:  (res[1] && res[1].total) || 0,
-          completed:      (res[2] && res[2].total) || 0,
-          overdue:        Number((res[3] && res[3].overdueOrderCount) || 0),
+          all:            Number(stats.totalOrders) || 0,
+          in_production:  Number(stats.activeOrders) || 0,
+          completed:      Number(stats.completedOrders) || 0,
+          overdue:        Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0,
         },
       });
-    });
+    }).catch(function () {});
   },
 
   /* ======== 状态筛选切换 ======== */
   onStatTap: function (e) {
-    const key = e.currentTarget.dataset.key;
+    var key = e.currentTarget.dataset.key;
     if (key === this.data.activeFilter) return;
     this.setData({ activeFilter: key });
     this.loadOrders(true);
@@ -233,14 +237,14 @@ Page({
 
   /* ======== 展开/收起订单卡片 ======== */
   onCardToggle: function (e) {
-    const idx = e.currentTarget.dataset.index;
-    const path = 'orders.list[' + idx + '].expanded';
+    var idx = e.currentTarget.dataset.index;
+    var path = 'orders.list[' + idx + '].expanded';
     this.setData({ [path]: !this.data.orders.list[idx].expanded });
   },
 
   /* ======== 复制订单号 ======== */
   onCopyOrderNo: function (e) {
-    const orderNo = e.currentTarget.dataset.orderNo;
+    var orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;
     wx.setClipboardData({ data: orderNo, success: function () {
       wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
@@ -249,8 +253,8 @@ Page({
 
   /* ======== 搜索：输入（防抖 500ms） ======== */
   onSearchInput: function (e) {
-    const that = this;
-    const val = (e.detail.value || '').trim();
+    var that = this;
+    var val = (e.detail.value || '').trim();
     that.setData({ searchKey: val });
     clearTimeout(that._searchTimer);
     that._searchTimer = setTimeout(function () {
@@ -268,7 +272,7 @@ Page({
   _loadUnreadCount: function () {
     return api.notice.unreadCount()
       .then(function (res) {
-        const count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
+        var count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
         this.setData({ unreadNoticeCount: count });
       }.bind(this))
       .catch(function (e) { console.warn('[dashboard] _loadUnreadCount失败:', e.message || e); });
@@ -276,7 +280,39 @@ Page({
 
   /* ======== 工具方法 ======== */
   _formatToday: function () {
-    const d = new Date();
+    var d = new Date();
     return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  },
+
+  _bindWsEvents: function () {
+    if (this._wsBound) return;
+    this._wsBound = true;
+    var that = this;
+    this._onDataChanged = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onOrderProgress = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onOrderStatus = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onWarehouseIn = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onScanSuccess = function () { that.loadOrders(true); };
+    this._onScanUndo = function () { that.loadOrders(true); };
+    this._onRefreshAll = function () { that.refreshCards(); that.loadOrders(true); that._loadUnreadCount(); };
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    eventBus.on(Events.ORDER_STATUS_CHANGED, this._onOrderStatus);
+    eventBus.on(Events.WAREHOUSE_IN, this._onWarehouseIn);
+    eventBus.on(Events.SCAN_SUCCESS, this._onScanSuccess);
+    eventBus.on(Events.SCAN_UNDO, this._onScanUndo);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindWsEvents: function () {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onOrderProgress) eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    if (this._onOrderStatus) eventBus.off(Events.ORDER_STATUS_CHANGED, this._onOrderStatus);
+    if (this._onWarehouseIn) eventBus.off(Events.WAREHOUSE_IN, this._onWarehouseIn);
+    if (this._onScanSuccess) eventBus.off(Events.SCAN_SUCCESS, this._onScanSuccess);
+    if (this._onScanUndo) eventBus.off(Events.SCAN_UNDO, this._onScanUndo);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 });

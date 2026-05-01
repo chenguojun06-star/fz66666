@@ -1,20 +1,21 @@
 const api = require('../../utils/api');
-const { getUserInfo, getToken, setUserInfo } = require('../../utils/storage');
+const { getUserInfo, getToken, setUserInfo, isFactoryOwner } = require('../../utils/storage');
 const { getBaseUrl } = require('../../config');
 const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
-const { onDataRefresh } = require('../../utils/eventBus');
+const { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
 const { safeNavigate } = require('../../utils/uiHelper');
+const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const i18n = require('../../utils/i18n/index');
 
-function buildMenuItems({ showInviteSection, showApprovalEntry, _currentLanguageName }) {
+function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName: _currentLanguageName }) {
   const items = [
-    { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/change-password/index' },
+    { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' },
     { id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' },
-    { id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/feedback/index' },
+    { id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/misc/feedback/index' },
   ];
 
   if (showInviteSection) {
-    items.splice(2, 0, { id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/invite/index' });
+    items.splice(2, 0, { id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/misc/invite/index' });
   }
 
   if (showApprovalEntry) {
@@ -36,16 +37,11 @@ Page({
     avatarImgUrl: '',
     onlineCount: 0,
     showApprovalEntry: false,
-    showInviteSection: false,
-    recruitInfo: { show: false, tenantCode: '', tenantName: '' },
+    // showInviteSection / recruitInfo 已迁移到 this._showInviteSection / this._recruitInfo 实例属性
+    // 这两个变量只作为 buildMenuItems / onCopyRecruitCode 的输入，不参与 WXML 渲染，
+    // 避免 setData 传入未绑定 WXML 变量的性能告警。
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
-    languageNameMap: {
-      'zh-CN': '中文',
-      'en-US': 'English',
-      'vi-VN': 'Ti\u1ebfng Vi\u1ec7t',
-      'km-KH': '\u1781\u17d2\u1798\u17c2\u179a',
-    },
     menuItems: [],
   },
 
@@ -61,7 +57,7 @@ Page({
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
-    this.loadUserInfo(isAdminOrSupervisor());
+    this.loadUserInfo(isAdminOrSupervisor() || isFactoryOwner());
     this.loadSystemInfo();
     this.setupDataRefreshListener();
   },
@@ -73,10 +69,10 @@ Page({
       'vi-VN': i18n.t('language.names.vi-VN', language),
       'km-KH': i18n.t('language.names.km-KH', language),
     };
+    this._languageNameMap = languageNameMap;
     this.setData({
       currentLanguage: language,
       currentLanguageName: languageNameMap[language] || '中文',
-      languageNameMap,
     });
     this.refreshMenuItems();
   },
@@ -84,7 +80,7 @@ Page({
   refreshMenuItems() {
     this.setData({
       menuItems: buildMenuItems({
-        showInviteSection: this.data.showInviteSection,
+        showInviteSection: this._showInviteSection || false,
         showApprovalEntry: this.data.showApprovalEntry,
         currentLanguageName: this.data.currentLanguageName,
       }),
@@ -105,7 +101,7 @@ Page({
   },
 
   onLanguageSwitchTap() {
-    const { languageNameMap } = this.data;
+    const languageNameMap = this._languageNameMap || { 'zh-CN': '中文', 'en-US': 'English', 'vi-VN': 'Tiếng Việt', 'km-KH': 'ភាសាខ្មែរ' };
     const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
     const itemList = langList.map((lang) => languageNameMap[lang] || lang);
     wx.showActionSheet({
@@ -133,6 +129,21 @@ Page({
       this.loadUserInfo(isAdminOrSupervisor());
       this.loadSystemInfo();
     });
+
+    if (this._wsBound) return;
+    this._wsBound = true;
+    this._onApprovalPending = () => { this.loadUserInfo(isAdminOrSupervisor()); };
+    this._onApprovalResult = () => { this.loadUserInfo(isAdminOrSupervisor()); };
+    this._onRefreshAll = () => { this.loadSystemInfo(); };
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindWsEvents() {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onApprovalPending) eventBus.off('approval:pending', this._onApprovalPending);
+    if (this._onApprovalResult) eventBus.off('approval:result', this._onApprovalResult);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 
   onHide() {
@@ -140,6 +151,7 @@ Page({
       this._unsubscribeRefresh();
       this._unsubscribeRefresh = null;
     }
+    this._unbindWsEvents();
   },
 
   onUnload() {
@@ -147,6 +159,7 @@ Page({
       this._unsubscribeRefresh();
       this._unsubscribeRefresh = null;
     }
+    this._unbindWsEvents();
   },
 
   onPullDownRefresh() {
@@ -162,14 +175,7 @@ Page({
     let avatarImgUrl = '';
     const rawAvatar = userInfo?.avatarUrl || userInfo?.avatar || userInfo?.headUrl || '';
     if (rawAvatar) {
-      if (rawAvatar.startsWith('http://') || rawAvatar.startsWith('https://')) {
-        avatarImgUrl = rawAvatar;
-      } else {
-        const token = getToken();
-        const base = getBaseUrl().replace(/\/$/, '');
-        const sep = rawAvatar.includes('?') ? '&' : '?';
-        avatarImgUrl = `${base}${rawAvatar}${sep}token=${encodeURIComponent(token)}`;
-      }
+      avatarImgUrl = getAuthedImageUrl(rawAvatar);
     }
 
     const patch = { userInfo, roleDisplayName, avatarLetter, avatarImgUrl };
@@ -216,10 +222,11 @@ Page({
           const tenantCode = (tenantResp && tenantResp.tenantCode) || '';
           const tenantName = (tenantResp && tenantResp.tenantName) || '';
           if (tenantCode) {
-            this.setData({ recruitInfo: { show: true, tenantCode, tenantName } });
+            this._recruitInfo = { show: true, tenantCode, tenantName };
           }
           // 所有有租户的用户均显示「邀请员工」菜单项（工人/管理员均可扫码邀请同事）
-          this.setData({ showInviteSection: true }, () => this.refreshMenuItems());
+          this._showInviteSection = true;
+          this.refreshMenuItems();
         } catch (e) {
           console.error('加载租户信息失败', e);
         }
@@ -233,7 +240,7 @@ Page({
   },
 
   onCopyRecruitCode() {
-    const code = this.data.recruitInfo.tenantCode;
+    const code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
     if (!code) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
@@ -245,7 +252,7 @@ Page({
   },
 
   onCopyRecruitUrl() {
-    const { tenantCode, tenantName } = this.data.recruitInfo;
+    const { tenantCode = '', tenantName = '' } = this._recruitInfo || {};
     if (!tenantCode) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
@@ -257,7 +264,7 @@ Page({
     } catch (e) {
       baseUrl = getBaseUrl();
     }
-    const origin = baseUrl.replace(/\/api\/?$/, '');
+    const origin = baseUrl.replace(/^(https?:\/\/)api\./, '$1www.').replace(/\/api\/?$/, '');
     const url = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
       + '&tenantName=' + encodeURIComponent(tenantName || '');
     wx.setClipboardData({

@@ -3,7 +3,7 @@
   top: 0;
   left: 0;
   right: 0;
-  z-index: 999;
+  z-index: var(--z-overlay);
   background-color: var(--color-bg-card);
 }
 
@@ -32,17 +32,17 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--color-border-light);
 }
 
 .back-icon {
-  font-size: 24px;
+  font-size: var(--font-size-3xl);
   color: var(--color-text-primary);
   line-height: 1;
 }
 
 .nav-title-left {
-  font-size: 17px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -68,14 +68,14 @@
 }
 
 .search-icon {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   margin-right: 4px;
 }
 
 .search-input {
   flex: 1;
   height: 100%;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
 
@@ -84,7 +84,7 @@
 }
 
 .clear-icon {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
   padding: 2px;
 }

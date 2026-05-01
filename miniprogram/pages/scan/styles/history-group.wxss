@@ -9,7 +9,7 @@
 
 .hist-group-header {
   padding: 8px 10px;
-  background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-light) 100%);
+  background: var(--color-bg-light);
   cursor: pointer;
 }
 .hist-group-header-hover {
@@ -51,23 +51,7 @@
   padding: 2px 9px;
   background: var(--color-bg-light);
   color: var(--color-primary);
-  border-radius: 999px;
-}
-
-/* 交期信息 - 展开区域内显示 */
-.hgh-delivery-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  margin-bottom: 6px;
-  background: rgba(241, 245, 249, 0.5);
-  border-radius: var(--radius-sm);
-}
-
-.hgh-delivery-row .delivery-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  border-radius: var(--radius-full);
 }
 
 .delivery-days-tag {
@@ -121,36 +105,8 @@
   color: var(--color-text-secondary);
 }
 
-.hgh-stat {
-  font-size: var(--font-size-xs);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-.hgh-stat.qualified {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.hgh-stat.defective {
-  background: var(--color-error-bg);
-  color: var(--color-error);
-}
-
-.hgh-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .hgh-time {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.hgh-expand {
-  font-size: var(--font-size-sm); /* 辅助字体 */
   color: var(--color-text-secondary);
 }
 
@@ -212,7 +168,7 @@
   color: var(--color-primary);
   padding: 4px 10px;
   border: 1px solid var(--color-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: var(--color-bg-light);
   font-weight: 500;
 }

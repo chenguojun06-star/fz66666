@@ -8,6 +8,12 @@ const production = {
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
   },
+  orderStats(params) {
+    return ok('/api/production/order/stats', 'GET', params || {});
+  },
+  getFactoryCapacity() {
+    return ok('/api/production/order/factory-capacity', 'GET', {});
+  },
   createOrder(payload) {
     return ok('/api/production/order', 'POST', payload || {});
   },
@@ -158,6 +164,10 @@ const production = {
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', {
       remark: remark || '',
     });
+  },
+  completePatternByTask(patternId) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/complete`, 'POST', {});
   },
   warehouseIn(patternId, warehouseCode, remark) {
     const id = String(patternId || '').trim();

@@ -1,4 +1,4 @@
-const { getToken, setToken, setUserInfo } = require('../../utils/storage');
+const { getToken, setToken, setRefreshToken, setUserInfo, isTokenExpired } = require('../../utils/storage');
 const { getBaseUrl, setBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const i18n = require('../../utils/i18n/index');
@@ -25,7 +25,12 @@ async function tryAutoWechatLogin() {
     const resp = await api.wechat.miniProgramLogin({ code });
     if (resp && resp.code === 200 && resp.data && resp.data.token) {
       setToken(resp.data.token);
-      if (resp.data.user) setUserInfo(resp.data.user);
+      if (resp.data.refreshToken) {
+        setRefreshToken(resp.data.refreshToken);
+      }
+      if (resp.data.user) {
+        setUserInfo(resp.data.user);
+      }
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return true;
     }
@@ -58,9 +63,12 @@ function clearBusinessCaches() {
   });
 }
 
-function finishLogin(user, token) {
+function finishLogin(user, token, refreshToken) {
   clearBusinessCaches();
   setToken(token);
+  if (refreshToken) {
+    setRefreshToken(refreshToken);
+  }
   if (user) {
     setUserInfo(user);
   }
@@ -136,7 +144,7 @@ async function resolveLoginCode() {
   const envVersion = resolveEnvVersion();
 
   if (!appId || appId === 'touristappid') {
-    console.log('[Login] 未获取到有效 AppID，使用 Mock 模式跳过微信登录');
+    console.warn('[Login] 未获取到有效 AppID，使用 Mock 模式跳过微信登录');
     return 'mock_dev';
   }
 
@@ -193,7 +201,7 @@ async function executeLogin(params, options = {}) {
         toast.error('当前微信已绑定其他公司账号，请改用账号密码登录或先解绑微信');
         return { success: false, tenantMismatch: true };
       }
-      finishLogin(loginUser, resp.data.token);
+      finishLogin(loginUser, resp.data.token, resp.data.refreshToken);
       return { success: true };
     }
 
@@ -360,9 +368,13 @@ Page({
     this.applyLanguage(i18n.getLanguage());
 
     const token = getToken();
-    if (token) {
+    if (token && !isTokenExpired()) {
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return;
+    }
+    if (token && isTokenExpired()) {
+      try { wx.removeStorageSync('auth_token'); } catch (_) { /* ignore */ }
+      try { wx.removeStorageSync('auth_refresh_token'); } catch (_) { /* ignore */ }
     }
 
     const envVersion = resolveEnvVersion();
@@ -624,7 +636,7 @@ Page({
       if (code && !code.startsWith('mock_')) {
         const result = await executeLogin(
           { code, username, password, tenantId },
-          { expectedTenantId: tenantId },
+          { expectedTenantId: tenantId }
         );
         if (result.success) return;
         // needBind 不应出现（已传账号密码），其他错误 executeLogin 内部已 toast
@@ -634,7 +646,7 @@ Page({
       // 无法获取 code（开发工具 / 模拟器）→ 走传统密码登录
       const resp = await api.system.login({ username, password, tenantId });
       if (resp && resp.code === 200 && resp.data && resp.data.token) {
-        finishLogin(resp.data.user || null, resp.data.token);
+        finishLogin(resp.data.user || null, resp.data.token, resp.data.refreshToken);
         return;
       }
       toast.error((resp && resp.message) || i18n.t('login.loginFailed'));

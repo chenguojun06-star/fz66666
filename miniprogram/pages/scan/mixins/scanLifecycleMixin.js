@@ -8,10 +8,11 @@
  * @description 管理页面生命周期、事件订阅和数据刷新
  */
 
+/* global Behavior */
 const ScanHandler = require('../handlers/ScanHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
-const { eventBus } = require('../../../utils/eventBus');
+const { eventBus, Events } = require('../../../utils/eventBus');
 const ScanOfflineQueue = require('../services/ScanOfflineQueue');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
@@ -41,8 +42,8 @@ const scanLifecycleMixin = Behavior({
     // 订阅全局事件
     // 修复: 使用 eventBus.on 且绑定 this
     if (eventBus && typeof eventBus.on === 'function') {
-      const unsubData = eventBus.on('DATA_REFRESH', this.handleDataRefresh.bind(this));
-      const unsubScan = eventBus.on('SCAN_SUCCESS', this.handleRemoteScanSuccess.bind(this));
+      const unsubData = eventBus.on(Events.DATA_CHANGED, this.handleDataRefresh.bind(this));
+      const unsubScan = eventBus.on(Events.SCAN_SUCCESS, this.handleRemoteScanSuccess.bind(this));
       // 隐私授权弹窗（微信审核必须）
       const unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
         try {
@@ -97,12 +98,52 @@ const scanLifecycleMixin = Behavior({
       this.getTabBar().setData({ selected: 2 });
     }
 
+    // 从扫码确认页返回时，读取最新扫码结果并显示成功提示
+    try {
+      const lastScanRes = getApp().globalData.lastScanResult;
+      if (lastScanRes) {
+        const isSuccess = lastScanRes.success !== false;
+        const processName = lastScanRes.processName || '';
+        // 构建 scan-result.wxml 所需的 lastResult 格式（同 handleScanSuccess）
+        const formattedResult = {
+          success: isSuccess,
+          statusText: isSuccess ? '扫码成功' : '扫码失败',
+          message: processName
+            ? (isSuccess ? processName + ' 已完成' : processName + ' 提交失败')
+            : (isSuccess ? '扫码成功' : '扫码失败'),
+          processName: processName,
+          orderNo: lastScanRes.orderNo || '',
+          quantity: lastScanRes.quantity || 0,
+          processCode: lastScanRes.processCode || '',
+        };
+        this.setData({ lastResult: formattedResult, lastLocalScanRecord: lastScanRes });
+        this._startResultDismissTimer();
+        getApp().globalData.lastScanResult = null;
+      }
+    } catch (_) { /* ignore */ }
+
     // 每次显示都检查登录状态和更新统计
     const isLogin = await this.checkLoginStatus();
     if (isLogin) {
       // ✅ 并行加载数据（try/catch 防止任一失败导致待办弹窗不弹出）
       try {
         await this.loadMyPanel(true);
+
+        // 兜底重拉：首轮请求可能命中后端落库延迟/并发竞争，避免用户必须手动刷新
+        if (this._myPanelRevalidateTimer) {
+          clearTimeout(this._myPanelRevalidateTimer);
+          this._myPanelRevalidateTimer = null;
+        }
+        this._myPanelRevalidateTimer = setTimeout(() => {
+          if (!this || !this.data) return;
+          const stats = (this.data.my && this.data.my.stats) || {};
+          const hasAnyStat = Number(stats.scanCount || 0) > 0 || Number(stats.totalQuantity || 0) > 0;
+          const hasAnyHistory = !!(this.data.my && this.data.my.groupedHistory && this.data.my.groupedHistory.length > 0);
+          if (!hasAnyStat && !hasAnyHistory && !this.data.my.loadingStats && !this.data.my.loadingHistory) {
+            this.loadMyPanel(true);
+          }
+          this._myPanelRevalidateTimer = null;
+        }, 600);
       } catch (err) {
         console.error('[scanLifecycleMixin] onShow 数据加载异常（不影响待办弹窗）:', err);
       }
@@ -126,9 +167,10 @@ const scanLifecycleMixin = Behavior({
    * @returns {void} 无返回值
    */
   onHide() {
-    // 清理离线刷新定时器
     if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
-    // 清理撤销定时器（委托给 UndoHandler）
+    if (this._scanRefreshTimer) { clearTimeout(this._scanRefreshTimer); this._scanRefreshTimer = null; }
+    if (this._myPanelRevalidateTimer) { clearTimeout(this._myPanelRevalidateTimer); this._myPanelRevalidateTimer = null; }
+    if (this._resultDismissTimer) { clearTimeout(this._resultDismissTimer); this._resultDismissTimer = null; }
     this.stopUndoTimer();
   },
 
@@ -137,8 +179,10 @@ const scanLifecycleMixin = Behavior({
    * @returns {void} 无返回值
    */
   onUnload() {
-    // 清理离线刷新定时器
     if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
+    if (this._scanRefreshTimer) { clearTimeout(this._scanRefreshTimer); this._scanRefreshTimer = null; }
+    if (this._myPanelRevalidateTimer) { clearTimeout(this._myPanelRevalidateTimer); this._myPanelRevalidateTimer = null; }
+    if (this._resultDismissTimer) { clearTimeout(this._resultDismissTimer); this._resultDismissTimer = null; }
 
     // 取消订阅
     if (this.unsubscribeEvents) {
@@ -256,8 +300,9 @@ const scanLifecycleMixin = Behavior({
      */
     async _loadWarehouseOptions() {
       try {
-        const res = await api.system.getDictList('warehouse_location');
-        const records = res?.data?.records || res?.data || [];
+        // 加载成品仓库库位（默认）
+        const res = await api.system.getDictList('finished_warehouse_location');
+        const records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res?.data || []));
         if (Array.isArray(records) && records.length > 0) {
           const options = records
             .filter(item => item.dictLabel)

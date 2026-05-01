@@ -148,7 +148,7 @@ class JSONCodeParser {
     let resolvedQuantity = ParserUtils.extractQuantity(
       qty,
       meta,
-      ParserUtils.isPresent(code) ? String(code) : '',
+      ParserUtils.isPresent(code) ? String(code) : ''
     );
     if (isOrderQR && !ParserUtils.isPresent(qty)) {
       resolvedQuantity = null;

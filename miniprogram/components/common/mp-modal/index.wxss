@@ -21,7 +21,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-notification);
 }
 
 /* 弹窗主体 */
@@ -29,7 +29,7 @@
   width: 90%;
   max-height: 85vh;
   background: var(--color-bg-card);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   box-shadow: 0 2px 10px rgba(0,0,0,0.14);
@@ -52,16 +52,16 @@
   position: relative;
   padding: 11px 40px;
   text-align: center;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-text-primary);
   border-bottom: 1px solid var(--color-bg-light);
   flex-shrink: 0;
-  line-height: 1.5;
+  line-height: var(--line-height-medium);
 }
 
 .mp-modal-title {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -98,5 +98,5 @@
   line-height: 26px;
   text-align: center;
   color: var(--color-text-disabled);
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }

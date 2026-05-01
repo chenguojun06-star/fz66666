@@ -21,10 +21,13 @@ function orderStatusText(status) {
     production: '生产中',
     completed: '已完成',
     delayed: '已逾期',
+    scrapped: '已报废',
     cancelled: '已取消',
     canceled: '已取消',
     paused: '已暂停',
     returned: '已退回',
+    closed: '已关单',
+    archived: '已归档',
   };
   if (!s) {
     return '';
@@ -77,12 +80,15 @@ function getStatusColor(status) {
   const colorMap = {
     pending: COLOR_DEFAULT,
     production: COLOR_SUCCESS,
-    completed: COLOR_DEFAULT,
+    completed: COLOR_SUCCESS,
     delayed: COLOR_WARNING,
+    scrapped: COLOR_ERROR,
     cancelled: COLOR_ERROR,
     canceled: COLOR_ERROR,
-    paused: COLOR_DEFAULT,
+    paused: COLOR_WARNING,
     returned: COLOR_ERROR,
+    closed: COLOR_SUCCESS,
+    archived: COLOR_DEFAULT,
   };
   return colorMap[s] || COLOR_FALLBACK;
 }

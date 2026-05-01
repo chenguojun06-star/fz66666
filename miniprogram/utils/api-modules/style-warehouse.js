@@ -12,41 +12,41 @@ const style = {
     return ok('/api/style/bom/list', 'GET', { styleId });
   },
   getInventory(styleId) {
-    return ok('/api/warehouse/finished/inventory/list', 'GET', { styleId });
+    return ok('/api/warehouse/finished-inventory/list', 'GET', { styleId });
   },
   updateInventory(styleId, data) {
-    return ok('/api/warehouse/finished/inventory/outbound', 'POST', data || {});
+    return ok('/api/warehouse/finished-inventory/outbound', 'POST', data || {});
   },
 };
 
 const warehouse = {
   listFinishedInventory(params) {
-    return ok('/api/warehouse/finished/inventory/list', 'GET', params || {});
+    return ok('/api/warehouse/finished-inventory/list', 'GET', params || {});
   },
   outboundFinishedInventory(data) {
-    return ok('/api/warehouse/finished/inventory/outbound', 'POST', data || {});
+    return ok('/api/warehouse/finished-inventory/outbound', 'POST', data || {});
   },
 };
 
 
 const material = {
   listStockAlerts(params) {
-    return ok('/api/material/stock/alerts', 'GET', params || {});
+    return ok('/api/production/material/stock/alerts', 'GET', params || {});
   },
   listBatchDetails(params) {
-    return ok('/api/material/stock/batch-details', 'GET', params || {});
+    return ok('/api/production/material/stock/batch-details', 'GET', params || {});
   },
   listPurchaseRecords(params) {
-    return ok('/api/material/purchase/records', 'GET', params || {});
+    return ok('/api/production/purchase/list', 'GET', params || {});
   },
 };
 
 const materialRoll = {
   scan(data) {
-    return ok('/api/material/roll/scan', 'POST', data || {});
+    return ok('/api/production/material/roll/scan', 'POST', data || {});
   },
   listByInbound(params) {
-    return ok('/api/material/roll/list-by-inbound', 'GET', params || {});
+    return ok('/api/production/material/roll/list-by-inbound', 'GET', params || {});
   },
 };
 

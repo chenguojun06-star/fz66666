@@ -60,7 +60,7 @@ Component({
       const { years, months } = this.data;
       if (!years.length) return;
       const now = new Date();
-      let year; let month; let day;
+      let year, month, day;
       if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
         [year, month, day] = val.split('-');
       } else {
@@ -93,7 +93,7 @@ Component({
     onPickerChange(e) {
       const idx = e.detail.value;
       const { years, months } = this.data;
-      const year = years[idx[0]]; const month = months[idx[1]];
+      const year = years[idx[0]], month = months[idx[1]];
       const days = this._buildDays(year, month);
       let di = idx[2];
       if (di >= days.length) di = days.length - 1;

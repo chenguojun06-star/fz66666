@@ -62,7 +62,7 @@ class ScanHandler {
     this.stageProcessor = new ScanStageProcessor(
       api,
       this.modeResolver,
-      () => this.scanType, // 传递 scanType getter
+      () => this.scanType // 传递 scanType getter
     );
     this.submitter = new ScanSubmitter(api);
 
@@ -104,10 +104,12 @@ class ScanHandler {
       return null;
     }
 
+    // 采购/裁剪阶段判断使用 includes 而非严格等于，防止后端返回「原材料采购」等变体名称时误判
+    const _cpn = String(orderDetail.currentProcessName || orderDetail.current_process_name || '').trim();
     const isProcurementMode =
       manualScanType === 'procurement' ||
-      orderDetail.currentProcessName === '采购' ||
-      orderDetail.current_process_name === '采购';
+      _cpn === '采购' ||
+      _cpn.includes('采购');
 
     if (isProcurementMode) {
       return await this.dataProcessor.handleProcurementMode(parsedData, orderDetail, this.SCAN_MODE.ORDER);
@@ -115,8 +117,8 @@ class ScanHandler {
 
     const isCuttingMode =
       manualScanType === 'cutting' ||
-      orderDetail.currentProcessName === '裁剪' ||
-      orderDetail.current_process_name === '裁剪';
+      _cpn === '裁剪' ||
+      _cpn.includes('裁剪');
 
     if (isCuttingMode) {
       return await this.dataProcessor.handleCuttingMode(parsedData, orderDetail, this.SCAN_MODE.ORDER);
@@ -127,7 +129,7 @@ class ScanHandler {
         parsedData,
         orderDetail,
         this._detectStage.bind(this),
-        this.SCAN_MODE.ORDER,
+        this.SCAN_MODE.ORDER
       );
     }
 

@@ -2,7 +2,7 @@ const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
 
-const TOOL_NAMES = {
+var TOOL_NAMES = {
   tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
   tool_query_warehouse_stock: '库存查询', tool_finished_product_stock: '成品库存',
   tool_deep_analysis: '深度分析', tool_knowledge_search: '知识搜索',
@@ -11,6 +11,18 @@ const TOOL_NAMES = {
   tool_smart_report: '智能报表', tool_delay_trend: '延期趋势',
   tool_root_cause_analysis: '根因分析', tool_whatif: '假设模拟',
   tool_action_executor: '执行操作', tool_procurement: '采购管理',
+  tool_create_production_order: 'AI建单', tool_sample_loan: '样衣借调',
+  tool_sample_stock: '样衣库存', tool_sample_workflow: '样衣流程',
+  tool_query_style_info: '款式查询', tool_order_contact_urge: '催单',
+  tool_scan_undo: '扫码撤回', tool_cutting_task_create: '创建裁剪',
+  tool_bundle_split_transfer: '拆菲转派', tool_team_dispatch: '协同派单',
+  tool_order_batch_close: '批量关单', tool_payroll_approve: '工资审批',
+  tool_material_audit: '面辅料审核', tool_material_reconciliation: '物料对账',
+  tool_shipment_reconciliation: '出货对账', tool_change_approval: '变更审批',
+  tool_material_picking: '领料单', tool_material_calculation: '物料计算',
+  tool_defective_board: '次品看板', tool_production_exception: '生产异常',
+  tool_order_factory_transfer: '订单转厂', tool_style_template: '模板库',
+  tool_warehouse_op_log: '仓库日志', tool_org_query: '组织架构',
 };
 
 function describeTool(name) {
@@ -18,23 +30,64 @@ function describeTool(name) {
 }
 
 function parseAiCards(text) {
-  const cards = [];
-  let actions = [];
-  const acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
+  var actions = [];
+  var insightCards = [];
+  var clarificationHints = [];
+  var charts = [];
+  var stepWizardCards = [];
+
+  function safeParse(str) {
+    try { return JSON.parse(str); } catch (e) { return null; }
+  }
+  function validateCard(item) {
+    return item && typeof item === 'object' && item.title;
+  }
+
+  var acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
   if (acMatch) {
     text = text.replace(acMatch[0], '');
-    try {
-      const acData = JSON.parse(acMatch[1]);
-      if (Array.isArray(acData)) actions = acData;
-      else if (acData && acData.actions) actions = acData.actions;
-    } catch (_e) {
-      acMatch[1].split('\n').forEach(function (line) {
-        const m = line.match(/[-*]\s*(.+)/);
-        if (m) actions.push({ label: m[1].trim(), type: 'navigate' });
-      });
-    }
+    var acData = safeParse(acMatch[1]);
+    if (Array.isArray(acData)) actions = acData.filter(validateCard);
+    else if (acData && acData.actions) actions = acData.actions;
   }
-  return { text: text.trim(), cards: cards, actions: actions };
+
+  var insightRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
+  var m;
+  while ((m = insightRe.exec(text)) !== null) {
+    var ip = safeParse(m[1]);
+    if (Array.isArray(ip)) insightCards = insightCards.concat(ip.filter(validateCard));
+    else if (validateCard(ip)) insightCards.push(ip);
+  }
+  text = text.replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '');
+
+  var clarifRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
+  while ((m = clarifRe.exec(text)) !== null) {
+    var clp = safeParse(m[1]);
+    if (Array.isArray(clp)) clarificationHints = clarificationHints.concat(clp.filter(function(x) { return typeof x === 'string'; }));
+  }
+  text = text.replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '');
+
+  var chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
+  while ((m = chartRe.exec(text)) !== null) {
+    var cp = safeParse(m[1]);
+    if (Array.isArray(cp)) charts = charts.concat(cp.filter(validateCard));
+    else if (validateCard(cp)) charts.push(cp);
+  }
+  text = text.replace(/【CHART】[\s\S]*?【\/CHART】/g, '');
+
+  var wizRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
+  while ((m = wizRe.exec(text)) !== null) {
+    var wp = safeParse(m[1]);
+    if (Array.isArray(wp)) stepWizardCards = stepWizardCards.concat(wp);
+    else if (wp) stepWizardCards.push(wp);
+  }
+  text = text.replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '');
+
+  text = text.replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '');
+  text = text.replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '');
+  text = text.replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '');
+
+  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards };
 }
 
 Component({
@@ -46,15 +99,14 @@ Component({
     isOpen: false,
     inputValue: '',
     messages: [],
+    visibleMessages: [],
     isLoading: false,
     streamingText: '',
     streamingTool: '',
     scrollTo: '',
-    pendingImage: '',
-    uploading: false,
     currentTab: 'chat',
     totalTasks: 0,
-    qualityTasks: [], cuttingTasks: [], warehouseTasks: [],
+    qualityTasks: [], cuttingTasks: [],
     purchaseTasks: [], repairTasks: [], overdueOrders: [],
     overdueSummary: null, pendingUsers: [], pendingRegistrations: [],
     timeoutReminders: [], isAdmin: false, isTenantOwner: false,
@@ -84,14 +136,11 @@ Component({
               'tenant_admin', 'tenant_manager', 'merchandiser'].some(r => role.includes(r));
         } catch (err) { console.error('get user info error', err); }
 
-        const greetingSuffix = isManager
-          ? '可以直接点下面的快捷问题，或者问我订单、工厂、日报、库存、财务等任何管理问题！'
-          : '可以问我您的生产任务、扫码记录或负责的订单进度哦！';
         const greeting = userName
-          ? 'Hi ' + userName + '，我是小云～ 有什么可以帮您的？\n' + greetingSuffix
-          : 'Hi 我是小云～ 有什么可以帮您的？\n' + greetingSuffix;
+          ? 'Hi ' + userName + '，这里是小云帮助中心。'
+          : 'Hi，这里是小云帮助中心。';
 
-        const sysInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+        const sysInfo = wx.getWindowInfo();
         const sw = sysInfo.windowWidth || 375;
         const sh = sysInfo.windowHeight || 667;
         let tx = sw - 20; let ty = 110; let edge = 'right';
@@ -102,23 +151,24 @@ Component({
             tx = edge === 'left' ? -30 : sw - 20;
             ty = Math.max(40, Math.min(saved.y != null ? saved.y : ty, sh - 60));
           }
-        } catch (_e) { /* ignore */ }
+        } catch (_e) { /* ignore invalid saved trigger position */ }
 
-        const conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-        let savedMessages = [];
+        var conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        var savedMessages = [];
         try {
           savedMessages = wx.getStorageSync('ai_chat_history') || [];
           if (!Array.isArray(savedMessages) || savedMessages.length === 0) savedMessages = [];
-        } catch (_e) { /* ignore */ }
+        } catch (_e) { /* ignore unreadable chat history */ }
 
-        this.setData({
-          isManager, screenWidth: sw, screenHeight: sh,
-          triggerX: tx, triggerY: ty, edgeSide: edge,
+        var initMsgs = savedMessages.length > 0 ? savedMessages : [{
+          id: Date.now(), role: 'ai', content: greeting,
+        }];
+        this._setMessages(initMsgs, {
+          isManager, triggerX: tx, triggerY: ty, edgeSide: edge,
           conversationId: conversationId,
-          messages: savedMessages.length > 0 ? savedMessages : [{
-            id: Date.now(), role: 'ai', content: greeting,
-          }],
         });
+        this._screenWidth = sw;
+        this._screenHeight = sh;
         this._loadDynamicSuggestions();
       }, 0);
     },
@@ -132,7 +182,11 @@ Component({
   },
   pageLifetimes: {
     show() {
-      setTimeout(() => this.loadTasks(), 0);
+      var now = Date.now();
+      if (!this._lastLoadTime || now - this._lastLoadTime > 30000) {
+        this._lastLoadTime = now;
+        setTimeout(() => this.loadTasks(), 0);
+      }
       this._refreshPageSuggestions();
       this._loadDynamicSuggestions();
       // 修复：tabBar页面常驻不销毁，attached()只执行一次。
@@ -141,8 +195,8 @@ Component({
       try {
         const saved = wx.getStorageSync('ai_trigger_position');
         if (saved) {
-          const sw = this.data.screenWidth || 375;
-          const sh = this.data.screenHeight || 667;
+          const sw = this._screenWidth || 375;
+          const sh = this._screenHeight || 667;
           const edge = saved.edge || 'right';
           const tx = edge === 'left' ? -30 : sw - 20;
           const ty = Math.max(40, Math.min(saved.y != null ? saved.y : this.data.triggerY, sh - 60));
@@ -150,7 +204,7 @@ Component({
             this.setData({ triggerX: tx, triggerY: ty, edgeSide: edge });
           }
         }
-      } catch (_e) { /* ignore */ }
+      } catch (_e) { /* ignore invalid stored trigger position on show */ }
     },
   },
   detached() {
@@ -161,7 +215,16 @@ Component({
       app.eventBus.off('tasksUpdated', this.boundLoadTasks);
     }
   },
+
   methods: {
+    _setMessages(msgs, extra) {
+      var MAX_VISIBLE = 30;
+      var visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
+      var data = { messages: msgs, visibleMessages: visible };
+      if (extra) Object.assign(data, extra);
+      this.setData(data);
+    },
+
     switchTab(e) {
       this.setData({ currentTab: e.currentTarget.dataset.tab });
     },
@@ -169,27 +232,28 @@ Component({
     onTriggerTouchStart(e) {
       const touch = e.touches[0];
       this._touchStartTime = Date.now();
-      this.setData({
-        isDragging: false,
-        dragStartX: touch.clientX, dragStartY: touch.clientY,
-        dragStartTriggerX: this.data.triggerX, dragStartTriggerY: this.data.triggerY,
-      });
+      this._isDragging = false;
+      this._dragStartX = touch.clientX;
+      this._dragStartY = touch.clientY;
+      this._dragStartTriggerX = this.data.triggerX;
+      this._dragStartTriggerY = this.data.triggerY;
     },
     onTriggerTouchMove(e) {
       const touch = e.touches[0];
-      const dx = touch.clientX - this.data.dragStartX;
-      const dy = touch.clientY - this.data.dragStartY;
-      if (!this.data.isDragging && Math.abs(dx) + Math.abs(dy) < 5) return;
-      const sw = this.data.screenWidth;
-      const sh = this.data.screenHeight;
-      let nx = this.data.dragStartTriggerX + dx;
-      let ny = this.data.dragStartTriggerY + dy;
+      const dx = touch.clientX - this._dragStartX;
+      const dy = touch.clientY - this._dragStartY;
+      if (!this._isDragging && Math.abs(dx) + Math.abs(dy) < 5) return;
+      const sw = this._screenWidth;
+      const sh = this._screenHeight;
+      let nx = this._dragStartTriggerX + dx;
+      let ny = this._dragStartTriggerY + dy;
       nx = Math.max(-30, Math.min(nx, sw - 20));
       ny = Math.max(40, Math.min(ny, sh - 60));
-      this.setData({ triggerX: nx, triggerY: ny, isDragging: true });
+      this.setData({ triggerX: nx, triggerY: ny });
+      this._isDragging = true;
     },
     onTriggerTouchEnd() {
-      if (!this.data.isDragging) {
+      if (!this._isDragging) {
         const willOpen = !this.data.isOpen;
         this._cancelIdleSnap();
         this.setData({ isOpen: willOpen });
@@ -197,12 +261,13 @@ Component({
         else { this._startIdleSnap(); }
         return;
       }
-      const sw = this.data.screenWidth;
+      const sw = this._screenWidth;
       const midX = this.data.triggerX + 25;
       const edge = midX < sw / 2 ? 'left' : 'right';
       const snapX = edge === 'left' ? -30 : sw - 20;
-      this.setData({ triggerX: snapX, edgeSide: edge, isDragging: false });
-      try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) { /* ignore */ }
+      this.setData({ triggerX: snapX, edgeSide: edge });
+      this._isDragging = false;
+      try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) { /* ignore storage write failure */ }
       if (!this.data.isOpen) this._startIdleSnap();
     },
     _snapToVisible() {
@@ -259,11 +324,13 @@ Component({
     },
 
     _loadDynamicSuggestions() {
-      const self = this;
+      // 未登录或 token 不存在时跳过，避免触发 401 请求
+      if (!(wx.getStorageSync('auth_token') || '')) return;
+      var self = this;
       api.intelligence.getMyPendingTaskSummary().then(function (res) {
-        const data = res && res.data ? res.data : res;
+        var data = res && res.data ? res.data : res;
         if (!data) return;
-        const suggestions = [];
+        var suggestions = [];
         if (data.overdueOrderCount > 0) {
           suggestions.push({ icon: 'icon-alert', label: '🚨 ' + data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
         }
@@ -276,24 +343,26 @@ Component({
         if (suggestions.length > 0) {
           self.setData({ dynamicSuggestions: suggestions });
         }
-      }).catch(function () {});
+      }).catch(function (e) { console.warn('[XiaoYun] 待办任务加载失败:', e); });
     },
 
     _saveChatHistory() {
       try {
-        const msgs = this.data.messages.slice(-20);
+        var msgs = this.data.messages.slice(-20);
         wx.setStorageSync('ai_chat_history', msgs);
-      } catch (_e) { /* ignore */ }
+      } catch (_e) { /* ignore chat history save failure */ }
     },
 
     _abortStream() {
       if (this._streamTask) {
-        try { this._streamTask.abort(); } catch (_e) { /* ignore */ }
+        try { this._streamTask.abort(); } catch (_e) { /* ignore abort failure */ }
         this._streamTask = null;
       }
     },
 
     async loadTasks() {
+      // 未登录或 token 不存在时跳过，避免在登录前触发 8 个并发 401 请求
+      if (!(wx.getStorageSync('auth_token') || '')) return;
       if (this.data.taskLoading) return;
       this.setData({ taskLoading: true });
       try {
@@ -347,70 +416,63 @@ Component({
     onInput(e) { this.setData({ inputValue: e.detail.value }); },
 
     async sendMessage() {
-      const text = this.data.inputValue.trim();
-      const hasImage = !!this.data.pendingImage;
-      if ((!text && !hasImage) || this.data.isLoading) return;
+      var text = this.data.inputValue.trim();
+      if (!text || this.data.isLoading) return;
 
       this.setData({ inputValue: '' });
-      const tempPath = hasImage ? this.data.pendingImage : '';
 
-      const userMsg = {
+      var userMsg = {
         id: Date.now(), role: 'user',
-        content: hasImage ? (text || '发送了一张图片') : text,
+        content: text,
       };
-      if (hasImage) userMsg.imageUrl = tempPath;
-      if (hasImage) this.setData({ pendingImage: '', uploading: true });
-      this.setData({
-        messages: [].concat(this.data.messages, [userMsg]),
-        isLoading: !hasImage,
-        streamingText: '', streamingTool: '',
-      });
+      this._setMessages([].concat(this.data.messages, [userMsg]), { isLoading: true, streamingText: '', streamingTool: '' });
       this.scrollToBottom();
 
-      let imageUrl = '';
       try {
-        if (tempPath) {
-          imageUrl = await api.common.uploadImage(tempPath);
-          this.setData({ uploading: false, isLoading: true });
-        }
-
-        const chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
-        const streamPayload = {
-          question: text || (imageUrl ? '请看这张图片' : text),
+        var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
+        var streamPayload = {
+          question: text,
           pageContext: chatContext,
           conversationId: this.data.conversationId,
         };
-        if (imageUrl) streamPayload.imageUrl = imageUrl;
 
-        const self = this;
-        let accumulatedText = '';
-        let streamStarted = false;
-        const _streamFailed = false;
-        let pendingFollowUpActions = null;
+        var self = this;
+        var accumulatedText = '';
+        var streamStarted = false;
+        var pendingFollowUpActions = null;
+        var _streamPendingUpdate = false;
+        var _streamUpdateTimer = null;
 
-        const aiMsgId = Date.now() + 1;
+        var aiMsgId = Date.now() + 1;
 
-        const requestTask = api.intelligence.aiAdvisorChatStream(
+        var requestTask = api.intelligence.aiAdvisorChatStream(
           streamPayload,
           function (event) {
             streamStarted = true;
             if (event.type === 'thinking') {
               self.setData({ streamingTool: '小云正在整理思路…' });
             } else if (event.type === 'tool_call') {
-              const toolName = describeTool(String(event.data.tool || ''));
+              var toolName = describeTool(String(event.data.tool || ''));
               self.setData({ streamingTool: '正在处理：' + toolName + '…' });
             } else if (event.type === 'tool_result') {
-              const tn = describeTool(String(event.data.tool || ''));
+              var tn = describeTool(String(event.data.tool || ''));
               if (event.data.success) {
                 self.setData({ streamingTool: tn + ' 已完成，继续整理…' });
               } else {
                 self.setData({ streamingTool: tn + ' 未成功，重新组织…' });
               }
             } else if (event.type === 'answer') {
-              const content = String(event.data.content || '');
+              var content = String(event.data.content || '');
               if (content) {
                 accumulatedText += content;
-                self.setData({ streamingText: accumulatedText, streamingTool: '' });
+                if (!_streamPendingUpdate) {
+                  _streamPendingUpdate = true;
+                  _streamUpdateTimer = setTimeout(function () {
+                    _streamPendingUpdate = false;
+                    _streamUpdateTimer = null;
+                    self.setData({ streamingText: accumulatedText, streamingTool: '' });
+                  }, 100);
+                }
               }
             } else if (event.type === 'follow_up_actions') {
               if (event.data && event.data.actions) {
@@ -420,14 +482,14 @@ Component({
           },
           function () {
             self._streamTask = null;
-            const parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
-            let recommendPills = [];
+            var parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
+            var recommendPills = [];
             if (parsed.text.includes('【推荐追问】：')) {
-              const parts = parsed.text.split('【推荐追问】：');
+              var parts = parsed.text.split('【推荐追问】：');
               parsed.text = parts[0].trim();
               if (parts[1]) recommendPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
             }
-            let actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
+            var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
             if (!actions && pendingFollowUpActions && pendingFollowUpActions.length > 0) {
               actions = pendingFollowUpActions.map(function (a) {
                 return {
@@ -440,15 +502,14 @@ Component({
                 };
               });
             }
-            const aiMsg = {
+            var completedAiMsg = {
               id: aiMsgId, role: 'ai', content: parsed.text,
               recommendPills: recommendPills,
               actions: actions,
+              insightCards: parsed.insightCards || [],
+              clarificationHints: parsed.clarificationHints || [],
             };
-            self.setData({
-              messages: [].concat(self.data.messages, [aiMsg]),
-              isLoading: false, streamingText: '', streamingTool: '',
-            });
+            self._setMessages([].concat(self.data.messages, [completedAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
             self._saveChatHistory();
           },
@@ -456,19 +517,18 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              var aiMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
-              self.setData({ messages: [].concat(self.data.messages, [aiMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              var streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
               return;
             }
             try {
-              const chatParams = { question: text || (imageUrl ? '请看这张图片' : text), context: chatContext };
-              if (imageUrl) chatParams.imageUrl = imageUrl;
-              const chatRes = await api.intelligence.aiAdvisorChat(chatParams);
-              let aiResponse = '';
-              let syncActions = null;
-              let syncSuggestions = [];
+              var chatParams = { question: text, context: chatContext };
+              var chatRes = await api.intelligence.aiAdvisorChat(chatParams);
+              var aiResponse = '';
+              var syncActions = null;
+              var syncSuggestions = [];
               if (chatRes && typeof chatRes === 'object') {
                 aiResponse = chatRes.displayAnswer || chatRes.answer || chatRes.content || chatRes.reply || chatRes.message || '';
                 if (chatRes.followUpActions && chatRes.followUpActions.length > 0) {
@@ -491,49 +551,47 @@ Component({
               }
               if (!aiResponse) aiResponse = '抱歉，我现在无法回答这个问题。';
 
-              const parsed = parseAiCards(aiResponse);
-              let recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
+              var parsed = parseAiCards(aiResponse);
+              var recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
               if (parsed.text.includes('【推荐追问】：')) {
-                const parts = parsed.text.split('【推荐追问】：');
+                var parts = parsed.text.split('【推荐追问】：');
                 parsed.text = parts[0].trim();
                 if (parts[1]) {
-                  const extraPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
+                  var extraPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
                   recommendPills = recommendPills.concat(extraPills);
                 }
               }
-              const actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
-              aiMsg = {
+              var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
+              var syncAiMsg = {
                 id: aiMsgId, role: 'ai', content: parsed.text,
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
+                insightCards: parsed.insightCards || [],
+                clarificationHints: parsed.clarificationHints || [],
               };
-              self.setData({ messages: [].concat(self.data.messages, [aiMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              self._setMessages([].concat(self.data.messages, [syncAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
-              const errMsg = { id: aiMsgId, role: 'ai', content: 'AI暂时无法响应，请稍后再试。' };
-              self.setData({ messages: [].concat(self.data.messages, [errMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              var errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。' };
+              self._setMessages([].concat(self.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
             }
-          },
+          }
         );
         this._streamTask = requestTask;
 
       } catch (err) {
         console.error('[XiaoYun] sendMessage error:', err);
-        if (tempPath && !imageUrl) {
-          wx.showToast({ title: '图片上传失败', icon: 'none' });
-          this.setData({ uploading: false });
-        }
-        const errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : 'AI暂时无法响应，请稍后再试。';
-        const errMsg = { id: Date.now(), role: 'ai', content: errContent };
-        this.setData({ messages: [].concat(this.data.messages, [errMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+        var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : '服务暂时无法响应，请稍后再试。';
+        var errMsg = { id: Date.now(), role: 'ai', content: errContent };
+        this._setMessages([].concat(this.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
         this.scrollToBottom();
       }
     },
 
     onActionTap(e) {
-      const action = e.currentTarget.dataset.action;
+      var action = e.currentTarget.dataset.action;
       if (!action) return;
       if (action.type === 'execute' || action.type === 'urge_order' || action.type === 'mark_urgent') {
         this.setData({ inputValue: action.label || action.command || '', isOpen: true });
@@ -544,29 +602,6 @@ Component({
       }
     },
 
-    chooseImage() {
-      if (this.data.isLoading || this.data.uploading) return;
-      const self = this;
-      wx.chooseMedia({
-        count: 1, mediaType: ['image'], sourceType: ['camera', 'album'],
-        success: (res) => {
-          const path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
-          if (path) self.setData({ pendingImage: path });
-        },
-        fail: (err) => {
-          if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-            wx.showModal({
-              title: '相机/相册权限', content: '需要相机或相册权限才能上传图片，请在设置中允许',
-              confirmText: '去设置', cancelText: '取消',
-              success: function (modalRes) { if (modalRes.confirm) wx.openSetting(); },
-            });
-          }
-        },
-      });
-    },
-    removePendingImage() { this.setData({ pendingImage: '' }); },
-    previewImage(e) { const src = e.currentTarget.dataset.src; if (src) wx.previewImage({ current: src, urls: [src] }); },
-
     clearMessages() {
       let userName = '';
       try {
@@ -574,14 +609,13 @@ Component({
         if (userInfo.realName) userName = userInfo.realName;
         else if (userInfo.username) userName = userInfo.username;
         else if (userInfo.nickname) userName = userInfo.nickname;
-      } catch (err) { /* ignore */ }
-      const greeting = userName ? 'Hi ' + userName + '，我是小云～ 有什么可以帮您的？' : 'Hi 我是小云～ 有什么可以帮您的？';
-      const newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-      this.setData({
-        messages: [{ id: Date.now(), role: 'ai', content: greeting }],
-        inputValue: '', conversationId: newConvId,
-      });
-      try { wx.removeStorageSync('ai_chat_history'); } catch (_e) { /* ignore */ }
+      } catch (err) {
+        /* ignore greeting name read failure */
+      }
+      const greeting = userName ? 'Hi ' + userName + '，这里是小云帮助中心。' : 'Hi，这里是小云帮助中心。';
+      var newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+      this._setMessages([{ id: Date.now(), role: 'ai', content: greeting }], { inputValue: '', conversationId: newConvId });
+      try { wx.removeStorageSync('ai_chat_history'); } catch (_e) { /* ignore storage cleanup failure */ }
     },
     scrollToBottom() {
       setTimeout(() => {

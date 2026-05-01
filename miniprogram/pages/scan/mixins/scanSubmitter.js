@@ -5,12 +5,12 @@
  */
 'use strict';
 
-const api = require('../../../utils/api');
-const ScanHandler = require('../handlers/ScanHandler');
-const { toast } = require('../../../utils/uiHelper');
-const scanValidator = require('./scanValidator');
-const isRecentDuplicate = scanValidator.isRecentDuplicate;
-const markRecent = scanValidator.markRecent;
+var api = require('../../../utils/api');
+var ScanHandler = require('../handlers/ScanHandler');
+var { toast, toastAndRedirect } = require('../../../utils/uiHelper');
+var scanValidator = require('./scanValidator');
+var isRecentDuplicate = scanValidator.isRecentDuplicate;
+var markRecent = scanValidator.markRecent;
 
 module.exports = {
   methods: {
@@ -30,9 +30,9 @@ module.exports = {
 
     onScan: function() {
       if (!this.data.scanEnabled || this.data.loading) return;
-      const currentScanType = this.data.scanType || 'auto';
+      var currentScanType = this.data.scanType || 'auto';
       if (currentScanType === 'warehouse' && !this.data.warehouse) { toast.error('请先选择目标仓库'); return; }
-      const self = this;
+      var self = this;
       wx.scanCode({
         onlyFromCamera: true,
         scanType: ['qrCode', 'barCode'],
@@ -45,7 +45,7 @@ module.exports = {
 
     processScanCode: function(codeStr, scanType) {
       if (!codeStr) return;
-      const self = this;
+      var self = this;
       if (isRecentDuplicate(codeStr)) { toast.info('扫码太快啦'); return; }
       this.setData({ loading: true });
       if (/^MR\d{13}$/.test(codeStr)) {
@@ -54,7 +54,7 @@ module.exports = {
         return;
       }
       if (scanType === 'stock') { this.handleStockQuery(codeStr); return; }
-      const options = { scanType: scanType, quantity: this._quantity, warehouse: this.data.warehouse };
+      var options = { scanType: scanType, quantity: this._quantity, warehouse: this.data.warehouse };
       this._ensureScanHandler();
       this.scanHandler.handleScan(codeStr, options).then(function(result) {
         self._handleScanResult(result, codeStr, scanType);
@@ -68,7 +68,7 @@ module.exports = {
     _handleScanResult: function(result, codeStr, scanType) {
       if (result && result.data && result.data.scanMode === 'ucode') {
         markRecent(codeStr, 30000);
-        const sd = result.data.scanData || {};
+        var sd = result.data.scanData || {};
         wx.navigateTo({
           url: '/pages/warehouse/sample/scan-action/index?styleNo=' + encodeURIComponent(sd.styleNo || '') + '&color=' + encodeURIComponent(sd.color || '') + '&size=' + encodeURIComponent(sd.size || ''),
         });
@@ -94,7 +94,7 @@ module.exports = {
           toast.error('多次输入无效，请检查订单数据后重试');
           this.setData({ loading: false }); this._needInputRetryCount = 0; return;
         }
-        const self = this;
+        var self = this;
         wx.showModal({
           title: '请输入数量', content: '无法自动获取订单数量，请输入本次完成数量',
           editable: true, placeholderText: '例如: 100',
@@ -110,7 +110,7 @@ module.exports = {
         return;
       }
       if (result && result.success === false) {
-        const msg = result.message || result.errMsg || '扫码失败，请重试';
+        var msg = result.message || result.errMsg || '扫码失败，请重试';
         toast.error(msg);
         this.handleScanError({ message: msg, orderNo: result.orderNo, processCode: result.processCode, processName: result.processName, quantity: result.quantity });
         return;
@@ -122,13 +122,13 @@ module.exports = {
     _handleScanException: function(e) {
       if (e.needWarehousing && e.warehousingData) { this.showQualityModal(e.warehousingData); this.setData({ loading: false }); return; }
       if (e.isCompleted) {
-        const msg = e.message || '进度节点已完成';
+        var msg = e.message || '进度节点已完成';
         if (msg.indexOf('物料均已领取') >= 0) toast.info('物料已全部领取，请扫描订单二维码进入裁剪工序');
         else toast.success(msg);
         this.setData({
           lastResult: { success: true, message: msg, displayTime: new Date().toLocaleTimeString(), statusText: '已完成', statusClass: 'success' },
           lastLocalScanRecord: { orderNo: e.orderNo || '', processName: '全部工序已完成', processCode: '', quantity: 0, success: true, time: new Date().toLocaleTimeString() },
-          loading: false,
+          loading: false
         });
         wx.pageScrollTo({ scrollTop: 0, duration: 300 });
         this._startResultDismissTimer();
@@ -138,17 +138,17 @@ module.exports = {
         wx.showToast({ title: '📶 已离线缓存，联网后自动同步', icon: 'none', duration: 2500 });
         this.setData({
           lastResult: { success: false, queued: true, message: '📶 无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
-          offlinePendingCount: e.offlineCount || 0,
+          offlinePendingCount: e.offlineCount || 0
         });
         wx.pageScrollTo({ scrollTop: 0, duration: 300 });
         this._startResultDismissTimer();
         return;
       }
-      const errorMsg = e.errMsg || e.message || '系统异常';
+      var errorMsg = e.errMsg || e.message || '系统异常';
       toast.error(errorMsg);
       this.handleScanError({ message: errorMsg });
-      const errorHandler = require('../../../utils/errorHandler');
+      var errorHandler = require('../../../utils/errorHandler');
       errorHandler.logError(e, '_handleScanException');
-    },
-  },
+    }
+  }
 };

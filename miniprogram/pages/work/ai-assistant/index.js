@@ -1,10 +1,10 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { parseChatReply } = require('./chat-parser');
-const { toast } = require('../../../utils/uiHelper');
+const _uiHelper = require('../../../utils/uiHelper'); // toast reserved for future use
 const { eventBus } = require('../../../utils/eventBus');
 
-const TOOL_NAMES = {
+var TOOL_NAMES = {
   tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
   tool_query_warehouse_stock: '库存查询', tool_finished_product_stock: '成品库存',
   tool_deep_analysis: '深度分析', tool_knowledge_search: '知识搜索',
@@ -13,29 +13,58 @@ const TOOL_NAMES = {
   tool_smart_report: '智能报表', tool_delay_trend: '延期趋势',
   tool_root_cause_analysis: '根因分析', tool_whatif: '假设模拟',
   tool_action_executor: '执行操作', tool_procurement: '采购管理',
+  tool_create_production_order: 'AI建单', tool_sample_loan: '样衣借调',
+  tool_sample_stock: '样衣库存', tool_sample_workflow: '样衣流程',
+  tool_query_style_info: '款式查询', tool_order_contact_urge: '催单',
+  tool_scan_undo: '扫码撤回', tool_cutting_task_create: '创建裁剪',
+  tool_bundle_split_transfer: '拆菲转派', tool_team_dispatch: '协同派单',
+  tool_order_batch_close: '批量关单', tool_payroll_approve: '工资审批',
+  tool_material_audit: '面辅料审核', tool_material_reconciliation: '物料对账',
+  tool_shipment_reconciliation: '出货对账', tool_change_approval: '变更审批',
+  tool_material_picking: '领料单', tool_material_calculation: '物料计算',
+  tool_defective_board: '次品看板', tool_production_exception: '生产异常',
+  tool_order_factory_transfer: '订单转厂', tool_style_template: '模板库',
+  tool_warehouse_op_log: '仓库日志', tool_org_query: '组织架构',
 };
 
 function describeTool(name) {
   return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
 }
 
+/**
+ * 将 formData 中的数组字段转为 {value: true} 查找表。
+ * 目的：避免在 WXML class 绑定里使用 (arr||[]).indexOf(v)（WeChat 编译器不支持括号后跟点）。
+ * @param {object} formData
+ * @returns {object} e.g. { colors: { red: true, blue: true } }
+ */
+function _buildSelectedSet(formData) {
+  const result = {};
+  Object.keys(formData || {}).forEach(function(k) {
+    if (Array.isArray(formData[k])) {
+      const lookup = {};
+      formData[k].forEach(function(v) { lookup[v] = true; });
+      result[k] = lookup;
+    }
+  });
+  return result;
+}
+
 // 工厂工人快捷提问
 const WORKER_PROMPTS = [
-  { label: '今日做了多少件', text: '我今天做了多少件？', cmd: false },
-  { label: '本周工资估算', text: '本周工资大概是多少？', cmd: false },
-  { label: '查询订单进度', text: '我负责的订单进度怎么样？', cmd: false },
-  { label: '哪些订单快要逾期', text: '哪些订单快要逾期了？', cmd: false },
+  { label: '内部资料: 扫码规范', text: '请给我内部资料：扫码规范', cmd: false },
+  { label: '内部资料: 质检流程', text: '请给我内部资料：质检流程', cmd: false },
+  { label: '内部资料: 入库流程', text: '请给我内部资料：入库流程', cmd: false },
+  { label: '内部资料: 常见问题', text: '请给我内部资料：常见问题', cmd: false },
 ];
 
 // 管理员/跟单员快捷指令（查询 + 操作两类）
 const MANAGER_PROMPTS = [
-  { label: '查逾期订单', text: '当前有哪些逾期或高风险订单？', cmd: false },
-  { label: '暂停订单', text: '暂停订单 ', cmd: true },
-  { label: '加急订单', text: '加急订单 ', cmd: true },
-  { label: '修改货期', text: '修改订单 ', cmd: true },
-  { label: '催工厂', text: '催促工厂跟进订单 ', cmd: true },
-  { label: '审批通过', text: '审批通过订单 ', cmd: true },
-  { label: '驳回', text: '驳回订单 ', cmd: true },
+  { label: '📋 下单', text: '帮我下单', cmd: true },
+  { label: '👕 借调样衣', text: '帮我借调样衣', cmd: true },
+  { label: '内部资料: 日报口径', text: '请给我内部资料：日报统计口径', cmd: false },
+  { label: '内部资料: 逾期定义', text: '请给我内部资料：逾期定义', cmd: false },
+  { label: '内部资料: 采购流程', text: '请给我内部资料：采购流程', cmd: false },
+  { label: '内部资料: 返修流程', text: '请给我内部资料：返修流程', cmd: false },
 ];
 
 const MAX_MESSAGES = 30;
@@ -46,7 +75,7 @@ function buildTextSegments(text) {
   if (!re.test(text)) return null;
   re.lastIndex = 0;
   const segs = [];
-  let last = 0; let m;
+  let last = 0, m;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) segs.push({ content: text.slice(last, m.index), isOrder: false, orderNo: '' });
     segs.push({ content: m[0], isOrder: true, orderNo: m[0] });
@@ -59,6 +88,7 @@ function buildTextSegments(text) {
 Page({
   data: {
     messages: [],
+    visibleMessages: [],
     inputText: '',
     sending: false,
     streamingText: '',
@@ -66,8 +96,6 @@ Page({
     quickPrompts: WORKER_PROMPTS,
     conversationId: '',
     isManager: false,
-    pendingImage: '',
-    uploading: false,
     dynamicSuggestions: [],
   },
 
@@ -76,23 +104,26 @@ Page({
     if (eventBus && typeof eventBus.on === 'function') {
       this._unsubPrivacy = eventBus.on('showPrivacyDialog', (resolve) => {
         try {
-          const dialog = this.selectComponent('#privacyDialog');
+          var dialog = this.selectComponent('#privacyDialog');
           if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
-        } catch (_) { /* ignore */ }
+        } catch (_) { /* dialog may not exist on this page, intentional no-op */ }
       });
     }
     const isManager = isAdminOrSupervisor();
     const conversationId = 'mp_' + Date.now();
     const welcomeId = conversationId + '_w';
     const welcomeText = isManager
-      ? '你好！我是小云\n可以帮你查逾期订单、分析风险，也可以直接下指令操作系统——如「暂停订单PO2026001」「催工厂跟进PO2026002」，我来帮你执行。'
-      : '你好！我是你的 AI 助手\n可以帮你查产量、估工资、看订单进度，有什么想问的尽管说～';
+      ? '你好！这里是小云帮助中心。'
+      : '你好！这里是小云帮助中心。';
+    var initMsgs = [{ id: welcomeId, role: 'ai', text: welcomeText }];
     this.setData({
       conversationId,
       isManager,
       quickPrompts: isManager ? MANAGER_PROMPTS : WORKER_PROMPTS,
-      messages: [{ id: welcomeId, role: 'ai', text: welcomeText }],
+      messages: initMsgs,
+      visibleMessages: initMsgs,
     });
+    if (!(wx.getStorageSync('auth_token') || '')) return;
     this._loadDynamicSuggestions();
   },
 
@@ -113,51 +144,9 @@ Page({
 
   onSend() {
     const text = String(this.data.inputText || '').trim();
-    const hasImage = !!this.data.pendingImage;
-    if ((!text && !hasImage) || this.data.sending) return;
+    if (!text || this.data.sending) return;
     this.setData({ inputText: '' });
-    if (hasImage) {
-      this._sendWithImage(text);
-    } else {
-      this._send(text);
-    }
-  },
-
-  /** 选择图片（拍照/相册） */
-  chooseImage() {
-    if (this.data.sending || this.data.uploading) {
-      console.warn('[AI-Assistant] chooseImage blocked: sending=', this.data.sending, 'uploading=', this.data.uploading);
-      return;
-    }
-    const self = this;
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['camera', 'album'],
-      success: (res) => {
-        const path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
-        if (path) self.setData({ pendingImage: path });
-      },
-      fail: (err) => {
-        console.warn('[AI-Assistant] chooseImage fail:', err);
-        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-          wx.showModal({
-            title: '相机/相册权限',
-            content: '需要相机或相册权限才能上传图片，请在设置中允许',
-            confirmText: '去设置',
-            cancelText: '取消',
-            success: function (modalRes) {
-              if (modalRes.confirm) wx.openSetting();
-            },
-          });
-        }
-      },
-    });
-  },
-
-  /** 移除待发送图片 */
-  removePendingImage() {
-    this.setData({ pendingImage: '' });
+    this._send(text);
   },
 
   /** 预览图片 */
@@ -166,77 +155,20 @@ Page({
     if (src) wx.previewImage({ current: src, urls: [src] });
   },
 
-  /** 发送图片（可附带文字） */
-  async _sendWithImage(text) {
-    const tempPath = this.data.pendingImage;
-    this.setData({ pendingImage: '', uploading: true });
-
-    // 先显示用户消息（含本地图片预览）
-    this._appendMsg({ role: 'user', text: text || '', imageUrl: tempPath });
-
-    // 上传图片到 COS
-    let imageUrl = '';
-    try {
-      imageUrl = await api.common.uploadImage(tempPath);
-    } catch (err) {
-      toast.error('图片上传失败');
-      this.setData({ uploading: false });
-      return;
-    }
-    this.setData({ uploading: false });
-
-    // 发送到 AI（带图片 URL）
-    const loadingId = this._appendMsg({ role: 'ai', text: '', loading: true });
-    this.setData({ sending: true });
-
-    try {
-      let reply;
-      const payload = {
-        message: text || '请看这张图片',
-        imageUrl: imageUrl,
-        conversationId: this.data.conversationId,
-        context: 'worker_assistant',
-      };
-      if (this.data.isManager) {
-        try {
-          const res = await api.intelligence.naturalLanguageExecute({
-            text: text || '分析这张图片',
-            imageUrl: imageUrl,
-            conversationId: this.data.conversationId,
-          });
-          reply = (res && (res.message || res.reply || res.content)) || '操作完成';
-        } catch (nlErr) {
-          // NL指令失败，降级为对话模式
-          console.warn('[AI-Page] NL exec failed, fallback to chat:', nlErr && nlErr.errMsg);
-          const fbRes = await api.intelligence.aiAdvisorChat(payload);
-          reply = (fbRes && (fbRes.reply || fbRes.content || fbRes.message)) || '（无回应）';
-        }
-      } else {
-        const res = await api.intelligence.aiAdvisorChat(payload);
-        reply = (res && (res.reply || res.content || res.message)) || '（无回应）';
-      }
-      this._updateMsg(loadingId, reply);
-    } catch (err) {
-      const msg = (err && err.message) ? err.message : '网络异常，请稍后再试';
-      this._updateMsg(loadingId, msg);
-    } finally {
-      this.setData({ sending: false });
-      this._scrollToBottom();
-    }
-  },
-
   async _send(text) {
     this._appendMsg({ role: 'user', text });
     const loadingId = this._appendMsg({ role: 'ai', text: '', loading: true });
     this.setData({ sending: true, streamingText: '', streamingTool: '' });
 
-    const self = this;
-    let accumulatedText = '';
-    let streamStarted = false;
-    const chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
+    var self = this;
+    var accumulatedText = '';
+    var streamStarted = false;
+    var _streamPendingUpdate = false;
+    var _streamUpdateTimer = null;
+    var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
 
     try {
-      const requestTask = api.intelligence.aiAdvisorChatStream(
+      var requestTask = api.intelligence.aiAdvisorChatStream(
         {
           question: text,
           pageContext: chatContext,
@@ -247,22 +179,31 @@ Page({
           if (event.type === 'thinking') {
             self.setData({ streamingTool: '小云正在整理思路…' });
           } else if (event.type === 'tool_call') {
-            const toolName = describeTool(String(event.data.tool || ''));
+            var toolName = describeTool(String(event.data.tool || ''));
             self.setData({ streamingTool: '正在处理：' + toolName + '…' });
           } else if (event.type === 'tool_result') {
-            const tn = describeTool(String(event.data.tool || ''));
+            var tn = describeTool(String(event.data.tool || ''));
             self.setData({ streamingTool: event.data.success ? (tn + ' 已完成，继续整理…') : (tn + ' 未成功，重新组织…') });
           } else if (event.type === 'answer') {
-            const content = String(event.data.content || '');
+            var content = String(event.data.content || '');
             if (content) {
               accumulatedText += content;
-              self.setData({ streamingText: accumulatedText, streamingTool: '' });
+              if (!_streamPendingUpdate) {
+                _streamPendingUpdate = true;
+                _streamUpdateTimer = setTimeout(function () {
+                  _streamPendingUpdate = false;
+                  _streamUpdateTimer = null;
+                  self.setData({ streamingText: accumulatedText, streamingTool: '' });
+                }, 100);
+              }
             }
           }
         },
         function () {
+          if (_streamUpdateTimer) { clearTimeout(_streamUpdateTimer); _streamUpdateTimer = null; }
+          _streamPendingUpdate = false;
           self._streamTask = null;
-          const rawText = accumulatedText || '抱歉，我现在无法回答这个问题。';
+          var rawText = accumulatedText || '抱歉，我暂时无法回答这个问题。';
           self._updateMsg(loadingId, rawText);
           self.setData({ sending: false, streamingText: '', streamingTool: '' });
           self._scrollToBottom();
@@ -277,33 +218,33 @@ Page({
             return;
           }
           try {
-            let reply;
+            var reply;
             if (self.data.isManager) {
               try {
-                const res = await api.intelligence.naturalLanguageExecute({ text: text, conversationId: self.data.conversationId });
+                var res = await api.intelligence.naturalLanguageExecute({ text: text, conversationId: self.data.conversationId });
                 reply = (res && (res.message || res.reply || res.content)) || '操作完成';
               } catch (nlErr) {
-                const fbRes = await api.intelligence.aiAdvisorChat({ message: text, conversationId: self.data.conversationId, context: 'manager_assistant' });
+                var fbRes = await api.intelligence.aiAdvisorChat({ question: text, conversationId: self.data.conversationId, context: 'manager_assistant' });
                 reply = (fbRes && (fbRes.reply || fbRes.content || fbRes.message)) || '（无回应）';
               }
             } else {
-              const res2 = await api.intelligence.aiAdvisorChat({ message: text, conversationId: self.data.conversationId, context: 'worker_assistant' });
+              var res2 = await api.intelligence.aiAdvisorChat({ question: text, conversationId: self.data.conversationId, context: 'worker_assistant' });
               reply = (res2 && (res2.reply || res2.content || res2.message)) || '（无回应）';
             }
             self._updateMsg(loadingId, reply);
           } catch (syncErr) {
-            self._updateMsg(loadingId, 'AI暂时无法响应，请稍后再试。');
+            self._updateMsg(loadingId, '服务暂时无法响应，请稍后再试。');
           } finally {
             self.setData({ sending: false, streamingText: '', streamingTool: '' });
             self._scrollToBottom();
           }
-        },
+        }
       );
       this._streamTask = requestTask;
     } catch (err) {
       console.error('[AI-Page] send error:', err);
-      const errText = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : (err && err.message && err.message !== 'undefined') ? err.message : '';
-      this._updateMsg(loadingId, errText || 'AI暂时无法响应，请稍后再试。');
+      var errText = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : (err && err.message && err.message !== 'undefined') ? err.message : '';
+      this._updateMsg(loadingId, errText || '服务暂时无法响应，请稍后再试。');
       this.setData({ sending: false, streamingText: '', streamingTool: '' });
       this._scrollToBottom();
     }
@@ -335,6 +276,122 @@ Page({
     if (path) wx.navigateTo({ url: path, fail: () => wx.showToast({ title: '页面不存在', icon: 'none' }) });
   },
 
+  _findWizardCard(msgid, wi) {
+    var msg = this.data.messages.find(function (m) { return m.id === msgid; });
+    if (!msg || !msg.stepWizardCards || !msg.stepWizardCards[wi]) return null;
+    return { msg: msg, wiz: msg.stepWizardCards[wi] };
+  },
+
+  _updateWizardCard(msgid, wi, updater) {
+    var found = this._findWizardCard(msgid, wi);
+    if (!found) return;
+    var wiz = found.wiz;
+    updater(wiz);
+    var key = 'messages[' + this.data.messages.indexOf(found.msg) + '].stepWizardCards[' + wi + ']';
+    this.setData({
+      [key]: wiz,
+    });
+    var vIdx = this.data.visibleMessages.findIndex(function (m) { return m.id === msgid; });
+    if (vIdx >= 0) {
+      this.setData({ ['visibleMessages[' + vIdx + '].stepWizardCards[' + wi + ']']: wiz });
+    }
+  },
+
+  _recalcCanNext(wiz) {
+    var step = wiz.steps && wiz.steps[wiz._currentStep];
+    if (!step) { wiz._canNext = false; return; }
+    wiz._canNext = step.fields.every(function (f) {
+      if (!f.required) return true;
+      var val = wiz._formData[f.key];
+      if (f.inputType === 'multi_select') return Array.isArray(val) && val.length > 0;
+      return val !== undefined && val !== null && val !== '';
+    });
+  },
+
+  onWizardSelect(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      wiz._formData[ds.key] = ds.value;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardMultiSelect(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      var cur = wiz._formData[ds.key] || [];
+      var idx = cur.indexOf(ds.value);
+      if (idx >= 0) {
+        cur = cur.filter(function (v) { return v !== ds.value; });
+      } else {
+        cur = cur.concat([ds.value]);
+      }
+      wiz._formData[ds.key] = cur;
+      // 同步维护 _formDataSelectedSet，避免 WXML class 绑定里出现 indexOf（method call 编译报错）
+      wiz._formDataSelectedSet = wiz._formDataSelectedSet || {};
+      wiz._formDataSelectedSet[ds.key] = _buildSelectedSet({ [ds.key]: cur })[ds.key] || {};
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardInput(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      wiz._formData[ds.key] = e.detail.value;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardDate(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      wiz._formData[ds.key] = e.detail.value;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardPrev(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      if (wiz._currentStep > 0) wiz._currentStep--;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardNext(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      if (!wiz._canNext) return;
+      if (wiz._currentStep === wiz.steps.length - 1) {
+        wiz._submitted = true;
+        var cmd = wiz.submitCommand || '';
+        var formData = wiz._formData;
+        var text = cmd;
+        var paramParts = [];
+        Object.keys(formData).forEach(function (k) {
+          var v = formData[k];
+          if (Array.isArray(v)) {
+            paramParts.push(k + '=' + v.join(','));
+          } else {
+            paramParts.push(k + '=' + v);
+          }
+        });
+        if (paramParts.length > 0) text += ' ' + paramParts.join(' ');
+        self.setData({ inputText: '' });
+        self._send(text);
+      } else {
+        wiz._currentStep++;
+        self._recalcCanNext(wiz);
+      }
+    });
+  },
+
   onSegmentTap(e) {
     const { type, orderno } = e.currentTarget.dataset;
     if (type === 'order' && orderno) this._send('查询订单 ' + orderno);
@@ -346,26 +403,63 @@ Page({
     if (msg.imageUrl) entry.imageUrl = msg.imageUrl;
     const messages = [...this.data.messages, entry];
     if (messages.length > MAX_MESSAGES) messages.shift();
-    this.setData({ messages });
+    var MAX_VISIBLE = 30;
+    var visibleMessages = messages.length > MAX_VISIBLE ? messages.slice(messages.length - MAX_VISIBLE) : messages;
+    this.setData({ messages, visibleMessages });
     this._scrollToBottom();
     return id;
   },
 
   _updateMsg(id, rawText) {
     const parsed = parseChatReply(rawText);
+    var stepWizardCards = (parsed.stepWizardCards || []).map(function (w) {
+      const formData = w.prefilledData ? Object.assign({}, w.prefilledData) : {};
+      return Object.assign({}, w, {
+        _currentStep: 0,
+        _formData: formData,
+        // 预计算 _formDataSelectedSet，避免 WXML class 绑定里用 (arr || []).indexOf()（method call 编译报错）
+        _formDataSelectedSet: _buildSelectedSet(formData),
+        _canNext: false,
+        _submitted: false,
+      });
+    });
+    stepWizardCards.forEach(function (wiz) {
+      var firstStep = wiz.steps && wiz.steps[0];
+      if (firstStep) {
+        wiz._canNext = firstStep.fields.every(function (f) {
+          if (!f.required) return true;
+          var val = wiz._formData[f.key];
+          if (f.inputType === 'multi_select') return Array.isArray(val) && val.length > 0;
+          return val !== undefined && val !== null && val !== '';
+        });
+      }
+    });
     const messages = this.data.messages.map(m =>
       m.id === id ? {
         ...m,
         text: parsed.displayText,
         textSegments: buildTextSegments(parsed.displayText),
-        actionCards: parsed.actionCards,
+        // 预计算 _cardType，避免 WXML class 绑定里出现 actions[0].type（bracket-dot 编译报错）
+        actionCards: (parsed.actionCards || []).map(function(card) {
+          var t = card.actions && card.actions[0] && card.actions[0].type;
+          return Object.assign({}, card, {
+            _cardType: t === 'mark_urgent' ? 'card-danger'
+                     : t === 'send_notification' ? 'card-warning'
+                     : 'card-normal'
+          });
+        }),
         charts: parsed.charts,
         teamStatusCards: parsed.teamStatusCards,
         bundleSplitCards: parsed.bundleSplitCards,
+        stepWizardCards: stepWizardCards,
+        insightCards: parsed.insightCards || [],
+        clarificationHints: parsed.clarificationHints || [],
         loading: false,
-      } : m,
+      } : m
     );
-    this.setData({ messages });
+    var MAX_VISIBLE = 30;
+    var visibleMessages = messages.length > MAX_VISIBLE ? messages.slice(messages.length - MAX_VISIBLE) : messages;
+    this.setData({ messages, visibleMessages });
   },
 
   _scrollToBottom() {
@@ -373,11 +467,11 @@ Page({
   },
 
   _loadDynamicSuggestions() {
-    const self = this;
+    var self = this;
     api.intelligence.getMyPendingTaskSummary().then(function (res) {
-      const data = res && res.data ? res.data : res;
+      var data = res && res.data ? res.data : res;
       if (!data) return;
-      const suggestions = [];
+      var suggestions = [];
       if (data.overdueOrderCount > 0) {
         suggestions.push({ label: '🚨 ' + data.overdueOrderCount + '个逾期', text: '当前有哪些逾期订单？帮我分析一下' });
       }
@@ -390,12 +484,12 @@ Page({
       if (suggestions.length > 0) {
         self.setData({ dynamicSuggestions: suggestions });
       }
-    }).catch(function () {});
+    }).catch(function (e) { console.warn('[AI-Assistant] 待办任务加载失败:', e); });
   },
 
   _abortStream() {
     if (this._streamTask) {
-      try { this._streamTask.abort(); } catch (_e) { /* ignore */ }
+      try { this._streamTask.abort(); } catch (_e) { /* abort may throw if already done */ }
       this._streamTask = null;
     }
   },

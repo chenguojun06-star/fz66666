@@ -5,6 +5,12 @@
   <!-- 顶部统计卡片 -->
   <summary-card title="我的工资" items="{{summaryItems}}"></summary-card>
 
+  <!-- 工资结算反馈入口 -->
+  <view class="feedback-entry" hover-class="feedback-entry-hover" bindtap="goFeedback">
+    <text class="feedback-entry-text">工资结算反馈</text>
+    <text class="feedback-entry-arrow">›</text>
+  </view>
+
   <!-- 筛选器 -->
   <view class="filter-bar">
     <view class="filter-tabs">
@@ -37,8 +43,8 @@
     <view class="section-header">
       <view class="section-title">【工序明细】</view>
       <view class="sort-btn" hover-class="sort-btn-hover" hover-stay-time="100" bindtap="toggleSort">
-        <text class="sort-text">按金额</text>
-        <text class="sort-icon">{{sortOrder === 'desc' ? '▼' : '▲'}}</text>
+        <text class="sort-text">{{sortField === 'amount' ? '按金额' : '按时间'}}</text>
+        <text class="sort-icon" catchtap="toggleSortOrder">{{sortOrder === 'desc' ? '▼' : '▲'}}</text>
       </view>
     </view>
 
@@ -51,10 +57,17 @@
       </view>
       <view class="record-detail">
         <text class="color-size">{{item.color}} {{item.size}}</text>
+        <text wx:if="{{item.cuttingBundleNo}}" class="bundle-no">菲号{{item.cuttingBundleNo}}</text>
         <text class="process">{{item.processName}}</text>
+        <text wx:if="{{item.scanTypeText && item.scanTypeText !== '-'}}" class="scan-type-tag">{{item.scanTypeText}}</text>
       </view>
       <view wx:if="{{item.operatorName}}" class="operator-name">扫码人：{{item.operatorName}}</view>
-  <view class="record-footer">
+      <view wx:if="{{item.delegateTargetName}}" class="delegate-info">
+        <text wx:if="{{item.delegateTargetType === 'external'}}" class="delegate-tag delegate-external">外发</text>
+        <text wx:elif="{{item.delegateTargetType === 'internal'}}" class="delegate-tag delegate-internal">指派</text>
+        <text class="delegate-name">{{item.delegateTargetName}}</text>
+      </view>
+      <view class="record-footer">
         <view class="calculation">
           <text class="quantity" user-select>{{item.quantity}}件</text>
           <text class="multiply">×</text>

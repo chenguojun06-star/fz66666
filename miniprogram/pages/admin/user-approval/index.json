@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "用户审批",
   "enablePullDownRefresh": true,
-  "onReachBottomDistance": 50
+  "onReachBottomDistance": 50,
+  "usingComponents": {
+    "mp-modal": "/components/common/mp-modal/index"
+  }
 }

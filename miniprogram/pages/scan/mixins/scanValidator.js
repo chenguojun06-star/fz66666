@@ -45,7 +45,7 @@ module.exports = {
       const factory = getStorageValue('currentFactory');
       if (!token || !user) { toastAndRedirect('请先登录', '/pages/login/index'); return false; }
       if (isTokenExpired()) { clearToken(); clearRefreshToken(); toastAndRedirect('登录已过期，请重新登录', '/pages/login/index'); return false; }
-      const updates = {};
+      var updates = {};
       if (JSON.stringify(user) !== JSON.stringify(this.data.currentUser)) updates.currentUser = user;
       if (JSON.stringify(factory) !== JSON.stringify(this._currentFactory)) this._currentFactory = factory;
       if (Object.keys(updates).length > 0) this.setData(updates);
@@ -53,9 +53,9 @@ module.exports = {
     },
 
     onQuantityInput: function(e) {
-      const value = e.detail.value;
+      var value = e.detail.value;
       if (value === '' || value === null || value === undefined) { this._quantity = ''; return; }
-      const num = parseInt(value, 10);
+      var num = parseInt(value, 10);
       if (isNaN(num)) { wx.showToast({ title: '请输入有效数字', icon: 'none' }); return; }
       if (num < 0) { wx.showToast({ title: '数量不能为负数', icon: 'none' }); return; }
       if (num > 999999) { wx.showToast({ title: '数量不能超过999999', icon: 'none' }); return; }
@@ -63,16 +63,16 @@ module.exports = {
     },
 
     mapScanType: function(stageName) {
-      const map = {
+      var map = {
         采购: 'production', 裁剪: 'cutting', 裁床: 'cutting', 剪裁: 'cutting', 开裁: 'cutting',
         二次工艺: 'production', 绣花: 'production', 印花: 'production', 水洗: 'production',
         车缝: 'production', 缝制: 'production', 缝纫: 'production', 整件: 'production',
         大烫: 'production', 整烫: 'production', 熨烫: 'production',
         尾部: 'production', 后整: 'production', 打包: 'production', 装箱: 'production',
         质检: 'quality', 检验: 'quality', 品检: 'quality', 验货: 'quality',
-        包装: 'production', 入库: 'warehouse', 入仓: 'warehouse', 仓储: 'warehouse',
+        包装: 'production', 入库: 'warehouse', 入仓: 'warehouse', 仓储: 'warehouse'
       };
       return map[stageName] || 'production';
-    },
-  },
+    }
+  }
 };

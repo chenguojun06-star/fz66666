@@ -27,7 +27,6 @@ const scanPageData = {
   offlinePendingCount: 0,  // 离线待同步条数（无网时扫码进队列）
   offlineSyncing: false,   // 联网后正在批量上传时为 true
   lastResult: null,
-  scanHistory: [],
 
   // 扫码结果确认弹窗（混合模式）
   scanResultConfirm: {
@@ -78,10 +77,12 @@ const scanPageData = {
     // 扫码历史
     loadingHistory: false,
     groupedHistory: [],
-    history: [],
-    historyPage: 1,
-    historyPageSize: 20,
-    historyHasMore: true,
+    // 与 HistoryHandler 约定保持一致：分页字段收敛到 history 对象内
+    history: {
+      page: 1,
+      pageSize: 20,
+      hasMore: true,
+    },
 
 
   },
@@ -147,9 +148,6 @@ const scanPageData = {
 
   // 调试模式
   debug: DEBUG_MODE,
-
-  // 本次会话按工序累计扫码件数（key: processName → qty）
-  sessionStats: {},
 };
 
 module.exports = {

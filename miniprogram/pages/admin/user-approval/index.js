@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { isTenantOwner } = require('../../../utils/storage');
+const { isTenantOwner, isFactoryOwner, isSuperAdmin } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 
 Page({
@@ -14,11 +14,14 @@ Page({
     tenantRegistrations: [],
     tenantTotal: 0,
     isTenantOwner: false,
-    activeTab: 'system',
+    isFactoryOwner: false,
+    isPlatformAdmin: false,
+    activeTab: 'tenant',
     showApprovalModal: false,
     showRejectModal: false,
     currentUser: null,
     selectedRoleId: '',
+    factorySelectedRole: '',
     rejectReason: '',
     roleOptions: [],
     roleLoading: false,
@@ -31,31 +34,42 @@ Page({
     }
 
     const ownerFlag = isTenantOwner();
-    this.setData({ isTenantOwner: ownerFlag });
+    const factoryOwnerFlag = isFactoryOwner();
+    const adminFlag = isAdminOrSupervisor();
+    const platformAdminFlag = isSuperAdmin();
+    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag, isPlatformAdmin: platformAdminFlag });
 
-    if (!isAdminOrSupervisor() && !ownerFlag) {
+    if (!adminFlag && !ownerFlag && !factoryOwnerFlag) {
       toast.error('仅管理员可访问', 2000);
       setTimeout(() => wx.navigateBack(), 2000);
       return;
     }
 
-    if (ownerFlag && !isAdminOrSupervisor()) {
+    if (platformAdminFlag) {
+      this.setData({ activeTab: 'system' });
+    } else {
       this.setData({ activeTab: 'tenant' });
     }
 
-    this.loadPendingUsers(true);
-    this.loadRoleOptions();
-    if (ownerFlag) {
+    if (platformAdminFlag) {
+      this.loadPendingUsers(true);
+      this.loadRoleOptions();
+    }
+    if (ownerFlag || factoryOwnerFlag) {
       this.loadTenantRegistrations();
     }
   },
 
   onPullDownRefresh() {
-    this.loadPendingUsers(true);
+    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin) {
+      this.loadPendingUsers(true);
+    } else {
+      this.loadTenantRegistrations();
+    }
   },
 
   onReachBottom() {
-    if (this.data.hasMore && !this.data.loading) {
+    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin && this.data.hasMore && !this.data.loading) {
       this.setData({ page: this.data.page + 1 }, () => {
         this.loadPendingUsers(false);
       });
@@ -102,7 +116,9 @@ Page({
   },
 
   onTabChange(e) {
-    this.setData({ activeTab: e.currentTarget.dataset.tab });
+    var tab = e.currentTarget.dataset.tab;
+    if (tab === 'system' && !this.data.isPlatformAdmin) return;
+    this.setData({ activeTab: tab });
   },
 
   onApproveUser(e) {
@@ -130,14 +146,9 @@ Page({
 
     wx.showLoading({ title: '处理中...', mask: true });
     try {
-      await api.system.approveUser(currentUser.id);
-      await api.system.updateUser(currentUser.id, {
-        roleId: Number(selectedRoleId),
-        status: 'active',
-        approvalStatus: 'approved',
-      });
+      await api.system.approveUser(currentUser.id, { roleId: Number(selectedRoleId) });
       wx.hideLoading();
-      toast.success('已批准');
+      toast.success('已批准并分配角色');
       this.setData({ showApprovalModal: false, currentUser: null, selectedRoleId: '' });
       this.loadPendingUsers(true);
     } catch (e) {
@@ -207,7 +218,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '处理中...', mask: true });
           try {
-            await api.tenant.approveRegistration(user.id);
+            await api.tenant.approveRegistration(user.id, { roleId: this.data.factorySelectedRole });
             wx.hideLoading();
             toast.success('已批准');
             this.loadTenantRegistrations();
@@ -236,7 +247,7 @@ Page({
           const reason = res.content?.trim() || '管理员拒绝';
           wx.showLoading({ title: '处理中...', mask: true });
           try {
-            await api.tenant.rejectRegistration(user.id, reason);
+            await api.tenant.rejectRegistration(user.id, { reason: reason });
             wx.hideLoading();
             toast.success('已拒绝');
             this.loadTenantRegistrations();

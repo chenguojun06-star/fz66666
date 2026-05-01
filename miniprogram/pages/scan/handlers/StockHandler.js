@@ -35,7 +35,7 @@ async function handleStockQuery(page, codeStr, qrParser) {
         if (res.confirm) {
           showStockUpdateDialog(skuCode);
         }
-      },
+      }
     });
   } catch (e) {
     console.error('[handleStockQuery] error:', e);
@@ -73,7 +73,7 @@ function showStockUpdateDialog(skuCode) {
           toast.error('更新失败: ' + (e.errMsg || e.message));
         }
       }
-    },
+    }
   });
 }
 

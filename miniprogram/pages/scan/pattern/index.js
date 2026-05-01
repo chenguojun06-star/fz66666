@@ -5,6 +5,7 @@
 const toast = require('../../../utils/uiHelper').toast;
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 // ---- 常量（与 PatternHandler.js 保持一致） ----
 const OPERATION_LABELS = {
@@ -12,6 +13,7 @@ const OPERATION_LABELS = {
   PLATE: '车板扫码',
   FOLLOW_UP: '跟单确认',
   COMPLETE: '完成确认',
+  REWORK: '返修完成',
   PROCUREMENT: '采购',
   CUTTING: '裁剪',
   SECONDARY: '二次工艺',
@@ -79,7 +81,7 @@ Page({
 
     // 直接使用 PatternScanProcessor 已正确计算好的 operationType，不再从 status 重新推导
     const SUBMIT_LABEL_MAP = {
-      RECEIVE: '领取', COMPLETE: '完成', REVIEW: '审核',
+      RECEIVE: '领取', COMPLETE: '完成', REWORK: '返修完成', REVIEW: '审核',
       WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库', WAREHOUSE_RETURN: '归还',
       PROCUREMENT: '采购', CUTTING: '裁剪', SECONDARY: '二次工艺',
       SEWING: '车缝', TAIL: '尾部',
@@ -122,13 +124,17 @@ Page({
         sourceLabel: SOURCE_LABELS[patternDetail.developmentSourceType || data.developmentSourceType || ''] || patternDetail.developmentSourceType || data.developmentSourceType || '',
         submitLabel: submitLabel,
         remark: '',
+        reviewResult: 'PASS',
       },
     });
 
     // Process size/color matrix for table display + aggregated text (matching PC端 cardSizeQuantity.ts)
     const matrix = patternDetail.sizeColorMatrix;
-    if (matrix && Array.isArray(matrix.commonSizes) && Array.isArray(matrix.matrixRows)
-        && matrix.commonSizes.length > 0 && matrix.matrixRows.length > 0) {
+    var matrixSizes = (matrix && Array.isArray(matrix.sizes) && matrix.sizes.length > 0)
+      ? matrix.sizes
+      : (matrix && Array.isArray(matrix.commonSizes) ? matrix.commonSizes : []);
+    if (matrix && Array.isArray(matrix.matrixRows)
+        && matrixSizes.length > 0 && matrix.matrixRows.length > 0) {
       const matrixRows = matrix.matrixRows.map(row => {
         const quantities = Array.isArray(row.quantities) ? row.quantities : [];
         return {
@@ -140,27 +146,27 @@ Page({
       const grandTotal = matrixRows.reduce((s, r) => s + r.rowTotal, 0);
 
       // Build aggregated items (replicating PC端 buildStyleMatrixItems logic)
-      const items = [];
+      var items = [];
       matrix.matrixRows.forEach(function(row) {
-        const color = row.color || '';
-        const qtys = Array.isArray(row.quantities) ? row.quantities : [];
-        matrix.commonSizes.forEach(function(size, idx) {
-          const qty = Number(qtys[idx]) || 0;
+        var color = row.color || '';
+        var qtys = Array.isArray(row.quantities) ? row.quantities : [];
+        matrixSizes.forEach(function(size, idx) {
+          var qty = Number(qtys[idx]) || 0;
           if (size && qty > 0) {
             items.push({ color: color, size: size, quantity: qty });
           }
         });
       });
 
-      const matrixUpdate = {
+      var matrixUpdate = {
         'detail.hasMatrix': true,
-        'detail.matrixSizes': matrix.commonSizes,
+        'detail.matrixSizes': matrixSizes,
         'detail.matrixRows': matrixRows,
         'detail.matrixTotal': grandTotal,
       };
 
       if (items.length > 0) {
-        const uniqueColors = [];
+        var uniqueColors = [];
         items.forEach(function(item) {
           if (item.color && uniqueColors.indexOf(item.color) === -1) {
             uniqueColors.push(item.color);
@@ -219,6 +225,11 @@ Page({
     this.setData({ 'detail.remark': e.detail.value });
   },
 
+  onReviewResultChange(e) {
+    const result = e.currentTarget.dataset.result;
+    this.setData({ 'detail.reviewResult': result });
+  },
+
   previewImage() {
     const url = this.data.detail.coverImage;
     if (!url) return;
@@ -243,14 +254,12 @@ Page({
     const qty = normalizePositiveInt(d.quantity, 0);
     const remark = String(d.remark || '').trim();
 
-    if (operationType !== 'REVIEW' && qty <= 0) {
+    if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty <= 0) {
       toast.error('请输入正确数量');
       return;
     }
-    if ((operationType === 'REVIEW'
-        || (operationType === 'WAREHOUSE_IN' && d.requiresReviewBeforeInbound))
-        && !remark) {
-      toast.error('请填写样衣审核备注');
+    if (operationType === 'REVIEW' && !remark) {
+      toast.error('请填写审核备注');
       return;
     }
     if (WAREHOUSE_OPERATIONS.has(operationType) && !String(d.warehouseCode || '').trim()) {
@@ -263,8 +272,14 @@ Page({
       let result;
 
       if (operationType === 'REVIEW') {
-        const res = await api.production.reviewPattern(d.patternId, 'APPROVED', remark);
-        result = res ? { success: true, message: '样衣审核通过' } : { success: false, message: '审核提交失败' };
+        const reviewResult = d.reviewResult || 'PASS';
+        const res = await api.production.reviewPattern(d.patternId, reviewResult, remark);
+        const resultMsg = reviewResult === 'PASS' ? '审核通过' : reviewResult === 'REWORK' ? '审核返修，请扫码返修' : '审核已驳回';
+        result = res ? { success: true, message: resultMsg } : { success: false, message: '审核提交失败' };
+
+      } else if (operationType === 'COMPLETE') {
+        const res = await api.production.completePatternByTask(d.patternId);
+        result = res ? { success: true, message: '制作完成' } : { success: false, message: '完成操作失败' };
 
       } else if (operationType === 'WAREHOUSE_IN') {
         // 入库前自动审核（如尚未审核通过）
@@ -288,7 +303,7 @@ Page({
 
       } else {
         // COMPLETE、PLATE、FOLLOW_UP 等走通用扫码接口
-        result = await api.production.submitPatternScan({
+        const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
           operationType: operationType,
           operatorRole: 'PLATE_WORKER',
@@ -296,6 +311,11 @@ Page({
           warehouseCode: d.warehouseCode,
           remark: remark,
         });
+        result = {
+          success: true,
+          message: (scanRes && scanRes.message) || `${d.operationLabel || '操作'}成功`,
+          data: scanRes,
+        };
       }
 
       if (result && result.success) {
@@ -316,9 +336,6 @@ Page({
   // ---- 内部工具 ----
 
   _emitRefresh() {
-    const eventBus = getApp().globalData && getApp().globalData.eventBus;
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('pattern');
   },
 });

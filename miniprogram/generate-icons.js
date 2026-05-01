@@ -18,7 +18,7 @@ const icons = {
   admin: `<svg xmlns="http://www.w3.org/2000/svg" width="81" height="81" viewBox="0 0 24 24" fill="none" stroke="COLOR" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
     <circle cx="12" cy="7" r="4"/>
-  </svg>`,
+  </svg>`
 };
 
 const outputDir = path.join(__dirname, 'assets', 'tabbar');
@@ -30,11 +30,11 @@ async function svgToPng(svgString, outputPath) {
       value: 81,
     },
   };
-
+  
   const resvg = new Resvg(svgString, opts);
   const pngData = resvg.render();
   const pngBuffer = pngData.asPng();
-
+  
   fs.writeFileSync(outputPath, pngBuffer);
 }
 
@@ -42,13 +42,13 @@ async function main() {
   for (const [name, svg] of Object.entries(icons)) {
     const graySvg = svg.replace(/COLOR/g, '#999999');
     const blueSvg = svg.replace(/COLOR/g, '#3b82f6');
-
+    
     await svgToPng(graySvg, path.join(outputDir, `${name}.png`));
     await svgToPng(blueSvg, path.join(outputDir, `${name}-active.png`));
-
+    
     console.log(`Generated ${name}.png and ${name}-active.png`);
   }
-
+  
   console.log('All icons generated!');
 }
 

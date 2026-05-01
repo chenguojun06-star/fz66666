@@ -48,7 +48,7 @@
             class="input-field"
             type="number"
             value="{{bundleSize}}"
-            placeholder="输入每扎件数"
+            placeholder="默认20"
             bindinput="onBundleSizeInput"
           />
           <text class="input-suffix">件/扎</text>

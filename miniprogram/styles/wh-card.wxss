@@ -7,7 +7,7 @@
 /* ---- 卡片容器 ---- */
 .wc-card {
   background: var(--color-bg-card);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   padding: 10px;
   margin-bottom: 10px;
   display: flex;
@@ -18,7 +18,7 @@
 .wc-img {
   width: 70px;
   height: 70px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin-right: 10px;
   flex-shrink: 0;
 }
@@ -26,17 +26,17 @@
 .wc-img-placeholder {
   width: 70px;
   height: 70px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin-right: 10px;
   flex-shrink: 0;
   background: var(--color-bg-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--font-size-xxs);
   color: var(--color-bg-gray);
   text-align: center;
-  line-height: 1.4;
+  line-height: var(--line-height-normal);
 }
 
 /* ---- 内容区 ---- */
@@ -61,7 +61,7 @@
 }
 
 .wc-op-btn {
-  font-size: 11px;
+  font-size: var(--font-size-xxs);
   padding: 3px 9px;
   border-radius: 10px;
   border: 1px solid var(--color-bg-gray);
@@ -79,7 +79,7 @@
 
 /* ---- 款号（单独使用时 display:block；在 wc-head 内自动 flex:1）---- */
 .wc-title {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--color-text-primary);
   flex: 1;
@@ -87,12 +87,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.3;
+  line-height: var(--line-height-normal);
 }
 
 /* ---- 款式名称 ---- */
 .wc-subtitle {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   display: block;
   margin-bottom: 4px;
@@ -110,7 +110,7 @@
 }
 
 .wc-tag {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   padding: 2px 7px;
   border-radius: 10px;
   white-space: nowrap;
@@ -151,12 +151,12 @@
 }
 
 .wc-stock-label {
-  font-size: 11px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-disabled);
 }
 
 .wc-stock-val {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--color-text-primary);
 }
@@ -166,7 +166,7 @@
 .wc-stock-val.red    { color: var(--color-danger); }
 
 .wc-stock-unit {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-disabled);
 }
 
@@ -178,7 +178,7 @@
 }
 
 .wc-action-link {
-  font-size: 11px;
+  font-size: var(--font-size-xxs);
   color: var(--color-primary, var(--color-primary));
   padding: 2px 7px;
   border: 1px solid var(--color-info-bg);

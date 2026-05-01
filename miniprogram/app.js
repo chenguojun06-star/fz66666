@@ -1,4 +1,4 @@
-const { getToken, clearToken } = require('./utils/storage');
+const { getToken, clearToken, clearRefreshToken, isTokenExpired } = require('./utils/storage');
 const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
 const { eventBus } = require('./utils/eventBus');
@@ -74,7 +74,7 @@ App({
         eventBus.emit('showPrivacyDialog', resolve);
         setTimeout(function () {
           if (getApp().globalData.privacyResolve === resolve) {
-            try { resolve({ buttonAction: 'disagree' }); } catch (_e) { /* 忽略回调异常 */ }
+            try { resolve({ buttonAction: 'disagree' }); } catch (_e) { /* ignore resolve race */ }
             getApp().globalData.privacyResolve = null;
           }
         }, 10000);
@@ -90,7 +90,6 @@ App({
   },
 
   onShow() {
-    // 小程序从后台进入前台时检查提醒
     try {
       if (this._reminderTimerId) { clearTimeout(this._reminderTimerId); }
       this._reminderTimerId = setTimeout(() => {
@@ -99,6 +98,18 @@ App({
     } catch (e) {
       console.error('检查提醒失败', e);
     }
+  },
+
+  onHide() {
+    if (this._reminderTimerId) {
+      clearTimeout(this._reminderTimerId);
+      this._reminderTimerId = null;
+    }
+  },
+
+  onPageNotFound(res) {
+    console.warn('[App] 页面不存在:', res.path);
+    wx.reLaunch({ url: '/pages/home/index' });
   },
 
   setTabSelected(page, selected) {
@@ -118,8 +129,12 @@ App({
 
   requireAuth() {
     const token = getToken();
-    if (token) {
+    if (token && !isTokenExpired()) {
       return true;
+    }
+    if (token && isTokenExpired()) {
+      clearToken();
+      clearRefreshToken();
     }
     this.redirectToLogin();
     return false;
@@ -146,6 +161,7 @@ App({
 
   logout() {
     clearToken();
+    clearRefreshToken();
     const { clearUserInfo } = require('./utils/storage');
     clearUserInfo();
 
@@ -266,6 +282,7 @@ App({
       if (e && e.type === 'auth') {
         return;
       }
+      console.error('[loadPagedList] error:', e && e.message ? e.message : e, 'key:', key);
       this.toastError(e, '网络异常');
     } finally {
       if (pageCtx && typeof pageCtx.setData === 'function') {
@@ -327,11 +344,15 @@ App({
       }
       console.error('[App] 全局错误:', msg);
       this._reportError('onError', typeof msg === 'string' ? msg : String(msg));
-    } catch (_) { /* 忽略上报异常 */ }
+    } catch (_) {
+      /* ignore secondary onError failure */
+    }
   },
 
   onUnhandledRejection(res) {
     const reason = res && res.reason ? String(res.reason) : 'unknown';
+    // 过滤正常的防抖导航忽略 — 不属于真实错误，不需要上报
+    if (reason.includes('导航进行中')) return;
     console.error('[App] 未处理的Promise拒绝:', reason);
     this._reportError('unhandledRejection', reason);
   },
@@ -349,8 +370,16 @@ App({
           detail: (detail || '').substring(0, 500),
           timestamp: Date.now(),
         },
-        fail() {},
+        success(res) {
+          if (res.statusCode === 404 || res.statusCode === 500) {
+            // 端点未部署或服务异常，静默跳过，避免报错套报错
+            console.warn('[App] error-report端点不可用 (' + res.statusCode + ')，跳过上报');
+          }
+        },
+        fail() { /* ignore report failure to avoid recursive noise */ },
       });
-    } catch (_) { /* 忽略初始化异常 */ }
+    } catch (_) {
+      /* ignore reporting bootstrap failure */
+    }
   },
 });

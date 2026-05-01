@@ -27,7 +27,7 @@
     <view class="chat-header">
       <view class="header-tabs">
         <view class="tab-item {{currentTab === 'chat' ? 'active' : ''}}" catchtap="switchTab" data-tab="chat">
-          <text>☁️ 小云助理</text>
+          <text>☁️ 小云帮助中心</text>
         </view>
         <view class="tab-item {{currentTab === 'tasks' ? 'active' : ''}}" catchtap="switchTab" data-tab="tasks">
           <view class="line-icon line-icon--sm icon-clipboard"></view><text>待办任务</text>
@@ -61,7 +61,7 @@
     </view>
     <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
       <block wx:if="{{isManager}}">
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我生成今日智能日报"><view class="line-icon line-icon--sm icon-stats"></view><text>生成日报</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我汇总今日日报"><view class="line-icon line-icon--sm icon-stats"></view><text>生成日报</text></view>
         <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？"><view class="line-icon line-icon--sm icon-alert"></view><text>风险订单</text></view>
         <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？"><view class="line-icon line-icon--sm icon-search"></view><text>今日扫码</text></view>
       </block>
@@ -73,7 +73,7 @@
     </view>
     <view class="chat-history-wrapper">
       <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
-        <block wx:for="{{messages}}" wx:key="id">
+        <block wx:for="{{visibleMessages}}" wx:key="id">
           <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
             <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
             <view class="bubble">
@@ -93,6 +93,25 @@
                   <view class="action-card-btn" hover-class="action-card-btn-hover" hover-stay-time="100" catchtap="onActionTap" data-action="{{act}}" wx:if="{{act.type !== 'info'}}">
                     <text>{{act.buttonText || '执行'}}</text>
                   </view>
+                </view>
+              </view>
+              <view class="insight-cards" wx:if="{{item.insightCards && item.insightCards.length > 0}}">
+                <view class="insight-card insight-{{ic.level || 'info'}}" wx:for="{{item.insightCards}}" wx:for-item="ic" wx:key="title">
+                  <view class="insight-title">{{ic.level === 'danger' ? '🔴' : ic.level === 'warning' ? '🟠' : ic.level === 'success' ? '🟢' : '🔵'}} {{ic.title}}</view>
+                  <view wx:if="{{ic.summary}}" class="insight-summary">{{ic.summary}}</view>
+                  <view wx:if="{{ic.painPoint}}" class="insight-pain">⚠ {{ic.painPoint}}</view>
+                  <view wx:if="{{ic.execute}}" class="insight-action">→ {{ic.execute}}</view>
+                  <view wx:if="{{ic.evidence.length}}" class="insight-evidence">
+                    <view wx:for="{{ic.evidence}}" wx:for-item="ev" wx:for-index="evi" wx:key="evi" class="insight-ev-item">· {{ev}}</view>
+                  </view>
+                </view>
+              </view>
+              <view class="clarification-card" wx:if="{{item.clarificationHints && item.clarificationHints.length > 0}}">
+                <view class="clarification-label">🤔 需要补充信息：</view>
+                <view class="clarification-btns">
+                  <view wx:for="{{item.clarificationHints}}" wx:for-item="hint" wx:for-index="hi" wx:key="hi"
+                    class="clarification-btn" hover-class="clarification-btn-hover"
+                    catchtap="autoAsk" data-question="{{hint}}">{{hint}}</view>
                 </view>
               </view>
               <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
@@ -123,23 +142,13 @@
           <view class="loading-dots" wx:if="{{streamingTool}}">
             <text class="loading-tool-text">{{streamingTool}}</text>
           </view>
-          <text wx:else>小云正在思考...</text>
+          <text wx:else>小云正在整理...</text>
         </view>
       </scroll-view>
     </view>
-    <view class="pending-image-wrap" wx:if="{{pendingImage}}">
-      <image class="pending-image-preview" src="{{pendingImage}}" mode="aspectFill" catchtap="previewImage" data-src="{{pendingImage}}" />
-      <view class="pending-image-remove" catchtap="removePendingImage">✕</view>
-    </view>
-    <view class="uploading-mask" wx:if="{{uploading}}">
-      <text class="uploading-text">图片上传中...</text>
-    </view>
     <view class="chat-input-area">
-      <view class="photo-btn" catchtap="chooseImage" hover-class="photo-btn-hover" hover-stay-time="100">
-        <view class="line-icon icon-camera photo-icon"></view>
-      </view>
-      <input class="chat-input chat-input-with-photo" value="{{inputValue}}" placeholder="问点什么..." bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
-      <view class="send-btn-mini {{(isLoading || (!inputValue && !pendingImage)) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
+      <input class="chat-input" value="{{inputValue}}" placeholder="输入关键字查询内部资料" bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
+      <view class="send-btn-mini {{(isLoading || !inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
         <text class="send-icon">➤</text>
       </view>
     </view>

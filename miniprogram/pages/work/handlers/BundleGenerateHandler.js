@@ -28,16 +28,16 @@ const INITIAL_BUNDLE_MODAL = {
  * excessRate > 0 时 cuttingQty 会大于 orderedQty
  */
 function buildBundleRows(colorGroups, allSizes, bundleSize, excessRate) {
-  const bs = parseInt(bundleSize, 10);
-  const rate = parseFloat(excessRate) || 0;
-  const rows = [];
+  var bs = parseInt(bundleSize, 10);
+  var rate = parseFloat(excessRate) || 0;
+  var rows = [];
   colorGroups.forEach(function(group) {
     allSizes.forEach(function(size, si) {
-      const qty = (group.sizeQtyList && group.sizeQtyList[si]) || 0;
+      var qty = (group.sizeQtyList && group.sizeQtyList[si]) || 0;
       if (qty <= 0) return;
-      const cuttingQty = rate > 0 ? Math.ceil(qty * (1 + rate / 100)) : qty;
-      const bundleCount = bs > 0 ? Math.ceil(cuttingQty / bs) : 0;
-      const remainder = bs > 0 && bundleCount > 0 ? cuttingQty % bs : 0;
+      var cuttingQty = rate > 0 ? Math.ceil(qty * (1 + rate / 100)) : qty;
+      var bundleCount = bs > 0 ? Math.ceil(cuttingQty / bs) : 0;
+      var remainder = bs > 0 && bundleCount > 0 ? cuttingQty % bs : 0;
       rows.push({
         color: group.color || '',
         size: size,
@@ -72,12 +72,12 @@ function onGenerateBundle(ctx, e) {
 }
 
 function onBundleSizeInput(ctx, e) {
-  const val = (e.detail.value || '').trim();
-  const bs = parseInt(val, 10);
-  const modal = ctx.data.bundleModal;
-  const bundleRows = buildBundleRows(modal.colorGroups, modal.allSizes, val, modal.excessRate);
-  const totalBundles = bs > 0 ? bundleRows.reduce(function(sum, r) { return sum + r.bundleCount; }, 0) : 0;
-  const totalCuttingQty = bundleRows.reduce(function(sum, r) { return sum + r.cuttingQty; }, 0);
+  var val = (e.detail.value || '').trim();
+  var bs = parseInt(val, 10);
+  var modal = ctx.data.bundleModal;
+  var bundleRows = buildBundleRows(modal.colorGroups, modal.allSizes, val, modal.excessRate);
+  var totalBundles = bs > 0 ? bundleRows.reduce(function(sum, r) { return sum + r.bundleCount; }, 0) : 0;
+  var totalCuttingQty = bundleRows.reduce(function(sum, r) { return sum + r.cuttingQty; }, 0);
   ctx.setData({
     'bundleModal.bundleSize': val,
     'bundleModal.bundleRows': bundleRows,
@@ -87,12 +87,12 @@ function onBundleSizeInput(ctx, e) {
 }
 
 function onExcessRateInput(ctx, e) {
-  const val = (e.detail.value || '').trim();
-  const modal = ctx.data.bundleModal;
-  const bundleRows = buildBundleRows(modal.colorGroups, modal.allSizes, modal.bundleSize, val);
-  const bs = parseInt(modal.bundleSize, 10);
-  const totalBundles = bs > 0 ? bundleRows.reduce(function(sum, r) { return sum + r.bundleCount; }, 0) : 0;
-  const totalCuttingQty = bundleRows.reduce(function(sum, r) { return sum + r.cuttingQty; }, 0);
+  var val = (e.detail.value || '').trim();
+  var modal = ctx.data.bundleModal;
+  var bundleRows = buildBundleRows(modal.colorGroups, modal.allSizes, modal.bundleSize, val);
+  var bs = parseInt(modal.bundleSize, 10);
+  var totalBundles = bs > 0 ? bundleRows.reduce(function(sum, r) { return sum + r.bundleCount; }, 0) : 0;
+  var totalCuttingQty = bundleRows.reduce(function(sum, r) { return sum + r.cuttingQty; }, 0);
   ctx.setData({
     'bundleModal.excessRate': val,
     'bundleModal.bundleRows': bundleRows,
@@ -102,8 +102,8 @@ function onExcessRateInput(ctx, e) {
 }
 
 function onLastBundleQtyInput(ctx, e) {
-  const index = e.currentTarget.dataset.index;
-  let val = parseInt(e.detail.value, 10);
+  var index = e.currentTarget.dataset.index;
+  var val = parseInt(e.detail.value, 10);
   if (isNaN(val) || val < 1) val = 1;
   ctx.setData({
     ['bundleModal.bundleRows[' + index + '].lastBundleQty']: val,
@@ -122,7 +122,7 @@ async function onConfirmBundle(ctx) {
   const items = [];
   (modal.bundleRows || []).forEach(function(row) {
     if (!row.cuttingQty || row.cuttingQty <= 0 || !row.bundleCount || row.bundleCount <= 0) return;
-    for (let b = 0; b < row.bundleCount - 1; b++) {
+    for (var b = 0; b < row.bundleCount - 1; b++) {
       items.push({ color: String(row.color || ''), size: String(row.size || ''), quantity: bundleSize });
     }
     items.push({ color: String(row.color || ''), size: String(row.size || ''), quantity: row.lastBundleQty || bundleSize });
