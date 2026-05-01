@@ -10,7 +10,6 @@ import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.FactoryShipmentService;
 import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,21 +21,20 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 外发工厂发货/收货/质检 Orchestrator。
- * <p>
- * 闭环流程：
+ * 外发工厂发货/收货 Orchestrator。
+ *
+ * <p>闭环流程（职责边界）：
  * <ol>
  *   <li>外发工厂发货 (ship) → 创建发货单，状态 pending</li>
- *   <li>租户收货确认 (receive) → 确认物流到货，状态 received</li>
- *   <li>质检扫码 (qualityCheck) → 分出合格品/次品，状态 quality_checked</li>
- *   <li>合格品走成品入库 → 现有 ProductWarehousing 流程</li>
- *   <li>次品退回外发厂 → 外发厂返修 → 重新发货 → 回到步骤 1</li>
+ *   <li>本厂收货确认 (receive) → 确认物流到货数量，状态 received</li>
+ *   <li>质检入库 → 由 /production/warehousing 页面负责（不在本模块）</li>
+ *   <li>次品返修 → 由质检入库流程处理（不在本模块）</li>
  * </ol>
  * </p>
  *
  * <p>关键规则：
  * <ul>
- *   <li>发货/收货不做库存变更 — 库存变更由成品入库(warehousing)负责</li>
+ *   <li>发货/收货不做库存变更 — 库存变更由成品入库(ProductWarehousing)负责</li>
  *   <li>收货由租户（本厂）操作，非外发工厂账号</li>
  *   <li>发货量不能超过裁剪总量</li>
  * </ul>
@@ -54,14 +52,11 @@ public class FactoryShipmentOrchestrator {
     private ProductionOrderService productionOrderService;
     @Autowired
     private FactoryShipmentDetailService factoryShipmentDetailService;
-    @Autowired
-    private ProductSkuService productSkuService;
 
     // ===== 发货 =====
 
     /**
      * 外发工厂发货 — 创建发货单（仅物流记录，不影响库存）。
-     * SKU 库存变更由成品入库(warehousing)负责。
      */
     @Transactional(rollbackFor = Exception.class)
     public Result<FactoryShipment> ship(Map<String, Object> params) {
@@ -75,7 +70,6 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
-        // 发货权限：外发工厂账号只能发自己工厂的订单；租户管理员可代为发货
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(order.getFactoryId())) {
             return Result.fail("无权操作其他工厂的订单");
@@ -97,7 +91,6 @@ public class FactoryShipmentOrchestrator {
         Map<String, Object> summary = cuttingBundleService.summarize(order.getOrderNo(), orderId);
         int cuttingTotal = summary != null ? (int) summary.getOrDefault("totalQuantity", 0) : 0;
         int alreadyShipped = factoryShipmentService.sumShippedByOrderId(orderId);
-
         if (alreadyShipped + shipQuantity > cuttingTotal) {
             return Result.fail("发货数量超限，裁剪总量 " + cuttingTotal
                     + "，已发 " + alreadyShipped + "，本次 " + shipQuantity);
@@ -125,21 +118,19 @@ public class FactoryShipmentOrchestrator {
         factoryShipmentService.save(fs);
         factoryShipmentDetailService.saveDetails(fs.getId(), details, UserContext.tenantId());
 
-        // 发货不扣库存！库存变更由成品入库负责
-        log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={} skuLines={} factory={}",
+        log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={} lines={} factory={}",
                 fs.getShipmentNo(), orderId, shipQuantity, details.size(), order.getFactoryName());
         return Result.success(fs);
     }
 
-    // ===== 收货确认（物流级） =====
+    // ===== 收货确认（仅物流到货确认，不做质检） =====
 
     /**
-     * 租户收货确认 — 仅确认物流到货，不做库存变更。
-     * 收货后需走质检→成品入库流程才会增加库存。
+     * 收货确认 — 仅确认到货数量，不做质检。
+     * 质检由 /production/warehousing 页面负责。
      */
     @Transactional(rollbackFor = Exception.class)
-    public Result<FactoryShipment> receive(String shipmentId, Integer receivedQuantity,
-                                           List<Map<String, Object>> receiveDetails) {
+    public Result<FactoryShipment> receive(String shipmentId, Integer receivedQuantity) {
         if (!StringUtils.hasText(shipmentId)) {
             return Result.fail("缺少发货单 ID");
         }
@@ -152,24 +143,14 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("该发货单状态为 " + fs.getReceiveStatus() + "，无法收货");
         }
 
-        // 收货由租户（本厂）操作，非外发工厂
+        // 收货由租户（本厂）操作，外发工厂账号不操作收货
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
-            return Result.fail("外发工厂账号不可操作收货，请使用本厂账号");
+            return Result.fail("外发工厂账号不可操作收货，请使用本厂账号登录");
         }
 
-        int actualQty = 0;
-        if (receiveDetails != null && !receiveDetails.isEmpty()) {
-            // 颜色/尺码粒度收货
-            actualQty = receiveDetails.stream()
-                    .mapToInt(d -> d.get("quantity") instanceof Number ? ((Number) d.get("quantity")).intValue() : 0)
-                    .sum();
-            factoryShipmentDetailService.updateReceivedDetails(shipmentId, receiveDetails);
-        } else if (receivedQuantity != null && receivedQuantity > 0) {
-            actualQty = receivedQuantity;
-        } else {
-            actualQty = fs.getShipQuantity();
-        }
+        int actualQty = (receivedQuantity != null && receivedQuantity > 0)
+                ? receivedQuantity : fs.getShipQuantity();
 
         if (actualQty > fs.getShipQuantity()) {
             return Result.fail("实际到货数量(" + actualQty + ")不能超过发货数量(" + fs.getShipQuantity() + ")");
@@ -187,88 +168,6 @@ public class FactoryShipmentOrchestrator {
         return Result.success(fs);
     }
 
-    // ===== 质检 =====
-
-    /**
-     * 质检 — 区分合格品/次品数量。
-     * 合格品后续走成品入库流程增加库存。
-     * 次品如需退回外发厂返修，调用 returnDefective。
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public Result<FactoryShipment> qualityCheck(String shipmentId, int qualifiedQty, int defectiveQty,
-                                                 List<Map<String, Object>> qualityDetails) {
-        if (!StringUtils.hasText(shipmentId)) {
-            return Result.fail("缺少发货单 ID");
-        }
-        FactoryShipment fs = factoryShipmentService.getById(shipmentId);
-        if (fs == null) {
-            return Result.fail("发货单不存在");
-        }
-        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
-        if (!"received".equals(fs.getReceiveStatus())) {
-            return Result.fail("仅已收货状态可质检，当前状态: " + fs.getReceiveStatus());
-        }
-
-        int total = qualifiedQty + defectiveQty;
-        if (total > fs.getReceivedQuantity()) {
-            return Result.fail("质检总数量(" + total + ")超过收货数量(" + fs.getReceivedQuantity() + ")");
-        }
-
-        fs.setReceiveStatus("quality_checked");
-        factoryShipmentService.updateById(fs);
-
-        // 记录质检明细（颜色/尺码级别的合格/次品数量）
-        if (qualityDetails != null && !qualityDetails.isEmpty()) {
-            factoryShipmentDetailService.updateQualityDetails(shipmentId, qualityDetails);
-        }
-
-        log.info("[FactoryShipment] 质检完成 shipmentId={} qualified={} defective={}",
-                shipmentId, qualifiedQty, defectiveQty);
-        return Result.success(fs);
-    }
-
-    // ===== 次品退回返修 =====
-
-    /**
-     * 次品退回外发厂返修 — 创建返修记录，允许工厂重新发货。
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public Result<FactoryShipment> returnDefective(String shipmentId, int returnQty,
-                                                    List<Map<String, Object>> returnDetails) {
-        if (!StringUtils.hasText(shipmentId)) {
-            return Result.fail("缺少发货单 ID");
-        }
-        FactoryShipment fs = factoryShipmentService.getById(shipmentId);
-        if (fs == null) {
-            return Result.fail("发货单不存在");
-        }
-        TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
-        if (!"quality_checked".equals(fs.getReceiveStatus())
-                && !"received".equals(fs.getReceiveStatus())) {
-            return Result.fail("当前状态不可退回返修: " + fs.getReceiveStatus());
-        }
-
-        if (returnQty <= 0) {
-            return Result.fail("返修数量须大于0");
-        }
-
-        // 记录返修明细
-        if (returnDetails != null && !returnDetails.isEmpty()) {
-            factoryShipmentDetailService.markReturned(shipmentId, returnDetails);
-        }
-
-        // 退回后状态回退到 pending，允许工厂重新发货
-        // 已收货数量 = 减去退回的（剩余是未退回的合格品）
-        int remaining = Math.max(0, fs.getReceivedQuantity() - returnQty);
-        fs.setReceiveStatus("partially_returned");
-        fs.setReceivedQuantity(remaining);
-        factoryShipmentService.updateById(fs);
-
-        log.info("[FactoryShipment] 次品退回返修 shipmentId={} returnQty={} remainingQty={}",
-                shipmentId, returnQty, remaining);
-        return Result.success(fs);
-    }
-
     // ===== 删除发货单 =====
 
     @Transactional(rollbackFor = Exception.class)
@@ -281,13 +180,14 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("发货单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(fs.getTenantId(), "发货单");
-        if ("received".equals(fs.getReceiveStatus()) || "quality_checked".equals(fs.getReceiveStatus())) {
-            return Result.fail("已收货/已质检的发货单不可删除，请走退货返修流程");
+        if ("received".equals(fs.getReceiveStatus())) {
+            return Result.fail("已收货的发货单不可删除，如需退货请联系管理员");
         }
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(fs.getFactoryId())) {
             return Result.fail("无权操作其他工厂的发货单");
         }
+
         FactoryShipment patch = new FactoryShipment();
         patch.setId(shipmentId);
         patch.setDeleteFlag(1);
@@ -300,9 +200,6 @@ public class FactoryShipmentOrchestrator {
 
     // ===== 查询 =====
 
-    /**
-     * 获取可发货信息（裁剪总量 / 已发 / 剩余）。
-     */
     public Map<String, Object> getShippableInfo(String orderId) {
         ProductionOrder order = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getId, orderId)
@@ -323,9 +220,6 @@ public class FactoryShipmentOrchestrator {
         return info;
     }
 
-    /**
-     * 获取某订单所有发货单中明细的颜色×尺码汇总。
-     */
     public List<Map<String, Object>> getOrderShipmentDetailSum(String orderId) {
         List<FactoryShipment> shipments = factoryShipmentService.lambdaQuery()
                 .eq(FactoryShipment::getOrderId, orderId)

@@ -16,6 +16,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 外发工厂收发货 Controller。
+ * <p>
+ * 职责边界：
+ * <ul>
+ *   <li>发货 — 外发工厂操作，创建发货单</li>
+ *   <li>收货 — 本厂确认到货数量（仅物流确认，不做质检）</li>
+ *   <li>质检/次品/返修/入库 — 由质检入库页面(/production/warehousing)负责</li>
+ * </ul>
+ * </p>
+ */
 @RestController
 @RequestMapping("/api/production/factory-shipment")
 @PreAuthorize("isAuthenticated()")
@@ -36,39 +47,13 @@ public class FactoryShipmentController {
         return factoryShipmentOrchestrator.ship(params);
     }
 
-    /** 本厂收货确认（物流级） */
+    /** 本厂收货确认 — 仅确认到货数量，不做质检 */
     @PostMapping("/{id}/receive")
     public Result<FactoryShipment> receive(@PathVariable("id") String id,
                                            @RequestBody Map<String, Object> params) {
         Integer receivedQuantity = params.get("receivedQuantity") instanceof Number
                 ? ((Number) params.get("receivedQuantity")).intValue() : null;
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> receiveDetails = (List<Map<String, Object>>) params.get("details");
-        return factoryShipmentOrchestrator.receive(id, receivedQuantity, receiveDetails);
-    }
-
-    /** 质检 — 区分合格品/次品 */
-    @PostMapping("/{id}/quality-check")
-    public Result<FactoryShipment> qualityCheck(@PathVariable("id") String id,
-                                                 @RequestBody Map<String, Object> params) {
-        int qualifiedQty = params.get("qualifiedQty") instanceof Number
-                ? ((Number) params.get("qualifiedQty")).intValue() : 0;
-        int defectiveQty = params.get("defectiveQty") instanceof Number
-                ? ((Number) params.get("defectiveQty")).intValue() : 0;
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> qualityDetails = (List<Map<String, Object>>) params.get("details");
-        return factoryShipmentOrchestrator.qualityCheck(id, qualifiedQty, defectiveQty, qualityDetails);
-    }
-
-    /** 次品退回外发厂返修 */
-    @PostMapping("/{id}/return-defective")
-    public Result<FactoryShipment> returnDefective(@PathVariable("id") String id,
-                                                    @RequestBody Map<String, Object> params) {
-        int returnQty = params.get("returnQty") instanceof Number
-                ? ((Number) params.get("returnQty")).intValue() : 0;
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> returnDetails = (List<Map<String, Object>>) params.get("details");
-        return factoryShipmentOrchestrator.returnDefective(id, returnQty, returnDetails);
+        return factoryShipmentOrchestrator.receive(id, receivedQuantity);
     }
 
     /** 发货单列表 */
