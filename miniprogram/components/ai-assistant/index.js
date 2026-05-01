@@ -7,9 +7,9 @@ function mdToHtml(text) {
   if (!text) return '';
   var t = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/```([\s\S]*?)```/g, '<pre style="background:#f5f6f8;padding:12rpx 16rpx;border-radius:8rpx;overflow-x:auto;font-size:24rpx;margin:12rpx 0"><code style="background:transparent;padding:0">$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.04);padding:2rpx 8rpx;border-radius:4rpx;font-size:26rpx;font-family:monospace">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight:700">$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>');
   var lines = t.split('\n');
   var result = [];
@@ -18,14 +18,14 @@ function mdToHtml(text) {
     var l = lines[i];
     var trimmed = l.trim();
     if (trimmed.match(/^[-*]\s/)) {
-      if (!inList) { result.push('<ul>'); inList = true; }
-      result.push('<li>' + trimmed.replace(/^[-*]\s/, '') + '</li>');
+      if (!inList) { result.push('<ul style="margin:8rpx 0;padding-left:32rpx">'); inList = true; }
+      result.push('<li style="margin:4rpx 0">' + trimmed.replace(/^[-*]\s/, '') + '</li>');
     } else if (trimmed.match(/^\d+[\.\\)]\s/)) {
-      if (!inList) { result.push('<ul>'); inList = true; }
-      result.push('<li>' + trimmed.replace(/^\d+[\.\\)]\s/, '') + '</li>');
+      if (!inList) { result.push('<ul style="margin:8rpx 0;padding-left:32rpx">'); inList = true; }
+      result.push('<li style="margin:4rpx 0">' + trimmed.replace(/^\d+[\.\\)]\s/, '') + '</li>');
     } else {
       if (inList) { result.push('</ul>'); inList = false; }
-      if (l) result.push('<p>' + (trimmed || '') + '</p>');
+      if (l) result.push('<p style="margin:8rpx 0;line-height:1.8">' + (trimmed || '') + '</p>');
     }
   }
   if (inList) result.push('</ul>');
