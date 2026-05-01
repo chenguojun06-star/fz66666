@@ -266,26 +266,27 @@ public class PendingTaskOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
-        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
-                        ProductionOrder::getStyleNo, ProductionOrder::getExpectedShipDate,
+                        ProductionOrder::getStyleNo, ProductionOrder::getPlannedEndDate,
                         ProductionOrder::getProductionProgress, ProductionOrder::getMerchandiser,
                         ProductionOrder::getFactoryId, ProductionOrder::getFactoryName)
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                 .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
-                .isNotNull(ProductionOrder::getExpectedShipDate)
-                .lt(ProductionOrder::getExpectedShipDate, today)
-                .last("LIMIT " + MAX_PER_CATEGORY)
+                .isNotNull(ProductionOrder::getPlannedEndDate)
+                .lt(ProductionOrder::getPlannedEndDate, now)
+                .orderByAsc(ProductionOrder::getPlannedEndDate)
+                .last("LIMIT 50")
                 .list();
         return orders.stream().map(o -> {
             PendingTaskDTO dto = new PendingTaskDTO();
             dto.setId("OVD_" + o.getId());
             dto.setTaskType("OVERDUE_ORDER");
             dto.setModule("production");
-            long days = ChronoUnit.DAYS.between(o.getExpectedShipDate(), today);
+            long days = ChronoUnit.DAYS.between(o.getPlannedEndDate(), now);
             dto.setTitle("订单逾期 " + safe(o.getOrderNo()));
             int prog = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
             dto.setDescription("逾期" + days + "天，进度" + prog + "%");
@@ -293,7 +294,7 @@ public class PendingTaskOrchestrator {
             dto.setStyleNo(o.getStyleNo());
             dto.setDeepLinkPath("/production");
             dto.setPriority("high");
-            dto.setCreatedAt(o.getExpectedShipDate() != null ? o.getExpectedShipDate().atStartOfDay() : null);
+            dto.setCreatedAt(o.getPlannedEndDate());
             dto.setTaskStatus("pending");
             dto.setAssigneeName(o.getMerchandiser());
             dto.setAssigneeRole("跟单员");

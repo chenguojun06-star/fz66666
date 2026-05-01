@@ -106,7 +106,8 @@ public class NlQueryDataHandlers {
     public NlQueryResponse handleOverdueQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("overdue");
-        long count = dashboardQueryService.countOverdueOrders();
+        List<ProductionOrder> allOverdues = dashboardQueryService.listOverdueOrders(200);
+        long count = allOverdues.size();
 
         if (count == 0) {
             resp.setAnswer("🎉 当前没有延期订单，生产进度良好！");
@@ -116,7 +117,6 @@ public class NlQueryDataHandlers {
             data.put("factoryGroups", Collections.emptyList());
             resp.setData(data);
         } else {
-            List<ProductionOrder> allOverdues = dashboardQueryService.listOverdueOrders(200);
             LocalDateTime now = LocalDateTime.now();
 
             Map<String, List<ProductionOrder>> byFactory = allOverdues.stream()

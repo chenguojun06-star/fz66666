@@ -21,9 +21,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderLearningRecommendationOrchestrator {
@@ -38,6 +40,29 @@ public class OrderLearningRecommendationOrchestrator {
     private final OrderLearningFactoryScoreOrchestrator orderLearningFactoryScoreOrchestrator;
     private final OrderLearningSimilarStyleOrchestrator orderLearningSimilarStyleOrchestrator;
     public OrderLearningRecommendationResponse buildRecommendation(
+            String styleNo,
+            Integer orderQuantity,
+            String currentFactoryMode,
+            String currentPricingMode,
+            BigDecimal currentUnitPrice
+    ) {
+        try {
+            return doBuildRecommendation(styleNo, orderQuantity, currentFactoryMode, currentPricingMode, currentUnitPrice);
+        } catch (Exception ex) {
+            log.warn("[OrderLearning] buildRecommendation failed, styleNo={}", styleNo, ex);
+            OrderLearningRecommendationResponse fallback = new OrderLearningRecommendationResponse();
+            fallback.setStyleNo(styleNo);
+            fallback.setCurrentFactoryMode(currentFactoryMode);
+            fallback.setCurrentPricingMode(currentPricingMode);
+            fallback.setCurrentUnitPrice(currentUnitPrice);
+            fallback.setRecommendationTitle("AI 学习建议暂不可用");
+            fallback.setRecommendationSummary("学习数据加载异常，请稍后重试。");
+            fallback.setConfidenceLevel("low");
+            return fallback;
+        }
+    }
+
+    private OrderLearningRecommendationResponse doBuildRecommendation(
             String styleNo,
             Integer orderQuantity,
             String currentFactoryMode,

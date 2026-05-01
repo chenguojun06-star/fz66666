@@ -67,7 +67,7 @@ public class OrderDecisionCaptureOrchestrator {
             snapshot.setStyleName(order.getStyleName());
             snapshot.setStyleCategory(order.getProductCategory());
             snapshot.setFactoryMode(normalizeFactoryMode(order.getFactoryType()));
-            snapshot.setFactoryId(parseLong(order.getFactoryId()));
+            snapshot.setFactoryId(order.getFactoryId());
             snapshot.setFactoryName(order.getFactoryName());
             snapshot.setSelectedPricingMode(emptyToDefault(order.getPricingMode(), "PROCESS"));
             snapshot.setSelectedOrderUnitPrice(order.getFactoryUnitPrice());

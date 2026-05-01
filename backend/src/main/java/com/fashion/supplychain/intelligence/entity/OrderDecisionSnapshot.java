@@ -30,7 +30,7 @@ public class OrderDecisionSnapshot {
 
     private String factoryMode;
 
-    private Long factoryId;
+    private String factoryId;
 
     private String factoryName;
 
