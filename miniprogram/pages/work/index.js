@@ -1,7 +1,6 @@
 const api = require('../../utils/api');
 const { syncManager } = require('../../utils/syncManager');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
-const { getCurrentFactoryId } = require('../../utils/permission');
 const { eventBus, Events } = require('../../utils/eventBus');
 
 

@@ -221,7 +221,6 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
               </div>
               <ResizableTable
                 size="small"
-                scroll={{ y: 320 }}
                 rowKey={(r: RecognizedItem) =>
                   r.purchaseId || r.materialCode || r.materialName
                 }

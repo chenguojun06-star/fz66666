@@ -369,7 +369,6 @@ const BillingTab: React.FC = () => {
         loading={loading}
         pagination={false}
         size="small"
-        scroll={{ y: 300 }}
       />
 
       <Divider />

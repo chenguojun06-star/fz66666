@@ -53,7 +53,6 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
           size="small"
           rowKey={(r) => String(r.id)}
           dataSource={filteredAssignableUsers}
-          scroll={{ y: 300 }}
           pagination={false}
           rowSelection={{
             type: 'checkbox',

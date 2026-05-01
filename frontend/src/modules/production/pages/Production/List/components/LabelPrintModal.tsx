@@ -301,7 +301,6 @@ function SkuTable({ open, order, styleInfo, printColLabel, onPrint, onClose }: S
           rowKey="key"
           size="small"
           bordered
-          scroll={{ y: 320 }}
         />
       </Spin>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>

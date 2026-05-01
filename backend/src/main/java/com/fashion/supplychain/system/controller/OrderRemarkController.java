@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -38,6 +40,9 @@ public class OrderRemarkController {
     @Autowired
     private StyleInfoService styleInfoService;
 
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
+
     private static final Pattern REMARK_LINE_PATTERN = Pattern.compile(
             "^\\[(?:(AI巡检)\\s*)?(\\d{2}-\\d{2}\\s+\\d{2}:\\d{2})\\]\\s*(.+)$"
     );
@@ -64,6 +69,8 @@ public class OrderRemarkController {
         if ("order".equals(targetType)) {
             List<OrderRemark> inlineRemarks = extractOrderInlineRemarks(targetNo);
             result.addAll(inlineRemarks);
+            // 合并采购单备注：t_material_purchase.remark → 统一展示在订单备注时间线中
+            result.addAll(extractPurchaseRemarks(targetNo));
             result.sort(Comparator.comparing(OrderRemark::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder())));
         } else if ("style".equals(targetType)) {
             List<OrderRemark> inlineRemarks = extractStyleInlineRemarks(targetNo);
@@ -72,6 +79,46 @@ public class OrderRemarkController {
         }
 
         return Result.success(result);
+    }
+
+    /**
+     * 从 t_material_purchase 提取该订单下所有采购条目的 remark 字段，
+     * 合并进备注时间线，让各端点开备注都能看到采购相关说明。
+     */
+    private List<OrderRemark> extractPurchaseRemarks(String orderNo) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<MaterialPurchase> purchases = materialPurchaseService.lambdaQuery()
+                .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo,
+                        MaterialPurchase::getMaterialName, MaterialPurchase::getRemark,
+                        MaterialPurchase::getReceiverName, MaterialPurchase::getReceivedTime)
+                .eq(MaterialPurchase::getOrderNo, orderNo)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .isNotNull(MaterialPurchase::getRemark)
+                .list();
+
+        List<OrderRemark> result = new ArrayList<>();
+        long seq = -1000;
+        for (MaterialPurchase p : purchases) {
+            String remarkText = p.getRemark();
+            if (!StringUtils.hasText(remarkText)) continue;
+
+            // 内容加上物料名称前缀，方便区分是哪个采购条目的备注
+            String materialTag = StringUtils.hasText(p.getMaterialName())
+                    ? "「采购·" + p.getMaterialName() + "」"
+                    : "「采购备注」";
+            OrderRemark r = new OrderRemark();
+            r.setId(seq--);
+            r.setTargetType("order");
+            r.setTargetNo(orderNo);
+            r.setContent(materialTag + remarkText);
+            r.setAuthorName(StringUtils.hasText(p.getReceiverName()) ? p.getReceiverName() : "采购");
+            r.setAuthorRole("采购备注");
+            r.setCreateTime(p.getReceivedTime());
+            r.setDeleteFlag(0);
+            result.add(r);
+        }
+        return result;
     }
 
     private List<OrderRemark> extractOrderInlineRemarks(String orderNo) {

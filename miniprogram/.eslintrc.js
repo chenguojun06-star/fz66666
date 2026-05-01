@@ -22,6 +22,7 @@ module.exports = {
     App: 'readonly',
     Page: 'readonly',
     Component: 'readonly',
+    Behavior: 'readonly',
     getApp: 'readonly',
     getCurrentPages: 'readonly',
   },
@@ -116,6 +117,27 @@ module.exports = {
       files: ['utils/**/*.js'],
       rules: {
         'max-lines-per-function': ['warn', { max: 100 }],
+      },
+    },
+    {
+      files: ['test/**/*.js', 'tests/**/*.js'],
+      env: {
+        node: true,
+        es6: true,
+      },
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        before: 'readonly',
+        after: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+      },
+      rules: {
+        'require-jsdoc': 'off',
+        'valid-jsdoc': 'off',
+        'max-lines-per-function': 'off',
       },
     },
   ],

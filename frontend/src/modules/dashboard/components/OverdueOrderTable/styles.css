@@ -190,7 +190,7 @@
   align-items: center;
   gap: 5px;
   padding: 4px 12px;
-  border-radius: 16px;
+  border-radius: 6px;
   background: #f0f0f0;
   cursor: pointer;
   transition: background 0.18s, color 0.18s, border-color 0.18s;

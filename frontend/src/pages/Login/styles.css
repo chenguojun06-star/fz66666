@@ -49,7 +49,7 @@
   top: 38%;
   left: 42%;
   transform: rotate(-18deg);
-  color: rgba(135, 145, 165, 0.28);
+  color: rgba(130, 142, 162, 0.25);
   filter: url(#pencil-texture);
 }
 
@@ -58,7 +58,7 @@
   top: 52%;
   left: 32%;
   transform: rotate(14deg);
-  color: rgba(128, 138, 158, 0.32);
+  color: rgba(122, 134, 155, 0.28);
   filter: url(#pencil-texture);
 }
 
@@ -67,7 +67,8 @@
   top: 8%;
   left: 24%;
   transform: rotate(-5deg);
-  color: rgba(155, 162, 178, 0.18);
+  color: rgba(150, 158, 175, 0.24);
+  filter: url(#pencil-texture);
 }
 
 .garment-shirt {
@@ -75,7 +76,7 @@
   top: 10%;
   right: 14%;
   transform: rotate(6deg);
-  color: rgba(150, 158, 175, 0.20);
+  color: rgba(144, 154, 172, 0.24);
   filter: url(#pencil-texture);
 }
 
@@ -84,7 +85,8 @@
   top: 35%;
   right: 26%;
   transform: rotate(12deg);
-  color: rgba(148, 155, 172, 0.16);
+  color: rgba(145, 154, 170, 0.22);
+  filter: url(#pencil-texture);
 }
 
 .garment-vest {
@@ -92,7 +94,7 @@
   top: 48%;
   right: 7%;
   transform: rotate(-8deg);
-  color: rgba(130, 140, 160, 0.30);
+  color: rgba(125, 136, 158, 0.26);
   filter: url(#pencil-texture);
 }
 
@@ -101,7 +103,7 @@
   bottom: 18%;
   left: 2%;
   transform: rotate(5deg);
-  color: rgba(108, 118, 142, 0.40);
+  color: rgba(105, 116, 140, 0.28);
   filter: url(#pencil-texture);
 }
 
@@ -110,7 +112,8 @@
   bottom: 26%;
   right: 3%;
   transform: rotate(-10deg);
-  color: rgba(118, 128, 150, 0.28);
+  color: rgba(115, 126, 148, 0.30);
+  filter: url(#pencil-texture);
 }
 
 .garment-skirt {
@@ -118,7 +121,7 @@
   bottom: 3%;
   left: 50%;
   transform: translateX(-50%) rotate(-3deg);
-  color: rgba(88, 100, 130, 0.52);
+  color: rgba(88, 100, 128, 0.36);
   filter: url(#pencil-texture);
 }
 
@@ -132,7 +135,7 @@
   top: 22%;
   left: 14%;
   transform: rotate(25deg);
-  color: rgba(148, 156, 174, 0.18);
+  color: rgba(145, 154, 172, 0.22);
 }
 
 .tech-grid {

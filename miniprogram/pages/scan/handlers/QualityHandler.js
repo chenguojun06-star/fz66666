@@ -18,7 +18,7 @@ function showQualityModal(page, detail) {
 /**
  * 关闭质检弹窗（页面跳转模式下为空操作，兼容调用方）
  */
-function closeQualityModal(page) {
+function closeQualityModal(_page) {
   // 页面跳转模式，无弹窗需要关闭
 }
 

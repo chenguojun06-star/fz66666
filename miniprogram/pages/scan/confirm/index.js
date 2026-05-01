@@ -410,11 +410,11 @@ Page({
       wx.navigateBack();
     } catch (e) {
       this.setData({ loading: false });
-      var raw = this._scanContext;
+      var ctx = this._scanContext;
       getApp().globalData.lastScanResult = {
-        orderNo: (raw && raw.orderNo) || '',
-        processCode: (raw && raw.processCode) || '',
-        processName: (raw && (raw.progressStage || raw.processName)) || '',
+        orderNo: (ctx && ctx.orderNo) || '',
+        processCode: (ctx && ctx.processCode) || '',
+        processName: (ctx && (ctx.progressStage || ctx.processName)) || '',
         quantity: 0,
         success: false,
       };

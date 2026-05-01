@@ -322,7 +322,6 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
               dataSource={batchDetails}
               rowKey="batchNo"
               pagination={false}
-              scroll={{ y: 300 }}
               size="small"
               bordered
               summary={() => {

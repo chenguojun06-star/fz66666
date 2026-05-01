@@ -132,7 +132,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           <ResizableTable
             storageKey="production-list-transfer"
             size="small" loading={transferBundlesLoading} dataSource={transferBundles}
-            rowKey="id" pagination={false} scroll={{ y: 200 }}
+            rowKey="id" pagination={false}
             rowClassName={(record: any) => {
               const s = record?.status;
               if (s === 'received' || s === 'qualified' || s === 'completed') return 'transfer-bundle-row-disabled';

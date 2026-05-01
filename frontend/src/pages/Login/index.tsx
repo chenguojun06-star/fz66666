@@ -208,9 +208,10 @@ const Login: React.FC = () => {
         </div>
         <svg className="pencil-filters" aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
           <defs>
-            <filter id="pencil-texture" x="-5%" y="-5%" width="110%" height="110%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="5" seed="3" result="noise"/>
-              <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.0" xChannelSelector="R" yChannelSelector="G"/>
+            <filter id="pencil-texture" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.042 0.022" numOctaves="4" seed="7" result="noise"/>
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="warped"/>
+              <feGaussianBlur in="warped" stdDeviation="0.25"/>
             </filter>
           </defs>
         </svg>

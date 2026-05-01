@@ -43,7 +43,6 @@ const OperatorsTab: React.FC<OperatorsTabProps> = ({ operatorSummary }) => (
       dataSource={operatorSummary}
       columns={operatorColumns}
       pagination={false}
-      scroll={{ y: 300 }}
     />
   </div>
 );

@@ -329,7 +329,6 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                     rowKey="id"
                     loading={membersLoading}
                     pagination={false}
-                    scroll={{ y: 300 }}
                   />
                 </div>
               ),

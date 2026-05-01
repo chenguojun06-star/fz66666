@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
@@ -18,8 +19,23 @@ public class CorsConfig {
     @Value("${app.cors.allow-credentials:true}")
     private boolean allowCredentials;
 
+    /**
+     * 暴露 CorsConfigurationSource bean，供 Spring Security 的
+     * .cors(Customizer.withDefaults()) 使用。
+     * 如果没有此 bean，Spring Security 会回退到 HandlerMappingIntrospector，
+     * 由于无 @CrossOrigin 注解，所有跨域请求都会被拒绝返回 403。
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        return buildCorsSource();
+    }
+
     @Bean
     public CorsFilter corsFilter() {
+        return new CorsFilter(buildCorsSource());
+    }
+
+    private UrlBasedCorsConfigurationSource buildCorsSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
@@ -46,7 +62,7 @@ public class CorsConfig {
         config.addAllowedMethod("*");
 
         source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
+        return source;
     }
 
     private List<String> parseCsv(String value) {

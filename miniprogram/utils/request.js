@@ -429,46 +429,37 @@ function _buildHeaders(token, customHeader) {
   };
 }
 
-function request(options) {
-  return new Promise(async (resolve, reject) => {
-    const url = (options && options.url) || '';
-    const method = (options && options.method) || 'GET';
-    const data = (options && options.data) || undefined;
-    const header = (options && options.header) || {};
-    const skipAuthRedirect = !!(options && options.skipAuthRedirect);
-    const retryCount = (options && options._retryCount) || 0;
+async function request(options) {
+  const url = (options && options.url) || '';
+  const method = (options && options.method) || 'GET';
+  const data = (options && options.data) || undefined;
+  const header = (options && options.header) || {};
+  const skipAuthRedirect = !!(options && options.skipAuthRedirect);
+  const retryCount = (options && options._retryCount) || 0;
 
-    let token = getToken();
-    const baseUrl = getBaseUrl();
-    const envVersion = resolveEnvVersion();
-    const isDevEnv = !envVersion || envVersion === 'develop';
+  let token = getToken();
+  const baseUrl = getBaseUrl();
+  const envVersion = resolveEnvVersion();
+  const isDevEnv = !envVersion || envVersion === 'develop';
 
-    if (token && isTokenExpired()) {
-      const newToken = await refreshTokenRequest();
-      if (newToken) {
-        token = newToken;
-      } else {
-        if (!skipAuthRedirect) {
-          triggerLoginRedirect();
-        }
-        reject(createError('登录已过期，请重新登录', { type: 'auth' }));
-        return;
+  if (token && isTokenExpired()) {
+    const newToken = await refreshTokenRequest();
+    if (newToken) {
+      token = newToken;
+    } else {
+      if (!skipAuthRedirect) {
+        triggerLoginRedirect();
       }
+      throw createError('登录已过期，请重新登录', { type: 'auth' });
     }
-    // 开发调试时允许HTTP，生产/体验环境强制HTTPS
-    const requireHttps = !isDevEnv;
+  }
+  const requireHttps = !isDevEnv;
 
-    // 验证baseUrl配置
-    try {
-      _validateBaseUrl(baseUrl, requireHttps, envVersion);
-    } catch (err) {
-      reject(err);
-      return;
-    }
+  _validateBaseUrl(baseUrl, requireHttps, envVersion);
 
-    // 构建请求头
-    const headers = _buildHeaders(token, header);
+  const headers = _buildHeaders(token, header);
 
+  return new Promise((resolve, reject) => {
     wx.request({
       url: `${baseUrl}${url}`,
       method,

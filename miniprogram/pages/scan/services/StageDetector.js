@@ -23,7 +23,6 @@
 
 var shared = require('../../../shared/stageDetection');
 var inferScanType = shared.inferScanType;
-var parseDefectQtyFromRemark = shared.parseDefectQtyFromRemark;
 var extractQualityMeta = shared.extractQualityMeta;
 var SCAN_TYPE_RULES = shared.SCAN_TYPE_RULES;
 var VALID_SCAN_TYPES = shared.VALID_SCAN_TYPES;

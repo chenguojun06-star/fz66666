@@ -160,7 +160,7 @@ const BomView: React.FC<{ obj: unknown }> = ({ obj }) => {
       size="small"
       rowKey={(r: Record<string, unknown>) => String(r?.materialCode || r?.materialName || '')}
       pagination={false}
-      scroll={{ x: 'max-content', y: 520 }}
+      scroll={{ x: 'max-content' }}
       columns={[
         { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 140, render: (v: unknown) => getMaterialTypeLabel(v) },
         { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: unknown) => String(v || '-') },
@@ -227,7 +227,7 @@ const SizeView: React.FC<{ obj: unknown }> = ({ obj }) => {
       size="small"
       rowKey={(r: Record<string, unknown>) => String(r?.partName || '')}
       pagination={false}
-      scroll={{ x: 'max-content', y: 520 }}
+      scroll={{ x: 'max-content' }}
       columns={[...baseCols, ...sizeCols]}
       dataSource={parts}
     />

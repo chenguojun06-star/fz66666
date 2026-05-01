@@ -144,7 +144,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
         loading={loading}
         rowKey="key"
         size="small"
-        scroll={{ x: 900, y: 750 }}
+        scroll={{ x: 900 }}
         rowSelection={rowSelection}
         pagination={{
           defaultPageSize: readPageSize(DEFAULT_PAGE_SIZE),

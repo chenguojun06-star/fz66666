@@ -218,7 +218,6 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
             rowKey="key"
             pagination={false}
             size="small"
-            scroll={{ y: 300 }}
         />
       </Form>
     </ResizableModal>

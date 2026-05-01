@@ -8,7 +8,6 @@
  * @description 管理页面生命周期、事件订阅和数据刷新
  */
 
-/* global Behavior */
 const ScanHandler = require('../handlers/ScanHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）

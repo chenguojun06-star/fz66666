@@ -55,7 +55,7 @@ module.exports = {
       var newSessionQty = prevSessionQty + scanQty;
       if (processName) { if (!this._sessionStats) this._sessionStats = {}; this._sessionStats[processName] = newSessionQty; }
       var formattedResult = { displayTime: new Date().toLocaleTimeString(), statusText: '扫码成功', statusClass: 'success', sessionQty: newSessionQty };
-      for (var k in result) { if (result.hasOwnProperty(k)) formattedResult[k] = result[k]; }
+      for (var k in result) { if (Object.prototype.hasOwnProperty.call(result, k)) formattedResult[k] = result[k]; }
       var localRecord = { orderNo: result.orderNo || '', processCode: result.processCode || '', processName: result.processName || '', quantity: result.quantity || 0, success: true, time: new Date().toLocaleTimeString() };
       this.setData({ lastResult: formattedResult, lastLocalScanRecord: localRecord, quantity: '' });
       wx.pageScrollTo({ scrollTop: 0, duration: 300 });

@@ -7,7 +7,7 @@
 
 var api = require('../../../utils/api');
 var ScanHandler = require('../handlers/ScanHandler');
-var { toast, toastAndRedirect } = require('../../../utils/uiHelper');
+var { toast } = require('../../../utils/uiHelper');
 var scanValidator = require('./scanValidator');
 var isRecentDuplicate = scanValidator.isRecentDuplicate;
 var markRecent = scanValidator.markRecent;

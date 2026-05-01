@@ -287,7 +287,6 @@ const AppManagementTab: React.FC = () => {
           loading={logsLoading}
           pagination={{ total: logsTotal, pageSize: 50, showTotal: (t) => `共 ${t} 条` }}
           size="small"
-          scroll={{ y: 400 }}
         />
       </ResizableModal>
     </div>

@@ -217,7 +217,7 @@ app:
       - "::1"
     pii-encryption-key: ${APP_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}
   cors:
-    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:}
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*:*,http://10.*:*}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
   performance-monitor:
     default-warn-threshold-ms: ${APP_PERF_DEFAULT_WARN_THRESHOLD_MS:1000}

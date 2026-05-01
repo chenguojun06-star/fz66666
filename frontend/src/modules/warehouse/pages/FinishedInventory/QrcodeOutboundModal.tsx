@@ -288,7 +288,6 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         columns={columns}
         pagination={false}
         locale={{ emptyText: '暂无出库明细，请扫码或输入二维码' }}
-        scroll={{ y: 340 }}
       />
     </ResizableModal>
   );
