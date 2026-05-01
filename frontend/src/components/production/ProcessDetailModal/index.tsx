@@ -51,7 +51,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       onCancel={onClose}
       footer={null}
       className="process-detail-modal"
-      width="60vw"
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       {processType === 'warehousing' ? (

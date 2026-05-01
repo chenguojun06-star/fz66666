@@ -59,21 +59,21 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
             title: '序号',
             dataIndex: 'sortOrder',
             key: 'sortOrder',
-            width: 60,
+            width: '6%',
             render: (_: any, __: any, index: number) => index + 1,
           },
           {
             title: '工序',
             dataIndex: 'name',
             key: 'name',
-            width: 180,
+            width: '20%',
             render: (v: string, record: any) => <span style={{ fontWeight: 600 }}>{formatProcessDisplayName(record.id, v)}</span>,
           },
           {
             title: descriptionTitle,
             dataIndex: 'description',
             key: 'description',
-            width: 180,
+            width: '30%',
             ellipsis: true,
             render: (v: string) => v || '-',
           },
@@ -81,14 +81,14 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
             title: '机器类型',
             dataIndex: 'machineType',
             key: 'machineType',
-            width: 120,
+            width: '14%',
             render: (v: string) => v || '-',
           },
           {
             title: '工序单价',
             dataIndex: 'unitPrice',
             key: 'unitPrice',
-            width: 100,
+            width: '14%',
             align: 'right' as const,
             render: (v: number) => (
               <span style={{ fontWeight: 600, color: '#dc2626' }}>
@@ -99,7 +99,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
           {
             title: '工序工资',
             key: 'totalWage',
-            width: 120,
+            width: '16%',
             align: 'right' as const,
             render: (_: any, record: any) => {
               const total = (record.unitPrice || 0) * cuttingQty;
