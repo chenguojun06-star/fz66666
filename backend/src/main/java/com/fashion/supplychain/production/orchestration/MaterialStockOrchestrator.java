@@ -180,6 +180,18 @@ public class MaterialStockOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public String manualOutbound(
+            String stockId,
+            Integer quantity,
+            String reason,
+            String orderNo,
+            String styleNo,
+            String factoryId,
+            String factoryName,
+            String factoryType,
+            String receiverId,
+            String receiverName,
+            String pickupType,
+            String usageType) {
         if (!StringUtils.hasText(stockId)) {
             throw new IllegalArgumentException("库存记录不能为空");
         }
