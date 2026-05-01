@@ -16,7 +16,7 @@
   padding: 6px 10px;
   margin-bottom: 3px;
   background: var(--color-bg-light);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   box-sizing: border-box;
 }
 
@@ -45,13 +45,13 @@
 }
 
 .process-scroll-title {
-  font-size: var(--font-size-xxs);
+  font-size: 11px;
   color: var(--color-text-secondary);
   font-weight: 600;
 }
 
 .process-scroll-hint {
-  font-size: var(--font-size-2xs);
+  font-size: 10px;
   color: var(--color-text-disabled);
 }
 
@@ -65,12 +65,12 @@
   padding: 8px 10px;
   background: var(--color-bg-light);
   border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
 }
 
 .process-selected-title {
   display: block;
-  font-size: var(--font-size-xxs);
+  font-size: 11px;
   color: var(--color-text-secondary);
   font-weight: 600;
   margin-bottom: 6px;
@@ -87,22 +87,22 @@
   align-items: center;
   height: 24px;
   padding: 0 8px;
-  border-radius: var(--radius-full);
+  border-radius: 999px;
   background: var(--color-blue-lighter);
   color: var(--color-primary);
-  font-size: var(--font-size-xxs);
+  font-size: 11px;
   font-weight: 600;
 }
 
 /* 价格标签（工序选择器专有） */
 .process-item-price {
-  font-size: var(--font-size-xs);
+  font-size: 12px;
   color: var(--color-success);
   font-weight: 700;
 }
 
 .process-scroll-selector .inline-selector-label {
-  font-size: var(--font-size-sm);
+  font-size: 13px;
 }
 
 .inline-selector-item.active .process-item-price {
@@ -110,13 +110,13 @@
 }
 
 .item-label {
-  font-size: var(--font-size-xxs);
+  font-size: 11px;
   color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .item-value {
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   color: var(--color-text-primary);
   font-weight: 600;
 }
@@ -131,7 +131,7 @@
   padding: 0 8px;
   text-align: right;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   background: var(--color-bg-card);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
@@ -146,8 +146,8 @@
   gap: 6px;
   padding: 8px;
   margin: 6px 0 0 0;
-  background: var(--color-warning-border);
-  border-radius: var(--radius-xs);
+  background: linear-gradient(135deg, var(--color-warning-bg) 0%, var(--color-warning-border) 100%);
+  border-radius: 6px;
   border-left: 4px solid var(--color-warning);
 }
 
@@ -158,19 +158,17 @@
 .hint-text {
   flex: 1;
   font-size: var(--font-size-sm);
-  color: var(--color-warning);
-  line-height: var(--line-height-medium);
+  color: #92400e;
+  line-height: 1.5;
 }
 
 .modal-btn.ok {
-  background: var(--color-success);
-  color: var(--color-text-white);
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success) 100%);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .modal-btn.ok.loading {
   background: var(--color-text-disabled);
-  color: var(--color-text-secondary);
   pointer-events: none;
 }
 
@@ -182,16 +180,16 @@
 }
 
 .diff-hint-label {
-  color: var(--color-danger);
+  color: #c2410c;
   flex-shrink: 0;
   margin-top: 1px;
 }
 
 .diff-hint-text {
-  font-size: var(--font-size-xxs);
-  color: var(--color-danger);
+  font-size: 11px;
+  color: #9a3412;
   font-weight: 500;
-  line-height: var(--line-height-medium);
+  line-height: 1.5;
   flex: 1;
   text-align: right;
   white-space: pre-wrap;

@@ -1,12 +1,12 @@
 <scroll-view class="page" scroll-y="{{true}}" enhanced="{{true}}">
   <view class="section">
-    <text class="title">衣智链 隐私政策</text>
-    <text class="update-date">更新日期：2026年4月22日</text>
+    <text class="title">云裳智链 隐私保护指引</text>
+    <text class="update-date">更新日期：2026年2月25日</text>
   </view>
 
   <view class="section">
     <text class="heading">一、引言</text>
-    <text class="body">衣智链（以下简称"我们"）深知个人信息对您的重要性。本指引说明我们如何收集、使用和保护您在使用本小程序期间产生的信息，请您仔细阅读。</text>
+    <text class="body">云裳智链（以下简称"我们"）深知个人信息对您的重要性。本指引说明我们如何收集、使用和保护您在使用本小程序期间产生的信息，请您仔细阅读。</text>
   </view>
 
   <view class="section">
@@ -18,10 +18,8 @@
     <text class="sub-heading">2.3 生产业务数据</text>
     <text class="body">您在使用扫码、质检、入库等功能时产生的扫码记录、工序进度、数量等数据，全部归属于您所在工厂/企业，仅用于生产管理目的。</text>
     <text class="sub-heading">2.4 设备权限</text>
-    <text class="body">• 摄像头（wx.scanCode）：仅用于扫描工序条码（二维码/条形码），实现生产进度记录与工序追踪，不用于拍照、录像或其他任何目的。
-• 摄像头（wx.chooseMedia 拍摄模式）：仅用于拍摄质检现场照片上传，记录生产质量问题，不上传任何与生产业务无关的图片。
-• 相册（wx.chooseMedia 选图模式）：仅用于从相册选取质检照片上传，不读取其他任何文件或媒体内容。
-• 剪切板（wx.setClipboardData）：仅用于将工厂邀请码、员工注册链接及生产订单号写入剪切板，方便管理员复制分享，不读取剪切板中的任何内容。</text>
+    <text class="body">• 摄像头：用于扫描工序条码（二维码/条形码）及拍摄质检现场照片，不用于其他任何目的。
+• 相册：用于从相册选取质检现场照片上传，不读取任何其他文件。</text>
   </view>
 
   <view class="section">
@@ -57,10 +55,10 @@
 
   <view class="section">
     <text class="heading">七、联系我们</text>
-    <text class="body">如您对本隐私政策有任何疑问，可通过小程序内「我的 → 问题反馈」功能联系我们。</text>
+    <text class="body">如您对本隐私保护指引有任何疑问，可通过小程序内「我的 → 问题反馈」功能联系我们。</text>
   </view>
 
   <view class="footer">
-    <text>© 2026 衣智链. 保留所有权利.</text>
+    <text>© 2026 云裳智链. 保留所有权利.</text>
   </view>
 </scroll-view>

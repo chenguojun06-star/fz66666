@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -40,6 +41,7 @@ public class AiAgentOrchestrator {
 
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(5);
     private static final int CACHE_MAX_SIZE = 200;
+    private static final long AGENT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(30);
     private final ConcurrentHashMap<String, CacheEntry> queryCache = new ConcurrentHashMap<>();
 
     private static class CacheEntry {
@@ -102,6 +104,7 @@ public class AiAgentOrchestrator {
     public void executeAgentStreaming(String userMessage, String pageContext, SseEmitter emitter) {
         long requestStartAt = System.currentTimeMillis();
         ScheduledExecutorService heartbeat = null;
+        AtomicBoolean cancelled = new AtomicBoolean(false);
         try {
             if (!contextBuilder.isModelEnabled()) {
                 emitSse(emitter, "error", java.util.Map.of("message", "智能服务暂未配置或不可用"));
@@ -124,17 +127,19 @@ public class AiAgentOrchestrator {
                 queryCache.entrySet().removeIf(e -> e.getValue().isExpired());
             }
 
-            heartbeat = startHeartbeat(emitter, 15);
+            heartbeat = startHeartbeat(emitter, 15, cancelled);
 
             AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+            ctx.setDeadlineMs(requestStartAt + AGENT_TIMEOUT_MS);
+            ctx.setCancelled(cancelled);
             StreamingAgentLoopCallback cb = new StreamingAgentLoopCallback(
                     emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
 
             String loopResult = loopEngine.run(ctx, cb);
 
             if ("plan_mode".equals(loopResult) || "stuck_detected".equals(loopResult)
-                    || "token_budget_exceeded".equals(loopResult) || "max_iterations_exceeded".equals(loopResult)) {
-                // Callback already handled SSE events
+                    || "token_budget_exceeded".equals(loopResult) || "max_iterations_exceeded".equals(loopResult)
+                    || "cancelled".equals(loopResult) || "deadline_exceeded".equals(loopResult)) {
             } else if (cb.getFinalContent() != null && cb.getExecRecords().size() <= 2) {
                 queryCache.put(cacheKey, new CacheEntry(deduplicateAnswer(cb.getFinalContent())));
             }
@@ -187,7 +192,7 @@ public class AiAgentOrchestrator {
         }
     }
 
-    private ScheduledExecutorService startHeartbeat(SseEmitter emitter, int intervalSeconds) {
+    private ScheduledExecutorService startHeartbeat(SseEmitter emitter, int intervalSeconds, AtomicBoolean cancelled) {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "sse-hb-" + emitter.hashCode());
             t.setDaemon(true);
@@ -197,7 +202,8 @@ public class AiAgentOrchestrator {
             try {
                 emitter.send(SseEmitter.event().comment("heartbeat " + System.currentTimeMillis()));
             } catch (Exception e) {
-                log.debug("[AiAgent-Stream] 心跳发送失败，连接可能已断开");
+                log.debug("[AiAgent-Stream] 心跳发送失败，连接已断开，中断Agent执行");
+                cancelled.set(true);
                 scheduler.shutdownNow();
             }
         }, intervalSeconds, intervalSeconds, TimeUnit.SECONDS);

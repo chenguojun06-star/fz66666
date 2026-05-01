@@ -14,80 +14,32 @@
 const QUEUE_KEY = 'scan_offline_queue';
 const MAX_QUEUE_SIZE = 50;
 const ITEM_TTL_MS = 24 * 60 * 60 * 1000;
-const FLUSH_LOCK_KEY = 'scan_offline_flush_lock';
-const FLUSH_LOCK_TTL_MS = 30 * 1000;
 const { DEBUG } = require('../../../config/debug');
 
-let _cache = null;
-let _cacheTime = 0;
-const CACHE_TTL_MS = 5000;
-
-function _deepClone(obj) {
-  try {
-    return JSON.parse(JSON.stringify(obj));
-  } catch (e) {
-    return { ...obj };
-  }
-}
+// ─── 私有实现 ────────────────────────────────────────────────────────────────
 
 function _load() {
-  const now = Date.now();
-  if (_cache && (now - _cacheTime) < CACHE_TTL_MS) {
-    return _cache;
-  }
   try {
     const raw = wx.getStorageSync(QUEUE_KEY);
-    if (!raw) { _cache = []; _cacheTime = now; return []; }
+    if (!raw) return [];
     const queue = JSON.parse(raw);
+    const now = Date.now();
     const valid = queue.filter(i => !i.queuedAt || (now - i.queuedAt) < ITEM_TTL_MS);
     if (valid.length !== queue.length) {
       _save(valid);
       if (DEBUG) console.log('[ScanOfflineQueue] 清理过期条目:', queue.length - valid.length);
     }
-    _cache = valid;
-    _cacheTime = now;
     return valid;
   } catch (e) {
-    if (DEBUG) console.error('[ScanOfflineQueue] _load 解析失败，尝试恢复备份:', e);
-    try {
-      const backup = wx.getStorageSync(QUEUE_KEY + '_backup');
-      if (backup && typeof backup === 'string' && backup.length > 2) {
-        const recovered = JSON.parse(backup);
-        if (Array.isArray(recovered) && recovered.length > 0) {
-          if (DEBUG) console.warn('[ScanOfflineQueue] 从备份恢复:', recovered.length, '条');
-          _save(recovered);
-          _cache = recovered;
-          _cacheTime = now;
-          return recovered;
-        }
-      }
-    } catch (_) {
-      /* ignore backup recovery failure */
-    }
-    try {
-      const raw = wx.getStorageSync(QUEUE_KEY);
-      if (raw && typeof raw === 'string' && raw.length > 2) {
-        wx.setStorageSync(QUEUE_KEY + '_backup', raw);
-        if (DEBUG) console.warn('[ScanOfflineQueue] 已备份损坏数据到:', QUEUE_KEY + '_backup');
-      }
-    } catch (_) {
-      /* ignore corrupted queue backup write failure */
-    }
-    _cache = [];
-    _cacheTime = now;
     return [];
   }
 }
 
 function _save(queue) {
-  _cache = queue;
-  _cacheTime = Date.now();
   try {
     wx.setStorageSync(QUEUE_KEY, JSON.stringify(queue));
-    return true;
   } catch (e) {
     if (DEBUG) console.warn('[ScanOfflineQueue] storage 写入失败:', e);
-    return false;
   }
 }
 
@@ -128,14 +80,10 @@ const ScanOfflineQueue = {
     const item = {
       queueId: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       queuedAt: Date.now(),
-      scanData: _deepClone(scanData),
+      scanData: { ...scanData },
     };
     queue.push(item);
-    var saved = _save(queue);
-    if (!saved) {
-      wx.showToast({ title: '离线数据保存失败，请检查存储空间', icon: 'none', duration: 3000 });
-      return false;
-    }
+    _save(queue);
     if (DEBUG) console.log('[ScanOfflineQueue] 已入队，当前数量:', queue.length);
     return true;
   },
@@ -146,7 +94,7 @@ const ScanOfflineQueue = {
    */
   dequeue(queueId) {
     const queue = _load().filter(i => i.queueId !== queueId);
-    return _save(queue);
+    _save(queue);
   },
 
   /**
@@ -176,84 +124,52 @@ const ScanOfflineQueue = {
    * @returns {Promise<{submitted: number, failed: number}>}
    */
   async flush(api, onProgress) {
-    try {
-      const lockRaw = wx.getStorageSync(FLUSH_LOCK_KEY);
-      if (lockRaw && (Date.now() - Number(lockRaw)) < FLUSH_LOCK_TTL_MS) {
-        if (DEBUG) console.log('[ScanOfflineQueue] flush 已被锁定，跳过');
-        return { submitted: 0, failed: 0 };
-      }
-    } catch (_) {
-      /* ignore stale flush lock read failure */
-    }
-    try { wx.setStorageSync(FLUSH_LOCK_KEY, Date.now().toString()); } catch (_) {
-      /* ignore lock write failure */
-    }
+    const queue = _load();
+    if (queue.length === 0) return { submitted: 0, failed: 0 };
 
-    try {
-      const queue = _load();
-      if (queue.length === 0) return { submitted: 0, failed: 0 };
+    let submitted = 0;
+    let failed = 0;
+    const total = queue.length;
+    if (DEBUG) console.log('[ScanOfflineQueue] 开始批量上传，共', total, '条');
 
-      let submitted = 0;
-      let failed = 0;
-      const total = queue.length;
-      if (DEBUG) console.log('[ScanOfflineQueue] 开始批量上传，共', total, '条');
-
-      for (const item of queue) {
-        try {
-          const res = await api.production.executeScan(item.scanData);
-          if (res && (res.success === true || res.code === 200 || res.scanRecord)) {
-            const saved = this.dequeue(item.queueId);
-            if (saved) {
-              submitted++;
-            } else {
-              failed++;
-              if (DEBUG) console.warn('[ScanOfflineQueue] dequeue 保存失败，将重试:', item.queueId);
-            }
-            if (DEBUG) console.log('[ScanOfflineQueue] 上传成功:', submitted + '/' + total);
-          } else {
-            this.dequeue(item.queueId);
-            if (DEBUG) console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res?.message);
-          }
-        } catch (e) {
-          failed++;
-          const errMsg = (e && (e.errMsg || e.message)) || '';
-          if (DEBUG) console.warn('[ScanOfflineQueue] 上传异常:', errMsg);
-          if (
-            errMsg.includes('timeout') ||
-            errMsg.includes('errcode:-101') ||
-            errMsg.includes('errcode:-102') ||
-            errMsg.includes('errcode:-105') ||
-            errMsg.includes('ERR_CONNECTION') ||
-            errMsg.includes('fail network')
-          ) {
-            if (DEBUG) console.log('[ScanOfflineQueue] 网络仍断开，停止上传');
-            break;
-          }
-          if (errMsg.includes('DuplicateKey') || errMsg.includes('重复') || errMsg.includes('duplicate')) {
-            this.dequeue(item.queueId);
-            if (DEBUG) console.log('[ScanOfflineQueue] 服务端重复记录，直接丢弃:', item.queueId);
-            failed--;
-            continue;
-          }
-          item._retryCount = (item._retryCount || 0) + 1;
-          if (item._retryCount >= 5) {
-            this.dequeue(item.queueId);
-            if (DEBUG) console.warn('[ScanOfflineQueue] 重试次数超限，丢弃:', item.queueId);
-          }
+    for (const item of queue) {
+      try {
+        const res = await api.production.executeScan(item.scanData);
+        if (res && (res.success === true || res.code === 200 || res.scanRecord)) {
+          // ✅ 上传成功
+          this.dequeue(item.queueId);
+          submitted++;
+          if (DEBUG) console.log('[ScanOfflineQueue] 上传成功:', submitted + '/' + total);
+        } else {
+          // 业务拒绝（如重复扫码），直接丢弃，不重传
+          this.dequeue(item.queueId);
+          if (DEBUG) console.warn('[ScanOfflineQueue] 服务端拒绝（直接丢弃）:', res?.message);
         }
-
-        if (onProgress) {
-          onProgress(submitted, failed, this.count());
+      } catch (e) {
+        failed++;
+        const errMsg = (e && (e.errMsg || e.message)) || '';
+        if (DEBUG) console.warn('[ScanOfflineQueue] 上传异常:', errMsg);
+        // 网络仍断开 → 停止本次 flush，等待下次触发
+        if (
+          errMsg.includes('timeout') ||
+          errMsg.includes('errcode:-101') ||
+          errMsg.includes('errcode:-102') ||
+          errMsg.includes('errcode:-105') ||
+          errMsg.includes('ERR_CONNECTION') ||
+          errMsg.includes('fail network')
+        ) {
+          if (DEBUG) console.log('[ScanOfflineQueue] 网络仍断开，停止上传');
+          break;
         }
       }
 
-      if (DEBUG) console.log('[ScanOfflineQueue] 批量上传完成 submitted=' + submitted + ' failed=' + failed + ' remaining=' + this.count());
-      return { submitted, failed };
-    } finally {
-      try { wx.removeStorageSync(FLUSH_LOCK_KEY); } catch (_) {
-        /* ignore lock cleanup failure */
+      if (onProgress) {
+        onProgress(submitted, failed, this.count());
       }
     }
+
+    if (DEBUG) console.log('[ScanOfflineQueue] 批量上传完成 submitted=' + submitted + ' failed=' + failed + ' remaining=' + this.count());
+    return { submitted, failed };
   },
 };
 

@@ -1,5 +1,5 @@
 Page({
   onLoad() {
-    wx.setNavigationBarTitle({ title: '隐私政策' });
+    wx.setNavigationBarTitle({ title: '隐私保护指引' });
   },
 });

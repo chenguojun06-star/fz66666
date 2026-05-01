@@ -3,7 +3,7 @@ const api = require('../../../../utils/api');
 Page({
   data: {
     pwdForm: { oldPassword: '', newPassword: '', confirmPassword: '' },
-    saving: false
+    saving: false,
   },
 
   onOldPwdInput(e) {
@@ -39,5 +39,5 @@ Page({
     } finally {
       this.setData({ saving: false });
     }
-  }
+  },
 });

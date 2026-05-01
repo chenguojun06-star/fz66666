@@ -114,9 +114,11 @@ export const orderLearningApi = {
         return await api.get<ApiResult<OrderLearningRecommendationResponse>>('/intelligence/order-learning/recommendation', { params });
       } catch (error: unknown) {
         const status = typeof error === 'object' && error !== null && 'response' in error ? Number((error as Record<string, any>).response?.status || 0) : 0;
-        if (status === 404) {
-          markEndpointUnavailable();
-          return { code: 200, data: null, message: 'order-learning recommendation endpoint unavailable' } as ApiResult<null>;
+        if (status === 404 || status === 500) {
+          if (status === 404) {
+            markEndpointUnavailable();
+          }
+          return { code: 200, data: null, message: 'order-learning recommendation temporarily unavailable' } as ApiResult<null>;
         }
         throw error;
       } finally {

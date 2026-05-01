@@ -45,35 +45,6 @@ function formatDateTime(date) {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
-function _scanTypeText(raw) {
-  const v = String(raw || '').trim();
-  if (!v) return '-';
-  if (v === 'production') return '生产';
-  if (v === 'cutting') return '裁剪';
-  if (v === 'procurement') return '采购';
-  if (v === 'quality') return '质检';
-  if (v === 'pressing') return '大烫';
-  if (v === 'packaging') return '包装';
-  if (v === 'warehousing') return '入库';
-  if (v === 'sewing' || v === 'carSewing') return '车缝';
-  return v;
-}
-
-function _orderStatusText(status) {
-  const s = String(status || '').toLowerCase();
-  if (s === 'completed') return '已完成';
-  if (s === 'closed') return '已关单';
-  if (s === 'archived') return '已归档';
-  if (s === 'production') return '生产中';
-  if (s === 'pending') return '待生产';
-  if (s === 'delayed') return '已逾期';
-  if (s === 'scrapped') return '已报废';
-  if (s === 'cancelled' || s === 'canceled') return '已取消';
-  if (s === 'paused') return '已暂停';
-  if (s === 'returned') return '已退回';
-  return s || '-';
-}
-
 Page({
   data: {
     // 筛选条件
@@ -95,28 +66,19 @@ Page({
     loading: false,
 
     // 排序状态
-    sortField: 'time', // 'amount' 或 'time'
     sortOrder: 'desc', // desc:降序(从高到低), asc:升序(从低到高)
     summaryItems: [],
   },
 
   onLoad() {
     this.initDates();
-    // 数据加载由 onShow 统一处理（onLoad 后立即触发 onShow，首次也会加载）
-  },
-
-  // 每次进入页面（包括首次、从子页面返回）都刷新最新工资数据
-  onShow() {
-    // 未登录时拒绝访问：工资数据属于敏感个人信息，必须验证身份后才能加载
-    var app = getApp();
-    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadData();
   },
 
   onPullDownRefresh() {
     this.loadData().then(() => {
       wx.stopPullDownRefresh();
-    }).catch(() => { wx.stopPullDownRefresh(); });
+    });
   },
 
   /**
@@ -172,7 +134,7 @@ Page({
         if (filter !== 'custom') {
           this.loadData();
         }
-      }
+      },
     );
   },
 
@@ -186,7 +148,7 @@ Page({
       },
       () => {
         this.loadData();
-      }
+      },
     );
   },
 
@@ -200,7 +162,7 @@ Page({
       },
       () => {
         this.loadData();
-      }
+      },
     );
   },
 
@@ -244,114 +206,84 @@ Page({
    * 处理数据
    */
   processData(data) {
+    // 计算汇总数据（按当前筛选日期范围）
     const filterStart = this.data.startDate ? new Date(this.data.startDate + 'T00:00:00') : null;
     const filterEnd = this.data.endDate ? new Date(this.data.endDate + 'T23:59:59') : null;
 
-    let totalAmount = 0;
-    let totalQuantity = 0;
-    const orderNoSet = new Set();
-    const records = [];
-
-    for (let i = 0; i < data.length; i++) {
-      const item = data[i];
-      if (!item.startTime) continue;
+    const monthData = data.filter(item => {
+      if (!item.startTime) {
+        return false;
+      }
       const time = parseDateSafe(item.startTime);
-      if ((filterStart && time < filterStart) || (filterEnd && time > filterEnd)) continue;
+      return (!filterStart || time >= filterStart) && (!filterEnd || time <= filterEnd);
+    });
 
-      const amt = Number(item.totalAmount) || 0;
-      const qty = Number(item.quantity) || 0;
-      totalAmount += amt;
-      totalQuantity += qty;
-      if (item.orderNo) orderNoSet.add(item.orderNo);
+    const totalAmount = monthData.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+    const totalQuantity = monthData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    const orderNos = new Set(monthData.map(item => item.orderNo).filter(Boolean));
 
-      records.push({
-        orderNo: item.orderNo || '-',
-        styleNo: item.styleNo || '-',
-        color: item.color || '-',
-        size: item.size || '-',
-        cuttingBundleNo: item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '',
-        processName: item.processName || '-',
-        operatorName: item.operatorName || '',
-        scanType: item.scanType || '',
-        scanTypeText: _scanTypeText(item.scanType),
-        delegateTargetType: item.delegateTargetType || '',
-        delegateTargetName: item.delegateTargetName || '',
-        actualOperatorName: item.actualOperatorName || '',
-        orderStatus: item.orderStatus || '',
-        orderStatusText: _orderStatusText(item.orderStatus),
-        quantity: qty,
-        unitPrice: (Number(item.unitPrice) || 0).toFixed(2),
-        totalAmount: amt.toFixed(2),
-        totalAmountNum: amt,
-        scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
-        rawScanTime: item.startTime || '',
-      });
-    }
+    // 处理明细数据（当前筛选）
+    const records = data.map(item => ({
+      orderNo: item.orderNo || '-',
+      styleNo: item.styleNo || '-',
+      color: item.color || '-',
+      size: item.size || '-',
+      processName: item.processName || '-',
+      operatorName: item.operatorName || '',
+      quantity: item.quantity || 0,
+      unitPrice: (item.unitPrice || 0).toFixed(2),
+      totalAmount: (item.totalAmount || 0).toFixed(2),
+      totalAmountNum: item.totalAmount || 0, // 用于排序
+      scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
+    }));
 
-    this._sortRecords(records);
+    // 按总金额排序
+    const { sortOrder } = this.data;
+    records.sort((a, b) => {
+      if (sortOrder === 'desc') {
+        return b.totalAmountNum - a.totalAmountNum; // 降序
+      } else {
+        return a.totalAmountNum - b.totalAmountNum; // 升序
+      }
+    });
 
-    let filteredTotalAmount = 0;
-    for (let i = 0; i < records.length; i++) {
-      filteredTotalAmount += records[i].totalAmountNum;
-    }
+    const filteredTotalAmount = records.reduce(
+      (sum, item) => sum + parseFloat(item.totalAmount),
+      0,
+    );
 
     this.setData({
+      totalAmount: totalAmount.toFixed(2),
+      totalQuantity,
+      recordCount: monthData.length,
+      orderCount: orderNos.size,
       records,
       filteredTotalAmount: filteredTotalAmount.toFixed(2),
       summaryItems: [
         { label: '本月总金额', value: '¥' + totalAmount.toFixed(2), highlight: true },
         { label: '本月数量',   value: totalQuantity + ' 件' },
-        { label: '扫码次数',   value: records.length + ' 次' },
-        { label: '参与订单',   value: orderNoSet.size + ' 个' },
+        { label: '扫码次数',   value: monthData.length + ' 次' },
+        { label: '参与订单',   value: orderNos.size + ' 个' },
       ],
     });
   },
 
   /**
-   * 排序记录（内部方法）
-   */
-  _sortRecords(records) {
-    const { sortField, sortOrder } = this.data;
-    const dir = sortOrder === 'desc' ? -1 : 1;
-    if (sortField === 'time') {
-      records.sort((a, b) => {
-        const ta = a.rawScanTime || '';
-        const tb = b.rawScanTime || '';
-        if (ta > tb) return -1 * dir;
-        if (ta < tb) return 1 * dir;
-        return 0;
-      });
-    } else {
-      records.sort((a, b) => dir * (b.totalAmountNum - a.totalAmountNum));
-    }
-  },
-
-  /**
-   * 切换排序字段（金额 / 时间）
+   * 切换排序
    */
   toggleSort() {
-    const { sortField } = this.data;
-    const newField = sortField === 'amount' ? 'time' : 'amount';
-    this.setData({ sortField: newField, sortOrder: 'desc' }, () => {
+    const newSortOrder = this.data.sortOrder === 'desc' ? 'asc' : 'desc';
+    this.setData({ sortOrder: newSortOrder }, () => {
+      // 重新排序当前数据
       const records = [...this.data.records];
-      this._sortRecords(records);
+      records.sort((a, b) => {
+        if (newSortOrder === 'desc') {
+          return b.totalAmountNum - a.totalAmountNum;
+        } else {
+          return a.totalAmountNum - b.totalAmountNum;
+        }
+      });
       this.setData({ records });
     });
-  },
-
-  /**
-   * 切换排序方向
-   */
-  toggleSortOrder() {
-    const newOrder = this.data.sortOrder === 'desc' ? 'asc' : 'desc';
-    this.setData({ sortOrder: newOrder }, () => {
-      const records = [...this.data.records];
-      this._sortRecords(records);
-      this.setData({ records });
-    });
-  },
-
-  goFeedback() {
-    wx.navigateTo({ url: '/pages/payroll/feedback/index' });
   },
 });

@@ -11,7 +11,7 @@ spring:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:sk-placeholder-for-spring-ai-compatibility}
+      api-key: ${DEEPSEEK_API_KEY:sk-placeholder-for-spring-ai-compatibility}
       chat:
         enabled: true
   datasource:

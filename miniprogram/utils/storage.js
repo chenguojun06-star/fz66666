@@ -1,5 +1,4 @@
 const TOKEN_KEY = 'auth_token';
-const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USER_INFO_KEY = 'user_info';
 
 function base64Decode(str) {
@@ -44,31 +43,6 @@ function clearToken() {
     wx.removeStorageSync(TOKEN_KEY);
   } catch (e) {
     console.warn('[storage] clearToken失败:', e.message || e);
-  }
-}
-
-function getRefreshToken() {
-  try {
-    return wx.getStorageSync(REFRESH_TOKEN_KEY) || '';
-  } catch (e) {
-    console.warn('[storage] getRefreshToken失败:', e.message || e);
-    return '';
-  }
-}
-
-function setRefreshToken(token) {
-  try {
-    wx.setStorageSync(REFRESH_TOKEN_KEY, token || '');
-  } catch (e) {
-    console.error('[storage] setRefreshToken失败:', e.message || e);
-  }
-}
-
-function clearRefreshToken() {
-  try {
-    wx.removeStorageSync(REFRESH_TOKEN_KEY);
-  } catch (e) {
-    console.warn('[storage] clearRefreshToken失败:', e.message || e);
   }
 }
 
@@ -125,11 +99,6 @@ function isSuperAdmin() {
   return !userInfo.tenantId && (role === 'admin' || role === '管理员');
 }
 
-function isFactoryOwner() {
-  const userInfo = getUserInfo();
-  return userInfo && userInfo.isFactoryOwner === true;
-}
-
 function getStorageValue(key, fallback) {
   try {
     const v = wx.getStorageSync(key);
@@ -148,16 +117,6 @@ function setStorageValue(key, value) {
   }
 }
 
-function utf8Decode(str) {
-  try {
-    var bytes = new Uint8Array(str.length);
-    for (var i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
-    return new TextDecoder('utf-8').decode(bytes);
-  } catch (_e) {
-    return decodeURIComponent(escape(str));
-  }
-}
-
 function isTokenExpired() {
   try {
     const token = getToken();
@@ -166,8 +125,8 @@ function isTokenExpired() {
     if (parts.length !== 3) return true;
     let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     while (payload.length % 4 !== 0) payload += '=';
-    const decoded = JSON.parse(utf8Decode(base64Decode(payload)));
-    if (!decoded.exp) return true;
+    const decoded = JSON.parse(decodeURIComponent(escape(base64Decode(payload))));
+    if (!decoded.exp) return false;
     const nowSec = Math.floor(Date.now() / 1000);
     return decoded.exp < (nowSec + 300);
   } catch (e) {
@@ -180,9 +139,6 @@ module.exports = {
   getToken,
   setToken,
   clearToken,
-  getRefreshToken,
-  setRefreshToken,
-  clearRefreshToken,
   getUserInfo,
   setUserInfo,
   clearUserInfo,
@@ -191,7 +147,6 @@ module.exports = {
   getUserTenantId,
   isTenantOwner,
   isSuperAdmin,
-  isFactoryOwner,
   getStorageValue,
   setStorageValue,
   isTokenExpired,

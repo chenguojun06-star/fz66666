@@ -49,7 +49,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   onClear,
   existingCutQtyByKey,
 }) => {
-  const [bundleSize, setBundleSize] = useState<number>(20);
+  const [bundleSize, setBundleSize] = useState<number | null>(null);
   const [excessRate, setExcessRate] = useState<number>(0);
   const [lastBundleOverrides, setLastBundleOverrides] = useState<Record<string, number>>({});
 
@@ -66,8 +66,8 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       const rate = excessRate > 0 ? excessRate : 0;
       // 基础裁剪数 = 订单数 × (1 + 损耗率)，向上取整
       const baseCuttingQty = rate > 0 ? Math.ceil(orderQty * (1 + rate / 100)) : orderQty;
-      const bs = bundleSize > 0 ? bundleSize : 20;
-      const bundles = baseCuttingQty > 0 ? Math.ceil(baseCuttingQty / bs) : 0;
+      const bs = bundleSize && bundleSize > 0 ? bundleSize : 0;
+      const bundles = baseCuttingQty > 0 && bs > 0 ? Math.ceil(baseCuttingQty / bs) : 0;
       const remainder = baseCuttingQty % bs;
       const key = `${line.color}-${line.size}-${idx}`;
 
@@ -117,7 +117,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   const valid = tableRows.some((r) => r.quantity > 0 && r.bundles > 0);
 
   const handleConfirm = () => {
-    const bs = bundleSize > 0 ? bundleSize : 20;
+    const bs = bundleSize && bundleSize > 0 ? bundleSize : 0;
     const rows: BundleInputRow[] = [];
     for (const row of tableRows) {
       if (row.quantity <= 0 || row.bundles <= 0) continue;
@@ -185,7 +185,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       width: 320,
       render: (_val: string, record: BundleRow) => {
         if (record.bundles === 0) return <Text>-</Text>;
-        const bs = bundleSize > 0 ? bundleSize : 20;
+        const bs = bundleSize && bundleSize > 0 ? bundleSize : 0;
         const defaultLastQty = record.remainder > 0 ? record.remainder : bs;
         const lastQty = lastBundleOverrides[record.key] ?? defaultLastQty;
         const prefix = record.bundles > 1 ? `${record.bundles - 1}×${bs} + ` : '';
@@ -231,7 +231,8 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           precision={0}
           value={bundleSize}
           disabled={disabled}
-          onChange={(val) => setBundleSize(val || 20)}
+          placeholder="输入每扎件数"
+          onChange={(val) => setBundleSize(val ?? null)}
           style={{ width: 90 }}
         />
         <Text type="secondary">件/扎</Text>

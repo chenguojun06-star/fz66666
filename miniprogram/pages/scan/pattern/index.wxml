@@ -74,24 +74,8 @@
       <text class="review-warning-text">⚠ 当前未完成样衣审核，本次会先提交审核再执行入库</text>
     </view>
 
-    <!-- 审批选择器（审核操作时显示） -->
-    <view wx:if="{{detail.operationType === 'REVIEW'}}" class="review-selector">
-      <text class="input-label">审批结论</text>
-      <view class="review-options">
-        <view class="review-option {{detail.reviewResult === 'PASS' ? 'review-option-active' : ''}}" data-result="PASS" bindtap="onReviewResultChange">
-          <text>✅ 通过</text>
-        </view>
-        <view class="review-option {{detail.reviewResult === 'REWORK' ? 'review-option-active' : ''}}" data-result="REWORK" bindtap="onReviewResultChange">
-          <text>🔧 返修</text>
-        </view>
-        <view class="review-option {{detail.reviewResult === 'REJECT' ? 'review-option-active' : ''}}" data-result="REJECT" bindtap="onReviewResultChange">
-          <text>❌ 不通过</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 数量输入（完成/返修操作时隐藏） -->
-    <view wx:if="{{detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
+    <!-- 数量输入 -->
+    <view class="input-row">
       <text class="input-label">数量</text>
       <input
         class="input-field"

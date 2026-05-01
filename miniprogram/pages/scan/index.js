@@ -165,7 +165,7 @@ Page({
    * @returns {void} 无返回值
    */
   onGoToMonthly() {
-    safeNavigate({ url: '/pages/payroll/payroll' }).catch(() => {
+    safeNavigate({ url: '/pages/scan/history/index' }).catch(() => {
       // 导航失败忽略（通常是重复点击）
     });
   },
@@ -490,8 +490,10 @@ Page({
           require('./../../utils/uiHelper').toast.success('已撤回');
           // 刷新面板
           this.loadMyPanel(true);
-          const { triggerDataRefresh } = require('./../../utils/eventBus');
-          triggerDataRefresh('scan');
+          const { eventBus } = require('./../../utils/eventBus');
+          if (eventBus && typeof eventBus.emit === 'function') {
+            eventBus.emit('DATA_REFRESH');
+          }
         } catch (err) {
           require('./../../utils/uiHelper').toast.error('撤回失败: ' + (err.errMsg || err.message || '未知错误'));
         } finally {

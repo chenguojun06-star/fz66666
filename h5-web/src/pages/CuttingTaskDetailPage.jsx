@@ -16,7 +16,7 @@ export default function CuttingTaskDetailPage() {
   const [coverImage, setCoverImage] = useState('');
   const [taskInfo, setTaskInfo] = useState({});
   const [orderLines, setOrderLines] = useState([]);
-  const [bundleSize, setBundleSize] = useState(20);
+  const [bundleSize, setBundleSize] = useState('');
   const [excessRate, setExcessRate] = useState('');
   const [summary, setSummary] = useState({ totalOrdered: 0, totalCutting: 0, totalBundles: 0 });
   const [hasData, setHasData] = useState(false);
@@ -67,7 +67,8 @@ export default function CuttingTaskDetailPage() {
   };
 
   const recalculate = (lines, bs, rate) => {
-    const bundleSizeNum = parseInt(bs, 10) || 20;
+    const bundleSizeNum = parseInt(bs, 10);
+    if (!bundleSizeNum || bundleSizeNum <= 0) return;
     const rateNum = parseFloat(rate) || 0;
     let totalOrdered = 0, totalCutting = 0, totalBundles = 0;
     const updated = lines.map(line => {
@@ -94,7 +95,8 @@ export default function CuttingTaskDetailPage() {
     if (submitting) return;
     if (!orderId) { toast.error('缺少订单信息'); return; }
     if (!orderLines.length) { toast.error('无可裁剪的尺码数据'); return; }
-    const bs = parseInt(bundleSize, 10) || 20;
+    const bs = parseInt(bundleSize, 10);
+    if (!bs || bs <= 0) { toast.error('请输入有效的每扎件数'); return; }
     const items = [];
     orderLines.forEach(line => {
       if (line.cuttingQty <= 0 || line.bundleCount <= 0) return;
@@ -131,7 +133,7 @@ export default function CuttingTaskDetailPage() {
 
       <div className="field-block">
         <label>每扎件数</label>
-        <input className="text-input" type="number" value={bundleSize} min={1}
+        <input className="text-input" type="number" value={bundleSize} min={1} placeholder="输入每扎件数"
           onChange={e => { setBundleSize(e.target.value); recalculate(orderLines.map(l => ({ ...l, lastBundleOverride: null })), e.target.value, excessRate); }} />
       </div>
       <div className="field-block">

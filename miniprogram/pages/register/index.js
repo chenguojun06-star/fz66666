@@ -18,27 +18,19 @@ Page({
     phone: '',
     password: '',
     confirmPassword: '',
-    agreedPolicies: false,
     loading: false,
-    factorySearch: '',
-    tenants: [],
-    filteredTenants: [],
-    selectedFactory: null,
-    showFactoryDropdown: false,
   },
 
   onLoad(options) {
+    // 从页面参数中获取工厂编码（扫码跳转时传入）
     if (options && options.tenantCode) {
       this.setData({
         tenantCode: decodeURIComponent(options.tenantCode),
         tenantName: options.tenantName ? decodeURIComponent(options.tenantName) : '',
         scannedCode: true,
-        selectedFactory: {
-          tenantCode: decodeURIComponent(options.tenantCode),
-          tenantName: options.tenantName ? decodeURIComponent(options.tenantName) : '',
-        },
       });
     }
+    // 订阅隐私授权弹窗事件（微信审核必须：扫码前须获得授权）
     if (eventBus && typeof eventBus.on === 'function') {
       this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
         try {
@@ -49,19 +41,6 @@ Page({
         } catch (_) { /* 静默忽略 */ }
       });
     }
-    this._loadTenants();
-  },
-
-  _loadTenants() {
-    api.tenant.publicList().then((res) => {
-      var list = [];
-      if (res && res.data && Array.isArray(res.data)) {
-        list = res.data;
-      } else if (Array.isArray(res)) {
-        list = res;
-      }
-      this.setData({ tenants: list });
-    }).catch(function() {});
   },
 
   onUnload() {
@@ -73,47 +52,7 @@ Page({
 
   // ========== 输入事件 ==========
   onTenantCodeInput(e) {
-    var val = (e && e.detail && e.detail.value) || '';
-    this.setData({ tenantCode: val, selectedFactory: null, factorySearch: val });
-    this._filterTenants(val);
-  },
-
-  _filterTenants(keyword) {
-    if (!keyword || !keyword.trim()) {
-      this.setData({ filteredTenants: [], showFactoryDropdown: false });
-      return;
-    }
-    var kw = keyword.trim().toLowerCase();
-    var tenants = this.data.tenants;
-    var filtered = tenants.filter(function(t) {
-      var tName = (t.tenantName || t.name || '').toLowerCase();
-      var tCode = (t.tenantCode || '').toLowerCase();
-      return tName.indexOf(kw) !== -1 || tCode.indexOf(kw) !== -1;
-    });
-    this.setData({
-      filteredTenants: filtered.slice(0, 20),
-      showFactoryDropdown: filtered.length > 0,
-    });
-  },
-
-  onPickFactory(e) {
-    var idx = e.currentTarget.dataset.index;
-    var factory = this.data.filteredTenants[idx];
-    if (!factory) return;
-    this.setData({
-      tenantCode: factory.tenantCode || '',
-      tenantName: factory.tenantName || factory.name || '',
-      factoryId: factory.id || '',
-      factorySearch: factory.tenantCode || '',
-      selectedFactory: factory,
-      filteredTenants: [],
-      showFactoryDropdown: false,
-      scannedCode: false,
-    });
-  },
-
-  onHideFactoryDropdown() {
-    this.setData({ showFactoryDropdown: false });
+    this.setData({ tenantCode: (e && e.detail && e.detail.value) || '' });
   },
   onUsernameInput(e) {
     this.setData({ username: (e && e.detail && e.detail.value) || '' });
@@ -129,16 +68,6 @@ Page({
   },
   onConfirmPasswordInput(e) {
     this.setData({ confirmPassword: (e && e.detail && e.detail.value) || '' });
-  },
-  onAgreePoliciesChange(e) {
-    const checked = !!(e && e.detail ? e.detail.value : false);
-    this.setData({ agreedPolicies: checked });
-  },
-  onViewServiceAgreement() {
-    safeNavigate({ url: '/pages/privacy/service/index' }).catch(() => {});
-  },
-  onViewPrivacyPolicy() {
-    safeNavigate({ url: '/pages/privacy/index' }).catch(() => {});
   },
 
   // ========== 扫码获取工厂编码 ==========
@@ -156,22 +85,13 @@ Page({
             tenantName: parsed.factoryName || parsed.tenantName || '',
             factoryId: parsed.factoryId || '',
             scannedCode: true,
-            selectedFactory: {
-              tenantCode: parsed.tenantCode,
-              tenantName: parsed.factoryName || parsed.tenantName || '',
-              id: parsed.factoryId || '',
-            },
-            filteredTenants: [],
-            showFactoryDropdown: false,
           });
           toast.success('扫码成功：' + (parsed.factoryName || parsed.tenantName || parsed.tenantCode));
         } else {
+          // 直接把扫到的内容作为工厂编码
           this.setData({
             tenantCode: result.trim(),
             scannedCode: true,
-            selectedFactory: null,
-            filteredTenants: [],
-            showFactoryDropdown: false,
           });
           toast.success('已获取编码');
         }
@@ -235,7 +155,7 @@ Page({
 
   // ========== 表单验证 ==========
   _validate() {
-    const { tenantCode, username, name, phone, password, confirmPassword, agreedPolicies } = this.data;
+    const { tenantCode, username, name, phone, password, confirmPassword } = this.data;
 
     if (!tenantCode.trim()) {
       toast.error('请输入工厂编码');
@@ -259,17 +179,14 @@ Page({
       return false;
     }
 
-    const phoneValue = String(phone || '').trim();
-    if (phoneValue) {
-      const phoneErr = validateByRule(phoneValue, {
-        name: '手机号',
-        required: false,
-        pattern: /^1[3-9]\d{9}$/,
-      });
-      if (phoneErr) {
-        toast.error(phoneErr);
-        return false;
-      }
+    const phoneErr = validateByRule(phone, {
+      name: '手机号',
+      required: true,
+      pattern: /^1[3-9]\d{9}$/,
+    });
+    if (phoneErr) {
+      toast.error(phoneErr);
+      return false;
     }
 
     const passwordErr = validateByRule(password, {
@@ -288,11 +205,6 @@ Page({
       return false;
     }
 
-    if (!agreedPolicies) {
-      toast.error('请先阅读并同意用户服务协议和隐私政策');
-      return false;
-    }
-
     return true;
   },
 
@@ -303,15 +215,13 @@ Page({
 
     this.setData({ loading: true });
     try {
-      const { tenantCode, factoryId, orgUnitId, tenantName, username, name, phone, password } = this.data;
+      const { tenantCode, factoryId, username, name, phone, password } = this.data;
       const resp = await api.tenant.workerRegister({
         tenantCode: tenantCode.trim(),
         factoryId: factoryId || undefined,
-        orgUnitId: orgUnitId || undefined,
-        factoryName: tenantName || undefined,
         username: username.trim(),
         name: name.trim(),
-        phone: (phone || '').trim() || undefined,
+        phone: phone.trim(),
         password,
       });
 
@@ -319,7 +229,7 @@ Page({
       if (resp && resp.code === 200) {
         wx.showModal({
           title: '注册成功',
-          content: '注册申请已提交，请耐心等待管理员审批通过后即可登录。',
+          content: '注册申请已提交，请等待工厂管理员审批通过后使用账号登录。',
           showCancel: false,
           confirmText: '返回登录',
           success: () => {

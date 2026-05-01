@@ -16,13 +16,13 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  background: var(--color-bg-gray);
+  background: #f8fafc;
 }
 .placeholder-icon {
-  font-size: var(--font-size-3xl);
+  font-size: 48rpx;
 }
 .placeholder-text {
-  font-size: var(--font-size-xxs);
-  color: var(--color-text-tertiary);
+  font-size: 22rpx;
+  color: #94a3b8;
   margin-top: 8rpx;
 }

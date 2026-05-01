@@ -143,6 +143,7 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         }
         try {
             StringBuilder contentBuilder = new StringBuilder();
+            boolean[] streamError = {false};
             ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
             for (Message msg : convertMessages(messages)) {
                 if (msg instanceof SystemMessage sm) {
@@ -163,11 +164,22 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                             }
                         }
                     })
-                    .doOnComplete(() -> chunkConsumer.accept("", true))
+                    .doOnError(err -> {
+                        streamError[0] = true;
+                        log.warn("[SpringAiAdapter] chatStream error: {}", err.getMessage());
+                        if (contentBuilder.length() > 0) {
+                            chunkConsumer.accept(contentBuilder.toString(), true);
+                        }
+                    })
+                    .doOnComplete(() -> {
+                        if (!streamError[0]) {
+                            chunkConsumer.accept("", true);
+                        }
+                    })
                     .blockLast();
 
             IntelligenceInferenceResult result = new IntelligenceInferenceResult();
-            result.setSuccess(true);
+            result.setSuccess(!streamError[0]);
             result.setProvider("spring-ai");
             result.setContent(contentBuilder.toString());
             result.setLatencyMs(System.currentTimeMillis() - start);
@@ -176,6 +188,9 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             int estimatedCompletion = contentBuilder.length() / 2;
             result.setPromptTokens(estimatedPrompt);
             result.setCompletionTokens(estimatedCompletion);
+            if (streamError[0]) {
+                result.setErrorMessage("stream partially delivered, " + contentBuilder.length() + " chars before error");
+            }
             recordTokenUsage(result);
             return result;
         } catch (Exception e) {

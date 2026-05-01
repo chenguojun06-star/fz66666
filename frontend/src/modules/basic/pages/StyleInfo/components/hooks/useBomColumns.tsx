@@ -1,6 +1,6 @@
 export { useBomColumns } from './bomColumns';
-export type { MaterialType } from './bomColumns';
-export { materialTypeOptions } from './bomColumns';
+export type { MaterialType } from './bomConstants';
+export { materialTypeOptions } from './bomConstants';
 export {
   parseSizeUsageMap,
   normalizeUnitText,

@@ -218,20 +218,34 @@ public class CollaborationTaskLifecycleOrchestrator {
                     StringUtils.hasText(targetRole) ? targetRole.trim() : "general"
             );
             String json = MAPPER.writeValueAsString(state);
+            String currentStage = state.getResponse().getCurrentStage();
+            boolean isCompleted = "已完成".equals(currentStage);
             if (existing != null) {
                 existing.setDispatchResponseJson(json);
-                existing.setCurrentStage(state.getResponse().getCurrentStage());
+                existing.setCurrentStage(currentStage);
                 existing.setNextStep(state.getResponse().getNextStep());
                 existing.setUpdatedAt(state.getUpdatedAt());
                 existing.setDueAt(state.getDueAt());
                 existing.setOverdue(state.getDueAt() != null && state.getDueAt().isBefore(LocalDateTime.now()));
+                if (isCompleted) {
+                    existing.setTaskStatus("COMPLETED");
+                    existing.setCompletedAt(LocalDateTime.now());
+                    if (state.getResponse().getHistory() != null && !state.getResponse().getHistory().isEmpty()) {
+                        CollaborationDispatchResponse.HistoryEntry last = state.getResponse().getHistory().get(0);
+                        if ("complete_task".equals(last.getAction()) && StringUtils.hasText(last.getRemark())) {
+                            existing.setCompletionNote(last.getRemark());
+                        }
+                    }
+                } else if (existing.getTaskStatus() == null || "PENDING".equals(existing.getTaskStatus())) {
+                    existing.setTaskStatus("IN_PROGRESS");
+                }
                 collaborationTaskMapper.updateById(existing);
             } else {
                 CollaborationTask task = new CollaborationTask();
                 task.setTenantId(tenantId);
                 task.setOrderNo(StringUtils.hasText(orderNo) ? orderNo.trim() : "general");
                 task.setTargetRole(StringUtils.hasText(targetRole) ? targetRole.trim() : "general");
-                task.setCurrentStage(state.getResponse().getCurrentStage());
+                task.setCurrentStage(currentStage);
                 task.setNextStep(state.getResponse().getNextStep());
                 task.setInstruction(null);
                 task.setDueHint(state.getResponse().getDueHint());
@@ -239,6 +253,7 @@ public class CollaborationTaskLifecycleOrchestrator {
                 task.setUpdatedAt(state.getUpdatedAt());
                 task.setDueAt(state.getDueAt());
                 task.setOverdue(false);
+                task.setTaskStatus("PENDING");
                 collaborationTaskMapper.insert(task);
             }
         } catch (Exception e) {

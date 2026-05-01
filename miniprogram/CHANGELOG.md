@@ -4,14 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### ✨ 新增
-- **WebSocket 实时数据同步**：6 个核心页面（work/dashboard/inbox/scan-history/cutting-task-list/admin）接入 WebSocket 事件监听，任何一端操作后其他端自动刷新
-- **轮询降级策略**：websocketManager.js 新增轮询降级，WebSocket 重连 10 次失败后自动切换 30s 轮询，连接恢复后自动停止轮询
-- **eventBus 统一引用**：12 个文件从 `getApp().globalData.eventBus` 迁移到 `require` 导入，事件名从 `'DATA_REFRESH'` 统一为 `triggerDataRefresh()` 标准方法
-
-### 🐛 修复
-- **图标恢复**：恢复 `line-icons.wxss` 中被误删的 14 个图标定义，新增 icon-bell
-
 ## [1.0.0] - 2026-02-26
 ### ✨ 新增
 - **代码规范**：建立了完整的手机端代码规范文档 `MOBILE_DEV_GUIDE.md`。

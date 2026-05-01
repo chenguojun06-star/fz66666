@@ -5,14 +5,14 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
+const { eventBus } = require('../../../utils/eventBus');
 
-const HANDLE_METHODS = ['返修', '报废'];
+const HANDLE_METHODS = ['返修', '报废', '退货', '降级使用', '其他'];
 
-const DEFECT_CATEGORIES = ['外观完整性问题', '尺寸精度问题', '工艺规范性问题', '功能有效性问题', '其他问题'];
+const DEFECT_CATEGORIES = ['外观完整性', '尺寸精度', '工艺合规性', '功能有效性', '其他'];
 
 const CATEGORY_VALUE_MAP = [
-  'appearance_integrity', 'size_accuracy', 'process_compliance', 'functional_effectiveness', 'other'
+  'appearance_integrity', 'size_accuracy', 'process_compliance', 'functional_effectiveness', 'other',
 ];
 
 Page({
@@ -30,7 +30,7 @@ Page({
     aiSuggestionList: [],
     historicalDefectRate: '',
     loading: false,
-    coverImage: ''
+    coverImage: '',
   },
 
   onLoad() {
@@ -38,13 +38,13 @@ Page({
     if (eventBus && typeof eventBus.on === 'function') {
       this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
         try {
-          var dialog = this.selectComponent('#privacyDialog');
+          const dialog = this.selectComponent('#privacyDialog');
           if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
         } catch (_) { /* 静默 */ }
       });
     }
-    var app = getApp();
-    var raw = app.globalData.qualityData;
+    const app = getApp();
+    const raw = app.globalData.qualityData;
     if (!raw) {
       toast.error('数据异常');
       wx.navigateBack();
@@ -52,7 +52,7 @@ Page({
     }
     this._rawDetail = raw;
 
-    var coverImage = getAuthedImageUrl(raw.coverImage || raw.styleImage || '');
+    const coverImage = getAuthedImageUrl(raw.coverImage || raw.styleImage || '');
 
     this.setData({
       detail: {
@@ -65,9 +65,9 @@ Page({
         quantity: raw.quantity || 0,
         progressStage: raw.progressStage || '',
         operatorName: raw.operatorName || '',
-        scanCode: raw.scanCode || ''
+        scanCode: raw.scanCode || '',
       },
-      coverImage: coverImage
+      coverImage: coverImage,
     });
 
     // Async AI suggestion
@@ -84,31 +84,31 @@ Page({
   /* ---- AI ---- */
 
   _fetchAiSuggestion(orderId) {
-    var self = this;
+    const self = this;
     api.production.getQualityAiSuggestion(orderId)
       .then(function (res) {
         if (!res) return;
-        var rate = '';
+        let rate = '';
         if (res.historicalDefectRate != null) {
           rate = (res.historicalDefectRate * 100).toFixed(1) + '%';
         }
         // 处理 defectSuggestions（Map<String,String>）为数组供模板渲染
-        var suggestionList = [];
-        var defectSuggestions = res.defectSuggestions || {};
-        var keys = Object.keys(defectSuggestions);
-        for (var i = 0; i < keys.length; i++) {
-          var catVal = keys[i];
-          var catIdx = CATEGORY_VALUE_MAP.indexOf(catVal);
+        const suggestionList = [];
+        const defectSuggestions = res.defectSuggestions || {};
+        const keys = Object.keys(defectSuggestions);
+        for (let i = 0; i < keys.length; i++) {
+          const catVal = keys[i];
+          const catIdx = CATEGORY_VALUE_MAP.indexOf(catVal);
           suggestionList.push({
             category: catVal,
             label: catIdx >= 0 ? DEFECT_CATEGORIES[catIdx] : catVal,
-            text: defectSuggestions[catVal]
+            text: defectSuggestions[catVal],
           });
         }
         self.setData({
           aiSuggestion: res,
           aiSuggestionList: suggestionList,
-          historicalDefectRate: rate
+          historicalDefectRate: rate,
         });
       })
       .catch(function (err) {
@@ -119,13 +119,13 @@ Page({
   /* ---- events ---- */
 
   previewImage() {
-    var img = this.data.coverImage;
+    const img = this.data.coverImage;
     if (!img) return;
     wx.previewImage({ current: img, urls: [img] });
   },
 
   onSelectResult(e) {
-    var val = e.currentTarget.dataset.value;
+    const val = e.currentTarget.dataset.value;
     this.setData({ result: val });
   },
 
@@ -146,15 +146,15 @@ Page({
   },
 
   onAdoptAiSuggestion() {
-    var ai = this.data.aiSuggestion;
+    const ai = this.data.aiSuggestion;
     if (!ai) return;
-    var updates = {};
+    const updates = {};
     // 从 defectSuggestions（Map<category, suggestion>）中提取第一条建议
-    var defectSuggestions = ai.defectSuggestions || {};
-    var keys = Object.keys(defectSuggestions);
+    const defectSuggestions = ai.defectSuggestions || {};
+    const keys = Object.keys(defectSuggestions);
     if (keys.length > 0) {
-      var suggestedCategory = keys[0];
-      var idx = CATEGORY_VALUE_MAP.indexOf(suggestedCategory);
+      const suggestedCategory = keys[0];
+      const idx = CATEGORY_VALUE_MAP.indexOf(suggestedCategory);
       if (idx >= 0) updates.defectCategoryIndex = idx;
       updates.remark = defectSuggestions[suggestedCategory];
     }
@@ -173,7 +173,7 @@ Page({
   /* ---- image upload ---- */
 
   onUploadImage() {
-    var self = this;
+    const self = this;
     if (self.data.images.length >= 5) {
       toast.error('最多上传5张');
       return;
@@ -182,21 +182,18 @@ Page({
   },
 
   _doChooseMedia(sourceType) {
-    var self = this;
+    const self = this;
     wx.chooseMedia({
       count: 5 - self.data.images.length,
       mediaType: ['image'],
       sourceType: sourceType || ['album', 'camera'],
       success: function (res) {
-        var files = res.tempFiles || [];
-        var tasks = files.map(function (f) {
+        const files = res.tempFiles || [];
+        const tasks = files.map(function (f) {
           return api.common.uploadImage(f.tempFilePath);
         });
         Promise.all(tasks).then(function (urls) {
-          // 上传后返回的是相对路径 /api/file/tenant-download/...，
-          // <image> 标签无法发送 Authorization header，必须在 URL 追加 ?token=xxx
-          var authedUrls = urls.filter(Boolean).map(function (u) { return getAuthedImageUrl(u); });
-          self.setData({ images: self.data.images.concat(authedUrls) });
+          self.setData({ images: self.data.images.concat(urls.filter(Boolean)) });
         }).catch(function () {
           toast.error('图片上传失败');
         });
@@ -211,23 +208,23 @@ Page({
             confirmText: '去设置',
             cancelText: '取消',
             success: function (modalRes) {
-              if (modalRes.confirm) wx.openSetting({ success: function () {} });
-            }
+              if (modalRes.confirm) wx.openSetting();
+            },
           });
         }
-      }
+      },
     });
   },
 
   onDeleteImage(e) {
-    var idx = e.currentTarget.dataset.index;
-    var imgs = this.data.images.slice();
+    const idx = e.currentTarget.dataset.index;
+    const imgs = this.data.images.slice();
     imgs.splice(idx, 1);
     this.setData({ images: imgs });
   },
 
   onPreviewUpload(e) {
-    var url = e.currentTarget.dataset.url;
+    const url = e.currentTarget.dataset.url;
     wx.previewImage({ current: url, urls: this.data.images });
   },
 
@@ -237,8 +234,8 @@ Page({
 
   async submitQuality() {
     if (this.data.loading) return;
-    var d = this.data;
-    var raw = this._rawDetail;
+    const d = this.data;
+    const raw = this._rawDetail;
 
     if (!d.result) {
       toast.error('请选择质检结果');
@@ -246,8 +243,8 @@ Page({
     }
 
     // Build payload
-    var userInfo = getUserInfo() || {};
-    var payload = {
+    const userInfo = getUserInfo() || {};
+    const payload = {
       orderNo: d.detail.orderNo,
       orderItemId: raw.orderItemId || '',
       bundleNo: d.detail.bundleNo,
@@ -259,12 +256,12 @@ Page({
       qualityResult: d.result,
       qualityStage: 'confirm',
       operatorId: userInfo.userId || '',
-      operatorName: userInfo.name || userInfo.username || ''
+      operatorName: userInfo.name || userInfo.username || '',
     };
 
     // 自动领取：confirm 前先发 receive 请求（后端要求先领取再确认）
     // 同一操作员重复领取后端幂等返回成功，不会报错
-    var receivePayload = {
+    const receivePayload = {
       orderNo: payload.orderNo,
       bundleNo: payload.bundleNo,
       quantity: payload.quantity,
@@ -274,13 +271,13 @@ Page({
       scanType: 'quality',
       qualityStage: 'receive',
       operatorId: payload.operatorId,
-      operatorName: payload.operatorName
+      operatorName: payload.operatorName,
     };
     this.setData({ loading: true });
     try {
       await api.production.executeScan(receivePayload);
     } catch (recvErr) {
-      var recvMsg = (recvErr && (recvErr.message || recvErr.errMsg)) || '';
+      const recvMsg = (recvErr && (recvErr.message || recvErr.errMsg)) || '';
       // 被其他人领取 → 不允许继续
       if (recvMsg.indexOf('已被') >= 0 && recvMsg.indexOf('领取') >= 0) {
         this.setData({ loading: false });
@@ -291,7 +288,7 @@ Page({
     }
 
     if (d.result === 'unqualified') {
-      var qty = parseInt(d.defectQuantity, 10);
+      const qty = parseInt(d.defectQuantity, 10);
       if (!qty || qty <= 0) {
         this.setData({ loading: false });
         toast.error('请输入不良数量');
@@ -313,15 +310,8 @@ Page({
     if (d.remark) payload.remark = d.remark;
 
     try {
-      var res = await api.production.executeScan(payload);
+      await api.production.executeScan(payload);
       toast.success(d.result === 'qualified' ? '质检合格，已记录' : '已记录不良品');
-      var hints = (res && res.bundleStatusHints) || [];
-      var statusText = (res && res.bundleStatusText) || '';
-      if (hints.length > 0) {
-        setTimeout(function() {
-          wx.showToast({ title: statusText || hints.join(' → '), icon: 'none', duration: 3000 });
-        }, 800);
-      }
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
@@ -330,12 +320,15 @@ Page({
         title: '提交失败',
         content: e.message || e.errMsg || '请稍后重试',
         showCancel: false,
-        confirmText: '知道了'
+        confirmText: '知道了',
       });
     }
   },
 
   _emitRefresh() {
-    triggerDataRefresh('quality');
-  }
+    const eb = getApp().globalData && getApp().globalData.eventBus;
+    if (eb && typeof eb.emit === 'function') {
+      eb.emit('DATA_REFRESH');
+    }
+  },
 });

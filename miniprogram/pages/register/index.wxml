@@ -1,16 +1,16 @@
 <view class="container">
   <view class="card register-card">
     <view class="title">员工注册</view>
-    <view class="subtitle">填写信息后请耐心等待管理员审批</view>
+    <view class="subtitle">填写信息后等待工厂管理员审批</view>
 
-    <!-- 工厂编码/名称 -->
-    <view class="field factory-field">
-      <view class="label">工厂编码/名称 <text class="required">*</text></view>
+    <!-- 工厂编码 -->
+    <view class="field">
+      <view class="label">工厂编码 <text class="required">*</text></view>
       <view class="input-row">
         <input
-          class="input"
-          placeholder="输入工厂编码或名称搜索"
-          value="{{selectedFactory ? selectedFactory.tenantCode : tenantCode}}"
+          class="input {{tenantCode ? '' : ''}}"
+          placeholder="请输入工厂编码"
+          value="{{tenantCode}}"
           bindinput="onTenantCodeInput"
           disabled="{{!!scannedCode}}"
         />
@@ -20,26 +20,9 @@
           </view>
         </view>
       </view>
-      <!-- 已选中工厂标签 -->
-      <view wx:if="{{selectedFactory}}" class="tenant-info">
-        <text class="tenant-tag">{{selectedFactory.tenantName || tenantName}}</text>
-      </view>
-      <!-- 搜索下拉列表 -->
-      <view wx:if="{{showFactoryDropdown && !selectedFactory}}" class="factory-dropdown">
-        <view
-          wx:for="{{filteredTenants}}"
-          wx:key="id"
-          class="factory-dropdown-item"
-          hover-class="factory-dropdown-item-hover"
-          data-index="{{index}}"
-          bindtap="onPickFactory"
-        >
-          <text class="factory-dropdown-name">{{item.tenantName || item.name}}</text>
-          <text class="factory-dropdown-code">({{item.tenantCode}})</text>
-        </view>
-        <view wx:if="{{filteredTenants.length === 0}}" class="factory-dropdown-empty">
-          未搜索到对应工厂，可直接输入编码
-        </view>
+      <view wx:if="{{tenantName}}" class="tenant-info">
+        <text class="tenant-tag">{{tenantName}}</text>
+        <text wx:if="{{factoryName}}" class="tenant-tag" style="margin-left: 8px;">{{factoryName}}</text>
       </view>
     </view>
 
@@ -68,11 +51,11 @@
 
     <!-- 手机号 -->
     <view class="field">
-      <view class="label">手机号（选填）</view>
+      <view class="label">手机号 <text class="required">*</text></view>
       <input
         class="input"
         type="number"
-        placeholder="用于通知联系，可不填"
+        placeholder="请输入手机号"
         value="{{phone}}"
         bindinput="onPhoneInput"
         maxlength="11"
@@ -103,19 +86,9 @@
       />
     </view>
 
-    <view class="agreement-row">
-      <switch checked="{{agreedPolicies}}" bindchange="onAgreePoliciesChange" color="#2563eb" />
-      <view class="agreement-text-wrap">
-        <text class="agreement-text">我已阅读并同意</text>
-        <text class="agreement-link" bindtap="onViewServiceAgreement">《用户服务协议》</text>
-        <text class="agreement-text">和</text>
-        <text class="agreement-link" bindtap="onViewPrivacyPolicy">《隐私政策》</text>
-      </view>
-    </view>
-
     <!-- 提交按钮 -->
     <view class="btn">
-      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" hover-class="{{loading ? '' : 'btn-primary-hover'}}" hover-stay-time="100" bindtap="onSubmit">
+      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onSubmit">
         {{loading ? '提交中...' : '提交注册申请'}}
       </view>
     </view>

@@ -60,7 +60,7 @@ class URLCodeParser {
     return JSONCodeParser.buildResult(
       { code, qty, orderNo, orderId, styleNo, color, size, bundleNo },
       raw,
-      parseFeiNo
+      parseFeiNo,
     );
   }
 

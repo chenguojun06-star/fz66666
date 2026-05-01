@@ -4,7 +4,7 @@
   min-height: 100vh;
   background:
     radial-gradient(ellipse at 20% 0%, rgba(var(--color-primary-rgb, 37,99,235), 0.06) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(var(--color-primary-rgb, 37,99,235), 0.03) 0%, var(--color-bg-page) 30%);
+    linear-gradient(180deg, rgba(var(--color-primary-rgb, 37,99,235), 0.03) 0%, var(--color-bg-page, #f5f7fa) 30%);
   padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
 }
 
@@ -23,18 +23,18 @@
   gap: 6rpx;
   padding: 12rpx 28rpx;
   border-radius: var(--radius-xl, 24rpx);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-card);
-  border-bottom: 1rpx solid var(--color-border);
+  font-size: 26rpx;
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
 }
 .filter-tab.active {
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  border-color: var(--color-primary);
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  border-color: var(--color-primary, #2563eb);
 }
 .tab-badge {
-  font-size: var(--font-size-xxs);
+  font-size: 22rpx;
   background: rgba(255,255,255,0.3);
   padding: 2rpx 10rpx;
   border-radius: 20rpx;
@@ -47,14 +47,14 @@
 .loading-state {
   text-align: center;
   padding: 120rpx 0;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-md);
+  color: var(--color-text-secondary, #64748b);
+  font-size: 28rpx;
 }
 
 /* ---- 任务卡片 ---- */
 .task-card {
   margin: 16rpx 32rpx;
-  background: var(--color-bg-card);
+  background: var(--color-bg-card, #fff);
   border-radius: var(--radius-xl, 24rpx);
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
   overflow: hidden;
@@ -71,12 +71,12 @@
   padding: 24rpx 28rpx 12rpx;
 }
 .order-no {
-  font-size: var(--font-size-base);
+  font-size: 30rpx;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text-primary, #1e293b);
 }
 .status-tag {
-  font-size: var(--font-size-xxs);
+  font-size: 22rpx;
   padding: 4rpx 16rpx;
   border-radius: var(--radius-lg, 16rpx);
 }
@@ -91,13 +91,13 @@
 }
 .info-label {
   width: 100rpx;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  font-size: 24rpx;
+  color: var(--color-text-secondary, #64748b);
 }
 .info-value {
   flex: 1;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  font-size: 26rpx;
+  color: var(--color-text-primary, #1e293b);
 }
 .info-value.bold {
   font-weight: 600;
@@ -109,24 +109,24 @@
   align-items: center;
   justify-content: flex-end;
   padding: 16rpx 28rpx 20rpx;
-  border-top: 1px solid var(--color-border-light);
+  border-top: 1px solid var(--color-border-light, #f1f5f9);
   gap: 16rpx;
 }
 .btn-action {
   padding: 12rpx 32rpx;
   border-radius: var(--radius-lg, 16rpx);
-  font-size: var(--font-size-sm);
+  font-size: 26rpx;
   font-weight: 500;
 }
 .btn-primary {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: var(--color-primary, #2563eb);
+  color: #fff;
 }
 .btn-disabled {
-  background: var(--color-bg-page);
-  color: var(--color-text-secondary);
+  background: var(--color-bg-page, #f5f7fa);
+  color: var(--color-text-secondary, #64748b);
 }
 .card-arrow {
-  font-size: var(--font-size-md-lg);
-  color: var(--color-text-tertiary);
+  font-size: 32rpx;
+  color: var(--color-text-tertiary, #94a3b8);
 }

@@ -312,17 +312,17 @@ async function loadAllTasks(ctx) {
   try {
     const isAdmin = checkIsAdmin();
     const canManageRegistrations = checkCanManageRegistrations();
-    const isSuperAdmin = isAdmin && !canManageRegistrations;
     ctx.setData({ isAdmin, isTenantOwner: canManageRegistrations });
 
-    const [cutting, procurement, quality, repair, timeouts, pending, overdueOrders] = await Promise.all([
+    const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders] = await Promise.all([
       loadCuttingTasks(),
       loadProcurementTasks(),
       loadQualityTasks(),
-      loadRepairTasks(),
+      loadRepairTasks(),         // 次品待返修
       loadTimeoutReminders(),
-      isSuperAdmin ? loadPendingUsers() : Promise.resolve([]),
-      loadOverdueOrders(),
+      isAdmin ? loadPendingUsers() : Promise.resolve([]),
+      canManageRegistrations ? loadTenantPendingRegistrations() : Promise.resolve([]),
+      loadOverdueOrders(), // 加载延期订单
     ]);
 
     const urgentEvents = [];
@@ -338,6 +338,7 @@ async function loadAllTasks(ctx) {
       repair.length +
       timeouts.length +
       pending.length +
+      tenantRegistrations.length +
       overdueOrders.length;
 
     ctx.setData({
@@ -348,6 +349,7 @@ async function loadAllTasks(ctx) {
       repairTasks: repair,       // 次品待返修列表
       timeoutReminders: timeouts,
       pendingUsers: pending,
+      pendingRegistrations: tenantRegistrations,
       overdueOrders,
       overdueSummary,
       totalCount,

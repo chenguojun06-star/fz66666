@@ -150,23 +150,29 @@ public class AiInferenceRouter implements AiInferenceGateway {
         if (springAiConsecutiveFailures.get() < CIRCUIT_OPEN_THRESHOLD) return false;
         long openSince = springAiCircuitOpenSince.get();
         if (openSince > 0 && System.currentTimeMillis() - openSince > CIRCUIT_RESET_MS) {
-            springAiConsecutiveFailures.set(0);
-            springAiCircuitOpenSince.set(0);
-            log.info("[AiInferenceRouter] Spring AI 熔断恢复（{}秒冷却期已过）", CIRCUIT_RESET_MS / 1000);
+            log.info("[AiInferenceRouter] Spring AI 熔断进入半开状态，允许探测请求");
             return false;
         }
-        return true;
+        return openSince > 0;
     }
 
     private void trackSpringAiHealth(IntelligenceInferenceResult result) {
         if (result == null || !"spring-ai".equals(result.getProvider())) return;
         if (result.isSuccess()) {
+            if (springAiConsecutiveFailures.get() >= CIRCUIT_OPEN_THRESHOLD) {
+                log.info("[AiInferenceRouter] Spring AI 半开探测成功，熔断恢复");
+            }
             springAiConsecutiveFailures.set(0);
             springAiCircuitOpenSince.set(0);
         } else {
             int failures = springAiConsecutiveFailures.incrementAndGet();
-            if (failures >= CIRCUIT_OPEN_THRESHOLD && springAiCircuitOpenSince.compareAndSet(0, System.currentTimeMillis())) {
-                log.warn("[AiInferenceRouter] Spring AI 连续{}次失败，熔断开启（{}秒后自动恢复尝试）", failures, CIRCUIT_RESET_MS / 1000);
+            if (failures == CIRCUIT_OPEN_THRESHOLD && springAiCircuitOpenSince.get() == 0) {
+                springAiCircuitOpenSince.set(System.currentTimeMillis());
+                log.warn("[AiInferenceRouter] Spring AI 连续{}次失败，熔断开启（{}秒后进入半开探测）", failures, CIRCUIT_RESET_MS / 1000);
+            } else if (springAiCircuitOpenSince.get() > 0
+                    && System.currentTimeMillis() - springAiCircuitOpenSince.get() > CIRCUIT_RESET_MS) {
+                log.warn("[AiInferenceRouter] Spring AI 半开探测失败，重新熔断 {} 秒", CIRCUIT_RESET_MS / 1000);
+                springAiCircuitOpenSince.set(System.currentTimeMillis());
             }
         }
     }
@@ -238,7 +244,7 @@ public class AiInferenceRouter implements AiInferenceGateway {
         if (modelConsortiumRouter != null) {
             return modelConsortiumRouter.selectModel(userMessage, hasImage, toolCount);
         }
-        return "deepseek-chat"; // 默认
+        return "deepseek-v4-flash";
     }
 
     /**

@@ -17,7 +17,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SelfConsistencyVerifier {
 
     private static final int DEFAULT_SAMPLE_COUNT = 3;
+    private static final double AGREEMENT_THRESHOLD = 0.6;
     private static final double SAMPLING_TEMPERATURE = 0.7;
+    private static final int HIGH_RISK_SAMPLES = 5;
+    private static final double HIGH_RISK_AGREEMENT_THRESHOLD = 0.75;
     private static final Set<String> HIGH_RISK_SCENES = Set.of(
             "payroll_approve", "order_edit", "batch_close", "finance_settlement",
             "order_transfer", "price_adjustment", "expense_reimbursement_approve"
@@ -53,7 +56,13 @@ public class SelfConsistencyVerifier {
             return SelfConsistencyResult.single();
         }
 
-        int n = Math.max(2, Math.min(sampleCount, DEFAULT_SAMPLE_COUNT));
+        int maxSamples = DEFAULT_SAMPLE_COUNT;
+        double threshold = AGREEMENT_THRESHOLD;
+        if (isHighRiskScene(scene)) {
+            maxSamples = HIGH_RISK_SAMPLES;
+            threshold = HIGH_RISK_AGREEMENT_THRESHOLD;
+        }
+        int n = Math.max(2, Math.min(sampleCount > 0 ? sampleCount : maxSamples, maxSamples));
         List<IntelligenceInferenceResult> samples = new ArrayList<>();
         List<Future<IntelligenceInferenceResult>> futures = new ArrayList<>();
 
@@ -70,10 +79,10 @@ public class SelfConsistencyVerifier {
             }
         }
 
-        return aggregate(samples);
+        return aggregate(samples, threshold);
     }
 
-    private SelfConsistencyResult aggregate(List<IntelligenceInferenceResult> samples) {
+    private SelfConsistencyResult aggregate(List<IntelligenceInferenceResult> samples, double threshold) {
         if (samples.isEmpty()) {
             return SelfConsistencyResult.failed();
         }
@@ -113,7 +122,7 @@ public class SelfConsistencyVerifier {
         result.setSuccessCount(successContents.size());
         result.setAgreement(agreement);
         result.setConsensusContent(bestContent);
-        result.setHighConfidence(agreement >= 0.66);
+        result.setHighConfidence(agreement >= threshold);
         return result;
     }
 

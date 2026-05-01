@@ -55,11 +55,11 @@
   <!-- ① 今日统计 + ② 快捷入口 -->
   <include src="./sections/stats-entries.wxml" />
 
+  <!-- ③ 扫码结果 -->
+  <include src="./sections/scan-result.wxml" />
+
   <!-- ④ 扫码区 -->
   <include src="./sections/scan-area.wxml" />
-
-  <!-- ③ 扫码结果（每次扫码成功/失败均更新，显示在扫码键下方、历史上方） -->
-  <include src="./sections/scan-result.wxml" />
 
   <!-- 任务入口（裁剪/采购已迁移到独立页面） -->
   <include src="./sections/my-tasks.wxml" />
@@ -67,10 +67,7 @@
   <!-- ⑦ 今日扫码记录 -->
   <include src="./sections/scan-history.wxml" />
 
-  <!-- rescan / scan-result-confirm 弹窗 -->
-  <include src="./sections/modal-rescan.wxml" />
-  <include src="./sections/modal-scan-result.wxml" />
-
+  <!-- 弹窗已转为独立页面：rescan / scan-result / confirm / quality -->
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->

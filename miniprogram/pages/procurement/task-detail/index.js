@@ -1,12 +1,11 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
-const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
   liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
+  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
 };
 
 Page({
@@ -31,7 +30,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    this._loadDetail().then(() => wx.stopPullDownRefresh()).catch(() => wx.stopPullDownRefresh());
+    this._loadDetail().then(() => wx.stopPullDownRefresh());
   },
 
   async _loadDetail() {
@@ -132,8 +131,8 @@ Page({
         api.production.receivePurchase({
           purchaseId: item.id || item.purchaseId,
           receiverId,
-          receiverName
-        })
+          receiverName,
+        }),
       ));
       wx.hideLoading();
       toast.success(`已采购 ${pendingItems.length} 项`);
@@ -171,14 +170,15 @@ Page({
           wx.hideLoading();
           toast.success('回料确认成功');
 
-          triggerDataRefresh('procurement');
+          const eventBus = getApp()?.globalData?.eventBus;
+          if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
 
           this._loadDetail();
         } catch (err) {
           wx.hideLoading();
           toast.error(err.errMsg || err.message || '确认失败');
         }
-      }
+      },
     });
   },
 
@@ -207,14 +207,15 @@ Page({
           wx.hideLoading();
           toast.success('采购阶段已完成，已流转到裁剪');
 
-          triggerDataRefresh('procurement');
+          const eventBus = getApp()?.globalData?.eventBus;
+          if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
 
           setTimeout(() => wx.navigateBack(), 1000);
         } catch (err) {
           wx.hideLoading();
           toast.error(err.errMsg || err.message || '确认失败');
         }
-      }
+      },
     });
   },
 
@@ -245,7 +246,8 @@ Page({
     try {
       await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
 
-      triggerDataRefresh('procurement');
+      const eventBus = getApp()?.globalData?.eventBus;
+      if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
 
       wx.hideLoading();
       this.setData({ submitting: false });
@@ -273,7 +275,7 @@ Page({
       updates.push({
         id: item.id || item.purchaseId,
         arrivedQuantity: newArrived,
-        remark: remarkText || ''
+        remark: remarkText || '',
       });
     });
     return updates;
@@ -291,7 +293,7 @@ Page({
       const shortageQty = purchaseQty - newArrived;
       throw new Error(
         `「${materialName}」到货率仅${arrivalRate}%（${newArrived}/${purchaseQty}），` +
-        `还差${shortageQty}，请填写备注说明原因`
+        `还差${shortageQty}，请填写备注说明原因`,
       );
     }
     return remark;
@@ -309,24 +311,12 @@ Page({
   },
 
   _getStatusText(status) {
-    const map = {
-      pending: '待采购', received: '已领取', partial: '部分到货',
-      partial_arrival: '部分到货', awaiting_confirm: '待确认完成',
-      completed: '全部到货', cancelled: '已取消', warehouse_pending: '待仓库出库',
-      waiting_procurement: '待采购', procurement_in_progress: '采购中',
-      procurement_completed: '已完成',
-    };
+    const map = { pending: '待采购', received: '已采购', partial: '部分到货', completed: '已完成', cancelled: '已取消' };
     return map[status] || '待采购';
   },
 
   _getStatusColor(status) {
-    const map = {
-      pending: 'orange', received: 'blue', partial: 'blue',
-      partial_arrival: 'blue', awaiting_confirm: 'gold', completed: 'green',
-      cancelled: 'gray', warehouse_pending: 'cyan',
-      waiting_procurement: 'orange', procurement_in_progress: 'blue',
-      procurement_completed: 'green',
-    };
+    const map = { pending: 'orange', received: 'blue', partial: 'blue', completed: 'green', cancelled: 'gray' };
     return map[status] || 'orange';
   },
 
@@ -354,5 +344,5 @@ Page({
     if (receiverId && existingId) return receiverId === existingId;
     if (receiverName && existingName) return receiverName === existingName;
     return false;
-  }
+  },
 });

@@ -1,12 +1,11 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 Page({
   data: {
     detail: {},
-    loading: false
+    loading: false,
   },
 
   onLoad() {
@@ -28,8 +27,8 @@ Page({
         styleNo: raw.styleNo || '',
         styleName: raw.styleName || '',
         processName: raw.processName || '',
-        progressStage: raw.progressStage || ''
-      }
+        progressStage: raw.progressStage || '',
+      },
     });
   },
 
@@ -62,12 +61,15 @@ Page({
         title: '退回失败',
         content: String(msg),
         showCancel: false,
-        confirmText: '知道了'
+        confirmText: '知道了',
       });
     }
   },
 
   _emitRefresh() {
-    triggerDataRefresh('scan');
-  }
+    const eventBus = getApp().globalData && getApp().globalData.eventBus;
+    if (eventBus && typeof eventBus.emit === 'function') {
+      eventBus.emit('DATA_REFRESH');
+    }
+  },
 });

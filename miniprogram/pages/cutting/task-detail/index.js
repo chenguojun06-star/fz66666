@@ -2,7 +2,6 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 /**
  * 裁剪分扎页 — 与 PC 端 CuttingRatioPanel 对齐
@@ -20,7 +19,7 @@ Page({
     /* 自动填充的裁剪行 [{color, size, orderedQty, cuttingQty, bundleCount,
        lastBundleQty, defaultLastQty, bundleDisplay, lastBundleOverride, key}] */
     orderLines: [],
-    bundleSize: 20,
+    bundleSize: '',
     excessRate: '',
     summary: { totalOrdered: 0, totalCutting: 0, totalBundles: 0 },
     hasData: false,
@@ -125,7 +124,8 @@ Page({
 
   /* ---- 核心计算：与 PC 端 CuttingRatioPanel 完全对齐 ---- */
   _recalculate() {
-    const bs = parseInt(this.data.bundleSize, 10) || 20;
+    const bs = parseInt(this.data.bundleSize, 10);
+    if (!bs || bs <= 0) return;
     const rate = parseFloat(this.data.excessRate) || 0;
     const lines = this.data.orderLines;
 
@@ -220,7 +220,8 @@ Page({
   async onSubmit() {
     if (this.data.submitting) return;
     const { orderLines, orderId, bundleSize } = this.data;
-    const bs = parseInt(bundleSize, 10) || 20;
+    const bs = parseInt(bundleSize, 10);
+    if (!bs || bs <= 0) { toast.error('请输入有效的每扎件数'); return; }
 
     if (!orderId) return toast.error('缺少订单信息');
     if (!orderLines.length) return toast.error('无可裁剪的尺码数据');
@@ -250,7 +251,12 @@ Page({
       await api.production.generateCuttingBundles(orderId, items);
       toast.success('菲号生成成功');
 
-      triggerDataRefresh('cutting');
+      const eventBus = getApp()?.globalData?.eventBus;
+      if (eventBus) {
+        eventBus.emit('DATA_REFRESH', { type: 'cutting' });
+        eventBus.emit('taskStatusChanged');
+        eventBus.emit('refreshBellTasks');
+      }
 
       setTimeout(() => wx.navigateBack(), 500);
     } catch (err) {

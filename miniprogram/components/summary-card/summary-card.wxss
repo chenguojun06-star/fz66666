@@ -2,12 +2,12 @@
   margin: 12px;
   padding: 16px;
   /* 降低饱和度：从 #3b82f6→#2563eb(刺眼蓝) 改为更柔和的商务蓝 */
-  background: var(--color-primary);
+  background: linear-gradient(135deg, #4d84d9 0%, #2358b8 100%);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 .summary-title {
-  font-size: var(--font-size-lg-xl);
+  font-size: 18px;
   font-weight: 700;
   color: var(--color-text-white);
   margin-bottom: 12px;
@@ -35,17 +35,17 @@
   margin-right: 0;
 }
 .summary-label {
-  font-size: var(--font-size-xs);
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.9);
   margin-bottom: 4px;
 }
 .summary-value {
-  font-size: var(--font-size-md-lg);
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-text-white);
 }
 .summary-value.primary {
   /* 大金额：橙色在蓝底上刺眼，改为纯白更清晰 */
-  font-size: var(--font-size-xl);
+  font-size: 20px;
   color: rgba(255, 255, 255, 0.98);
 }

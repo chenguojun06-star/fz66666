@@ -6,7 +6,6 @@ const { validateProductionOrder, normalizeData } = require('../../../utils/dataV
 const { orderStatusText } = require('../../../utils/orderStatusHelper');
 const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { calcOrderProgress } = require('./progressNodes');
 
 /**
  * 安全转换为去空格字符串
@@ -66,8 +65,7 @@ function sortSizes(sizes) {
  */
 function isClosedStatus(status) {
   const s = normalizeText(status).toLowerCase();
-  return s === 'completed' || s === 'cancelled' || s === 'canceled'
-    || s === 'scrapped' || s === 'closed' || s === 'archived';
+  return s === 'completed' || s === 'cancelled' || s === 'canceled' || s === 'paused';
 }
 
 /**
@@ -133,7 +131,7 @@ function buildColorSizeMeta(order) {
   return {
     groups: Array.from(colorMap.values()).map(group => {
       // sizeMap 转为普通对象，供 WXML 模板 cg.sizeMap[sz] 访问
-      var sizeMapObj = {};
+      const sizeMapObj = {};
       group.sizeMap.forEach(function (val, key) { sizeMapObj[key] = val; });
       return {
         color: group.color,
@@ -157,7 +155,7 @@ function buildColorSizeMeta(order) {
 function calcDeliveryInfo(source) {
   // 已关单 / 已完成：停止倒计时，直接显示关单状态
   const status = String(source.status || '').toLowerCase();
-  if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
+  if (status === 'completed' || status === 'cancelled' || status === 'canceled') {
     const raw = source.plannedEndDate || source.expectedShipDate || '';
     const dateStr = raw ? String(raw).substring(0, 10) : '';
     return {
@@ -187,36 +185,38 @@ function calcDeliveryInfo(source) {
   let remainDaysClass = '';
 
   if (remainDays < 0) {
-    remainDaysText = `逾${Math.abs(remainDays)}天`;
+    remainDaysText = `超期${Math.abs(remainDays)}天`;
     remainDaysClass = 'days-overdue';
   } else if (remainDays === 0) {
-    remainDaysText = '今天';
+    remainDaysText = '今天到期❗';
     remainDaysClass = 'days-urgent';
   } else {
+    // 有 createTime 时，按剩余比例计算等级（与 PC 端 getRemainingDaysDisplay 一致）
     const createRaw = source.createTime || '';
     if (createRaw) {
       const start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
       const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
       const ratio = remainDays / totalDays;
       if (ratio <= 0.2) {
-        remainDaysText = `${remainDays}天`;
+        remainDaysText = `剩${remainDays}天❗`;
         remainDaysClass = 'days-urgent';
       } else if (ratio <= 0.5) {
-        remainDaysText = `${remainDays}天`;
+        remainDaysText = `剩${remainDays}天`;
         remainDaysClass = 'days-warn';
       } else {
-        remainDaysText = `${remainDays}天`;
+        remainDaysText = `剩${remainDays}天`;
         remainDaysClass = 'days-safe';
       }
     } else {
+      // 无 createTime，退化为固定阈值
       if (remainDays <= 3) {
-        remainDaysText = `${remainDays}天`;
+        remainDaysText = `剩${remainDays}天❗`;
         remainDaysClass = 'days-urgent';
       } else if (remainDays <= 7) {
-        remainDaysText = `${remainDays}天`;
+        remainDaysText = `剩${remainDays}天`;
         remainDaysClass = 'days-warn';
       } else {
-        remainDaysText = `${remainDays}天`;
+        remainDaysText = `剩${remainDays}天`;
         remainDaysClass = 'days-safe';
       }
     }
@@ -238,7 +238,7 @@ function validateAndNormalizeOrder(order) {
     orderQuantity: { required: true, type: 'number', default: 0 },
     completedQuantity: { required: true, type: 'number', default: 0 },
     productionProgress: { required: true, type: 'number', default: 0 },
-    progressWorkflowJson: { required: false, default: {} },
+    progressWorkflowJson: { required: true, type: 'string', default: '{}' },
     status: { required: true, type: 'string' },
   });
 
@@ -292,7 +292,6 @@ function transformOrderData(r) {
     colorGroups,
     allSizes,
     totalQuantity,
-    calculatedProgress: calcOrderProgress(source),
     deliveryDateStr: delivery.deliveryDateStr,
     remainDays: delivery.remainDays,
     remainDaysText: delivery.remainDaysText,

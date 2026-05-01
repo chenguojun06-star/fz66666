@@ -1,0 +1,80 @@
+<custom-nav title="AI拍照助手" show-back="{{true}}" />
+
+<view class="page">
+
+  <!-- 任务选择 -->
+  <view class="section-title">选择检测类型</view>
+  <view class="task-grid">
+    <view
+      wx:for="{{tasks}}" wx:key="type"
+      class="task-card {{activeTask === item.type ? 'active' : ''}}"
+      data-type="{{item.type}}"
+      bind:tap="pickTask"
+    >
+      <text class="task-icon">{{item.icon}}</text>
+      <text class="task-label">{{item.label}}</text>
+      <text class="task-desc">{{item.desc}}</text>
+    </view>
+  </view>
+
+  <!-- 拍照区域：无图片时点击拍照 -->
+  <view wx:if="{{activeTask && !tempPath}}" class="photo-area" bind:tap="takePhoto">
+    <view class="photo-placeholder">
+      <view class="line-icon icon-camera--gray camera-icon"></view>
+      <text class="photo-hint">点击拍照或选择图片</text>
+    </view>
+    <view wx:if="{{uploading}}" class="overlay">
+      <text class="overlay-text">上传中…</text>
+    </view>
+  </view>
+  <!-- 拍照区域：有图片时点击预览 -->
+  <view wx:if="{{activeTask && tempPath}}" class="photo-area" bind:tap="previewImage">
+    <image class="preview-img" src="{{tempPath}}" mode="aspectFit" />
+    <view wx:if="{{analyzing}}" class="overlay">
+      <text class="overlay-text">AI 分析中…</text>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view wx:if="{{imageUrl && !analyzing}}" class="btn-row">
+    <view class="btn btn-outline" bind:tap="retake">重新拍照</view>
+    <view class="btn btn-primary" bind:tap="reset">换个检测</view>
+  </view>
+
+  <!-- 分析结果 -->
+  <view wx:if="{{result}}" class="result-card">
+    <view class="result-header">
+      <text class="result-title">分析结果</text>
+      <text class="severity severity-{{result.severity || 'NONE'}}">{{result.severity || '无'}}</text>
+    </view>
+
+    <view wx:if="{{result.confidence}}" class="result-row">
+      <text class="row-label">置信度</text>
+      <text class="row-value">{{result.confidence}}%</text>
+    </view>
+
+    <!-- 检测项列表 -->
+    <view wx:if="{{result.detectedItems && result.detectedItems.length}}" class="detected-list">
+      <view class="detected-title">检测明细</view>
+      <view wx:for="{{result.detectedItems}}" wx:key="index" class="detected-item">
+        <text class="item-type">{{item.type}}</text>
+        <text class="item-desc">{{item.description}}</text>
+        <text wx:if="{{item.confidence}}" class="item-conf">{{item.confidence}}%</text>
+      </view>
+    </view>
+
+    <!-- AI 报告 -->
+    <view wx:if="{{result.report}}" class="report-block">
+      <text class="report-label">AI 报告</text>
+      <text class="report-text" user-select>{{result.report}}</text>
+    </view>
+
+    <!-- 建议 -->
+    <view wx:if="{{result.recommendation}}" class="report-block">
+      <text class="report-label">处理建议</text>
+      <text class="report-text" user-select>{{result.recommendation}}</text>
+    </view>
+  </view>
+
+  <privacy-dialog id="privacyDialog" />
+</view>

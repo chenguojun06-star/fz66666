@@ -105,14 +105,14 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   flex: 1;
-  line-height: var(--line-height-normal);
+  line-height: 1.4;
 }
 
 /* 通知内容 */
 .notice-content {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  line-height: var(--line-height-relaxed);
+  line-height: 1.7;
   display: block;
   margin-bottom: 8px;
 }
@@ -165,7 +165,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.45);
-  z-index: var(--z-sticky);
+  z-index: 200;
   display: flex;
   align-items: flex-end;
 }

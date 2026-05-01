@@ -4,8 +4,6 @@ const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const SKUProcessor = require('../processors/SKUProcessor');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
-const { triggerDataRefresh } = require('../../../utils/eventBus');
-const { sortBySizeOrder } = require('../../../utils/orderParser');
 
 Page({
   data: {
@@ -18,18 +16,15 @@ Page({
     summary: { totalQuantity: 0, totalAmount: 0 },
     sizeMatrix: { sizes: [], rows: [] },
     cuttingTask: null,
-    cuttingUnitPrice: 0,
     aiTipData: null,
     aiTipVisible: false,
-    description: '',
-    secondaryProcesses: [],
     buttonText: '确认扫码',
-    loading: false
+    loading: false,
   },
 
   onLoad() {
-    var app = getApp();
-    var raw = app.globalData.confirmScanData;
+    const app = getApp();
+    const raw = app.globalData.confirmScanData;
     if (!raw) {
       toast.error('数据异常');
       wx.navigateBack();
@@ -37,9 +32,9 @@ Page({
     }
     this._scanContext = raw;
 
-    var orderDetail = raw.orderDetail || {};
-    var isProcurement = raw.progressStage === '采购';
-    var isCutting = raw.progressStage === '裁剪';
+    const orderDetail = raw.orderDetail || {};
+    const isProcurement = raw.progressStage === '采购';
+    const isCutting = raw.progressStage === '裁剪';
 
     if (isProcurement) {
       wx.setNavigationBarTitle({ title: '面辅料采购确认' });
@@ -47,26 +42,26 @@ Page({
       wx.setNavigationBarTitle({ title: '裁剪任务领取' });
     }
 
-    var skuItems = raw.skuItems || orderDetail.orderItems || [];
+    const skuItems = raw.skuItems || orderDetail.orderItems || [];
 
-    var normalized = SKUProcessor.normalizeOrderItems(skuItems, raw.orderNo, raw.styleNo || orderDetail.styleNo);
-    var formItems = SKUProcessor.buildSKUInputList(normalized);
-    var summary = SKUProcessor.getSummary(formItems);
-    var sizeMatrix = this._buildSizeMatrix(normalized);
+    const normalized = SKUProcessor.normalizeOrderItems(skuItems, raw.orderNo, raw.styleNo || orderDetail.styleNo);
+    const formItems = SKUProcessor.buildSKUInputList(normalized);
+    const summary = SKUProcessor.getSummary(formItems);
+    const sizeMatrix = this._buildSizeMatrix(normalized);
 
-    var coverImage = getAuthedImageUrl(orderDetail.coverImage || orderDetail.styleImage || '');
+    const coverImage = getAuthedImageUrl(orderDetail.coverImage || orderDetail.styleImage || '');
 
-    var materialPurchases = [];
-    var materialSummary = { totalDemand: 0, totalArrived: 0, totalPending: 0 };
+    let materialPurchases = [];
+    const materialSummary = { totalDemand: 0, totalArrived: 0, totalPending: 0 };
     if (isProcurement && Array.isArray(raw.materialPurchases)) {
-      var MATERIAL_TYPE_MAP = {
+      const MATERIAL_TYPE_MAP = {
         fabricA: '主面料', fabricB: '辅面料',
         liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-        accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
+        accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
       };
       materialPurchases = raw.materialPurchases.map(function(item) {
         return Object.assign({}, item, {
-          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || ''
+          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
         });
       });
       materialPurchases.forEach(function(item) {
@@ -76,18 +71,18 @@ Page({
       });
     }
 
-    var cuttingTask = null;
+    let cuttingTask = null;
     if (isCutting && raw.cuttingTask) {
       cuttingTask = raw.cuttingTask;
-      var statusMap = {
+      const statusMap = {
         pending: '待领取', not_started: '待领取',
-        received: '已领取', in_progress: '已领取',
-        bundled: '已完成', completed: '已完成', done: '已完成'
+        received: '已领取', in_progress: '进行中',
+        completed: '已完成', done: '已完成',
       };
       cuttingTask.statusText = statusMap[cuttingTask.status] || cuttingTask.status || '待领取';
     }
 
-    var btnText = '确认扫码';
+    let btnText = '确认扫码';
     if (isProcurement) btnText = '一键领取';
     else if (isCutting) {
       if (cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
@@ -95,36 +90,6 @@ Page({
       } else {
         btnText = cuttingTask ? '领取任务' : '返回';
       }
-    }
-
-    var PROCESS_TYPE_MAP = {
-      embroidery: '绣花', printing: '印花', washing: '洗水',
-      dyeing: '染色', ironing: '整烫', pleating: '压褶',
-      beading: '钉珠', other: '其他'
-    };
-    var STATUS_MAP = {
-      pending: '待处理', processing: '进行中',
-      completed: '已完成', cancelled: '已取消'
-    };
-    var rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
-    var secondaryProcesses = rawProcesses.map(function(item) {
-      return Object.assign({}, item, {
-        processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
-        statusCN: STATUS_MAP[item.status] || item.status || ''
-      });
-    });
-
-    var description = orderDetail.description || raw.description || '';
-
-    // 提取裁剪工序单价（来自 handleCuttingMode 注入的 stageResult）
-    var cuttingUnitPrice = 0;
-    if (isCutting) {
-      var stageResult = raw.stageResult || {};
-      var allBundleProcesses = stageResult.allBundleProcesses || [];
-      var cuttingProc = allBundleProcesses.find(function(p) {
-        return (p.scanType === 'cutting') || (String(p.progressStage || '').includes('裁剪'));
-      }) || allBundleProcesses[0];
-      cuttingUnitPrice = cuttingProc ? Number(cuttingProc.unitPrice || 0) : 0;
     }
 
     this.setData({
@@ -138,18 +103,15 @@ Page({
         processName: raw.processName || '',
         progressStage: raw.progressStage || '',
         bomFallback: raw.bomFallback || false,
-        quantity: raw.quantity || 0
+        quantity: raw.quantity || 0,
       },
       materialPurchases: materialPurchases,
       materialSummary: materialSummary,
       cuttingTask: cuttingTask,
-      cuttingUnitPrice: cuttingUnitPrice,
-      description: description,
-      secondaryProcesses: secondaryProcesses,
       buttonText: btnText,
       skuList: formItems,
       summary: summary,
-      sizeMatrix: sizeMatrix
+      sizeMatrix: sizeMatrix,
     });
 
     // 防御性检查：裁剪已完成 → 自动提示并返回
@@ -173,31 +135,29 @@ Page({
     if (!Array.isArray(skuList) || skuList.length === 0) {
       return { sizes: [], rows: [] };
     }
-    var sizeSet = [];
-    var colorMap = {};
+    const sizeSet = [];
+    const colorMap = {};
     skuList.forEach(function (item) {
-      var color = (item.color || '').trim() || '默认';
-      var size = (item.size || '').trim() || '均码';
-      var qty = Number(item.cuttingQty || item.totalQuantity || item.quantity || 0);
+      const color = (item.color || '').trim() || '默认';
+      const size = (item.size || '').trim() || '均码';
+      const qty = Number(item.cuttingQty || item.totalQuantity || item.quantity || 0);
       if (sizeSet.indexOf(size) === -1) sizeSet.push(size);
       if (!colorMap[color]) colorMap[color] = {};
       colorMap[color][size] = qty;
     });
-    // 按标准尺码顺序排列列头（XS→S→M→L→XL→2XL→XXL→...）
-    sizeSet = sortBySizeOrder(sizeSet);
-    var rows = Object.keys(colorMap).map(function (color) {
+    const rows = Object.keys(colorMap).map(function (color) {
       return {
         color: color,
         cells: sizeSet.map(function (size) {
           return { size: size, quantity: colorMap[color][size] || 0 };
-        })
+        }),
       };
     });
     return { sizes: sizeSet, rows: rows };
   },
 
   _fetchAiTip(orderNo, processName) {
-    var self = this;
+    const self = this;
     api.intelligence.getScanTips({ orderNo: orderNo, processName: processName })
       .then(function (res) {
         if (res && res.aiTip) {
@@ -214,17 +174,17 @@ Page({
   },
 
   previewImage() {
-    var img = this.data.detail.coverImage;
+    const img = this.data.detail.coverImage;
     if (!img) return;
     wx.previewImage({ current: img, urls: [img] });
   },
 
   onSkuInput(e) {
-    var idx = e.currentTarget.dataset.index;
-    var val = parseInt(e.detail.value, 10) || 0;
-    var key = 'skuList[' + idx + '].inputQuantity';
+    const idx = e.currentTarget.dataset.index;
+    const val = parseInt(e.detail.value, 10) || 0;
+    const key = 'skuList[' + idx + '].inputQuantity';
     this.setData({ [key]: val });
-    var summary = SKUProcessor.getSummary(this.data.skuList);
+    const summary = SKUProcessor.getSummary(this.data.skuList);
     this.setData({ summary: summary });
   },
 
@@ -247,23 +207,23 @@ Page({
   },
 
   async _confirmProcurement() {
-    var materialPurchases = this.data.materialPurchases;
+    const materialPurchases = this.data.materialPurchases;
     if (!materialPurchases || materialPurchases.length === 0) {
       toast.error('无采购物料');
       return;
     }
 
-    var userInfo = getUserInfo() || {};
-    var receiverId = String(userInfo.id || userInfo.userId || '').trim();
-    var receiverName = String(userInfo.name || userInfo.username || '').trim();
+    const userInfo = getUserInfo() || {};
+    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
     if (!receiverId && !receiverName) {
       toast.error('领取人信息缺失，请重新登录');
       return;
     }
 
-    var pendingItems = materialPurchases.filter(function(item) {
-      var status = String(item.status || '').trim().toLowerCase();
+    const pendingItems = materialPurchases.filter(function(item) {
+      const status = String(item.status || '').trim().toLowerCase();
       return !status || status === 'pending';
     });
 
@@ -282,14 +242,13 @@ Page({
         return api.production.receivePurchase({
           purchaseId: item.id || item.purchaseId,
           receiverId: receiverId,
-          receiverName: receiverName
+          receiverName: receiverName,
         });
       }));
 
       wx.hideLoading();
       this.setData({ loading: false });
       toast.success('已领取 ' + pendingItems.length + ' 项物料');
-
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
@@ -300,22 +259,22 @@ Page({
   },
 
   async _confirmCutting() {
-    var cuttingTask = this.data.cuttingTask;
+    const cuttingTask = this.data.cuttingTask;
     if (!cuttingTask || !cuttingTask.id) {
       toast.error('无裁剪任务可领取');
       return;
     }
 
-    var status = String(cuttingTask.status || '').trim().toLowerCase();
+    const status = String(cuttingTask.status || '').trim().toLowerCase();
     if (status === 'received' || status === 'in_progress' || status === 'completed' || status === 'done') {
       toast.info('该任务已被领取');
       wx.navigateBack();
       return;
     }
 
-    var userInfo = getUserInfo() || {};
-    var receiverId = String(userInfo.id || userInfo.userId || '').trim();
-    var receiverName = String(userInfo.name || userInfo.username || '').trim();
+    const userInfo = getUserInfo() || {};
+    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
     if (!receiverId && !receiverName) {
       toast.error('领取人信息缺失，请重新登录');
@@ -334,7 +293,7 @@ Page({
       this._emitRefresh();
 
       wx.redirectTo({
-        url: '/pages/cutting/task-detail/index?orderNo=' + encodeURIComponent(this.data.detail.orderNo) + '&styleNo=' + encodeURIComponent(this.data.detail.styleNo)
+        url: '/pages/cutting/task-detail/index?orderNo=' + encodeURIComponent(this.data.detail.orderNo) + '&styleNo=' + encodeURIComponent(this.data.detail.styleNo),
       });
     } catch (e) {
       wx.hideLoading();
@@ -344,11 +303,11 @@ Page({
   },
 
   async _confirmNormalScan() {
-    var raw = this._scanContext;
+    const raw = this._scanContext;
     if (!raw) { toast.error('数据异常'); return; }
 
-    var skuList = this.data.skuList;
-    var validation = SKUProcessor.validateSKUInputBatch(skuList);
+    const skuList = this.data.skuList;
+    const validation = SKUProcessor.validateSKUInputBatch(skuList);
     if (!validation.valid) {
       toast.error((validation.errors && validation.errors[0]) || '请检查输入');
       return;
@@ -357,77 +316,65 @@ Page({
     this.setData({ loading: true });
 
     try {
-      var requests = SKUProcessor.generateScanRequests(
+      const requests = SKUProcessor.generateScanRequests(
         validation.validList,
         raw.orderNo,
         raw.styleNo || (raw.orderDetail && raw.orderDetail.styleNo) || '',
         raw.progressStage,
-        { scanCode: raw.scanCode || raw.orderNo || '' }
+        { scanCode: raw.scanCode || raw.orderNo || '' },
       );
 
       if (requests.length === 0) {
         throw new Error('请至少输入一个数量');
       }
 
-      var tasks = requests.map(function (req) {
+      const tasks = requests.map(function (req) {
         req.scanType = normalizeScanType(raw.progressStage, req.scanType || 'production');
         return api.production.executeScan(req);
       });
 
-      var results = await Promise.all(tasks);
-        // 超额审批处理：有任一结果要求审批，走审批流程
-        var approvalResult = (results || []).find(function (r) { return r && r.needApproval; });
-        if (approvalResult) {
-            this.setData({ loading: false });
-            wx.showModal({
-                title: '已提交主管审批',
-                content: '入库数量超出限制，已记录并提交主管【' +
+      const results = await Promise.all(tasks);
+      // 超额审批处理：有任一结果要求审批，走审批流程
+      const approvalResult = (results || []).find(function (r) { return r && r.needApproval; });
+      if (approvalResult) {
+        this.setData({ loading: false });
+        wx.showModal({
+          title: '已提交主管审批',
+          content: '入库数量超出限制，已记录并提交主管【' +
                          (approvalResult.approverName || '') + '】审批，审批通过后自动完成入库。\n' +
                          (approvalResult.overQuantityDetail || ''),
-                showCancel: false,
-                confirmText: '知道了',
-                success: function () { wx.navigateBack(); }
-            });
-            return;
-        }
-      var invalid = (results || []).find(function (r) {
+          showCancel: false,
+          confirmText: '知道了',
+          success: function () { wx.navigateBack(); },
+        });
+        return;
+      }
+      const invalid = (results || []).find(function (r) {
         return !(r && r.scanRecord && (r.scanRecord.id || r.scanRecord.recordId));
       });
       if (invalid) {
-        var msg = (invalid && invalid.message) ? String(invalid.message) : '部分扫码未落库，请重试';
+        const msg = (invalid && invalid.message) ? String(invalid.message) : '部分扫码未落库，请重试';
         throw new Error(msg);
       }
 
       toast.success('批量提交成功（' + tasks.length + '条）');
-      getApp().globalData.lastScanResult = {
-        orderNo: raw.orderNo || '',
-        processCode: raw.processCode || '',
-        processName: raw.progressStage || raw.processName || '',
-        quantity: (validation.validList || []).reduce(function (sum, item) { return sum + (item.quantity || 0); }, 0),
-        success: true,
-      };
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
       this.setData({ loading: false });
-      var ctx = this._scanContext;
-      getApp().globalData.lastScanResult = {
-        orderNo: (ctx && ctx.orderNo) || '',
-        processCode: (ctx && ctx.processCode) || '',
-        processName: (ctx && (ctx.progressStage || ctx.processName)) || '',
-        quantity: 0,
-        success: false,
-      };
       wx.showModal({
         title: '扫码失败',
         content: e.message || e.errMsg || '提交失败，请稍后重试',
         showCancel: false,
-        confirmText: '知道了'
+        confirmText: '知道了',
       });
     }
   },
 
   _emitRefresh() {
-    triggerDataRefresh('scan');
-  }
+    const eb = getApp().globalData && getApp().globalData.eventBus;
+    if (eb && typeof eb.emit === 'function') {
+      eb.emit('DATA_REFRESH');
+    }
+  },
 });

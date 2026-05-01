@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +49,8 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
 
     private static final ExecutorService RECALL_EXECUTOR = Executors.newFixedThreadPool(3);
     private static final ExecutorService ASYNC_EXECUTOR = Executors.newFixedThreadPool(2);
+
+    private static final int RECALL_TIMEOUT_SECONDS = 2;
 
     @Override
     public String getName() {
@@ -163,9 +166,9 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
             return result;
         }, RECALL_EXECUTOR);
 
-        Map<String, Float> semanticScoreMap = semanticFuture.join();
-        List<KnowledgeBase> sqlResults = keywordFuture.join();
-        GraphRecallResult graphResult = graphFuture.join();
+        Map<String, Float> semanticScoreMap = safeJoin(semanticFuture);
+        List<KnowledgeBase> sqlResults = safeJoinList(keywordFuture);
+        GraphRecallResult graphResult = safeJoinGraph(graphFuture);
         List<KnowledgeGraphOrchestrator.ReasoningPath> graphPaths = graphResult.paths;
         Set<String> graphEntityIds = graphResult.entityIds;
 
@@ -404,5 +407,32 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
     private static class GraphRecallResult {
         List<KnowledgeGraphOrchestrator.ReasoningPath> paths = new ArrayList<>();
         Set<String> entityIds = new HashSet<>();
+    }
+
+    private Map<String, Float> safeJoin(CompletableFuture<Map<String, Float>> future) {
+        try {
+            return future.get(RECALL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("[KnowledgeSearch] 语义召回超时或异常: {}", e.getMessage());
+            return new LinkedHashMap<>();
+        }
+    }
+
+    private List<KnowledgeBase> safeJoinList(CompletableFuture<List<KnowledgeBase>> future) {
+        try {
+            return future.get(RECALL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("[KnowledgeSearch] 关键词召回超时或异常: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private GraphRecallResult safeJoinGraph(CompletableFuture<GraphRecallResult> future) {
+        try {
+            return future.get(RECALL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("[KnowledgeSearch] 图谱召回超时或异常: {}", e.getMessage());
+            return new GraphRecallResult();
+        }
     }
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface CollaborationTaskMapper extends BaseMapper<CollaborationTask> {
@@ -18,4 +19,19 @@ public interface CollaborationTaskMapper extends BaseMapper<CollaborationTask> {
 
     @Select("SELECT * FROM t_collaboration_task WHERE tenant_id = #{tenantId} AND order_no = #{orderNo} ORDER BY updated_at DESC LIMIT #{limit}")
     List<CollaborationTask> findByTenantAndOrder(@Param("tenantId") Long tenantId, @Param("orderNo") String orderNo, @Param("limit") int limit);
+
+    @Select("SELECT * FROM t_collaboration_task WHERE tenant_id = #{tenantId} AND task_status IN ('PENDING', 'ACCEPTED', 'IN_PROGRESS', 'ESCALATED') ORDER BY FIELD(priority, 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'), due_at ASC LIMIT #{limit}")
+    List<CollaborationTask> findActiveByTenant(@Param("tenantId") Long tenantId, @Param("limit") int limit);
+
+    @Select("SELECT * FROM t_collaboration_task WHERE tenant_id = #{tenantId} AND task_status = #{status} ORDER BY FIELD(priority, 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'), due_at ASC LIMIT #{limit}")
+    List<CollaborationTask> findByTenantAndStatus(@Param("tenantId") Long tenantId, @Param("status") String status, @Param("limit") int limit);
+
+    @Select("SELECT * FROM t_collaboration_task WHERE overdue = 1 AND task_status IN ('PENDING', 'ACCEPTED', 'IN_PROGRESS') AND escalated_at IS NULL ORDER BY priority ASC, due_at ASC LIMIT #{limit}")
+    List<CollaborationTask> findOverdueNotEscalated(@Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM t_collaboration_task WHERE tenant_id = #{tenantId} AND task_status = #{status}")
+    int countByTenantAndStatus(@Param("tenantId") Long tenantId, @Param("status") String status);
+
+    @Update("UPDATE t_collaboration_task SET task_status = 'ESCALATED', escalated_at = NOW(), escalated_to = #{escalatedTo}, updated_at = NOW() WHERE id = #{id}")
+    int escalateTask(@Param("id") Long id, @Param("escalatedTo") String escalatedTo);
 }

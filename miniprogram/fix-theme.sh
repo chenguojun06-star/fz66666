@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /Users/guojunmini4/Documents/服装66666/miniprogram
+cd /Volumes/macoo2/Users/guojunmini4/Documents/服装66666/miniprogram
 
 FILES=$(find . -name "*.wxss" ! -name "design-tokens.wxss")
 

@@ -1,8 +1,7 @@
 const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../utils/permission');
-const { isTenantOwner, isTokenExpired } = require('../../utils/storage');
-const { eventBus, Events } = require('../../utils/eventBus');
+const { isTenantOwner } = require('../../utils/storage');
 
 /**
  * 根据当前小时返回问候语
@@ -19,9 +18,7 @@ function getGreeting() {
  */
 function buildMenuItems() {
   const canSeeDashboard = isTenantOwner() || isAdminOrSupervisor();
-  const canSeeSmartOps = isTenantOwner();
   return [
-    canSeeSmartOps ? { id: 'smartOps', name: '运营看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/smart-ops/index', badge: 'AI' } : null,
     canSeeDashboard ? { id: 'dashboard', name: '进度看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' } : null,
     { id: 'production', name: '生产', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/work/index', tab: 'sewing' },
     { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
@@ -38,22 +35,18 @@ Page({
     statusBarHeight: 0,
     greeting: '',
     userName: '',
-    orgName: '',      // 工厂名（工厂账号）或公司名（租户主），用于首页欢迎语
     menuItems: [],
     unreadNoticeCount: 0,
     dateInfo: { icon: '', date: '', day: '', season: '', dailyTip: '' },
   },
 
   onLoad() {
-    const sysInfo = wx.getWindowInfo();
+    const sysInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
     this.setData({
       statusBarHeight: sysInfo.statusBarHeight || 44,
       greeting: getGreeting(),
       menuItems: buildMenuItems(),
     });
-    // requireAuth 在 onLoad 阶段提前守卫：有 token 且未过期才初始化用户信息
-    const app = getApp();
-    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._loadUserName();
     this._computeDateInfo();
   },
@@ -67,15 +60,6 @@ Page({
     this.setData({ greeting: getGreeting() });
     this._loadUserName(true);
     this._refreshHomeData();
-    this._bindWsEvents();
-  },
-
-  onHide() {
-    this._unbindWsEvents();
-  },
-
-  onUnload() {
-    this._unbindWsEvents();
   },
 
   onPullDownRefresh() {
@@ -88,52 +72,25 @@ Page({
     return Promise.allSettled([this._loadUnreadCount()]);
   },
 
-  _bindWsEvents() {
-    if (this._wsBound) return;
-    this._wsBound = true;
-    this._onDataChanged = () => { this._refreshHomeData(); };
-    this._onOrderProgress = () => { this._refreshHomeData(); };
-    this._onWarehouseIn = () => { this._refreshHomeData(); };
-    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
-    eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
-    eventBus.on(Events.WAREHOUSE_IN, this._onWarehouseIn);
-  },
-
-  _unbindWsEvents() {
-    if (!this._wsBound) return;
-    this._wsBound = false;
-    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
-    if (this._onOrderProgress) eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
-    if (this._onWarehouseIn) eventBus.off(Events.WAREHOUSE_IN, this._onWarehouseIn);
-  },
-
   _loadUserName(forceRemote = false) {
     const app = getApp();
     const globalInfo = (app && app.globalData && app.globalData.userInfo) || {};
     const cacheInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
     const info = Object.assign({}, cacheInfo, globalInfo);
     const name = info.realName || info.name || info.nickName || info.nickname || '用户';
-    // 工厂账号优先显示工厂名，其次显示租户/公司名
-    const orgName = info.factoryName || info.tenantName || '';
-    const patch = {};
-    if (name !== this.data.userName) patch.userName = name;
-    if (orgName !== this.data.orgName) patch.orgName = orgName;
-    if (Object.keys(patch).length) this.setData(patch);
+    if (name !== this.data.userName) {
+      this.setData({ userName: name });
+    }
 
     if (!forceRemote && this._loadedUserNameFromRemote) return;
-    // 无 token 或 token 已过期时跳过远程接口，防止 onLoad 阶段触发 401
-    const authToken = wx.getStorageSync('auth_token') || '';
-    if (!authToken || isTokenExpired()) return;
     this._loadedUserNameFromRemote = true;
     api.system.getMe()
       .then(res => {
         const me = (res && res.data) || res || {};
         const remoteName = me.realName || me.name || me.nickName || me.nickname;
-        const remoteOrgName = me.factoryName || me.tenantName || '';
-        const remotePatch = {};
-        if (remoteName && remoteName !== this.data.userName) remotePatch.userName = remoteName;
-        if (remoteOrgName !== this.data.orgName) remotePatch.orgName = remoteOrgName;
-        if (Object.keys(remotePatch).length) this.setData(remotePatch);
+        if (remoteName && remoteName !== this.data.userName) {
+          this.setData({ userName: remoteName });
+        }
       })
       .catch(e => { console.warn('[home] _loadUserName失败:', e.message || e); });
   },
@@ -155,33 +112,52 @@ Page({
     const d = now.getDate();
     const weekDay = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
 
-    // 每月花语（中国传统月花）
-    var monthFlowers = [
-      { icon: '🎍', name: '梅花', saying: '凌寒独自开，暗香浮动' },      // 1月
-      { icon: '🌺', name: '杏花', saying: '满园春色关不住' },            // 2月
-      { icon: '🌸', name: '桃花', saying: '人面桃花相映红' },            // 3月
-      { icon: '🏵️', name: '牡丹', saying: '花开时节动京城' },           // 4月
-      { icon: '🌷', name: '石榴花', saying: '蕊珠如火一时开' },         // 5月
-      { icon: '🪷', name: '荷花', saying: '出淤泥而不染，濯清涟而不妖' },  // 6月
-      { icon: '🌻', name: '蜀葵', saying: '向阳而生，永远热忱' },        // 7月
-      { icon: '🌕', name: '桂花', saying: '低调芬芳，不言自明' },        // 8月
-      { icon: '💮', name: '菊花', saying: '宁可枝头抱香死' },            // 9月
-      { icon: '🌺', name: '芙蓉', saying: '一日三变，愈晚愈红' },        // 10月
-      { icon: '🌼', name: '山茶花', saying: '唯有山茶偏耐久' },          // 11月
-      { icon: '🧊', name: '水仙', saying: '凌波仙子，自有光芒' },        // 12月
+    // 季节 + 图标
+    let season; let icon;
+    if (m >= 3 && m <= 5) { season = '春'; icon = '🌸'; }
+    else if (m >= 6 && m <= 8) { season = '夏'; icon = '☀️'; }
+    else if (m >= 9 && m <= 11) { season = '秋'; icon = '🍂'; }
+    else { season = '冬'; icon = '❄️'; }
+
+    // 每日花语（按日期轮换）
+    const flowers = [
+      '🌸 樱花 — 生命之美，转瞬即永恒',
+      '🌹 玫瑰 — 热情与勇气',
+      '🌻 向日葵 — 追随阳光，永远热忱',
+      '🌷 郁金香 — 优雅与自信',
+      '🌺 木槿 — 坚韧温柔，细水长流',
+      '💐 康乃馨 — 感恩与温暖',
+      '🪻 薰衣草 — 等待一份美好',
+      '🌼 雏菊 — 纯真与希望',
+      '🏵️ 牡丹 — 雍容大气，不负韶华',
+      '🌿 绿萝 — 生生不息，自在生长',
+      '🪷 莲花 — 出淤泥而不染',
+      '🌾 稻穗 — 越充实，越谦逊',
+      '🍀 四叶草 — 幸运藏在坚持里',
+      '💮 茉莉 — 清新淡雅，沁人心脾',
+      '🪹 蒲公英 — 自由飞翔，落地生根',
+      '🌲 松柏 — 四季常青，志存高远',
+      '🌵 仙人掌 — 坚强不需要掌声',
+      '🎋 竹子 — 虚心有节，宁折不弯',
+      '🎍 梅花 — 凌寒独自开',
+      '🌱 新芽 — 一切美好，正在生长',
+      '🌳 橡树 — 根深才能叶茂',
+      '🪴 多肉 — 小而美，也是一种力量',
+      '🍃 银杏 — 时光沉淀出金色',
+      '🌕 桂花 — 低调芬芳，不言自明',
+      '🏔️ 雪莲 — 高处不胜寒，依然盛放',
+      '🎐 风铃草 — 感谢每一次相遇',
+      '🧊 水仙 — 内心丰盈，自有光芒',
+      '🫧 满天星 — 甘做配角，也照亮全场',
+      '🌴 椰树 — 面朝大海，从容不迫',
+      '🍁 枫叶 — 每一次变化都是成长',
+      '🎄 冬青 — 寒冬也有绿意',
     ];
-    var flower = monthFlowers[m - 1];
-    var season;
-    if (m >= 3 && m <= 5) { season = '春'; }
-    else if (m >= 6 && m <= 8) { season = '夏'; }
-    else if (m >= 9 && m <= 11) { season = '秋'; }
-    else { season = '冬'; }
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+    const dailyTip = flowers[dayOfYear % flowers.length];
 
     this.setData({
-      dateInfo: {
-        icon: flower.icon, date: m + '月' + d + '日', day: '星期' + weekDay,
-        season: season, flowerName: flower.name, dailyTip: flower.icon + ' ' + flower.name + ' — ' + flower.saying,
-      },
+      dateInfo: { icon, date: m + '月' + d + '日', day: '星期' + weekDay, season, dailyTip },
     });
   },
 

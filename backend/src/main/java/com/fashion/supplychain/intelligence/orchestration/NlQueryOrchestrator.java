@@ -6,6 +6,8 @@ import com.fashion.supplychain.intelligence.dto.NlQueryRequest;
 import com.fashion.supplychain.intelligence.dto.NlQueryResponse;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +32,16 @@ public class NlQueryOrchestrator {
     @Autowired private NlQueryDataHandlers dataHandlers;
     @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
 
+    private static final int SESSION_CONTEXT_WINDOW = 3;
+    private static final int SESSION_CACHE_MAX_SIZE = 200;
     /** 会话上下文缓存: sessionKey → 最近3轮 [question, answer] */
-    private final ConcurrentHashMap<String, LinkedList<String[]>> sessionContexts = new ConcurrentHashMap<>();
+    private final Map<String, LinkedList<String[]>> sessionContexts = Collections.synchronizedMap(
+            new LinkedHashMap<>() {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, LinkedList<String[]>> eldest) {
+                    return size() > SESSION_CACHE_MAX_SIZE;
+                }
+            });
 
     public NlQueryResponse query(NlQueryRequest req) {
         String question = req.getQuestion().trim();

@@ -3,10 +3,13 @@ package com.fashion.supplychain.intelligence.job;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
+import com.fashion.supplychain.intelligence.entity.CollaborationTask;
+import com.fashion.supplychain.intelligence.mapper.CollaborationTaskMapper;
 import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.SmartEscalationOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -59,6 +62,9 @@ public class AiPatrolJob {
     /** 工厂沉默阈值：超过此天数无扫码视为沉默 */
     private static final int FACTORY_SILENCE_DAYS = 3;
 
+    /** 超时任务升级阈值：逾期超过此小时数后自动升级 */
+    private static final int ESCALATION_HOURS_THRESHOLD = 4;
+
     @Autowired
     private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired
@@ -67,6 +73,12 @@ public class AiPatrolJob {
     private PatrolClosedLoopOrchestrator patrolOrchestrator;
     @Autowired
     private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
+
+    @Autowired(required = false)
+    private CollaborationTaskMapper collaborationTaskMapper;
+
+    @Autowired(required = false)
+    private SmartEscalationOrchestrator smartEscalationOrchestrator;
 
     /**
      * 跨模块读取生产数据（只读，不涉及事务，Job 层允许跨模块调用 Service）。
@@ -340,6 +352,69 @@ public class AiPatrolJob {
         }
 
         log.info("[AiPatrolJob-Ext] ===== 扩展巡查完成，发现 {} 个风险 =====", found);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // P0-2: 协作任务逾期自动升级（每30分钟）
+    // ══════════════════════════════════════════════════════════════════
+
+    @Scheduled(cron = "0 */30 * * * ?")
+    public void scanOverdueCollaborationTasks() {
+        if (collaborationTaskMapper == null) {
+            log.debug("[AiPatrolJob-TaskEscalation] CollaborationTaskMapper 未注入，跳过");
+            return;
+        }
+        try {
+            List<CollaborationTask> overdueTasks = collaborationTaskMapper.findOverdueNotEscalated(50);
+            if (overdueTasks.isEmpty()) return;
+
+            int escalated = 0;
+            for (CollaborationTask task : overdueTasks) {
+                if (task.getCreatedAt() == null) continue;
+                long hoursSinceCreation = java.time.Duration.between(task.getCreatedAt(), LocalDateTime.now()).toHours();
+                if (hoursSinceCreation < ESCALATION_HOURS_THRESHOLD) continue;
+
+                String escalationLevel = smartEscalationOrchestrator != null
+                        ? smartEscalationOrchestrator.escalationByRisk("overdue")
+                        : "L3";
+
+                String escalatedTo = resolveEscalationTarget(task);
+                collaborationTaskMapper.escalateTask(task.getId(), escalatedTo);
+
+                String issue = String.format(
+                        "协作任务[%s] 逾期%d小时未处理（订单:%s, 岗位:%s），已自动升级至%s",
+                        task.getId(), hoursSinceCreation,
+                        task.getOrderNo() != null ? task.getOrderNo() : "无",
+                        task.getTargetRole() != null ? task.getTargetRole() : "未知",
+                        escalatedTo);
+                patrolOrchestrator.createAction(
+                        "TASK_ESCALATION_JOB", issue, "COLLAB_TASK_OVERDUE",
+                        "HIGH", "collab_task", String.valueOf(task.getId()),
+                        "{\"action\":\"escalate_task\",\"taskId\":" + task.getId() + ",\"level\":\"" + escalationLevel + "\"}",
+                        BigDecimal.valueOf(0.9), "NEED_APPROVAL"
+                );
+                log.warn("[AiPatrolJob-TaskEscalation] {}", issue);
+                escalated++;
+            }
+
+            if (escalated > 0) {
+                log.info("[AiPatrolJob-TaskEscalation] ===== 任务升级扫描完成，升级 {} 个逾期任务 =====", escalated);
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-TaskEscalation] 扫描异常: {}", e.getMessage());
+        }
+    }
+
+    private String resolveEscalationTarget(CollaborationTask task) {
+        String role = task.getTargetRole() != null ? task.getTargetRole().trim() : "";
+        return switch (role) {
+            case "跟单", "跟单员" -> "生产主管";
+            case "采购", "采购员" -> "采购经理";
+            case "财务" -> "财务主管";
+            case "仓库", "仓库管理员" -> "仓库主管";
+            case "质检", "质检员" -> "品质主管";
+            default -> "管理员";
+        };
     }
 
     // ══════════════════════════════════════════════════════════════════

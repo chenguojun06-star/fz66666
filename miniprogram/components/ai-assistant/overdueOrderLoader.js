@@ -77,7 +77,7 @@ function formatOverdueInfo(overdueDays) {
  */
 // 终态订单状态（与后端 OrderProgressFillHelper.TERMINAL_STATUSES 保持完全对齐）
 // 说明：比对后加入 SCRAPPED(报废) / ARCHIVED(已归档)，去除 FINISHED/DONE（后端不存在这两个值）
-const TERMINAL_STATUSES = ['COMPLETED', 'CANCELLED', 'CANCELED', 'SCRAPPED', 'ARCHIVED', 'CLOSED'];
+const TERMINAL_STATUSES = ['COMPLETED', 'CANCELLED', 'SCRAPPED', 'ARCHIVED', 'CLOSED'];
 
 async function loadOverdueOrders() {
   try {

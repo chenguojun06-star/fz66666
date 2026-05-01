@@ -54,10 +54,5 @@ Component({
         },
       });
     },
-
-    /** 查看用户服务协议 */
-    onViewService() {
-      wx.navigateTo({ url: '/pages/privacy/service/index' });
-    },
   },
 });

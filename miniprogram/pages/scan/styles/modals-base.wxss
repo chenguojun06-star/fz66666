@@ -5,11 +5,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--color-overlay);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: var(--z-overlay);
+  z-index: 999;
   padding: 10px;
 }
 .modal-box {
@@ -41,15 +41,17 @@
 }
 
 .modal-head {
-  padding: 16px 20px 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.8);
   color: var(--color-text-primary);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
   flex-shrink: 0;
 }
-
+/* .modal-cd 已删除 — 倒计时功能已取消 */
 .modal-body {
-  padding: 8px 20px 16px;
+  padding: 8px 10px;
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -68,9 +70,48 @@
   gap: 4px;
 }
 
+.compact-info-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.compact-info-half {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 29px;
+  padding: 0 5px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 5px;
+  background: var(--color-bg-card);
+  box-sizing: border-box;
+}
+
+.compact-info-label {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.compact-info-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.compact-info-value--highlight {
+  color: var(--color-primary);
+}
+
 /* AI 扫码工艺提醒 */
 .ai-tip-card {
-  background: var(--color-bg-light);
+  background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-light) 100%);
   border: 1px solid var(--color-info-bg);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -85,20 +126,20 @@
 }
 
 .ai-tip-icon {
-  font-size: var(--font-size-md-lg);
+  font-size: 16px;
   margin-right: 4px;
 }
 
 .ai-tip-title {
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-primary);
 }
 
 .ai-tip-content {
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   color: var(--color-text-primary);
-  line-height: var(--line-height-medium);
+  line-height: 1.5;
   display: block;
 }
 
@@ -112,7 +153,7 @@
 .ai-tip-kw {
   background: var(--color-info-bg);
   color: var(--color-primary);
-  font-size: var(--font-size-xxs);
+  font-size: 11px;
   padding: 1px 5px;
   border-radius: 2px;
 }
@@ -129,7 +170,7 @@
 }
 
 .ai-tip-loading-text {
-  font-size: var(--font-size-xs);
+  font-size: 12px;
   color: var(--color-text-disabled);
   margin-left: 4px;
 }
@@ -144,19 +185,71 @@
   to { transform: rotate(360deg); }
 }
 
-/* 质检接收提示 */
+/* 质检选项 - 弹窗内 */
+.qc-modal-bar {
+  margin-top: 6px;
+  padding: 6px 0;
+  border-top: 1px solid var(--color-border-light);
+}
+.qc-modal-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  margin-bottom: 4px;
+}
+
+.qc-defect-input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+  font-size: var(--font-size-sm);
+  box-sizing: border-box;
+}
+
 .qc-receive-tip {
   margin-top: 6px;
   padding: 6px 10px;
   background: var(--color-bg-light);
   border-left: 3px solid var(--color-primary);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
 }
 
 .qc-tip-text {
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-  line-height: var(--line-height-medium);
+  line-height: 1.5;
+}
+
+.qc-modal-opts {
+  display: flex;
+  gap: 6px;
+}
+.qc-modal-opt {
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px solid transparent;
+}
+.qc-modal-opt.on.pass {
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-text-primary);
+  border-color: rgba(var(--color-primary-rgb), 0.2);
+}
+.qc-modal-opt.on.fail {
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-text-primary);
+  border-color: rgba(var(--color-primary-rgb), 0.2);
+}
+.qc-modal-opt.on.fix {
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-text-primary);
+  border-color: rgba(var(--color-primary-rgb), 0.2);
 }
 
 /* 次品详情 - 弹窗内 */

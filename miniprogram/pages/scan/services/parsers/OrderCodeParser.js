@@ -12,7 +12,7 @@ class OrderCodeParser {
   constructor() {
     // 订单号正则：PO/ORD + 至少8位数字/字母，支持分隔符 - 或 _
     // 兼容后端ORD前缀和前端PO前缀
-    this.orderNoPattern = /^(PO|ORD|CUT)[-_]?[0-9A-Z]{8,}$/i;
+    this.orderNoPattern = /^(PO|ORD)[-_]?[0-9A-Z]{8,}$/i;
   }
 
   /**

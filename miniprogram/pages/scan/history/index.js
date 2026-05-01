@@ -3,8 +3,6 @@
  * 支持"按月"和"自定义"两种时间筛选模式
  */
 const api = require('../../../utils/api');
-const { request } = require('../../../utils/request');
-const { eventBus, Events } = require('../../../utils/eventBus');
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -48,14 +46,8 @@ function _formatPatternRecord(item) {
     displayWorker: item.operatorName || '-',
     displayOrderNo: item.styleNo || '-',
     displayBundleNo: item.color || '-',
-    displayColor: item.color || '-',
-    displaySize: item.size || '-',
-    // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
-    // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
-    displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
     displayQuantity: 0,
     displayUnitPrice: '-',
-    displayPriceAmount: '-',
     lineAmount: 0,
     displayLineAmount: '-',
     isPayable: false,
@@ -74,8 +66,7 @@ Page({
     startDate: getDateBefore(30),
     endDate: getToday(),
     searchKeyword: '',
-    // records 已迁移到 this._records 实例属性（不参与 WXML 渲染，无需走 setData，避免触发
-    // 「setData 中存在 WXML 中未绑定的变量」性能告警，并减少大数组序列化开销）
+    records: [],
     displayRecords: [],
     showOnlyPayable: false,
     loading: false,
@@ -99,11 +90,7 @@ Page({
   onLoad() {
     this._reqGeneration = 0;
     this._showedOnce = false;
-    this._records = [];
-    this._patternRecords = [];
     this._updateMonthDisplay();
-    // 未登录时跳过数据加载，避免触发 401 请求
-    if (!(wx.getStorageSync('auth_token') || '')) return;
     this.loadData(true);
   },
 
@@ -114,7 +101,6 @@ Page({
     }
     this.setData({ loading: false });
     this.loadData(true);
-    this._bindWsEvents();
   },
 
   onPullDownRefresh() {
@@ -236,16 +222,6 @@ Page({
         if (start) patternParams.startTime = start + ' 00:00:00';
         if (end) patternParams.endTime = end + ' 23:59:59';
         requests.push(api.production.myPatternScanHistory(patternParams));
-        // 并行调用工资 API 获取准确工资总额
-        requests.push(request({
-          url: '/api/finance/payroll-settlement/operator-summary',
-          method: 'POST',
-          data: {
-            startTime: start + ' 00:00:00',
-            endTime: end + ' 23:59:59',
-            includeSettled: true,
-          },
-        }));
       }
 
       const settled = await Promise.allSettled(requests);
@@ -255,7 +231,7 @@ Page({
         : (this._patternRecords || []);
 
       const newRecords = (result?.records || []).filter(
-        (item) => (item.scanResult || '').toLowerCase() !== 'failure'
+        (item) => (item.scanResult || '').toLowerCase() !== 'failure',
       );
       const formatted = newRecords.map((item) => ({
         ...item,
@@ -268,31 +244,18 @@ Page({
           (item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '') ||
           item.cuttingBundleQrCode ||
           '-',
-        displayColor: item.color || '-',
-        displaySize: item.size || '-',
-        // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
-        // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
-        displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
         displayQuantity: item.quantity || 0,
         displayUnitPrice: item.unitPrice == null || item.unitPrice === '' ? '-' : Number(item.unitPrice).toFixed(2),
-        // 金额优先级与后端 selectPayrollAggregation SQL 一致：totalAmount → scanCost → unitPrice×quantity
-        lineAmount: Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)),
-        displayLineAmount: (function() {
-          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
-          return amt > 0 ? amt.toFixed(2) : '-';
-        })(),
-        displayPriceAmount: (function() {
-          var price = item.unitPrice == null || item.unitPrice === '' ? null : Number(item.unitPrice);
-          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
-          var priceText = price == null ? '-' : '¥' + price.toFixed(2);
-          var amtText = amt > 0 ? '¥' + amt.toFixed(2) : '-';
-          return priceText + ' / ' + amtText;
-        })(),
-        isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
+        lineAmount: (Number(item.unitPrice) || 0) * (Number(item.quantity) || 0),
+        displayLineAmount:
+          (Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0
+            ? ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)).toFixed(2)
+            : '-',
+        isPayable: (Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0,
         displayBedNo: item.bedNo != null ? String(item.bedNo) : '-',
       }));
 
-      const prevList = reset ? [] : (this._records || []);
+      const prevList = reset ? [] : this.data.records;
       const merged = prevList.concat(formatted);
       const total = result?.total || 0;
       const hasMore = merged.length < total;
@@ -306,37 +269,23 @@ Page({
       const orderSet = new Set();
       merged.forEach((r) => {
         totalQuantity += r.quantity || 0;
+        const price = Number(r.unitPrice) || 0;
+        const qty = Number(r.quantity) || 0;
+        if (price > 0 && qty > 0) {
+          totalWage += price * qty;
+        }
         if (r.orderNo && r.orderNo !== '-') {
           orderSet.add(r.orderNo);
         }
       });
-
-      // 优先使用工资 API 返回的准确总额，回退到客户端计算
-      if (reset && settled[2] && settled[2].status === 'fulfilled') {
-        const payrollRes = settled[2].value;
-        if (payrollRes && payrollRes.code === 200 && Array.isArray(payrollRes.data)) {
-          payrollRes.data.forEach((item) => {
-            totalWage += Number(item.totalAmount) || 0;
-          });
-        }
-      }
-      if (totalWage === 0) {
-        // 工资 API 不可用时回退到客户端估算（与后端 COALESCE 优先级一致）
-        merged.forEach((r) => {
-          var amt = Number(r.totalAmount) || Number(r.scanCost) || ((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0));
-          if (amt > 0) {
-            totalWage += amt;
-          }
-        });
-      }
 
       const allForDisplay = this._mergeAndSort(merged, patternRecords);
       const displayRecords = this._getDisplayRecords(allForDisplay);
 
       if (gen !== this._reqGeneration) return;
       this._patternRecords = patternRecords;
-      this._records = merged;
       this.setData({
+        records: merged,
         displayRecords,
         page: nextPage,
         hasMore,
@@ -372,7 +321,7 @@ Page({
 
   onTogglePayableFilter() {
     const showOnlyPayable = !this.data.showOnlyPayable;
-    const allRecords = this._mergeAndSort(this._records || [], this._patternRecords || []);
+    const allRecords = this._mergeAndSort(this.data.records, this._patternRecords || []);
     const displayRecords = showOnlyPayable
       ? allRecords.filter((item) => item.isPayable)
       : allRecords;
@@ -387,35 +336,5 @@ Page({
 
   onLoadMore() {
     this.loadData(false);
-  },
-
-  _bindWsEvents() {
-    if (this._wsBound) return;
-    this._wsBound = true;
-    this._onScanSuccess = () => { this.loadData(true); };
-    this._onScanUndo = () => { this.loadData(true); };
-    this._onDataChanged = () => { this.loadData(true); };
-    this._onRefreshAll = () => { this.loadData(true); };
-    eventBus.on(Events.SCAN_SUCCESS, this._onScanSuccess);
-    eventBus.on(Events.SCAN_UNDO, this._onScanUndo);
-    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
-    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
-  },
-
-  _unbindWsEvents() {
-    if (!this._wsBound) return;
-    this._wsBound = false;
-    if (this._onScanSuccess) eventBus.off(Events.SCAN_SUCCESS, this._onScanSuccess);
-    if (this._onScanUndo) eventBus.off(Events.SCAN_UNDO, this._onScanUndo);
-    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
-    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
-  },
-
-  onHide() {
-    this._unbindWsEvents();
-  },
-
-  onUnload() {
-    this._unbindWsEvents();
   },
 });

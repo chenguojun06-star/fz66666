@@ -6,8 +6,8 @@
 
 /* 顶部标题 */
 .header { margin-bottom: 12px; }
-.header-title { font-size: var(--font-size-lg-xl); font-weight: bold; color: var(--color-text-primary, var(--color-text-primary)); display: block; }
-.header-sub { font-size: var(--font-size-sm); color: var(--color-text-secondary, var(--color-text-disabled)); margin-top: 3px; display: block; }
+.header-title { font-size: 18px; font-weight: bold; color: var(--color-text-primary, var(--color-text-primary)); display: block; }
+.header-sub { font-size: 13px; color: var(--color-text-secondary, var(--color-text-disabled)); margin-top: 3px; display: block; }
 
 /* 扫码按钮（首次进入没有rollCode时） */
 .scan-btn-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 40px; }
@@ -19,61 +19,61 @@
   border: 2px solid var(--color-primary, var(--color-primary));
 }
 .scan-icon { width: 44px; height: 44px; }
-.scan-label { font-size: var(--font-size-md); color: var(--color-primary, var(--color-primary)); margin-top: 4px; font-weight: bold; }
-.scan-hint { margin-top: 12px; font-size: var(--font-size-xs); color: var(--color-text-disabled, var(--color-text-disabled)); }
+.scan-label { font-size: 14px; color: var(--color-primary, var(--color-primary)); margin-top: 4px; font-weight: bold; }
+.scan-hint { margin-top: 12px; font-size: 12px; color: var(--color-text-disabled, var(--color-text-disabled)); }
 
 /* 料卷编号栏 */
 .roll-code-bar {
-  background: var(--color-bg-card, var(--color-bg-card)); border-radius: var(--radius-md); padding: 10px 12px;
+  background: var(--color-bg-card, var(--color-bg-card)); border-radius: 8px; padding: 10px 12px;
   display: flex; align-items: center; margin-bottom: 8px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
-.roll-code-label { font-size: var(--font-size-xs); color: var(--color-text-secondary, var(--color-text-disabled)); margin-right: 6px; white-space: nowrap; }
-.roll-code-value { font-size: var(--font-size-md); font-weight: bold; color: var(--color-text-primary, var(--color-text-primary)); flex: 1; font-family: monospace; }
+.roll-code-label { font-size: 12px; color: var(--color-text-secondary, var(--color-text-disabled)); margin-right: 6px; white-space: nowrap; }
+.roll-code-value { font-size: 14px; font-weight: bold; color: var(--color-text-primary, var(--color-text-primary)); flex: 1; font-family: monospace; }
 .btn-rescan {
-  font-size: var(--font-size-xs); color: var(--color-primary, var(--color-primary));
+  font-size: 12px; color: var(--color-primary, var(--color-primary));
   border: 1px solid var(--color-primary, var(--color-primary)); border-radius: 10px;
   padding: 3px 9px; white-space: nowrap;
 }
 
 /* 加载中 */
 .loading-wrap { padding: 20px; text-align: center; }
-.loading-text { color: var(--color-text-secondary, var(--color-text-disabled)); font-size: var(--font-size-md); }
+.loading-text { color: var(--color-text-secondary, var(--color-text-disabled)); font-size: 14px; }
 
 /* 错误 */
 .error-card {
-  background: var(--color-error-bg); border: 1px solid var(--color-error-border); border-radius: var(--radius-md);
+  background: var(--color-error-bg); border: 1px solid var(--color-error-border); border-radius: 8px;
   padding: 12px; display: flex; flex-direction: column; align-items: center;
   margin-bottom: 8px;
 }
-.error-icon { font-size: var(--font-size-3xl); }
-.error-msg { font-size: var(--font-size-md); color: var(--color-error, var(--color-error)); margin-top: 4px; text-align: center; }
+.error-icon { font-size: 24px; }
+.error-msg { font-size: 14px; color: var(--color-error, var(--color-error)); margin-top: 4px; text-align: center; }
 .btn-retry {
   margin-top: 8px; padding: 5px 16px; background: var(--color-error, var(--color-danger)); color: var(--color-bg-card);
-  border-radius: 10px; font-size: var(--font-size-sm);
+  border-radius: 10px; font-size: 13px;
 }
 
 /* 成功横幅 */
 .success-banner {
-  background: var(--color-success-bg); border: 1px solid var(--color-success-border); border-radius: var(--radius-md);
+  background: var(--color-success-bg); border: 1px solid var(--color-success-border); border-radius: 8px;
   padding: 10px; display: flex; align-items: center; margin-bottom: 8px;
 }
-.success-icon { font-size: var(--font-size-xl); margin-right: 6px; }
-.success-text { font-size: var(--font-size-md); color: var(--color-success, var(--color-success)); flex: 1; }
+.success-icon { font-size: 20px; margin-right: 6px; }
+.success-text { font-size: 14px; color: var(--color-success, var(--color-success)); flex: 1; }
 
 /* 料卷信息卡片 */
 .info-card {
-  background: var(--color-bg-card, var(--color-bg-card)); border-radius: var(--radius-md); padding: 12px;
+  background: var(--color-bg-card, var(--color-bg-card)); border-radius: 8px; padding: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 10px;
 }
 .info-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--color-border-light, var(--color-bg-light)); }
 .info-row:last-child { border-bottom: none; }
-.info-label { font-size: var(--font-size-sm); color: var(--color-text-secondary, var(--color-text-disabled)); width: 60px; flex-shrink: 0; }
-.info-value { font-size: var(--font-size-md); color: var(--color-text-primary, var(--color-text-primary)); flex: 1; }
-.info-value.bold { font-weight: bold; color: var(--color-primary, var(--color-primary)); font-size: var(--font-size-md-lg); }
+.info-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-disabled)); width: 60px; flex-shrink: 0; }
+.info-value { font-size: 14px; color: var(--color-text-primary, var(--color-text-primary)); flex: 1; }
+.info-value.bold { font-weight: bold; color: var(--color-primary, var(--color-primary)); font-size: 16px; }
 
 /* 状态标签 */
-.status-tag { padding: 2px 8px; border-radius: 10px; font-size: var(--font-size-xs); }
+.status-tag { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
 .tag-green { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
 .tag-orange { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid var(--color-warning-border); }
 
@@ -82,28 +82,28 @@
 
 /* 裁剪单输入 */
 .input-row { margin-bottom: 8px; }
-.input-label { font-size: var(--font-size-sm); color: var(--color-text-secondary, var(--color-text-secondary)); display: block; margin-bottom: 4px; }
+.input-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-secondary)); display: block; margin-bottom: 4px; }
 .input-field {
-  background: var(--color-bg-card, var(--color-bg-card)); border: 1px solid var(--color-border, var(--color-bg-gray)); border-radius: var(--radius-xs);
-  padding: 8px 10px; font-size: var(--font-size-md); width: 100%; box-sizing: border-box;
+  background: var(--color-bg-card, var(--color-bg-card)); border: 1px solid var(--color-border, var(--color-bg-gray)); border-radius: 6px;
+  padding: 8px 10px; font-size: 14px; width: 100%; box-sizing: border-box;
 }
 
 /* 发料按钮 */
 .btn-issue {
-  background: var(--color-primary, var(--color-primary)); color: var(--color-bg-card); border-radius: var(--radius-md);
-  padding: 14px; text-align: center; font-size: var(--font-size-md-lg); font-weight: bold;
+  background: var(--color-primary, var(--color-primary)); color: var(--color-bg-card); border-radius: 8px;
+  padding: 14px; text-align: center; font-size: 16px; font-weight: bold;
   box-shadow: 0 2px 6px rgba(22,119,255,0.3);
 }
 .btn-return {
-  background: var(--color-warning, var(--color-warning)); color: var(--color-bg-card); border-radius: var(--radius-md);
-  padding: 14px; text-align: center; font-size: var(--font-size-md-lg); font-weight: bold;
+  background: var(--color-warning, var(--color-warning)); color: var(--color-bg-card); border-radius: 8px;
+  padding: 14px; text-align: center; font-size: 16px; font-weight: bold;
   box-shadow: 0 2px 6px rgba(250,140,22,0.3);
 }
 .btn-disabled { opacity: 0.6; }
 
 /* 扫下一个 */
 .btn-next {
-  background: var(--color-bg-card, var(--color-bg-card)); border: 1px solid var(--color-border, var(--color-bg-gray)); border-radius: var(--radius-md);
-  padding: 12px; text-align: center; font-size: var(--font-size-md); color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card)); border: 1px solid var(--color-border, var(--color-bg-gray)); border-radius: 8px;
+  padding: 12px; text-align: center; font-size: 14px; color: var(--color-text-secondary, var(--color-text-secondary));
   margin-top: 6px;
 }

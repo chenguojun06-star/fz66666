@@ -2,11 +2,10 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
-  var n = parseInt(value, 10);
+  const n = parseInt(value, 10);
   if (!isFinite(n) || n <= 0) return fallback;
   return n;
 }
@@ -19,13 +18,12 @@ Page({
     selectedCount: 0,
     selectedAmount: 0,
     quantity: 1,
-    warehouseName: '成品库',
     warehouseCode: '',
     warehouseOptions: [],
     showWarehouse: false,
     isQualityReceive: false,
     imageInsight: '',
-    loading: false
+    loading: false,
   },
 
   onLoad() {
@@ -38,7 +36,7 @@ Page({
     }
     this._scanContext = raw;
 
-    var processOptions = this._buildProcessOptions(raw);
+    let processOptions = this._buildProcessOptions(raw);
     if (processOptions.length === 0 && raw.processName) {
       processOptions = [{
         label: raw.processName,
@@ -46,60 +44,34 @@ Page({
         scanType: raw.scanType || 'production',
         unitPrice: 0,
         hidePrice: true,
-        checked: true
+        checked: true,
       }];
     }
-    var isWarehouseStage = !!(raw.progressStage === 'warehouse' || raw.progressStage === '入库'
-      || raw.scanType === 'warehouse'
-      || (raw.stageResult && raw.stageResult.scanType === 'warehouse')
-      || raw.showWarehouse);
-    if (processOptions.length === 0 && isWarehouseStage) {
-      processOptions = [{
-        label: '入库',
-        value: raw.progressStage || 'warehouse',
-        scanType: 'warehouse',
-        unitPrice: 0,
-        hidePrice: true,
-        checked: true
-      }];
-    }
-    var selectedNames = processOptions.filter(function(o) { return o.checked; }).map(function(o) { return o.value; });
+    let selectedNames = processOptions.filter(function(o) { return o.checked; }).map(function(o) { return o.value; });
     if (selectedNames.length === 0 && processOptions.length > 0) {
       selectedNames = [processOptions[0].value];
       processOptions[0].checked = true;
     }
-    var summary = this._buildSummary(processOptions, selectedNames);
-    var isQualityReceive = raw.progressStage === 'quality' || raw.progressStage === '质检'
-      || raw.scanType === 'quality'
-      || (raw.stageResult && raw.stageResult.scanType === 'quality');
-    // 扩展检测：processOptions 全部为质检工序时也触发质检录入流程
-    // （progressStage 未正确设为 quality 时的兜底，常见于工序列表来源的质检）
-    if (!isQualityReceive && processOptions.length > 0) {
-      var qualityKeywords = ['质检', '质量检验', '终检'];
-      var allAreQuality = processOptions.every(function(o) {
-        return o.scanType === 'quality' || qualityKeywords.indexOf(o.value) >= 0 || qualityKeywords.indexOf(o.label) >= 0;
-      });
-      if (allAreQuality) {
-        isQualityReceive = true;
-      }
-    }
+    const summary = this._buildSummary(processOptions, selectedNames);
+    const isWarehouseStage = raw.progressStage === 'warehouse' || raw.progressStage === '入库';
+    const isQualityReceive = raw.progressStage === 'quality' || raw.progressStage === '质检';
 
-    var coverImage = '';
+    let coverImage = '';
     if (raw.orderDetail && raw.orderDetail.coverImage) {
       coverImage = getAuthedImageUrl(raw.orderDetail.coverImage);
     } else if (raw.orderDetail && raw.orderDetail.styleImage) {
       coverImage = getAuthedImageUrl(raw.orderDetail.styleImage);
     }
 
-    var color = raw.color || '';
-    var size = raw.size || '';
-    var bundleNo = raw.bundleNo || '';
-    var displayQuantity = raw.quantity || 0;
+    const color = raw.color || '';
+    const size = raw.size || '';
+    const bundleNo = raw.bundleNo || '';
+    const displayQuantity = raw.quantity || 0;
 
-    var orderDetail = raw.orderDetail || {};
-    var bedNo = orderDetail.bedNo || orderDetail.bed_number || orderDetail.bed || '';
-    var cuttingDate = orderDetail.cuttingDate || orderDetail.cutDate || orderDetail.plannedCutDate || orderDetail.plannedStartDate || '';
-    var deliveryDate = orderDetail.deliveryDate || orderDetail.expectedShipDate || orderDetail.shipDate || orderDetail.plannedShipDate || orderDetail.plannedEndDate || '';
+    const orderDetail = raw.orderDetail || {};
+    const bedNo = orderDetail.bedNo || orderDetail.bed_number || orderDetail.bed || '';
+    const cuttingDate = orderDetail.cuttingDate || orderDetail.cutDate || orderDetail.plannedCutDate || orderDetail.plannedStartDate || '';
+    const deliveryDate = orderDetail.deliveryDate || orderDetail.expectedShipDate || orderDetail.shipDate || orderDetail.plannedShipDate || orderDetail.plannedEndDate || '';
 
     this.setData({
       detail: {
@@ -116,8 +88,6 @@ Page({
         bedNo: bedNo ? String(bedNo) : '',
         cuttingDateDisplay: this._formatYMD(cuttingDate),
         deliveryDateDisplay: this._formatYMD(deliveryDate),
-        bundleStatusHints: raw.bundleStatusHints || [],
-        bundleStatusText: raw.bundleStatusText || ''
       },
       processOptions: processOptions,
       selectedNames: selectedNames,
@@ -126,7 +96,7 @@ Page({
       quantity: normalizePositiveInt(raw.quantity, 1),
       showWarehouse: isWarehouseStage,
       isQualityReceive: isQualityReceive,
-      warehouseCode: raw.warehouseCode || ''
+      warehouseCode: raw.warehouseCode || '',
     });
 
     if (isWarehouseStage) {
@@ -147,11 +117,11 @@ Page({
         if (v.length >= 10) return v.substring(0, 10);
         return v;
       }
-      var d = new Date(String(v).replace(' ', 'T'));
+      const d = new Date(String(v).replace(' ', 'T'));
       if (isNaN(d.getTime())) return '';
-      var y = d.getFullYear();
-      var m = String(d.getMonth() + 1).padStart(2, '0');
-      var day = String(d.getDate()).padStart(2, '0');
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
       return y + '-' + m + '-' + day;
     } catch (e) {
       return '';
@@ -163,20 +133,20 @@ Page({
       return;
     }
 
-    var detail = this.data.detail || {};
-    var needColor = !detail.color;
-    var needSize = !detail.size;
-    var needDeliveryDate = !detail.deliveryDateDisplay;
+    const detail = this.data.detail || {};
+    const needColor = !detail.color;
+    const needSize = !detail.size;
+    const needDeliveryDate = !detail.deliveryDateDisplay;
 
     if (!needColor && !needSize && !needDeliveryDate) {
       return;
     }
 
-    var patch = {};
+    const patch = {};
 
     if (needColor || needSize || !detail.styleNo) {
       try {
-        var bundle = await api.production.getCuttingBundle(raw.orderNo, raw.bundleNo);
+        const bundle = await api.production.getCuttingBundle(raw.orderNo, raw.bundleNo);
         if (bundle) {
           if (needColor && bundle.color) {
             patch['detail.color'] = String(bundle.color);
@@ -195,18 +165,18 @@ Page({
 
     if (needDeliveryDate) {
       try {
-        var source = orderDetail || {};
-        var hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
+        let source = orderDetail || {};
+        const hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
         if (!hasDelivery) {
-          var orderRes = await api.production.orderDetailByOrderNo(raw.orderNo);
+          const orderRes = await api.production.orderDetailByOrderNo(raw.orderNo);
           if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
             source = orderRes.records[0] || source;
           } else if (orderRes && typeof orderRes === 'object') {
             source = orderRes;
           }
         }
-        var dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
-        var dateText = this._formatYMD(dateVal);
+        const dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
+        const dateText = this._formatYMD(dateVal);
         if (dateText) {
           patch['detail.deliveryDateDisplay'] = dateText;
         }
@@ -221,34 +191,33 @@ Page({
   },
 
   _buildProcessOptions(raw) {
-    var stageResult = raw.stageResult || {};
-    var allProcesses = stageResult.allBundleProcesses || [];
-    var scannedArr = stageResult.scannedProcessNames || [];
-    var scannedSet = {};
+    const stageResult = raw.stageResult || {};
+    const allProcesses = stageResult.allBundleProcesses || [];
+    const scannedArr = stageResult.scannedProcessNames || [];
+    const scannedSet = {};
     scannedArr.forEach(function(n) { scannedSet[n] = true; });
     return allProcesses
       .filter(function(p) {
-        var name = p.processName || p.name || '';
+        const name = p.processName || p.name || '';
         return !scannedSet[name] || name === raw.processName;
       })
       .map(function(p) {
-        var name = p.processName || p.name || '';
+        const name = p.processName || p.name || '';
         return {
           label: name,
           value: name,
-          progressStage: p.progressStage || '',
           scanType: p.scanType || 'production',
           unitPrice: p.unitPrice || 0,
           hidePrice: !p.unitPrice,
-          checked: name === raw.processName
+          checked: name === raw.processName,
         };
       });
   },
 
   _buildSummary(options, selectedNames) {
-    var selected = {};
+    const selected = {};
     selectedNames.forEach(function(n) { selected[n] = true; });
-    var count = 0, amount = 0;
+    let count = 0; let amount = 0;
     options.forEach(function(o) {
       if (selected[o.value]) {
         count++;
@@ -259,38 +228,38 @@ Page({
   },
 
   previewImage() {
-    var img = this.data.detail.coverImage;
+    const img = this.data.detail.coverImage;
     if (!img) return;
     wx.previewImage({ current: img, urls: [img] });
   },
 
   onProcessTap(e) {
-    var value = e.currentTarget.dataset.value;
+    const value = e.currentTarget.dataset.value;
     if (!value) return;
-    var selectedNames = this.data.selectedNames.slice();
-    var idx = selectedNames.indexOf(value);
+    const selectedNames = this.data.selectedNames.slice();
+    const idx = selectedNames.indexOf(value);
     if (idx >= 0) {
       if (selectedNames.length <= 1) return;
       selectedNames.splice(idx, 1);
     } else {
       selectedNames.push(value);
     }
-    var selected = {};
+    const selected = {};
     selectedNames.forEach(function(n) { selected[n] = true; });
-    var processOptions = this.data.processOptions.map(function(o) {
+    const processOptions = this.data.processOptions.map(function(o) {
       return Object.assign({}, o, { checked: !!selected[o.value] });
     });
-    var summary = this._buildSummary(processOptions, selectedNames);
+    const summary = this._buildSummary(processOptions, selectedNames);
     this.setData({
       selectedNames: selectedNames,
       processOptions: processOptions,
       selectedCount: summary.count,
-      selectedAmount: summary.amount
+      selectedAmount: summary.amount,
     });
   },
 
   onWarehouseChipTap(e) {
-    var val = e.currentTarget.dataset.value || '';
+    const val = e.currentTarget.dataset.value || '';
     this.setData({ warehouseCode: val });
   },
 
@@ -304,13 +273,12 @@ Page({
 
   async _loadWarehouseOptions() {
     try {
-      // 加载成品仓库库位（默认）
-      var res = await api.system.getDictList('finished_warehouse_location');
-      var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res && res.data ? res.data : []));
-      if (records.length > 0) {
-        var options = records
+      const res = await api.system.getDictList('warehouse_location');
+      const records = (res && res.data) ? (Array.isArray(res.data) ? res.data : (res.data.records || [])) : [];
+      if (Array.isArray(records) && records.length > 0) {
+        const options = records
           .filter(function(item) { return item.dictLabel; })
-          .sort(function(a, b) { return (a.sort || a.sortOrder || 0) - (b.sort || b.sortOrder || 0); })
+          .sort(function(a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); })
           .map(function(item) { return item.dictLabel; });
         if (options.length > 0) {
           this.setData({ warehouseOptions: options });
@@ -327,40 +295,11 @@ Page({
 
   async submitScanResult() {
     if (this.data.loading) return;
-    var raw = this._scanContext;
-
-    // 质检一步到位：直接跳转录入页，quality/index 内部自动处理 receive+confirm
-    if (this.data.isQualityReceive) {
-      var detail = this.data.detail;
-      var orderDetail = raw.orderDetail || {};
-      // processName 兜底：若 raw 中没有，从已选质检工序名取第一个
-      var qualityProcessName = raw.processName || detail.processName || '';
-      if (!qualityProcessName && this.data.selectedNames.length > 0) {
-        qualityProcessName = this.data.selectedNames[0];
-      }
-      getApp().globalData.qualityData = {
-        orderNo:       raw.orderNo || '',
-        orderItemId:   raw.orderItemId || '',
-        bundleNo:      raw.bundleNo   || detail.bundleNo      || '',
-        styleNo:       raw.styleNo   || detail.styleNo        || orderDetail.styleNo || '',
-        color:         raw.color     || detail.color          || '',
-        size:          raw.size      || raw.sizeSpec          || detail.size || '',
-        processName:   qualityProcessName,
-        progressStage: raw.progressStage || detail.progressStage || 'quality',
-        quantity:      raw.quantity  || detail.displayQuantity || 0,
-        operatorName:  raw.operatorName  || '',
-        scanCode:      raw.scanCode  || raw.orderNo || '',
-        coverImage:    orderDetail.coverImage || orderDetail.styleImage || '',
-        orderId:       raw.orderId   || ''
-      };
-      wx.navigateTo({ url: '/pages/scan/quality/index' });
-      return;
-    }
-
-    var selectedNames = this.data.selectedNames;
-    var processOptions = this.data.processOptions;
-    var quantity = this.data.quantity;
-    var warehouseCode = this.data.warehouseCode;
+    const raw = this._scanContext;
+    const selectedNames = this.data.selectedNames;
+    const processOptions = this.data.processOptions;
+    const quantity = this.data.quantity;
+    const warehouseCode = this.data.warehouseCode;
 
     if (!raw || selectedNames.length === 0) {
       toast.error('请至少选择一个工序');
@@ -376,39 +315,39 @@ Page({
     }
 
     this.setData({ loading: true });
-    var selected = {};
+    const selected = {};
     selectedNames.forEach(function(n) { selected[n] = true; });
-    var selectedOptions = processOptions.filter(function(o) { return selected[o.value]; });
-    var successCount = 0;
-    var failedItems = [];
+    const selectedOptions = processOptions.filter(function(o) { return selected[o.value]; });
+    let successCount = 0;
+    const failedItems = [];
 
     try {
-      for (var i = 0; i < selectedOptions.length; i++) {
-        var option = selectedOptions[i];
+      for (let i = 0; i < selectedOptions.length; i++) {
+        const option = selectedOptions[i];
         // 质检工序强制路由为 quality，避免 normalizeScanType 因传入 'production' 直接返回
         // 而跳过质检分支（Bug #1: 'production' 是标准值会被直接返回，不会检查 progressStage）
-        var effectiveScanType = option.scanType || 'production';
-        if (raw.progressStage === 'quality' || raw.progressStage === '质检' || raw.scanType === 'quality') {
+        let effectiveScanType = option.scanType || 'production';
+        if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
           effectiveScanType = 'quality';
         }
-        var scanPayload = Object.assign({}, raw.scanData || {}, {
+        const scanPayload = Object.assign({}, raw.scanData || {}, {
           scanType: normalizeScanType(raw.progressStage, effectiveScanType),
           processName: option.value,
-          quantity: quantity
+          quantity: quantity,
         });
-        if (raw.progressStage === 'quality' || raw.progressStage === '质检' || raw.scanType === 'quality') {
+        if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
           // qualityStage 优先使用 StageDetector 已计算的值（在 raw.scanData / raw.qualityStage 中），
           // 未传入时兜底为 'receive'（领取），避免跳过领取步骤导致后端 400
           scanPayload.qualityStage = scanPayload.qualityStage || raw.qualityStage || 'receive';
         }
         if (warehouseCode) {
-          scanPayload.warehouse = warehouseCode;
+          scanPayload.warehouseCode = warehouseCode;
         }
         if (raw.isDefectiveReentry) {
           scanPayload.isDefectiveReentry = true;
         }
         try {
-          var result = await api.production.executeScan(scanPayload);
+          const result = await api.production.executeScan(scanPayload);
           if (result && (result.recordId || result.id)) {
             successCount++;
           }
@@ -419,51 +358,39 @@ Page({
 
       if (successCount > 0) {
         this._emitRefresh();
-        var firstOption = selectedOptions[0] || {};
-        getApp().globalData.lastScanResult = {
-          orderNo: raw.orderNo || '',
-          processCode: raw.processCode || firstOption.value || '',
-          processName: firstOption.value || raw.processName || '',
-          quantity: quantity || 0,
-          success: true,
-        };
       }
 
       if (failedItems.length === 0) {
-        toast.success('已完成 ' + successCount + ' 个工序扫码');
-        wx.navigateBack();
+        if (this.data.isQualityReceive) {
+          wx.showModal({
+            title: '已领取质检任务',
+            content: '请在小云待办中点击该任务，录入质检结果（合格/不合格）。',
+            showCancel: false,
+            confirmText: '知道了',
+            success: function() { wx.navigateBack(); },
+          });
+        } else {
+          toast.success('已完成 ' + successCount + ' 个工序扫码');
+          wx.navigateBack();
+        }
       } else if (successCount > 0) {
         this.setData({ loading: false });
-        var failNames = failedItems.map(function(f) { return f.processName; }).join('、');
+        const failNames = failedItems.map(function(f) { return f.processName; }).join('、');
         wx.showModal({
           title: '部分工序提交失败',
           content: '成功 ' + successCount + ' 个，失败：' + failNames + '。请稍后重新扫码提交失败工序。',
           showCancel: false,
           confirmText: '知道了',
-          success: function() { wx.navigateBack(); }
+          success: function() { wx.navigateBack(); },
         });
       } else {
         this.setData({ loading: false });
-        var msg = failedItems[0].error || '提交失败，请稍后重试';
-        getApp().globalData.lastScanResult = {
-          orderNo: raw.orderNo || '',
-          processCode: raw.processCode || '',
-          processName: (selectedOptions[0] && selectedOptions[0].value) || raw.processName || '',
-          quantity: quantity || 0,
-          success: false,
-        };
+        const msg = failedItems[0].error || '提交失败，请稍后重试';
         wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
       }
     } catch (e) {
       this.setData({ loading: false });
-      var errMsg = this._buildFriendlyError(e);
-      getApp().globalData.lastScanResult = {
-        orderNo: (raw && raw.orderNo) || '',
-        processCode: (raw && raw.processCode) || '',
-        processName: (raw && raw.processName) || '',
-        quantity: quantity || 0,
-        success: false,
-      };
+      const errMsg = this._buildFriendlyError(e);
       wx.showModal({ title: '扫码失败', content: errMsg, showCancel: false, confirmText: '知道了' });
     }
   },
@@ -471,7 +398,7 @@ Page({
   _buildFriendlyError(error) {
     if (!error) return '未知错误';
     if (!error.response && !error.status) return '网络不稳定，请检查网络后重试';
-    var status = error.status || (error.response && error.response.status);
+    const status = error.status || (error.response && error.response.status);
     if (status === 401) return '登录已过期，请重新登录';
     if (status === 403) return '没有操作权限';
     if (status === 409) return '该记录已提交，请勿重复操作';
@@ -479,6 +406,9 @@ Page({
   },
 
   _emitRefresh() {
-    triggerDataRefresh('scan');
-  }
+    const eventBus = getApp().globalData && getApp().globalData.eventBus;
+    if (eventBus && typeof eventBus.emit === 'function') {
+      eventBus.emit('DATA_REFRESH');
+    }
+  },
 });

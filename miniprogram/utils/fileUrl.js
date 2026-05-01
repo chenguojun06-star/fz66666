@@ -21,29 +21,21 @@ const { getToken } = require('./storage');
  *   - 完整路径：http://192.168.x.x:8088/api/file/...
  * @returns {string} 可在 <image> 标签直接使用的完整URL
  */
-function isAuthedPath(url) {
-  return url.includes('/api/file/tenant-download/') || url.includes('/api/common/download/');
-}
-
 function getAuthedImageUrl(fileUrl) {
   if (!fileUrl) return '';
   const url = String(fileUrl).trim();
   if (!url) return '';
 
+  // 已是完整外部 URL，直接返回
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    if (isAuthedPath(url)) {
-      const token = getToken();
-      if (token) {
-        const sep = url.includes('?') ? '&' : '?';
-        return url + sep + 'token=' + encodeURIComponent(token);
-      }
-    }
     return url;
   }
 
+  // 拼接后端地址
   const fullUrl = getBaseUrl() + url;
 
-  if (isAuthedPath(url)) {
+  // tenant-download 端点需要认证，追加 token 查询参数
+  if (url.includes('/api/file/tenant-download/')) {
     const token = getToken();
     if (token) {
       const sep = fullUrl.includes('?') ? '&' : '?';

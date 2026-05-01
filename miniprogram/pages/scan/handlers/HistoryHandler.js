@@ -215,11 +215,6 @@ function _addRecordToGroup(group, record) {
     cuttingBundleId: record.cuttingBundleId || '',
     coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
     styleImage: getAuthedImageUrl(record.styleImage || record.coverImage || ''),
-    // 质检领取待处理：质检扫码 + quality_receive + 尚未确认（confirmTime 为空）
-    // 决定 scan-history.wxml 中"处理"按钮是否显示
-    isQualityReceive: String(record.scanType || '').toLowerCase() === 'quality'
-      && record.processCode === 'quality_receive'
-      && !record.confirmTime,
   });
 }
 
@@ -254,33 +249,29 @@ function groupScanRecords(records) {
 
   groupedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
 
+  // 撤回限制：下一工序已有成功记录则禁止撤回
+  // 标准流程：裁剪→车缝→质检→入库（如后端工序配置变更需同步更新此映射）
   const NEXT_STAGE_MAP = { cutting: 'production', production: 'quality', quality: 'warehouse' };
-
-  const scanTypeIndex = {};
-  records.forEach(r => {
-    if (r.scanResult !== 'success') return;
-    if (!scanTypeIndex[r.scanType]) scanTypeIndex[r.scanType] = [];
-    scanTypeIndex[r.scanType].push(r);
-  });
-
   groupedList.forEach(g => {
     g.items.forEach(item => {
-      if (!item.canRescan) return;
+      if (!item.canRescan) return; // 已禁止的不需再判断
       const nextType = NEXT_STAGE_MAP[item.scanType];
-      if (!nextType) return;
-      const candidates = scanTypeIndex[nextType];
-      if (!candidates) return;
-      const hasNext = candidates.some(r => {
-        if (item.cuttingBundleId && r.cuttingBundleId) {
-          return r.cuttingBundleId === item.cuttingBundleId;
+      if (nextType) {
+        // 优先用 cuttingBundleId 精确匹配；若 cuttingBundleId 缺失则用 orderNo+bundleNo 兜底
+        const hasNext = records.some(r => {
+          if (r.scanType !== nextType || r.scanResult !== 'success') return false;
+          if (item.cuttingBundleId && r.cuttingBundleId) {
+            return r.cuttingBundleId === item.cuttingBundleId;
+          }
+          // cuttingBundleId 缺失时，用 orderNo + cuttingBundleNo/bundleNo 作兜底匹配
+          const itemBundle = String(item.cuttingBundleNo || item.bundleNo || '');
+          const rBundle = String(r.cuttingBundleNo || r.bundleNo || '');
+          return r.orderNo === item.orderNo && itemBundle && rBundle && itemBundle === rBundle;
+        });
+        if (hasNext) {
+          item.canRescan = false;
+          item.canUndo = false;
         }
-        const itemBundle = String(item.cuttingBundleNo || item.bundleNo || '');
-        const rBundle = String(r.cuttingBundleNo || r.bundleNo || '');
-        return r.orderNo === item.orderNo && itemBundle && rBundle && itemBundle === rBundle;
-      });
-      if (hasNext) {
-        item.canRescan = false;
-        item.canUndo = false;
       }
     });
   });
@@ -391,10 +382,6 @@ function _getToday() {
 async function loadMyHistory(page, refresh = false) {
   const { my } = page.data;
   if (my.loadingHistory) {
-    // 强制刷新在并发场景下不应被直接丢弃，改为排队到当前请求结束后执行
-    if (refresh) {
-      page.__pendingMyHistoryRefresh = true;
-    }
     return;
   }
 
@@ -405,51 +392,25 @@ async function loadMyHistory(page, refresh = false) {
   const pageNum = refresh ? 1 : my.history.page;
   const pageSize = my.history.pageSize || 20;
 
-  if (refresh) {
-    page.__pendingMyHistoryRefresh = false;
-  }
-
   page.setData({ 'my.loadingHistory': true });
 
   try {
+    // 只查询当天记录
     const today = _getToday();
-    const startTime = today + ' 00:00:00';
-    const endTime = today + ' 23:59:59';
-
-    const scanRes = await api.production.myScanHistory({
+    const res = await api.production.myScanHistory({
       page: pageNum,
       pageSize,
-      startTime: startTime,
-      endTime: endTime,
+      startTime: today + ' 00:00:00',
+      endTime: today + ' 23:59:59',
     });
 
-    let records = scanRes.records || scanRes || [];
-    const total = scanRes.total || 0;
+    const records = res.records || res || [];
+    const total = res.total || 0;
     const hasMore = pageNum * pageSize < total;
 
-    if (refresh) {
-      try {
-        const patternRes = await api.production.myPatternScanHistory({
-          startTime: startTime,
-          endTime: endTime,
-        });
-        const patternRecords = patternRes && (patternRes.records || patternRes.list || patternRes || []);
-        if (Array.isArray(patternRecords) && patternRecords.length > 0) {
-          const formatted = patternRecords.map(function(item) {
-            return Object.assign({}, item, {
-              scanType: item.scanType || 'pattern',
-              processName: item.processName || '样衣-' + (item.progressStage || item.operationType || ''),
-              progressStage: item.progressStage || 'pattern',
-              scanResult: item.scanResult || 'success',
-              operatorName: item.operatorName || item.operator_name || '',
-              operatorId: item.operatorId || item.operator_id || '',
-            });
-          });
-          records = records.concat(formatted);
-        }
-      } catch (pe) {
-        // 样衣记录加载失败不影响主记录
-      }
+    // 刷新时若今日API返回空，保留本地缓存（避免"重新进入后记录消失"）
+    if (refresh && records.length === 0 && my.groupedHistory && my.groupedHistory.length > 0) {
+      return;
     }
 
     let groupedHistory = groupScanRecords(records);
@@ -498,12 +459,6 @@ async function loadMyHistory(page, refresh = false) {
     wx.showToast({ title: '加载记录失败，请下拉刷新', icon: 'none', duration: 2500 });
   } finally {
     page.setData({ 'my.loadingHistory': false });
-
-    // 若加载期间又收到了一次强制刷新，当前请求结束后立即补跑一次
-    if (page.__pendingMyHistoryRefresh) {
-      page.__pendingMyHistoryRefresh = false;
-      loadMyHistory(page, true);
-    }
   }
 }
 
@@ -591,7 +546,7 @@ function onHandleQuality(page, e) {
  */
 function loadLocalHistory(page) {
   const history = getStorageValue('scan_history_v2') || [];
-  page._scanHistory = history;
+  page.setData({ scanHistory: history });
 }
 
 /**
@@ -601,73 +556,9 @@ function loadLocalHistory(page) {
  * @returns {void}
  */
 function addToLocalHistory(page, record) {
-  const history = [record, ...(page._scanHistory || [])].slice(0, 20);
-  page._scanHistory = history;
+  const history = [record, ...page.data.scanHistory].slice(0, 20);
+  page.setData({ scanHistory: history });
   setStorageValue('scan_history_v2', history);
-
-  addOptimisticRecordToGroupedHistory(page, record);
-}
-
-function addOptimisticRecordToGroupedHistory(page, record) {
-  const groupedHistory = page.data.my && page.data.my.groupedHistory;
-  if (!groupedHistory) return;
-
-  const orderNo = record.orderNo || '';
-  const processName = _normalizeQualityName(record.processName || '');
-  const groupKey = _createGroupKey(orderNo, processName);
-
-  const newItem = {
-    id: record.recordId || ('local_' + Date.now()),
-    orderNo: orderNo,
-    bundleNo: record.bundleNo || '',
-    color: record.color || '',
-    size: record.size || '',
-    sizeArr: record.size ? [record.size] : [],
-    qtyArr: record.quantity ? [record.quantity] : [],
-    quantity: record.quantity || 1,
-    unitPrice: record.unitPrice || 0,
-    createdAt: new Date().toISOString(),
-    scanTime: new Date().toISOString(),
-    scanType: record.scanType || '',
-    scanResult: 'success',
-    scanCode: record.scanCode || '',
-    operatorName: record.operatorName || '',
-    operatorId: record.operatorId || '',
-    displayOperator: record.operatorName || record.operatorId || '',
-    canRescan: false,
-    canUndo: true,
-    payrollSettled: false,
-    cuttingBundleId: record.cuttingBundleId || '',
-    coverImage: record.coverImage || record.styleImage || '',
-    styleImage: record.styleImage || record.coverImage || '',
-  };
-
-  const existingGroupIdx = groupedHistory.findIndex(function(g) { return g.id === groupKey; });
-
-  if (existingGroupIdx >= 0) {
-    const group = Object.assign({}, groupedHistory[existingGroupIdx]);
-    group.items = [newItem].concat(group.items);
-    group.totalQuantity = (group.totalQuantity || 0) + (newItem.quantity || 0);
-    group.latestTime = newItem.scanTime;
-    const updated = groupedHistory.slice();
-    updated[existingGroupIdx] = group;
-    page.setData({ 'my.groupedHistory': updated });
-  } else {
-    const newGroup = {
-      id: groupKey,
-      orderNo: orderNo,
-      styleNo: record.styleNo || '',
-      stage: processName,
-      totalQuantity: newItem.quantity,
-      latestTime: newItem.scanTime,
-      expanded: true,
-      items: [newItem],
-      deliveryDateStr: '',
-      remainDaysText: '',
-      remainDaysClass: '',
-    };
-    page.setData({ 'my.groupedHistory': [newGroup].concat(groupedHistory) });
-  }
 }
 
 /**
@@ -678,7 +569,7 @@ function addOptimisticRecordToGroupedHistory(page, record) {
  */
 function onTapHistoryItem(page, e) {
   const index = Number(e.currentTarget.dataset.index);
-  const item = (page._scanHistory || [])[index];
+  const item = page.data.scanHistory[index];
 
   if (!item) {
     return;

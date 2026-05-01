@@ -1,7 +1,6 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
-const { eventBus, Events } = require('../../../utils/eventBus');
 
 Page({
   data: {
@@ -13,26 +12,20 @@ Page({
       { key: 'all', label: '全部', count: 0 },
       { key: 'pending', label: '待领取', count: 0 },
       { key: 'received', label: '已领取', count: 0 },
-      { key: 'bundled', label: '已完成', count: 0 },
+      { key: 'bundled', label: '已分菲', count: 0 },
     ],
   },
 
   onLoad() {
-    // 未登录时拒绝访问：裁剪任务页需要身份验证
-    var app = getApp();
-    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadTasks();
   },
 
   onShow() {
-    var app = getApp();
-    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadTasks();
-    this._bindWsEvents();
   },
 
   onPullDownRefresh() {
-    this.loadTasks().then(() => wx.stopPullDownRefresh()).catch(() => wx.stopPullDownRefresh());
+    this.loadTasks().then(() => wx.stopPullDownRefresh());
   },
 
   /* ---- 加载任务 ---- */
@@ -149,7 +142,7 @@ Page({
       canReceive = false;
       canOperate = isMine;
     } else if (status === 'bundled') {
-      statusText = '已完成';
+      statusText = '已分菲';
       statusColor = 'green';
     }
 
@@ -161,38 +154,5 @@ Page({
       canOperate,
       orderNo: task.productionOrderNo || task.orderNo,
     };
-  },
-
-  _bindWsEvents() {
-    if (this._wsBound) return;
-    this._wsBound = true;
-    this._onTaskReceived = () => { this.loadTasks(); };
-    this._onTaskCompleted = () => { this.loadTasks(); };
-    this._onTaskBundled = () => { this.loadTasks(); };
-    this._onDataChanged = () => { this.loadTasks(); };
-    this._onRefreshAll = () => { this.loadTasks(); };
-    eventBus.on(Events.TASK_RECEIVED, this._onTaskReceived);
-    eventBus.on(Events.TASK_COMPLETED, this._onTaskCompleted);
-    eventBus.on(Events.TASK_BUNDLED, this._onTaskBundled);
-    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
-    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
-  },
-
-  _unbindWsEvents() {
-    if (!this._wsBound) return;
-    this._wsBound = false;
-    if (this._onTaskReceived) eventBus.off(Events.TASK_RECEIVED, this._onTaskReceived);
-    if (this._onTaskCompleted) eventBus.off(Events.TASK_COMPLETED, this._onTaskCompleted);
-    if (this._onTaskBundled) eventBus.off(Events.TASK_BUNDLED, this._onTaskBundled);
-    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
-    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
-  },
-
-  onHide() {
-    this._unbindWsEvents();
-  },
-
-  onUnload() {
-    this._unbindWsEvents();
   },
 });

@@ -27,12 +27,12 @@ page {
 .profile-avatar {
   width: 48px;
   height: 48px;
-  background: rgba(255, 255, 255, 0.98);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.98));
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-xl);
+  font-size: 20px;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border: 2px solid rgba(var(--color-primary-rgb), 0.14);
@@ -125,11 +125,11 @@ page {
 .menu-icon-wrap {
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.98);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.98));
   border: 1px solid rgba(var(--color-primary-rgb), 0.14);
   box-shadow: 0 4px 10px rgba(var(--color-primary-rgb), 0.08);
   margin-right: 12px;
@@ -146,22 +146,6 @@ page {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   margin-right: 4px;
-}
-
-.menu-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32rpx;
-  height: 32rpx;
-  padding: 0 8rpx;
-  border-radius: 16rpx;
-  background: #ff3b30;
-  color: #fff;
-  font-size: 20rpx;
-  font-weight: 700;
-  line-height: 1;
-  margin-right: 8rpx;
 }
 
 .menu-arrow {

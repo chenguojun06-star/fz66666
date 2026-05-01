@@ -55,6 +55,20 @@ public class AgentLoopEngine {
         cb.onThinking(0, "开始思考...");
 
         while (ctx.getCurrentIteration() < ctx.getMaxIterations()) {
+            if (ctx.isCancelled()) {
+                log.warn("[AgentLoop] SSE断开，中断Agent执行 (iter={})", ctx.getCurrentIteration());
+                aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, "cancelled",
+                        System.currentTimeMillis() - ctx.getRequestStartAt());
+                cb.onError("连接已断开，执行已中断");
+                return "cancelled";
+            }
+            if (ctx.isDeadlineExceeded()) {
+                log.warn("[AgentLoop] 超时中断 ({}ms > {}ms)", System.currentTimeMillis() - ctx.getRequestStartAt(), ctx.getDeadlineMs() - ctx.getRequestStartAt());
+                aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, "deadline_exceeded",
+                        System.currentTimeMillis() - ctx.getRequestStartAt());
+                cb.onError("执行超时，已完成部分将在下次请求中使用");
+                return "deadline_exceeded";
+            }
             ctx.incrementIteration();
             int iter = ctx.getCurrentIteration();
 

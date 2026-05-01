@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: var(--z-modal);
+  z-index: 1000;
 }
 
 .form-mask {
@@ -13,7 +13,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--color-overlay);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .form-container {
@@ -37,13 +37,13 @@
 }
 
 .form-title {
-  font-size: var(--font-size-lg-xl);
+  font-size: 18px;
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .close-btn {
-  font-size: var(--font-size-4xl);
+  font-size: 30px;
   color: var(--color-text-disabled);
   line-height: 1;
 }
@@ -74,12 +74,12 @@
 
 .info-item .label {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-md);
+  font-size: 14px;
 }
 
 .info-item .value {
   color: var(--color-text-primary);
-  font-size: var(--font-size-md);
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -88,7 +88,7 @@
 }
 
 .form-label {
-  font-size: var(--font-size-md);
+  font-size: 14px;
   color: var(--color-text-primary);
   margin-bottom: 8px;
   font-weight: 500;
@@ -100,7 +100,7 @@
   padding: 10px;
   border: 1px solid var(--color-bg-gray);
   border-radius: 5px;
-  font-size: var(--font-size-md);
+  font-size: 14px;
   box-sizing: border-box;
 }
 
@@ -120,7 +120,7 @@
   flex: 1;
   padding: 12px;
   border-radius: 5px;
-  font-size: var(--font-size-md-lg);
+  font-size: 16px;
   font-weight: 500;
 }
 
@@ -130,6 +130,6 @@
 }
 
 .submit-btn {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%);
   color: var(--color-text-white);
 }

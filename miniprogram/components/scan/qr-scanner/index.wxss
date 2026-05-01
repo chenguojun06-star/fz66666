@@ -8,9 +8,9 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: var(--color-primary);
+  background: var(--gradient-primary);
   border-radius: 10px;
-  box-shadow: 0 5px 20px rgba(var(--color-primary-rgb), 0.15);
+  box-shadow: 0 5px 20px rgba(var(--color-primary-rgb), 0.08);
   transition: all 0.3s ease;
 }
 
@@ -31,7 +31,7 @@
 
 .scan-text {
   color: var(--color-text-white);
-  font-size: var(--font-size-md-lg);
+  font-size: 16px;
   font-weight: 500;
 }
 

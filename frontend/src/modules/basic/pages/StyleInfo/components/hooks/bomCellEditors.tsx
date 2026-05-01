@@ -4,7 +4,7 @@ import { StyleBom } from '@/types/style';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
-import { materialTypeOptions } from './bomColumns';
+import { materialTypeOptions } from './bomConstants';
 
 export const parseSizeUsageMap = (value?: string) => {
   try {

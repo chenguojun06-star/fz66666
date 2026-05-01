@@ -548,11 +548,18 @@ public class IntelligenceInferenceOrchestrator {
 
     private String buildRequestBody(String scene, String model, List<AiMessage> messages, List<AiTool> tools) throws Exception {
         var root = MAPPER.createObjectNode();
-        root.put("model", model);
+        String actualModel = model;
+        String thinkingMode = null;
+        if (model != null && model.contains(":thinking")) {
+            actualModel = model.replace(":thinking", "");
+            thinkingMode = "thinking";
+        }
+        root.put("model", actualModel);
         root.put("temperature", SCENE_TEMPERATURE.getOrDefault(scene, DEFAULT_TEMPERATURE));
         root.put("max_tokens", SCENE_MAX_TOKENS.getOrDefault(scene, DEFAULT_MAX_TOKENS));
         root.set("messages", MAPPER.valueToTree(messages));
         if (tools != null && !tools.isEmpty()) root.set("tools", MAPPER.valueToTree(tools));
+        if (thinkingMode != null) root.put("thinking_mode", thinkingMode);
         return MAPPER.writeValueAsString(root);
     }
 

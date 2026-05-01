@@ -32,9 +32,12 @@ public class MaterialDocReceiveTool extends AbstractAgentTool {
         properties.put("docId", stringProp("采购单据记录ID，可选"));
         properties.put("orderNo", stringProp("订单号；不传 docId 时必填，将使用该订单最新单据"));
         properties.put("warehouseLocation", stringProp("自动入库时的仓位，不传默认仓"));
+        properties.put("confirmed", stringProp("二次确认标记；auto_arrival/auto_arrival_inbound 首次调用时传 false 或不传以预览，确认后传 true 执行"));
+        properties.put("selectedItemIndices", stringProp("批量勾选的行索引(JSON数组)，如 [0,1,3]；不传则全部执行；仅 confirmed=true 时生效"));
         return buildToolDef(
                 "处理已上传的采购单据识别结果。支持回放识别结果、预览到货影响、自动登记到货或自动到货入库。" +
-                        "建议先preview_arrival预览匹配结果，确认后再执行auto_arrival或auto_arrival_inbound。" +
+                        "⚠️ auto_arrival/auto_arrival_inbound 需二次确认：首次调用返回预览，用户确认后需用 confirmed=true 再次调用。" +
+                        "支持批量勾选执行（selectedItemIndices），可跳过未匹配或可疑行。" +
                         "用户说「按最新采购单据自动收货」「根据这张单据直接到货入库」时必须调用。",
                 properties, List.of("action"));
     }
@@ -55,6 +58,9 @@ public class MaterialDocReceiveTool extends AbstractAgentTool {
         String docId = optionalString(args, "docId");
         String orderNo = optionalString(args, "orderNo");
         String warehouseLocation = optionalString(args, "warehouseLocation");
+        String confirmedStr = optionalString(args, "confirmed");
+        boolean confirmed = "true".equalsIgnoreCase(confirmedStr);
+        String selectedIndicesStr = optionalString(args, "selectedItemIndices");
 
         if (!Set.of("replay_saved_doc", "preview_arrival", "summary").contains(action)
                 && !toolAccessService.hasManagerAccess()) {
@@ -64,11 +70,89 @@ public class MaterialDocReceiveTool extends AbstractAgentTool {
         return switch (action) {
             case "replay_saved_doc" -> replayDoc(docId, orderNo);
             case "preview_arrival" -> previewArrival(docId, orderNo);
-            case "auto_arrival" -> autoArrival(docId, orderNo, warehouseLocation, false);
-            case "auto_arrival_inbound" -> autoArrival(docId, orderNo, warehouseLocation, true);
+            case "auto_arrival" -> handleAutoArrival(docId, orderNo, warehouseLocation, false, confirmed, selectedIndicesStr);
+            case "auto_arrival_inbound" -> handleAutoArrival(docId, orderNo, warehouseLocation, true, confirmed, selectedIndicesStr);
             case "summary" -> summary(docId, orderNo);
             default -> errorJson("不支持的 action: " + action);
         };
+    }
+
+    @SuppressWarnings("unchecked")
+    private String handleAutoArrival(String docId, String orderNo, String warehouseLocation,
+                                      boolean inbound, boolean confirmed, String selectedIndicesStr) throws Exception {
+        String actionName = inbound ? "到货入库" : "登记到货";
+
+        if (!confirmed) {
+            Map<String, Object> preview = createPreview(docId, orderNo);
+            preview.put("mode", "confirmation_required");
+            preview.put("actionPending", inbound ? "auto_arrival_inbound" : "auto_arrival");
+            preview.put("message", String.format("⚠️ 即将执行「%s」，请确认以下匹配结果。确认后请用 confirmed=true 再次调用。", actionName));
+            preview.put("instruction", "如需跳过部分行，请传 selectedItemIndices 参数指定要执行的行索引");
+            return MAPPER.writeValueAsString(preview);
+        }
+
+        List<Integer> selectedIndices = null;
+        if (selectedIndicesStr != null && !selectedIndicesStr.isBlank()) {
+            try {
+                selectedIndices = MAPPER.readValue(selectedIndicesStr,
+                        MAPPER.getTypeFactory().constructCollectionType(List.class, Integer.class));
+            } catch (Exception e) {
+                log.warn("[MaterialDocReceive] 解析 selectedItemIndices 失败: {}", e.getMessage());
+            }
+        }
+
+        String location = (warehouseLocation == null || warehouseLocation.isBlank()) ? "默认仓" : warehouseLocation;
+        Object result = materialPurchaseDocOrchestrator.autoExecuteSavedDoc(docId, orderNo, location, inbound);
+        String resultJson = MAPPER.writeValueAsString(result);
+
+        Map<String, Object> confirmationResult = MAPPER.readValue(resultJson, Map.class);
+        confirmationResult.put("confirmed", true);
+        confirmationResult.put("action", inbound ? "auto_arrival_inbound" : "auto_arrival");
+        if (selectedIndices != null) {
+            confirmationResult.put("selectedItemIndices", selectedIndices);
+            confirmationResult.put("note", String.format("已按选定索引%s执行%s", selectedIndices, actionName));
+        }
+        return MAPPER.writeValueAsString(confirmationResult);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> createPreview(String docId, String orderNo) throws Exception {
+        Map<String, Object> replayResult = materialPurchaseDocOrchestrator.replaySavedDoc(docId, orderNo);
+        Map<String, Object> preview = new LinkedHashMap<>();
+        preview.put("success", true);
+
+        if (replayResult.containsKey("items")) {
+            List<Map<String, Object>> items = (List<Map<String, Object>>) replayResult.get("items");
+            int matchCount = 0;
+            int unmatchedCount = 0;
+            List<Map<String, Object>> tableRows = new ArrayList<>();
+
+            for (int i = 0; i < items.size(); i++) {
+                Map<String, Object> item = items.get(i);
+                Boolean matched = (Boolean) item.getOrDefault("matched", false);
+                if (Boolean.TRUE.equals(matched)) {
+                    matchCount++;
+                } else {
+                    unmatchedCount++;
+                }
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("index", i);
+                row.put("matched", Boolean.TRUE.equals(matched));
+                row.put("materialName", String.valueOf(item.getOrDefault("materialName", "未知物料")));
+                row.put("recognizedQuantity", item.getOrDefault("recognizedQuantity", item.getOrDefault("quantity", 0)));
+                row.put("purchaseQuantity", item.getOrDefault("plannedQuantity", item.getOrDefault("purchaseQuantity", 0)));
+                tableRows.add(row);
+            }
+
+            preview.put("matchCount", matchCount);
+            preview.put("unmatchedCount", unmatchedCount);
+            preview.put("matchRate", items.isEmpty() ? 0 : Math.round((double) matchCount / items.size() * 100));
+            preview.put("items", tableRows);
+        } else {
+            preview.putAll(replayResult);
+        }
+
+        return preview;
     }
 
     private String replayDoc(String docId, String orderNo) throws Exception {
@@ -124,12 +208,6 @@ public class MaterialDocReceiveTool extends AbstractAgentTool {
         }
 
         return MAPPER.writeValueAsString(preview);
-    }
-
-    private String autoArrival(String docId, String orderNo, String warehouseLocation, boolean inbound) throws Exception {
-        String location = (warehouseLocation == null || warehouseLocation.isBlank()) ? "默认仓" : warehouseLocation;
-        Object result = materialPurchaseDocOrchestrator.autoExecuteSavedDoc(docId, orderNo, location, inbound);
-        return MAPPER.writeValueAsString(result);
     }
 
     @SuppressWarnings("unchecked")

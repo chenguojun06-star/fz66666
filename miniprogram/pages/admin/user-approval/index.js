@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { isTenantOwner, isFactoryOwner, isSuperAdmin } = require('../../../utils/storage');
+const { isTenantOwner } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 
 Page({
@@ -14,14 +14,11 @@ Page({
     tenantRegistrations: [],
     tenantTotal: 0,
     isTenantOwner: false,
-    isFactoryOwner: false,
-    isPlatformAdmin: false,
-    activeTab: 'tenant',
+    activeTab: 'system',
     showApprovalModal: false,
     showRejectModal: false,
     currentUser: null,
     selectedRoleId: '',
-    factorySelectedRole: '',
     rejectReason: '',
     roleOptions: [],
     roleLoading: false,
@@ -34,43 +31,31 @@ Page({
     }
 
     const ownerFlag = isTenantOwner();
-    const factoryOwnerFlag = isFactoryOwner();
-    const adminFlag = isAdminOrSupervisor();
-    const platformAdminFlag = isSuperAdmin();
-    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag, isPlatformAdmin: platformAdminFlag });
+    this.setData({ isTenantOwner: ownerFlag });
 
-    if (!adminFlag && !ownerFlag && !factoryOwnerFlag) {
+    if (!isAdminOrSupervisor() && !ownerFlag) {
       toast.error('仅管理员可访问', 2000);
       setTimeout(() => wx.navigateBack(), 2000);
       return;
     }
 
-    if (platformAdminFlag) {
-      this.setData({ activeTab: 'system' });
-    } else {
+    if (ownerFlag && !isAdminOrSupervisor()) {
       this.setData({ activeTab: 'tenant' });
     }
 
-    if (platformAdminFlag) {
-      this.loadPendingUsers(true);
-      this.loadRoleOptions();
-    }
-    if (ownerFlag || factoryOwnerFlag) {
+    this.loadPendingUsers(true);
+    this.loadRoleOptions();
+    if (ownerFlag) {
       this.loadTenantRegistrations();
-      this.loadRoleOptions();
     }
   },
 
   onPullDownRefresh() {
-    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin) {
-      this.loadPendingUsers(true);
-    } else {
-      this.loadTenantRegistrations();
-    }
+    this.loadPendingUsers(true);
   },
 
   onReachBottom() {
-    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin && this.data.hasMore && !this.data.loading) {
+    if (this.data.hasMore && !this.data.loading) {
       this.setData({ page: this.data.page + 1 }, () => {
         this.loadPendingUsers(false);
       });
@@ -117,9 +102,7 @@ Page({
   },
 
   onTabChange(e) {
-    var tab = e.currentTarget.dataset.tab;
-    if (tab === 'system' && !this.data.isPlatformAdmin) return;
-    this.setData({ activeTab: tab });
+    this.setData({ activeTab: e.currentTarget.dataset.tab });
   },
 
   onApproveUser(e) {
@@ -147,20 +130,16 @@ Page({
 
     wx.showLoading({ title: '处理中...', mask: true });
     try {
-      const isRegistration = currentUser.registrationStatus === 'PENDING';
-      if (isRegistration) {
-        await api.tenant.approveRegistration(currentUser.id, { roleId: Number(selectedRoleId) });
-      } else {
-        await api.system.approveUser(currentUser.id, { roleId: Number(selectedRoleId) });
-      }
+      await api.system.approveUser(currentUser.id);
+      await api.system.updateUser(currentUser.id, {
+        roleId: Number(selectedRoleId),
+        status: 'active',
+        approvalStatus: 'approved',
+      });
       wx.hideLoading();
-      toast.success('已批准并分配角色');
+      toast.success('已批准');
       this.setData({ showApprovalModal: false, currentUser: null, selectedRoleId: '' });
-      if (isRegistration) {
-        this.loadTenantRegistrations();
-      } else {
-        this.loadPendingUsers(true);
-      }
+      this.loadPendingUsers(true);
     } catch (e) {
       wx.hideLoading();
       toast.error(e.errMsg || e.message || '审批失败');
@@ -190,20 +169,11 @@ Page({
 
     wx.showLoading({ title: '处理中...', mask: true });
     try {
-      const isRegistration = currentUser.registrationStatus === 'PENDING';
-      if (isRegistration) {
-        await api.tenant.rejectRegistration(currentUser.id, { reason: rejectReason });
-      } else {
-        await api.system.rejectUser(currentUser.id, { approvalRemark: rejectReason });
-      }
+      await api.system.rejectUser(currentUser.id, { approvalRemark: rejectReason });
       wx.hideLoading();
       toast.success('已拒绝');
       this.setData({ showRejectModal: false, currentUser: null, rejectReason: '' });
-      if (isRegistration) {
-        this.loadTenantRegistrations();
-      } else {
-        this.loadPendingUsers(true);
-      }
+      this.loadPendingUsers(true);
     } catch (e) {
       wx.hideLoading();
       toast.error(e.errMsg || e.message || '拒绝失败');
@@ -225,9 +195,29 @@ Page({
   },
 
   onTenantApprove(e) {
-    const user = e.currentTarget.dataset.user;
+    const { user } = e.currentTarget.dataset;
     if (!user) return;
-    this.setData({ currentUser: user, showApprovalModal: true, selectedRoleId: '' });
+
+    wx.showModal({
+      title: '批准工人注册',
+      content: `确定批准"${user.name || user.username}"加入工厂吗？`,
+      confirmText: '批准',
+      cancelText: '取消',
+      success: async (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '处理中...', mask: true });
+          try {
+            await api.tenant.approveRegistration(user.id);
+            wx.hideLoading();
+            toast.success('已批准');
+            this.loadTenantRegistrations();
+          } catch (error) {
+            wx.hideLoading();
+            toast.error(error?.message || '批准失败');
+          }
+        }
+      },
+    });
   },
 
   onTenantReject(e) {
@@ -246,7 +236,7 @@ Page({
           const reason = res.content?.trim() || '管理员拒绝';
           wx.showLoading({ title: '处理中...', mask: true });
           try {
-            await api.tenant.rejectRegistration(user.id, { reason: reason });
+            await api.tenant.rejectRegistration(user.id, reason);
             wx.hideLoading();
             toast.success('已拒绝');
             this.loadTenantRegistrations();

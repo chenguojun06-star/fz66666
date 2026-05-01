@@ -50,7 +50,7 @@ function loadOrders(ctx, reset) {
 
       return api.production.listOrders(params);
     },
-    r => transformOrderData(r)
+    r => transformOrderData(r),
   ).then(() => {
     const sortedList = [...ctx.data.orders.list].sort((a, b) => {
       const safeDate = s => new Date(typeof s === 'string' ? s.replace(' ', 'T') : (s || 0));

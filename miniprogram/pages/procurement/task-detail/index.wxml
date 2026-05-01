@@ -1,4 +1,4 @@
-<custom-nav title="采购到货" show-back="{{true}}" />
+<custom-nav title="采购到货" />
 
 <view class="page-container">
   <view class="loading-wrapper" wx:if="{{loading}}">

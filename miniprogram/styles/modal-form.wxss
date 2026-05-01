@@ -44,7 +44,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   margin-bottom: 4px;
-  line-height: var(--line-height-normal);
+  line-height: 1.4;
   font-weight: 500;
 }
 
@@ -62,7 +62,7 @@
   color: var(--color-text-primary);
   background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   box-sizing: border-box;
 }
 
@@ -73,7 +73,7 @@
   color: var(--color-text-primary);
   background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   box-sizing: border-box;
   min-height: 68px;
 }
@@ -87,7 +87,7 @@
   color: var(--color-text-primary);
   background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -95,7 +95,7 @@
 
 .mf-picker-arrow {
   color: var(--color-text-disabled);
-  font-size: var(--font-size-2xs);
+  font-size: 10px;
   margin-left: 4px;
   flex-shrink: 0;
 }
@@ -135,7 +135,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   font-weight: 500;
-  line-height: var(--line-height-normal);
+  line-height: 1.4;
 }
 
 .mf-field-ctrl {
@@ -189,7 +189,7 @@
   color: var(--color-text-secondary);
   background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
 }
 
 .mf-toggle.active {
@@ -240,7 +240,7 @@
   align-items: center;
   justify-content: center;
   background: var(--color-primary);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   flex-shrink: 0;
 }
 
@@ -252,7 +252,7 @@
   color: var(--color-text-primary);
   background: rgba(var(--color-primary-rgb), 0.15);
   border: 1px solid rgba(var(--color-primary-rgb), 0.2);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -288,7 +288,7 @@
   color: var(--color-text-primary);
   background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   box-sizing: border-box;
 }
 
@@ -358,7 +358,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-disabled);
   background: var(--color-bg-light, var(--color-bg-light));
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
 }
 
 /* ---- 选择项（如库存规格） ---- */
@@ -369,7 +369,7 @@
   padding: 8px 10px;
   margin-bottom: 6px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   background: var(--color-bg-light, var(--color-bg-light));
 }
 

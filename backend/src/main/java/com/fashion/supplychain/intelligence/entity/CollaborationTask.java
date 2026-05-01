@@ -36,4 +36,36 @@ public class CollaborationTask {
     private Boolean overdue;
 
     private LocalDateTime createdAt;
+
+    private String taskStatus;
+
+    private String priority;
+
+    private String assigneeName;
+
+    private String acceptanceCriteria;
+
+    private LocalDateTime escalatedAt;
+
+    private String escalatedTo;
+
+    private String sourceType;
+
+    private String sourceInstruction;
+
+    private String completionNote;
+
+    private LocalDateTime completedAt;
+
+    public enum TaskStatus {
+        PENDING, ACCEPTED, IN_PROGRESS, COMPLETED, ESCALATED, CANCELLED
+    }
+
+    public enum Priority {
+        CRITICAL, HIGH, MEDIUM, LOW
+    }
+
+    public enum SourceType {
+        AI_DISPATCH, MANUAL, CREW_MEETING, PATROL
+    }
 }

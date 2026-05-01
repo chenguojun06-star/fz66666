@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Getter
 @Builder
@@ -87,5 +88,28 @@ public class AgentLoopContext {
 
     public void setStructuredResponse(XiaoyunStructuredResponse response) {
         this.structuredResponse = response;
+    }
+
+    private long deadlineMs;
+    private AtomicBoolean cancelled;
+
+    public void setDeadlineMs(long deadlineMs) {
+        this.deadlineMs = deadlineMs;
+    }
+
+    public long getDeadlineMs() {
+        return deadlineMs;
+    }
+
+    public void setCancelled(AtomicBoolean cancelled) {
+        this.cancelled = cancelled;
+    }
+
+    public boolean isCancelled() {
+        return cancelled != null && cancelled.get();
+    }
+
+    public boolean isDeadlineExceeded() {
+        return deadlineMs > 0 && System.currentTimeMillis() > deadlineMs;
     }
 }

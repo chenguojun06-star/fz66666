@@ -1,120 +1,89 @@
 /**
  * 小云 AI 回复解析器
- * 从 AI 原始回复文本中提取结构化卡片数据
+ * 从 AI 原始回复文本中提取结构化卡片数据（ActionCard / Chart / TeamStatus / BundleSplit）
  * 对标 PC 端 xiaoyunChatAdapter.ts → parseXiaoyunLegacyMeta()
  */
 
+/**
+ * 解析 AI 回复中的标记块，返回纯文本 + 各类卡片数据
+ * @param {string} rawText AI原始回复
+ * @returns {{ displayText: string, actionCards: Array, charts: Array, teamStatusCards: Array, bundleSplitCards: Array }}
+ */
 function parseChatReply(rawText) {
   if (!rawText || typeof rawText !== 'string') {
-    return { displayText: rawText || '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [], stepWizardCards: [], insightCards: [], clarificationHints: [] };
+    return { displayText: rawText || '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [] };
   }
 
-  var actionCards = [];
-  var charts = [];
-  var teamStatusCards = [];
-  var bundleSplitCards = [];
-  var stepWizardCards = [];
-  var insightCards = [];
-  var clarificationHints = [];
+  let actionCards = [];
+  const charts = [];
+  let teamStatusCards = [];
+  let bundleSplitCards = [];
 
-  function safeParse(str) {
-    try { return JSON.parse(str); } catch (e) { return null; }
-  }
-
-  function validateCard(item) {
-    return item && typeof item === 'object' && item.title;
-  }
-
-  var actionsRe = /【ACTIONS】([\s\S]*?)【\/ACTIONS】/g;
-  var m;
+  // 【ACTIONS】[...]【/ACTIONS】
+  const actionsRe = /【ACTIONS】([\s\S]*?)【\/ACTIONS】/g;
+  let m;
   while ((m = actionsRe.exec(rawText)) !== null) {
-    var parsed = safeParse(m[1].trim());
-    if (Array.isArray(parsed)) {
-      parsed.forEach(function(item) { if (validateCard(item)) actionCards.push(item); });
-    } else if (validateCard(parsed)) {
-      actionCards.push(parsed);
-    }
+    try {
+      const parsed = JSON.parse(m[1].trim());
+      if (Array.isArray(parsed)) {
+        actionCards = actionCards.concat(parsed);
+      }
+    } catch (e) { /* 解析失败静默忽略 */ }
   }
 
-  var chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
+  // 【CHART】{...}【/CHART】
+  const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
   while ((m = chartRe.exec(rawText)) !== null) {
-    var cp = safeParse(m[1].trim());
-    if (Array.isArray(cp)) {
-      cp.forEach(function(item) { if (validateCard(item)) charts.push(item); });
-    } else if (validateCard(cp)) {
-      charts.push(cp);
-    }
+    try {
+      charts.push(JSON.parse(m[1].trim()));
+    } catch (e) { /* ignore */ }
   }
 
-  var teamRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
+  // 【TEAM_STATUS】[...]【/TEAM_STATUS】
+  const teamRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
   while ((m = teamRe.exec(rawText)) !== null) {
-    var tp = safeParse(m[1].trim());
-    if (Array.isArray(tp)) {
-      teamStatusCards = teamStatusCards.concat(tp);
-    } else if (tp) {
-      teamStatusCards.push(tp);
-    }
+    try {
+      const p = JSON.parse(m[1].trim());
+      if (Array.isArray(p)) {
+        teamStatusCards = teamStatusCards.concat(p);
+      }
+    } catch (e) { /* ignore */ }
   }
 
-  var bundleRe = /【BUNDLE_SPLIT】([\s\S]*?)【\/BUNDLE_SPLIT】/g;
+  // 【BUNDLE_SPLIT】[...]【/BUNDLE_SPLIT】
+  const bundleRe = /【BUNDLE_SPLIT】([\s\S]*?)【\/BUNDLE_SPLIT】/g;
   while ((m = bundleRe.exec(rawText)) !== null) {
-    var bp = safeParse(m[1].trim());
-    if (Array.isArray(bp)) {
-      bundleSplitCards = bundleSplitCards.concat(bp);
-    } else if (bp) {
-      bundleSplitCards.push(bp);
-    }
+    try {
+      const bp = JSON.parse(m[1].trim());
+      if (Array.isArray(bp)) {
+        bundleSplitCards = bundleSplitCards.concat(bp);
+      }
+    } catch (e) { /* ignore */ }
   }
 
-  var wizardRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
-  while ((m = wizardRe.exec(rawText)) !== null) {
-    var wp = safeParse(m[1].trim());
-    if (Array.isArray(wp)) {
-      stepWizardCards = stepWizardCards.concat(wp);
-    } else if (wp) {
-      stepWizardCards.push(wp);
-    }
-  }
-
-  var insightRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
-  while ((m = insightRe.exec(rawText)) !== null) {
-    var ip = safeParse(m[1].trim());
-    if (Array.isArray(ip)) {
-      ip.forEach(function(item) { if (validateCard(item)) insightCards.push(item); });
-    } else if (validateCard(ip)) {
-      insightCards.push(ip);
-    }
-  }
-
-  var clarifRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
-  while ((m = clarifRe.exec(rawText)) !== null) {
-    var clp = safeParse(m[1].trim());
-    if (Array.isArray(clp)) {
-      clp.forEach(function(item) { if (typeof item === 'string') clarificationHints.push(item); });
-    }
-  }
-
-  var displayText = rawText
+  // 剥离所有标记块 → 纯文本
+  const displayText = rawText
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
     .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')
     .replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '')
     .replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '')
-    .replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '')
     .replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '')
-    .replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '')
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .trim();
 
-  return { displayText: displayText, actionCards: actionCards, charts: charts, teamStatusCards: teamStatusCards, bundleSplitCards: bundleSplitCards, stepWizardCards: stepWizardCards, insightCards: insightCards, clarificationHints: clarificationHints };
+  return { displayText: displayText, actionCards: actionCards, charts: charts, teamStatusCards: teamStatusCards, bundleSplitCards: bundleSplitCards };
 }
 
+/**
+ * 判断消息是否有富媒体卡片
+ * @param {object} msg 消息对象
+ * @returns {boolean}
+ */
 function hasRichContent(msg) {
   return (msg.actionCards && msg.actionCards.length > 0)
     || (msg.charts && msg.charts.length > 0)
     || (msg.teamStatusCards && msg.teamStatusCards.length > 0)
-    || (msg.bundleSplitCards && msg.bundleSplitCards.length > 0)
-    || (msg.stepWizardCards && msg.stepWizardCards.length > 0)
-    || (msg.insightCards && msg.insightCards.length > 0);
+    || (msg.bundleSplitCards && msg.bundleSplitCards.length > 0);
 }
 
 module.exports = { parseChatReply: parseChatReply, hasRichContent: hasRichContent };

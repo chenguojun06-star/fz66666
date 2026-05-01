@@ -368,10 +368,10 @@ ai:
   consortium:
     enabled: ${AI_CONSORTIUM_ENABLED:true}
   model:
-    fast: ${AI_MODEL_FAST:deepseek-chat}
-    reasoning: ${AI_MODEL_REASONING:deepseek-reasoner}
+    fast: ${AI_MODEL_FAST:deepseek-v4-flash}
+    reasoning: ${AI_MODEL_REASONING:deepseek-v4-flash}
     vision: ${AI_MODEL_VISION:doubao-1-5-vision-pro-32k-250115}
-    default: ${AI_MODEL_DEFAULT:deepseek-chat}
+    default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
 
 # Qdrant 向量库配置（QdrantService @Value 读取）
 intelligence:

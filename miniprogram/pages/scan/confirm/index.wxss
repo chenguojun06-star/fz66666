@@ -104,7 +104,7 @@
 }
 .insight-card { background: var(--color-info-bg); color: var(--color-primary); }
 .warn-card { background: var(--color-warning-bg); color: var(--color-warning); }
-.insight-icon, .warn-icon { flex-shrink: 0; font-size: var(--font-size-md); }
+.insight-icon, .warn-icon { flex-shrink: 0; font-size: 28rpx; }
 .insight-text, .warn-text { flex: 1; }
 
 /* ===== 区段卡片 ===== */
@@ -121,102 +121,6 @@
   color: var(--color-text-primary);
   margin-bottom: 12rpx;
   display: block;
-}
-
-/* ===== 工艺制单 ===== */
-.description-content {
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-md);
-  padding: 20rpx;
-}
-.description-text {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  line-height: var(--line-height-relaxed);
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-/* ===== 二次工艺（重点突出） ===== */
-.process-highlight-card {
-  border: 2rpx solid var(--color-warning);
-  background: var(--color-bg-card);
-}
-.process-highlight-title {
-  color: var(--color-warning);
-}
-.process-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-.process-item {
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-md);
-  padding: 20rpx;
-  border-left: 6rpx solid var(--color-warning);
-}
-.process-item-header {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  flex-wrap: wrap;
-}
-.process-type-tag {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-white);
-  background: var(--color-warning);
-  padding: 4rpx 16rpx;
-  border-radius: var(--radius-xs);
-}
-.process-name {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  flex: 1;
-}
-.process-status {
-  font-size: var(--font-size-xs);
-  padding: 2rpx 12rpx;
-  border-radius: var(--radius-xs);
-}
-.status-done {
-  color: var(--color-success);
-  background: rgba(82, 196, 26, 0.1);
-}
-.status-active {
-  color: var(--color-warning);
-  background: rgba(250, 173, 20, 0.1);
-}
-.process-item-desc {
-  margin-top: 12rpx;
-  padding-top: 12rpx;
-  border-top: 1rpx solid var(--color-border-light);
-}
-.process-desc-text {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  line-height: var(--line-height-normal);
-  white-space: pre-wrap;
-}
-.process-item-detail {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-  margin-top: 10rpx;
-}
-.process-detail-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-.process-item-remark {
-  margin-top: 8rpx;
-}
-.process-remark-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-style: italic;
 }
 
 /* ===== 面辅料列表 ===== */
@@ -277,7 +181,7 @@
 .qty-val.pending { color: var(--color-warning); }
 .qty-lbl {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
 }
 
 /* ===== 裁剪任务信息 ===== */
@@ -293,7 +197,7 @@
 }
 .cutting-lbl {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   width: 80rpx;
   flex-shrink: 0;
 }
@@ -333,7 +237,7 @@
   color: var(--color-primary);
   line-height: var(--line-height-normal);
 }
-.tip-icon { flex-shrink: 0; font-size: var(--font-size-md); }
+.tip-icon { flex-shrink: 0; font-size: 28rpx; }
 .tip-text { flex: 1; }
 
 /* ===== 汇总卡片 ===== */
@@ -410,11 +314,6 @@
   font-weight: var(--font-weight-semibold);
   background: var(--color-bg-card);
 }
-.sku-qty-readonly {
-  background: var(--color-bg-page, #f5f5f5);
-  color: var(--color-text-secondary);
-  border-color: transparent;
-}
 .sku-unit {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
@@ -425,13 +324,13 @@
   margin: 16rpx 0;
   padding: 20rpx 24rpx;
   border-radius: 16rpx;
-  background: var(--color-info-bg);
-  border-left: 6rpx solid var(--color-primary);
+  background: #f0f7ff;
+  border-left: 6rpx solid #4096ff;
   position: relative;
 }
 .ai-bubble-high {
-  background: var(--color-error-bg);
-  border-left-color: var(--color-danger);
+  background: #fff2f0;
+  border-left-color: #ff4d4f;
 }
 .ai-bubble-header {
   display: flex;
@@ -439,33 +338,33 @@
   margin-bottom: 8rpx;
 }
 .ai-bubble-icon {
-  font-size: var(--font-size-md);
+  font-size: 28rpx;
   margin-right: 8rpx;
 }
 .ai-bubble-stage {
-  font-size: var(--font-size-xxs);
-  color: var(--color-text-white);
-  background: var(--color-primary);
+  font-size: 22rpx;
+  color: #fff;
+  background: #4096ff;
   padding: 2rpx 12rpx;
   border-radius: 8rpx;
   margin-right: 8rpx;
 }
 .ai-bubble-high .ai-bubble-stage {
-  background: var(--color-danger);
+  background: #ff4d4f;
 }
 .ai-bubble-close {
   position: absolute;
   top: 12rpx;
   right: 16rpx;
-  font-size: var(--font-size-md);
-  color: var(--color-text-tertiary);
+  font-size: 28rpx;
+  color: #999;
   padding: 8rpx;
   line-height: 1;
 }
 .ai-bubble-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-primary);
-  line-height: var(--line-height-relaxed);
+  font-size: 24rpx;
+  color: #333;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 .ai-bubble-tags {
@@ -475,14 +374,14 @@
   margin-top: 10rpx;
 }
 .ai-bubble-tag {
-  font-size: var(--font-size-2xs);
-  color: var(--color-primary);
+  font-size: 20rpx;
+  color: #4096ff;
   background: rgba(64, 150, 255, 0.1);
   padding: 2rpx 12rpx;
   border-radius: 6rpx;
 }
 .ai-bubble-high .ai-bubble-tag {
-  color: var(--color-danger);
+  color: #ff4d4f;
   background: rgba(255, 77, 79, 0.1);
 }
 

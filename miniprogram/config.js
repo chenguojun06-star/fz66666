@@ -50,32 +50,8 @@ function normalizeBaseUrl(url) {
   if (!raw) {
     return '';
   }
-  const withProto = raw.includes('://') ? raw : `https://${raw}`;
+  const withProto = raw.includes('://') ? raw : `http://${raw}`;
   return withProto.replace(/\/+$/, '');
-}
-
-const ALLOWED_DOMAINS = [
-  'api.webyszl.cn',
-  'webyszl.cn',
-  'www.webyszl.cn',
-  '.tcloudbase.com',
-  '.service.tcloudbase.com',
-  '.run.tcloudbase.com',
-];
-
-function isAllowedDomain(url) {
-  try {
-    var match = url.match(/^https?:\/\/([^/:]+)/i);
-    if (!match) return false;
-    var host = match[1].toLowerCase();
-    for (var i = 0; i < ALLOWED_DOMAINS.length; i++) {
-      var d = ALLOWED_DOMAINS[i];
-      if (d.startsWith('.') ? host.endsWith(d) : host === d) return true;
-    }
-    return false;
-  } catch (_e) {
-    return false;
-  }
 }
 
 /**
@@ -126,12 +102,8 @@ function getBaseUrl() {
             try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
             return DEFAULT_BASE_URL;
           }
-          // 4. 其他合法地址 - 必须在域名白名单内
-          if (isAllowedDomain(v)) {
-            return v;
-          }
-          try { wx.removeStorageSync('api_base_url'); } catch (_) { /* ignore */ }
-          return DEFAULT_BASE_URL;
+          // 4. 其他合法地址（如手动配置的云地址）直接使用
+          return v;
         }
       }
     }
@@ -165,4 +137,4 @@ function setBaseUrl(url) {
 
 const baseUrl = getBaseUrl();
 
-module.exports = { DEFAULT_BASE_URL, FALLBACK_BASE_URL, DEBUG_MODE, getBaseUrl, setBaseUrl, normalizeBaseUrl, isAllowedDomain, baseUrl };
+module.exports = { DEFAULT_BASE_URL, FALLBACK_BASE_URL, DEBUG_MODE, getBaseUrl, setBaseUrl, normalizeBaseUrl, baseUrl };

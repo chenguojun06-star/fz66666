@@ -3,7 +3,6 @@
  * 从 scan/index.js 抽取，处理样板确认弹窗及提交逻辑
  */
 const toast = require('../../../utils/uiHelper').toast;
-const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 const OPERATION_LABELS = {
   RECEIVE: '领取样板',
@@ -110,7 +109,7 @@ function showPatternConfirmModal(page, data) {
   const confirmedQty = normalizePositiveInt(data.quantity, 1);
   // 计算"一键领取"可批量提交的工序（排除仓库类和审核）
   const productionOnlyOps = operationOptions.filter(
-    op => !CLAIM_EXCLUDED_OPS.has(String(op.value || '').toUpperCase())
+    op => !CLAIM_EXCLUDED_OPS.has(String(op.value || '').toUpperCase()),
   );
   const hasClaimAllOps = productionOnlyOps.length >= 1;
   page.setData({
@@ -273,7 +272,10 @@ async function submitPatternScan(page) {
         },
       });
 
-      triggerDataRefresh('pattern');
+      const eventBus = getApp().globalData?.eventBus;
+      if (eventBus && typeof eventBus.emit === 'function') {
+        eventBus.emit('DATA_REFRESH');
+      }
     } else {
       toast.error(result.message || '操作失败');
     }
@@ -356,7 +358,10 @@ async function submitPatternScanAll(page) {
       },
     });
 
-    triggerDataRefresh('pattern');
+    const eventBus = getApp().globalData?.eventBus;
+    if (eventBus && typeof eventBus.emit === 'function') {
+      eventBus.emit('DATA_REFRESH');
+    }
   } catch (e) {
     console.error('[扫码页] 样板一键提交失败:', e);
     toast.error(e.errMsg || e.message || '一键提交失败');
@@ -421,7 +426,10 @@ async function claimAllPatternOps(page) {
           operationType: 'CLAIM_ALL',
         },
       });
-      triggerDataRefresh('pattern');
+      const eventBus = getApp().globalData && getApp().globalData.eventBus;
+      if (eventBus && typeof eventBus.emit === 'function') {
+        eventBus.emit('DATA_REFRESH');
+      }
     }
   } catch (e) {
     console.error('[扫码页] 样板一键领取失败:', e);

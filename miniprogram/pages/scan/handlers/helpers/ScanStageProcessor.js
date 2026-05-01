@@ -65,19 +65,14 @@ class ScanStageProcessor {
         return {
           processName: currentProcessName,
           progressStage: currentProcessName,
-          scanType: currentProcessName === '采购' ? 'production' : 'cutting',
+          scanType: currentProcessName === '采购' ? 'procurement' : 'cutting',
           quantity: parsedData.quantity || 0,
           isDuplicate: false,
           isCompleted: false,
           _skipStageDetection: true,
         };
       }
-      // ORDER 码（无菲号）只能用于采购和裁剪阶段。
-      // 当前订单处于生产阶段（车缝/尾部/二次工艺等），必须使用菲号二维码扫码。
-      // 历史 bug：此处曾错误调用 detectNextStage，导致 ORDER 码被识别为任意生产工序。
-      throw new Error(
-        `当前订单处于【${currentProcessName || '生产阶段'}】，订单码只能用于采购/裁剪，请扫描菲号二维码`
-      );
+      return await this.stageDetector.detectNextStage(orderDetail);
     }
   }
 
@@ -103,9 +98,8 @@ class ScanStageProcessor {
       throw new Error('无法识别当前工序,请联系管理员');
     }
 
-    // 页面手选 scanType 仅用于 manual 覆盖，后续判定应优先使用检测出的工序 scanType
-    const pageScanType = this.scanTypeGetter ? this.scanTypeGetter() : null;
-    const scanType = (stageResult && stageResult.scanType) || pageScanType;
+    // 获取 scanType（通过回调）
+    const scanType = this.scanTypeGetter ? this.scanTypeGetter() : null;
 
     // 质检类型特殊处理
     if (scanType === 'quality' && scanMode === 'ORDER') {
@@ -117,6 +111,20 @@ class ScanStageProcessor {
       const err = new Error(stageResult.hint || '进度节点已完成');
       err.isCompleted = true;
       throw err;
+    }
+
+    // 入库类型特殊处理 - 触发手动入库弹窗
+    if (scanType === 'warehouse') {
+      // 标记需要手动入库，返回给页面处理
+      return {
+        success: true,
+        needWarehousing: true,
+        orderNo: parsedData.orderNo,
+        bundleNo: parsedData.bundleNo,
+        quantity: stageResult.quantity || parsedData.quantity,
+        processName: stageResult.processName,
+        stageResult,
+      };
     }
 
     if (stageResult.isDuplicate) {

@@ -5,8 +5,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--color-overlay);
-  z-index: var(--z-overlay);
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
 }
 
 /* 弹窗容器 */
@@ -15,7 +15,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: var(--z-modal);
+  z-index: 1000;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -94,10 +94,10 @@
 }
 
 .modal-btn.confirm {
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  border: none;
-  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
+  background: var(--gradient-primary-alpha);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.15);
 }
 
 .modal-btn.confirm-hover {
@@ -107,10 +107,30 @@
 
 /* 确认按钮禁用状态：显示灰色，防止误导操作人 */
 .modal-btn.confirm[disabled] {
-  background: var(--color-border-light);
-  color: rgba(0, 0, 0, 0.28);
-  border-color: var(--color-border);
-  box-shadow: none;
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.28) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: none !important;
+}
+
+.qm-info {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  font-size: var(--font-size-xs);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.qm-label {
+  color: var(--color-text-disabled);
+  width: 60px;
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+}
+
+.qm-value {
+  color: var(--color-text-primary);
+  font-weight: 500;
 }
 
 .qm-section {
@@ -166,14 +186,12 @@
   border: 1px solid var(--color-border);
   border-radius: 50%;
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  background: var(--color-bg-gray);
+  color: var(--color-text-white);
 }
 
 .qm-radio.active .qm-radio-icon {
   background: rgba(var(--color-primary-rgb), 0.7);
   border-color: rgba(var(--color-primary-rgb), 0.7);
-  color: var(--color-text-white);
 }
 
 .qm-defective {
@@ -196,7 +214,7 @@
   height: 32px;
   padding: 0 8px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   font-size: var(--font-size-xs);
   background: var(--color-bg-card);
 }
@@ -208,10 +226,10 @@
   min-height: 60px;
   padding: 6px 8px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   font-size: var(--font-size-xs);
   background: var(--color-bg-card);
-  line-height: var(--line-height-medium);
+  line-height: 1.5;
 }
 
 /* 图片上传区域 */
@@ -231,7 +249,7 @@
 .qm-image {
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   border: 1px solid var(--color-border);
 }
 
@@ -256,7 +274,7 @@
   width: 64px;
   height: 64px;
   border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -274,51 +292,8 @@
   line-height: 1;
 }
 
-/* 确认按钮禁用状态（用于 view 元素） */
-.modal-btn.confirm-disabled {
-  background: var(--color-border-light);
-  color: var(--color-text-disabled);
-  box-shadow: none;
-  pointer-events: none;
-}
-
-/* 订单信息行 */
-.qm-info-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--color-border-light);
-  margin-bottom: 8px;
-}
-.qm-info-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.qm-info-label {
+.qm-upload-text {
   font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
-}
-.qm-info-value {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-primary);
-  font-weight: 500;
-}
-
-/* native picker 触发区域 */
-.qm-picker-view {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 36px;
-  padding: 0 10px;
-  background: var(--color-bg-input, #f5f5f5);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-primary);
-}
-.qm-picker-arrow {
-  font-size: var(--font-size-md);
-  color: var(--color-text-disabled);
+  margin-top: 4px;
 }

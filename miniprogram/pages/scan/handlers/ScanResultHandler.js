@@ -35,29 +35,15 @@ function buildProcessOptions(processName, progressStage, stageResult) {
   const scannedSet = new Set(stageResult?.scannedProcessNames || []);
   const allBundleProcesses = stageResult?.allBundleProcesses || [];
   const hidePrice = stageResult?.hidePrice || false;
-  let options = allBundleProcesses
+  const options = allBundleProcesses
     .filter(p => !scannedSet.has(p.processName))
     .map(p => ({
       label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
       value: p.processName,
-      progressStage: p.progressStage || '',
       scanType: normalizeScanType(p.processName, p.scanType),
       unitPrice: Number(p.unitPrice || p.price || 0),
       hidePrice: hidePrice,
     }));
-
-  // 兜底：若未携带 allBundleProcesses（如非菲号流程），退化为当前工序单选
-  if (options.length === 0 && (processName || progressStage)) {
-    const fallbackName = processName || progressStage;
-    options = [{
-      label: fallbackName,
-      value: fallbackName,
-      scanType: normalizeScanType(fallbackName, stageResult?.scanType),
-      unitPrice: Number(stageResult?.unitPrice || 0),
-      hidePrice: true,
-    }];
-  }
-
   let index = options.findIndex(opt => opt.value === processName || opt.value === progressStage);
   if (index < 0) index = 0;
   return { options, index };
@@ -67,7 +53,7 @@ function applySelectionState(processOptions, selectedProcessNames) {
   const selectedSet = new Set(
     Array.isArray(selectedProcessNames)
       ? selectedProcessNames.filter(Boolean)
-      : []
+      : [],
   );
 
   return (processOptions || []).map((option) => ({
@@ -78,7 +64,7 @@ function applySelectionState(processOptions, selectedProcessNames) {
 
 function buildSelectionSummary(processOptions, selectedProcessNames) {
   const selected = (processOptions || []).filter((option) =>
-    (selectedProcessNames || []).includes(option.value)
+    (selectedProcessNames || []).includes(option.value),
   );
   return {
     selectedProcessDetails: selected.map((option) => ({
@@ -104,24 +90,17 @@ function showScanResultConfirm(ctx, data) {
   const { options: processOptions } =
     buildProcessOptions(processName, progressStage, stageResult);
 
-  const isWarehouseStage = progressStage === 'warehouse' || progressStage === '入库'
-    || data.scanType === 'warehouse'
-    || (stageResult && stageResult.scanType === 'warehouse');
-
-  if (processOptions.length === 0 && !isWarehouseStage) {
-    console.warn('[ScanResultHandler] 非入库阶段且无可用工序，跳过确认页');
+  if (processOptions.length === 0) {
+    console.error('[ScanResultHandler] 所有工序已扫完，不应弹出确认页');
     toast.error('该菲号所有工序已完成');
     return;
   }
 
-  if (isWarehouseStage) {
-    data.showWarehouse = true;
-    data.hasWarehouseSelected = true;
-  }
-
+  // 跳转独立页面（原弹窗已转为页面）
   getApp().globalData.scanResultData = data;
   wx.navigateTo({ url: '/pages/scan/scan-result/index' });
 }
+
 /**
  * 数量输入框变更
  * @param {Object} ctx - Page 上下文
@@ -164,7 +143,7 @@ function buildScanData(confirm, option, confirmedQty) {
   return {
     ...existingScanData,
     processName: option.value,
-    progressStage: option.progressStage || existingScanData.progressStage || option.value,
+    progressStage: option.value,
     scanType: normalizedScanType,
     unitPrice: option.unitPrice || 0,
     quantity: confirmedQty,
@@ -224,7 +203,6 @@ function handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData, clo
     ...result,
     recordId,
     processName: confirm.processName,
-    processCode: confirm.processCode || result.processCode || '',
     progressStage: confirm.progressStage || confirm.processName,
     bundleNo: confirm.bundleNo,
     orderNo: confirm.orderNo,
@@ -270,7 +248,7 @@ function onProcessScrollSelect(ctx, e) {
     'scanResultConfirm.selectedProcessCount': selectionSummary.selectedProcessCount,
     'scanResultConfirm.selectedProcessAmount': selectionSummary.selectedProcessAmount,
     'scanResultConfirm.processName': primaryOption.value,
-    'scanResultConfirm.progressStage': primaryOption.progressStage || primaryOption.value,
+    'scanResultConfirm.progressStage': primaryOption.value,
     'scanResultConfirm.scanType': primaryOption.scanType,
     'scanResultConfirm.unitPrice': primaryOption.unitPrice || 0,
     'scanResultConfirm.hasWarehouseSelected': selectedOptions.some(item => item.scanType === 'warehouse'),

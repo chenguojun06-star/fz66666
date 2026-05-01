@@ -17,6 +17,7 @@ import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,12 +42,15 @@ public class FinanceWorkflowTool implements AgentTool {
 
     private static final Set<String> WRITE_ACTIONS = Set.of(
             "initiate_payment", "confirm_offline_payment", "reject_payable",
-            "approve_expense", "reject_expense", "approve_finished_settlement");
+            "approve_expense", "reject_expense", "approve_finished_settlement", "batch_run");
+
+    private static final int LARGE_BATCH_THRESHOLD = 5;
+    private static final double LARGE_AMOUNT_THRESHOLD = 50000.0;
 
     @Override
     public AiTool getToolDefinition() {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("action", schema("string", "动作: list_pending_payables | list_finance_approvals | list_payee_accounts | initiate_payment | confirm_offline_payment | reject_payable | approve_expense | reject_expense | approve_finished_settlement"));
+        properties.put("action", schema("string", "动作: list_pending_payables | list_finance_approvals | list_payee_accounts | initiate_payment | confirm_offline_payment | reject_payable | approve_expense | reject_expense | approve_finished_settlement | batch_run(批量执行)"));
         properties.put("bizType", schema("string", "业务类型，可选：RECONCILIATION / REIMBURSEMENT"));
         properties.put("bizId", schema("string", "上游单据ID"));
         properties.put("paymentId", schema("string", "支付记录ID"));
@@ -60,11 +64,12 @@ public class FinanceWorkflowTool implements AgentTool {
         properties.put("reimbursementId", schema("string", "报销单ID"));
         properties.put("settlementId", schema("string", "成品结算单ID"));
         properties.put("limit", schema("integer", "列表条数，默认 10"));
+        properties.put("entries", schema("array", "批量执行条目列表，仅 batch_run 使用。每项含 action 和对应参数"));
 
         AiTool tool = new AiTool();
         AiTool.AiFunction function = new AiTool.AiFunction();
         function.setName(getName());
-        function.setDescription("处理财务常见审批和付款中心动作。支持查看待付款、查看待审批报销与成品结算、直接批准/驳回报销、批准成品结算、发起付款、确认线下付款、驳回付款项。用户说“帮我看看财务待审批”“把这张报销通过”“发起这张物料对账付款”时必须调用。【重要】标注为可选的参数不要追问用户，直接用默认值或不传执行。只有必填参数缺失时才追问。");
+        function.setDescription("处理财务常见审批和付款中心动作。【批量操作】batch_run 用于同时处理多条审批/付款，自动校验总金额超5万或数量超5条时需确认。单条失败不影响其他条目。用户说“帮我看看财务待审批”“把这几条全通过”“批量付款这几条”时必须调用。");
         AiTool.AiParameters parameters = new AiTool.AiParameters();
         parameters.setProperties(properties);
         parameters.setRequired(List.of("action"));
@@ -94,6 +99,7 @@ public class FinanceWorkflowTool implements AgentTool {
             case "approve_expense" -> approveExpense(args);
             case "reject_expense" -> rejectExpense(args);
             case "approve_finished_settlement" -> approveFinishedSettlement(args);
+            case "batch_run" -> batchRun(args);
             default -> "{\"error\":\"不支持的 action\"}";
         };
     }
@@ -226,6 +232,101 @@ public class FinanceWorkflowTool implements AgentTool {
         }
         finishedSettlementApprovalStatusService.markApproved(settlementId, tenantId, UserContext.userId(), UserContext.username());
         return ok("已通过成品结算审批", Map.of("settlement", toSettlementDto(settlement)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private String batchRun(Map<String, Object> args) throws Exception {
+        Object entriesRaw = args.get("entries");
+        if (entriesRaw == null) {
+            return "{\"success\":false,\"error\":\"batch_run 需要 entries 参数（条目列表）\"}";
+        }
+        if (!(entriesRaw instanceof List)) {
+            return "{\"success\":false,\"error\":\"entries 必须是数组\"}";
+        }
+        List<Map<String, Object>> entries = (List<Map<String, Object>>) entriesRaw;
+        if (entries.isEmpty()) {
+            return "{\"success\":false,\"error\":\"entries 不能为空\"}";
+        }
+
+        if (entries.size() > LARGE_BATCH_THRESHOLD) {
+            Map<String, Object> warn = new LinkedHashMap<>();
+            warn.put("success", false);
+            warn.put("needsConfirmation", true);
+            warn.put("warning", String.format("批量操作共 %d 条，超过安全阈值 %d 条。请确认后重试。", entries.size(), LARGE_BATCH_THRESHOLD));
+            warn.put("entryCount", entries.size());
+            warn.put("threshold", LARGE_BATCH_THRESHOLD);
+            warn.put("instruction", "如确认无误，请明确回复「确认批量执行」后再调用 batch_run，或将条目分批（每批≤" + LARGE_BATCH_THRESHOLD + "条）");
+            return MAPPER.writeValueAsString(warn);
+        }
+
+        double totalAmount = 0;
+        for (Map<String, Object> entry : entries) {
+            Object amount = entry.get("amount");
+            if (amount instanceof Number) {
+                totalAmount += ((Number) amount).doubleValue();
+            }
+        }
+        if (totalAmount > LARGE_AMOUNT_THRESHOLD) {
+            Map<String, Object> warn = new LinkedHashMap<>();
+            warn.put("success", false);
+            warn.put("needsConfirmation", true);
+            warn.put("warning", String.format("批量操作总金额 ¥%.2f，超过安全阈值 ¥%.0f。请确认后重试。", totalAmount, LARGE_AMOUNT_THRESHOLD));
+            warn.put("totalAmount", totalAmount);
+            warn.put("threshold", LARGE_AMOUNT_THRESHOLD);
+            warn.put("instruction", "如确认无误，请明确回复「确认金额无误」后再调用 batch_run");
+            return MAPPER.writeValueAsString(warn);
+        }
+
+        List<Map<String, Object>> results = new ArrayList<>();
+        int successCount = 0;
+        int failCount = 0;
+
+        for (int i = 0; i < entries.size(); i++) {
+            Map<String, Object> entry = entries.get(i);
+            String subAction = text(entry.get("action"));
+            Map<String, Object> itemResult = new LinkedHashMap<>();
+            itemResult.put("index", i);
+            itemResult.put("action", subAction);
+            try {
+                String subResultJson = executeSingle(subAction, entry);
+                Map<String, Object> subResult = MAPPER.readValue(subResultJson, new TypeReference<Map<String, Object>>() {});
+                itemResult.put("success", true);
+                itemResult.put("result", subResult);
+                successCount++;
+            } catch (Exception e) {
+                itemResult.put("success", false);
+                itemResult.put("error", e.getMessage());
+                failCount++;
+                log.warn("[FinanceBatch] 第{}条执行失败: {} - {}", i, subAction, e.getMessage());
+            }
+            results.add(itemResult);
+        }
+
+        Map<String, Object> batchResult = new LinkedHashMap<>();
+        batchResult.put("success", failCount == 0);
+        batchResult.put("mode", "batch_run");
+        batchResult.put("totalEntries", entries.size());
+        batchResult.put("successCount", successCount);
+        batchResult.put("failCount", failCount);
+        batchResult.put("totalAmount", totalAmount);
+        batchResult.put("results", results);
+        if (failCount > 0) {
+            batchResult.put("partialFailure", true);
+            batchResult.put("note", String.format("%d 条成功，%d 条失败，失败条目不影响已成功的操作", successCount, failCount));
+        }
+        return MAPPER.writeValueAsString(batchResult);
+    }
+
+    private String executeSingle(String action, Map<String, Object> args) throws Exception {
+        return switch (action) {
+            case "initiate_payment" -> initiatePayment(args);
+            case "confirm_offline_payment" -> confirmOfflinePayment(args);
+            case "reject_payable" -> rejectPayable(args);
+            case "approve_expense" -> approveExpense(args);
+            case "reject_expense" -> rejectExpense(args);
+            case "approve_finished_settlement" -> approveFinishedSettlement(args);
+            default -> throw new IllegalArgumentException("批量不支持的操作: " + action);
+        };
     }
 
     private WagePaymentOrchestrator.PayableItemDTO findPayable(String bizType, String bizId) {
