@@ -4,22 +4,22 @@
 .status-left { display: flex; align-items: center; gap: 6px; }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #52c41a; animation: blink 1.5s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.live-label { font-size: 11px; font-weight: 700; color: #52c41a; letter-spacing: 1px; }
-.status-time { font-size: 12px; color: #999; margin-left: 6px; }
+.live-label { font-size: 11px; font-weight: 700; color: #237804; letter-spacing: 1px; }
+.status-time { font-size: 12px; color: #555; margin-left: 6px; }
 .alert-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
-.alert-ok { background: #f6ffed; color: #52c41a; }
-.alert-warn { background: #fff7e6; color: #fa8c16; }
+.alert-ok { background: #f6ffed; color: #237804; }
+.alert-warn { background: #fff7e6; color: #ad4e00; }
 
 .warn { color: #fa541c !important; }
 
 .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
 .menu-card { background: #fff; border-radius: 10px; padding: 10px 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 2px solid transparent; }
 .menu-card.menu-active { border-color: #1890ff; background: #f0f7ff; }
-.menu-label { display: block; font-size: 11px; color: #999; font-weight: 500; margin-bottom: 4px; }
+.menu-label { display: block; font-size: 11px; color: #555; font-weight: 500; margin-bottom: 4px; }
 .menu-num-row { display: flex; align-items: baseline; justify-content: center; gap: 2px; }
-.menu-val { font-size: 26px; font-weight: 800; color: #333; line-height: 1.2; }
-.menu-unit { font-size: 12px; color: #999; font-weight: 600; }
-.menu-qty { display: block; font-size: 11px; color: #bbb; margin-top: 2px; }
+.menu-val { font-size: 26px; font-weight: 800; color: #222; line-height: 1.2; }
+.menu-unit { font-size: 12px; color: #555; font-weight: 600; }
+.menu-qty { display: block; font-size: 11px; color: #555; margin-top: 2px; }
 
 .section { padding: 0 12px; margin-top: 10px; }
 .card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
@@ -27,8 +27,8 @@
 .live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: #1890ff; flex-shrink: 0; }
 .live-dot-sm.green { background: #52c41a; }
 .card-title { font-size: 14px; font-weight: 600; color: #333; flex: 1; }
-.card-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600; background: #f0f0f0; color: #999; }
-.card-close { font-size: 14px; color: #999; padding: 0 4px; }
+.card-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600; background: #f0f0f0; color: #666; }
+.card-close { font-size: 14px; color: #666; padding: 0 4px; }
 .card-body { padding: 8px 12px; }
 
 .order-row { padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
@@ -40,26 +40,26 @@
 .order-style { font-size: 12px; color: #666; background: #f5f5f5; padding: 1px 6px; border-radius: 3px; }
 .order-factory { font-size: 12px; color: #666; }
 .order-qty { font-size: 12px; color: #666; }
-.order-date { font-size: 12px; color: #999; }
+.order-date { font-size: 12px; color: #666; }
 
 .stage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .stage-card { background: #fafafa; border-radius: 8px; padding: 8px 6px; text-align: center; border: 2px solid transparent; }
 .stage-card.stage-active { border-color: #1890ff; background: #f0f7ff; }
 .stage-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
 .stage-name { font-size: 12px; font-weight: 600; color: #333; }
-.stage-count { font-size: 10px; color: #999; }
-.stage-qty { font-size: 18px; font-weight: 800; color: #333; line-height: 1.2; }
+.stage-count { font-size: 10px; color: #555; }
+.stage-qty { font-size: 18px; font-weight: 800; color: #222; line-height: 1.2; }
 .stage-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
-.stage-lead { font-size: 10px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px; }
+.stage-lead { font-size: 10px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px; }
 .stage-lead-prog { font-size: 10px; color: #1890ff; font-weight: 700; }
-.stage-empty { font-size: 10px; color: #ccc; display: block; margin-top: 2px; }
+.stage-empty { font-size: 10px; color: #555; display: block; margin-top: 2px; }
 
 .stage-detail { margin-top: 8px; border-top: 1px solid #f0f0f0; padding-top: 8px; }
 .stage-detail-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.stage-detail-title { font-size: 13px; font-weight: 600; color: #333; }
+.stage-detail-title { font-size: 13px; font-weight: 600; color: #222; }
 
 .factory-summary { display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-.factory-summary-item { font-size: 12px; color: #666; font-weight: 500; }
+.factory-summary-item { font-size: 12px; color: #555; font-weight: 500; }
 .factory-summary-item.warn { color: #fa541c; }
 
 .factory-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid #f5f5f5; flex-wrap: wrap; }
@@ -67,12 +67,12 @@
 .factory-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .dot-active { background: #52c41a; }
 .dot-idle { background: #fa8c16; }
-.factory-name { font-size: 13px; color: #333; font-weight: 600; flex: 1; min-width: 50px; }
-.factory-orders { font-size: 12px; color: #666; }
-.factory-qty { font-size: 12px; color: #666; }
+.factory-name { font-size: 13px; color: #222; font-weight: 600; flex: 1; min-width: 50px; }
+.factory-orders { font-size: 12px; color: #555; }
+.factory-qty { font-size: 12px; color: #555; }
 .factory-risk { font-size: 11px; color: #fa541c; font-weight: 600; }
-.factory-time { font-size: 11px; color: #999; }
+.factory-time { font-size: 11px; color: #555; }
 
-.empty-hint { font-size: 12px; color: #999; text-align: center; padding: 10px 0; }
+.empty-hint { font-size: 12px; color: #555; text-align: center; padding: 10px 0; }
 .footer { text-align: center; padding: 16px 0 8px; }
-.footer-text { font-size: 11px; color: #ccc; }
+.footer-text { font-size: 11px; color: #666; }

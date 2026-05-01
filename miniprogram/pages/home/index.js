@@ -4,6 +4,22 @@ const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner, isTokenExpired } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 
+// 每月花语（中国传统月花）
+const MONTH_FLOWERS = [
+  { icon: '🎍', name: '梅花', saying: '凌寒独自开，暗香浮动' },
+  { icon: '🌺', name: '杏花', saying: '满园春色关不住' },
+  { icon: '🌸', name: '桃花', saying: '人面桃花相映红' },
+  { icon: '🏵️', name: '牡丹', saying: '花开时节动京城' },
+  { icon: '🌷', name: '石榴花', saying: '蕊珠如火一时开' },
+  { icon: '🪷', name: '荷花', saying: '出淤泥而不染，濯清涟而不妖' },
+  { icon: '🌻', name: '蜀葵', saying: '向阳而生，永远热忱' },
+  { icon: '🌕', name: '桂花', saying: '低调芬芳，不言自明' },
+  { icon: '💮', name: '菊花', saying: '宁可枝头抱香死' },
+  { icon: '🌺', name: '芙蓉', saying: '一日三变，愈晚愈红' },
+  { icon: '🌼', name: '山茶花', saying: '唯有山茶偏耐久' },
+  { icon: '🧊', name: '水仙', saying: '凌波仙子，自有光芒' },
+];
+
 /**
  * 根据当前小时返回问候语
  */
@@ -155,22 +171,7 @@ Page({
     const d = now.getDate();
     const weekDay = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
 
-    // 每月花语（中国传统月花）
-    var monthFlowers = [
-      { icon: '🎍', name: '梅花', saying: '凌寒独自开，暗香浮动' },      // 1月
-      { icon: '🌺', name: '杏花', saying: '满园春色关不住' },            // 2月
-      { icon: '🌸', name: '桃花', saying: '人面桃花相映红' },            // 3月
-      { icon: '🏵️', name: '牡丹', saying: '花开时节动京城' },           // 4月
-      { icon: '🌷', name: '石榴花', saying: '蕊珠如火一时开' },         // 5月
-      { icon: '🪷', name: '荷花', saying: '出淤泥而不染，濯清涟而不妖' },  // 6月
-      { icon: '🌻', name: '蜀葵', saying: '向阳而生，永远热忱' },        // 7月
-      { icon: '🌕', name: '桂花', saying: '低调芬芳，不言自明' },        // 8月
-      { icon: '💮', name: '菊花', saying: '宁可枝头抱香死' },            // 9月
-      { icon: '🌺', name: '芙蓉', saying: '一日三变，愈晚愈红' },        // 10月
-      { icon: '🌼', name: '山茶花', saying: '唯有山茶偏耐久' },          // 11月
-      { icon: '🧊', name: '水仙', saying: '凌波仙子，自有光芒' },        // 12月
-    ];
-    var flower = monthFlowers[m - 1];
+    var flower = MONTH_FLOWERS[m - 1];
     var season;
     if (m >= 3 && m <= 5) { season = '春'; }
     else if (m >= 6 && m <= 8) { season = '夏'; }
