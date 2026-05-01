@@ -541,11 +541,13 @@
   display: flex;
   margin-bottom: 12px;
   align-items: flex-start;
+  will-change: transform;
 }
 .streaming-bubble {
   background: var(--color-bg-card);
   color: var(--color-text-primary);
   border-radius: 0 8px 8px 8px;
+  will-change: contents;
 }
 .streaming-text {
   word-break: break-all;

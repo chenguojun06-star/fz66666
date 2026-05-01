@@ -500,8 +500,13 @@ Component({
                   _streamUpdateTimer = setTimeout(function () {
                     _streamPendingUpdate = false;
                     _streamUpdateTimer = null;
-                    self.setData({ streamingText: accumulatedText, streamingTool: '' });
-                  }, 100);
+                    // 只更新文字，不频繁setData streamingTool减少渲染抖动
+                    if (self.data.streamingTool) {
+                      self.setData({ streamingText: accumulatedText, streamingTool: '' });
+                    } else {
+                      self.setData({ streamingText: accumulatedText });
+                    }
+                  }, 200);
                 }
               }
             } else if (event.type === 'follow_up_actions') {
