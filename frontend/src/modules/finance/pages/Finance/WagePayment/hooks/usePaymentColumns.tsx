@@ -53,6 +53,7 @@ interface UsePaymentColumnsProps {
   handleCancel: (r: WagePayment) => void;
   fetchPayments: () => void;
   msg: { error: (s: string) => void; success: (s: string) => void };
+  onAmountClick?: (record: PayableItem) => void;
 }
 
 // ============================================================
@@ -63,6 +64,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
     openPayModal, handleRejectPayable, openAccountModal,
     setDetailRecord, setDetailOpen,
     openProofModal, handleCancel, fetchPayments, msg,
+    onAmountClick,
   } = props;
 
   // ---- 待收付款列 ----
@@ -107,7 +109,15 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'amount',
         width: 130,
         align: 'right',
-        render: (v: number) => <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(v).toFixed(2)}</span>,
+        render: (v: number, record: PayableItem) => (
+          <span
+            style={{ fontWeight: 600, color: '#cf1322', cursor: 'pointer', textDecoration: 'underline' }}
+            title="点击查看明细"
+            onClick={() => onAmountClick?.(record)}
+          >
+            ¥{Number(v).toFixed(2)}
+          </span>
+        ),
       },
       {
         title: '已付金额',
