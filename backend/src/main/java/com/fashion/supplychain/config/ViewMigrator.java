@@ -423,9 +423,18 @@ public class ViewMigrator implements ApplicationRunner {
         }
     }
 
+    // SQL 关键字集合：防止 extractExpectedColumns 把 SELECT/FROM 等误识别为列别名
+    // （复现场景：selectStart 正则因格式偏差未能匹配时，aliasPattern 会抓到 "AS SELECT\n"）
+    private static final java.util.Set<String> SQL_KEYWORDS = java.util.Set.of(
+            "select", "from", "where", "group", "order", "having", "join",
+            "inner", "outer", "left", "right", "cross", "on", "and", "or", "not",
+            "as", "in", "by", "null", "case", "when", "then", "else", "end",
+            "distinct", "all", "union", "intersect", "except", "binary", "using",
+            "convert", "concat", "lpad", "ifnull", "coalesce", "nullif",
+            "trim", "max", "min", "sum", "count", "substring_index");
+
     private List<String> extractExpectedColumns(String createSql) {
         // 跳过 "CREATE VIEW xxx AS" 前缀（AS 和 SELECT 之间可能有换行），只解析列别名
-        // 避免把 SQL 关键字（SELECT/FROM/WHERE 等）误抓为列名
         java.util.regex.Pattern selectStart = java.util.regex.Pattern.compile(
                 "(?i)\\bAS\\s+SELECT\\b");
         java.util.regex.Matcher sm = selectStart.matcher(createSql);
@@ -436,7 +445,8 @@ public class ViewMigrator implements ApplicationRunner {
         Matcher m = aliasPattern.matcher(selectPart);
         while (m.find()) {
             String col = m.group(2);
-            if (col != null && !cols.contains(col)) {
+            // 过滤 SQL 关键字，避免把 SELECT/FROM/WHERE 等误识别为期望列名
+            if (col != null && !cols.contains(col) && !SQL_KEYWORDS.contains(col.toLowerCase())) {
                 cols.add(col);
             }
         }

@@ -108,7 +108,13 @@ public class IntelligenceAiAdvisorController {
                                           @RequestParam(required = false) String processName,
                                           @RequestParam(required = false) String stage,
                                           @RequestParam(required = false) String mode) {
+        // 前置鉴权：必须在 SseEmitter 创建（响应头提交）之前完成 Token 校验。
+        // 若 UserContext 未填充（Token 过期/无效），此时响应头尚未发出，Spring Security
+        // 能正常返回 401，避免 "response is already committed" 异常。
         String userId = UserContext.userId();
+        if (userId == null || userId.isBlank()) {
+            throw new org.springframework.security.access.AccessDeniedException("登录已过期，请重新登录");
+        }
         if (!RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:sse:" + userId, 30, 1)) {
             SseEmitter emitter = new SseEmitter(3000L);
             try { emitter.send(SseEmitter.event().name("error").data("AI对话请求过于频繁")); emitter.complete(); } catch (Exception e) { log.warn("[AI对话] SSE限流提示发送失败: userId={}", userId); }
