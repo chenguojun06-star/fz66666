@@ -137,7 +137,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public boolean markBundledByOrderId(String productionOrderId) {
         if (!StringUtils.hasText(productionOrderId)) return false;
         String oid = productionOrderId.trim();
@@ -249,7 +249,6 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void deleteByOrderId(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) return;

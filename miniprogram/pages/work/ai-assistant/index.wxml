@@ -37,9 +37,7 @@
 
       <!-- 气泡 -->
       <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
-        <view wx:if="{{item.loading}}" class="typing-dots">
-          <view class="dot"></view><view class="dot"></view><view class="dot"></view>
-        </view>
+        <text wx:if="{{item.loading}}" class="loading-text">思考中…</text>
         <block wx:else>
           <!-- 用户发送的图片 -->
           <image wx:if="{{item.imageUrl}}" src="{{item.imageUrl}}" class="bubble-image" mode="widthFix" bindtap="previewImage" data-src="{{item.imageUrl}}" />
@@ -218,13 +216,9 @@
 
           <!-- 澄清追问 -->
           <block wx:if="{{item.clarificationHints.length > 0}}">
-          <view class="clarification-card">
-            <view class="clarification-label">🤔 需要补充信息：</view>
-            <view class="clarification-btns">
-              <view wx:for="{{item.clarificationHints}}" wx:for-item="hint" wx:for-index="hi" wx:key="hi"
-                class="clarification-btn" hover-class="clarification-btn-hover"
-                bindtap="onQuickPrompt" data-text="{{hint}}" data-cmd="{{false}}">{{hint}}</view>
-            </view>
+          <view class="clarification-text">
+            <text wx:for="{{item.clarificationHints}}" wx:for-item="hint" wx:for-index="hi" wx:key="hi" class="clarification-hint-line">· {{hint}}
+</text>
           </view>
           </block>
         </block>
@@ -234,16 +228,8 @@
       <view wx:if="{{item.role === 'user'}}" class="avatar avatar-user">我</view>
     </view>
 
-    <!-- 流式输出区域 -->
-    <view class="streaming-row" wx:if="{{sending && streamingText}}">
-      <view class="avatar avatar-ai">☁️</view>
-      <view class="bubble bubble-ai streaming-bubble">
-        <text class="streaming-text">{{streamingText}}<text class="streaming-cursor">▍</text></text>
-      </view>
-    </view>
-    <view class="streaming-tool-bar" wx:if="{{sending && streamingTool && !streamingText}}">
-      <text class="streaming-tool-text">{{streamingTool}}</text>
-    </view>
+
+
   </view>
 
   <!-- 底部输入栏 -->

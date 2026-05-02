@@ -42,7 +42,7 @@ const system = {
     return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
   getDictList(type) {
-    return ok('/api/system/dict/by-type', 'GET', { type });
+    return ok('/api/system/dict/list-by-type', 'POST', { type });
   },
 };
 
@@ -63,7 +63,7 @@ const factoryWorker = {
     return ok('/api/factory-worker/list', 'GET', { factoryId });
   },
   save(data) {
-    return ok('/api/factory-worker/save', 'POST', data || {});
+    return ok('/api/factory-worker', 'POST', data || {});
   },
   remove(id) {
     return ok(`/api/factory-worker/${id}`, 'DELETE', {});

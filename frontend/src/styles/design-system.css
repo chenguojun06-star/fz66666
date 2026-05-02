@@ -23,15 +23,26 @@
   --color-text-primary: #1a1a1a;
   --color-text-secondary: #6b7280;
   --color-text-tertiary: #9ca3af;
+  --color-text-quaternary: #bfbfbf;
   --color-bg-base: #ffffff;
   --color-bg-container: #fafafa;
   --color-bg-subtle: #f5f5f5;
   --color-border: #e5e7eb;
   --color-border-light: #f0f0f0;
+  --color-border-antd: #d9d9d9;
 
   /* 背景色 */
   --color-bg-page: #f8fafc;
   --color-bg-card: #ffffff;
+  --color-bg-highlight: #ebf2ff;
+  --color-bg-stripe: #f5f7fb;
+
+  /* 语义强调色 */
+  --color-accent-cyan: #13c2c2;
+  --color-accent-purple: #722ed1;
+  --color-accent-sky: #38bdf8;
+  --color-accent-emerald: #10b981;
+  --color-error: #f5222d;
 
   /* 玻璃拟态 */
   --glass-bg: rgba(255, 255, 255, 0.75);
@@ -98,6 +109,7 @@
     --color-text-primary: #f5f5f5;
     --color-text-secondary: #a8a8a8;
     --color-text-tertiary: #707070;
+    --color-text-quaternary: #525252;
 
     /* 背景颜色 - 深色模式 */
     --color-bg-base: #1a1a1a;
@@ -105,10 +117,20 @@
     --color-bg-subtle: #303030;
     --color-bg-page: #161616;
     --color-bg-card: #1f1f1f;
+    --color-bg-highlight: #1a2744;
+    --color-bg-stripe: #1e1e2e;
 
     /* 边框 - 深色模式 */
     --color-border: #404040;
     --color-border-light: #2a2a2a;
+    --color-border-antd: #434343;
+
+    /* 语义强调色 - 深色模式 */
+    --color-accent-cyan: #36cfc9;
+    --color-accent-purple: #9254de;
+    --color-accent-sky: #69b1ff;
+    --color-accent-emerald: #34d399;
+    --color-error: #ff7875;
 
     /* 主色调适配 - 深色模式下更亮 */
     --color-primary: #5B9CFA;
@@ -140,13 +162,22 @@ html.dark-mode {
   --color-text-primary: #f5f5f5;
   --color-text-secondary: #a8a8a8;
   --color-text-tertiary: #707070;
+  --color-text-quaternary: #525252;
   --color-bg-base: #1a1a1a;
   --color-bg-container: #262626;
   --color-bg-subtle: #303030;
   --color-bg-page: #161616;
   --color-bg-card: #1f1f1f;
+  --color-bg-highlight: #1a2744;
+  --color-bg-stripe: #1e1e2e;
   --color-border: #404040;
   --color-border-light: #2a2a2a;
+  --color-border-antd: #434343;
+  --color-accent-cyan: #36cfc9;
+  --color-accent-purple: #9254de;
+  --color-accent-sky: #69b1ff;
+  --color-accent-emerald: #34d399;
+  --color-error: #ff7875;
   --color-primary: #5B9CFA;
   --color-primary-light: #7CB3FB;
   --color-primary-dark: #4A8BE9;

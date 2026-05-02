@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +26,15 @@ public class TenantSmartFeatureController {
         return Result.success(tenantSmartFeatureOrchestrator.listCurrentTenantFeatures());
     }
 
+    @PutMapping
+    public Result<Map<String, Boolean>> update(@RequestBody(required = false) TenantSmartFeatureSaveRequest request) {
+        return Result.success(tenantSmartFeatureOrchestrator.saveCurrentTenantFeatures(
+                request == null ? null : request.getFeatures()
+        ));
+    }
+
+    /** @deprecated 使用 PUT / 替代 */
+    @Deprecated
     @PostMapping("/save")
     public Result<Map<String, Boolean>> save(@RequestBody(required = false) TenantSmartFeatureSaveRequest request) {
         return Result.success(tenantSmartFeatureOrchestrator.saveCurrentTenantFeatures(

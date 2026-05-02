@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,6 +30,14 @@ public class TenantIntelligenceProfileController {
         return Result.success(tenantIntelligenceProfileViewOrchestrator.getCurrentTenantProfileView());
     }
 
+    @PutMapping("/current")
+    public Result<TenantIntelligenceProfileResponse> updateCurrent(@RequestBody(required = false) TenantIntelligenceProfileSaveRequest request) {
+        tenantIntelligenceProfileOrchestrator.saveCurrentTenantProfile(request);
+        return Result.success(tenantIntelligenceProfileViewOrchestrator.getCurrentTenantProfileView());
+    }
+
+    /** @deprecated 使用 PUT /current 替代 */
+    @Deprecated
     @PostMapping("/save")
     public Result<TenantIntelligenceProfileResponse> save(@RequestBody(required = false) TenantIntelligenceProfileSaveRequest request) {
         tenantIntelligenceProfileOrchestrator.saveCurrentTenantProfile(request);

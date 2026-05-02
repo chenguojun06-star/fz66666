@@ -8,7 +8,6 @@ import com.fashion.supplychain.finance.service.MaterialReconciliationSyncService
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -41,7 +40,6 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
      * @return 对账记录ID
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public String createReconciliation(MaterialReconciliation reconciliation) {
         if (reconciliation == null) {
             throw new RuntimeException("对账记录不能为空");

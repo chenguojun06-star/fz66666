@@ -18,6 +18,7 @@ public final class DbColumnDefinitions {
         addPatternColumns();
         addIntelligenceColumns();
         addFactoryColumns();
+        addBillingColumns();
         addOtherColumns();
     }
 
@@ -863,6 +864,47 @@ public final class DbColumnDefinitions {
         add("t_stock_transfer", "update_by", "VARCHAR(36) DEFAULT NULL COMMENT '更新人'");
         add("t_stock_transfer", "update_time", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
         add("t_stock_transfer", "delete_flag", "INT DEFAULT 0 COMMENT '删除标记'");
+    }
+
+    private static void addBillingColumns() {
+        add("t_tenant", "plan_type", "VARCHAR(20) NOT NULL DEFAULT 'TRIAL' COMMENT '套餐类型'");
+        add("t_tenant", "monthly_fee", "DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '月费(元)'");
+        add("t_tenant", "storage_quota_mb", "BIGINT NOT NULL DEFAULT 1024 COMMENT '存储配额(MB)'");
+        add("t_tenant", "storage_used_mb", "BIGINT NOT NULL DEFAULT 0 COMMENT '已用存储(MB)'");
+        add("t_tenant", "billing_cycle", "VARCHAR(10) DEFAULT 'MONTHLY' COMMENT '计费周期'");
+        add("t_tenant", "invoice_title", "VARCHAR(200) DEFAULT NULL COMMENT '默认发票抬头'");
+        add("t_tenant", "invoice_tax_no", "VARCHAR(50) DEFAULT NULL COMMENT '默认纳税人识别号'");
+        add("t_tenant", "invoice_bank_name", "VARCHAR(100) DEFAULT NULL COMMENT '开户银行'");
+        add("t_tenant", "invoice_bank_account", "VARCHAR(50) DEFAULT NULL COMMENT '银行账号'");
+        add("t_tenant", "invoice_address", "VARCHAR(200) DEFAULT NULL COMMENT '注册地址'");
+        add("t_tenant", "invoice_phone", "VARCHAR(30) DEFAULT NULL COMMENT '注册电话'");
+        add("t_tenant", "tenant_type", "VARCHAR(30) NOT NULL DEFAULT 'HYBRID' COMMENT '租户类型'");
+        add("t_tenant_billing_record", "invoice_required", "TINYINT DEFAULT 0 COMMENT '是否需要发票'");
+        add("t_tenant_billing_record", "invoice_status", "VARCHAR(20) DEFAULT 'NOT_REQUIRED' COMMENT '发票状态'");
+        add("t_tenant_billing_record", "invoice_title", "VARCHAR(200) DEFAULT NULL COMMENT '发票抬头'");
+        add("t_tenant_billing_record", "invoice_tax_no", "VARCHAR(50) DEFAULT NULL COMMENT '纳税人识别号'");
+        add("t_tenant_billing_record", "invoice_no", "VARCHAR(50) DEFAULT NULL COMMENT '发票号码'");
+        add("t_tenant_billing_record", "invoice_amount", "DECIMAL(12,2) DEFAULT NULL COMMENT '发票金额'");
+        add("t_tenant_billing_record", "invoice_issued_time", "DATETIME DEFAULT NULL COMMENT '开票时间'");
+        add("t_tenant_billing_record", "invoice_bank_name", "VARCHAR(100) DEFAULT NULL COMMENT '开户银行'");
+        add("t_tenant_billing_record", "invoice_bank_account", "VARCHAR(50) DEFAULT NULL COMMENT '银行账号'");
+        add("t_tenant_billing_record", "invoice_address", "VARCHAR(200) DEFAULT NULL COMMENT '注册地址'");
+        add("t_tenant_billing_record", "invoice_phone", "VARCHAR(30) DEFAULT NULL COMMENT '注册电话'");
+        add("t_tenant_billing_record", "billing_cycle", "VARCHAR(10) DEFAULT 'MONTHLY' COMMENT '计费周期'");
+        add("t_login_log", "log_type", "VARCHAR(20) DEFAULT 'LOGIN' COMMENT '日志类型'");
+        add("t_login_log", "biz_type", "VARCHAR(50) DEFAULT NULL COMMENT '业务类型'");
+        add("t_login_log", "biz_id", "VARCHAR(64) DEFAULT NULL COMMENT '业务ID'");
+        add("t_login_log", "action", "VARCHAR(50) DEFAULT NULL COMMENT '操作'");
+        add("t_login_log", "remark", "VARCHAR(500) DEFAULT NULL COMMENT '备注'");
+        add("t_login_log", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_agent_checkpoint", "thread_id", "VARCHAR(128) NOT NULL DEFAULT '' COMMENT '线程ID'");
+        add("t_agent_checkpoint", "node_id", "VARCHAR(128) NOT NULL DEFAULT '' COMMENT '节点ID'");
+        add("t_agent_checkpoint", "node_name", "VARCHAR(256) DEFAULT NULL COMMENT '节点名称'");
+        add("t_agent_checkpoint", "state_json", "MEDIUMTEXT DEFAULT NULL COMMENT '状态JSON'");
+        add("t_agent_checkpoint", "metadata_json", "TEXT DEFAULT NULL COMMENT '元数据JSON'");
+        add("t_agent_checkpoint", "step_index", "INT NOT NULL DEFAULT 0 COMMENT '步骤索引'");
+        add("t_agent_checkpoint", "status", "VARCHAR(32) DEFAULT 'ACTIVE' COMMENT '状态'");
+        add("t_style_attachment", "biz_type", "VARCHAR(128) DEFAULT 'general' COMMENT '业务类型'");
     }
 
     private static void addOtherColumns() {

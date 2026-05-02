@@ -100,7 +100,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
       const values = await form.validateFields();
       setSaving(true);
       const res = await api.post<{ code: number; message?: string }>(
-        '/integration/channel-config/save',
+        '/integration/channel-config',
         { channelCode, ...values }
       );
       if (res.code === 200) {

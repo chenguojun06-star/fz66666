@@ -36,6 +36,16 @@ public class SelectionBatchController {
     }
 
     /** 创建批次 */
+    @PostMapping
+    public Result<SelectionBatch> create(@RequestBody SelectionBatchRequest req) {
+        if (req.getBatchName() == null || req.getBatchName().isEmpty()) {
+            return Result.fail("批次名称不能为空");
+        }
+        return Result.success(batchOrchestrator.createBatch(req));
+    }
+
+    /** @deprecated 使用 POST / 替代 */
+    @Deprecated
     @PostMapping("/save")
     public Result<SelectionBatch> save(@RequestBody SelectionBatchRequest req) {
         if (req.getBatchName() == null || req.getBatchName().isEmpty()) {

@@ -16,6 +16,7 @@ public class CuttingBundleSplitTransferResponse {
     private String sourceBundleLabel;
     private String currentProcessName;
     private String reason;
+    private String splitLogId;
     private List<BundleNode> bundles = new ArrayList<>();
 
     @Data

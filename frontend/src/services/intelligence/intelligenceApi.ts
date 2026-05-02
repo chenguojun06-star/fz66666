@@ -76,8 +76,9 @@ export const intelligenceApi = {
   getTenantSmartFeatureFlags: () =>
     api.get<{ code: number; data: Record<string, boolean> }>('/system/tenant-smart-feature/list'),
 
+  /** @deprecated 使用 tenantSmartFeatureService.save 替代 */
   saveTenantSmartFeatureFlags: (features: Record<string, boolean>) =>
-    api.post<{ code: number; data: Record<string, boolean> }>('/system/tenant-smart-feature/save', { features }),
+    api.put<{ code: number; data: Record<string, boolean> }>('/system/tenant-smart-feature', { features }),
 
   precheckScan: (payload: {
     orderId?: string;

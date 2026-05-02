@@ -52,7 +52,20 @@ public class MaterialRollController {
 
     /**
      * 查询入库单下所有料卷
+     * POST /api/production/material/roll/list  body: { "inboundId": "xxx" }
      */
+    @PostMapping("/list")
+    public Result<?> listByInboundPost(@RequestBody Map<String, String> params) {
+        String inboundId = params != null ? params.get("inboundId") : null;
+        if (inboundId == null || inboundId.isBlank()) {
+            return Result.fail("inboundId不能为空");
+        }
+        List<MaterialRoll> rolls = materialRollOrchestrator.listRollsByInbound(inboundId);
+        return Result.success(rolls);
+    }
+
+    /** @deprecated 使用 POST /list 替代 */
+    @Deprecated
     @GetMapping("/by-inbound/{inboundId}")
     public Result<?> listByInbound(@PathVariable String inboundId) {
         List<MaterialRoll> rolls = materialRollOrchestrator.listRollsByInbound(inboundId);

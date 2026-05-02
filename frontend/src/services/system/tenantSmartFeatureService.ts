@@ -10,7 +10,7 @@ const tenantSmartFeatureService = {
   },
 
   async save(features: TenantSmartFeatureMap): Promise<TenantSmartFeatureMap> {
-    const res = await api.post<ApiResult<TenantSmartFeatureMap>>('/system/tenant-smart-feature/save', { features });
+    const res = await api.put<ApiResult<TenantSmartFeatureMap>>('/system/tenant-smart-feature', { features });
     return res?.data || {};
   },
 };

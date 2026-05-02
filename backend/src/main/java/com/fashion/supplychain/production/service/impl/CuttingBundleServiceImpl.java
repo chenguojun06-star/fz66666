@@ -519,7 +519,6 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void deleteByOrderId(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {

@@ -77,6 +77,20 @@ public class CuttingBundleController {
         return Result.success(cuttingBundleSplitTransferOrchestrator.splitAndTransfer(request));
     }
 
+    @PostMapping("/split-transfer/request")
+    public Result<?> splitTransferRequest(@RequestBody CuttingBundleSplitTransferRequest request) {
+        return Result.success(cuttingBundleSplitTransferOrchestrator.requestSplit(request));
+    }
+
+    @PostMapping("/split-transfer/confirm")
+    public Result<?> splitTransferConfirm(@RequestBody Map<String, String> body) {
+        String splitLogId = body != null ? body.get("splitLogId") : null;
+        if (splitLogId == null || splitLogId.isEmpty()) {
+            return Result.fail("splitLogId 不能为空");
+        }
+        return Result.success(cuttingBundleSplitTransferOrchestrator.confirmSplit(splitLogId));
+    }
+
     @PostMapping("/split-rollback")
     public Result<?> splitRollback(@RequestBody CuttingBundleSplitRollbackRequest request) {
         return Result.success(cuttingBundleSplitTransferOrchestrator.rollbackSplit(request));
@@ -94,6 +108,11 @@ public class CuttingBundleController {
     @GetMapping("/family/{bundleId}")
     public Result<?> family(@PathVariable String bundleId) {
         return Result.success(cuttingBundleSplitTransferOrchestrator.queryFamily(bundleId));
+    }
+
+    @GetMapping("/split-transfer/pending-for-me")
+    public Result<?> pendingForMe() {
+        return Result.success(cuttingBundleSplitTransferOrchestrator.listPendingForMe());
     }
 
 }

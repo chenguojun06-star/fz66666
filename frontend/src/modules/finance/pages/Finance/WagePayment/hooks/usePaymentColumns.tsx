@@ -88,7 +88,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         ellipsis: true,
         render: (v: string, record: PayableItem) => (
           <PaymentAuditPopover record={record}>
-            <span style={{ cursor: 'pointer', borderBottom: '1px dashed #d9d9d9' }}>{v || '-'}</span>
+            <span style={{ cursor: 'pointer', borderBottom: '1px dashed var(--color-border-antd)' }}>{v || '-'}</span>
           </PaymentAuditPopover>
         ),
       },

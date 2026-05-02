@@ -130,8 +130,21 @@ const production = {
   splitTransfer(data) {
     return ok('/api/production/cutting/split-transfer', 'POST', data);
   },
-  splitRollback(data) {
-    return ok('/api/production/cutting/split-rollback', 'POST', data);
+
+  requestSplit(body) {
+    return ok('/api/production/cutting/split-transfer/request', 'POST', body);
+  },
+
+  confirmSplit(splitLogId) {
+    return ok('/api/production/cutting/split-transfer/confirm', 'POST', { splitLogId });
+  },
+
+  listPendingSplits() {
+    return ok('/api/production/cutting/split-transfer/pending-for-me', 'GET', {});
+  },
+
+  getBundleByCode(qrCode) {
+    return ok('/api/production/cutting/by-code', 'POST', { qrCode });
   },
   getBundleFamily(bundleId) {
     return ok(`/api/production/cutting/family/${bundleId}`, 'GET', {});

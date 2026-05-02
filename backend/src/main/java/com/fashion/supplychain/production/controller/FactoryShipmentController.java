@@ -70,7 +70,26 @@ public class FactoryShipmentController {
         return Result.success(factoryShipmentService.queryPage(params));
     }
 
-    /** 按订单查发货单 */
+    /** 按订单查发货单（无分页） */
+    @PostMapping("/list-by-order")
+    public Result<?> listByOrderPost(@RequestBody Map<String, String> params) {
+        String orderId = params != null ? params.get("orderId") : null;
+        if (orderId == null || orderId.isBlank()) {
+            return Result.fail("orderId不能为空");
+        }
+        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null && !factoryOrderIds.contains(orderId)) {
+            return Result.success(List.of());
+        }
+        return Result.success(factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getOrderId, orderId)
+                .eq(FactoryShipment::getDeleteFlag, 0)
+                .orderByDesc(FactoryShipment::getCreateTime)
+                .list());
+    }
+
+    /** @deprecated 使用 POST /list-by-order 替代 */
+    @Deprecated
     @GetMapping("/by-order/{orderId}")
     public Result<?> listByOrder(@PathVariable("orderId") String orderId) {
         List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);

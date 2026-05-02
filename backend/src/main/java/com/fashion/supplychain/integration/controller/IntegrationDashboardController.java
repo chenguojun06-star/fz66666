@@ -197,10 +197,22 @@ public class IntegrationDashboardController {
     }
 
     /**
-     * 保存/更新渠道配置（前端界面开通/修改）
+     * 保存/更新渠道配置（upsert）
+     * POST /api/integration/channel-config  body: { "channelCode": "xxx", ... }
      */
+    @PostMapping("/channel-config")
+    public Result<String> upsertChannelConfig(@RequestBody Map<String, Object> params) {
+        return doSaveChannelConfig(params);
+    }
+
+    /** @deprecated 使用 POST /channel-config 替代 */
+    @Deprecated
     @PostMapping("/channel-config/save")
     public Result<String> saveChannelConfig(@RequestBody Map<String, Object> params) {
+        return doSaveChannelConfig(params);
+    }
+
+    private Result<String> doSaveChannelConfig(Map<String, Object> params) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) return Result.fail("未登录");
 

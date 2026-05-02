@@ -31,7 +31,7 @@ const tenantIntelligenceProfileService = {
   },
 
   async save(profile: TenantIntelligenceProfilePayload): Promise<TenantIntelligenceProfileResponse> {
-    const res = await api.post<ApiResult<TenantIntelligenceProfileResponse>>('/system/tenant-intelligence-profile/save', profile);
+    const res = await api.put<ApiResult<TenantIntelligenceProfileResponse>>('/system/tenant-intelligence-profile/current', profile);
     return (res?.data || {}) as TenantIntelligenceProfileResponse;
   },
 

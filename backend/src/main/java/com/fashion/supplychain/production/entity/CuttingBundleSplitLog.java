@@ -28,6 +28,7 @@ public class CuttingBundleSplitLog {
     private String toWorkerId;
     private String toWorkerName;
     private String reason;
+    private String splitStatus;
     private String completedBundleId;
     private String completedBundleLabel;
     private String transferBundleId;

@@ -177,25 +177,16 @@ Page({
         function (event) {
           streamStarted = true;
           if (event.type === 'thinking') {
-            self.setData({ streamingTool: '小云正在整理思路…' });
+            // 思考中——无需展示状态条
           } else if (event.type === 'tool_call') {
-            var toolName = describeTool(String(event.data.tool || ''));
-            self.setData({ streamingTool: '正在处理：' + toolName + '…' });
+            // 工具调用中——无需展示状态条
           } else if (event.type === 'tool_result') {
-            var tn = describeTool(String(event.data.tool || ''));
-            self.setData({ streamingTool: event.data.success ? (tn + ' 已完成，继续整理…') : (tn + ' 未成功，重新组织…') });
+            // 工具结果——无需展示状态条
           } else if (event.type === 'answer') {
             var content = String(event.data.content || '');
             if (content) {
               accumulatedText += content;
-              if (!_streamPendingUpdate) {
-                _streamPendingUpdate = true;
-                _streamUpdateTimer = setTimeout(function () {
-                  _streamPendingUpdate = false;
-                  _streamUpdateTimer = null;
-                  self.setData({ streamingText: accumulatedText, streamingTool: '' });
-                }, 100);
-              }
+              // 不实时刷 UI，等全文到齐后一次性展示
             }
           }
         },

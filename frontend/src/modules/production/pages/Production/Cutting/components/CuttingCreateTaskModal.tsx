@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AutoComplete, Button, Card, Dropdown, Input, InputNumber, Select, Segmented, Space, Tag, Tooltip } from 'antd';
 import { PlusOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -16,6 +16,44 @@ interface Props {
 
 const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   const { sorted, spanMap } = computeStageSortedAndSpan(createTask.createProcessNodes, CUTTING_STAGE_ORDER);
+
+  // ── 快速批量录入 状态 ──────────────────────────────────────────────────
+  const [matrixColors, setMatrixColors] = useState<string[]>([]);
+  const [matrixSizes, setMatrixSizes] = useState<string[]>([]);
+  const [colorInput, setColorInput] = useState('');
+  const [sizeInput, setSizeInput] = useState('');
+
+  const addMatrixColor = () => {
+    const v = colorInput.trim();
+    if (!v || matrixColors.includes(v)) { setColorInput(''); return; }
+    setMatrixColors((prev) => [...prev, v]);
+    setColorInput('');
+  };
+
+  const addMatrixSize = () => {
+    const v = sizeInput.trim();
+    if (!v || matrixSizes.includes(v)) { setSizeInput(''); return; }
+    setMatrixSizes((prev) => [...prev, v]);
+    setSizeInput('');
+  };
+
+  const handleMatrixImport = () => {
+    if (matrixColors.length === 0 || matrixSizes.length === 0) return;
+    // 生成 颜色×码数 组合行，数量留空由用户填写
+    const newLines: { color: string; size: string; quantity: number | null }[] = [];
+    for (const c of matrixColors) {
+      for (const s of matrixSizes) {
+        newLines.push({ color: c, size: s, quantity: null });
+      }
+    }
+    createTask.setCreateOrderLines((prev) => {
+      const filled = prev.filter((l) => l.color || l.size || l.quantity);
+      return [...(filled.length ? filled : []), ...newLines];
+    });
+    setMatrixColors([]);
+    setMatrixSizes([]);
+  };
+  // ─────────────────────────────────────────────────────────────────────
 
   const stageSummary = useMemo(() => {
     const stages: Record<string, { count: number; total: number }> = {};
@@ -169,6 +207,54 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               <span style={{ color: 'rgba(0,0,0,0.85)', fontWeight: 500 }}>下单明细</span>
               <Button size="small" type="dashed" onClick={createTask.addCreateOrderLine}>新增一行</Button>
             </div>
+
+            {/* ── 快速批量录入：颜色+码数 → 生成明细行 ───────────────── */}
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '6px 0', marginBottom: 8, borderBottom: '1px dashed #e8e8e8' }}>
+              <span style={{ fontSize: 12, color: '#555', flexShrink: 0 }}>颜色</span>
+              {matrixColors.map((c) => (
+                <Tag
+                  key={c}
+                  closable
+                  color="blue"
+                  style={{ fontSize: 12, margin: 0 }}
+                  onClose={() => setMatrixColors((prev) => prev.filter((x) => x !== c))}
+                >{c}</Tag>
+              ))}
+              <Input
+                size="small"
+                style={{ width: 88 }}
+                placeholder="输入颜色"
+                value={colorInput}
+                onChange={(e) => setColorInput(e.target.value)}
+                onPressEnter={addMatrixColor}
+                suffix={<PlusOutlined style={{ cursor: 'pointer', color: '#1677ff' }} onClick={addMatrixColor} />}
+              />
+              <span style={{ fontSize: 12, color: '#555', flexShrink: 0, marginLeft: 8 }}>码数</span>
+              {matrixSizes.map((s) => (
+                <Tag
+                  key={s}
+                  closable
+                  color="blue"
+                  style={{ fontSize: 12, margin: 0 }}
+                  onClose={() => setMatrixSizes((prev) => prev.filter((x) => x !== s))}
+                >{s}</Tag>
+              ))}
+              <Input
+                size="small"
+                style={{ width: 88 }}
+                placeholder="输入码数"
+                value={sizeInput}
+                onChange={(e) => setSizeInput(e.target.value)}
+                onPressEnter={addMatrixSize}
+                suffix={<PlusOutlined style={{ cursor: 'pointer', color: '#1677ff' }} onClick={addMatrixSize} />}
+              />
+              {matrixColors.length > 0 && matrixSizes.length > 0 && (
+                <Button size="small" type="primary" onClick={handleMatrixImport} style={{ marginLeft: 4 }}>
+                  生成明细（{matrixColors.length}色×{matrixSizes.length}码={matrixColors.length * matrixSizes.length}行）
+                </Button>
+              )}
+            </div>
+            {/* ─────────────────────────────────────────────────────────── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {createTask.createOrderLines.map((line, index) => (
                 <Space key={`order-line-${index}`} wrap style={{ display: 'flex' }}>

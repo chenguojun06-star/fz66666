@@ -92,7 +92,11 @@ const FactoryWorkerList: React.FC = () => {
     setSaving(true);
     try {
       const payload = workerModal.data?.id ? { ...values, id: workerModal.data.id } : values;
-      await api.post('/factory-worker/save', payload);
+      if (workerModal.data?.id) {
+        await api.put(`/factory-worker/${workerModal.data.id}`, values);
+      } else {
+        await api.post('/factory-worker', payload);
+      }
       message.success(workerModal.data?.id ? '修改成功' : '添加成功');
       handleClose();
       fetchWorkers();

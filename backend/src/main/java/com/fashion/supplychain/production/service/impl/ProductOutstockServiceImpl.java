@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -96,7 +95,6 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean saveOutstockAndValidate(ProductOutstock outstock) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -171,7 +169,6 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean softDeleteByOrderId(String orderId) {
         if (!StringUtils.hasText(orderId)) {
             return false;

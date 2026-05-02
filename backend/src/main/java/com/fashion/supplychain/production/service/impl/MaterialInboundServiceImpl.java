@@ -11,7 +11,6 @@ import com.fashion.supplychain.production.service.MaterialInboundService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -85,7 +84,6 @@ public class MaterialInboundServiceImpl extends ServiceImpl<MaterialInboundMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public MaterialInbound createInboundAndUpdateStock(MaterialInbound inbound) {
         // 1. 生成入库单号（如果没有）
         if (inbound.getInboundNo() == null || inbound.getInboundNo().trim().isEmpty()) {

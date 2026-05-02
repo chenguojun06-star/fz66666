@@ -124,8 +124,8 @@ public class SystemTableMigrator {
             }
             dbHelper.addIndexIfAbsent("t_factory", "idx_f_tenant_id", "tenant_id");
             // 将全局 UNIQUE factory_code 改为 (tenant_id, factory_code) 复合唯一，允许不同租户使用相同编码
-            dbHelper.execSilently("ALTER TABLE t_factory DROP INDEX factory_code");
-            dbHelper.execSilently("ALTER TABLE t_factory ADD UNIQUE KEY uq_tenant_factory_code (tenant_id, factory_code)");
+            dbHelper.dropIndexIfExists("t_factory", "factory_code");
+            dbHelper.addUniqueKeyIfAbsent("t_factory", "uq_tenant_factory_code", "tenant_id, factory_code");
         }
     }
 
@@ -586,7 +586,7 @@ public class SystemTableMigrator {
         }
         try {
             Integer garbledCount = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM t_app_store WHERE app_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                "SELECT COUNT(*) FROM t_app_store WHERE HEX(LEFT(app_name,1)) NOT IN ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F') AND LENGTH(app_name) <> CHAR_LENGTH(app_name)",
                 Integer.class);
             if (garbledCount == null || garbledCount == 0) {
                 return;
@@ -620,7 +620,7 @@ public class SystemTableMigrator {
         }
         try {
             Integer roleGarbled = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM t_role WHERE role_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                "SELECT COUNT(*) FROM t_role WHERE HEX(LEFT(role_name,1)) NOT IN ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F') AND LENGTH(role_name) <> CHAR_LENGTH(role_name)",
                 Integer.class);
             if (roleGarbled != null && roleGarbled > 0) {
                 log.info("[EncodingFix] Detected {} garbled role records, fixing...", roleGarbled);
@@ -640,7 +640,7 @@ public class SystemTableMigrator {
         }
         try {
             Integer dictGarbled = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM t_dict WHERE dict_label REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                "SELECT COUNT(*) FROM t_dict WHERE HEX(LEFT(dict_label,1)) NOT IN ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F') AND LENGTH(dict_label) <> CHAR_LENGTH(dict_label)",
                 Integer.class);
             if (dictGarbled != null && dictGarbled > 0) {
                 log.info("[EncodingFix] Detected {} garbled dict records, fixing...", dictGarbled);
@@ -663,7 +663,7 @@ public class SystemTableMigrator {
         }
         try {
             Integer permGarbled = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM t_permission WHERE permission_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                "SELECT COUNT(*) FROM t_permission WHERE HEX(LEFT(permission_name,1)) NOT IN ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F') AND LENGTH(permission_name) <> CHAR_LENGTH(permission_name)",
                 Integer.class);
             if (permGarbled == null || permGarbled == 0) {
                 return;
@@ -707,7 +707,7 @@ public class SystemTableMigrator {
         }
         try {
             Integer tplGarbled = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM t_template_library WHERE template_name REGEXP '[\\x{00C0}-\\x{00FF}]'",
+                "SELECT COUNT(*) FROM t_template_library WHERE HEX(LEFT(template_name,1)) NOT IN ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F') AND LENGTH(template_name) <> CHAR_LENGTH(template_name)",
                 Integer.class);
             if (tplGarbled == null || tplGarbled == 0) {
                 return;

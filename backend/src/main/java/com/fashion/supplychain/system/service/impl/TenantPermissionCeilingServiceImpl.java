@@ -6,7 +6,6 @@ import com.fashion.supplychain.system.entity.TenantPermissionCeiling;
 import com.fashion.supplychain.system.mapper.TenantPermissionCeilingMapper;
 import com.fashion.supplychain.system.service.TenantPermissionCeilingService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -39,7 +38,6 @@ public class TenantPermissionCeilingServiceImpl
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void replaceCeiling(Long tenantId, List<Long> grantedPermissionIds) {
         // 删除旧数据
         remove(new LambdaQueryWrapper<TenantPermissionCeiling>()

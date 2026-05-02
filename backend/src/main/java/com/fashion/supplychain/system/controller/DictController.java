@@ -33,9 +33,20 @@ public class DictController {
     }
 
     /**
-     * 按类型查询启用的词典项（无分页，前端下拉专用）
-     * GET /api/system/dict/by-type?type=garment_part
+     * 按类型查询启用的词典项（无分页，下拉专用）
+     * POST /api/system/dict/list-by-type  body: { "type": "garment_part" }
      */
+    @PostMapping("/list-by-type")
+    public Result<List<Dict>> listByType(@RequestBody Map<String, String> params) {
+        String type = params != null ? params.get("type") : null;
+        if (type == null || type.isBlank()) {
+            return Result.success(List.of());
+        }
+        return Result.success(dictOrchestrator.getByType(type));
+    }
+
+    /** @deprecated 使用 POST /list-by-type 替代 */
+    @Deprecated
     @GetMapping("/by-type")
     public Result<List<Dict>> getByType(@RequestParam String type) {
         return Result.success(dictOrchestrator.getByType(type));

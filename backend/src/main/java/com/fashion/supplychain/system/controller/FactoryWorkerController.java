@@ -55,9 +55,43 @@ public class FactoryWorkerController {
     }
 
     /**
-     * 保存（新增或更新）工人
-     * 新增时自动绑定当前用户的 tenantId 和 factoryId
+     * 新增工人
+     * 自动绑定当前用户的 tenantId 和 factoryId
      */
+    @PostMapping
+    public Result<Boolean> create(@RequestBody FactoryWorker worker) {
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            worker.setFactoryId(ctxFactoryId);
+        } else if (!StringUtils.hasText(worker.getFactoryId())) {
+            return Result.fail("请指定所属工厂");
+        }
+        if (worker.getTenantId() == null) {
+            worker.setTenantId(UserContext.tenantId());
+        }
+        if (worker.getStatus() == null) {
+            worker.setStatus("active");
+        }
+        if (worker.getDeleteFlag() == null) {
+            worker.setDeleteFlag(0);
+        }
+        worker.setCreateTime(LocalDateTime.now());
+        worker.setUpdateTime(LocalDateTime.now());
+        return Result.success(factoryWorkerService.save(worker));
+    }
+
+    /**
+     * 更新工人
+     */
+    @PutMapping("/{id}")
+    public Result<Boolean> update(@PathVariable String id, @RequestBody FactoryWorker worker) {
+        worker.setId(id);
+        worker.setUpdateTime(LocalDateTime.now());
+        return Result.success(factoryWorkerService.updateById(worker));
+    }
+
+    /** @deprecated 使用 POST / 或 PUT /{id} 替代 */
+    @Deprecated
     @PostMapping("/save")
     public Result<Boolean> save(@RequestBody FactoryWorker worker) {
         String ctxFactoryId = UserContext.factoryId();

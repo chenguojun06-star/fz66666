@@ -6,7 +6,6 @@ import com.fashion.supplychain.system.entity.UserPermissionOverride;
 import com.fashion.supplychain.system.mapper.UserPermissionOverrideMapper;
 import com.fashion.supplychain.system.service.UserPermissionOverrideService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -39,7 +38,6 @@ public class UserPermissionOverrideServiceImpl
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void replaceOverrides(Long userId, Long tenantId, List<Long> grantIds, List<Long> revokeIds) {
         // 删除旧数据
         remove(new LambdaQueryWrapper<UserPermissionOverride>()

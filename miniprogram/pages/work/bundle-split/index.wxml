@@ -1,10 +1,18 @@
+<wxs module="fmt">
+function abbr(str) {
+  if (!str) return '?';
+  return str.substring(0, 2);
+}
+module.exports = { abbr: abbr };
+</wxs>
 <view class="container">
   <custom-nav title="拆菲号 / 单价调整" show-back="{{true}}" show-search="{{false}}" />
 
   <!-- ======== Tab 切换栏 ======== -->
   <view class="tab-bar">
     <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">拆菲号</view>
-    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">单价调整</view>
+    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">待确认</view>
+    <view class="tab-item {{activeTab === 2 ? 'tab-active' : ''}}" data-tab="2" bindtap="switchTab">单价调整</view>
   </view>
 
   <!-- ======== Panel 0: 拆菲号 ======== -->
@@ -41,20 +49,41 @@
 
       <view wx:elif="{{bundles.length}}" class="bundle-list">
         <view wx:for="{{bundles}}" wx:key="id" class="bundle-card {{selectedIdx === index ? 'selected' : ''}}" bindtap="selectBundle" data-idx="{{index}}">
-          <view class="bundle-row">
-            <text class="bundle-no">{{item.bundleLabel || item.bundleNo}}</text>
-            <text class="bundle-qty">{{item.quantity}} 件</text>
+          <!-- 卡片头部：左图右信息 -->
+          <view class="bundle-card-hd">
+            <!-- 左侧款式图 -->
+            <view class="bundle-thumb">
+              <image wx:if="{{orderStyleCover}}" class="bundle-thumb-img" src="{{orderStyleCover}}" mode="aspectFill" lazy-load="{{true}}" />
+              <view wx:else class="bundle-thumb-placeholder">
+                <text class="thumb-abbr">{{fmt.abbr(item.styleNo)}}</text>
+              </view>
+            </view>
+            <!-- 右侧 3 行信息 -->
+            <view class="bundle-info">
+              <!-- 第 1 行：订单号 -->
+              <view class="bundle-info-row">
+                <text class="bi-label">订单号</text>
+                <text class="bi-val bi-order-no">{{item.productionOrderNo || orderNo}}</text>
+              </view>
+              <!-- 第 2 行：款号 · 颜色 -->
+              <view class="bundle-info-row">
+                <text class="bi-val bi-style-no">{{item.styleNo || '-'}}</text>
+                <text class="bi-dot"> · </text>
+                <text class="bi-val bi-color">{{item.color || '-'}}</text>
+              </view>
+              <!-- 第 3 行：菲号 + 数量徽章 -->
+              <view class="bundle-info-row">
+                <text class="bi-label">菲号</text>
+                <text class="bi-val bi-bundle-label">{{item.bundleLabel || item.bundleNo}}</text>
+                <text class="bi-badge">{{item.quantity}}件</text>
+              </view>
+            </view>
           </view>
-          <view class="bundle-meta">
-            <text class="bundle-style">{{item.styleNo || '-'}}</text>
-            <text class="meta-sep">/</text>
-            <text>{{item.color || '-'}}</text>
-            <text class="meta-sep">/</text>
-            <text>{{item.size || '-'}}</text>
-          </view>
-          <view wx:if="{{item.operatorName}}" class="bundle-operator">
-            <text class="operator-label">当前持有：</text>
-            <text class="operator-name">{{item.operatorName}}</text>
+          <!-- 持有人（可选） -->
+          <view wx:if="{{item.operatorName}}" class="bundle-holder">
+            <text class="holder-icon">👤</text>
+            <text class="holder-label">持有：</text>
+            <text class="holder-name">{{item.operatorName}}</text>
           </view>
 
           <view wx:if="{{selectedIdx === index}}" class="split-form" catchtap="">
@@ -114,8 +143,51 @@
     </view>
   </view>
 
-  <!-- ======== Panel 1: 工序单价调整 ======== -->
+  <!-- ======== Panel 1: 待确认 ======== -->
   <view wx:if="{{activeTab === 1}}">
+    <view wx:if="{{pendingLoading}}" class="loading-state"><text>加载中...</text></view>
+
+    <view wx:elif="{{pendingSplits.length}}" class="pending-list">
+      <view wx:for="{{pendingSplits}}" wx:key="id" class="pending-card">
+        <view class="pending-header">
+          <text class="pending-label">拆菲请求</text>
+          <text class="pending-status pending">{{item.splitStatus}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">订单号</text>
+          <text class="pending-val">{{item.orderNo || '-'}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">菲号</text>
+          <text class="pending-val">{{item.sourceBundleName || item.sourceBundleLabel || '-'}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">工序</text>
+          <text class="pending-val">{{item.currentProcessName || '-'}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">数量</text>
+          <text class="pending-val highlight">{{item.transferQuantity || 0}} 件</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">来自</text>
+          <text class="pending-val">{{item.fromWorkerName || '-'}}</text>
+        </view>
+        <view class="confirm-btn {{confirmingId === item.id ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="confirmPendingSplit" hover-class="submit-hover">
+          {{confirmingId === item.id ? '确认中...' : '接收并确认'}}
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="empty-state empty-state-card">
+      <text class="empty-icon">📥</text>
+      <text class="empty-text">暂无待确认的拆菲请求</text>
+      <text class="empty-hint">当有工友向你拆菲转派时会显示在这里</text>
+    </view>
+  </view>
+
+  <!-- ======== Panel 2: 单价调整 ======== -->
+  <view wx:if="{{activeTab === 2}}">
 
     <!-- 搜索订单 -->
     <view class="search-bar-wrap">

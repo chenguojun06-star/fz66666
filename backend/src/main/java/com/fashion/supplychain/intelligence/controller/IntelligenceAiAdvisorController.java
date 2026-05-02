@@ -208,6 +208,14 @@ public class IntelligenceAiAdvisorController {
         return Result.success(aiAdvisorChatResponseOrchestrator.build(prompt, commandId, agentResult, toolRecords));
     }
 
+    @PostMapping("/ai-advisor/conversation/persist")
+    public Result<Void> persistAiConversation() {
+        aiAgentOrchestrator.saveCurrentConversationToMemory();
+        return Result.success(null);
+    }
+
+    /** @deprecated 使用 POST /ai-advisor/conversation/persist 替代 */
+    @Deprecated
     @PostMapping("/ai-advisor/memory/save")
     public Result<Void> saveAiConversationMemory() {
         aiAgentOrchestrator.saveCurrentConversationToMemory();
@@ -286,6 +294,14 @@ public class IntelligenceAiAdvisorController {
         return Result.success();
     }
 
+    @PostMapping("/memory")
+    public Result<IntelligenceMemoryResponse> createMemory(@RequestBody java.util.Map<String, String> body) {
+        return Result.success(intelligenceMemoryOrchestrator.saveCase(
+                body.get("memoryType"), body.get("businessDomain"), body.get("title"), body.get("content")));
+    }
+
+    /** @deprecated 使用 POST /memory 替代 */
+    @Deprecated
     @PostMapping("/memory/save")
     public Result<IntelligenceMemoryResponse> saveMemory(@RequestBody java.util.Map<String, String> body) {
         return Result.success(intelligenceMemoryOrchestrator.saveCase(

@@ -2,16 +2,19 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.BusinessException;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.QrCodeSigner;
 import com.fashion.supplychain.production.dto.CuttingBundleSplitRollbackRequest;
 import com.fashion.supplychain.production.dto.CuttingBundleSplitTransferRequest;
 import com.fashion.supplychain.production.dto.CuttingBundleSplitTransferResponse;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingBundleSplitLog;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingBundleSplitLogService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.websocket.service.WebSocketService;
@@ -39,6 +42,8 @@ public class CuttingBundleSplitTransferOrchestrator {
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
+    @Autowired
+    private ProductionOrderService productionOrderService;
     @Autowired
     private ProductionProcessTrackingService trackingService;
     @Autowired
@@ -90,6 +95,121 @@ public class CuttingBundleSplitTransferOrchestrator {
         CuttingBundleSplitTransferResponse response = buildResponse(source, rootBundleId, request, completedBundle, transferBundle);
         registerPostCommitNotification(source, request, completedBundle, transferBundle);
         return response;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public CuttingBundleSplitTransferResponse requestSplit(CuttingBundleSplitTransferRequest request) {
+        CuttingBundle source = resolveSource(request);
+        validateRequest(source, request);
+        validateOrderStatus(source);
+        List<ProductionProcessTracking> sourceTrackings = trackingService.getByBundleId(source.getId()).stream()
+                .sorted(Comparator.comparing(ProductionProcessTracking::getProcessOrder, Comparator.nullsLast(Integer::compareTo)))
+                .collect(Collectors.toList());
+        ProductionProcessTracking currentTracking = sourceTrackings.stream()
+                .filter(item -> request.getCurrentProcessName().trim().equals(item.getProcessName()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("未找到当前工序记录"));
+        int currentOrder = currentTracking.getProcessOrder() == null ? Integer.MAX_VALUE : currentTracking.getProcessOrder();
+        validatePreConditions(sourceTrackings, currentOrder, source);
+        CuttingBundleSplitLog logEntry = buildSplitLog(source, null, null, request);
+        logEntry.setSplitStatus("PENDING");
+        splitLogService.save(logEntry);
+        registerPostCommitNotificationForRequest(source, request, logEntry);
+        CuttingBundleSplitTransferResponse response = new CuttingBundleSplitTransferResponse();
+        response.setSuccess(true);
+        response.setAction("split_request");
+        response.setSplitLogId(logEntry.getId());
+        response.setMessage("拆菲请求已发送，等待 " + request.getToWorkerName() + " 确认");
+        response.setRootBundleId(StringUtils.hasText(source.getRootBundleId()) ? source.getRootBundleId() : source.getId());
+        response.setOrderNo(source.getProductionOrderNo());
+        response.setSourceBundleId(source.getId());
+        response.setSourceBundleLabel(resolveBundleLabel(source));
+        response.setCurrentProcessName(request.getCurrentProcessName());
+        response.setReason(request.getReason());
+        return response;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public CuttingBundleSplitTransferResponse confirmSplit(String splitLogId) {
+        CuttingBundleSplitLog splitLog = splitLogService.getById(splitLogId);
+        if (splitLog == null) {
+            throw new BusinessException("拆菲记录不存在");
+        }
+        if (!"PENDING".equals(splitLog.getSplitStatus())) {
+            throw new BusinessException("该拆菲请求已处理，无法重复确认");
+        }
+        CuttingBundle source = cuttingBundleService.getById(splitLog.getSourceBundleId());
+        if (source == null) {
+            throw new BusinessException("原菲号已不存在");
+        }
+        CuttingBundleSplitTransferRequest request = rebuildRequest(splitLog);
+        validateOrderStatus(source);
+        List<ProductionProcessTracking> sourceTrackings = trackingService.getByBundleId(source.getId()).stream()
+                .sorted(Comparator.comparing(ProductionProcessTracking::getProcessOrder, Comparator.nullsLast(Integer::compareTo)))
+                .collect(Collectors.toList());
+        ProductionProcessTracking currentTracking = sourceTrackings.stream()
+                .filter(item -> splitLog.getCurrentProcessName().equals(item.getProcessName()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("当前工序记录已过期，请重新发起拆菲"));
+        int currentOrder = currentTracking.getProcessOrder() == null ? Integer.MAX_VALUE : currentTracking.getProcessOrder();
+        validatePreConditions(sourceTrackings, currentOrder, source);
+        List<ScanRecord> sourceScans = scanRecordService.listByCondition(source.getProductionOrderId(), source.getId(), null, "success", null);
+        Map<String, ScanRecord> scanByProcess = sourceScans.stream().collect(Collectors.toMap(
+                item -> StringUtils.hasText(item.getProcessCode()) ? item.getProcessCode() : item.getProcessName(),
+                Function.identity(), (a, b) -> a, java.util.LinkedHashMap::new));
+        String rootBundleId = StringUtils.hasText(source.getRootBundleId()) ? source.getRootBundleId() : source.getId();
+        int maxSeq = cuttingBundleService.lambdaQuery().eq(CuttingBundle::getRootBundleId, rootBundleId)
+                .orderByDesc(CuttingBundle::getSplitSeq).last("limit 1").oneOpt()
+                .map(item -> item.getSplitSeq() == null ? 0 : item.getSplitSeq()).orElse(0);
+        String splitProcessName = currentTracking.getProcessName();
+        CuttingBundle completedBundle = buildChildBundle(source, splitLog.getCompletedQuantity(), maxSeq + 1,
+                splitLog.getToWorkerId(), splitLog.getToWorkerName(), false, splitProcessName, currentOrder);
+        CuttingBundle transferBundle = buildChildBundle(source, splitLog.getTransferQuantity(), maxSeq + 2,
+                splitLog.getToWorkerId(), splitLog.getToWorkerName(), true, splitProcessName, currentOrder);
+        cuttingBundleService.saveBatch(List.of(completedBundle, transferBundle));
+        persistTrackingAndScans(source, completedBundle, transferBundle, sourceTrackings, scanByProcess, currentOrder, request);
+        archiveSourceBundle(source, splitProcessName, currentOrder);
+        splitLog.setCompletedBundleId(completedBundle.getId());
+        splitLog.setCompletedBundleLabel(completedBundle.getBundleLabel());
+        splitLog.setTransferBundleId(transferBundle.getId());
+        splitLog.setTransferBundleLabel(transferBundle.getBundleLabel());
+        splitLog.setSplitStatus("CONFIRMED");
+        splitLog.setUpdater(UserContext.username());
+        splitLogService.updateById(splitLog);
+        CuttingBundleSplitTransferResponse response = buildResponse(source, rootBundleId, request, completedBundle, transferBundle);
+        response.setMessage("拆菲转派成功，后续可按子菲号继续扫码或打印");
+        registerPostCommitNotificationForConfirm(source, splitLog, completedBundle, transferBundle);
+        return response;
+    }
+
+    public List<CuttingBundleSplitLog> listPendingForMe() {
+        String userId = UserContext.userId();
+        // 防御性查询：不在 SQL WHERE 中引用 split_status 列（该列在云端 DB 可能尚未添加）。
+        // 用 completedBundleId IS NULL 作为"待确认"代理条件：
+        //   已确认(CONFIRMED)时 confirmSplit() 会写入 completedBundleId
+        //   未回滚：rollbackTime IS NULL
+        // 同时显式 SELECT 排除 split_status 以避免 Unknown column 500
+        return splitLogService.lambdaQuery()
+                .select(CuttingBundleSplitLog::getId,
+                        CuttingBundleSplitLog::getRootBundleId,
+                        CuttingBundleSplitLog::getSourceBundleId,
+                        CuttingBundleSplitLog::getSourceBundleNo,
+                        CuttingBundleSplitLog::getSourceBundleLabel,
+                        CuttingBundleSplitLog::getSourceQuantity,
+                        CuttingBundleSplitLog::getCompletedQuantity,
+                        CuttingBundleSplitLog::getTransferQuantity,
+                        CuttingBundleSplitLog::getCurrentProcessName,
+                        CuttingBundleSplitLog::getFromWorkerId,
+                        CuttingBundleSplitLog::getFromWorkerName,
+                        CuttingBundleSplitLog::getToWorkerId,
+                        CuttingBundleSplitLog::getToWorkerName,
+                        CuttingBundleSplitLog::getReason,
+                        CuttingBundleSplitLog::getCreateTime)
+                .eq(CuttingBundleSplitLog::getToWorkerId, userId)
+                .isNull(CuttingBundleSplitLog::getCompletedBundleId)
+                .isNull(CuttingBundleSplitLog::getRollbackTime)
+                .orderByDesc(CuttingBundleSplitLog::getCreateTime)
+                .list();
     }
 
     public CuttingBundleSplitTransferResponse queryFamily(String bundleId) {
@@ -501,13 +621,153 @@ public class CuttingBundleSplitTransferOrchestrator {
     }
 
     private void validateRequest(CuttingBundle source, CuttingBundleSplitTransferRequest request) {
-        if (!StringUtils.hasText(request.getCurrentProcessName())) throw new BusinessException("当前工序不能为空");
+        if (!StringUtils.hasText(request.getCurrentProcessName())) throw new BusinessException("当前工序不能为空，请选择拆分所在的工序");
         if (request.getCompletedQuantity() == null || request.getCompletedQuantity() <= 0) throw new BusinessException("已完成数量必须大于0");
         if (request.getTransferQuantity() == null || request.getTransferQuantity() <= 0) throw new BusinessException("转派数量必须大于0");
         if (source.getQuantity() == null || source.getQuantity() <= 0) throw new BusinessException("原菲号数量无效");
         if (request.getCompletedQuantity() + request.getTransferQuantity() != source.getQuantity()) throw new BusinessException("已完成数量和转派数量之和必须等于原菲号数量");
-        if ("split_parent".equals(source.getSplitStatus())) throw new BusinessException("该菲号已拆分为父菲号，不能再次执行");
-        if (!StringUtils.hasText(request.getToWorkerName()) && !StringUtils.hasText(request.getToWorkerId())) throw new BusinessException("目标工人不能为空");
+        if ("split_parent".equals(source.getSplitStatus())) throw new BusinessException("该菲号已拆分为父菲号，不能再拆");
+        if ("split_child".equals(source.getSplitStatus())) throw new BusinessException("该菲号是拆分子菲号，不能再次拆分");
+        if (!StringUtils.hasText(request.getToWorkerName()) && !StringUtils.hasText(request.getToWorkerId())) throw new BusinessException("请选择接手工人");
+    }
+
+    private void validateOrderStatus(CuttingBundle source) {
+        String orderNo = source.getProductionOrderNo();
+        ProductionOrder order = null;
+        if (StringUtils.hasText(orderNo)) {
+            order = productionOrderService.getByOrderNo(orderNo);
+        }
+        if (order == null && StringUtils.hasText(source.getProductionOrderId())) {
+            order = productionOrderService.getById(source.getProductionOrderId());
+        }
+        if (order == null) {
+            throw new BusinessException("未找到关联的生产订单，无法拆菲");
+        }
+        String st = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
+        if (OrderStatusConstants.isTerminal(st)) {
+            String label = statusLabel(st);
+            throw new BusinessException("该订单已" + label + "，不能拆菲转派");
+        }
+        if (!"producing".equals(st) && !"pending".equals(st)) {
+            throw new BusinessException("只有生产中的订单可以拆菲，当前订单状态：" + statusLabel(st));
+        }
+    }
+
+    private String statusLabel(String status) {
+        if (status == null) return "未知";
+        switch (status.toLowerCase()) {
+            case "producing": return "生产中";
+            case "pending": return "待生产";
+            case "completed": return "已完成";
+            case "cancelled": return "已取消";
+            case "scrapped": return "已报废";
+            case "archived": return "已归档";
+            case "closed": return "已关单";
+            default: return status;
+        }
+    }
+
+    private void validatePreConditions(List<ProductionProcessTracking> sourceTrackings, int currentOrder, CuttingBundle source) {
+        if (sourceTrackings.stream().anyMatch(item -> (item.getProcessOrder() == null ? Integer.MAX_VALUE : item.getProcessOrder()) > currentOrder
+                && "scanned".equals(item.getScanStatus()))) {
+            throw new BusinessException("后续工序已有扫码记录，不能再拆菲转派");
+        }
+        List<ScanRecord> sourceScans = scanRecordService.listByCondition(source.getProductionOrderId(), source.getId(), null, "success", null);
+        if (sourceScans.stream().anyMatch(item -> StringUtils.hasText(item.getPayrollSettlementId())
+                || "settled".equalsIgnoreCase(item.getSettlementStatus()))) {
+            throw new BusinessException("该菲号已有工资结算记录，不能拆菲转派");
+        }
+    }
+
+    private CuttingBundleSplitTransferRequest rebuildRequest(CuttingBundleSplitLog log) {
+        CuttingBundleSplitTransferRequest req = new CuttingBundleSplitTransferRequest();
+        req.setBundleId(log.getSourceBundleId());
+        req.setCompletedQuantity(log.getCompletedQuantity());
+        req.setTransferQuantity(log.getTransferQuantity());
+        req.setCurrentProcessName(log.getCurrentProcessName());
+        req.setToWorkerId(log.getToWorkerId());
+        req.setToWorkerName(log.getToWorkerName());
+        req.setReason(log.getReason());
+        return req;
+    }
+
+    private void registerPostCommitNotificationForRequest(CuttingBundle source, CuttingBundleSplitTransferRequest request,
+                                                           CuttingBundleSplitLog logEntry) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            sendRequestNotification(source, request, logEntry);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                sendRequestNotification(source, request, logEntry);
+            }
+        });
+    }
+
+    private void sendRequestNotification(CuttingBundle source, CuttingBundleSplitTransferRequest request,
+                                          CuttingBundleSplitLog logEntry) {
+        try {
+            String toOperatorId = request.getToWorkerId();
+            String toOperatorName = request.getToWorkerName();
+            int transferQty = request.getTransferQuantity() != null ? request.getTransferQuantity() : 0;
+            String orderNo = source.getProductionOrderNo();
+            String styleNo = source.getStyleNo();
+            String bundleLabel = resolveBundleLabel(source);
+            String processName = request.getCurrentProcessName();
+            if (StringUtils.hasText(toOperatorId)) {
+                webSocketService.notifyDataChanged(toOperatorId, "bundle_split_pending",
+                        logEntry.getId(), "split_requested");
+                log.info("[拆菲请求] 已通知接手方确认: toWorkerId={}, toWorkerName={}, splitLogId={}",
+                        toOperatorId, toOperatorName, logEntry.getId());
+            }
+        } catch (Exception e) {
+            log.warn("[拆菲请求] 通知推送失败（不阻断主流程）: splitLogId={}, error={}",
+                    logEntry.getId(), e.getMessage(), e);
+        }
+    }
+
+    private void registerPostCommitNotificationForConfirm(CuttingBundle source, CuttingBundleSplitLog splitLog,
+                                                           CuttingBundle completedBundle, CuttingBundle transferBundle) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            sendConfirmNotification(source, splitLog, completedBundle, transferBundle);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                sendConfirmNotification(source, splitLog, completedBundle, transferBundle);
+            }
+        });
+    }
+
+    private void sendConfirmNotification(CuttingBundle source, CuttingBundleSplitLog splitLog,
+                                          CuttingBundle completedBundle, CuttingBundle transferBundle) {
+        try {
+            String fromOperatorId = splitLog.getFromWorkerId();
+            String fromOperatorName = splitLog.getFromWorkerName();
+            String toOperatorId = splitLog.getToWorkerId();
+            String toOperatorName = splitLog.getToWorkerName();
+            String orderNo = source.getProductionOrderNo();
+            String styleNo = source.getStyleNo();
+            String processName = splitLog.getCurrentProcessName();
+            int transferQty = splitLog.getTransferQuantity() != null ? splitLog.getTransferQuantity() : 0;
+            // 通知接手方：拆菲已确认，菲号已转给ta
+            if (StringUtils.hasText(toOperatorId)) {
+                webSocketService.notifyScanSuccess(toOperatorId, orderNo, styleNo,
+                        processName, transferQty, toOperatorName, transferBundle.getBundleLabel());
+            }
+            // 通知原持有者：对方已确认
+            if (StringUtils.hasText(fromOperatorId)) {
+                webSocketService.notifyDataChanged(fromOperatorId, "bundle_split",
+                        String.valueOf(source.getId()), "split_confirmed");
+            }
+            log.info("[拆菲确认] 双方通知已发送: from={}, to={}, bundleLabel={}, qty={}",
+                    fromOperatorName, toOperatorName, resolveBundleLabel(source), transferQty);
+        } catch (Exception e) {
+            log.warn("[拆菲确认] 通知推送失败（不阻断主流程）: splitLogId={}, error={}",
+                    splitLog.getId(), e.getMessage(), e);
+        }
     }
 
     private CuttingBundleSplitLog buildSplitLog(CuttingBundle source, CuttingBundle completedBundle, CuttingBundle transferBundle, CuttingBundleSplitTransferRequest request) {

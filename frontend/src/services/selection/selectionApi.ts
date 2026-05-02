@@ -7,7 +7,7 @@ export const candidateList = async (params: Record<string, unknown>) => {
 };
 
 export const candidateSave = async (data: Record<string, unknown>) => {
-  const result = await request.post('/selection/candidate/save', data);
+  const result = await request.post('/selection/candidate', data);
   return unwrapApiData(result, '保存候选款失败');
 };
 

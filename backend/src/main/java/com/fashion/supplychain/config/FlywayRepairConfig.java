@@ -31,14 +31,13 @@ public class FlywayRepairConfig {
                 flyway.migrate();
                 log.info("[FlywayRepair] Migrate complete.");
             } catch (Exception e) {
-                // cloud_patch 已手动执行旧迁移 → 幂等冲突是预期行为
-                // 任何 migrate 错误都不应阻止应用启动
-                log.warn("[FlywayRepair] Migrate 失败（cloud_patch 已执行或兼容性问题），应用继续启动。详情: {}",
-                        e.getMessage());
+                log.error("[FlywayRepair] Migrate 失败，应用继续启动。详情: {}", e.getMessage());
+                if (e.getCause() != null) {
+                    log.error("[FlywayRepair] 根因: {}", e.getCause().getMessage());
+                }
                 try {
                     flyway.repair();
                 } catch (Exception ignored) {
-                    // 万一 repair 也失败，忽略
                 }
             }
         };
