@@ -37,7 +37,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 SET @s = (SELECT IF(COUNT(*) = 0,
-    CONCAT('ALTER TABLE t_material_purchase ADD INDEX idx_mpu_tenant_order (tenant_id, production_order_id)'),
+    CONCAT('ALTER TABLE t_material_purchase ADD INDEX idx_mpu_tenant_order (tenant_id, order_id)'),
     'SELECT 1')
 FROM information_schema.statistics
 WHERE table_schema = DATABASE() AND table_name = 't_material_purchase' AND index_name = 'idx_mpu_tenant_order');
