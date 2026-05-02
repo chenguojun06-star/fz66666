@@ -34,7 +34,8 @@ public class TenantInterceptor implements InnerInterceptor {
             "t_tenant", "t_permission", "t_role_permission", "t_login_log",
             "t_dict", "t_param_config", "t_serial_rule", "t_app_store",
             "t_tenant_permission_ceiling", "t_user_permission_override",
-            "t_integration_callback_log"
+            "t_integration_callback_log",
+            "t_cron_job"
     );
 
     /** 需要混合查询的表（租户数据 + 系统共享数据，用 tenant_id = X OR tenant_id IS NULL） */
