@@ -21,6 +21,7 @@ public class IntelligencePainPoint {
     private String businessDomain;
     private Integer triggerCount;
     private Integer affectedOrderCount;
+    private String affectedOrderNos;
     private BigDecimal affectedAmount;
     private LocalDateTime latestTriggerTime;
     private String rootReasonSummary;

@@ -55,15 +55,16 @@ public class AiChatContextOrchestrator {
 
     private void appendPainPoints(StringBuilder sb, Long tenantId) {
         appendSection(sb, "【当前高频痛点】",
-                "SELECT pain_name, pain_level, trigger_count, affected_order_count, root_reason_summary, current_status " +
+                "SELECT pain_name, pain_level, trigger_count, affected_order_count, affected_order_nos, root_reason_summary, current_status " +
                         "FROM t_intelligence_pain_point WHERE tenant_id = ? AND delete_flag = 0 " +
                         "ORDER BY trigger_count DESC, update_time DESC LIMIT 6",
                 tenantId,
-                row -> String.format("- %s（级别:%s，触发:%s次，影响订单:%s，状态:%s，根因:%s）",
+                row -> String.format("- %s（级别:%s，触发:%s次，影响订单:%s，涉及单号:%s，状态:%s，根因:%s）",
                         value(row.get("pain_name")),
                         value(row.get("pain_level")),
                         value(row.get("trigger_count")),
                         value(row.get("affected_order_count")),
+                        value(row.get("affected_order_nos")),
                         value(row.get("current_status")),
                         shortText(row.get("root_reason_summary"), 40)));
     }

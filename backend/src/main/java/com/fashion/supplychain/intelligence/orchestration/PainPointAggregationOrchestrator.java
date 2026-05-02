@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,7 +83,8 @@ public class PainPointAggregationOrchestrator {
                 delayedOrders.size(),
                 null,
                 delayedOrders.stream().map(ProductionOrder::getPlannedEndDate).filter(java.util.Objects::nonNull).max(LocalDateTime::compareTo).orElse(LocalDateTime.now()),
-                "近期延期订单持续出现，说明跟单推进和工厂协同存在重复性问题"
+                "近期延期订单持续出现，说明跟单推进和工厂协同存在重复性问题",
+                delayedOrders.stream().map(ProductionOrder::getOrderNo).filter(java.util.Objects::nonNull).distinct().collect(Collectors.joining(","))
         ));
     }
 
@@ -108,7 +110,8 @@ public class PainPointAggregationOrchestrator {
                 (int) delayedWithFactory,
                 null,
                 LocalDateTime.now(),
-                "存在工厂不可控反馈，且延期订单明显集中在外发执行环节"
+                "存在工厂不可控反馈，且延期订单明显集中在外发执行环节",
+                orders.stream().filter(o -> "delayed".equalsIgnoreCase(o.getStatus())).map(ProductionOrder::getOrderNo).filter(java.util.Objects::nonNull).distinct().collect(Collectors.joining(","))
         ));
     }
 
@@ -129,7 +132,8 @@ public class PainPointAggregationOrchestrator {
                 (int) failed.stream().map(ScanRecord::getOrderId).filter(java.util.Objects::nonNull).distinct().count(),
                 null,
                 failed.stream().map(ScanRecord::getScanTime).filter(java.util.Objects::nonNull).max(LocalDateTime::compareTo).orElse(LocalDateTime.now()),
-                "异常扫码在多个订单和工序重复出现，说明执行标准与现场校验存在缺口"
+                "异常扫码在多个订单和工序重复出现，说明执行标准与现场校验存在缺口",
+                failed.stream().map(ScanRecord::getOrderNo).filter(java.util.Objects::nonNull).distinct().collect(Collectors.joining(","))
         ));
     }
 
@@ -156,7 +160,8 @@ public class PainPointAggregationOrchestrator {
                 (int) unsettledCount,
                 null,
                 LocalDateTime.now(),
-                "已完工未结算扫码记录占比偏高，且租户反馈倾向优先保障回款节奏"
+                "已完工未结算扫码记录占比偏高，且租户反馈倾向优先保障回款节奏",
+                scanRecords.stream().filter(r -> "success".equalsIgnoreCase(r.getScanResult())).filter(r -> r.getPayrollSettlementId() == null || r.getPayrollSettlementId().isBlank()).map(ScanRecord::getOrderNo).filter(java.util.Objects::nonNull).distinct().collect(Collectors.joining(","))
         ));
     }
 
@@ -178,14 +183,15 @@ public class PainPointAggregationOrchestrator {
                 lowMaterialOrders.size(),
                 null,
                 lowMaterialOrders.stream().map(ProductionOrder::getUpdateTime).filter(java.util.Objects::nonNull).max(LocalDateTime::compareTo).orElse(LocalDateTime.now()),
-                "多张订单物料到位率持续偏低，说明采购与开工节奏匹配不足"
+                "多张订单物料到位率持续偏低，说明采购与开工节奏匹配不足",
+                lowMaterialOrders.stream().map(ProductionOrder::getOrderNo).filter(java.util.Objects::nonNull).distinct().collect(Collectors.joining(","))
         ));
     }
 
     private IntelligencePainPoint buildPainPoint(Long tenantId, String painCode, String painName, String painLevel,
                                                  String businessDomain, int triggerCount, int affectedOrderCount,
                                                  BigDecimal affectedAmount, LocalDateTime latestTriggerTime,
-                                                 String rootReasonSummary) {
+                                                 String rootReasonSummary, String affectedOrderNos) {
         IntelligencePainPoint entity = new IntelligencePainPoint();
         entity.setTenantId(tenantId);
         entity.setPainCode(painCode);
@@ -197,6 +203,7 @@ public class PainPointAggregationOrchestrator {
         entity.setAffectedAmount(affectedAmount);
         entity.setLatestTriggerTime(latestTriggerTime);
         entity.setRootReasonSummary(rootReasonSummary);
+        entity.setAffectedOrderNos(affectedOrderNos);
         entity.setCurrentStatus("OPEN");
         entity.setCreateTime(LocalDateTime.now());
         entity.setUpdateTime(LocalDateTime.now());
