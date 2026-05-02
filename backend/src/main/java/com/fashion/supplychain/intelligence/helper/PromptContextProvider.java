@@ -44,6 +44,20 @@ public class PromptContextProvider {
     @Autowired(required = false) private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired(required = false) private PatrolClosedLoopOrchestrator patrolClosedLoopOrchestrator;
     @Autowired(required = false) private IntelligenceSignalOrchestrator intelligenceSignalOrchestrator;
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService;
+
+    /**
+     * 系统操作指南类查询关键词 — 命中时注入知识库内容到系统提示词，
+     * 确保小云即使不调用 tool_knowledge_search 也能回答基础操作问题。
+     */
+    private static final java.util.Set<String> SYSTEM_GUIDE_KEYWORDS = java.util.Set.of(
+        "怎么下单", "如何建单", "下单方式", "如何创建订单", "怎么创建订单",
+        "如何扫码", "怎么扫码", "扫码流程",
+        "如何结算", "怎么结算", "工资结算",
+        "如何入库", "怎么入库", "质检入库",
+        "如何使用", "怎么用", "操作指南", "新手教程"
+    );
 
     public String buildIntelligenceContext() {
         try {
@@ -145,6 +159,45 @@ public class PromptContextProvider {
     }
 
     public String buildRagContext(Long tenantId, String userMessage) {
+        StringBuilder result = new StringBuilder();
+        boolean hasContent = false;
+
+        // ── 路径1：知识库（系统操作指南）──
+        // 当用户问"怎么下单""如何建单"等操作问题，直接将知识库内容注入系统提示词，
+        // 确保小云不依赖 LLM 主动调用 tool_knowledge_search 也能回答基础操作问题。
+        if (userMessage != null && !userMessage.isBlank() && knowledgeBaseService != null) {
+            boolean isSystemGuideQuery = SYSTEM_GUIDE_KEYWORDS.stream()
+                    .anyMatch(kw -> userMessage.contains(kw));
+            if (isSystemGuideQuery) {
+                try {
+                    com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.KnowledgeBase> kbQw =
+                            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.KnowledgeBase>()
+                                    .eq("delete_flag", 0)
+                                    .in("category", java.util.List.of("system_guide", "sop"))
+                                    .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId))
+                                    .last("LIMIT 3");
+                    java.util.List<com.fashion.supplychain.intelligence.entity.KnowledgeBase> kbList =
+                            knowledgeBaseService.list(kbQw);
+                    if (kbList != null && !kbList.isEmpty()) {
+                        result.append("【系统操作知识库（已预加载）】\n");
+                        for (com.fashion.supplychain.intelligence.entity.KnowledgeBase kb : kbList) {
+                            String summary = kb.getContent();
+                            if (summary != null && summary.length() > 600) {
+                                summary = summary.substring(0, 600) + "…";
+                            }
+                            result.append("--- ").append(kb.getTitle()).append(" ---\n")
+                                    .append(summary).append("\n\n");
+                        }
+                        result.append("（以上为系统内置操作指南，可直接据此回答。如需更详细内容，调用 tool_knowledge_search。）\n\n");
+                        hasContent = true;
+                    }
+                } catch (Exception e) {
+                    log.debug("[AiAgent-RAG] 知识库预注入跳过: {}", e.getMessage());
+                }
+            }
+        }
+
+        // ── 路径2：记忆案例（历史经验）──
         try {
             if (userMessage != null && !userMessage.isBlank()) {
                 IntelligenceMemoryResponse ragResult =
@@ -156,7 +209,7 @@ public class PromptContextProvider {
                             .collect(Collectors.toList());
                     if (!relevant.isEmpty()) {
                         StringBuilder rag = new StringBuilder();
-                        rag.append("【混合检索 RAG — 相关历史经验参考（融合分≥0.45）】\n");
+                        rag.append("【混合检索 RAG — 相关历史经验参考（融合分≥").append(ragSimilarityThreshold).append("）】\n");
                         for (int ri = 0; ri < relevant.size(); ri++) {
                             IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
                             String c = item.getContent();
@@ -171,15 +224,19 @@ public class PromptContextProvider {
                                     c != null ? c : ""));
                         }
                         rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
-                        log.debug("[AiAgent-RAG] 本次问题混合检索到 {} 条相关经验", relevant.size());
-                        return rag.toString();
+                        result.append(rag);
+                        hasContent = true;
                     }
                 }
             }
         } catch (Exception e) {
-            log.debug("[AiAgent-RAG] 混合检索跳过（Qdrant 未启用或记忆链失败）: {}", e.getMessage());
+            log.debug("[AiAgent-RAG] 混合检索跳过: {}", e.getMessage());
         }
-        return "【知识库检索】（检索失败，请勿编造知识库内容，如需查询请调用工具）\n";
+
+        if (!hasContent) {
+            return "【知识库检索】（检索失败，请勿编造知识库内容，如需查询请调用 tool_knowledge_search）\n";
+        }
+        return result.toString();
     }
 
     public String buildUserBehaviorHint() {
