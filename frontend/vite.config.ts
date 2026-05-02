@@ -44,7 +44,7 @@ export default defineConfig({
           if (id.includes('node_modules/')) {
             if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
             if (id.includes('exceljs/')) return 'vendor-exceljs';
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) return 'vendor-react';
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/') || id.includes('react-virtuoso')) return 'vendor-react';
             if (id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')) return 'vendor-antd';
             if (id.includes('@ant-design/charts') || id.includes('@antv/')) return 'vendor-antv-charts';
             if (id.includes('react-router') || id.includes('@remix-run/')) return 'vendor-router';
