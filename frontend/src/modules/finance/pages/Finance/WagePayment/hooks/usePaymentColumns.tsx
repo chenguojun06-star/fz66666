@@ -97,9 +97,9 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'payee',
         width: 160,
         render: (_: unknown, r: PayableItem) => (
-          <Space orientation="vertical" size={0}>
+          <Space size={4}>
+            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 11, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
             <span style={{ fontWeight: 500 }}>{r.payeeName}</span>
-            <Tag style={{ fontSize: 11 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂/供应商'}</Tag>
           </Space>
         ),
       },
@@ -200,9 +200,9 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'payee',
         width: 140,
         render: (_: unknown, r: WagePayment) => (
-          <Space orientation="vertical" size={0}>
+          <Space size={4}>
+            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 11, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
             <span>{r.payeeName}</span>
-            <Tag style={{ fontSize: 11 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
           </Space>
         ),
       },
