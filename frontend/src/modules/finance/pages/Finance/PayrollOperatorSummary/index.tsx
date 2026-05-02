@@ -48,7 +48,7 @@ const PayrollOperatorSummary: React.FC = () => {
             title: '订单号',
             dataIndex: 'orderNo',
             key: 'orderNo',
-            width: 160,
+            width: 150,
         },
         {
             title: '款号',
@@ -60,11 +60,19 @@ const PayrollOperatorSummary: React.FC = () => {
             title: '工厂',
             dataIndex: 'factoryName',
             key: 'factoryName',
-            width: 180,
+            width: 220,
             render: (_text: string, record: any) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
-                    <span>{record.factoryName || '-'}</span>
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
+                        <span>{record.factoryName || '-'}</span>
+                    </div>
+                    {(record.orgPath || record.parentOrgUnitName) &&
+                     (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
+                        <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+                            {record.orgPath || record.parentOrgUnitName}
+                        </div>
+                    ) : null}
                 </div>
             ),
         },
@@ -72,7 +80,7 @@ const PayrollOperatorSummary: React.FC = () => {
             title: '状态',
             dataIndex: 'status',
             key: 'status',
-            width: 90,
+            width: 100,
             render: (status: string) => {
                 const info = statusMap[status] || { text: status || '-', color: 'var(--neutral-text-secondary)' };
                 return (
@@ -86,7 +94,7 @@ const PayrollOperatorSummary: React.FC = () => {
             title: '完成时间',
             dataIndex: 'completeTime',
             key: 'completeTime',
-            width: 150,
+            width: 160,
             render: (val: string) => val ? val.replace('T', ' ').slice(0, 16) : '-',
         },
         {
@@ -100,79 +108,65 @@ const PayrollOperatorSummary: React.FC = () => {
             title: '下单数',
             dataIndex: 'orderQuantity',
             key: 'orderQuantity',
-            width: 90,
+            width: 100,
             align: 'right' as const,
-            render: (val: number) => val != null ? val.toLocaleString() : '-',
+            render: (val: number) => val?.toLocaleString() || '-',
         },
         {
             title: '入库数',
             dataIndex: 'warehousedQuantity',
             key: 'warehousedQuantity',
-            width: 90,
+            width: 100,
             align: 'right' as const,
-            render: (val: number) => val != null ? val.toLocaleString() : '-',
+            render: (val: number) => val?.toLocaleString() || '-',
         },
         {
             title: '次品数',
             dataIndex: 'defectQuantity',
             key: 'defectQuantity',
-            width: 90,
+            width: 100,
             align: 'right' as const,
             render: (val: number) => (
                 <span style={{ color: val > 0 ? 'var(--color-danger)' : '#666' }}>
-                    {val != null ? val.toLocaleString() : '-'}
+                    {val?.toLocaleString() || '-'}
                 </span>
+            ),
+        },
+        {
+            title: (<Tooltip title="下单时锁定的加工单价"><span>下单锁定单价</span></Tooltip>),
+            dataIndex: 'styleFinalPrice',
+            key: 'styleFinalPrice',
+            width: 150,
+            align: 'right' as const,
+            render: (val: number) => (
+                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{val?.toFixed(2) || '0.00'}</span>
             ),
         },
         {
             title: (<Tooltip title="面辅料采购总成本（状态：已收货/已完成）"><span>面辅料成本</span></Tooltip>),
             dataIndex: 'materialCost',
             key: 'materialCost',
-            width: 120,
+            width: 130,
             align: 'right' as const,
-            render: (val: number) => `¥${(val ?? 0).toFixed(2)}`,
-        },
-        {
-            title: (<Tooltip title="物料采购单价 = 面辅料成本 ÷ 入库数"><span>物料单价</span></Tooltip>),
-            key: 'materialUnitCost',
-            width: 100,
-            align: 'right' as const,
-            render: (_: unknown, record: any) => {
-                const qty = Number(record.warehousedQuantity) || 0;
-                const cost = Number(record.materialCost) || 0;
-                if (qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
-                return `¥${(cost / qty).toFixed(2)}`;
-            },
+            render: (val: number) => `¥${val?.toFixed(2) || '0.00'}`,
         },
         {
             title: (<Tooltip title="生产过程中工序扫码成本总计"><span>生产成本</span></Tooltip>),
             dataIndex: 'productionCost',
             key: 'productionCost',
-            width: 110,
+            width: 120,
             align: 'right' as const,
-            render: (val: number) => `¥${(val ?? 0).toFixed(2)}`,
-        },
-        {
-            title: (<Tooltip title="整件衣服车缝单价 = 生产成本 ÷ 入库数"><span>车缝单价</span></Tooltip>),
-            key: 'sewingUnitCost',
-            width: 100,
-            align: 'right' as const,
-            render: (_: unknown, record: any) => {
-                const qty = Number(record.warehousedQuantity) || 0;
-                const cost = Number(record.productionCost) || 0;
-                if (qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
-                return `¥${(cost / qty).toFixed(2)}`;
-            },
+            render: (val: number) => `¥${val?.toFixed(2) || '0.00'}`,
         },
         {
             title: (<Tooltip title="次品报废损失 = 次品数 × 单件成本"><span>报废损失</span></Tooltip>),
             dataIndex: 'defectLoss',
             key: 'defectLoss',
-            width: 110,
+            width: 120,
             align: 'right' as const,
             render: (val: number) => (
                 <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
-                    {val > 0 ? '-' : ''}¥{(val ?? 0).toFixed(2)}
+                    {val > 0 ? '-' : ''}¥{val?.toFixed(2) || '0.00'}
                 </span>
             ),
         },
@@ -180,10 +174,34 @@ const PayrollOperatorSummary: React.FC = () => {
             title: '总金额',
             dataIndex: 'totalAmount',
             key: 'totalAmount',
-            width: 120,
+            width: 130,
             align: 'right' as const,
             render: (val: number) => (
-                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{(val ?? 0).toFixed(2)}</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{val?.toFixed(2) || '0.00'}</span>
+            ),
+        },
+        {
+            title: '利润',
+            dataIndex: 'profit',
+            key: 'profit',
+            width: 130,
+            align: 'right' as const,
+            render: (val: number) => (
+                <span style={{ fontWeight: 600, color: val >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                    ¥{val?.toFixed(2) || '0.00'}
+                </span>
+            ),
+        },
+        {
+            title: '利润率',
+            dataIndex: 'profitMargin',
+            key: 'profitMargin',
+            width: 100,
+            align: 'right' as const,
+            render: (val: number) => (
+                <span style={{ fontWeight: 600, color: val >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                    {val !== null && val !== undefined ? `${val.toFixed(2)}%` : '-'}
+                </span>
             ),
         },
     ], []);
