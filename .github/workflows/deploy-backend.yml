@@ -28,7 +28,7 @@ jobs:
         working-directory: ${{ env.BACKEND_DIR }}
 
       - name: Login to WeChat Cloud Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ccr.ccs.tencentyun.com
           username: ${{ secrets.TCR_USERNAME }}
