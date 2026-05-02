@@ -47,10 +47,10 @@ export default defineConfig({
           if (id.includes('node_modules/')) {
             if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
             if (id.includes('exceljs/')) return 'vendor-exceljs';
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) return 'vendor-react';
-            if (id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')
-                || id.includes('clsx/')) return 'vendor-antd';
-            if (id.includes('@ant-design/charts') || id.includes('@antv/')) return 'vendor-antv-charts';
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')
+                || id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')
+                || id.includes('clsx/')) return 'vendor-react-antd';
+            if (id.includes('@antv/')) return 'vendor-antv';
             if (id.includes('react-router') || id.includes('@remix-run/')) return 'vendor-router';
             if (id.includes('dayjs/')) return 'vendor-dayjs';
             if (id.includes('axios/')) return 'vendor-axios';
