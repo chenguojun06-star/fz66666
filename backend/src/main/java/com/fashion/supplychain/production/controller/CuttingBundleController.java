@@ -82,8 +82,12 @@ public class CuttingBundleController {
         return Result.success(cuttingBundleSplitTransferOrchestrator.rollbackSplit(request));
     }
 
-    @GetMapping("/by-code/{qrCode}")
-    public Result<?> getByCode(@PathVariable String qrCode) {
+    @PostMapping("/by-code")
+    public Result<?> getByCode(@RequestBody Map<String, String> body) {
+        String qrCode = body != null ? body.get("qrCode") : null;
+        if (qrCode == null || qrCode.isEmpty()) {
+            return Result.fail("qrCode 不能为空");
+        }
         return Result.success(cuttingBundleOrchestrator.getByCode(qrCode));
     }
 

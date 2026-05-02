@@ -110,7 +110,7 @@ Page({
       const bundle = await api.production.getBundleByCode(qrCode);
       const data = (bundle && bundle.data) || bundle || {};
       if (!data || !data.id) {
-        showTip('未找到该菲号，请确认二维码正确');
+        showTip('未找到该菲号，请确认扫的是菲号二维码');
         this.setData({ loading: false });
         return;
       }
@@ -124,12 +124,16 @@ Page({
       });
       this.loadWorkers();
       this.fetchProcesses(orderNo);
-      if (!data.bundleNo && !data.bundleLabel) {
-        showTip('该码可能不是菲号');
-      }
     } catch (e) {
       console.error('[bundle-split] scanBundle fail', e);
-      showTip('扫码识别失败');
+      var msg = '扫码识别失败，请重试';
+      if (e && e.message) {
+        if (e.message.indexOf('不存在') >= 0) msg = '未找到该菲号，请确认二维码正确';
+        else if (e.message.indexOf('400') >= 0 || e.message.indexOf('参数') >= 0) msg = '二维码格式不正确，请确认扫的是菲号';
+        else if (e.message.indexOf('网络') >= 0 || e.message.indexOf('timeout') >= 0) msg = '网络连接失败，请检查网络后重试';
+        else msg = e.message.length > 30 ? '扫码识别失败' : e.message;
+      }
+      showTip(msg);
       this.setData({ loading: false });
     }
   },
@@ -152,7 +156,9 @@ Page({
       if (!list.length) showTip('该订单暂无菲号');
     } catch (e) {
       console.error('[bundle-split] fetch fail', e);
-      showTip('加载失败');
+      var msg = '加载菲号列表失败';
+      if (e && e.message) msg = e.message.length > 20 ? msg : e.message;
+      showTip(msg);
       this.setData({ loading: false });
     }
   },
@@ -274,7 +280,13 @@ Page({
       this.fetchBundles();
     } catch (e) {
       console.error('[bundle-split] split fail', e);
-      showTip('拆分失败');
+      var msg = '拆分失败，请重试';
+      if (e && e.message) {
+        if (e.message.indexOf('工序') >= 0) msg = e.message;
+        else if (e.message.indexOf('数量') >= 0) msg = e.message;
+        else if (e.message.length <= 25) msg = e.message;
+      }
+      showTip(msg);
       this.setData({ submitting: false });
     }
   },

@@ -47,12 +47,11 @@
   justify-content: center;
   gap: 8rpx;
   height: 88rpx;
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-white);
   border-radius: 20rpx;
   font-size: var(--font-size-lg);
   font-weight: 600;
-  box-shadow: 0 4px 16px rgba(255,107,53,0.25);
 }
 .scan-bundle-btn-hover { opacity: 0.85; }
 .scan-icon { font-size: 40rpx; }

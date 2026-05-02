@@ -32,6 +32,8 @@ public class SmartRemarkAgent {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
     private static final String AI_REMARK_PREFIX = "[AI巡检]";
     private static final int URGENT_THRESHOLD = 60;
+    private static final int MAX_REMARKS_LENGTH = 4000;
+    private static final int MAX_AI_REMARK_ENTRIES = 10;
     private static final Set<String> TERMINAL_STATUSES =
             Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
@@ -264,6 +266,9 @@ public class SmartRemarkAgent {
         } else {
             newRemarks = existing + "\n" + remark;
         }
+        if (newRemarks.length() > MAX_REMARKS_LENGTH) {
+            newRemarks = truncateRemarks(newRemarks);
+        }
         order.setRemarks(newRemarks);
         productionOrderService.updateById(order);
 
@@ -393,5 +398,32 @@ public class SmartRemarkAgent {
         if (t == null) return true;
         String s = t.getStatus();
         return "DISABLED".equalsIgnoreCase(s) || "SUSPENDED".equalsIgnoreCase(s);
+    }
+
+    private String truncateRemarks(String remarks) {
+        String[] lines = remarks.split("\n");
+        List<String> aiLines = new ArrayList<>();
+        List<String> otherLines = new ArrayList<>();
+        for (String line : lines) {
+            if (line.startsWith(AI_REMARK_PREFIX)) {
+                aiLines.add(line);
+            } else {
+                otherLines.add(line);
+            }
+        }
+        if (aiLines.size() > MAX_AI_REMARK_ENTRIES) {
+            aiLines = aiLines.subList(aiLines.size() - MAX_AI_REMARK_ENTRIES, aiLines.size());
+        }
+        List<String> kept = new ArrayList<>(otherLines);
+        kept.addAll(aiLines);
+        String result = String.join("\n", kept);
+        if (result.length() > MAX_REMARKS_LENGTH) {
+            result = result.substring(result.length() - MAX_REMARKS_LENGTH);
+            int firstNewline = result.indexOf('\n');
+            if (firstNewline >= 0) {
+                result = result.substring(firstNewline + 1);
+            }
+        }
+        return result;
     }
 }

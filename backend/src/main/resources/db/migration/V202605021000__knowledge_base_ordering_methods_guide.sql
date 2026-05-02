@@ -226,7 +226,6 @@ INSERT IGNORE INTO `t_knowledge_base` (`id`,`tenant_id`,`category`,`title`,`cont
 
 对于快速建单推荐用 **AI建单**（说句话就行）或 **裁剪下单**（裁剪模块直达）。',
 
-'下单 方式 创建订单 建单 AI 裁剪 PC端 OpenAPI', 'system'),
+'下单 方式 创建订单 建单 AI 裁剪 PC端 OpenAPI', 'system');
 
--- 扩展知识库总量 70 → 75
 SELECT CONCAT('下单方式知识库条目已创建：kb-guide-007/kb-guide-008/kb-sop-003/kb-faq-029，总计75条知识库记录') AS result;

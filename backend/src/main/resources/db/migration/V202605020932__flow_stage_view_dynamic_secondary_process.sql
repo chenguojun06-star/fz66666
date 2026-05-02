@@ -112,7 +112,6 @@ SELECT
              OR EXISTS (
                SELECT 1 FROM t_process_parent_mapping pm
                WHERE pm.parent_node = '二次工艺'
-                 AND pm.delete_flag = 0
                  AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')
              ))
       THEN sr.scan_time END) AS secondary_process_start_time,
@@ -122,7 +121,6 @@ SELECT
              OR EXISTS (
                SELECT 1 FROM t_process_parent_mapping pm
                WHERE pm.parent_node = '二次工艺'
-                 AND pm.delete_flag = 0
                  AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')
              ))
       THEN sr.scan_time END) AS secondary_process_end_time,
@@ -133,7 +131,6 @@ SELECT
              OR EXISTS (
                SELECT 1 FROM t_process_parent_mapping pm
                WHERE pm.parent_node = '二次工艺'
-                 AND pm.delete_flag = 0
                  AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')
              ))
       THEN CONVERT(CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '') ) USING binary) END),
@@ -145,7 +142,6 @@ SELECT
              OR EXISTS (
                SELECT 1 FROM t_process_parent_mapping pm
                WHERE pm.parent_node = '二次工艺'
-                 AND pm.delete_flag = 0
                  AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')
              ))
       THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS secondary_process_quantity,

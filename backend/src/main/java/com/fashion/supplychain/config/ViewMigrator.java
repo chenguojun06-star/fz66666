@@ -222,29 +222,25 @@ public class ViewMigrator implements ApplicationRunner {
                   MIN(CASE WHEN sr.scan_type = 'production'
                         AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
-                             OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%')
+                             OR EXISTS (SELECT 1 FROM t_process_parent_mapping pm WHERE pm.parent_node = '二次工艺' AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')))
                       THEN sr.scan_time END) AS secondary_process_start_time,
                   MAX(CASE WHEN sr.scan_type = 'production'
                         AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
-                             OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%')
+                             OR EXISTS (SELECT 1 FROM t_process_parent_mapping pm WHERE pm.parent_node = '二次工艺' AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')))
                       THEN sr.scan_time END) AS secondary_process_end_time,
                   SUBSTRING_INDEX(
                     MAX(CASE WHEN sr.scan_type = 'production'
                         AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
-                             OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%')
+                             OR EXISTS (SELECT 1 FROM t_process_parent_mapping pm WHERE pm.parent_node = '二次工艺' AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')))
                       THEN CONVERT(CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '') ) USING binary) END),
                     '|', -1
                   ) AS secondary_process_operator_name,
                   SUM(CASE WHEN sr.scan_type = 'production'
                         AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
-                             OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%')
+                             OR EXISTS (SELECT 1 FROM t_process_parent_mapping pm WHERE pm.parent_node = '二次工艺' AND TRIM(sr.process_name) LIKE CONCAT('%', TRIM(pm.process_keyword), '%')))
                       THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS secondary_process_quantity,
                   -- ★ packaging_* 列实际存「尾部」父节点聚合（与 ironing_* 值相同）
                   MIN(CASE WHEN sr.scan_type = 'production'
