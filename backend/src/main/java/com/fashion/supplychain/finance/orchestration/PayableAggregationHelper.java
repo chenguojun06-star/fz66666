@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -39,8 +38,7 @@ public class PayableAggregationHelper {
     private final WagePaymentService wagePaymentService;
     private final BillAggregationService billAggregationService;
     private final WagePaymentCallbackHelper callbackHelper;
-
-    private static final AtomicLong PAYMENT_SEQ = new AtomicLong(1);
+    private final PaymentNoGenerator paymentNoGenerator;
 
     public List<PayableItemDTO> listPendingPayables(String bizType) {
         TenantAssert.assertTenantContext();
@@ -104,9 +102,7 @@ public class PayableAggregationHelper {
     }
 
     String generatePaymentNo() {
-        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long seq = PAYMENT_SEQ.getAndIncrement();
-        return String.format("WP%s%06d", datePart, seq);
+        return paymentNoGenerator.generate();
     }
 
     private List<PayableItemDTO> queryReconciliationPayables(Long tenantId) {
@@ -182,7 +178,8 @@ public class PayableAggregationHelper {
                     .bizId(wp.getBizId())
                     .bizNo(wp.getPaymentNo())
                     .payeeName(wp.getPayeeName())
-                    .payeeType("PERSON")
+                    .payeeId(wp.getPayeeId())
+                    .payeeType("WORKER")
                     .amount(wp.getAmount())
                     .sourceStatus("pending")
                     .description(wp.getPaymentRemark())

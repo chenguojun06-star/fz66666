@@ -19,9 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Service
@@ -34,8 +32,7 @@ public class WagePaymentOrchestrator {
     private final WagePaymentCallbackHelper callbackHelper;
     private final PayableAggregationHelper payableAggregationHelper;
     private final WagePaymentDashboardHelper dashboardHelper;
-
-    private static final AtomicLong PAYMENT_SEQ = new AtomicLong(1);
+    private final PaymentNoGenerator paymentNoGenerator;
 
     public List<PaymentAccount> listAccounts(String ownerType, String ownerId) {
         TenantAssert.assertTenantContext();
@@ -382,9 +379,7 @@ public class WagePaymentOrchestrator {
     }
 
     private String generatePaymentNo() {
-        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long seq = PAYMENT_SEQ.getAndIncrement();
-        return String.format("WP%s%06d", datePart, seq);
+        return paymentNoGenerator.generate();
     }
 
     @Data

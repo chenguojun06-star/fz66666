@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Form } from 'antd';
 import {
   wagePaymentApi,
   type PaymentAccount,
   type PayableItem,
+  type PayeeSearchResult,
 } from '@/services/finance/wagePaymentApi';
 
 interface UsePayModalOptions {
@@ -22,6 +23,10 @@ export function usePayModal({ msg, fetchPayables, fetchPayments, reportSmartErro
   const [paySubmitting, setPaySubmitting] = useState(false);
   const [currentPayable, setCurrentPayable] = useState<PayableItem | null>(null);
   const hasOpenedRef = useRef(false);
+
+  const [payeeOptions, setPayeeOptions] = useState<PayeeSearchResult[]>([]);
+  const [payeeSearching, setPayeeSearching] = useState(false);
+  const payeeSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!payModalOpen) {
@@ -61,6 +66,7 @@ export function usePayModal({ msg, fetchPayables, fetchPayments, reportSmartErro
     setSelectedMethod('');
     setSelectedAccount(null);
     setPayAccounts([]);
+    setPayeeOptions([]);
     setCurrentPayable(payable ?? null);
 
     if (payable) {
@@ -68,6 +74,45 @@ export function usePayModal({ msg, fetchPayables, fetchPayments, reportSmartErro
     }
     setPayModalOpen(true);
   };
+
+  const handlePayeeSearch = useCallback((keyword: string) => {
+    if (payeeSearchTimerRef.current) {
+      clearTimeout(payeeSearchTimerRef.current);
+    }
+    if (!keyword || keyword.trim().length < 1) {
+      setPayeeOptions([]);
+      return;
+    }
+    const payeeType = payForm.getFieldValue('payeeType');
+    payeeSearchTimerRef.current = setTimeout(async () => {
+      setPayeeSearching(true);
+      try {
+        const res: any = await wagePaymentApi.searchPayee(keyword.trim(), payeeType || undefined);
+        setPayeeOptions(res?.data ?? res ?? []);
+      } catch {
+        setPayeeOptions([]);
+      } finally {
+        setPayeeSearching(false);
+      }
+    }, 300);
+  }, [payForm]);
+
+  const handlePayeeSelect = useCallback((value: string) => {
+    const selected = payeeOptions.find(p => p.id === value);
+    if (selected) {
+      payForm.setFieldsValue({
+        payeeId: selected.id,
+        payeeType: selected.payeeType,
+        payeeName: selected.name,
+      });
+      loadPayeeAccounts(selected.payeeType, selected.id);
+    }
+  }, [payeeOptions, payForm]);
+
+  const handlePayeeTypeChange = useCallback(() => {
+    payForm.setFieldsValue({ payeeId: undefined, payeeName: undefined });
+    setPayeeOptions([]);
+  }, [payForm]);
 
   const handlePayeeChange = () => {
     const payeeType = payForm.getFieldValue('payeeType');
@@ -133,8 +178,13 @@ export function usePayModal({ msg, fetchPayables, fetchPayments, reportSmartErro
     selectedMethod, selectedAccount,
     paySubmitting,
     currentPayable,
+    payeeOptions,
+    payeeSearching,
     openPayModal,
     handlePayeeChange,
+    handlePayeeSearch,
+    handlePayeeSelect,
+    handlePayeeTypeChange,
     handleMethodSelect,
     handlePaySubmit,
   };

@@ -122,6 +122,7 @@ export const BIZ_TYPE_MAP: Record<string, { text: string; color: string }> = {
   PAYROLL_SETTLEMENT: { text: '工资结算', color: 'blue' },
   ORDER_SETTLEMENT: { text: '订单结算', color: 'cyan' },
   RECONCILIATION: { text: '工厂对账', color: 'orange' },
+  material_reconciliation: { text: '工厂对账', color: 'orange' },
   REIMBURSEMENT: { text: '费用报销', color: 'purple' },
   BILL_RECEIVABLE: { text: '应收账款', color: 'green' },
   BILL_PAYABLE: { text: '应付账款', color: 'volcano' },
@@ -154,6 +155,14 @@ export const PAYMENT_STATUS_MAP: Record<string, { text: string; color: string }>
   refunded: { text: '已退回', color: 'volcano' },
 };
 
+export interface PayeeSearchResult {
+  id: string;
+  payeeType: 'WORKER' | 'FACTORY';
+  name: string;
+  phone?: string;
+  label: string;
+}
+
 export const OWNER_TYPE_OPTIONS = [
   { label: '员工', value: 'WORKER' },
   { label: '工厂', value: 'FACTORY' },
@@ -164,6 +173,10 @@ export const OWNER_TYPE_OPTIONS = [
 // ============================================================
 
 export const wagePaymentApi = {
+  // ---- 收款方搜索 ----
+  searchPayee: (keyword: string, payeeType?: string) =>
+    api.post('/finance/payee-search', { keyword, payeeType }),
+
   // ---- 收款账户 ----
   listAccounts: (ownerType: string, ownerId: string) =>
     api.post('/finance/payment-accounts/list', { ownerType, ownerId }),

@@ -10,7 +10,9 @@ import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.Wag
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.WagePaymentRequest;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.PayableItemDTO;
 import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.FactoryService;
+import com.fashion.supplychain.system.service.UserService;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,6 +41,9 @@ public class WagePaymentController {
 
     @Autowired
     private FactoryService factoryService;
+
+    @Autowired
+    private UserService userService;
 
     // ============================================================
     // 一、收款账户管理
@@ -123,10 +128,15 @@ public class WagePaymentController {
             return Result.fail("支付金额必须大于0");
         }
 
+        String validatedName = validatePayee(request.getPayeeType(), request.getPayeeId(), request.getPayeeName());
+        if (validatedName == null) {
+            return Result.fail("收款方不存在，请从系统人员/工厂中选择");
+        }
+
         WagePaymentRequest paymentRequest = WagePaymentRequest.builder()
             .payeeType(request.getPayeeType())
             .payeeId(request.getPayeeId())
-            .payeeName(request.getPayeeName())
+            .payeeName(validatedName)
             .paymentAccountId(request.getPaymentAccountId())
             .paymentMethod(request.getPaymentMethod())
             .amount(request.getAmount())
@@ -264,10 +274,15 @@ public class WagePaymentController {
             return Result.fail("支付金额必须大于0");
         }
 
+        String validatedName = validatePayee(request.getPayeeType(), request.getPayeeId(), request.getPayeeName());
+        if (validatedName == null) {
+            return Result.fail("收款方不存在，请从系统人员/工厂中选择");
+        }
+
         WagePaymentRequest paymentRequest = WagePaymentRequest.builder()
             .payeeType(request.getPayeeType())
             .payeeId(request.getPayeeId())
-            .payeeName(request.getPayeeName())
+            .payeeName(validatedName)
             .paymentAccountId(request.getPaymentAccountId())
             .paymentMethod(request.getPaymentMethod())
             .amount(request.getAmount())
@@ -380,6 +395,80 @@ public class WagePaymentController {
     }
 
     // ============================================================
+    // 三.五、收款方搜索
+    // ============================================================
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/payee-search")
+    public Result<java.util.List<PayeeSearchResult>> searchPayee(@RequestBody PayeeSearchRequest request) {
+        if (request.getKeyword() == null || request.getKeyword().trim().isEmpty()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+        Long tenantId = UserContext.tenantId();
+        java.util.List<PayeeSearchResult> results = new java.util.ArrayList<>();
+        String keyword = request.getKeyword().trim();
+
+        if (request.getPayeeType() == null || "WORKER".equals(request.getPayeeType())) {
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User> userQw =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            if (tenantId != null) userQw.eq("tenant_id", tenantId);
+            userQw.eq("status", "active")
+                  .and(w -> w.like("name", keyword).or().like("username", keyword).or().like("phone", keyword))
+                  .last("LIMIT 20");
+            for (User u : userService.list(userQw)) {
+                results.add(new PayeeSearchResult(
+                    String.valueOf(u.getId()), "WORKER",
+                    u.getName() != null ? u.getName() : u.getUsername(),
+                    u.getPhone(), "员工"
+                ));
+            }
+        }
+
+        if (request.getPayeeType() == null || "FACTORY".equals(request.getPayeeType())) {
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Factory> factoryQw =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            if (tenantId != null) factoryQw.eq("tenant_id", tenantId);
+            factoryQw.eq("delete_flag", 0)
+                     .and(w -> w.like("factory_name", keyword).or().like("contact_person", keyword).or().like("factory_code", keyword))
+                     .last("LIMIT 20");
+            for (Factory f : factoryService.list(factoryQw)) {
+                results.add(new PayeeSearchResult(
+                    f.getId(), "FACTORY",
+                    f.getFactoryName(),
+                    f.getContactPhone(), "工厂"
+                ));
+            }
+        }
+
+        return Result.success(results);
+    }
+
+    private String validatePayee(String payeeType, String payeeId, String payeeName) {
+        if (payeeType == null || payeeId == null) {
+            return null;
+        }
+        if ("WORKER".equals(payeeType)) {
+            try {
+                Long uid = Long.valueOf(payeeId);
+                User user = userService.getById(uid);
+                if (user != null) {
+                    return user.getName() != null ? user.getName() : user.getUsername();
+                }
+            } catch (NumberFormatException ignored) {
+            }
+            return null;
+        }
+        if ("FACTORY".equals(payeeType)) {
+            Factory factory = factoryService.getById(payeeId);
+            if (factory != null && factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
+                return factory.getFactoryName();
+            }
+            return null;
+        }
+        return payeeName;
+    }
+
+    // ============================================================
     // 四、请求DTO
     // ============================================================
 
@@ -463,5 +552,22 @@ public class WagePaymentController {
         private String bizId;
         /** 驳回原因 */
         private String reason;
+    }
+
+    @Data
+    public static class PayeeSearchRequest {
+        private String keyword;
+        private String payeeType;
+    }
+
+    @Data
+    @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
+    public static class PayeeSearchResult {
+        private String id;
+        private String payeeType;
+        private String name;
+        private String phone;
+        private String label;
     }
 }

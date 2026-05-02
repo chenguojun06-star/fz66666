@@ -35,8 +35,9 @@ public class WagePaymentCallbackHelper {
 
     public void callbackPaidUpstream(String bizType, String bizId) {
         Long tenantId = UserContext.tenantId();
+        String normalizedBizType = "material_reconciliation".equals(bizType) ? "RECONCILIATION" : bizType;
         try {
-            switch (bizType) {
+            switch (normalizedBizType) {
                 case "RECONCILIATION":
                     markReconciliationPaid(bizId, tenantId);
                     break;
@@ -56,7 +57,7 @@ public class WagePaymentCallbackHelper {
                 default:
                     log.warn("[付款中心] 未知业务类型: bizType={}", bizType);
             }
-            syncBillAggregationOnPaid(bizType, bizId);
+            syncBillAggregationOnPaid(normalizedBizType, bizId);
         } catch (Exception e) {
             log.error("[付款中心] 回写上游状态失败: bizType={}, bizId={}", bizType, bizId, e);
         }
@@ -66,8 +67,9 @@ public class WagePaymentCallbackHelper {
         if (payment == null || payment.getBizType() == null || payment.getBizId() == null) {
             return;
         }
+        String normalizedBizType = "material_reconciliation".equals(payment.getBizType()) ? "RECONCILIATION" : payment.getBizType();
         try {
-            switch (payment.getBizType()) {
+            switch (normalizedBizType) {
                 case "RECONCILIATION":
                     markReconciliationRefunded(payment.getBizId(), payment.getTenantId());
                     break;
@@ -83,15 +85,16 @@ public class WagePaymentCallbackHelper {
                 default:
                     log.warn("[工资支付] 退回: 未知业务类型 {}", payment.getBizType());
             }
-            syncBillAggregationOnRefund(payment.getBizType(), payment.getBizId());
+            syncBillAggregationOnRefund(normalizedBizType, payment.getBizId());
         } catch (Exception e) {
             log.error("[工资支付] 退回回写上游失败: bizType={}, bizId={}", payment.getBizType(), payment.getBizId(), e);
         }
     }
 
     public void callbackRejectUpstream(String bizType, String bizId, String reason) {
+        String normalizedBizType = "material_reconciliation".equals(bizType) ? "RECONCILIATION" : bizType;
         try {
-            switch (bizType) {
+            switch (normalizedBizType) {
                 case "RECONCILIATION":
                     markReconciliationRejected(bizId, reason);
                     break;

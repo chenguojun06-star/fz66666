@@ -459,24 +459,35 @@ const PaymentCenterPage: React.FC = () => {
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                     <Form.Item label="收款方类型" name="payeeType" rules={[{ required: true, message: '请选择收款方类型' }]}>
-                      <Select options={OWNER_TYPE_OPTIONS} onChange={pay.handlePayeeChange} placeholder="选择员工或工厂" />
+                      <Select options={OWNER_TYPE_OPTIONS} onChange={pay.handlePayeeTypeChange} placeholder="选择员工或工厂" />
                     </Form.Item>
-                    <Form.Item label="收款方ID" name="payeeId" rules={[{ required: true, message: '请输入收款方ID' }]}>
-                      <Input placeholder="员工/工厂ID" onBlur={pay.handlePayeeChange} />
-                    </Form.Item>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                    <Form.Item label="收款方名称" name="payeeName" rules={[{ required: true, message: '请输入收款方名称' }]}>
-                      <Input placeholder="姓名/工厂名" />
-                    </Form.Item>
-                    <Form.Item label="业务类型" name="bizType">
-                      <Select allowClear placeholder="可选">
-                        {BIZ_TYPE_OPTIONS.filter(o => o.value).map(o => (
-                          <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
+                    <Form.Item label="收款方" name="payeeId" rules={[{ required: true, message: '请搜索选择收款方' }]}>
+                      <Select
+                        showSearch
+                        filterOption={false}
+                        onSearch={pay.handlePayeeSearch}
+                        onChange={pay.handlePayeeSelect}
+                        loading={pay.payeeSearching}
+                        placeholder="输入姓名/工厂名搜索"
+                        notFoundContent={pay.payeeSearching ? '搜索中...' : '无匹配结果'}
+                      >
+                        {pay.payeeOptions.map(p => (
+                          <Select.Option key={p.id} value={p.id}>
+                            <span>{p.name}</span>
+                            <span style={{ color: '#999', marginLeft: 8, fontSize: 12 }}>[{p.label}]{p.phone ? ` ${p.phone}` : ''}</span>
+                          </Select.Option>
                         ))}
                       </Select>
                     </Form.Item>
                   </div>
+                  <Form.Item name="payeeName" hidden><Input /></Form.Item>
+                  <Form.Item label="业务类型" name="bizType">
+                    <Select allowClear placeholder="可选">
+                      {BIZ_TYPE_OPTIONS.filter(o => o.value).map(o => (
+                        <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
                 </>
               )}
 
