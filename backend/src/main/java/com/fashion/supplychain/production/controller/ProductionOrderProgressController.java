@@ -102,12 +102,16 @@ public class ProductionOrderProgressController {
         if (!StringUtils.hasText(targetId) && StringUtils.hasText(orderNo)) {
             TenantAssert.assertTenantContext();
             Long tenantId = UserContext.tenantId();
-            ProductionOrder order = productionOrderService.lambdaQuery()
+            String ctxFactoryId = UserContext.factoryId();
+            var query = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getOrderNo, orderNo.trim())
                     .eq(ProductionOrder::getTenantId, tenantId)
-                    .eq(ProductionOrder::getDeleteFlag, 0)
-                    .last("LIMIT 1")
-                    .one();
+                    .eq(ProductionOrder::getDeleteFlag, 0);
+            // 工厂账号只能重计算自己工厂的订单
+            if (StringUtils.hasText(ctxFactoryId)) {
+                query.eq(ProductionOrder::getFactoryId, ctxFactoryId);
+            }
+            ProductionOrder order = query.last("LIMIT 1").one();
             if (order != null) {
                 targetId = order.getId();
             }
@@ -115,6 +119,15 @@ public class ProductionOrderProgressController {
 
         if (!StringUtils.hasText(targetId)) {
             return Result.fail("缺少id或orderNo参数");
+        }
+
+        // 工厂账号再次校验订单归属
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            ProductionOrder checkOrder = productionOrderService.getById(targetId);
+            if (checkOrder == null || !ctxFactoryId.equals(checkOrder.getFactoryId())) {
+                return Result.fail("订单不存在或无权操作");
+            }
         }
 
         ProductionOrder updated = productionOrderService.recomputeProgressFromRecords(targetId);

@@ -99,7 +99,7 @@ public class CuttingTaskQueryHelper {
             CuttingTask::getBundledTime, CuttingTask::getCreateTime, CuttingTask::getUpdateTime,
             CuttingTask::getRemarks, CuttingTask::getExpectedShipDate,
             CuttingTask::getCreatorId, CuttingTask::getCreatorName, CuttingTask::getUpdaterId, CuttingTask::getUpdaterName,
-            CuttingTask::getTenantId);
+            CuttingTask::getTenantId, CuttingTask::getFactoryId, CuttingTask::getFactoryType);
         queryWrapper.apply("(production_order_id IS NULL OR production_order_id = '' OR production_order_id NOT IN (SELECT id FROM t_production_order WHERE delete_flag = 1 OR status = 'scrapped'))");
 
         if (StringUtils.hasText(orderNo)) {
@@ -116,31 +116,42 @@ public class CuttingTaskQueryHelper {
                 .eq(StringUtils.hasText(status), CuttingTask::getStatus, status)
                 .orderByDesc(CuttingTask::getCreateTime);
 
-        @SuppressWarnings("unchecked")
-        List<String> factoryOrderIds = (List<String>) params.get("_factoryOrderIds");
+        // 工厂账号隔离：优先使用裁剪任务级 factoryId（支持部分转单场景）
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
+        if (isFactoryAccount && StringUtils.hasText(ctxFactoryId)) {
+            // 裁剪任务级隔离：只显示 factory_id = 当前工厂 的任务
+            // 同时兼容订单级隔离（旧数据可能没有 factory_id）
+            queryWrapper.and(w -> w.eq(CuttingTask::getFactoryId, ctxFactoryId)
+                    .or().and(w2 -> w2.isNull(CuttingTask::getFactoryId)
+                            .or().eq(CuttingTask::getFactoryId, "")));
+        } else {
+            @SuppressWarnings("unchecked")
+            List<String> factoryOrderIds = (List<String>) params.get("_factoryOrderIds");
 
-        if (factoryOrderIds != null) {
-            if (factoryOrderIds.isEmpty()) {
-                return null;
+            if (factoryOrderIds != null) {
+                if (factoryOrderIds.isEmpty()) {
+                    return null;
+                }
+                queryWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
+            } else if (StringUtils.hasText(factoryType)) {
+                List<String> matchedOrderIds = productionOrderService.list(
+                        new LambdaQueryWrapper<ProductionOrder>()
+                                .select(ProductionOrder::getId)
+                                .eq(ProductionOrder::getFactoryType, factoryType)
+                                .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+                                .ne(ProductionOrder::getStatus, "scrapped"))
+                    .stream()
+                    .map(ProductionOrder::getId)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .distinct()
+                    .collect(Collectors.toList());
+                if (matchedOrderIds.isEmpty()) {
+                    return null;
+                }
+                queryWrapper.in(CuttingTask::getProductionOrderId, matchedOrderIds);
             }
-            queryWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
-        } else if (StringUtils.hasText(factoryType)) {
-            List<String> matchedOrderIds = productionOrderService.list(
-                    new LambdaQueryWrapper<ProductionOrder>()
-                            .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getFactoryType, factoryType)
-                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-                            .ne(ProductionOrder::getStatus, "scrapped"))
-                .stream()
-                .map(ProductionOrder::getId)
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .distinct()
-                .collect(Collectors.toList());
-            if (matchedOrderIds.isEmpty()) {
-                return null;
-            }
-            queryWrapper.in(CuttingTask::getProductionOrderId, matchedOrderIds);
         }
 
         return queryWrapper;

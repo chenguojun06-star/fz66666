@@ -1,10 +1,13 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -23,11 +26,32 @@ public class ProductionOrderOperationController {
     @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
 
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    /**
+     * 校验工厂账号是否有权操作该订单
+     */
+    private boolean assertFactoryOrderAccess(String orderId) {
+        String ctxFactoryId = UserContext.factoryId();
+        if (!StringUtils.hasText(ctxFactoryId)) {
+            return true; // 非工厂账号，跳过
+        }
+        ProductionOrder order = productionOrderService.getById(orderId);
+        if (order == null) {
+            return false;
+        }
+        return ctxFactoryId.equals(order.getFactoryId());
+    }
+
     /**
      * 报废订单
      */
     @PostMapping("/scrap")
     public Result<?> scrap(@Valid @RequestBody ScrapOrderRequest body) {
+        if (!assertFactoryOrderAccess(body.getId())) {
+            return Result.fail("无权操作：订单不属于当前工厂");
+        }
         productionOrderOrchestrator.scrapOrder(body.getId(), body.getRemark());
         return Result.successMessage("报废成功");
     }
@@ -37,6 +61,9 @@ public class ProductionOrderOperationController {
      */
     @PostMapping("/complete")
     public Result<?> complete(@Valid @RequestBody CompleteProductionRequest body) {
+        if (!assertFactoryOrderAccess(body.getId())) {
+            return Result.fail("无权操作：订单不属于当前工厂");
+        }
         productionOrderOrchestrator.completeProduction(body.getId(), body.getTolerancePercent());
         ProductionOrder detail = productionOrderOrchestrator.getDetailById(body.getId());
         return Result.success(detail);
@@ -48,6 +75,9 @@ public class ProductionOrderOperationController {
      */
     @PostMapping("/close")
     public Result<?> close(@Valid @RequestBody CloseOrderRequest body) {
+        if (!assertFactoryOrderAccess(body.getId())) {
+            return Result.fail("无权操作：订单不属于当前工厂");
+        }
         ProductionOrder updated = productionOrderOrchestrator.closeOrder(
             body.getId(), body.getSourceModule(), body.getRemark(),
             Boolean.TRUE.equals(body.getSpecialClose())
@@ -60,6 +90,9 @@ public class ProductionOrderOperationController {
      */
     @PostMapping("/delegate-process")
     public Result<?> delegateProcess(@Valid @RequestBody DelegateProcessRequest body) {
+        if (!assertFactoryOrderAccess(body.getOrderId())) {
+            return Result.fail("无权操作：订单不属于当前工厂");
+        }
         try {
             productionOrderOrchestrator.delegateProcess(
                 body.getOrderId(),

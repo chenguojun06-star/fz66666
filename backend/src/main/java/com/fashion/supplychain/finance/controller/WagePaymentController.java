@@ -56,6 +56,13 @@ public class WagePaymentController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/payment-accounts/list")
     public Result<List<PaymentAccount>> listAccounts(@RequestBody AccountQueryRequest request) {
+        // 工厂账号只能查看自己的收款账户
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            String ctxFactoryId = UserContext.factoryId();
+            if (ctxFactoryId != null && !ctxFactoryId.equals(request.getOwnerId())) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+        }
         List<PaymentAccount> accounts = wagePaymentOrchestrator.listAccounts(
             request.getOwnerType(), request.getOwnerId()
         );
@@ -212,6 +219,16 @@ public class WagePaymentController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/list")
     public Result<List<WagePayment>> listPayments(@RequestBody PaymentQueryRequest request) {
+        // 工厂账号只能查看自己作为收款方的支付记录
+        String ctxFactoryId = UserContext.factoryId();
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            if (ctxFactoryId == null) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            // 强制限定只查以当前工厂为收款方的记录
+            request.setPayeeType("FACTORY");
+            request.setPayeeId(ctxFactoryId);
+        }
         WagePaymentQuery query = WagePaymentQuery.builder()
             .payeeType(request.getPayeeType())
             .payeeId(request.getPayeeId())
@@ -249,6 +266,10 @@ public class WagePaymentController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/pending-payables")
     public Result<List<PayableItemDTO>> listPendingPayables(@RequestBody(required = false) PendingPayableRequest request) {
+        // 工厂账号不可查看待付款单据列表（属于租户级财务管理数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
         String bizType = request != null ? request.getBizType() : null;
         List<PayableItemDTO> items = wagePaymentOrchestrator.listPendingPayables(bizType);
         return Result.success(items);
@@ -405,8 +426,32 @@ public class WagePaymentController {
             return Result.success(java.util.Collections.emptyList());
         }
         Long tenantId = UserContext.tenantId();
+        String ctxFactoryId = UserContext.factoryId();
+        boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
         java.util.List<PayeeSearchResult> results = new java.util.ArrayList<>();
         String keyword = request.getKeyword().trim();
+
+        // 工厂账号只能搜索自己工厂的信息，不能搜索员工或其他工厂
+        if (isFactoryAccount) {
+            if (ctxFactoryId == null) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            // 工厂账号只能搜索自己工厂
+            if (request.getPayeeType() == null || "FACTORY".equals(request.getPayeeType())) {
+                Factory factory = factoryService.getById(ctxFactoryId);
+                if (factory != null && factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
+                    String fn = factory.getFactoryName();
+                    if (fn != null && fn.toLowerCase().contains(keyword.toLowerCase())) {
+                        results.add(new PayeeSearchResult(
+                            factory.getId(), "FACTORY",
+                            factory.getFactoryName(),
+                            factory.getContactPhone(), "工厂"
+                        ));
+                    }
+                }
+            }
+            return Result.success(results);
+        }
 
         if (request.getPayeeType() == null || "WORKER".equals(request.getPayeeType())) {
             com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User> userQw =

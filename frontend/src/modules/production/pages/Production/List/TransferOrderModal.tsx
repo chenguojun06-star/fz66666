@@ -1,5 +1,5 @@
-import React from 'react';
-import { Select, Tabs, Input } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Select, Tabs, Input, InputNumber } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { safeString } from './utils';
@@ -34,7 +34,7 @@ export interface TransferOrderModalProps {
   setTransferSelectedProcessCodes: (v: string[]) => void;
   searchTransferUsers: (v: string) => void;
   searchTransferFactories: (v: string) => void;
-  submitTransfer: () => void;
+  submitTransfer: (processPriceOverrides?: Record<string, number>) => void;
   closeTransferModal: () => void;
 }
 
@@ -53,12 +53,42 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
     submitTransfer, closeTransferModal,
   } = props;
 
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setPriceOverrides({});
+  }, [transferSelectedProcessCodes]);
+
+  const handleSubmit = () => {
+    if (transferType === 'factory' && transferSelectedProcessCodes.length > 0) {
+      submitTransfer(priceOverrides);
+    } else {
+      submitTransfer();
+    }
+  };
+
+  const handlePriceChange = (code: string, value: number | null) => {
+    setPriceOverrides(prev => {
+      const next = { ...prev };
+      if (value != null && value >= 0) {
+        next[code] = value;
+      } else {
+        delete next[code];
+      }
+      return next;
+    });
+  };
+
+  const selectedProcessDetails = transferSelectedProcessCodes
+    .map(code => transferProcesses.find((p: any) => (p.processCode || p.id) === code))
+    .filter(Boolean);
+
   return (
     <ResizableModal
       title={`转单 - ${safeString((transferRecord as any)?.orderNo)}`}
       open={transferModalVisible}
       onCancel={closeTransferModal}
-      onOk={submitTransfer}
+      onOk={handleSubmit}
       confirmLoading={transferSubmitting}
       okText={transferType === 'factory' ? '确认转工厂' : '确认转人员'}
       cancelText="取消"
@@ -67,7 +97,6 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
       destroyOnHidden
     >
       <div style={{ padding: '8px 0' }}>
-        {/* 转单类型 Tab */}
         <Tabs
           activeKey={transferType}
           onChange={(key) => setTransferType(key as 'user' | 'factory')}
@@ -78,7 +107,6 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           ]}
         />
 
-        {/* 转人员 */}
         {transferType === 'user' && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 6, fontWeight: 500 }}>转给谁：</div>
@@ -98,7 +126,6 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           </div>
         )}
 
-        {/* 转工厂 */}
         {transferType === 'factory' && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 6, fontWeight: 500 }}>转给哪个工厂：</div>
@@ -119,7 +146,6 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           </div>
         )}
 
-        {/* 菲号选择（共用） */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ marginBottom: 6, fontWeight: 500 }}>
             选择菲号（可选）：
@@ -135,14 +161,14 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
             rowKey="id" pagination={false}
             rowClassName={(record: any) => {
               const s = record?.status;
-              if (s === 'received' || s === 'qualified' || s === 'completed') return 'transfer-bundle-row-disabled';
+              if (s === 'qualified' || s === 'unqualified' || s === 'repaired' || s === 'repaired_waiting_qc' || s === 'completed') return 'transfer-bundle-row-disabled';
               return '';
             }}
             rowSelection={{
               selectedRowKeys: transferSelectedBundleIds,
               onChange: (keys) => setTransferSelectedBundleIds(keys as string[]),
               getCheckboxProps: (record: any) => ({
-                disabled: record?.status === 'received' || record?.status === 'qualified' || record?.status === 'completed',
+                disabled: record?.status === 'qualified' || record?.status === 'unqualified' || record?.status === 'repaired' || record?.status === 'repaired_waiting_qc' || record?.status === 'completed',
               }),
             }}
             columns={[
@@ -154,7 +180,8 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
                 title: '状态', dataIndex: 'status', width: 90,
                 render: (v: string) => {
                   const statusMap: Record<string, string> = {
-                    'created': '已创建', 'received': '已领取', 'qualified': '已质检',
+                    'created': '已创建', 'qualified': '已质检', 'unqualified': '不合格',
+                    'repaired': '已返修', 'repaired_waiting_qc': '返修待质检',
                     'completed': '已完成', 'in_progress': '生产中',
                   };
                   return statusMap[v] || v || '-';
@@ -165,7 +192,6 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           />
         </div>
 
-        {/* 工序选择（共用） */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ marginBottom: 6, fontWeight: 500 }}>
             选择工序（可选）：
@@ -205,7 +231,55 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           )}
         </div>
 
-        {/* 备注（时间戳由后端自动植入，格式 [2026-02-19 14:30] 备注内容） */}
+        {transferType === 'factory' && selectedProcessDetails.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>
+              工序单价设置：
+              <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', fontSize: '12px', marginLeft: 6 }}>
+                转厂后外部工厂将按新单价结算工资
+              </span>
+            </div>
+            <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: 'var(--color-bg-layout)' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 500 }}>工序名称</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 500, width: 120 }}>原单价</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 500, width: 160 }}>新单价（元/件）</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedProcessDetails.map((p: any) => {
+                    const code = p.processCode || p.id;
+                    const originalPrice = Number(p.unitPrice || 0);
+                    const newPrice = priceOverrides[code];
+                    return (
+                      <tr key={code} style={{ borderTop: '1px solid var(--color-border)' }}>
+                        <td style={{ padding: '6px 12px' }}>{p.processName}</td>
+                        <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
+                          {originalPrice > 0 ? `¥${originalPrice.toFixed(2)}` : '-'}
+                        </td>
+                        <td style={{ padding: '6px 12px', textAlign: 'right' }}>
+                          <InputNumber
+                            size="small"
+                            min={0}
+                            precision={2}
+                            placeholder={originalPrice > 0 ? `默认 ¥${originalPrice.toFixed(2)}` : '输入单价'}
+                            value={newPrice != null ? newPrice : undefined}
+                            onChange={(val) => handlePriceChange(code, val)}
+                            style={{ width: 130 }}
+                            addonAfter="元"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         <div>
           <div style={{ marginBottom: 6, fontWeight: 500 }}>
             备注（可选）：

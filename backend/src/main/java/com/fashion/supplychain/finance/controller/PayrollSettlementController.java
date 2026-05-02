@@ -49,6 +49,10 @@ public class PayrollSettlementController {
     @PostMapping("/operator-summary")
     public Result<List<PayrollOperatorProcessSummaryDTO>> getOperatorSummary(
             @RequestBody Map<String, Object> params) {
+        // 工厂账号不可查看工资结算汇总（属于租户级财务管理数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
 
         String orderNo = (String) params.get("orderNo");
         String operatorName = (String) params.get("operatorName");

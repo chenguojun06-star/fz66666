@@ -192,6 +192,9 @@ public class TenantFileController {
             return CommonController.buildFileResponse(resource, filePath, download);
         } catch (MalformedURLException e) {
             return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("[租户文件] 未预期的异常: tenantId={}, fileName={}", tenantId, fileName, e);
+            return missingFilePlaceholder(fileName);
         }
     }
 

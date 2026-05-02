@@ -85,6 +85,12 @@ public class MaterialPurchaseOrchestrator {
             effectiveParams = new java.util.HashMap<>(effectiveParams);
             effectiveParams.put("factoryType", "INTERNAL");
         }
+        // 工厂账号强制隔离：只能查看关联到自己工厂的采购记录
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            effectiveParams = new java.util.HashMap<>(effectiveParams);
+            effectiveParams.put("_factoryId", ctxFactoryId);
+        }
         return materialPurchaseService.queryPage(effectiveParams);
     }
 

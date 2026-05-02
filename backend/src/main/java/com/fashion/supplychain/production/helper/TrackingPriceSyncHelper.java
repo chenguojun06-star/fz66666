@@ -3,9 +3,11 @@ package com.fashion.supplychain.production.helper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.OrderTransfer;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.OrderTransferService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
@@ -51,6 +53,9 @@ public class TrackingPriceSyncHelper {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private OrderTransferService orderTransferService;
 
     @Autowired
     private TrackingRecordInitHelper initHelper;
@@ -145,6 +150,7 @@ public class TrackingPriceSyncHelper {
     // ========== 私有方法 ==========
 
     private void enrichWithTemplatePrices(List<ProductionProcessTracking> records, ProductionOrder order) {
+        Set<String> transferredBundleIds = getTransferredBundleIds(order.getId());
         try {
             List<Map<String, Object>> templateNodes = templateLibraryService.resolveProgressNodeUnitPrices(order.getStyleNo().trim());
             if (templateNodes == null || templateNodes.isEmpty()) return;
@@ -191,6 +197,8 @@ public class TrackingPriceSyncHelper {
             }
 
             for (ProductionProcessTracking tracking : records) {
+                if (transferredBundleIds.contains(tracking.getCuttingBundleId())) continue;
+
                 String pName = tracking.getProcessName() != null ? tracking.getProcessName().trim() : "";
                 BigDecimal templatePrice = priceMap.get(pName);
                 if (templatePrice == null) templatePrice = priceMap.get(tracking.getProcessCode());
@@ -383,8 +391,11 @@ public class TrackingPriceSyncHelper {
     private int syncTrackingPrices(List<ProductionProcessTracking> trackingRecords,
                                    Map<String, BigDecimal> priceMap, Map<String, String> codeMap,
                                    String productionOrderId, String orderNo) {
+        Set<String> transferredBundleIds = getTransferredBundleIds(productionOrderId);
         int updatedCount = 0;
         for (ProductionProcessTracking tracking : trackingRecords) {
+            if (transferredBundleIds.contains(tracking.getCuttingBundleId())) continue;
+
             BigDecimal newPrice = priceMap.get(tracking.getProcessName());
             if (newPrice == null) newPrice = priceMap.get(tracking.getProcessCode());
             if (newPrice == null) continue;
@@ -428,6 +439,7 @@ public class TrackingPriceSyncHelper {
     }
 
     private int syncScanRecordPrices(Map<String, BigDecimal> priceMap, Map<String, String> codeMap, String productionOrderId) {
+        Set<String> transferredBundleIds = getTransferredBundleIds(productionOrderId);
         int scanUpdated = 0;
         for (Map.Entry<String, BigDecimal> entry : priceMap.entrySet()) {
             String pName = entry.getKey();
@@ -447,6 +459,7 @@ public class TrackingPriceSyncHelper {
 
             String newCode = codeMap.get(pName);
             for (ScanRecord sr : scanRecords) {
+                if (transferredBundleIds.contains(sr.getCuttingBundleId())) continue;
                 if (sr.getQuantity() == null || sr.getQuantity() <= 0) continue;
                 boolean priceChanged = newPrice.compareTo(sr.getProcessUnitPrice() != null ? sr.getProcessUnitPrice()
                         : (sr.getUnitPrice() != null ? sr.getUnitPrice() : BigDecimal.ZERO)) != 0;
@@ -471,6 +484,28 @@ public class TrackingPriceSyncHelper {
             }
         }
         return scanUpdated;
+    }
+
+    private Set<String> getTransferredBundleIds(String orderId) {
+        Set<String> result = new HashSet<>();
+        try {
+            List<OrderTransfer> transfers = orderTransferService.list(
+                    new LambdaQueryWrapper<OrderTransfer>()
+                            .eq(OrderTransfer::getOrderId, orderId)
+                            .eq(OrderTransfer::getTransferType, "factory")
+                            .eq(OrderTransfer::getStatus, "accepted"));
+            for (OrderTransfer t : transfers) {
+                if (StringUtils.hasText(t.getBundleIds())) {
+                    for (String bid : t.getBundleIds().split(",")) {
+                        String trimmed = bid.trim();
+                        if (!trimmed.isEmpty()) result.add(trimmed);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("查询转厂记录失败: orderId={}", orderId, e);
+        }
+        return result;
     }
 
 }

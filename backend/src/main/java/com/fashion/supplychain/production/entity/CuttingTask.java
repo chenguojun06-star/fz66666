@@ -85,6 +85,11 @@ public class CuttingTask {
      */
     private String factoryType;
 
+    /**
+     * 工厂ID（支持裁剪任务级工厂隔离，转单时更新）
+     */
+    private String factoryId;
+
     @TableField(exist = false)
     private String styleCover;
 

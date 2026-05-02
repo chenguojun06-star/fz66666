@@ -183,7 +183,7 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
   };
 
   /** 提交转单（人员或工厂，时间戳由后端自动植入备注） */
-  const submitTransfer = async () => {
+  const submitTransfer = async (processPriceOverrides?: Record<string, number>) => {
     if (!transferRecord) return;
 
     if (transferType === 'user') {
@@ -213,7 +213,6 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
         setTransferSubmitting(false);
       }
     } else {
-      // 转工厂
       if (!transferFactoryId) {
         message.warning('请选择目标工厂');
         return;
@@ -226,9 +225,11 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
           message: transferFactoryMessage.trim() || '',
           bundleIds: transferSelectedBundleIds.length > 0 ? transferSelectedBundleIds.join(',') : null,
           processCodes: transferSelectedProcessCodes.length > 0 ? transferSelectedProcessCodes.join(',') : null,
+          processPriceOverrides: processPriceOverrides && Object.keys(processPriceOverrides).length > 0
+            ? JSON.stringify(processPriceOverrides) : null,
         }) as any;
         if (result?.code === 200) {
-          message.success('转工厂申请已发送');
+          message.success('转工厂成功');
           setTransferModalVisible(false);
           setTransferRecord(null);
         } else {

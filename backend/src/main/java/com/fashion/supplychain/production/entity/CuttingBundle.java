@@ -67,6 +67,11 @@ public class CuttingBundle {
 
     private LocalDateTime updateTime;
 
+    /**
+     * 工厂ID（支持菲号级工厂隔离，转单时更新）
+     */
+    private String factoryId;
+
     // ==================== 操作人字段（自动填充）====================
 
     @TableField(fill = FieldFill.INSERT)

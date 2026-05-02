@@ -306,9 +306,30 @@ public class MaterialPurchaseServiceQueryHelper {
     @SuppressWarnings("unchecked")
     private void applyFactoryAccountFilter(LambdaQueryWrapper<MaterialPurchase> wrapper,
                                             Map<String, Object> safeParams) {
+        // 支持两种工厂隔离模式：
+        // 1. _factoryOrderIds: 通过订单ID列表间接隔离（CuttingTaskOrchestrator 等使用）
+        // 2. _factoryId: 通过工厂ID直接隔离（MaterialPurchaseOrchestrator.list() 使用）
         List<String> factoryOrderIds = (List<String>) safeParams.get("_factoryOrderIds");
+        String factoryId = (String) safeParams.get("_factoryId");
+
         if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
             wrapper.in(MaterialPurchase::getOrderId, factoryOrderIds);
+        } else if (StringUtils.hasText(factoryId)) {
+            // 通过关联订单的 factory_id 进行隔离
+            List<String> matchedOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(ProductionOrder::getFactoryId, factoryId.trim())
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+                            .ne(ProductionOrder::getStatus, "scrapped"))
+                    .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+            if (matchedOrderIds.isEmpty()) {
+                // 无关联订单时返回空结果
+                wrapper.apply("1=0");
+            } else {
+                wrapper.in(MaterialPurchase::getOrderId, matchedOrderIds);
+            }
         }
     }
 }

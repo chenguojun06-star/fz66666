@@ -516,6 +516,10 @@ public class ProductWarehousingOrchestrator {
         return repairHelper.listPendingRepairTasks(tenantId);
     }
 
+    public List<Map<String, Object>> listPendingRepairTasksByFactory(Long tenantId, String factoryId) {
+        return repairHelper.listPendingRepairTasks(tenantId, factoryId);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean markBundleRepaired(String bundleId) {
         return repairHelper.markBundleRepaired(bundleId);

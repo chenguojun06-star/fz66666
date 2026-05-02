@@ -2,8 +2,10 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +33,9 @@ public class ProcessUnitPriceHelper {
 
     @Autowired(required = false)
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ProductionProcessTrackingService trackingService;
 
     public List<Map<String, Object>> getProcessUnitPrices(String orderNo) {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -393,6 +398,16 @@ public class ProcessUnitPriceHelper {
     }
 
     private BigDecimal resolveUnitPrice(String orderNo, String processName, ScanRecord scanRecord) {
+        if (scanRecord != null && StringUtils.hasText(scanRecord.getCuttingBundleId())) {
+            BigDecimal trackingPrice = resolveUnitPriceFromTracking(
+                    scanRecord.getOrderId(), scanRecord.getCuttingBundleId(), processName);
+            if (trackingPrice != null && trackingPrice.compareTo(BigDecimal.ZERO) > 0) {
+                log.info("[ProcessUnitPrice] 使用Tracking覆盖单价: bundleId={}, processName={}, price={}",
+                        scanRecord.getCuttingBundleId(), processName, trackingPrice);
+                return trackingPrice;
+            }
+        }
+
         Map<String, Object> priceInfo = getUnitPriceByProcess(orderNo, processName);
         BigDecimal unitPrice = parseBigDecimal(priceInfo.get("unitPrice"));
 
@@ -407,6 +422,25 @@ public class ProcessUnitPriceHelper {
             }
         }
         return unitPrice;
+    }
+
+    private BigDecimal resolveUnitPriceFromTracking(String orderId, String bundleId, String processName) {
+        try {
+            LambdaQueryWrapper<ProductionProcessTracking> query = new LambdaQueryWrapper<>();
+            query.eq(ProductionProcessTracking::getProductionOrderId, orderId)
+                 .eq(ProductionProcessTracking::getCuttingBundleId, bundleId)
+                 .eq(ProductionProcessTracking::getProcessName, processName)
+                 .last("LIMIT 1");
+            ProductionProcessTracking tracking = trackingService.getOne(query);
+            if (tracking != null && tracking.getUnitPrice() != null
+                    && tracking.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+                return tracking.getUnitPrice();
+            }
+        } catch (Exception e) {
+            log.debug("[ProcessUnitPrice] 查询Tracking单价失败: orderId={}, bundleId={}, processName={}",
+                    orderId, bundleId, processName, e);
+        }
+        return null;
     }
 
     private BigDecimal tryResolveStagePrice(String orderNo, String stageName) {

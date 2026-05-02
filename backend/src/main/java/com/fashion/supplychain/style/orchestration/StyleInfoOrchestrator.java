@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.context.annotation.Lazy;
 
 @Service
@@ -89,6 +90,9 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.style.service.StyleOperationLogService styleOperationLogService;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     public IPage<StyleInfo> list(Map<String, Object> params) {
         IPage<StyleInfo> page = styleInfoService.queryPage(params);
@@ -190,7 +194,6 @@ public class StyleInfoOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean save(StyleInfo styleInfo) {
         if (styleInfo == null) {
             throw new IllegalArgumentException("参数错误");
@@ -248,11 +251,12 @@ public class StyleInfoOrchestrator {
         } catch (Exception e) {
             log.error("保存样式信息失败", e);
             throw new IllegalStateException("保存失败: " + e.getMessage());
+        } finally {
+            evictCurrentTenantCache();
         }
     }
 
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean update(StyleInfo styleInfo) {
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
@@ -282,6 +286,8 @@ public class StyleInfoOrchestrator {
             throw new IllegalStateException("保存失败");
         } catch (Exception e) {
             throw new IllegalStateException("保存失败");
+        } finally {
+            evictCurrentTenantCache();
         }
     }
 
@@ -370,7 +376,6 @@ public class StyleInfoOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public boolean delete(Long id) {
         long activeOrders = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
@@ -384,11 +389,11 @@ public class StyleInfoOrchestrator {
                     .eq(com.fashion.supplychain.production.entity.PatternProduction::getStyleId, id)
                     .remove();
         }
+        evictCurrentTenantCache();
         return styleInfoService.deleteById(id);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = {"style", "dataCenter"}, allEntries = true)
     public Object deleteWithApproval(Long id, String reason) {
         StyleInfo style = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getId, id)
@@ -408,6 +413,7 @@ public class StyleInfoOrchestrator {
                 return approvalResp;
             }
         }
+        evictCurrentTenantCache();
         return scrap(id, reason);
     }
 
@@ -758,5 +764,23 @@ public class StyleInfoOrchestrator {
             newBoms.add(nb);
         }
         styleBomService.saveBatch(newBoms);
+    }
+
+    private void evictCurrentTenantCache() {
+        Long tid = UserContext.tenantId();
+        if (tid == null) return;
+        try {
+            java.util.Set<String> styleKeys = redisTemplate.keys("style::*" + tid + "*");
+            java.util.Set<String> dcKeys = redisTemplate.keys("dataCenter::*" + tid + "*");
+            java.util.List<String> all = new java.util.ArrayList<>();
+            if (styleKeys != null) all.addAll(styleKeys);
+            if (dcKeys != null) all.addAll(dcKeys);
+            if (!all.isEmpty()) {
+                redisTemplate.delete(all);
+                log.info("[缓存淘汰] 已清除租户 {} 的 style/dataCenter 缓存共 {} 条", tid, all.size());
+            }
+        } catch (Exception e) {
+            log.warn("[缓存淘汰] 清除租户 {} 缓存失败: {}", tid, e.getMessage());
+        }
     }
 }

@@ -269,6 +269,15 @@ public class ProductWarehousingRepairHelper {
      * 逻辑：quality_scan 记录（次品池）关联的菲号中，bundle.status 仍为 unqualified 的
      */
     public List<Map<String, Object>> listPendingRepairTasks(Long tenantId) {
+        return listPendingRepairTasks(tenantId, null);
+    }
+
+    /**
+     * 待返修任务列表（按工厂隔离）
+     * @param tenantId 租户ID
+     * @param factoryId 工厂ID（null=不限制）
+     */
+    public List<Map<String, Object>> listPendingRepairTasks(Long tenantId, String factoryId) {
         if (tenantId == null) return Collections.emptyList();
 
         // 1) 从 t_product_warehousing 查当前租户的 quality_scan 记录（次品来源）
@@ -278,6 +287,14 @@ public class ProductWarehousingRepairHelper {
             .eq("warehousing_type", "quality_scan")
             .eq("delete_flag", 0)
             .gt("unqualified_quantity", 0);
+        // 工厂隔离：通过 order_id 关联到工厂
+        if (StringUtils.hasText(factoryId)) {
+            qualityScanQuery.in("order_id",
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.ProductionOrder>()
+                    .select("id")
+                    .eq("factory_id", factoryId)
+                    .eq("tenant_id", tenantId));
+        }
         List<Map<String, Object>> qualityScans = productWarehousingService.listMaps(qualityScanQuery);
 
         if (qualityScans == null || qualityScans.isEmpty()) return Collections.emptyList();

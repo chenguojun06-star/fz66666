@@ -438,5 +438,15 @@ public class ProductionOrderOrchestrator {
                     operation, orderId, currentTenantId, order.getTenantId());
             throw new AccessDeniedException(operation + "操作失败：订单不属于当前租户");
         }
+        // 工厂账号额外校验：只能操作关联到自己工厂的订单
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            String orderFactoryId = order.getFactoryId();
+            if (!ctxFactoryId.equals(orderFactoryId)) {
+                log.warn("[工厂隔离] {} 操作被拒绝: orderId={}, 当前工厂={}, 订单工厂={}",
+                        operation, orderId, ctxFactoryId, orderFactoryId);
+                throw new AccessDeniedException(operation + "操作失败：订单不属于当前工厂");
+            }
+        }
     }
 }

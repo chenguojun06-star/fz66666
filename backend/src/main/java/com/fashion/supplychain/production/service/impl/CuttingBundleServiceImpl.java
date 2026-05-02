@@ -69,7 +69,11 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         String size = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "size"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "status"));
 
-        // 工厂账号隔离：通过 CuttingBundleOrchestrator 注入
+        // 工厂账号隔离：优先使用菲号级 factoryId 隔离（支持部分转单）
+        String ctxFactoryId = UserContext.factoryId();
+        boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
+
+        // 工厂账号隔离：通过 CuttingBundleOrchestrator 注入（订单级隔离，兼容旧数据）
         @SuppressWarnings("unchecked")
         List<String> factoryOrderNos = (List<String>) params.get("_factoryOrderNos");
 
@@ -92,7 +96,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                         CuttingBundle::getSplitProcessName,
                         CuttingBundle::getOperatorId,
                         CuttingBundle::getOperatorName,
-                        CuttingBundle::getCreateTime
+                        CuttingBundle::getCreateTime,
+                        CuttingBundle::getFactoryId
                 )
                 .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
                 .eq(StringUtils.hasText(styleNo), CuttingBundle::getStyleNo, styleNo)
@@ -101,7 +106,15 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                 .eq(StringUtils.hasText(status), CuttingBundle::getStatus, status)
                 .orderByAsc(CuttingBundle::getBundleNo);
 
-        if (factoryOrderNos != null && !factoryOrderNos.isEmpty()) {
+        // 工厂账号隔离：优先使用菲号级 factoryId（支持部分转单场景）
+        if (isFactoryAccount && StringUtils.hasText(ctxFactoryId)) {
+            // 菲号级隔离：只显示 factory_id = 当前工厂 的菲号
+            // 同时兼容订单级隔离（旧数据可能没有 factory_id）
+            wrapper.and(w -> w.eq(CuttingBundle::getFactoryId, ctxFactoryId)
+                    .or().and(w2 -> w2.isNull(CuttingBundle::getFactoryId)
+                            .or().eq(CuttingBundle::getFactoryId, "")));
+        } else if (factoryOrderNos != null && !factoryOrderNos.isEmpty()) {
+            // 非工厂账号但传入了工厂订单号限制（如内部员工查看特定工厂订单）
             wrapper.in(CuttingBundle::getProductionOrderNo, factoryOrderNos);
         }
 

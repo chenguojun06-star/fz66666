@@ -183,18 +183,8 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
             log.info("[WebSocket] 租户内广播: type={}, from={}({}), tenantId={}, to {} sessions",
                     message.getType(), senderUserId, senderType, senderTenantId, count);
         } else {
-            Set<String> onlineUsers = sessionManager.getAllOnlineUsers();
-            for (String userId : onlineUsers) {
-                Set<WebSocketSession> userSessions = sessionManager.getUserSessions(userId);
-                for (WebSocketSession session : userSessions) {
-                    if (session.getId().equals(senderSession.getId()) || !session.isOpen()) {
-                        continue;
-                    }
-                    sendMessage(session, message);
-                }
-            }
-            log.info("[WebSocket] 全局广播(无租户ID): type={}, from={}({}), to {} users",
-                    message.getType(), senderUserId, senderType, onlineUsers.size() - 1);
+            log.warn("[WebSocket] 拒绝无租户ID的广播请求: type={}, from={}({}), 已跳过以防止跨租户泄露",
+                    message.getType(), senderUserId, senderType);
         }
     }
 
@@ -252,6 +242,8 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
      * 广播消息（供Service层调用）
      */
     public void broadcast(WebSocketMessage<?> message) {
+        log.warn("[WebSocket] broadcast() 全局广播被调用，存在跨租户泄露风险！type={}, 调用栈已记录",
+                message.getType());
         Set<WebSocketSession> allSessions = sessionManager.getAllSessions();
 
         for (WebSocketSession session : allSessions) {
@@ -259,9 +251,6 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
                 sendMessage(session, message);
             }
         }
-
-        log.info("[WebSocket] 全局广播: type={}, to {} sessions",
-                message.getType(), allSessions.size());
     }
 
     public void broadcastToTenant(Long tenantId, WebSocketMessage<?> message) {

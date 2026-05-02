@@ -187,6 +187,8 @@ public class OrderTransferController {
             String message = (String) params.get("message");
             String bundleIds = (String) params.get("bundleIds");
             String processCodes = (String) params.get("processCodes");
+            String processPriceOverrides = params.get("processPriceOverrides") != null
+                    ? params.get("processPriceOverrides").toString() : null;
 
             if (!StringUtils.hasText(orderId)) {
                 return Result.fail("订单ID不能为空");
@@ -196,7 +198,7 @@ public class OrderTransferController {
             }
 
             OrderTransfer transfer = orderTransferService.createTransferToFactory(
-                    orderId, toFactoryId, message, bundleIds, processCodes);
+                    orderId, toFactoryId, message, bundleIds, processCodes, processPriceOverrides);
             return Result.success(transfer);
         } catch (Exception e) {
             log.error("创建转工厂请求失败", e);

@@ -98,12 +98,14 @@ public class OrderTransferTool extends AbstractAgentTool {
         String message = optionalString(args, "message");
         String toUserId = optionalString(args, "toUserId");
         String toFactoryId = optionalString(args, "toFactoryId");
+        String bundleIds = optionalString(args, "bundleIds");
+        String processCodes = optionalString(args, "processCodes");
 
         OrderTransfer transfer;
         if (StringUtils.hasText(toFactoryId)) {
-            transfer = orderTransferService.createTransferToFactory(orderId, toFactoryId, message, null, null);
+            transfer = orderTransferService.createTransferToFactory(orderId, toFactoryId, message, bundleIds, processCodes, null);
         } else if (StringUtils.hasText(toUserId)) {
-            transfer = orderTransferService.createTransfer(orderId, Long.valueOf(toUserId), message, null, null);
+            transfer = orderTransferService.createTransfer(orderId, Long.valueOf(toUserId), message, bundleIds, processCodes);
         } else {
             return errorJson("必须指定 toUserId 或 toFactoryId");
         }

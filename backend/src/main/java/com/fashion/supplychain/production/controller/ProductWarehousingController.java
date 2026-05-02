@@ -33,6 +33,15 @@ public class ProductWarehousingController {
      */
     @GetMapping("/stats")
     public Result<?> stats(@RequestParam(required = false) Map<String, Object> params) {
+        // 工厂账号只能查看自己工厂的入库统计
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            if (ctxFactoryId == null) {
+                return Result.success(java.util.Collections.emptyMap());
+            }
+            params = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
+            params.put("factoryId", ctxFactoryId);
+        }
         return Result.success(productWarehousingOrchestrator.getStatusStats(params));
     }
 
@@ -109,6 +118,14 @@ public class ProductWarehousingController {
     @GetMapping("/pending-repair-tasks")
     public Result<?> listPendingRepairTasks() {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        // 工厂账号只能查看自己工厂的返修任务
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            if (ctxFactoryId == null) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            return Result.success(productWarehousingOrchestrator.listPendingRepairTasksByFactory(tenantId, ctxFactoryId));
+        }
         return Result.success(productWarehousingOrchestrator.listPendingRepairTasks(tenantId));
     }
 

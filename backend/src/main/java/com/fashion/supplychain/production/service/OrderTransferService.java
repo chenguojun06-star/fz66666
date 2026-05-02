@@ -34,7 +34,7 @@ public interface OrderTransferService extends IService<OrderTransfer> {
      * @return 转移记录
      */
     OrderTransfer createTransferToFactory(String orderId, String toFactoryId, String message,
-            String bundleIds, String processCodes);
+            String bundleIds, String processCodes, String processPriceOverrides);
 
     /**
      * 查询待处理的转移请求(分页)

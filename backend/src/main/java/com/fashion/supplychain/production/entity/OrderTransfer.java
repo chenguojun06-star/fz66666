@@ -92,6 +92,9 @@ public class OrderTransfer {
     @TableField("process_codes")
     private String processCodes;
 
+    @TableField("process_price_overrides")
+    private String processPriceOverrides;
+
     /**
      * 拒绝原因
      */

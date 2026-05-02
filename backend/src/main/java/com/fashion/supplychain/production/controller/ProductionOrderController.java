@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
@@ -177,6 +178,15 @@ public class ProductionOrderController {
      */
     @GetMapping("/stats")
     public Result<?> getStats(@RequestParam(required = false) Map<String, Object> params) {
+        // 工厂账号只能查看自己工厂的统计数据
+        String ctxFactoryId = UserContext.factoryId();
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            if (ctxFactoryId == null) {
+                return Result.success(java.util.Collections.emptyMap());
+            }
+            params = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
+            params.put("factoryId", ctxFactoryId);
+        }
         return Result.success(productionOrderOrchestrator.getGlobalStats(params));
     }
 
@@ -411,6 +421,10 @@ public class ProductionOrderController {
      */
     @GetMapping("/factory-capacity")
     public Result<List<FactoryCapacityOrchestrator.FactoryCapacityItem>> getFactoryCapacity() {
+        // 工厂账号不可查看工厂产能雷达（属于租户级全局数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
         return Result.success(factoryCapacityOrchestrator.getFactoryCapacity());
     }
 }

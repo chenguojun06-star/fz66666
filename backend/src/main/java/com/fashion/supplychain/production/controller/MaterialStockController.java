@@ -63,11 +63,19 @@ public class MaterialStockController {
 
     @GetMapping("/summary")
     public Result<java.util.List<MaterialStock>> getSummary(@RequestParam("materialIds") java.util.List<String> materialIds) {
+        // 工厂账号不可查看面辅料库存（属于租户级仓库数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
         return Result.success(materialStockService.getStocksByMaterialIds(materialIds));
     }
 
     @GetMapping("/alerts")
     public Result<java.util.List<MaterialStockAlertDto>> getAlerts(@RequestParam Map<String, Object> params) {
+        // 工厂账号不可查看面辅料库存预警（属于租户级仓库数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
         return Result.success(materialStockOrchestrator.listAlerts(params));
     }
 
@@ -84,6 +92,10 @@ public class MaterialStockController {
             @RequestParam String materialCode,
             @RequestParam(required = false) String color,
             @RequestParam(required = false) String size) {
+        // 工厂账号不可查看面辅料批次（属于租户级仓库数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
         return Result.success(materialStockService.getBatchDetails(materialCode, color, size));
     }
 
@@ -115,6 +127,10 @@ public class MaterialStockController {
     public Result<List<MaterialTransactionDto>> getTransactions(
             @RequestParam String materialCode,
             @RequestParam(required = false) String stockId) {
+        // 工厂账号不可查看面辅料出入库流水（属于租户级仓库数据）
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         List<MaterialTransactionDto> result = new ArrayList<>();
 

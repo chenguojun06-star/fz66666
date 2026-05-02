@@ -56,6 +56,23 @@ public class OrderRemarkController {
         }
         Long tenantId = TenantAssert.requireTenantId();
 
+        // 工厂账号只能查看自己订单的备注
+        if ("order".equals(targetType) && com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            String ctxFactoryId = UserContext.factoryId();
+            if (StringUtils.hasText(ctxFactoryId)) {
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getId, ProductionOrder::getFactoryId)
+                        .eq(ProductionOrder::getOrderNo, targetNo)
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .last("LIMIT 1")
+                        .one();
+                if (order == null || !ctxFactoryId.equals(order.getFactoryId())) {
+                    return Result.success(java.util.Collections.emptyList());
+                }
+            }
+        }
+
         List<OrderRemark> result = new ArrayList<>();
 
         LambdaQueryWrapper<OrderRemark> wrapper = new LambdaQueryWrapper<OrderRemark>()

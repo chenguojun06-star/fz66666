@@ -52,6 +52,14 @@ public class UserController {
             @RequestParam(required = false) String roleName,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String factoryId) {
+        // 工厂账号只能查看关联到自己工厂的用户
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            if (ctxFactoryId == null) {
+                return Result.success(new Page<>());
+            }
+            factoryId = ctxFactoryId; // 强制限定只查自己工厂的用户
+        }
         Page<User> userPage = userOrchestrator.list(page, pageSize, username, name, roleName, status, factoryId);
         return Result.success(userPage);
     }

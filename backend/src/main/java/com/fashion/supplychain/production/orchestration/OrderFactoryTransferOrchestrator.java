@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.BusinessException;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -17,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -101,6 +104,8 @@ public class OrderFactoryTransferOrchestrator {
             throw new IllegalArgumentException("订单不存在: " + orderNo);
         }
 
+        validateTransferEligibility(order);
+
         String oldFactoryId   = order.getFactoryId();
         String oldFactoryName = order.getFactoryName();
 
@@ -123,9 +128,16 @@ public class OrderFactoryTransferOrchestrator {
         String colorSizeDetail = buildColorSizeDetail(colorSizeLines);
 
         if (isFullTransfer) {
-            // 整单转：更新 factoryId + factoryName
+            // 整单转：更新 factoryId + factoryName + factoryType（关键！影响扫码权限校验）
             order.setFactoryId(targetFactory.getId());
             order.setFactoryName(targetFactory.getFactoryName());
+            // 同步更新 factoryType，确保扫码权限校验正确
+            String targetFactoryType = targetFactory.getFactoryType();
+            if (StringUtils.hasText(targetFactoryType)) {
+                order.setFactoryType(targetFactoryType.toUpperCase());
+            } else {
+                order.setFactoryType("EXTERNAL"); // 默认外发
+            }
             appendRemark(order, String.format("[%s] 整单转厂 %s → %s，操作人:%s，原因:%s",
                     timeStr, safeStr(oldFactoryName), targetFactoryName, operator, safeStr(reason)));
         } else {
@@ -237,6 +249,17 @@ public class OrderFactoryTransferOrchestrator {
         if (wasFullTransfer) {
             order.setFactoryId("(未知)".equals(oldFactoryId) ? null : oldFactoryId);
             order.setFactoryName("(未知)".equals(oldFactoryName) ? "" : oldFactoryName);
+            // 还原 factoryType：查原工厂的 factoryType
+            if (!"(未知)".equals(oldFactoryId) && StringUtils.hasText(oldFactoryId)) {
+                Factory oldFactory = factoryService.getById(oldFactoryId);
+                if (oldFactory != null && StringUtils.hasText(oldFactory.getFactoryType())) {
+                    order.setFactoryType(oldFactory.getFactoryType().toUpperCase());
+                } else {
+                    order.setFactoryType("INTERNAL"); // 默认内部
+                }
+            } else {
+                order.setFactoryType("INTERNAL");
+            }
         }
 
         // 标记日志条目为 undone
@@ -448,6 +471,44 @@ public class OrderFactoryTransferOrchestrator {
         }
         scanRecordService.updateBatchById(records);
         log.info("[转厂] 已更新 {} 条扫码记录的factoryId → {}", records.size(), newFactoryId);
+    }
+
+    private void validateTransferEligibility(ProductionOrder order) {
+        String status = order.getStatus();
+        if (status != null && OrderStatusConstants.isTerminal(status)) {
+            throw new BusinessException("订单已" + statusLabel(status) + "，不能转厂");
+        }
+
+        List<ScanRecord> allScans = scanRecordService.listByCondition(
+                order.getId(), null, null, "success", null);
+
+        if (allScans.stream().anyMatch(item ->
+                StringUtils.hasText(item.getPayrollSettlementId())
+                        || "settled".equalsIgnoreCase(item.getSettlementStatus()))) {
+            throw new BusinessException("该订单已有工资结算记录，不能转厂");
+        }
+
+        if (allScans.stream().anyMatch(item -> "warehouse".equals(item.getScanType()))) {
+            throw new BusinessException("该订单已有入库记录，不能转厂");
+        }
+
+        if (!allScans.isEmpty()) {
+            throw new BusinessException("该订单已有 " + allScans.size() + " 条扫码登记记录，不能整单转厂。请通过PC端选择未扫码的菲号进行部分转单");
+        }
+    }
+
+    private String statusLabel(String status) {
+        if (status == null) return "未知";
+        switch (status.toLowerCase()) {
+            case "producing": return "生产中";
+            case "pending": return "待生产";
+            case "completed": return "已完成";
+            case "cancelled": return "已取消";
+            case "scrapped": return "已报废";
+            case "archived": return "已归档";
+            case "closed": return "已关单";
+            default: return status;
+        }
     }
 
     private String safeStr(Object s) {

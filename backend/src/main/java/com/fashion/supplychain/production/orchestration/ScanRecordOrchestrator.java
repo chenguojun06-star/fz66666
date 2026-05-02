@@ -196,6 +196,9 @@ public class ScanRecordOrchestrator {
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
+        // 菲号级工厂隔离校验（支持部分转单）
+        validateBundleBelonging(bundle, ctx);
+        validateOrderBelonging(finalOrder, ctx);
         return qualityScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
                 (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
     }
@@ -206,9 +209,9 @@ public class ScanRecordOrchestrator {
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
         String scanMode = TextUtils.safeText(params.get("scanMode"));
+        UserContext ctx = UserContext.get();
         if ("ucode".equals(scanMode)) {
             ProductionOrder order = resolveOrder(orderId, orderNo);
-            UserContext ctx = UserContext.get();
             validateOrderBelonging(order, ctx);
             return warehouseScanExecutor.executeUCode(params, requestId, operatorId, operatorName, order);
         }
@@ -217,7 +220,8 @@ public class ScanRecordOrchestrator {
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
-        UserContext ctx = UserContext.get();
+        // 菲号级工厂隔离校验（支持部分转单）
+        validateBundleBelonging(bundle, ctx);
         validateOrderBelonging(finalOrder, ctx);
         return warehouseScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
                 (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
@@ -274,6 +278,25 @@ public class ScanRecordOrchestrator {
             throw new AccessDeniedException("无法扫码其他工厂的外发订单，请确认订单归属");
         }
         if (!isInternalUser && !isExternalOrder) throw new AccessDeniedException("外发工厂无法扫码内部订单，请确认订单归属");
+    }
+
+    /**
+     * 校验菲号是否属于当前工厂（支持菲号级工厂隔离）
+     * 部分转单场景：订单可能属于内部工厂，但部分菲号转给了外部工厂
+     */
+    private void validateBundleBelonging(CuttingBundle bundle, UserContext ctx) {
+        if (bundle == null || ctx == null) return;
+        if (isAdminRole(ctx)) return;
+        String userFactoryId = ctx.getFactoryId();
+        // 内部用户不做菲号级校验
+        if (!StringUtils.hasText(userFactoryId)) return;
+
+        String bundleFactoryId = bundle.getFactoryId();
+        // 菲号有 factoryId 且与当前用户工厂不匹配 → 拒绝
+        if (StringUtils.hasText(bundleFactoryId) && !bundleFactoryId.equals(userFactoryId)) {
+            throw new AccessDeniedException("该菲号不属于当前工厂，请确认订单归属");
+        }
+        // 菲号没有 factoryId（旧数据）， fallback 到订单级校验
     }
 
     private boolean isAdminRole(UserContext ctx) {

@@ -703,6 +703,9 @@ public final class DbColumnDefinitions {
         add("t_intelligence_metrics", "tool_call_count", "INT DEFAULT NULL COMMENT '工具次数'");
         add("t_intelligence_metrics", "prompt_tokens", "INT DEFAULT NULL");
         add("t_intelligence_metrics", "completion_tokens", "INT DEFAULT NULL");
+        add("t_intelligence_metrics", "user_feedback", "TEXT DEFAULT NULL COMMENT '用户反馈文本'");
+        add("t_intelligence_metrics", "feedback_score", "SMALLINT DEFAULT 0 COMMENT '反馈评分'");
+        add("t_intelligence_metrics", "command_id", "VARCHAR(64) DEFAULT NULL COMMENT '命令ID'");
         add("t_agent_execution_log", "specialist_results", "TEXT DEFAULT NULL COMMENT '专家Agent执行结果'");
         add("t_agent_execution_log", "node_trace", "TEXT DEFAULT NULL COMMENT '图节点执行轨迹'");
         add("t_agent_execution_log", "digital_twin_snapshot", "TEXT DEFAULT NULL COMMENT '数字孪生快照'");
@@ -711,13 +714,13 @@ public final class DbColumnDefinitions {
         add("t_ai_job_run_log", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
         add("t_intelligence_signal", "id", "BIGINT NOT NULL AUTO_INCREMENT");
         add("t_intelligence_signal", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
-        add("t_intelligence_signal", "signal_type", "VARCHAR(20) DEFAULT NULL COMMENT '信号类型'");
-        add("t_intelligence_signal", "signal_code", "VARCHAR(50) DEFAULT NULL COMMENT '信号编码'");
+        add("t_intelligence_signal", "signal_type", "VARCHAR(50) DEFAULT NULL COMMENT '信号类型'");
+        add("t_intelligence_signal", "signal_code", "VARCHAR(100) DEFAULT NULL COMMENT '信号编码'");
         add("t_intelligence_signal", "signal_level", "VARCHAR(20) DEFAULT NULL COMMENT '信号级别'");
-        add("t_intelligence_signal", "source_domain", "VARCHAR(32) DEFAULT NULL COMMENT '来源域'");
-        add("t_intelligence_signal", "source_id", "VARCHAR(64) DEFAULT NULL COMMENT '关联业务ID'");
-        add("t_intelligence_signal", "source_name", "VARCHAR(100) DEFAULT NULL COMMENT '来源名称'");
-        add("t_intelligence_signal", "signal_title", "VARCHAR(200) DEFAULT NULL COMMENT '信号标题'");
+        add("t_intelligence_signal", "source_domain", "VARCHAR(50) DEFAULT NULL COMMENT '来源域'");
+        add("t_intelligence_signal", "source_id", "VARCHAR(100) DEFAULT NULL COMMENT '关联业务ID'");
+        add("t_intelligence_signal", "source_name", "VARCHAR(200) DEFAULT NULL COMMENT '来源名称'");
+        add("t_intelligence_signal", "signal_title", "VARCHAR(500) DEFAULT NULL COMMENT '信号标题'");
         add("t_intelligence_signal", "signal_detail", "TEXT DEFAULT NULL COMMENT '信号详情JSON'");
         add("t_intelligence_signal", "signal_analysis", "TEXT DEFAULT NULL COMMENT 'AI分析'");
         add("t_intelligence_signal", "related_ids", "VARCHAR(500) DEFAULT NULL COMMENT '关联信号IDs'");
@@ -729,8 +732,8 @@ public final class DbColumnDefinitions {
         add("t_intelligence_signal", "delete_flag", "INT DEFAULT 0 COMMENT '删除标志'");
         add("t_agent_meeting", "id", "BIGINT NOT NULL AUTO_INCREMENT");
         add("t_agent_meeting", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
-        add("t_agent_meeting", "meeting_type", "VARCHAR(32) DEFAULT NULL COMMENT '会议类型'");
-        add("t_agent_meeting", "topic", "VARCHAR(200) DEFAULT NULL COMMENT '议题'");
+        add("t_agent_meeting", "meeting_type", "VARCHAR(50) DEFAULT NULL COMMENT '会议类型'");
+        add("t_agent_meeting", "topic", "VARCHAR(300) DEFAULT NULL COMMENT '议题'");
         add("t_agent_meeting", "participants", "TEXT DEFAULT NULL COMMENT '参与Agent列表JSON'");
         add("t_agent_meeting", "agenda", "TEXT DEFAULT NULL COMMENT '议程JSON'");
         add("t_agent_meeting", "debate_rounds", "TEXT DEFAULT NULL COMMENT '辩论轮次JSON'");
@@ -775,6 +778,11 @@ public final class DbColumnDefinitions {
         add("t_knowledge_base", "delete_flag", "TINYINT DEFAULT 0");
         add("t_knowledge_base", "created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP");
         add("t_knowledge_base", "updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        add("t_scan_precheck_feedback", "scan_type", "VARCHAR(32) DEFAULT NULL COMMENT '扫码类型'");
+        add("t_scan_precheck_feedback", "precheck_issues", "JSON DEFAULT NULL COMMENT '预检问题列表JSON'");
+        add("t_scan_precheck_feedback", "user_remark", "VARCHAR(512) DEFAULT NULL COMMENT '用户备注'");
+        add("t_scan_precheck_feedback", "operator_id", "BIGINT DEFAULT NULL COMMENT '操作人ID'");
+        add("t_scan_precheck_feedback", "operator_name", "VARCHAR(64) DEFAULT NULL COMMENT '操作人姓名'");
     }
 
     private static void addFactoryColumns() {
