@@ -92,7 +92,7 @@ public class OrderStockFillService {
                         continue;
                     }
                     String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
-                    if ("quality_scan_scrap".equals(wt)) {
+                    if ("quality_scan_scrap".equals(wt) || "quality_scan".equals(wt)) {
                         continue;
                     }
                     String oid = w.getOrderId().trim();
