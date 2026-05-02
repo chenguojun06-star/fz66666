@@ -369,7 +369,7 @@ ai:
     enabled: ${AI_CONSORTIUM_ENABLED:true}
   model:
     fast: ${AI_MODEL_FAST:deepseek-v4-flash}
-    reasoning: ${AI_MODEL_REASONING:deepseek-v4-flash}
+    reasoning: ${AI_MODEL_REASONING:deepseek-v4-pro}
     vision: ${AI_MODEL_VISION:doubao-1-5-vision-pro-32k-250115}
     default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
 
