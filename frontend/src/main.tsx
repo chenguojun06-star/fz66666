@@ -27,28 +27,42 @@
   ];
   const isChunkError = (msg: string) => CHUNK_ERR_PATTERNS.some(p => msg.includes(p));
 
-  // Script error（同步 404）
+  const tryReload = () => {
+    if (!sessionStorage.getItem(RELOAD_KEY)) {
+      sessionStorage.setItem(RELOAD_KEY, '1');
+      window.location.reload();
+    }
+  };
+
   window.addEventListener('error', (event) => {
-    const src = (event.target as HTMLScriptElement | null)?.src ?? '';
+    const target = event.target as HTMLElement | null;
+    const tagName = target?.tagName ?? '';
+    const src = tagName === 'SCRIPT' ? (target as HTMLScriptElement).src
+      : tagName === 'LINK' ? (target as HTMLLinkElement).href : '';
     const msg = event.message ?? '';
-    if (src.includes('/assets/') || isChunkError(msg)) {
-      if (!sessionStorage.getItem(RELOAD_KEY)) {
-        sessionStorage.setItem(RELOAD_KEY, '1');
-        window.location.reload();
-      }
+    if ((src.includes('/assets/') && (tagName === 'SCRIPT' || tagName === 'LINK'))
+        || isChunkError(msg)) {
+      tryReload();
     }
   }, true);
 
-  // Promise rejection（异步动态 import 404）
   window.addEventListener('unhandledrejection', (event) => {
     const msg = String(event.reason?.message ?? event.reason ?? '');
     if (isChunkError(msg)) {
-      if (!sessionStorage.getItem(RELOAD_KEY)) {
-        sessionStorage.setItem(RELOAD_KEY, '1');
-        window.location.reload();
-      }
+      tryReload();
     }
   });
+
+  const origFetch = window.fetch;
+  window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+    return origFetch.apply(this, [input, init]).catch(err => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : '';
+      if (url.includes('/assets/')) {
+        tryReload();
+      }
+      throw err;
+    });
+  };
 })();
 
 // 前端 JS 异常自动上报（拦截 window.onerror / unhandledrejection）
