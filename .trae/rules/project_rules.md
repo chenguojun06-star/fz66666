@@ -24,6 +24,7 @@
 - ❌ 禁止手动 `docker exec mysql -e "ALTER TABLE..."`
 - ❌ 禁止修改已执行的 V*.sql（checksum 校验失败 → 启动报错）
 - ⚠️ **Flyway SET @s 陷阱**：动态 SQL 内禁止 `COMMENT 'xxx'` / `DEFAULT 'PENDING'` 等字符串字面量 → Flyway 把 `''` 当边界截断 SQL，静默失败
+- ⚠️ **Flyway PREPARE + DEFAULT NULL 陷阱**：`PREPARE stmt FROM @s` 动态 SQL 中禁止写 `DEFAULT NULL`，MySQL 8.0 会报 `ERROR 1064 near 'NULL'` → 列实际未添加但 Flyway 可能记录成功 → 云端 500。正确做法：不写 DEFAULT（MySQL 默认即为 NULL），回填值用独立 UPDATE
 
 ### 2. 权限码必须真实存在
 - ❌ 禁止使用 `t_permission` 表中不存在的权限码（导致全员 403）
@@ -123,6 +124,7 @@
 | 13 | 修改已执行 Flyway V*.sql | checksum 失败 → 启动不了 |
 | 14 | VIEW 修改只改 ViewMigrator 不改 Flyway | 云端 Flyway 执行，ViewMigrator 云端不跑 |
 | 15 | request_id 超 VARCHAR(64) | 紧凑格式 |
+| 16 | Flyway PREPARE + DEFAULT NULL 报错 | 动态SQL中不写 `DEFAULT NULL`，MySQL默认即NULL |
 
 ---
 

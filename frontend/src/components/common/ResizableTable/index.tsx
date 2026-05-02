@@ -72,6 +72,8 @@ const SortableHeaderCell: React.FC<any> = (props) => {
         transform: CSS.Translate.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        // 拖拽中需要 position:relative 才能正确渲染 transform，非拖拽状态不覆盖
+        // 不拖拽时不可覆盖 position，否则 fixed 列 header 的 position:sticky 会失效
         position: 'relative',
         zIndex: isDragging ? 100 : undefined,
       }
@@ -81,7 +83,7 @@ const SortableHeaderCell: React.FC<any> = (props) => {
     <th
       ref={setNodeRef}
       className={className}
-      style={{ ...style, ...transformStyle, position: 'relative' }}
+      style={{ ...style, ...transformStyle }}
       {...attributes}
       {...listeners}
       {...restProps}
@@ -259,7 +261,13 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       map.delete(id);
     }
 
-    return ordered;
+    // ✅ 修正：无论 localStorage 存储的顺序如何（可能因 DnD 拖拽把 fixed 列移到了中间），
+    // 始终保证 fixed:'left' 在最左，fixed:'right' 在最右，各组内保持相对顺序不变。
+    // 这可修复用户拖拽 fixed 列到中间后，fixed 列 header 出现空白占位的问题。
+    const fixedLeft = ordered.filter((c: any) => c.fixed === 'left');
+    const fixedRight = ordered.filter((c: any) => c.fixed === 'right');
+    const nonFixed = ordered.filter((c: any) => c.fixed !== 'left' && c.fixed !== 'right');
+    return [...fixedLeft, ...nonFixed, ...fixedRight];
   }, [preparedColumns, columnOrder]);
 
   const finalColumns = React.useMemo(() => {
