@@ -3,7 +3,7 @@ import { App, Form } from 'antd';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import type { PatternRevision } from '@/types/patternRevision';
-import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
+import { isAdminUser as isAdminUserFn, useUser } from '@/utils/AuthContext';
 import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
 
@@ -18,7 +18,7 @@ type PatternCheckResult = {
 
 export default function usePatternPanelActions(styleNo?: string) {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
     page: 1, pageSize: readPageSize(10), onlyCompleted: true,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App } from 'antd';
 import { useDebouncedValue } from '@/hooks/usePerformance';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { expenseReimbursementApi, type ExpenseReimbursement } from '@/services/finance/expenseReimbursementApi';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -9,7 +9,7 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import { usePersistentState } from '@/hooks/usePersistentState';
 
 export const useExpenseListData = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { message } = App.useApp();
 
   const [list, setList] = useState<ExpenseReimbursement[]>([]);

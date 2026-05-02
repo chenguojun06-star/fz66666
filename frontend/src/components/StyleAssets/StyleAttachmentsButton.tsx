@@ -6,7 +6,7 @@ import ResizableModal, {
   useResizableModalTableScrollY,
 } from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { message } from '@/utils/antdStatic';
 
@@ -21,7 +21,7 @@ const StyleAttachmentsButton: React.FC<{
   onlyActive?: boolean;
   onModalClose?: () => void;
 }> = ({ styleId, styleNo, buttonText = '纸样', modalTitle = '纸样附件', bizTypes, onlyActive, onModalClose }) => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const isAdmin = user?.permissions?.includes('system:manage') ?? false;
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);

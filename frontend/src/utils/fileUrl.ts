@@ -4,7 +4,7 @@
  * 新上传的文件URL格式：/api/file/tenant-download/{tenantId}/{uuid}.{ext}
  * 旧文件URL格式：/api/common/download/{uuid}.{ext} 或 /upload/{uuid}.{ext}
  *
- * 因为浏览器 <a href> / <img src> 不会自动带 Authorization header，
+ * 因为浏览器 <a href> / <img loading="lazy" src> 不会自动带 Authorization header，
  * 需要在 URL 上附加 ?token=xxx 让后端 TokenAuthFilter 识别身份。
  */
 

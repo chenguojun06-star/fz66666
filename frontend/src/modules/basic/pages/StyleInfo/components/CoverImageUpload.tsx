@@ -199,14 +199,14 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       >
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            <img src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: '#fff', fontSize: 12, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
           </div>
         ) : coverUrl ? (
           // 无上传附件但有选品中心下板时的参考图（cover字段）
-          <img src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             {isNewMode ? (

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   App,
-  Card,
   Button,
   Space,
   Tag,
@@ -14,7 +13,7 @@ import {
 import RowActions from '@/components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
-import StandardToolbar from '@/components/common/StandardToolbar';
+import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -379,68 +378,60 @@ const SampleInventory: React.FC = () => {
 
   return (
     <>
-        {showSmartErrorNotice && smartError ? (
-          <Card size="small" style={{ marginBottom: 12 }}>
+        <PageLayout
+          title="样衣库存"
+          headerContent={showSmartErrorNotice && smartError ? (
             <SmartErrorNotice
               error={smartError}
-              onFix={() => {
-                void loadData();
-              }}
+              onFix={() => { void loadData(); }}
             />
-          </Card>
-        ) : null}
-
-        <Card>
-          <div style={{ marginBottom: 16 }}>
-            <StandardToolbar
-              left={(
-                <StandardSearchBar
-                  searchValue={searchText}
-                  onSearchChange={setSearchText}
-                  searchPlaceholder="搜索款号"
-                  dateValue={dateRange}
-                  onDateChange={setDateRange}
-                  statusValue={sampleType || ''}
-                  onStatusChange={(value) => setSampleType(value || undefined)}
-                  showDatePresets={false}
-                  statusOptions={[
-                    { label: '全部', value: '' },
-                    ...Object.entries(SampleTypeMap).map(([key, label]) => ({
-                      label,
-                      value: key,
-                    }))
-                  ]}
-                />
-              )}
-              right={(
-                <Space>
-                  <Button
-                    type="default"
-                    style={getRecordSwitchButtonStyle(recordStatus === 'active')}
-                    onClick={() => setRecordStatus('active')}
-                  >
-                    在库列表
-                  </Button>
-                  <Button
-                    type="default"
-                    style={getRecordSwitchButtonStyle(recordStatus === 'destroyed')}
-                    onClick={() => setRecordStatus('destroyed')}
-                  >
-                    销毁记录
-                  </Button>
-                  {recordStatus === 'active' && (
-                    <Button type="primary" onClick={() => {
-                      setInboundSeed(undefined);
-                      inboundModal.open();
-                    }}>
-                      样衣入库
-                    </Button>
-                  )}
-                </Space>
-              )}
+          ) : undefined}
+          filterLeft={(
+            <StandardSearchBar
+              searchValue={searchText}
+              onSearchChange={setSearchText}
+              searchPlaceholder="搜索款号"
+              dateValue={dateRange}
+              onDateChange={setDateRange}
+              statusValue={sampleType || ''}
+              onStatusChange={(value) => setSampleType(value || undefined)}
+              showDatePresets={false}
+              statusOptions={[
+                { label: '全部', value: '' },
+                ...Object.entries(SampleTypeMap).map(([key, label]) => ({
+                  label,
+                  value: key,
+                }))
+              ]}
             />
-          </div>
-
+          )}
+          filterRight={(
+            <Space>
+              <Button
+                type="default"
+                style={getRecordSwitchButtonStyle(recordStatus === 'active')}
+                onClick={() => setRecordStatus('active')}
+              >
+                在库列表
+              </Button>
+              <Button
+                type="default"
+                style={getRecordSwitchButtonStyle(recordStatus === 'destroyed')}
+                onClick={() => setRecordStatus('destroyed')}
+              >
+                销毁记录
+              </Button>
+              {recordStatus === 'active' && (
+                <Button type="primary" onClick={() => {
+                  setInboundSeed(undefined);
+                  inboundModal.open();
+                }}>
+                  样衣入库
+                </Button>
+              )}
+            </Space>
+          )}
+        >
           <ResizableTable
             storageKey="sample-inventory"
             columns={columns}
@@ -456,7 +447,7 @@ const SampleInventory: React.FC = () => {
               onChange: pagination.onChange,
             }}
           />
-        </Card>
+        </PageLayout>
 
         <InboundModal
           visible={inboundModal.visible}

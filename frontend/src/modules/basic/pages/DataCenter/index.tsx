@@ -201,7 +201,7 @@ const DataCenter: React.FC = () => {
               <Col span={8}>
                 <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {detailRecord.cover ? (
-                    <img src={getFullAuthedFileUrl(detailRecord.cover)} alt="封面" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img loading="lazy" src={getFullAuthedFileUrl(detailRecord.cover)} alt="封面" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <span style={{ color: 'var(--neutral-text-secondary)' }}>暂无封面</span>
                   )}

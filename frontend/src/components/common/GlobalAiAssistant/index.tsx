@@ -14,7 +14,7 @@ import {
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { App } from 'antd';
 import api from '@/utils/api';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser, useAuthState } from '@/utils/AuthContext';
 import { useWebSocket, type WsMessage } from '@/hooks/useWebSocket';
 import XiaoyunCloudAvatar, { CuteCloudTrigger, type XiaoyunCloudMood } from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
@@ -62,7 +62,8 @@ function normalizeTraceableAdvice(payload: unknown): Message['traceableAdvice'] 
 
 const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useUser();
+  const { isAuthenticated } = useAuthState();
   const navigate = useNavigate();
   const location = useLocation();
 

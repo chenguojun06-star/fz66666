@@ -5,7 +5,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { productionOrderApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { savePageSize, readPageSize } from '@/utils/pageSizeStore';
@@ -19,7 +19,7 @@ import FactoryShipmentTab from './components/FactoryShipmentTab';
 
 const ExternalFactory: React.FC = () => {
   const { message } = App.useApp();
-  const { user: _user } = useAuth();
+  const { user: _user } = useUser();
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);

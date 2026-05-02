@@ -183,7 +183,7 @@ export const buildProductionSheetHtml = (payload: any) => {
       <button class="btn" onclick="window.print()">打印</button>
     </div>
     <div class="header">
-      <img class="cover" src="${esc(coverUrl)}" onerror="this.style.display='none'" />
+      <img loading="lazy" class="cover" src="${esc(coverUrl)}" onerror="this.style.display='none'" />
       <div>
         <div class="h1">生产制单</div>
         <div class="meta">

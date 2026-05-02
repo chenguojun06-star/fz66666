@@ -7,7 +7,7 @@ import { PlusOutlined, SearchOutlined, CloseCircleOutlined, UploadOutlined } fro
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import ResizableModal from '@/components/common/ResizableModal';
-import { useAuth, isSupervisorOrAbove } from '@/utils/AuthContext';
+import { useUser, isSupervisorOrAbove } from '@/utils/AuthContext';
 import { EXPENSE_TYPES, EXPENSE_STATUS, PAYMENT_METHODS, expenseReimbursementApi, type ExpenseReimbursement } from '@/services/finance/expenseReimbursementApi';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -26,7 +26,7 @@ const statusTag = (val: string) => {
 };
 
 const ExpenseReimbursementPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { message, modal } = App.useApp();
 
   const {

@@ -11,7 +11,7 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { customerApi, receivableApi, type Customer, type Receivable } from '@/services/crm/customerApi';
@@ -568,7 +568,7 @@ const CustomerManagement: React.FC = () => {
 // ─── 页面主入口（订阅检测 + 分支渲染）──────────────────────────────
 const CrmDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
   const isSuperAdmin = user?.isSuperAdmin === true;
   const [subscribed, setSubscribed] = useState(false);
   const [checking, setChecking] = useState(true);

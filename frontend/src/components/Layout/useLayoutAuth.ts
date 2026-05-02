@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
+import { isAdminUser as isAdminUserFn, useUser } from '../../utils/AuthContext';
 import { resolvePermissionCode, paths } from '../../routeConfig';
 
 const normalizePath = (path: string) => path.split('?')[0];
@@ -17,7 +17,7 @@ const FACTORY_VISIBLE_PATHS = new Set<string>([
   paths.orderFlow,
 ]);
 
-const ALWAYS_VISIBLE_PATHS = new Set(['/integration/center', '/system/app-store']);
+const ALWAYS_VISIBLE_PATHS = new Set<string>([]);
 
 export interface LayoutAuthResult {
   isAdmin: boolean;
@@ -33,7 +33,7 @@ export interface LayoutAuthResult {
 }
 
 export function useLayoutAuth(): LayoutAuthResult {
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
   const isSuperAdmin = user?.isSuperAdmin === true;

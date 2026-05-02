@@ -10,7 +10,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
+import { isAdminUser as isAdminUserFn, useUser } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { readPageSize } from '@/utils/pageSizeStore';
 import type { TemplateLibrary } from '@/types/style';
@@ -128,7 +128,7 @@ const getDirectTemplatePriority = (row: TemplateLibrary) => {
 
 const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const { width: vpWidth } = useViewport();
   const modalWidth = vpWidth > 1600 ? '60vw' : '60vw';
 

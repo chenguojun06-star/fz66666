@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, ReactNode, useCallback, useMemo } from 'react';
 import { message } from '@/utils/antdStatic';
 
 
@@ -79,15 +79,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }, 3000);
   }, [hideMessage]);
 
+  const contextValue = useMemo<AppContextType>(() => ({
+    ...state,
+    setLoading,
+    showMessage,
+    hideMessage
+  }), [state, setLoading, showMessage, hideMessage]);
+
   return (
-    <AppContext.Provider
-      value={{
-        ...state,
-        setLoading,
-        showMessage,
-        hideMessage
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

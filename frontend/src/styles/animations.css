@@ -197,25 +197,15 @@
 
 /* ─── 8. 全局减少动效偏好兜底 ─── */
 
-/* ─── 9. 表格行逐条进场（无需滚动，数据加载即触发）─── */
+/* ─── 9. 表格行进场（仅首次加载，避免每次数据刷新触发 layout 抖动）─── */
 @keyframes rowSlideIn {
   from { opacity: 0; transform: translateX(-14px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-.ant-table-tbody .ant-table-row {
+.ant-table-tbody .ant-table-row:first-child {
   animation: rowSlideIn 0.22s ease-out both;
 }
-.ant-table-tbody .ant-table-row:nth-child(1)  { animation-delay: 0ms;   }
-.ant-table-tbody .ant-table-row:nth-child(2)  { animation-delay: 45ms;  }
-.ant-table-tbody .ant-table-row:nth-child(3)  { animation-delay: 90ms;  }
-.ant-table-tbody .ant-table-row:nth-child(4)  { animation-delay: 135ms; }
-.ant-table-tbody .ant-table-row:nth-child(5)  { animation-delay: 180ms; }
-.ant-table-tbody .ant-table-row:nth-child(6)  { animation-delay: 225ms; }
-.ant-table-tbody .ant-table-row:nth-child(7)  { animation-delay: 270ms; }
-.ant-table-tbody .ant-table-row:nth-child(8)  { animation-delay: 315ms; }
-.ant-table-tbody .ant-table-row:nth-child(9)  { animation-delay: 360ms; }
-.ant-table-tbody .ant-table-row:nth-child(10) { animation-delay: 405ms; }
 
 
 @media (prefers-reduced-motion: reduce) {

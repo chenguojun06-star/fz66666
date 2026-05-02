@@ -17,7 +17,7 @@ import {
   getProgressNodeColor, clampPercent,
 } from './styleTableViewUtils';
 import { useNavigate } from 'react-router-dom';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import StyleCopyModal from './StyleCopyModal';
 import useSampleStage from './useSampleStage';
@@ -60,7 +60,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 }) => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
   const [selectedStage, setSelectedStage] = useState<{ record: StyleInfo; stage: SmartStage } | null>(null);
   const [developmentWorkbenchRecord, setDevelopmentWorkbenchRecord] = useState<StyleInfo | null>(null);

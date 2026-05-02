@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { App } from 'antd';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { checkPermissionRequirement, type PermissionRequirement } from '@/utils/api/permissionGuard';
 
 export interface RequestOptions<T = any> {
@@ -35,7 +35,7 @@ export const useRequest = <T = any>(
   options: RequestOptions<T> = {}
 ): RequestResult<T> => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<T | undefined>();
   const [error, setError] = useState<Error | undefined>();

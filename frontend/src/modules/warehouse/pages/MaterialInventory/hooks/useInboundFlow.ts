@@ -91,7 +91,7 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
     </style></head><body>
       <h2 style="text-align:center;margin-bottom:12px">面辅料料卷二维码标签</h2>
       <div class="grid">${items.map(r => `
-        <div class="card"><img src="${r.qrUrl}" />
+        <div class="card"><img loading="lazy" src="${r.qrUrl}" />
           <div class="code">${r.rollCode}</div><div class="name">${r.materialName}</div>
           <div class="qty">${r.quantity} ${r.unit}</div><div class="code">${r.warehouseLocation}</div>
         </div>`).join('')}

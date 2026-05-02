@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser, useAuthState } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import type { WsMessage } from '@/hooks/useWebSocket';
 import { useNavigate } from 'react-router-dom';
@@ -50,7 +50,8 @@ const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ minMinutesSinceLastScan, cu
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [selectedBucketIndex, setSelectedBucketIndex] = useState<number | null>(null);
   const counterRef = useRef(0);
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useUser();
+  const { isAuthenticated } = useAuthState();
   const navigate = useNavigate();
 
   const { subscribe } = useWebSocket({

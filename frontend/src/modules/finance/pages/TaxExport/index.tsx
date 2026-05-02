@@ -8,7 +8,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { message } from '@/utils/antdStatic';
 import InvoiceTab from './InvoiceTab';
 import PayableTab from './PayableTab';
@@ -23,7 +23,7 @@ const TaxExport: React.FC = () => {
   const [format, setFormat] = useState<ExportFormat>('STANDARD');
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([dayjs().startOf('month'), dayjs()]);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const { user } = useAuth();
+  const { user } = useUser();
   const isSuperAdmin = user?.isSuperAdmin === true;
   const [subscribed, setSubscribed] = useState(false);
   const [subscriptionType, setSubscriptionType] = useState<string>('');

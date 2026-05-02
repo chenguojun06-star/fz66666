@@ -44,9 +44,9 @@ export default defineConfig({
           if (id.includes('node_modules/')) {
             if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
             if (id.includes('exceljs/')) return 'vendor-exceljs';
-            if (id.includes('xlsx/')) return 'vendor-xlsx';
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) return 'vendor-react';
             if (id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')) return 'vendor-antd';
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) return 'vendor-antd';
+            if (id.includes('@ant-design/charts') || id.includes('@antv/')) return 'vendor-antv-charts';
             if (id.includes('react-router') || id.includes('@remix-run/')) return 'vendor-router';
             if (id.includes('dayjs/')) return 'vendor-dayjs';
             if (id.includes('axios/')) return 'vendor-axios';
@@ -54,6 +54,7 @@ export default defineConfig({
             if (id.includes('dompurify/')) return 'vendor-dompurify';
             if (id.includes('qrcode')) return 'vendor-qrcode';
             if (id.includes('zustand/')) return 'vendor-zustand';
+            return 'vendor-other';
           }
         },
       },

@@ -67,7 +67,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
           <div style={S.heroOverviewStyle}>
             <div style={S.styleCoverCardStyle}>
-              {styleCoverUrl ? <img src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 12, color: '#94a3b8' }}>暂无款式图</div></div>}
+              {styleCoverUrl ? <img loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 12, color: '#94a3b8' }}>暂无款式图</div></div>}
             </div>
             <div>
               <div style={S.orderNoStyle}>{data.orderNo}</div>

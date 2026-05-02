@@ -8,7 +8,7 @@ import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import api from '@/utils/api';
-import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
+import { isAdminUser as isAdminUserFn, useUser } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import type { TemplateLibrary } from '@/types/style';
 import SyncProcessPriceModal from './components/SyncProcessPriceModal';
@@ -31,7 +31,7 @@ const { Text } = Typography;
 
 const TemplateCenter: React.FC = () => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const { modalWidth } = useViewport();
   const editModalRef = useRef<EditTemplateModalRef>(null);
 

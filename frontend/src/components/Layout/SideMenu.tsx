@@ -238,7 +238,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
             )}
           >
             <Button type="text" size="small" className="sidebar-icp-collapsed-btn">
-              <img src="/police.png" alt="公安备案图标" className="sidebar-icp-collapsed-icon" />
+              <img loading="lazy" src="/police.png" alt="公安备案图标" className="sidebar-icp-collapsed-icon" />
               <span>备案</span>
             </Button>
           </Tooltip>
@@ -248,7 +248,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
         <div className="sidebar-icp">
           <div className="sidebar-icp-links">
             <div className="sidebar-icp-link-row">
-              <img src="/police.png" alt="公安备案图标" className="sidebar-icp-icon" />
+              <img loading="lazy" src="/police.png" alt="公安备案图标" className="sidebar-icp-icon" />
               <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer">
                 粤公网安备44011302005352号
               </a>

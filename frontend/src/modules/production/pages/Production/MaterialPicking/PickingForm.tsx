@@ -3,7 +3,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { Form, Modal, Select, Input, InputNumber } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { message } from '@/utils/antdStatic';
 
 interface PickingFormProps {
@@ -14,7 +14,7 @@ interface PickingFormProps {
 
 const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);

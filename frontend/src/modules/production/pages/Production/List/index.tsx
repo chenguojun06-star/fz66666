@@ -12,7 +12,7 @@ import { ProductionOrder } from '@/types/production';
 import {
   isOrderFrozenByStatus,
 } from '@/utils/api';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import '../../../styles.css';
 import dayjs from 'dayjs';
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -54,7 +54,7 @@ const ProductionList: React.FC = () => {
   const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
   const quickEditModal = useModal<ProductionOrder>();
   const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; orderNo: string; defaultRole?: string; merchandiser?: string }>({ open: false, orderNo: '' });
-  const { user } = useAuth();
+  const { user } = useUser();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
   const isFactoryAccount = !!(user as any)?.factoryId;
   const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;

@@ -18,7 +18,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import StandardModal from '@/components/common/StandardModal';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { message } from '@/utils/antdStatic';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { toSeasonCn, PrintOptions, DEFAULT_PRINT_OPTIONS, StylePrintModalProps, PrintData } from './types';
 import { buildPrintHtml } from './printTemplate';
@@ -31,7 +31,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   category, season, mode = 'sample', patternProductionId: propPatternId, extraInfo = {}, sizeDetails = [],
   sizes: propSizes, sizeColorConfig,
 }) => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const showPrice = canViewPrice(user);
   const [options, setOptions] = useState<PrintOptions>(DEFAULT_PRINT_OPTIONS);
   const [loading, setLoading] = useState(false);
@@ -189,7 +189,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           const qrIdx = itemIdx * copies + copyIdx;
           const displayText = [sNo, item.color, item.size].filter(Boolean).join(' - ');
           return `<div class="page"><div class="label">
-            <div class="qr-col"><img src="${qrUrls[qrIdx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/></div>
+            <div class="qr-col"><img loading="lazy" src="${qrUrls[qrIdx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/></div>
             <div class="info-col">
               <div class="ucode-row">${displayText}</div>
               <div class="info-row"><span class="lbl">款号</span><span class="val">${sNo}</span></div>
@@ -306,7 +306,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               <div style={{ display: 'flex', gap: 24, padding: 16, borderBottom: '2px solid #d9d9d9', background: 'var(--color-bg-container)', borderRadius: 8 }}>
                 {resolvedCover && (
                   <div style={{ flexShrink: 0, width: 120, height: 120 }}>
-                    <img src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
+                    <img loading="lazy" src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid #e8e8e8' }} />
                   </div>
                 )}
@@ -371,7 +371,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   {/* 必须使用 PNG dataURL 的 <img>，不能用 antd <QRCode type="svg">：
                       SVG 元素通过 innerHTML 序列化到打印 iframe 后命名空间会丢失，导致打印预览中二维码不显示。 */}
                   {qrPngDataUrl
-                    ? <img src={qrPngDataUrl} alt="QR" style={{ width: 160, height: 160, display: 'block' }} />
+                    ? <img loading="lazy" src={qrPngDataUrl} alt="QR" style={{ width: 160, height: 160, display: 'block' }} />
                     : <QRCode value={qrValue} size={160} />}
                 </div>
               </div>
@@ -548,7 +548,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                             {row.chunkImgs.length > 0
                               ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
                                   {row.chunkImgs.map((url: string) => (
-                                    <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} />
+                                    <img loading="lazy" key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} />
                                   ))}
                                 </div>
                               : <span style={{ color: '#ccc', fontSize: 11 }}>无图</span>
@@ -604,7 +604,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       return (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                           {imgs.map((url: string) => (
-                            <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
+                            <img loading="lazy" key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
                           ))}
                         </div>
                       );

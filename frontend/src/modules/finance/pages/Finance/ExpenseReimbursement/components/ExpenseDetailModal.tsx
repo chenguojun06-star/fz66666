@@ -4,7 +4,7 @@ import { CheckCircleOutlined, CloseCircleOutlined, PictureOutlined } from '@ant-
 import dayjs from 'dayjs';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ModalField, ModalFieldRow } from '@/components/common/ModalContentLayout';
-import { useAuth, isSupervisorOrAbove } from '@/utils/AuthContext';
+import { useUser, isSupervisorOrAbove } from '@/utils/AuthContext';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import {
   expenseReimbursementApi,
@@ -38,7 +38,7 @@ type ExpenseDetailModalProps = {
 };
 
 const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, viewMode, onClose, onRefresh, reportSmartError }) => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { message } = App.useApp();
   const [detailDocList, setDetailDocList] = useState<ExpenseReimbursementDoc[]>([]);
   const [selectedDocIndex, setSelectedDocIndex] = useState(0);
@@ -113,7 +113,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
               {detailDocList.length > 1 && (
                 <div style={{ flexShrink: 0, display: 'flex', gap: 8, overflowX: 'auto', padding: '2px 0 2px', scrollbarWidth: 'thin' as const }}>
                   {detailDocList.map((doc, idx) => (
-                    <img key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={60} height={60}
+                    <img loading="lazy" key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={60} height={60}
                       style={{ objectFit: 'cover', borderRadius: 6, cursor: 'pointer', flexShrink: 0, border: selectedDocIndex === idx ? '2px solid var(--color-primary)' : '2px solid #e0e0e0', opacity: selectedDocIndex === idx ? 1 : 0.6, transition: 'all 0.15s' }}
                       onClick={() => setSelectedDocIndex(idx)} title={`第 ${idx + 1} 张凭证`}
                     />

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { App, Form, Modal } from 'antd';
 import type { InputRef } from 'antd';
 import { isOrderFrozenByStatus, isOrderTerminal, generateRequestId } from '@/utils/api';
-import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useUser } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
 import { CuttingBundle, ProductionOrder, ScanRecord } from '@/types/production';
 import { productionCuttingApi, productionOrderApi } from '@/services/production/productionApi';
@@ -59,7 +59,7 @@ type ProgressDetailProps = { embedded?: boolean };
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { message } = App.useApp();
   const { factoryTypeOptions } = useOrganizationFilterOptions();
-  const { user } = useAuth();
+  const { user } = useUser();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
   const isFactoryAccount = !!(user as any)?.factoryId;
   const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { isAdmin, useAuth } from '../../utils/AuthContext';
+import { isAdmin, useUser, useAuthState } from '../../utils/AuthContext';
 import { paths, resolvePermissionCode, superAdminOnlyPaths } from '../../routeConfig';
 import XiaoyunPageLoader from '../common/XiaoyunPageLoader';
 import Layout from '../Layout';
@@ -21,7 +21,8 @@ const FACTORY_PREFIX_PATHS: string[] = [
 ];
 
 const PrivateRoute: React.FC = () => {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { user } = useUser();
+  const { isAuthenticated, loading } = useAuthState();
   const location = useLocation();
 
   if (loading) {

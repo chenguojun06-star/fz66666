@@ -85,7 +85,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       <div class="print-page">
         <div class="label">
           <div class="qr">
-            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" />
+            <img loading="lazy" src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" />
           </div>
           <div class="text">
             <div>订单：${String(b.productionOrderNo || '').trim() || '-'}</div>

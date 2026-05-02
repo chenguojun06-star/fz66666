@@ -12,7 +12,7 @@ import { useUserListData } from './hooks/useUserListData';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { User as UserType } from '@/types/system';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import tenantService from '@/services/tenantService';
 import { LOG_COLUMNS } from './userListUtils';
 import { useViewport } from '@/utils/useViewport';
@@ -24,7 +24,7 @@ import './styles.css';
 const { Option } = Select;
 
 const UserList: React.FC = () => {
-  const { user, isSuperAdmin, isTenantOwner } = useAuth();
+  const { user, isSuperAdmin, isTenantOwner } = useUser();
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();

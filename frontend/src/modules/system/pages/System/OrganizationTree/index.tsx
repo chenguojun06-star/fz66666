@@ -8,7 +8,7 @@ import tenantService from '@/services/tenantService';
 import type { Factory } from '@/services/system/factoryApi';
 import type { ApiResult } from '@/utils/api';
 import type { OrganizationUnit, User } from '@/types/system';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import {
   App, Avatar, Button, Checkbox, Col, Descriptions, Empty, Form, Input,
   InputNumber, QRCode, Row, Select, Space, Spin, Tag, Typography,
@@ -58,7 +58,7 @@ import { TreeItem } from './components/TreeItem';
 
 const OrganizationTreePage: React.FC = () => {
   const { message, modal } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const {
     loading,

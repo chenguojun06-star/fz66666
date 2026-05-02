@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { App, Button, Space, Tag } from 'antd';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
 import api from '@/utils/api';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
@@ -59,7 +59,7 @@ const StyleStageControlBar: React.FC<Props> = ({
   extraInfo,
 }) => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [saving, setSaving] = React.useState(false);
   const [resolvedStyleNo, setResolvedStyleNo] = React.useState('');
   const [rejectModalOpen, setRejectModalOpen] = React.useState(false);

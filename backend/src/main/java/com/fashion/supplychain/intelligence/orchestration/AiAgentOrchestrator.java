@@ -49,23 +49,17 @@ public class AiAgentOrchestrator {
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
 
-    private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(5);
-    private static final int CACHE_MAX_SIZE = 200;
     private static final long AGENT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(180);
     private static final long CONTEXT_REFRESH_MS = TimeUnit.MINUTES.toMillis(10);
-    private final ConcurrentHashMap<String, CacheEntry> queryCache = new ConcurrentHashMap<>();
+    private final com.github.benmanes.caffeine.cache.Cache<String, String> queryCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+            .maximumSize(200)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
 
     private volatile String cachedSystemContext = "";
     private volatile long lastContextRefresh = 0;
     private volatile String cachedSkillContext = "";
     private volatile long lastSkillRefresh = 0;
-
-    private static class CacheEntry {
-        final String result;
-        final long createdAt;
-        CacheEntry(String result) { this.result = result; this.createdAt = System.currentTimeMillis(); }
-        boolean isExpired() { return System.currentTimeMillis() - createdAt > CACHE_TTL_MS; }
-    }
 
     private String buildAugmentedPageContext(String userMessage, String originalPageContext) {
         StringBuilder augmented = new StringBuilder();
@@ -198,17 +192,14 @@ public class AiAgentOrchestrator {
             }
 
             String cacheKey = UserContext.tenantId() + ":" + UserContext.userId() + ":" + userMessage;
-            CacheEntry cached = queryCache.get(cacheKey);
-            if (cached != null && !cached.isExpired()) {
-                log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.result.length());
+            String cached = queryCache.getIfPresent(cacheKey);
+            if (cached != null) {
+                log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.length());
                 AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
-                emitSse(emitter, "answer", java.util.Map.of("content", cached.result, "commandId", ctx.getCommandId()));
+                emitSse(emitter, "answer", java.util.Map.of("content", cached, "commandId", ctx.getCommandId()));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
                 return;
-            }
-            if (queryCache.size() > CACHE_MAX_SIZE) {
-                queryCache.entrySet().removeIf(e -> e.getValue().isExpired());
             }
 
             if (isQuickPathEligible(userMessage)) {
@@ -234,7 +225,7 @@ public class AiAgentOrchestrator {
                     || "token_budget_exceeded".equals(loopResult) || "max_iterations_exceeded".equals(loopResult)
                     || "cancelled".equals(loopResult) || "deadline_exceeded".equals(loopResult)) {
             } else if (cb.getFinalContent() != null && cb.getExecRecords().size() <= 2) {
-                queryCache.put(cacheKey, new CacheEntry(deduplicateAnswer(cb.getFinalContent())));
+                queryCache.put(cacheKey, deduplicateAnswer(cb.getFinalContent()));
             }
 
             triggerPostTurnHooks(ctx, userMessage, cb.getFinalContent(), cb.getExecRecords());
@@ -448,7 +439,7 @@ public class AiAgentOrchestrator {
             emitSse(emitter, "done", java.util.Map.of());
             emitter.complete();
 
-            queryCache.put(cacheKey, new CacheEntry(deduplicateAnswer(answer)));
+            queryCache.put(cacheKey, deduplicateAnswer(answer));
 
             return true;
         } catch (Exception e) {

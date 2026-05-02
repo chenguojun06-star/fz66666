@@ -59,8 +59,17 @@ public class DashboardOrchestrator {
     public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
-            return buildFactoryDashboard(ctxFactoryId);
+            String factoryCacheKey = "factory_dashboard:" + ctxFactoryId;
+            DashboardResponse cached = cacheHelper.getFromCache(factoryCacheKey);
+            if (cached != null) return cached;
+            DashboardResponse result = buildFactoryDashboard(ctxFactoryId);
+            cacheHelper.putToCache(factoryCacheKey, result);
+            return result;
         }
+
+        String cacheKey = "main_dashboard";
+        DashboardResponse cachedMain = cacheHelper.getFromCache(cacheKey);
+        if (cachedMain != null) return cachedMain;
 
         LocalDate rangeStart = parseDateOrNull(startDate);
         LocalDate rangeEnd = parseDateOrNull(endDate);
@@ -94,6 +103,7 @@ public class DashboardOrchestrator {
         data.setDefectiveQuantity(unqualifiedQuantity);
         data.setPaymentApprovalCount(paymentApprovalCount);
         data.setRecentActivities(recentActivities);
+        cacheHelper.putToCache(cacheKey, data);
         return data;
     }
 

@@ -8,7 +8,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { useModal } from '@/hooks';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
@@ -24,7 +24,7 @@ interface FactoryWorker {
 }
 
 const FactoryWorkerList: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { message, modal } = App.useApp();

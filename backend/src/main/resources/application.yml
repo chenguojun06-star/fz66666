@@ -5,14 +5,18 @@ server:
     context-path: /
     session:
       cookie:
-        same-site: none    # 跨域部署(前端域≠后端域)需 None; JWT无状态模式下此Cookie不参与认证
-        secure: true        # SameSite=None 必须配合 Secure（HTTPS）
+        same-site: none
+        secure: true
         http-only: true
     encoding:
       charset: UTF-8
       enabled: true
       force: true
   shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/xml,text/plain,text/css,application/javascript
+    min-response-size: 1024
   tomcat:
     threads:
       max: 400

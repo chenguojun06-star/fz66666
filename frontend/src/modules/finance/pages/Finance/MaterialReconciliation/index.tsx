@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { App, Button, Card, Dropdown, Select, Tag } from 'antd';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import PageLayout from '@/components/common/PageLayout';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -22,7 +22,7 @@ const { Option } = Select;
 
 const MaterialReconciliation: React.FC = () => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const {
     reconciliationList, loading, queryLoading, total, queryParams, dateRange,

@@ -24,7 +24,9 @@ export const MODULE_SECTIONS = [
     { path: '/production/cutting', label: '裁剪管理' },
     { path: '/production/progress-detail', label: '工序跟进' },
     { path: '/production/external-factory', label: '外发工厂' },
+    { path: '/production/picking', label: '物料领用' },
     { path: '/production/warehousing', label: '质检入库' },
+    { path: '/production/transfer', label: '订单转移' },
   ]},
   { key: 'supplierManagement', title: '供应商管理', paths: [
     { path: '/production/partners', label: '供应商管理' },
@@ -49,6 +51,7 @@ export const MODULE_SECTIONS = [
   { key: 'system', title: '系统设置', paths: [
     { path: '/system/profile', label: '个人中心' },
     { path: '/system/user', label: '人员管理' },
+    { path: '/system/user-approval', label: '用户审批' },
     { path: '/system/role', label: '岗位管理' },
     { path: '/system/organization', label: '组织架构' },
     { path: '/system/dict', label: '字典管理' },
@@ -57,10 +60,19 @@ export const MODULE_SECTIONS = [
     { path: '/system/data-import', label: '数据导入' },
     { path: '/system/orphan-data', label: '孤立数据' },
   ]},
+  { key: 'appStore', title: '应用商店', paths: [
+    { path: '/system/app-store', label: '应用商店' },
+  ]},
+  { key: 'tenant', title: 'API对接管理', paths: [
+    { path: '/system/tenant', label: 'API对接管理' },
+  ]},
   { key: 'intelligence', title: '智能运营中心', paths: [
     { path: '/intelligence/center', label: '智能运营中心' },
     { path: '/cockpit', label: '数据看板' },
   ] },
+  { key: 'integrationCenter', title: '集成对接中心', paths: [
+    { path: '/integration/center', label: '集成对接中心' },
+  ]},
 ];
 
 export const ALL_MODULE_PATHS = MODULE_SECTIONS.flatMap(section => section.paths.map(item => item.path));

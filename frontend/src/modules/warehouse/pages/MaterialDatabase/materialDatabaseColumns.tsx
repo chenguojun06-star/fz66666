@@ -28,7 +28,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
       title: '图片', dataIndex: 'image', key: 'image', width: 80,
       render: (image: string) => {
         if (!image) return null;
-        return <img src={getFullAuthedFileUrl(image)} alt="物料图片" style={{ width: 40, height: 'auto', display: 'block' }} />;
+        return <img loading="lazy" src={getFullAuthedFileUrl(image)} alt="物料图片" style={{ width: 40, height: 'auto', display: 'block' }} />;
       }
     },
     {

@@ -105,7 +105,7 @@ function buildUCodeHtml(item: WashLabelItem, w: number, qrDataUrl: string): stri
       <div class="sub">款号：${item.styleNo || '-'}${item.color ? '&nbsp;&nbsp;颜色：' + item.color : ''}${item.size ? '&nbsp;&nbsp;码：' + item.size : ''}</div>
       <div class="hr"></div>
       <div class="ucode-val">${item.uCode || '（U码未填写）'}</div>
-      ${qrDataUrl ? `<div class="qr"><img src="${qrDataUrl}" width="${qrSize}mm" height="${qrSize}mm"/></div>` : ''}
+      ${qrDataUrl ? `<div class="qr"><img loading="lazy" src="${qrDataUrl}" width="${qrSize}mm" height="${qrSize}mm"/></div>` : ''}
       <div class="hr"></div>
       <div class="small">${item.orderNo}</div>
       <div class="date">${dateStr}</div>

@@ -8,7 +8,7 @@ import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { getStyleCardColorText, getStyleCardQuantityText, getStyleCardSizeQuantityItems, getStyleCardSizeText } from '@/utils/cardSizeQuantity';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { getStyleSourceText } from '@/utils/styleSource';
@@ -48,7 +48,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   focusedStyleId,
 }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
   const { columns: cardColumns } = useCardGridLayout(10);
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 

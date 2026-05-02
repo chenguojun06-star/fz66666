@@ -42,7 +42,7 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
       {loading ? (
         <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
-        <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img loading="lazy" src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}

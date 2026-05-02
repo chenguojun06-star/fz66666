@@ -9,7 +9,7 @@ import type {
 } from '@/services/intelligence/intelligenceApi';
 import type { ApiResult } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser, useAuthState } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import type { WsMessage } from '@/hooks/useWebSocket';
 import { useTimerManager } from './useTimerManager';
@@ -38,7 +38,8 @@ const INITIAL: CockpitData = {
 };
 
 export function useCockpit() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useUser();
+  const { isAuthenticated } = useAuthState();
   const [data, setData] = useState<CockpitData>(INITIAL);
   const timers = useTimerManager();
 

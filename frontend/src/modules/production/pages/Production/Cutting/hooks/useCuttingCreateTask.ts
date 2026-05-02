@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import api from '@/utils/api';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { factoryApi, type Factory } from '@/services/system/factoryApi';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit } from '@/types/system';
@@ -91,7 +91,7 @@ interface UseCuttingCreateTaskOptions {
 }
 
 export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCuttingCreateTaskOptions) {
-  useAuth();
+  useUser();
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);

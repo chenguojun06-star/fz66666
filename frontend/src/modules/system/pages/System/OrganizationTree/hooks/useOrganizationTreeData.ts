@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { App } from 'antd';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit, User } from '@/types/system';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 
 /** 递归过滤组织树，只保留属于指定工厂的节点（工厂账号数据隔离） */
 function filterTreeByFactory(nodes: OrganizationUnit[], factoryId: string): OrganizationUnit[] {
@@ -20,7 +20,7 @@ function filterTreeByFactory(nodes: OrganizationUnit[], factoryId: string): Orga
 
 export function useOrganizationTreeData() {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<OrganizationUnit[]>([]);

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Modal } from 'antd';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { useModal } from '@/hooks';
 import tenantAppService from '@/services/tenantAppService';
 import type { TenantAppInfo, TenantAppLogInfo } from '@/services/tenantAppService';
@@ -20,7 +20,7 @@ export const useAppManagement = () => {
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsLoading, setLogsLoading] = useState(false);
   const [newSecret, setNewSecret] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user } = useUser();
   const isSuperAdmin = user?.isSuperAdmin === true;
 
   const [editingUrlId, setEditingUrlId] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { App, Form, Modal } from 'antd';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { appStoreService, ecPlatformConfigService } from '@/services/system/appStore';
 import type { MyAppInfo } from '@/services/system/appStore';
 import type { AppStoreItem, OrderForm } from './appStoreConstants';
@@ -8,7 +8,7 @@ import { EC_PLATFORM_MAP, isEcApp, parseFeatures } from './appStoreConstants';
 
 export function useAppStore() {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [appList, setAppList] = useState<AppStoreItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedApp, setSelectedApp] = useState<AppStoreItem | null>(null);

@@ -3,7 +3,7 @@ import { App, Form, Modal } from 'antd';
 import { StyleBom } from '@/types/style';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { getMaterialSortWeight } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import StyleStageControlBar from './StyleStageControlBar';
@@ -96,7 +96,7 @@ const StyleBomTab: React.FC<Props> = ({
   onRefresh,
   sizeColorConfig,
 }) => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { message } = App.useApp();
   const { modalWidth } = useViewport();
   const [editingKey, setEditingKey] = useState('');

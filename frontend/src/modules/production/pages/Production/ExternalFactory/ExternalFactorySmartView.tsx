@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Empty, Skeleton } from 'antd';
 import dayjs from 'dayjs';
+import { Virtuoso } from 'react-virtuoso';
 import StandardPagination from '@/components/common/StandardPagination';
 import { ProductionOrder } from '@/types/production';
 import { isDirectCuttingOrder } from '@/utils/api';
@@ -128,41 +129,56 @@ const ExternalFactorySmartView: React.FC<Props> = ({
     return { record, deliveryMeta, stages, overallProgress, statusInfo, sizeMatrix, totalQty };
   }), [data]);
 
+  const rowRenderer = useCallback((index: number) => {
+    const row = rows[index];
+    if (!row) return null;
+    return (
+      <SmartOrderRow
+        key={row.record.id}
+        record={row.record}
+        deliveryMeta={row.deliveryMeta}
+        stages={row.stages}
+        overallProgress={row.overallProgress}
+        statusInfo={row.statusInfo}
+        sizeMatrix={row.sizeMatrix}
+        totalQty={row.totalQty}
+        STAGE_MIN_SLOT_WIDTH={STAGE_MIN_SLOT_WIDTH}
+        fmtTime={fmtTime}
+        handleCloseOrder={handleCloseOrder}
+        handleScrapOrder={handleScrapOrder}
+        handleTransferOrder={handleTransferOrder}
+        openProcessDetail={openProcessDetail}
+        syncProcessFromTemplate={syncProcessFromTemplate}
+        setPrintModalVisible={setPrintModalVisible}
+        setPrintingRecord={setPrintingRecord}
+        quickEditModal={quickEditModal}
+        handleShareOrder={handleShareOrder}
+        onOpenRemark={onOpenRemark}
+        handlePrintLabel={handlePrintLabel}
+        canManageOrderLifecycle={canManageOrderLifecycle}
+        isSupervisorOrAbove={isSupervisorOrAbove}
+        openSubProcessRemap={openSubProcessRemap}
+        isFactoryAccount={isFactoryAccount}
+        openNodeDetail={openNodeDetail}
+      />
+    );
+  }, [rows, handleCloseOrder, handleScrapOrder, handleTransferOrder,
+    openProcessDetail, syncProcessFromTemplate, setPrintModalVisible,
+    setPrintingRecord, quickEditModal, handleShareOrder, onOpenRemark,
+    handlePrintLabel, canManageOrderLifecycle, isSupervisorOrAbove,
+    openSubProcessRemap, isFactoryAccount, openNodeDetail]);
+
   if (loading) return <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 6 }} /></div>;
   if (data.length === 0) return <Empty description="暂无订单数据" style={{ padding: '80px 0' }} />;
 
   return (
     <div className="style-smart-list ef-compact">
-      {rows.map(row => (
-        <SmartOrderRow
-          key={row.record.id}
-          record={row.record}
-          deliveryMeta={row.deliveryMeta}
-          stages={row.stages}
-          overallProgress={row.overallProgress}
-          statusInfo={row.statusInfo}
-          sizeMatrix={row.sizeMatrix}
-          totalQty={row.totalQty}
-          STAGE_MIN_SLOT_WIDTH={STAGE_MIN_SLOT_WIDTH}
-          fmtTime={fmtTime}
-          handleCloseOrder={handleCloseOrder}
-          handleScrapOrder={handleScrapOrder}
-          handleTransferOrder={handleTransferOrder}
-          openProcessDetail={openProcessDetail}
-          syncProcessFromTemplate={syncProcessFromTemplate}
-          setPrintModalVisible={setPrintModalVisible}
-          setPrintingRecord={setPrintingRecord}
-          quickEditModal={quickEditModal}
-          handleShareOrder={handleShareOrder}
-          onOpenRemark={onOpenRemark}
-          handlePrintLabel={handlePrintLabel}
-          canManageOrderLifecycle={canManageOrderLifecycle}
-          isSupervisorOrAbove={isSupervisorOrAbove}
-          openSubProcessRemap={openSubProcessRemap}
-          isFactoryAccount={isFactoryAccount}
-          openNodeDetail={openNodeDetail}
-        />
-      ))}
+      <Virtuoso
+        totalCount={rows.length}
+        itemContent={rowRenderer}
+        style={{ height: Math.min(rows.length * 88, 600) }}
+        overscan={400}
+      />
       <div className="style-smart-list__pagination">
         <StandardPagination
           current={currentPage}

@@ -11,7 +11,7 @@ import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
@@ -42,7 +42,7 @@ import { usePurchaseColumns, useBundleColumns } from './columns';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
   const { modalWidth } = useViewport();

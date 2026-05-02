@@ -5,7 +5,7 @@ import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
 import { MaterialDatabase } from '@/types/production';
 import api from '@/utils/api';
@@ -23,7 +23,7 @@ const { Option } = Select;
 
 const MaterialDatabasePage: React.FC = () => {
   const { isMobile } = useViewport();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [dataList, setDataList] = useState<MaterialDatabase[]>([]);
   const [loading, setLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

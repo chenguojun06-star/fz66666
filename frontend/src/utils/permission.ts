@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserInfo, isAdmin, useAuth } from './AuthContext';
+import { UserInfo, isAdmin, useUser } from './AuthContext';
 
 export function hasPermission(user: UserInfo | null, permissionCode: string): boolean {
   if (!user) return false;
@@ -42,7 +42,7 @@ export function withPermission<P extends object>(
   permissionCode: string
 ): React.FC<P> {
   const Wrapped: React.FC<P> = (props: P) => {
-    const { user } = useAuth();
+    const { user } = useUser();
     if (!hasPermission(user, permissionCode)) {
       return null;
     }

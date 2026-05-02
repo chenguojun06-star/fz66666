@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { App } from 'antd';
 import { productionScanApi } from '@/services/production/productionApi';
 import { formatProcessDisplayName } from '@/utils/productionStage';
-import { useAuth, isAdminUser } from '@/utils/AuthContext';
+import { useUser, isAdminUser } from '@/utils/AuthContext';
 import { generateRequestId } from '@/utils/api';
 import type { ProcessTrackingRecord } from './processTrackingFilter';
 
@@ -14,7 +14,7 @@ export function useProcessTrackingActions(
   onUndoSuccess?: () => void,
 ) {
   const { message, modal } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const _isAdmin = isAdminUser(user);
 
   const resolveScanType = useCallback((record: ProcessTrackingRecord) => {

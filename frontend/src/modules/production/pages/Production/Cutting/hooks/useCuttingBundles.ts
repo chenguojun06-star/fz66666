@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { StyleBom } from '@/types/style';
 import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { getMaterialTypeSortKey } from '@/utils/materialType';
 
@@ -57,7 +57,7 @@ export function useCuttingBundles({
   message, modal, activeTask, orderId, isEntryPage,
   ensureOrderUnlockedById, syncActiveTaskByOrderNo,
 }: UseCuttingBundlesOptions) {
-  useAuth();
+  useUser();
   const editSectionRef = useRef<HTMLDivElement | null>(null);
 
   // 菲号输入

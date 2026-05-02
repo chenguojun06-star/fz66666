@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { message as antdMessage } from 'antd';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation } from 'react-router-dom';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -17,7 +17,7 @@ export function useMaterialPurchase() {
   const [messageApi, contextHolder] = antdMessage.useMessage();
   const message = messageApi;
   const location = useLocation();
-  const { user } = useAuth();
+  const { user } = useUser();
   const { isMobile, modalWidth } = useViewport();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 

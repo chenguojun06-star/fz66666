@@ -433,7 +433,7 @@ const Register: React.FC = () => {
             <div className="login-footer" style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <img src="/police.png" alt="公安备案图标" style={{ width: 14, height: 14, marginRight: 4 }} />
+                  <img loading="lazy" src="/police.png" alt="公安备案图标" style={{ width: 14, height: 14, marginRight: 4 }} />
                   <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer"
                     style={{ color: 'rgba(255,255,255,0.45)' }}>
                     粤公网安备44011302005352号

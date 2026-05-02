@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { App, Form } from 'antd';
 import api, { toNumberSafe, isApiSuccess } from '@/utils/api';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 
 export const NEW_ROW_KEY = '__new__';
 
@@ -51,7 +51,7 @@ export function useSecondaryProcessActions(
   onRefresh?: () => void,
 ) {
   const { message, modal } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [dataSource, setDataSource] = useState<SecondaryProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);

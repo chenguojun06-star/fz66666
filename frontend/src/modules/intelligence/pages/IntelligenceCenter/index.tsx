@@ -7,7 +7,7 @@ import {
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
 } from '@ant-design/icons';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import LiveScanFeed from './LiveScanFeed';
 import CollapseChevron from './CollapseChevron';
 
@@ -41,7 +41,7 @@ const IntelligenceCenter: React.FC = () => {
   const { data, reload } = useCockpit();
   const [countdown, setCountdown]   = useState(30);
   const [now, setNow]               = useState(new Date());
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useUser();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const { isLowEnd } = useDeviceCapability();

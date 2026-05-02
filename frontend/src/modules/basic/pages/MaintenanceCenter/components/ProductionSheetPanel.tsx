@@ -13,7 +13,7 @@ import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { readPageSize } from '@/utils/pageSizeStore';
-import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
+import { isAdminUser as isAdminUserFn, useUser } from '@/utils/AuthContext';
 import { buildProductionSheetHtml } from '../../DataCenter/buildProductionSheetHtml';
 
 const { TextArea } = Input;
@@ -102,7 +102,7 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
   return (
     <div style={{ width: 56, height: 56, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
-        : url ? <img src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : url ? <img loading="lazy" src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         : <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>}
     </div>
   );
@@ -112,7 +112,7 @@ interface ProductionSheetPanelProps { styleNo?: string; }
 
 const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const [stats, setStats] = useState<DataCenterStats>({ styleCount: 0, materialCount: 0, productionCount: 0 });
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({ page: 1, pageSize: readPageSize(10), onlyCompleted: true, ...(styleNo ? { styleNoExact: styleNo } : {}) });

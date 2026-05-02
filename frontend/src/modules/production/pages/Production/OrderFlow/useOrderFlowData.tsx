@@ -3,7 +3,7 @@ import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
 import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
 import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -55,7 +55,7 @@ const statusTag = (status: FlowStage['status']) => {
 
 export function useOrderFlowData() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user } = useUser();
   const isFactoryUser = !!(user as any)?.factoryId;
 
   const query = useMemo(() => {

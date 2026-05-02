@@ -43,9 +43,10 @@ public class ModelConsortiumRouter {
     @Value("${ai.consortium.enabled:true}")
     private boolean consortiumEnabled;
 
-    /** 复杂度判定缓存（TTL 5分钟） */
-    private final Map<String, ComplexityCache> complexityCache = new ConcurrentHashMap<>();
-    private static final int CACHE_MAX_SIZE = 500;
+    private final com.github.benmanes.caffeine.cache.Cache<String, Complexity> complexityCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+            .maximumSize(500)
+            .expireAfterWrite(5, java.util.concurrent.TimeUnit.MINUTES)
+            .build();
 
     /** 关键词模式 */
     private static final Pattern SIMPLE_GREETING = Pattern.compile(
@@ -71,8 +72,6 @@ public class ModelConsortiumRouter {
         /** 视觉 — 需要图片/文档分析 */
         VISUAL
     }
-
-    private record ComplexityCache(Complexity complexity, LocalDateTime cachedAt) {}
 
     /**
      * 根据用户消息判定复杂度并选择模型
@@ -165,26 +164,11 @@ public class ModelConsortiumRouter {
      * 缓存复杂度判定
      */
     public void cacheComplexity(String key, Complexity complexity) {
-        if (complexityCache.size() >= CACHE_MAX_SIZE) {
-            // 清理最旧的 10%
-            List<String> keys = new ArrayList<>(complexityCache.keySet());
-            int removeCount = CACHE_MAX_SIZE / 10;
-            for (int i = 0; i < removeCount && i < keys.size(); i++) {
-                complexityCache.remove(keys.get(i));
-            }
-        }
-        complexityCache.put(key, new ComplexityCache(complexity, LocalDateTime.now()));
+        complexityCache.put(key, complexity);
     }
 
-    /**
-     * 获取缓存的复杂度判定
-     */
     public Complexity getCachedComplexity(String key) {
-        ComplexityCache cache = complexityCache.get(key);
-        if (cache != null && cache.cachedAt.isAfter(LocalDateTime.now().minusMinutes(5))) {
-            return cache.complexity;
-        }
-        return null;
+        return complexityCache.getIfPresent(key);
     }
 
     // ===== 配置热更新 =====
@@ -205,7 +189,7 @@ public class ModelConsortiumRouter {
         config.put("reasoningModel", reasoningModel);
         config.put("visionModel", visionModel);
         config.put("defaultModel", defaultModel);
-        config.put("cacheSize", complexityCache.size());
+        config.put("cacheSize", complexityCache.estimatedSize());
         return config;
     }
 }

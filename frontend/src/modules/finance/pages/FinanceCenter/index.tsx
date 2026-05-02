@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs } from 'antd';
 import { FileTextOutlined, ShopOutlined, ScanOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import FactorySummaryContent from './FactorySummaryContent';
 import ExternalScanContent from './ExternalScanContent';
@@ -12,7 +12,7 @@ type TabKey = 'settlement' | 'factory' | 'scans';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user } = useUser();
   const isFactoryAccount = !!(user as any)?.factoryId;
   // 已审核订单号集合：Tab1审核后流入Tab2，Tab2驳回后回流Tab1
   const [auditedOrderNos, setAuditedOrderNos] = useState<Set<string>>(new Set());

@@ -540,7 +540,7 @@ const Login: React.FC = () => {
             <div className="login-footer login-filing">
               <div className="login-filing-row">
                 <div className="login-filing-item">
-                  <img src="/police.png" alt="公安备案图标" className="login-filing-icon" />
+                  <img loading="lazy" src="/police.png" alt="公安备案图标" className="login-filing-icon" />
                   <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer" className="login-filing-link">
                     粤公网安备44011302005352号
                   </a>

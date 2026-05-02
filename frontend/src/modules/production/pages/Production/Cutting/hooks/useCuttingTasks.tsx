@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import type { CuttingTask } from '@/types/production';
 import type { Dayjs } from 'dayjs';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
@@ -39,7 +39,7 @@ interface UseCuttingTasksOptions {
  * 管理任务列表、领取、退回、排序、统计筛选
  */
 export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions) {
-  const { user } = useAuth();
+  const { user } = useUser();
   const isAdmin = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   // 任务查询状态

@@ -5,7 +5,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { LockOutlined, PlusOutlined, QuestionCircleOutlined, UserOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
-import { useAuth } from '../../utils/AuthContext';
+import { useUser } from '../../utils/AuthContext';
 import api from '../../utils/api';
 import tenantService from '../../services/tenantService';
 
@@ -20,7 +20,7 @@ const statusMap: Record<string, { text: string; color: string }> = {
 };
 
 const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({ open, onClose }) => {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { message } = App.useApp();
   const [members, setMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);

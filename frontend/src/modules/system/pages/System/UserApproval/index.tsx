@@ -9,7 +9,7 @@ import api from '@/utils/api';
 import tenantService from '@/services/tenantService';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
-import { useAuth, isSupervisorOrAbove } from '@/utils/AuthContext';
+import { useUser, isSupervisorOrAbove } from '@/utils/AuthContext';
 import { paths } from '@/routeConfig';
 import './styles.css';
 import { message } from '@/utils/antdStatic';
@@ -19,7 +19,7 @@ const { TextArea } = Input;
 
 const UserApproval: React.FC = () => {
   const { isMobile } = useViewport();
-  const { isTenantOwner, user } = useAuth();
+  const { user, isTenantOwner } = useUser();
   const navigate = useNavigate();
   const canApproveFactory = isTenantOwner || isSupervisorOrAbove(user);
   const [activeTab, setActiveTab] = useState('tenant');

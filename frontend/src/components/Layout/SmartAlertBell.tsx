@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertOutlined,
@@ -10,7 +10,7 @@ import {
 import { Badge } from 'antd';
 import api, { ApiResult } from '../../utils/api';
 import { sysNoticeApi } from '../../services/production/productionApi';
-import { useAuth } from '../../utils/AuthContext';
+import { useUser } from '../../utils/AuthContext';
 import type { SysNotice } from '../../services/production/productionApi';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
@@ -82,7 +82,7 @@ const saveDismissedNotices = (ids: Set<number>) => {
 // ─── 主组件 ─────────────────────────────────────────────────
 const SmartAlertBell: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState<BriefData | null>(null);
   const [events, setEvents] = useState<UrgentEvent[]>([]);
@@ -95,19 +95,18 @@ const SmartAlertBell: React.FC = () => {
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  // 过滤掉今天已消除的事件（隔天自动恢复检测）
-  const visibleEvents = events.filter(ev => !dismissedIds.has(ev.id));
-  // 过滤掉已消除的我的通知（内存状态，刷新页面后重新检测）
-  const visibleNotices = myNotices.filter(n => !dismissedNoticeIds.has(n.id));
+  const fetchedTodayRef = useRef(fetchedToday);
+  fetchedTodayRef.current = fetchedToday;
+  const briefRef = useRef(brief);
+  briefRef.current = brief;
+  const userRef = useRef(user);
+  userRef.current = user;
 
-  // 徽章数 = 面板里还没被 × 关掉的可交互事件总数
-  // 只统计 visibleEvents（已过 dismissedIds 过滤），关一条减一，全关归零
-  // 不再加 overdueOrderCount / highRiskOrderCount：这两个是后端原始数字，
-  // 面板里无对应删除按钮，会导致 badge 永远不归零（"关了信息但数字不消"的问题）
-  // 通知不计入徽章（避免 30 条未读把计数顶到 99+）
+  const visibleEvents = useMemo(() => events.filter(ev => !dismissedIds.has(ev.id)), [events, dismissedIds]);
+  const visibleNotices = useMemo(() => myNotices.filter(n => !dismissedNoticeIds.has(n.id)), [myNotices, dismissedNoticeIds]);
+
   const alertCount = visibleEvents.length;
 
-  // 拉取「我的通知」
   const fetchMyNotices = useCallback(async () => {
     try {
       const [noticesRes, countRes] = await Promise.allSettled([
@@ -123,21 +122,19 @@ const SmartAlertBell: React.FC = () => {
     } catch { /* ignore */ }
   }, []);
 
-  // ── 拉取数据（每天只拉一次，展开时也重拉）──
   const abortRef = useRef<AbortController | null>(null);
   const fetchData = useCallback(async () => {
     const today = new Date().toDateString();
-    if (fetchedToday === today && brief) return; // 今天已拉过
-    // 取消前一个未完成请求，避免竞态
+    if (fetchedTodayRef.current === today && briefRef.current) return;
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
     setLoading(true);
     try {
-      const factoryId = (user as any)?.factoryId || undefined;
-      // 仅管理员/老板/工厂账号才拉取公司/工厂级数据；普通员工（worker等）只看"我的通知"
-      const isManagerLevel = !!(user as any)?.isSuperAdmin || !!(user as any)?.isTenantOwner
-        || ['admin', '管理员', '管理'].some(k => ((user as any)?.role || '').toLowerCase().includes(k));
+      const u = userRef.current;
+      const factoryId = (u as any)?.factoryId || undefined;
+      const isManagerLevel = !!(u as any)?.isSuperAdmin || !!(u as any)?.isTenantOwner
+        || ['admin', '管理员', '管理'].some(k => ((u as any)?.role || '').toLowerCase().includes(k));
       if (!factoryId && !isManagerLevel) {
         setFetchedToday(today);
         return;
@@ -157,9 +154,8 @@ const SmartAlertBell: React.FC = () => {
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
-  }, [fetchedToday, brief, user]);
+  }, []);
 
-  // 每 10 分钟后台静默刷新；每 60 秒轮询我的通知
   useEffect(() => {
     fetchData();
     fetchMyNotices();
@@ -172,7 +168,6 @@ const SmartAlertBell: React.FC = () => {
     };
   }, [fetchData, fetchMyNotices]);
 
-  // fetchedToday 清空后立即重拉
   useEffect(() => {
     if (!fetchedToday) fetchData();
   }, [fetchedToday, fetchData]);

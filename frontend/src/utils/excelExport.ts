@@ -1,11 +1,16 @@
-import ExcelJS from 'exceljs';
 import dayjs from 'dayjs';
+
+async function getExcelJS() {
+  const { default: ExcelJS } = await import('exceljs');
+  return ExcelJS;
+}
 
 export async function exportToExcel(
   data: Record<string, unknown>[],
   columns: { header: string; key: string; width?: number }[],
   fileName: string,
 ) {
+  const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Sheet1');
 

@@ -175,7 +175,9 @@ public class ProductionOrderQueryService {
             wrapper.eq("factory_id", qp.factoryId);
         }
 
-        if ("true".equalsIgnoreCase(qp.myOrdersOnly)) {
+        if ("true".equalsIgnoreCase(qp.myOrdersOnly)
+                && !com.fashion.supplychain.common.UserContext.isTenantOwner()
+                && !com.fashion.supplychain.common.UserContext.isSuperAdmin()) {
             String currentUserId = com.fashion.supplychain.common.UserContext.userId();
             if (org.springframework.util.StringUtils.hasText(currentUserId)) {
                 wrapper.apply(
@@ -439,17 +441,53 @@ public class ProductionOrderQueryService {
 
         java.util.Map<String, Object> safeParams = params == null ? new java.util.HashMap<>() : params;
         QueryWrapper<ProductionOrder> wrapper = buildStatsQueryWrapper(safeParams);
-        wrapper.select("id", "order_no", "order_quantity", "planned_end_date", "create_time", "status");
-        List<ProductionOrder> allOrders = productionOrderMapper.selectList(wrapper);
 
-        if (allOrders == null || allOrders.isEmpty()) {
+        try {
+            java.util.List<java.util.Map<String, Object>> rows = productionOrderMapper.selectMaps(
+                wrapper.select(
+                    "SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') THEN 1 ELSE 0 END) AS active_orders",
+                    "COALESCE(SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') THEN order_quantity ELSE 0 END), 0) AS active_quantity",
+                    "SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders",
+                    "COALESCE(SUM(CASE WHEN status = 'completed' THEN order_quantity ELSE 0 END), 0) AS completed_quantity",
+                    "SUM(CASE WHEN status = 'scrapped' THEN 1 ELSE 0 END) AS scrapped_orders",
+                    "COALESCE(SUM(CASE WHEN status = 'scrapped' THEN order_quantity ELSE 0 END), 0) AS scrapped_quantity",
+                    "SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND planned_end_date IS NOT NULL AND planned_end_date < NOW() THEN 1 ELSE 0 END) AS delayed_orders",
+                    "COALESCE(SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND planned_end_date IS NOT NULL AND planned_end_date < NOW() THEN order_quantity ELSE 0 END), 0) AS delayed_quantity",
+                    "SUM(CASE WHEN create_time >= CURDATE() AND create_time < CURDATE() + INTERVAL 1 DAY THEN 1 ELSE 0 END) AS today_orders",
+                    "COALESCE(SUM(CASE WHEN create_time >= CURDATE() AND create_time < CURDATE() + INTERVAL 1 DAY THEN order_quantity ELSE 0 END), 0) AS today_quantity"
+                )
+            );
+
+            if (rows != null && !rows.isEmpty()) {
+                java.util.Map<String, Object> r = rows.get(0);
+                long activeOrders = toLong(r.get("active_orders"));
+                long activeQty = toLong(r.get("active_quantity"));
+                stats.setActiveOrders(activeOrders);
+                stats.setActiveQuantity(activeQty);
+                stats.setCompletedOrders(toLong(r.get("completed_orders")));
+                stats.setCompletedQuantity(toLong(r.get("completed_quantity")));
+                stats.setScrappedOrders(toLong(r.get("scrapped_orders")));
+                stats.setScrappedQuantity(toLong(r.get("scrapped_quantity")));
+                stats.setTotalOrders(activeOrders);
+                stats.setTotalQuantity(activeQty);
+                stats.setDelayedOrders(toLong(r.get("delayed_orders")));
+                stats.setDelayedQuantity(toLong(r.get("delayed_quantity")));
+                stats.setTodayOrders(toLong(r.get("today_orders")));
+                stats.setTodayQuantity(toLong(r.get("today_quantity")));
+            } else {
+                resetStatsToZero(stats);
+            }
+        } catch (Exception e) {
+            log.warn("[OrderQuery] getGlobalStats SQL聚合失败，回退零值", e);
             resetStatsToZero(stats);
-            return stats;
         }
-
-        fillStatusStats(stats, allOrders);
-        fillDelayedAndTodayStats(stats, allOrders);
         return stats;
+    }
+
+    private long toLong(Object val) {
+        if (val == null) return 0;
+        if (val instanceof Number) return ((Number) val).longValue();
+        try { return Long.parseLong(val.toString()); } catch (Exception e) { return 0; }
     }
 
     private QueryWrapper<ProductionOrder> buildStatsQueryWrapper(java.util.Map<String, Object> safeParams) {

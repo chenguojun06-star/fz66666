@@ -5,7 +5,7 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
 import type { HyperAdvisorResponse, ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import type { AiTraceCardData, PurchaseDocCardData } from './AgentCards';
 import type { Message, FollowUpAction } from './types';
 import { parseAiResponse } from './types';
@@ -69,7 +69,7 @@ function buildReportInsight(label: string, data: any): string {
 }
 
 export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useApp>['message']) {
-  const { user } = useAuth();
+  const { user } = useUser();
   const isSuperAdmin = (user as any)?.isSuperAdmin === true;
   const location = useLocation();
 

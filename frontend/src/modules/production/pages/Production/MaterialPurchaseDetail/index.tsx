@@ -17,7 +17,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { useViewport } from '@/utils/useViewport';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -57,7 +57,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   const styleNo = styleNoParam === '_' ? '' : (styleNoParam || '');
   const navigate = useNavigate();
   const { isMobile } = useViewport();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);

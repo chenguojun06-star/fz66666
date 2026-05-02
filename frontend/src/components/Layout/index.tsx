@@ -2,7 +2,7 @@ import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { App, Avatar, Button, Dropdown, Tag } from 'antd';
 import { CloseOutlined, DownOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
-import { useAuth } from '../../utils/AuthContext';
+import { useUser, useAuthState } from '../../utils/AuthContext';
 import { paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
 import { getFullAuthedFileUrl } from '../../utils/fileUrl';
@@ -30,7 +30,8 @@ const sidebarCollapsedStorageKey = 'layout.sidebar.collapsed';
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useUser();
+  const { logout } = useAuthState();
   const { language } = useAppLanguage();
   const { message } = App.useApp();
   const { isMobile } = useViewport();

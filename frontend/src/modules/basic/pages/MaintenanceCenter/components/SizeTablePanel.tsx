@@ -7,7 +7,7 @@ import type { RowAction } from '@/components/common/RowActions';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
+import { isAdminUser as isAdminUserFn, useUser } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { readPageSize } from '@/utils/pageSizeStore';
 import type { TemplateLibrary } from '@/types/style';
@@ -79,7 +79,7 @@ interface SizeTablePanelProps { styleNo?: string; }
 
 const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const { width: vpWidth } = useViewport();
   const modalWidth = vpWidth > 1600 ? '60vw' : '60vw';
 

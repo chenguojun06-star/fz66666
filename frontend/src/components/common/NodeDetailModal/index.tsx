@@ -5,7 +5,7 @@ import type { TabsProps } from 'antd';
 import { FileTextOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ResizableModal from '../ResizableModal';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { useNodeDetailData } from './useNodeDetailData';
 import { formatProcessDisplayName } from '@/utils/productionStage';
@@ -30,7 +30,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 }) => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('processTracking');

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Row, Col, App, Modal, Input } from 'antd';
 import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
 import api from '@/utils/api';
-import { useAuth, isAdmin } from '@/utils/AuthContext';
+import { useUser, isAdmin } from '@/utils/AuthContext';
 import QuotationBomSection, { type BomColorCosts } from './styleQuotation/QuotationBomSection';
 import QuotationProcessSection from './styleQuotation/QuotationProcessSection';
 import QuotationSecondarySection from './styleQuotation/QuotationSecondarySection';
@@ -19,7 +19,7 @@ interface Props {
 
 const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSaved, totalQty = 0 }) => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [form] = Form.useForm();
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [unlockRemark, setUnlockRemark] = useState('');

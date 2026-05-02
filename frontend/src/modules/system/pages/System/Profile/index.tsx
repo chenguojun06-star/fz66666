@@ -7,13 +7,13 @@ import React from 'react';
 import { Tabs, Typography } from 'antd';
 import { UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import ProfileInfoTab from './components/ProfileInfoTab';
 import MyModulesTab from './components/MyModulesTab';
 import './styles.css';
 
 const Profile: React.FC = () => {
-    const { user } = useAuth();
+    const { user } = useUser();
     const isFactoryAccount = !!user?.factoryId;
     const role = String(user?.role || '').trim();
     const isTenantBillingAdmin = user?.isTenantOwner === true

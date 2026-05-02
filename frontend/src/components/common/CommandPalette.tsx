@@ -256,7 +256,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                   >
                     <span className="cp-item-icon cp-icon-style">
                       {s.coverUrl ? (
-                        <img src={getFullAuthedFileUrl(s.coverUrl)} alt={s.styleName} className="cp-cover" />
+                        <img loading="lazy" src={getFullAuthedFileUrl(s.coverUrl)} alt={s.styleName} className="cp-cover" />
                       ) : (
                         <SkinOutlined />
                       )}
