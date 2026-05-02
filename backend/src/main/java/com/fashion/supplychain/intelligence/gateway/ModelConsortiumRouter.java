@@ -28,16 +28,16 @@ import java.util.regex.Pattern;
 @Service
 public class ModelConsortiumRouter {
 
-    @Value("${ai.model.fast:deepseek-chat}")
+    @Value("${ai.model.fast:deepseek-v4-flash}")
     private String fastModel;
 
-    @Value("${ai.model.reasoning:deepseek-reasoner}")
+    @Value("${ai.model.reasoning:deepseek-v4-flash}")
     private String reasoningModel;
 
     @Value("${ai.model.vision:doubao-1-5-vision-pro-32k-250115}")
     private String visionModel;
 
-    @Value("${ai.model.default:deepseek-chat}")
+    @Value("${ai.model.default:deepseek-v4-flash}")
     private String defaultModel;
 
     @Value("${ai.consortium.enabled:true}")
