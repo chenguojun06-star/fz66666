@@ -8,6 +8,7 @@ import com.fashion.supplychain.integration.util.SignatureUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -35,6 +36,9 @@ import java.util.Map;
 public class LogisticsCallbackController {
 
     private final IntegrationRecordService recordService;
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     @Autowired(required = false)
     private SFExpressProperties sfExpressProperties;
@@ -91,6 +95,10 @@ public class LogisticsCallbackController {
                     recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
                     return "error";
                 }
+            } else if (isProdProfile()) {
+                log.error("[顺丰回调] 生产环境密钥未配置，拒绝请求");
+                recordService.updateCallbackResult(cbLog.getId(), false, false, null, "生产环境密钥未配置");
+                return "error";
             } else {
                 log.warn("[顺丰回调] 密钥未配置，跳过签名验证（仅限开发环境）");
             }
@@ -145,6 +153,10 @@ public class LogisticsCallbackController {
                     recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
                     return Map.of("code", "FAIL", "message", "签名错误");
                 }
+            } else if (isProdProfile()) {
+                log.error("[申通回调] 生产环境密钥未配置，拒绝请求");
+                recordService.updateCallbackResult(cbLog.getId(), false, false, null, "生产环境密钥未配置");
+                return Map.of("code", "FAIL", "message", "密钥未配置");
             } else {
                 log.warn("[申通回调] 密钥未配置，跳过签名验证（仅限开发环境）");
             }
@@ -230,6 +242,9 @@ public class LogisticsCallbackController {
             recordService.updateLogisticsStatus(
                     trackingNumber, mappedStatus, "申通状态: " + status, LocalDateTime.now());
         }
-        // 接入后实现：调用业务服务更新物流状态
+    }
+
+    private boolean isProdProfile() {
+        return activeProfile != null && activeProfile.contains("prod");
     }
 }

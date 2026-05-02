@@ -111,6 +111,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .requestMatchers("/api/file/tenant-download/**").authenticated()
                         .requestMatchers("/openapi/**").permitAll()  // 客户开放API（使用appKey+签名鉴权）
                         .requestMatchers("/api/intelligence/mcp/token").permitAll()  // MCP Token 换取（使用appKey+HMAC签名鉴权，不需要JWT）
+                        .requestMatchers("/api/intelligence/ai-advisor/chat/stream").permitAll()  // AI SSE 流式问答（自建鉴权，绕过虚拟线程权限上下文丢失）
                         .requestMatchers("/api/webhook/**").permitAll()  // 第三方回调（支付宝/微信支付/顺丰/申通），通过签名验证防伪造，不需要JWT
                         .requestMatchers("/api/ecommerce/webhook/**").permitAll()  // 电商平台推单回调（淘宝/京东/抖音等），Controller内做签名验证
                         .requestMatchers("/api/public/**").permitAll()   // 客户分享页等无需登录的公开查询接口

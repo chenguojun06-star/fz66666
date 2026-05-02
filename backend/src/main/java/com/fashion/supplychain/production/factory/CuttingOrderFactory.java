@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomai
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -188,6 +189,9 @@ public class CuttingOrderFactory {
             order.setExpectedShipDate(requestedDeliveryDate.toLocalDate());
         }
         order.setProgressWorkflowJson(progressWorkflowJson);
+        order.setPricingMode("PROCESS");
+        order.setScatterPricingMode("FOLLOW_ORDER");
+        order.setFactoryUnitPrice(BigDecimal.ZERO);
         order.setCreateTime(orderCreateTime);
         order.setUpdateTime(now);
         factoryContextHelper.applyFactoryFields(order, factoryCtx);

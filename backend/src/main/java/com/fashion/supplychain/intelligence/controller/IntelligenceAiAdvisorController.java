@@ -29,7 +29,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class IntelligenceAiAdvisorController {
 
-    @Value("${app.sse.timeout:240000}")
+    @Value("${app.sse.timeout:300000}")
     private long sseTimeout;
 
     @Value("${app.upload.max-size:5242880}")
@@ -99,6 +99,7 @@ public class IntelligenceAiAdvisorController {
     }
 
     /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
+    @PreAuthorize("permitAll()")
     @GetMapping(value = "/ai-advisor/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter aiAdvisorChatStream(@RequestParam String question,
                                           @RequestParam(required = false) String pageContext,

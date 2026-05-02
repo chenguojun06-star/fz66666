@@ -112,6 +112,9 @@ public class AgentLoopEngine {
             }
 
             AiMessage assistantMessage = AiMessage.assistant(result.getContent());
+            if (result.getReasoningContent() != null && !result.getReasoningContent().isEmpty()) {
+                assistantMessage.setReasoning_content(result.getReasoningContent());
+            }
 
             if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
                 if (handleStuckDetection(ctx, result.getToolCalls(), cb)) {

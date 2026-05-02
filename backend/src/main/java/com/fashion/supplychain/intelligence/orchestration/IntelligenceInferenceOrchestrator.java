@@ -46,7 +46,7 @@ public class IntelligenceInferenceOrchestrator {
     private static final int DEFAULT_MAX_TOKENS = 2048;
 
     private static final int MIN_TIMEOUT_SECONDS = 5;
-    private static final int DEFAULT_MAX_TIMEOUT_SECONDS = 60;
+    private static final int DEFAULT_MAX_TIMEOUT_SECONDS = 300;
     private static final int AI_ADVISOR_MAX_TIMEOUT_SECONDS = 20;
     private static final int NL_INTENT_MAX_TIMEOUT_SECONDS = 12;
     private static final int DAILY_BRIEF_MAX_TIMEOUT_SECONDS = 5;
@@ -285,6 +285,7 @@ public class IntelligenceInferenceOrchestrator {
         final Map<Integer, StringBuilder> toolCallArgs = new HashMap<>();
         final Map<Integer, String> toolCallNames = new HashMap<>();
         final Map<Integer, String> toolCallIds = new HashMap<>();
+        StringBuilder reasoningContent;
     }
 
     private void parseStreamLines(java.util.stream.Stream<String> lines,
@@ -304,6 +305,14 @@ public class IntelligenceInferenceOrchestrator {
                 if (content != null && !content.isEmpty()) {
                     acc.fullContent.append(content);
                     if (chunkConsumer != null) chunkConsumer.accept(content, false);
+                }
+
+                String reasoningChunk = delta.path("reasoning_content").asText(null);
+                if (reasoningChunk != null && !reasoningChunk.isEmpty()) {
+                    if (acc.reasoningContent == null) {
+                        acc.reasoningContent = new StringBuilder();
+                    }
+                    acc.reasoningContent.append(reasoningChunk);
                 }
 
                 if (delta.has("tool_calls")) {
@@ -347,6 +356,9 @@ public class IntelligenceInferenceOrchestrator {
     private void finalizeStreamResult(IntelligenceInferenceResult result, StreamAccumulator acc,
             long start, List<AiMessage> messages, String scene) {
         result.setContent(acc.fullContent.toString());
+        if (acc.reasoningContent != null && acc.reasoningContent.length() > 0) {
+            result.setReasoningContent(acc.reasoningContent.toString());
+        }
         result.setSuccess(true);
         result.setLatencyMs(System.currentTimeMillis() - start);
         result.setPromptChars(length(messages.toString()));
@@ -593,6 +605,10 @@ public class IntelligenceInferenceOrchestrator {
         }
         JsonNode message = choices.get(0).path("message");
         result.setContent(message.path("content").asText(null));
+        String reasoningContent = message.path("reasoning_content").asText(null);
+        if (reasoningContent != null && !reasoningContent.isEmpty()) {
+            result.setReasoningContent(reasoningContent);
+        }
         JsonNode usage = root.path("usage");
         if (!usage.isMissingNode()) {
             result.setPromptTokens(usage.path("prompt_tokens").asInt(0));

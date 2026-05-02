@@ -41,7 +41,7 @@ public class AiAgentOrchestrator {
 
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(5);
     private static final int CACHE_MAX_SIZE = 200;
-    private static final long AGENT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(30);
+    private static final long AGENT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(180);
     private final ConcurrentHashMap<String, CacheEntry> queryCache = new ConcurrentHashMap<>();
 
     private static class CacheEntry {

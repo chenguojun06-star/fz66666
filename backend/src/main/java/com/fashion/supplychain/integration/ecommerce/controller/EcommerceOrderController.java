@@ -113,8 +113,8 @@ public class EcommerceOrderController {
                                             String timestamp, String signature,
                                             Map<String, Object> body) {
         if (signature == null || timestamp == null) {
-            log.info("[EC Webhook] 无签名头，允许通过（兼容未配置签名的平台）: platform={}", platform);
-            return true;
+            log.warn("[EC Webhook] 拒绝无签名头的请求: platform={}, tenantId={}", platform, tenantId);
+            return false;
         }
         try {
             long ts = Long.parseLong(timestamp);
@@ -128,8 +128,8 @@ public class EcommerceOrderController {
         }
         var config = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platform);
         if (config == null || config.getAppSecret() == null) {
-            log.info("[EC Webhook] 平台未配置密钥，跳过签名验证: platform={}", platform);
-            return true;
+            log.error("[EC Webhook] 平台未配置密钥，拒绝请求: platform={}, tenantId={}", platform, tenantId);
+            return false;
         }
         try {
             String bodyStr = objectMapper.writeValueAsString(body);
