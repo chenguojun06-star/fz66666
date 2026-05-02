@@ -216,12 +216,20 @@ public class ProductionOrderFinanceOrchestrationService {
         if ("closed".equals(st) || "已关闭".equals(st)) {
             return order;
         }
+
+        int warehousingQualified = resolveWarehousingQualified(oid, order);
+
         if (!"completed".equals(st) && !specialClose) {
-            throw new IllegalStateException("订单未完成，无法关单。当前状态: " + st);
+            int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+            if (warehousingQualified > 0 && orderQty > 0 && warehousingQualified >= orderQty) {
+                markOrderCompleted(oid, warehousingQualified, st);
+                log.info("[FinanceOrch] 关单时自动完成生产: orderId={}, 入库={}, 订单数={}", oid, warehousingQualified, orderQty);
+            } else {
+                throw new IllegalStateException("订单未完成，无法关单。当前状态: " + st + "，入库合格数: " + warehousingQualified + "，订单数: " + orderQty);
+            }
         }
 
         int cuttingQty = resolveCuttingQuantity(oid, order);
-        int warehousingQualified = resolveWarehousingQualified(oid, order);
 
         if (!specialClose) {
             assertCloseQuantitySufficient(cuttingQty, warehousingQualified, order);

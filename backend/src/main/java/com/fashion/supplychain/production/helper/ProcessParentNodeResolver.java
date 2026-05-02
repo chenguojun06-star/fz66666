@@ -29,7 +29,7 @@ public class ProcessParentNodeResolver {
             }
             String parentNode = resolveParentForAggregation(pname);
             if (parentNode != null) {
-                result.merge(parentNode, entry.getValue(), Integer::sum);
+                result.merge(parentNode, entry.getValue(), Math::max);
             }
         }
         return result;

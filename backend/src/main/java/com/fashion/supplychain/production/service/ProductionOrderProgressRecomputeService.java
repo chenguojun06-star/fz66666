@@ -302,9 +302,11 @@ public class ProductionOrderProgressRecomputeService {
     }
 
     private int resolveCompletedQuantity(String oid, ProductionOrder order, int orderQty, int packagingDone) {
-        int lastDoneQty = packagingDone;
+        int warehousingQty = 0;
+        try { warehousingQty = productWarehousingService.sumQualifiedByOrderId(oid); } catch (Exception e) { log.warn("[ProgressRecompute] 获取入库合格数量失败: orderId={}", oid, e); }
+        int lastDoneQty = warehousingQty;
+        if (lastDoneQty <= 0) { lastDoneQty = packagingDone; }
         if (lastDoneQty <= 0) { int cur = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity(); if (cur > 0) lastDoneQty = cur; }
-        if (lastDoneQty <= 0) { try { int wq = productWarehousingService.sumQualifiedByOrderId(oid); if (wq > 0) lastDoneQty = wq; } catch (Exception e) { log.warn("[ProgressRecompute] 获取入库合格数量失败: orderId={}", oid, e); } }
         return Math.max(0, Math.min(lastDoneQty, orderQty));
     }
 
