@@ -37,9 +37,9 @@ ai:
       base-url: ${AI_LITELLM_BASE_URL:}
   openai-compat:
     enabled: ${AI_OPENAI_COMPAT_ENABLED:true}
-    api-key: ${AI_OPENAI_COMPAT_API_KEY:fashion-ai-local-2026}
+    api-key: ${AI_OPENAI_COMPAT_API_KEY:}
     api-key-map: ${AI_OPENAI_COMPAT_API_KEY_MAP:}
-    tenant-id: ${AI_OPENAI_COMPAT_TENANT_ID:1}
+    tenant-id: ${AI_OPENAI_COMPAT_TENANT_ID:}
   wechat-ai:
     enabled: ${AI_WECHAT_AI_ENABLED:false}
 
