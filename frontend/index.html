@@ -6,6 +6,23 @@
     <link rel="shortcut icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>云裳智链</title>
+    <script>
+    (function(){
+      var RK='__crit_reload__',LK='__crit_log__';
+      if(sessionStorage.getItem(RK))return;
+      function rl(){sessionStorage.setItem(RK,'1');location.reload();}
+      function lg(m){try{var a=JSON.parse(sessionStorage.getItem(LK)||'[]');a.push({t:Date.now(),m:m});if(a.length>10)a=a.slice(-10);sessionStorage.setItem(LK,JSON.stringify(a));}catch(e){}}
+      document.addEventListener('error',function(e){
+        var t=e.target||e.srcElement;
+        if(!t)return;
+        var tn=t.tagName;
+        if(tn==='SCRIPT'||tn==='LINK'){
+          var src=tn==='SCRIPT'?t.src:t.href;
+          if(src&&src.indexOf('/assets/')!==-1){lg('404:'+src);rl();}
+        }
+      },true);
+    })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

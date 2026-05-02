@@ -173,8 +173,10 @@ server {
     }
 
     # ---- SPA 路由支持 ----
+    # 故意去掉 $uri/：防止根路径 / 通过 try_files $uri/ 直接返回 index.html
+    # 而绕过 location = /index.html 的 no-cache 头（浏览器缓存旧 HTML 的根因）
     location / {
-        try_files $uri $uri/ @spa_fallback;
+        try_files $uri @spa_fallback;
     }
 
     # ---- 安全响应头 ----
@@ -186,12 +188,12 @@ server {
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: http:; connect-src 'self' ws: wss: http: https:; font-src 'self' data: https://fonts.gstatic.com; worker-src blob: 'self'; media-src 'self' blob: https:;" always;
 
     # ---- 错误页 ----
-    # CORB 修复：图片/ZIP/字体等二进制请求404时直接返回404，不返回SPA HTML
-    # 否则 <img src="xxx.png"> 收到HTML → Response was blocked by CORB
+    # CORB 修复：二进制/脚本/样式文件请求404时直接返回404，不返回SPA HTML
+    # 否则 <img>/<script>/<link> 标签收到HTML → Response was blocked by CORB / 解析错误
     error_page 404 @spa_fallback;
     location @spa_fallback {
-        # 二进制/媒体文件类型：直接返回404，避免img/script标签收到HTML触发CORB
-        if ($request_uri ~* "\.(png|jpg|jpeg|gif|webp|svg|ico|bmp|pdf|zip|rar|tar|gz|mp3|mp4|woff|woff2|ttf|eot|otf)$") {
+        # 二进制/媒体/脚本/样式文件类型：直接返回404，避免img/script/link标签收到HTML触发CORB或解析错误
+        if ($request_uri ~* "\.(js|css|png|jpg|jpeg|gif|webp|svg|ico|bmp|pdf|zip|rar|tar|gz|mp3|mp4|woff|woff2|ttf|eot|otf|map|json|wasm)$") {
             return 404;
         }
         # SPA路由：其余请求（/profile /orders 等）回退到index.html

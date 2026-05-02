@@ -134,6 +134,9 @@
 | 15 | request_id 超 VARCHAR(64) | 紧凑格式 |
 | 16 | Flyway PREPARE + DEFAULT NULL 报错 | 动态SQL中不写 `DEFAULT NULL`，MySQL默认即NULL |
 | 17 | 不维护上下文 → 重复踩坑 | 每次对话开始/结束必须更新进度快照 |
+| 18 | 部署后全站 404 白屏 | 错误恢复代码必须内联在 index.html `<head>` 中，不能放在可能 404 的外部 JS 里 |
+| 19 | nginx SPA fallback 遗漏 .js/.css | @spa_fallback 对所有静态资源类型（含 JS/CSS）返回 404，不返回 index.html |
+| 20 | nginx try_files $uri/ 绕过 no-cache | 根路径必须走 @spa_fallback → location = /index.html，确保 no-cache 头生效 |
 
 ---
 
@@ -232,6 +235,46 @@ grep -r "${新列名}" db/migration/  # 必须有结果
 **不该做的**：在多处硬编码子工序关键词 → 有人加"激光切割→二次工艺"到 DB，硬编码数组不认识
 
 **正确做法**：SQL VIEW 用 `EXISTS (SELECT 1 FROM t_process_parent_mapping ...)` 动态关联，不再写 `LIKE '%绣花%'`
+
+---
+
+### 模式 #7：部署后全站 404 白屏（2026-05-03 事故）
+
+**症状**：新部署后用户刷新页面白屏，控制台大量 `GET /assets/vendor-xxx.js 404`。
+
+**根因**（三层叠加）：
+1. 浏览器缓存旧 `index.html`，引用的旧 chunk 已被新部署替换 → 404
+2. 错误恢复代码在 `index-*.js` 里，但 `index-*.js` 本身也 404 → 恢复代码永远不执行
+3. nginx `@spa_fallback` 遗漏 `.js/.css`，404 的 JS/CSS 被错误返回 `index.html`（200）
+
+**正确做法**：
+```html
+<!-- ✅ 内联在 index.html <head> 中，不依赖任何外部文件 -->
+<script>
+(function(){
+  var RK='__crit_reload__';
+  if(sessionStorage.getItem(RK))return;
+  document.addEventListener('error',function(e){
+    var t=e.target||e.srcElement;if(!t)return;
+    var tn=t.tagName;
+    if(tn==='SCRIPT'||tn==='LINK'){
+      var src=tn==='SCRIPT'?t.src:t.href;
+      if(src&&src.indexOf('/assets/')!==-1){
+        sessionStorage.setItem(RK,'1');location.reload();
+      }
+    }
+  },true);
+})();
+</script>
+```
+
+```nginx
+# ✅ nginx @spa_fallback 对 JS/CSS 也返回 404，不返回 index.html
+if ($request_uri ~* "\.(js|css|...|map|json|wasm)$") { return 404; }
+
+# ✅ try_files 去掉 $uri/，确保根路径走 no-cache 头
+try_files $uri @spa_fallback;
+```
 
 ---
 
