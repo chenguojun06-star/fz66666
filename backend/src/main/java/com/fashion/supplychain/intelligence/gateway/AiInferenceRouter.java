@@ -247,6 +247,11 @@ public class AiInferenceRouter implements AiInferenceGateway {
         return "deepseek-v4-flash";
     }
 
+    public String chatSimple(String prompt) {
+        IntelligenceInferenceResult result = chat("reflection", null, prompt);
+        return result != null ? result.getContent() : "";
+    }
+
     /**
      * 获取模型推荐参数（temperature、maxTokens、timeout）。
      */

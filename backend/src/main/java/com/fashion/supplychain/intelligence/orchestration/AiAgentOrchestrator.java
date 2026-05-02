@@ -35,6 +35,9 @@ public class AiAgentOrchestrator {
     @Autowired private AiAgentMemoryHelper memoryHelper;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
+    @Autowired(required = false) private ConversationReflectionOrchestrator reflectionOrchestrator;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService;
+    @Autowired(required = false) private SkillEvolutionOrchestrator skillEvolutionOrchestrator;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -83,6 +86,9 @@ public class AiAgentOrchestrator {
             if (content == null) {
                 return Result.fail("推理服务暂时不可用");
             }
+
+            triggerPostTurnHooks(ctx, userMessage, content, cb.getExecRecords());
+
             return Result.success(content);
         } finally {
             lastCommandIdHolder.remove();
@@ -144,6 +150,8 @@ public class AiAgentOrchestrator {
                 queryCache.put(cacheKey, new CacheEntry(deduplicateAnswer(cb.getFinalContent())));
             }
 
+            triggerPostTurnHooks(ctx, userMessage, cb.getFinalContent(), cb.getExecRecords());
+
         } catch (Exception e) {
             log.error("[AiAgent-Stream] 流式执行异常", e);
             try {
@@ -169,6 +177,43 @@ public class AiAgentOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         memoryHelper.saveCurrentConversationToMemory(userId, tenantId);
+    }
+
+    private void triggerPostTurnHooks(AgentLoopContext ctx, String userMessage,
+                                       String assistantResponse,
+                                       java.util.List<AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
+        Long tenantId = UserContext.tenantId();
+        String userId = UserContext.userId();
+        String sessionId = "default";
+        String conversationId = ctx != null ? ctx.getCommandId() : java.util.UUID.randomUUID().toString();
+
+        String toolResultsStr = "";
+        if (toolRecords != null && !toolRecords.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
+                String preview = rec.rawResult != null && rec.rawResult.length() > 200
+                        ? rec.rawResult.substring(0, 200) + "..."
+                        : rec.rawResult;
+                sb.append(rec.toolName).append(": ").append(preview).append("\n");
+            }
+            toolResultsStr = sb.toString();
+        }
+
+        if (reflectionOrchestrator != null) {
+            final String finalToolResults = toolResultsStr;
+            final String finalConversationId = conversationId;
+            new Thread(UserContext.wrap(() -> {
+                reflectionOrchestrator.reflectAsync(
+                        tenantId, finalConversationId, sessionId,
+                        userMessage, assistantResponse, finalToolResults);
+            }), "post-turn-reflection").start();
+        }
+
+        if (sessionSearchService != null) {
+            sessionSearchService.indexConversation(
+                    tenantId, userId, sessionId, conversationId,
+                    userMessage, assistantResponse);
+        }
     }
 
     public String consumeLastCommandId() {
