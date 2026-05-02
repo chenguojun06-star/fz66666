@@ -40,11 +40,14 @@ export default defineConfig({
     target: 'es2020',
     rollupOptions: {
       output: {
+        // hoistTransitiveImports: false 防止 Rollup 把跨 chunk 的传递性依赖提升，
+        // 避免 vendor-antd 在 vendor-react 之前执行导致 React 为 undefined
+        hoistTransitiveImports: false,
         manualChunks(id) {
           if (id.includes('node_modules/')) {
             if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
             if (id.includes('exceljs/')) return 'vendor-exceljs';
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/') || id.includes('react-virtuoso')) return 'vendor-react';
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) return 'vendor-react';
             if (id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')) return 'vendor-antd';
             if (id.includes('@ant-design/charts') || id.includes('@antv/')) return 'vendor-antv-charts';
             if (id.includes('react-router') || id.includes('@remix-run/')) return 'vendor-router';
