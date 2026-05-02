@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.agent.loop.AgentLoopContextBuilder;
 import com.fashion.supplychain.intelligence.agent.loop.AgentLoopEngine;
 import com.fashion.supplychain.intelligence.agent.loop.StreamingAgentLoopCallback;
 import com.fashion.supplychain.intelligence.agent.loop.SyncAgentLoopCallback;
+import com.fashion.supplychain.intelligence.entity.SkillTemplate;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +41,7 @@ public class AiAgentOrchestrator {
     @Autowired(required = false) private SkillEvolutionOrchestrator skillEvolutionOrchestrator;
     @Autowired(required = false) private MemoryNudgeOrchestrator memoryNudgeOrchestrator;
     @Autowired(required = false) private UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.AgentContextFileService agentContextFileService;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -47,13 +49,83 @@ public class AiAgentOrchestrator {
     private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(5);
     private static final int CACHE_MAX_SIZE = 200;
     private static final long AGENT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(180);
+    private static final long CONTEXT_REFRESH_MS = TimeUnit.MINUTES.toMillis(10);
     private final ConcurrentHashMap<String, CacheEntry> queryCache = new ConcurrentHashMap<>();
+
+    private volatile String cachedSystemContext = "";
+    private volatile long lastContextRefresh = 0;
+    private volatile String cachedSkillContext = "";
+    private volatile long lastSkillRefresh = 0;
 
     private static class CacheEntry {
         final String result;
         final long createdAt;
         CacheEntry(String result) { this.result = result; this.createdAt = System.currentTimeMillis(); }
         boolean isExpired() { return System.currentTimeMillis() - createdAt > CACHE_TTL_MS; }
+    }
+
+    private String buildAugmentedPageContext(String userMessage, String originalPageContext) {
+        StringBuilder augmented = new StringBuilder();
+        if (originalPageContext != null && !originalPageContext.isBlank()) {
+            augmented.append(originalPageContext);
+        }
+
+        Long tenantId = UserContext.tenantId();
+        String systemContext = getOrRefreshSystemContext(tenantId);
+        if (!systemContext.isBlank()) {
+            if (augmented.length() > 0) augmented.append("\n---\n");
+            augmented.append(systemContext);
+        }
+
+        String skillContext = getOrRefreshSkillContext(tenantId);
+        if (!skillContext.isBlank()) {
+            if (augmented.length() > 0) augmented.append("\n---\n");
+            augmented.append(skillContext);
+        }
+
+        return augmented.toString();
+    }
+
+    private String getOrRefreshSystemContext(Long tenantId) {
+        long now = System.currentTimeMillis();
+        if (agentContextFileService == null) return "";
+        if (now - lastContextRefresh > CONTEXT_REFRESH_MS) {
+            synchronized (this) {
+                if (now - lastContextRefresh > CONTEXT_REFRESH_MS) {
+                    cachedSystemContext = agentContextFileService.buildSystemContext(tenantId);
+                    lastContextRefresh = now;
+                }
+            }
+        }
+        return cachedSystemContext;
+    }
+
+    private String getOrRefreshSkillContext(Long tenantId) {
+        long now = System.currentTimeMillis();
+        if (skillEvolutionOrchestrator == null) return "";
+        if (now - lastSkillRefresh > CONTEXT_REFRESH_MS) {
+            synchronized (this) {
+                if (now - lastSkillRefresh > CONTEXT_REFRESH_MS) {
+                    List<SkillTemplate> skills = skillEvolutionOrchestrator.loadActiveSkills(tenantId);
+                    if (skills != null && !skills.isEmpty()) {
+                        StringBuilder sb = new StringBuilder("## 可用技能 (系统自动学习)\n");
+                        for (SkillTemplate s : skills) {
+                            sb.append("- /").append(s.getSkillName())
+                                    .append(": ").append(s.getTitle());
+                            if (s.getTriggerPhrases() != null && !s.getTriggerPhrases().isBlank()) {
+                                sb.append(" (触发词: ").append(s.getTriggerPhrases()).append(")");
+                            }
+                            sb.append("\n");
+                        }
+                        cachedSkillContext = sb.toString();
+                    } else {
+                        cachedSkillContext = "";
+                    }
+                    lastSkillRefresh = now;
+                }
+            }
+        }
+        return cachedSkillContext;
     }
 
     public Result<String> executeAgent(String userMessage) {
@@ -65,7 +137,8 @@ public class AiAgentOrchestrator {
             return Result.fail("智能服务暂未配置或不可用");
         }
 
-        AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+        String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
+        AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
         lastCommandIdHolder.set(ctx.getCommandId());
 
         try {
@@ -137,7 +210,8 @@ public class AiAgentOrchestrator {
 
             heartbeat = startHeartbeat(emitter, 15, cancelled);
 
-            AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+            String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
+            AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
             ctx.setDeadlineMs(requestStartAt + AGENT_TIMEOUT_MS);
             ctx.setCancelled(cancelled);
             StreamingAgentLoopCallback cb = new StreamingAgentLoopCallback(

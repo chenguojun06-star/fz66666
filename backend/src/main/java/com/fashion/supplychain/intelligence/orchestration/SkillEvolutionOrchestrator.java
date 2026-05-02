@@ -25,7 +25,7 @@ public class SkillEvolutionOrchestrator {
     private final AiInferenceRouter inferenceRouter;
 
     private static final double EVOLUTION_TRIGGER_SCORE = 0.6;
-    private static final int MAX_STEPS = 8;
+    private static final int MAX_EVOLUTION_STEPS = 8;
 
     public Optional<SkillTemplate> tryEvolveSkill(ConversationReflection reflection) {
         if (reflection.getQualityScore() == null
@@ -41,6 +41,20 @@ public class SkillEvolutionOrchestrator {
             String llmResponse = inferenceRouter.chatSimple(extractionPrompt);
             SkillTemplate template = parseSkillFromLlm(llmResponse, reflection);
             if (template == null) return Optional.empty();
+
+            String stepsJson = template.getStepsJson();
+            if (stepsJson != null) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    Object[] steps = mapper.readValue(stepsJson, Object[].class);
+                    if (steps.length > MAX_EVOLUTION_STEPS) {
+                        log.warn("[SkillEvolve] 技能步骤过多({}>{})，丢弃 {}", steps.length, MAX_EVOLUTION_STEPS, template.getSkillName());
+                        return Optional.empty();
+                    }
+                } catch (Exception e) {
+                    log.warn("[SkillEvolve] 步骤JSON解析失败: {}", e.getMessage());
+                }
+            }
 
             QueryWrapper<SkillTemplate> existingQw = new QueryWrapper<>();
             existingQw.eq("skill_name", template.getSkillName())
