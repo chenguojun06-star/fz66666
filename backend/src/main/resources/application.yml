@@ -376,6 +376,26 @@ ai:
     reasoning: ${AI_MODEL_REASONING:deepseek-v4-pro}
     vision: ${AI_MODEL_VISION:doubao-1-5-vision-pro-32k-250115}
     default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
+  openai-compat:
+    enabled: ${AI_OPENAI_COMPAT_ENABLED:false}
+    api-key: ${AI_OPENAI_COMPAT_API_KEY:}
+    model-name: ${AI_OPENAI_COMPAT_MODEL_NAME:xiaoyun-agent}
+    tenant-id: ${AI_OPENAI_COMPAT_TENANT_ID:1}
+  wechat-ai:
+    enabled: ${AI_WECHAT_AI_ENABLED:false}
+    verify-token: ${AI_WECHAT_AI_VERIFY_TOKEN:}
+    aes-key: ${AI_WECHAT_AI_AES_KEY:}
+    app-id: ${AI_WECHAT_AI_APP_ID:}
+    app-secret: ${AI_WECHAT_AI_APP_SECRET:}
+    async-reply: ${AI_WECHAT_AI_ASYNC_REPLY:true}
+  im-ai:
+    feishu:
+      enabled: ${AI_IM_AI_FEISHU_ENABLED:false}
+      verification-token: ${AI_IM_AI_FEISHU_VERIFICATION_TOKEN:}
+      encrypt-key: ${AI_IM_AI_FEISHU_ENCRYPT_KEY:}
+    dingtalk:
+      enabled: ${AI_IM_AI_DINGTALK_ENABLED:false}
+      app-secret: ${AI_IM_AI_DINGTALK_APP_SECRET:}
 
 # Qdrant 向量库配置（QdrantService @Value 读取）
 intelligence:
