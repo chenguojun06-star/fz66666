@@ -223,6 +223,12 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: 下载前端构建产物
+      uses: actions/download-artifact@v5
+      with:
+        name: frontend-dist
+        path: frontend/dist
+
     - name: 注入构建时间戳（强制前端容器缓存失效）
       run: echo "BUILD_DATE=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
 
