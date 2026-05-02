@@ -82,6 +82,11 @@ public class CuttingBundleController {
         return Result.success(cuttingBundleSplitTransferOrchestrator.rollbackSplit(request));
     }
 
+    @GetMapping("/by-code/{qrCode}")
+    public Result<?> getByCode(@PathVariable String qrCode) {
+        return Result.success(cuttingBundleOrchestrator.getByCode(qrCode));
+    }
+
     @GetMapping("/family/{bundleId}")
     public Result<?> family(@PathVariable String bundleId) {
         return Result.success(cuttingBundleSplitTransferOrchestrator.queryFamily(bundleId));

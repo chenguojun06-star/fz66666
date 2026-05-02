@@ -21,28 +21,28 @@ public class AiMessage {
     public static AiMessage system(String txt) {
         AiMessage m = new AiMessage();
         m.role = "system";
-        m.content = txt;
+        m.content = txt != null ? txt : "";
         return m;
     }
 
     public static AiMessage user(String txt) {
         AiMessage m = new AiMessage();
         m.role = "user";
-        m.content = txt;
+        m.content = txt != null ? txt : "";
         return m;
     }
 
     public static AiMessage assistant(String txt) {
         AiMessage m = new AiMessage();
         m.role = "assistant";
-        m.content = txt;
+        m.content = txt != null ? txt : "";
         return m;
     }
 
     public static AiMessage tool(String txt, String toolCallId, String name) {
         AiMessage m = new AiMessage();
         m.role = "tool";
-        m.content = txt;
+        m.content = txt != null ? txt : "";
         m.tool_call_id = toolCallId;
         m.name = name;
         return m;

@@ -89,6 +89,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                         CuttingBundle::getQrCode,
                         CuttingBundle::getStatus,
                         CuttingBundle::getSplitStatus,
+                        CuttingBundle::getSplitProcessName,
+                        CuttingBundle::getOperatorId,
+                        CuttingBundle::getOperatorName,
                         CuttingBundle::getCreateTime
                 )
                 .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
@@ -349,6 +352,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                                 CuttingBundle::getQuantity, CuttingBundle::getBedNo,
                                 CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
                                 CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                                CuttingBundle::getSplitProcessName,
+                                CuttingBundle::getOperatorId,
+                                CuttingBundle::getOperatorName,
                                 CuttingBundle::getCreateTime)
                         .eq(CuttingBundle::getQrCode, qrCode)
                         .last("limit 1"));
@@ -368,6 +374,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                                     CuttingBundle::getQuantity, CuttingBundle::getBedNo,
                                     CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
                                     CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                                    CuttingBundle::getSplitProcessName,
+                                    CuttingBundle::getOperatorId,
+                                    CuttingBundle::getOperatorName,
                                     CuttingBundle::getCreateTime)
                             .eq(CuttingBundle::getQrCode, withoutSig)
                             .last("limit 1"));
@@ -392,6 +401,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                         CuttingBundle::getQuantity, CuttingBundle::getBedNo,
                         CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
                         CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                        CuttingBundle::getSplitProcessName,
+                        CuttingBundle::getOperatorId,
+                        CuttingBundle::getOperatorName,
                         CuttingBundle::getCreateTime)
                 .eq(CuttingBundle::getProductionOrderNo, on)
                 .eq(CuttingBundle::getBundleNo, bn)
@@ -416,6 +428,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                 CuttingBundle::getQuantity, CuttingBundle::getBedNo,
                 CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
                 CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                CuttingBundle::getSplitProcessName,
+                CuttingBundle::getOperatorId,
+                CuttingBundle::getOperatorName,
                 CuttingBundle::getCreateTime);
         if (StringUtils.hasText(on)) {
             wrapper.eq(CuttingBundle::getProductionOrderNo, on);

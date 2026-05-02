@@ -1,18 +1,13 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 
-/**
- * 简易 toast 函数包装
- * @param {string} msg 提示文字
- */
 function showTip(msg) { toast.info(msg); }
 
 Page({
   data: {
-    /* ---- Tab 切换 ---- */
-    activeTab: 0,                // 0=菲号单价  1=单价调整
+    activeTab: 0,
 
-    /* ---- Tab0 菲号单价 ---- */
+    /* ---- Tab0 拆菲号 ---- */
     orderNo: '',
     bundles: [],
     selectedIdx: -1,
@@ -24,11 +19,13 @@ Page({
     needSearch: false,
     searchOrderNo: '',
     splitRecords: [],
+    processes: [],
+    processIdx: -1,
 
     /* ---- Tab1 单价调整 ---- */
     priceOrderNo: '',
     priceSearchInput: '',
-    processes: [],
+    priceProcesses: [],
     priceLoading: false,
     selectedProcessIdx: -1,
     adjustPrice: '',
@@ -37,7 +34,6 @@ Page({
     adjustHistory: [],
     isAdmin: false,
 
-    /* ---- 通用 ---- */
     unreadNoticeCount: 0,
   },
 
@@ -68,7 +64,7 @@ Page({
     this.setData({ activeTab: tab });
   },
 
-  /* ========== Tab0 菲号单价 ========== */
+  /* ========== Tab0 拆菲号 ========== */
 
   onSearchInput(e) {
     this.setData({ searchOrderNo: e.detail.value || '' });
@@ -79,6 +75,7 @@ Page({
     if (!orderNo) return showTip('请输入订单号');
     this.setData({ orderNo, needSearch: false });
     this.fetchBundles();
+    this.fetchProcesses(orderNo);
   },
 
   scanOrderQr() {
@@ -89,13 +86,60 @@ Page({
         if (!code) return showTip('未识别到内容');
         this.setData({ orderNo: code, needSearch: false, searchOrderNo: code });
         this.fetchBundles();
+        this.fetchProcesses(code);
       },
       fail: () => showTip('扫码取消'),
     });
   },
 
+  scanBundleQr() {
+    wx.scanCode({
+      onlyFromCamera: false,
+      success: (res) => {
+        const code = (res.result || '').trim();
+        if (!code) return showTip('未识别到内容');
+        this._handleBundleScan(code);
+      },
+      fail: () => showTip('扫码取消'),
+    });
+  },
+
+  async _handleBundleScan(qrCode) {
+    this.setData({ loading: true, bundles: [], selectedIdx: -1 });
+    try {
+      const bundle = await api.production.getBundleByCode(qrCode);
+      const data = (bundle && bundle.data) || bundle || {};
+      if (!data || !data.id) {
+        showTip('未找到该菲号，请确认二维码正确');
+        this.setData({ loading: false });
+        return;
+      }
+      const orderNo = data.productionOrderNo || data.orderNo || '';
+      this.setData({
+        orderNo: orderNo,
+        needSearch: false,
+        searchOrderNo: orderNo,
+        bundles: [data],
+        loading: false,
+      });
+      this.loadWorkers();
+      this.fetchProcesses(orderNo);
+      if (!data.bundleNo && !data.bundleLabel) {
+        showTip('该码可能不是菲号');
+      }
+    } catch (e) {
+      console.error('[bundle-split] scanBundle fail', e);
+      showTip('扫码识别失败');
+      this.setData({ loading: false });
+    }
+  },
+
   changeOrder() {
-    this.setData({ needSearch: true, orderNo: '', bundles: [], selectedIdx: -1 });
+    this.setData({
+      needSearch: true, orderNo: '',
+      bundles: [], selectedIdx: -1,
+      processes: [], processIdx: -1,
+    });
   },
 
   async fetchBundles() {
@@ -110,6 +154,23 @@ Page({
       console.error('[bundle-split] fetch fail', e);
       showTip('加载失败');
       this.setData({ loading: false });
+    }
+  },
+
+  async fetchProcesses(orderNo) {
+    if (!orderNo) return;
+    try {
+      const res = await api.production.queryOrderProcesses(orderNo);
+      const list = (res && res.data) || res || [];
+      this.setData({
+        processes: Array.isArray(list) ? list.map(p => ({
+          processName: p.processName,
+          progressStage: p.progressStage,
+          unitPrice: p.unitPrice,
+        })) : [],
+      });
+    } catch (e) {
+      console.warn('[bundle-split] fetchProcesses fail', e);
     }
   },
 
@@ -132,6 +193,7 @@ Page({
       selectedIdx: this.data.selectedIdx === idx ? -1 : idx,
       splitQty: '',
       workerIdx: -1,
+      processIdx: -1,
     });
   },
 
@@ -141,6 +203,10 @@ Page({
 
   onWorkerChange(e) {
     this.setData({ workerIdx: Number(e.detail.value) });
+  },
+
+  onProcessChange(e) {
+    this.setData({ processIdx: Number(e.detail.value) });
   },
 
   loadSplitRecords() {
@@ -173,7 +239,7 @@ Page({
   },
 
   async submitSplit() {
-    const { bundles, selectedIdx, splitQty, workers, workerIdx } = this.data;
+    const { bundles, selectedIdx, splitQty, workers, workerIdx, processes, processIdx } = this.data;
     const bundle = bundles[selectedIdx];
     if (!bundle) return showTip('请先选择菲号');
 
@@ -184,6 +250,9 @@ Page({
     const worker = workers[workerIdx];
     if (!worker) return showTip('请选择接手工人');
 
+    const process = processes[processIdx];
+    if (!process) return showTip('请选择当前工序');
+
     this.setData({ submitting: true });
     try {
       const body = {
@@ -191,6 +260,7 @@ Page({
         qrCode: bundle.qrCode || '',
         orderNo: bundle.productionOrderNo || this.data.orderNo,
         bundleNo: bundle.bundleNo,
+        currentProcessName: process.processName,
         completedQuantity: (bundle.quantity || 0) - qty,
         transferQuantity: qty,
         toWorkerId: worker.id,
@@ -198,9 +268,9 @@ Page({
         reason: '',
       };
       await api.production.splitTransfer(body);
-      showTip('拆分成功');
+      showTip('拆分成功，已通知双方');
       this.saveSplitRecord(body.orderNo, bundle.bundleNo || bundle.bundleLabel, qty, worker.workerName);
-      this.setData({ submitting: false, selectedIdx: -1, splitQty: '', workerIdx: -1 });
+      this.setData({ submitting: false, selectedIdx: -1, splitQty: '', workerIdx: -1, processIdx: -1 });
       this.fetchBundles();
     } catch (e) {
       console.error('[bundle-split] split fail', e);
@@ -227,7 +297,7 @@ Page({
     const orderNo = (this.data.priceSearchInput || '').trim();
     if (!orderNo) return showTip('请输入订单号');
     this.setData({ priceOrderNo: orderNo, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
-    this.fetchProcesses();
+    this.fetchPriceProcesses();
     this.fetchAdjustHistory();
   },
 
@@ -238,24 +308,24 @@ Page({
         const code = (res.result || '').trim();
         if (!code) return showTip('未识别到内容');
         this.setData({ priceOrderNo: code, priceSearchInput: code, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
-        this.fetchProcesses();
+        this.fetchPriceProcesses();
         this.fetchAdjustHistory();
       },
       fail: () => showTip('扫码取消'),
     });
   },
 
-  async fetchProcesses() {
+  async fetchPriceProcesses() {
     const orderNo = this.data.priceOrderNo;
     if (!orderNo) return;
-    this.setData({ priceLoading: true, processes: [] });
+    this.setData({ priceLoading: true, priceProcesses: [] });
     try {
       const res = await api.production.queryOrderProcesses(orderNo);
       const list = (res && res.data) || res || [];
-      this.setData({ processes: Array.isArray(list) ? list : [], priceLoading: false });
+      this.setData({ priceProcesses: Array.isArray(list) ? list : [], priceLoading: false });
       if (!list.length) showTip('该订单暂无工序数据');
     } catch (e) {
-      console.error('[price-adjust] fetchProcesses fail', e);
+      console.error('[price-adjust] fetchPriceProcesses fail', e);
       showTip('加载工序失败');
       this.setData({ priceLoading: false });
     }
@@ -273,12 +343,12 @@ Page({
     }
   },
 
-  selectProcess(e) {
+  selectPriceProcess(e) {
     const idx = Number(e.currentTarget.dataset.idx);
     const isSame = this.data.selectedProcessIdx === idx;
     this.setData({
       selectedProcessIdx: isSame ? -1 : idx,
-      adjustPrice: isSame ? '' : String(this.data.processes[idx].unitPrice || ''),
+      adjustPrice: isSame ? '' : String(this.data.priceProcesses[idx].unitPrice || ''),
       adjustReason: '',
     });
   },
@@ -294,8 +364,8 @@ Page({
   async submitAdjust() {
     if (!this.data.isAdmin) return showTip('仅管理员可调整单价');
 
-    const { processes, selectedProcessIdx, adjustPrice, adjustReason, priceOrderNo } = this.data;
-    const proc = processes[selectedProcessIdx];
+    const { priceProcesses, selectedProcessIdx, adjustPrice, adjustReason, priceOrderNo } = this.data;
+    const proc = priceProcesses[selectedProcessIdx];
     if (!proc) return showTip('请先选择工序');
 
     const price = parseFloat(adjustPrice);
@@ -312,7 +382,7 @@ Page({
       });
       showTip('调整成功');
       this.setData({ adjustSubmitting: false, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
-      this.fetchProcesses();
+      this.fetchPriceProcesses();
       this.fetchAdjustHistory();
     } catch (e) {
       console.error('[price-adjust] submit fail', e);
@@ -322,13 +392,12 @@ Page({
     }
   },
 
-  /* -------- 通知数量（小云 AI 助手浮标） -------- */
   _loadUnreadCount() {
     api.notice.unreadCount()
       .then(res => {
         const count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
         this.setData({ unreadNoticeCount: count });
       })
-      .catch(e => { console.warn('[bundle-split] _loadUnreadCount失败:', e.message || e); });
+      .catch(e => { console.warn('[bundle-split] _loadUnreadCount fail:', e.message || e); });
   },
 });

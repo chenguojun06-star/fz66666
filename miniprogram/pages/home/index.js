@@ -172,11 +172,7 @@ Page({
     const weekDay = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
 
     var flower = MONTH_FLOWERS[m - 1];
-    var season;
-    if (m >= 3 && m <= 5) { season = '春'; }
-    else if (m >= 6 && m <= 8) { season = '夏'; }
-    else if (m >= 9 && m <= 11) { season = '秋'; }
-    else { season = '冬'; }
+    var season = this._computeSeasonBySolarTerms(now);
 
     this.setData({
       dateInfo: {
@@ -184,6 +180,23 @@ Page({
         season: season, flowerName: flower.name, dailyTip: flower.icon + ' ' + flower.name + ' — ' + flower.saying,
       },
     });
+  },
+
+  _computeSeasonBySolarTerms(now) {
+    var y = now.getFullYear();
+    var yy = y % 100;
+    var dayOfTerm = function (C) {
+      return Math.floor(yy * 0.2422 + C) - Math.floor(yy / 4);
+    };
+    var liChun = new Date(y, 1, dayOfTerm(4.81));
+    var liXia = new Date(y, 4, dayOfTerm(5.52));
+    var liQiu = new Date(y, 7, dayOfTerm(7.57));
+    var liDong = new Date(y, 10, dayOfTerm(7.44));
+    if (now < liChun) return '冬';
+    if (now < liXia) return '春';
+    if (now < liQiu) return '夏';
+    if (now < liDong) return '秋';
+    return '冬';
   },
 
   /* ---- 菜单与导航 ---- */

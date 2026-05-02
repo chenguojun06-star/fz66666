@@ -37,6 +37,26 @@
 }
 .search-bar-btn-hover { opacity: 0.85; }
 
+/* 扫码菲号入口 */
+.scan-bundle-bar {
+  margin-top: 16rpx;
+}
+.scan-bundle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  height: 88rpx;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  color: #fff;
+  border-radius: 20rpx;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(255,107,53,0.25);
+}
+.scan-bundle-btn-hover { opacity: 0.85; }
+.scan-icon { font-size: 40rpx; }
+
 .container {
   min-height: 100vh;
   background: var(--color-bg-page);
@@ -85,15 +105,33 @@
   border-radius: var(--radius-lg, 16rpx);
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
 }
-.order-bar-left { flex: 1; display: flex; align-items: center; gap: 12rpx; }
+.order-bar-left { flex: 1; display: flex; align-items: center; gap: 12rpx; min-width: 0; }
+.order-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-shrink: 0;
+}
 .order-label {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 .order-no {
   font-size: var(--font-size-md-lg);
   font-weight: 600;
   color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scan-bundle-btn-inline {
+  font-size: var(--font-size-md);
+  color: #ff6b35;
+  padding: 8rpx 16rpx;
+  border: 1rpx solid #ff6b35;
+  border-radius: var(--radius-lg, 16rpx);
+  white-space: nowrap;
 }
 .change-btn {
   font-size: var(--font-size-md);
@@ -101,6 +139,7 @@
   padding: 8rpx 20rpx;
   border: 1rpx solid var(--color-primary);
   border-radius: var(--radius-lg, 16rpx);
+  white-space: nowrap;
 }
 .change-btn-hover { opacity: 0.7; }
 
@@ -146,20 +185,51 @@
 .bundle-meta {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 6rpx;
   margin-top: 8rpx;
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
 }
+.bundle-style {
+  color: var(--color-primary);
+  font-weight: 500;
+}
 .meta-sep {
   color: var(--color-border);
+}
+.bundle-operator {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  margin-top: 8rpx;
+  padding: 6rpx 12rpx;
+  background: #fff3e0;
+  border-radius: 8rpx;
+}
+.operator-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.operator-name {
+  font-size: var(--font-size-sm);
+  color: #e65100;
+  font-weight: 600;
 }
 
 /* ======== 拆分表单 ======== */
 .split-form {
   margin-top: 20rpx;
   padding-top: 20rpx;
-  border-bottom: 1rpx solid var(--color-border);
+  border-top: 1rpx solid var(--color-border);
+}
+.split-summary {
+  margin-bottom: 16rpx;
+  padding: 12rpx 16rpx;
+  background: #f0f7ff;
+  border-radius: 12rpx;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-medium);
 }
 .form-row {
   display: flex;
@@ -264,7 +334,7 @@
 .adjust-form {
   margin-top: 20rpx;
   padding-top: 20rpx;
-  border-bottom: 1rpx solid var(--color-border);
+  border-top: 1rpx solid var(--color-border);
 }
 .admin-tip {
   font-size: var(--font-size-md);

@@ -7,7 +7,7 @@
     <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">单价调整</view>
   </view>
 
-  <!-- ======== Panel 0: 菲号单价 ======== -->
+  <!-- ======== Panel 0: 拆菲号 ======== -->
   <view wx:if="{{activeTab === 0}}">
 
     <!-- 搜索订单 -->
@@ -15,6 +15,12 @@
       <view class="search-bar-row">
         <input class="search-bar-input" placeholder="输入订单号或扫码查单" value="{{searchOrderNo}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
         <view class="search-bar-btn" bindtap="doSearch" hover-class="search-bar-btn-hover">查询</view>
+      </view>
+      <view class="scan-bundle-bar">
+        <view class="scan-bundle-btn" bindtap="scanBundleQr" hover-class="scan-bundle-btn-hover">
+          <text class="scan-icon">📷</text>
+          <text>扫码菲号直接拆</text>
+        </view>
       </view>
     </view>
 
@@ -25,7 +31,10 @@
           <text class="order-label">订单号</text>
           <text class="order-no">{{orderNo}}</text>
         </view>
-        <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
+        <view class="order-bar-actions">
+          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover">📷 扫菲号</view>
+          <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
+        </view>
       </view>
 
       <view wx:if="{{loading}}" class="loading-state"><text>加载菲号中...</text></view>
@@ -37,15 +46,30 @@
             <text class="bundle-qty">{{item.quantity}} 件</text>
           </view>
           <view class="bundle-meta">
+            <text class="bundle-style">{{item.styleNo || '-'}}</text>
+            <text class="meta-sep">/</text>
             <text>{{item.color || '-'}}</text>
             <text class="meta-sep">/</text>
             <text>{{item.size || '-'}}</text>
+          </view>
+          <view wx:if="{{item.operatorName}}" class="bundle-operator">
+            <text class="operator-label">当前持有：</text>
+            <text class="operator-name">{{item.operatorName}}</text>
           </view>
 
           <view wx:if="{{selectedIdx === index}}" class="split-form" catchtap="">
             <view class="form-row">
               <text class="form-label">转出数量</text>
               <input class="form-input" type="number" placeholder="输入件数" value="{{splitQty}}" bindinput="onQtyInput" />
+            </view>
+            <view class="form-row">
+              <text class="form-label">当前工序</text>
+              <picker mode="selector" range="{{processes}}" range-key="processName" value="{{processIdx}}" bindchange="onProcessChange">
+                <view class="picker-box">
+                  <text class="{{processIdx >= 0 ? '' : 'placeholder'}}">{{processIdx >= 0 ? processes[processIdx].processName : '选择工序'}}</text>
+                  <text class="arrow">›</text>
+                </view>
+              </picker>
             </view>
             <view class="form-row">
               <text class="form-label">接手工人</text>
@@ -56,6 +80,9 @@
                 </view>
               </picker>
             </view>
+            <view class="split-summary" wx:if="{{processIdx >= 0 && splitQty}}">
+              <text>剩余 {{(bundles[selectedIdx].quantity || 0) - splitQty}} 件保留，{{splitQty}} 件转给 {{workers[workerIdx].workerName || '--'}}</text>
+            </view>
             <view class="submit-btn {{submitting ? 'disabled' : ''}}" bindtap="submitSplit" hover-class="submit-hover">{{submitting ? '提交中...' : '确认拆分'}}</view>
           </view>
         </view>
@@ -64,7 +91,7 @@
       <view wx:else class="empty-state empty-state-card">
         <text class="empty-icon">📦</text>
         <text class="empty-text">该订单暂无菲号</text>
-        <text class="empty-hint">请确认订单号是否正确</text>
+        <text class="empty-hint">请确认订单号是否正确，或扫码菲号直接拆</text>
       </view>
     </block>
 
@@ -101,8 +128,8 @@
     <!-- 工序列表 -->
     <view wx:if="{{priceLoading}}" class="loading-state"><text>加载工序中...</text></view>
 
-    <view wx:elif="{{processes.length}}" class="process-list">
-      <view wx:for="{{processes}}" wx:key="processName" class="process-card {{selectedProcessIdx === index ? 'selected' : ''}}" bindtap="selectProcess" data-idx="{{index}}">
+    <view wx:elif="{{priceProcesses.length}}" class="process-list">
+      <view wx:for="{{priceProcesses}}" wx:key="processName" class="process-card {{selectedProcessIdx === index ? 'selected' : ''}}" bindtap="selectPriceProcess" data-idx="{{index}}">
         <view class="process-row">
           <text class="process-name">{{item.processName}}</text>
           <text class="process-price">¥{{item.unitPrice || '0.00'}}</text>

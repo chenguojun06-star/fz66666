@@ -14,6 +14,7 @@ import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingBundleSplitLogService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.websocket.service.WebSocketService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,8 +26,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -43,6 +47,9 @@ public class CuttingBundleSplitTransferOrchestrator {
     private CuttingBundleSplitLogService splitLogService;
     @Autowired
     private QrCodeSigner qrCodeSigner;
+    @Autowired
+    @Lazy
+    private WebSocketService webSocketService;
 
     @Transactional(rollbackFor = Exception.class)
     public CuttingBundleSplitTransferResponse splitAndTransfer(CuttingBundleSplitTransferRequest request) {
@@ -80,7 +87,9 @@ public class CuttingBundleSplitTransferOrchestrator {
         persistTrackingAndScans(source, completedBundle, transferBundle, sourceTrackings, scanByProcess, currentOrder, request);
         archiveSourceBundle(source, splitProcessName, currentOrder);
         splitLogService.save(buildSplitLog(source, completedBundle, transferBundle, request));
-        return buildResponse(source, rootBundleId, request, completedBundle, transferBundle);
+        CuttingBundleSplitTransferResponse response = buildResponse(source, rootBundleId, request, completedBundle, transferBundle);
+        registerPostCommitNotification(source, request, completedBundle, transferBundle);
+        return response;
     }
 
     public CuttingBundleSplitTransferResponse queryFamily(String bundleId) {
@@ -337,6 +346,57 @@ public class CuttingBundleSplitTransferOrchestrator {
             source.setBundleLabel(String.valueOf(source.getBundleNo()));
         }
         cuttingBundleService.updateById(source);
+    }
+
+    private void registerPostCommitNotification(CuttingBundle source, CuttingBundleSplitTransferRequest request,
+                                                 CuttingBundle completedBundle, CuttingBundle transferBundle) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            sendSplitNotifications(source, request, completedBundle, transferBundle);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                sendSplitNotifications(source, request, completedBundle, transferBundle);
+            }
+        });
+    }
+
+    private void sendSplitNotifications(CuttingBundle source, CuttingBundleSplitTransferRequest request,
+                                         CuttingBundle completedBundle, CuttingBundle transferBundle) {
+        try {
+            String orderNo = source.getProductionOrderNo();
+            String styleNo = source.getStyleNo();
+            String color = source.getColor();
+            String size = source.getSize();
+            String bundleLabel = resolveBundleLabel(source);
+            String fromOperatorId = source.getOperatorId();
+            String fromOperatorName = source.getOperatorName();
+            String toOperatorId = request.getToWorkerId();
+            String toOperatorName = request.getToWorkerName();
+            int transferQty = request.getTransferQuantity() != null ? request.getTransferQuantity() : 0;
+            int remainQty = request.getCompletedQuantity() != null ? request.getCompletedQuantity() : 0;
+            String processName = request.getCurrentProcessName();
+
+            // 通知接手方：收到拆菲转派
+            if (StringUtils.hasText(toOperatorId)) {
+                webSocketService.notifyScanSuccess(toOperatorId, orderNo, styleNo,
+                        processName, transferQty, toOperatorName, transferBundle.getBundleLabel());
+                log.info("[拆菲通知] 已通知接手方: toWorkerId={}, toWorkerName={}, bundleLabel={}, qty={}",
+                        toOperatorId, toOperatorName, transferBundle.getBundleLabel(), transferQty);
+            }
+
+            // 通知原持有者：菲号已拆分（带拆分详情）
+            if (StringUtils.hasText(fromOperatorId)) {
+                webSocketService.notifyDataChanged(fromOperatorId, "bundle_split",
+                        String.valueOf(source.getId()), "split_transfer");
+                log.info("[拆菲通知] 已通知原持有者: fromWorkerId={}, fromWorkerName={}, bundleLabel={}, 剩余={}, 转出={}",
+                        fromOperatorId, fromOperatorName, bundleLabel, remainQty, transferQty);
+            }
+        } catch (Exception e) {
+            log.warn("[拆菲通知] 推送失败（不阻断主流程）: bundleId={}, error={}",
+                    source.getId(), e.getMessage(), e);
+        }
     }
 
     private void restoreSourceBundle(CuttingBundle source, CuttingBundleSplitLog splitLog, int currentOrder, List<ProductionProcessTracking> sourceTrackings) {

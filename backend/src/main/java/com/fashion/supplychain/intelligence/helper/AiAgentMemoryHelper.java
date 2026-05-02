@@ -110,7 +110,7 @@ public class AiAgentMemoryHelper {
             for (Map<String, Object> m : raw) {
                 AiMessage msg = new AiMessage();
                 msg.setRole((String) m.get("role"));
-                msg.setContent((String) m.get("content"));
+                msg.setContent(m.get("content") != null ? (String) m.get("content") : "");
                 msgs.add(msg);
             }
             log.debug("[AiAgentMemory] Redis L2命中: key={}, turns={}", cacheKey, msgs.size() / 2);
