@@ -82,7 +82,7 @@ public class OpenAiCompatController {
     }
 
     @PostMapping("/chat/completions")
-    public ResponseEntity<?> chatCompletions(
+    public Object chatCompletions(
             @RequestHeader(value = "Authorization", required = false) String auth,
             @RequestBody ChatCompletionRequest request) {
         ResponseEntity<?> authCheck = checkAuthAndSetContext(auth);
@@ -140,7 +140,7 @@ public class OpenAiCompatController {
         }
     }
 
-    private ResponseEntity<?> handleStreaming(String userMessage, String pageContext) {
+    private SseEmitter handleStreaming(String userMessage, String pageContext) {
         SseEmitter emitter = new SseEmitter(sseTimeout);
         String chatId = "chatcmpl-" + UUID.randomUUID().toString().substring(0, 8);
 
@@ -179,7 +179,7 @@ public class OpenAiCompatController {
             UserContext.clear();
         });
 
-        return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(emitter);
+        return emitter;
     }
 
     private void sendOpenAiChunk(SseEmitter emitter, String chatId, String finishReason, Map<String, Object> delta) {
