@@ -495,7 +495,7 @@ function request(options) {
  * @returns {Promise<string>} - 上传成功后的图片URL
  */
 function uploadFile(options) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const { filePath, name = 'file', formData = {}, url = '/api/common/upload' } = options || {};
 
     if (!filePath) {
@@ -503,13 +503,23 @@ function uploadFile(options) {
       return;
     }
 
-    const token = getToken();
+    let token = getToken();
     const baseUrl = getBaseUrl();
 
-    // 验证baseUrl
     if (!baseUrl) {
       reject(createError('未配置有效的 API 地址', { type: 'config' }));
       return;
+    }
+
+    if (token && isTokenExpired()) {
+      const newToken = await refreshTokenRequest();
+      if (newToken) {
+        token = newToken;
+      } else {
+        triggerLoginRedirect();
+        reject(createError('登录已过期，请重新登录', { type: 'auth' }));
+        return;
+      }
     }
 
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -525,7 +535,6 @@ function uploadFile(options) {
         try {
           const statusCode = res.statusCode || 0;
 
-          // 解析响应数据
           let body;
           try {
             body = res.data ? JSON.parse(res.data) : {};
@@ -533,8 +542,21 @@ function uploadFile(options) {
             body = { message: res.data };
           }
 
-          // 处理401未授权
           if (statusCode === 401) {
+            const retryOn401 = options && options._retryOn401;
+            if (!retryOn401) {
+              refreshTokenRequest().then(newToken => {
+                if (newToken) {
+                  uploadFile({ ...options, _retryOn401: true }).then(resolve).catch(reject);
+                } else {
+                  clearToken();
+                  clearRefreshToken();
+                  triggerLoginRedirect();
+                  reject(createError('未登录', { type: 'auth', statusCode }));
+                }
+              });
+              return;
+            }
             clearToken();
             clearRefreshToken();
             triggerLoginRedirect();
@@ -542,9 +564,7 @@ function uploadFile(options) {
             return;
           }
 
-          // 处理业务成功
           if (statusCode === 200 && body.code === 200) {
-            // 返回上传后的文件URL
             const fileUrl = body.data?.url || body.data?.fileUrl || body.data;
             if (fileUrl) {
               resolve(fileUrl);
@@ -554,7 +574,6 @@ function uploadFile(options) {
             return;
           }
 
-          // 处理业务错误
           const serverMessage = extractServerMessage(body);
           reject(createError(serverMessage || '上传失败', { type: 'biz', statusCode, body }));
         } catch (err) {

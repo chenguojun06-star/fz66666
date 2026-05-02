@@ -184,7 +184,12 @@ public class OrderProgressFillHelper {
             }
 
             if (productionProcesses.isEmpty()) {
-                order.setCurrentProcessName(null);
+                // 未开始生产的订单，默认显示为"采购"阶段（确保未扫码订单在移动端可见）
+                order.setCurrentProcessName("采购");
+                String st = order.getStatus() == null ? "" : order.getStatus().trim();
+                if (!isTerminalStatus(st)) {
+                    order.setStatus("pending");
+                }
                 continue;
             }
 

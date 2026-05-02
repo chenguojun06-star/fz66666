@@ -1,7 +1,8 @@
 const { getToken, clearToken, clearRefreshToken, isTokenExpired } = require('./utils/storage');
 const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
-const { eventBus } = require('./utils/eventBus');
+const { eventBus, Events } = require('./utils/eventBus');
+const ScanOfflineQueue = require('./pages/scan/services/ScanOfflineQueue');
 // smartGuide 为非核心模块，防御性加载（避免新文件缓存未更新时崩溃 app）
 let resolveSmartGuideByRoute = () => null;
 try {
@@ -86,6 +87,23 @@ App({
       reminderManager.cleanupExpiredReminders();
     } catch (e) {
       console.error('清理过期提醒失败', e);
+    }
+
+    // 全局网络状态监听：网络恢复时触发数据刷新 + 离线队列同步
+    this._wasOffline = false;
+    if (typeof wx.onNetworkStatusChange === 'function') {
+      wx.onNetworkStatusChange((res) => {
+        if (res.isConnected && this._wasOffline) {
+          this._wasOffline = false;
+          eventBus.emit(Events.REFRESH_ALL, { source: 'network_recovery', timestamp: Date.now() });
+          if (ScanOfflineQueue.count() > 0) {
+            eventBus.emit('offline:flush', { count: ScanOfflineQueue.count() });
+          }
+        }
+        if (!res.isConnected) {
+          this._wasOffline = true;
+        }
+      });
     }
   },
 

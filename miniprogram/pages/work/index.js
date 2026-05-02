@@ -102,6 +102,7 @@ Page({
 
     this.loadUnreadNoticeCount();
     this._bindWsEvents();
+    this.setupOrderSync();
 
     try {
       const pendingOrderHint = wx.getStorageSync('pending_order_hint');

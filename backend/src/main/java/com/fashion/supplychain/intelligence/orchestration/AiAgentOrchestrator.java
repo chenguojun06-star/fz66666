@@ -42,6 +42,9 @@ public class AiAgentOrchestrator {
     @Autowired(required = false) private MemoryNudgeOrchestrator memoryNudgeOrchestrator;
     @Autowired(required = false) private UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator;
     @Autowired(required = false) private com.fashion.supplychain.intelligence.service.AgentContextFileService agentContextFileService;
+    @Autowired private com.fashion.supplychain.intelligence.gateway.AiInferenceGateway inferenceGateway;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService;
+    @Autowired private com.fashion.supplychain.intelligence.helper.PromptContextProvider promptContextProvider;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -208,6 +211,14 @@ public class AiAgentOrchestrator {
                 queryCache.entrySet().removeIf(e -> e.getValue().isExpired());
             }
 
+            if (isQuickPathEligible(userMessage)) {
+                boolean quickOk = tryQuickPath(userMessage, pageContext, emitter, cacheKey, requestStartAt);
+                if (quickOk) {
+                    return;
+                }
+                log.info("[AiAgent-Stream] 快速通道未产出有效回答，降级到Agent循环");
+            }
+
             heartbeat = startHeartbeat(emitter, 15, cancelled);
 
             String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
@@ -372,5 +383,77 @@ public class AiAgentOrchestrator {
             }
         }
         return sb.toString();
+    }
+
+    private static final java.util.regex.Pattern QUICK_GREETING =
+            java.util.regex.Pattern.compile("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|辛苦了|好的|收到|明白|知道了|了解).*");
+    private static final java.util.regex.Pattern COMPLEX_TRIGGER =
+            java.util.regex.Pattern.compile("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作|对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*");
+
+    private boolean isQuickPathEligible(String userMessage) {
+        if (userMessage == null || userMessage.length() > 200) return false;
+        if (COMPLEX_TRIGGER.matcher(userMessage).matches()) return false;
+        if (QUICK_GREETING.matcher(userMessage).matches()) return true;
+        if (userMessage.length() <= 25) return true;
+        return false;
+    }
+
+    private boolean tryQuickPath(String userMessage, String pageContext, SseEmitter emitter,
+                                  String cacheKey, long requestStartAt) {
+        try {
+            String commandId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+
+            String ragContext = "";
+            if (knowledgeBaseService != null) {
+                try {
+                    ragContext = promptContextProvider.buildRagContext(UserContext.tenantId(), userMessage);
+                } catch (Exception e) {
+                    log.debug("[QuickPath] RAG检索跳过: {}", e.getMessage());
+                }
+            }
+
+            String intelligenceCtx = "";
+            try {
+                intelligenceCtx = promptContextProvider.buildIntelligenceContext();
+            } catch (Exception e) {
+                log.debug("[QuickPath] 经营上下文跳过: {}", e.getMessage());
+            }
+
+            StringBuilder sysPrompt = new StringBuilder();
+            sysPrompt.append("你是「小云」，服装供应链智能助手。请简洁、准确地回答用户问题。\n");
+            sysPrompt.append("如果下方有知识库参考资料，优先引用；如无相关内容，根据业务经验作答，不要编造。\n\n");
+            if (intelligenceCtx != null && !intelligenceCtx.isBlank()) {
+                sysPrompt.append(intelligenceCtx).append("\n\n");
+            }
+            if (ragContext != null && !ragContext.isBlank()) {
+                sysPrompt.append(ragContext).append("\n\n");
+            }
+            if (pageContext != null && !pageContext.isBlank()) {
+                sysPrompt.append("【当前页面上下文】\n").append(pageContext).append("\n\n");
+            }
+
+            com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult result =
+                    inferenceGateway.chat("ai-advisor", sysPrompt.toString(), userMessage);
+
+            if (!result.isSuccess() || result.getContent() == null || result.getContent().isBlank()) {
+                log.info("[QuickPath] 单次调用未产出有效回答: {}", result.getErrorMessage());
+                return false;
+            }
+
+            String answer = result.getContent();
+            long elapsed = System.currentTimeMillis() - requestStartAt;
+            log.info("[QuickPath] 快速通道完成: {}字符, {}ms", answer.length(), elapsed);
+
+            emitSse(emitter, "answer", java.util.Map.of("content", answer, "commandId", commandId));
+            emitSse(emitter, "done", java.util.Map.of());
+            emitter.complete();
+
+            queryCache.put(cacheKey, new CacheEntry(deduplicateAnswer(answer)));
+
+            return true;
+        } catch (Exception e) {
+            log.warn("[QuickPath] 快速通道异常，降级到Agent循环: {}", e.getMessage());
+            return false;
+        }
     }
 }

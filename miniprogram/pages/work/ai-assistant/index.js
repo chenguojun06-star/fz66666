@@ -144,8 +144,11 @@ Page({
 
   onSend() {
     const text = String(this.data.inputText || '').trim();
-    if (!text || this.data.sending) return;
+    if (!text) return;
     this.setData({ inputText: '' });
+    if (this.data.sending) {
+      this._abortStream();
+    }
     this._send(text);
   },
 

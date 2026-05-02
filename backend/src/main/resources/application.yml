@@ -315,7 +315,7 @@ sto-express:
 ai:
   budget:
     enabled: ${AI_BUDGET_ENABLED:true}
-    tenant-daily-token-limit: ${AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT:3000000}
+    tenant-daily-token-limit: ${AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT:200000}
   voyage:
     api-key: ${VOYAGE_API_KEY:}              # Voyage AI Embedding（首选，语义质量最高）
     model: ${VOYAGE_MODEL:voyage-3}          # voyage-3：1024维多语言（推荐）

@@ -8,10 +8,10 @@
         <view class="mini-cloud-part mini-cloud-part-right"></view>
         <view class="mini-cloud-base"></view>
         <view class="mini-cloud-eye mini-cloud-eye-left">
-          <view class="mini-cloud-eye-highlight"></view>
+          <view class="mini-cloud-eye-dot"></view>
         </view>
         <view class="mini-cloud-eye mini-cloud-eye-right">
-          <view class="mini-cloud-eye-highlight"></view>
+          <view class="mini-cloud-eye-dot"></view>
         </view>
         <view class="mini-cloud-smile"></view>
         <view class="mini-cloud-spark mini-cloud-spark-left"></view>
@@ -75,7 +75,18 @@
       <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
         <block wx:for="{{visibleMessages}}" wx:key="id">
           <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
-            <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
+            <view wx:if="{{item.role === 'user'}}" class="avatar avatar-user">我</view>
+            <view wx:else class="avatar avatar-ai">
+              <view class="chat-cloud">
+                <view class="chat-cloud-part chat-cloud-part-left"></view>
+                <view class="chat-cloud-part chat-cloud-part-center"></view>
+                <view class="chat-cloud-part chat-cloud-part-right"></view>
+                <view class="chat-cloud-base"></view>
+                <view class="chat-cloud-eye chat-cloud-eye-left"><view class="chat-cloud-eye-dot"></view></view>
+                <view class="chat-cloud-eye chat-cloud-eye-right"><view class="chat-cloud-eye-dot"></view></view>
+                <view class="chat-cloud-smile"></view>
+              </view>
+            </view>
             <view class="bubble">
               <image class="msg-image" src="{{item.imageUrl}}" mode="widthFix" catchtap="previewImage" data-src="{{item.imageUrl}}" wx:if="{{item.imageUrl}}" />
               <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
@@ -132,23 +143,14 @@
             </view>
           </view>
         </block>
-        <view class="streaming-row" wx:if="{{isLoading && streamingText}}">
-          <view class="avatar">☁️</view>
-          <view class="bubble streaming-bubble">
-            <text class="message-text streaming-text">{{streamingText}}<text class="streaming-cursor">▍</text></text>
-          </view>
-        </view>
-        <view class="loading-indicator" wx:if="{{isLoading && !streamingText}}">
-          <view class="loading-dots" wx:if="{{streamingTool}}">
-            <text class="loading-tool-text">{{streamingTool}}</text>
-          </view>
-          <text wx:else>小云正在整理...</text>
+        <view class="loading-indicator" wx:if="{{isLoading}}">
+          <text class="loading-hint-text">小云正在思考，你可以继续输入下一个问题…</text>
         </view>
       </scroll-view>
     </view>
     <view class="chat-input-area">
       <input class="chat-input" value="{{inputValue}}" placeholder="输入关键字查询内部资料" bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
-      <view class="send-btn-mini {{(isLoading || !inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
+      <view class="send-btn-mini {{(!inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
         <text class="send-icon">➤</text>
       </view>
     </view>

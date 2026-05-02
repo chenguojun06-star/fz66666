@@ -33,11 +33,21 @@
       class="msg-row {{item.role === 'user' ? 'row-user' : 'row-ai'}}"
     >
       <!-- AI 头像 -->
-      <view wx:if="{{item.role === 'ai'}}" class="avatar avatar-ai">☁️</view>
+      <view wx:if="{{item.role === 'ai'}}" class="avatar avatar-ai">
+        <view class="chat-cloud">
+          <view class="chat-cloud-part chat-cloud-part-left"></view>
+          <view class="chat-cloud-part chat-cloud-part-center"></view>
+          <view class="chat-cloud-part chat-cloud-part-right"></view>
+          <view class="chat-cloud-base"></view>
+          <view class="chat-cloud-eye chat-cloud-eye-left"><view class="chat-cloud-eye-dot"></view></view>
+          <view class="chat-cloud-eye chat-cloud-eye-right"><view class="chat-cloud-eye-dot"></view></view>
+          <view class="chat-cloud-smile"></view>
+        </view>
+      </view>
 
       <!-- 气泡 -->
       <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
-        <text wx:if="{{item.loading}}" class="loading-text">思考中…</text>
+        <text wx:if="{{item.loading}}" class="loading-text">小云正在思考，你可以继续输入下一个问题…</text>
         <block wx:else>
           <!-- 用户发送的图片 -->
           <image wx:if="{{item.imageUrl}}" src="{{item.imageUrl}}" class="bubble-image" mode="widthFix" bindtap="previewImage" data-src="{{item.imageUrl}}" />
@@ -241,11 +251,10 @@
       bindinput="onInputChange"
       confirm-type="send"
       bindconfirm="onSend"
-      disabled="{{sending}}"
       adjust-position
     />
     <view
-      class="send-btn {{(!inputText || sending) ? 'send-disabled' : ''}}"
+      class="send-btn {{(!inputText) ? 'send-disabled' : ''}}"
       bindtap="onSend"
     >发送</view>
   </view>

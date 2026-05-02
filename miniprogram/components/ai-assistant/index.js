@@ -417,9 +417,14 @@ Component({
 
     async sendMessage() {
       var text = this.data.inputValue.trim();
-      if (!text || this.data.isLoading) return;
+      if (!text) return;
 
       this.setData({ inputValue: '' });
+
+      if (this.data.isLoading) {
+        this._abortStream();
+        this._setMessages(this.data.messages, { isLoading: false, streamingText: '', streamingTool: '' });
+      }
 
       var userMsg = {
         id: Date.now(), role: 'user',
@@ -440,8 +445,6 @@ Component({
         var accumulatedText = '';
         var streamStarted = false;
         var pendingFollowUpActions = null;
-        var _streamPendingUpdate = false;
-        var _streamUpdateTimer = null;
 
         var aiMsgId = Date.now() + 1;
 
@@ -449,30 +452,10 @@ Component({
           streamPayload,
           function (event) {
             streamStarted = true;
-            if (event.type === 'thinking') {
-              self.setData({ streamingTool: '小云正在整理思路…' });
-            } else if (event.type === 'tool_call') {
-              var toolName = describeTool(String(event.data.tool || ''));
-              self.setData({ streamingTool: '正在处理：' + toolName + '…' });
-            } else if (event.type === 'tool_result') {
-              var tn = describeTool(String(event.data.tool || ''));
-              if (event.data.success) {
-                self.setData({ streamingTool: tn + ' 已完成，继续整理…' });
-              } else {
-                self.setData({ streamingTool: tn + ' 未成功，重新组织…' });
-              }
-            } else if (event.type === 'answer') {
+            if (event.type === 'answer') {
               var content = String(event.data.content || '');
               if (content) {
                 accumulatedText += content;
-                if (!_streamPendingUpdate) {
-                  _streamPendingUpdate = true;
-                  _streamUpdateTimer = setTimeout(function () {
-                    _streamPendingUpdate = false;
-                    _streamUpdateTimer = null;
-                    self.setData({ streamingText: accumulatedText, streamingTool: '' });
-                  }, 100);
-                }
               }
             } else if (event.type === 'follow_up_actions') {
               if (event.data && event.data.actions) {

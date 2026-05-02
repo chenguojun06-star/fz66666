@@ -217,7 +217,18 @@ const ScanOfflineQueue = {
         } catch (e) {
           failed++;
           const errMsg = (e && (e.errMsg || e.message)) || '';
-          if (DEBUG) console.warn('[ScanOfflineQueue] 上传异常:', errMsg);
+          const errType = e && e.type;
+          if (DEBUG) console.warn('[ScanOfflineQueue] 上传异常:', errMsg, 'type:', errType);
+          if (
+            errType === 'auth' ||
+            errType === 'forbidden' ||
+            errMsg.includes('未登录') ||
+            errMsg.includes('登录已过期') ||
+            errMsg.includes('无权限')
+          ) {
+            if (DEBUG) console.log('[ScanOfflineQueue] 认证失败，停止上传（保留队列等待重新登录）');
+            break;
+          }
           if (
             errMsg.includes('timeout') ||
             errMsg.includes('errcode:-101') ||

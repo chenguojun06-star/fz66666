@@ -50,7 +50,7 @@ public class AiAgentTokenBudgetService {
     @Autowired(required = false)
     private StringRedisTemplate redis;
 
-    @Value("${ai.budget.tenant-daily-token-limit:3000000}")
+    @Value("${ai.budget.tenant-daily-token-limit:200000}")
     private long dailyTokenLimit;
 
     @Value("${ai.budget.enabled:true}")

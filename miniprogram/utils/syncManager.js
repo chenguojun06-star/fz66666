@@ -31,10 +31,7 @@ class SyncManager {
       return false;
     }
     if (this.syncTasks.has(taskId)) {
-      if (DEBUG) {
-        console.warn(`[同步管理器] 任务 ${taskId} 已在运行中`);
-      }
-      return false;
+      return true;
     }
 
     const opts = options || {};

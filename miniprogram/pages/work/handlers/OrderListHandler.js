@@ -35,6 +35,7 @@ function loadOrders(ctx, reset) {
         factoryType: String(f.factoryType || '').trim() || '',
         excludeTerminal: 'true',
         delayedOnly: ctx.data.delayedOnly ? 'true' : undefined,
+        myOrdersOnly: 'true',
       };
 
       const tab = ctx.data.activeTab;
@@ -95,6 +96,7 @@ function setupOrderSync(ctx) {
         parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
         factoryType: String(f.factoryType || '').trim() || '',
         excludeTerminal: 'true',
+        myOrdersOnly: 'true',
       };
       return await api.production.listOrders(params);
     } catch (error) {
@@ -115,7 +117,7 @@ function setupOrderSync(ctx) {
   syncManager.startSync('work_orders', syncFn, 30000, {
     onDataChange,
     onError: (_error, errorCount) => {
-      if (errorCount > 3) {
+      if (errorCount > 5) {
         syncManager.stopSync('work_orders');
       }
     },

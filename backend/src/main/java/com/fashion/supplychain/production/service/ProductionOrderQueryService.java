@@ -104,6 +104,7 @@ public class ProductionOrderQueryService {
         String delayedOnly, todayOnly, urgencyLevel, plateType, merchandiser;
         String includeScrapped, excludeTerminal, orgUnitId, parentOrgUnitId;
         String factoryType, factoryId, customerId, customerName;
+        String myOrdersOnly;
     }
 
     private QueryParams extractQueryParams(Map<String, Object> safeParams) {
@@ -127,6 +128,7 @@ public class ProductionOrderQueryService {
         qp.factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
         qp.customerId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerId"));
         qp.customerName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerName"));
+        qp.myOrdersOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "myOrdersOnly"));
         return qp;
     }
 
@@ -172,6 +174,17 @@ public class ProductionOrderQueryService {
         } else if (org.springframework.util.StringUtils.hasText(qp.factoryId)) {
             wrapper.eq("factory_id", qp.factoryId);
         }
+
+        if ("true".equalsIgnoreCase(qp.myOrdersOnly)) {
+            String currentUserId = com.fashion.supplychain.common.UserContext.userId();
+            if (org.springframework.util.StringUtils.hasText(currentUserId)) {
+                wrapper.apply(
+                    "EXISTS (SELECT 1 FROM t_scan_record sr WHERE sr.order_id = id AND sr.operator_id = {0} AND sr.scan_result = 'success')",
+                    currentUserId
+                );
+            }
+        }
+
         return wrapper;
     }
 
