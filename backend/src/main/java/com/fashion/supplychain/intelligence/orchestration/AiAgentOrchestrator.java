@@ -38,6 +38,8 @@ public class AiAgentOrchestrator {
     @Autowired(required = false) private ConversationReflectionOrchestrator reflectionOrchestrator;
     @Autowired(required = false) private com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService;
     @Autowired(required = false) private SkillEvolutionOrchestrator skillEvolutionOrchestrator;
+    @Autowired(required = false) private MemoryNudgeOrchestrator memoryNudgeOrchestrator;
+    @Autowired(required = false) private UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -213,6 +215,31 @@ public class AiAgentOrchestrator {
             sessionSearchService.indexConversation(
                     tenantId, userId, sessionId, conversationId,
                     userMessage, assistantResponse);
+        }
+
+        List<String> toolNames = new java.util.ArrayList<>();
+        if (toolRecords != null) {
+            for (AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
+                toolNames.add(rec.toolName);
+            }
+        }
+
+        if (memoryNudgeOrchestrator != null) {
+            final List<String> finalToolNames = toolNames;
+            new Thread(UserContext.wrap(() -> {
+                memoryNudgeOrchestrator.analyzeAndNudge(
+                        tenantId, userId, sessionId, conversationId,
+                        userMessage, assistantResponse, finalToolNames);
+            }), "post-turn-nudge").start();
+        }
+
+        if (userProfileEvolutionOrchestrator != null) {
+            final List<String> finalToolNames2 = toolNames;
+            new Thread(UserContext.wrap(() -> {
+                userProfileEvolutionOrchestrator.evolveProfile(
+                        tenantId, userId, userMessage, assistantResponse,
+                        conversationId, finalToolNames2);
+            }), "post-turn-profile").start();
         }
     }
 

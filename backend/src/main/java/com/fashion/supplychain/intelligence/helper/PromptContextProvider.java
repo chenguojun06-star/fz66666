@@ -46,6 +46,10 @@ public class PromptContextProvider {
     @Autowired(required = false) private IntelligenceSignalOrchestrator intelligenceSignalOrchestrator;
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService;
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.AgentContextFileLoaderService contextFileLoaderService;
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator;
 
     /**
      * 系统操作指南类查询关键词 — 命中时注入知识库内容到系统提示词，
@@ -341,6 +345,26 @@ public class PromptContextProvider {
             return sb.toString();
         } catch (Exception e) {
             log.debug("[AiAgent-Patrol] 巡查风险注入跳过: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    public String buildContextFileBlock(Long tenantId) {
+        try {
+            if (contextFileLoaderService == null) return "";
+            return contextFileLoaderService.loadForPrompt(tenantId);
+        } catch (Exception e) {
+            log.debug("[AiAgent-ContextFile] 上下文文件加载跳过: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    public String buildUserProfileBlock(Long tenantId, String userId) {
+        try {
+            if (userProfileEvolutionOrchestrator == null) return "";
+            return userProfileEvolutionOrchestrator.buildUserProfileContext(tenantId, userId);
+        } catch (Exception e) {
+            log.debug("[AiAgent-Profile] 用户画像加载跳过: {}", e.getMessage());
             return "";
         }
     }

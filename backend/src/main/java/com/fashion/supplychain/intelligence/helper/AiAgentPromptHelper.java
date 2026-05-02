@@ -81,6 +81,8 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> exceptionReport = isManager
                 ? supplyAsync(() -> contextProvider.buildExceptionReport(tenantId))
                 : CompletableFuture.completedFuture("");
+        CompletableFuture<String> contextFileBlock = supplyAsync(() -> contextProvider.buildContextFileBlock(tenantId));
+        CompletableFuture<String> userProfileBlock = supplyAsync(() -> contextProvider.buildUserProfileBlock(tenantId, userId));
 
         String intelligenceContext = safeJoin(intelligenceCtx, "实时经营上下文");
         String workerProfileBlock = safeJoin(workerProfile, "工人画像");
@@ -91,6 +93,8 @@ public class AiAgentPromptHelper {
         String userBehaviorBlock = safeJoin(userBehavior, "行为画像");
         String activePatrolBlock = safeJoinWithTimeout(activePatrol, 800, "巡查风险");
         String exceptionReportBlock = safeJoin(exceptionReport, "异常报告");
+        String contextFileBlockStr = safeJoin(contextFileBlock, "上下文文件");
+        String userProfileBlockStr = safeJoin(userProfileBlock, "用户画像");
 
         String masInsightBlock = buildMasInsightBlock();
         String digitalTwinBlock = buildDigitalTwinBlock();
@@ -104,13 +108,13 @@ public class AiAgentPromptHelper {
 
         String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, exceptionReportBlock, activePatrolBlock,
                 masInsightBlock, digitalTwinBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
-                userBehaviorBlock, toolGuide, domainHint);
+                userBehaviorBlock, contextFileBlockStr, userProfileBlockStr, toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
             // 按优先级保住核心内容，先从低优先级块开始缩减
             int excess = prompt.length() - maxSystemPromptChars;
             log.warn("[AiAgent] systemPrompt过长({}字符 > {}上限)，超出{}字符，按优先级缩减", prompt.length(), maxSystemPromptChars, excess);
-            String[] lowPriorityBlocks = {userBehaviorBlock, longTermMemBlock, masInsightBlock};
+            String[] lowPriorityBlocks = {userBehaviorBlock, longTermMemBlock, masInsightBlock, contextFileBlockStr};
             for (String lowBlock : lowPriorityBlocks) {
                 if (prompt.length() <= maxSystemPromptChars) break;
                 if (lowBlock != null && prompt.contains(lowBlock)) {
@@ -277,7 +281,8 @@ public class AiAgentPromptHelper {
             String exceptionReportBlock, String activePatrolBlock,
             String masInsightBlock, String digitalTwinBlock, String intelligenceContext,
             String longTermMemBlock, String memoryContext, String ragContext,
-            String userBehaviorBlock, String toolGuide, String domainHint) {
+            String userBehaviorBlock, String contextFileBlockStr, String userProfileBlockStr,
+            String toolGuide, String domainHint) {
         String identity = promptTemplateLoader.getBaseIdentity();
         if (identity == null || identity.isBlank()) {
             identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
@@ -291,6 +296,8 @@ public class AiAgentPromptHelper {
                 activePatrolBlock +
                 masInsightBlock +
                 digitalTwinBlock +
+                contextFileBlockStr +
+                userProfileBlockStr +
                 intelligenceContext + "\n" +
                 longTermMemBlock +
                 memoryContext +
