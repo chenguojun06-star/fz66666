@@ -367,10 +367,6 @@
   justify-content: center;
   padding: 60px 0;
 }
-.tasks-main .empty-icon {
-  font-size: var(--font-size-5xl);
-  margin-bottom: 10px;
-}
 .tasks-main .empty-text {
   font-size: var(--font-size-md);
   color: var(--color-text-disabled);
@@ -378,6 +374,27 @@
 
 /* ──── Task sections ──── */
 .task-section { margin-bottom: 12px; }
+
+.task-section-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+.section-title {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.section-badge {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-disabled);
+}
 
 /* Section header pill */
 .section-header {
@@ -438,6 +455,7 @@
 .task-type-repair   .task-accent-bar { background: var(--color-danger); }
 .task-type-overdue  .task-accent-bar { background: var(--color-danger); }
 .task-type-pending  .task-accent-bar { background: var(--color-success); }
+.task-type-timeout  .task-accent-bar { background: var(--color-warning); }
 
 .task-card-main {
   flex: 1;
@@ -475,6 +493,7 @@
 .purchase-tag { color: var(--color-purple); background: rgba(124, 58, 237, 0.08); border-color: rgba(124, 58, 237, 0.15); }
 .repair-tag   { color: var(--color-danger); background: var(--color-error-bg); border-color: var(--color-error-border); }
 .overdue-tag  { color: var(--color-danger); background: var(--color-error-bg); border-color: var(--color-error-border); }
+.timeout-tag  { color: var(--color-warning); background: var(--color-warning-bg); border-color: var(--color-warning-border); }
 
 .task-name {
   font-size: var(--font-size-sm);
@@ -498,6 +517,7 @@
 .time-chip { color: var(--color-text-disabled); }
 
 .task-action-col { flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; width: 84px; }
+.task-approve-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; width: 84px; }
 .task-action-btn {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
@@ -514,6 +534,9 @@
 }
 .quality-btn  { background: var(--color-primary); box-shadow: 0 3px 8px rgba(37,99,235,0.25); }
 .cutting-btn  { background: var(--color-primary); box-shadow: 0 3px 8px rgba(37,99,235,0.25); }
+.repair-btn   { background: var(--color-danger); box-shadow: 0 3px 8px rgba(255,77,79,0.25); }
+.approve-btn  { background: var(--color-success); box-shadow: 0 3px 8px rgba(5,150,105,0.22); margin-right: 6px; }
+.reject-btn   { background: var(--color-danger); box-shadow: 0 3px 8px rgba(255,77,79,0.22); }
 .default-btn  { background: var(--color-success); box-shadow: 0 3px 8px rgba(5,150,105,0.22); }
 .task-action-btn::after { border: none; }
 
@@ -549,19 +572,6 @@
   max-width: 180px;
   border-radius: var(--radius-md);
   margin-bottom: 6px;
-}
-.uploading-mask {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  background: rgba(0,0,0,0.04);
-  margin: 0 12px 4px;
-  border-radius: var(--radius-md);
-}
-.uploading-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
 }
 
 .dynamic-suggestions {
