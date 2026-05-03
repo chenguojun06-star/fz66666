@@ -4,11 +4,6 @@ var { isFactoryOwner } = require('../../../utils/storage');
 var { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
-  onCoverPreview: function (e) {
-    var url = e.currentTarget.dataset.url;
-    if (url) wx.previewImage({ current: url, urls: [url] });
-  },
-
   data: {
     styles: [], filteredStyles: [], keyword: '', loading: true
   },
@@ -26,18 +21,47 @@ Page({
     this.loadStyles().then(function () { wx.stopPullDownRefresh(); });
   },
 
+  /* 加载款式 + 品类中文 dict 映射 */
   loadStyles: function () {
     var self = this;
+    var catMap = {};
+
     this.setData({ loading: true });
-    return api.style.listStyles({ pageSize: 500, sampleStatus: 'COMPLETED' })
+
+    return api.system.getDictList('category')
       .then(function (res) {
-        var raw = (res && res.data && res.data.records) || (res && res.records) || (res && res.data) || [];
-        var list = Array.isArray(raw) ? raw : [];
-        list = list.filter(function (s) { return s.sampleStatus === 'COMPLETED'; });
-        list.forEach(function (s) {
-          s.displayCategory = s.dictLabel_category || s.category_label || s.category || s.productCategory || '';
-          s.displayCover = getAuthedImageUrl(s.cover || '');
+        var dictData = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+        dictData.forEach(function (d) {
+          var v = d.dictValue || d.value || '';
+          var l = d.dictLabel || d.label || '';
+          if (v) catMap[v] = l;
         });
+      })
+      .catch(function () {})
+      .then(function () {
+        return api.style.listStyles({ pageSize: 500, sampleStatus: 'COMPLETED' });
+      })
+      .then(function (res) {
+        var raw = (res && res.records) || (res && res.data && res.data.records) || (res && res.data) || [];
+        var list = Array.isArray(raw) ? raw : [];
+
+        list = list.filter(function (s) { return s.sampleStatus === 'COMPLETED'; });
+
+        list.forEach(function (s) {
+          s.displayCategory = catMap[s.category] || s.category || '';
+          s.displayCover = getAuthedImageUrl(s.cover || '');
+
+          if (s.latestOrderTime) {
+            var t = s.latestOrderTime;
+            if (typeof t === 'string' && t.indexOf('T') !== -1) t = t.split('T')[0];
+            if (typeof t === 'string' && t.length >= 10) t = t.substring(0, 10);
+            s.latestOrderDate = t;
+          }
+          s.orderCount = s.orderCount || 0;
+        });
+
+        list.sort(function (a, b) { return (b.orderCount || 0) - (a.orderCount || 0); });
+
         self.setData({ styles: list, filteredStyles: list, loading: false });
       })
       .catch(function () {

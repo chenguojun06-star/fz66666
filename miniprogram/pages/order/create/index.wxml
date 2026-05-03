@@ -1,9 +1,10 @@
 <view class="container">
-  <custom-nav title="选择款式下单" show-search="{{false}}" />
-
   <view class="search-bar">
-    <input class="search-inp" value="{{keyword}}" bindinput="onSearchInput" placeholder="搜索款号/款名" confirm-type="search" />
-    <text wx:if="{{keyword}}" class="search-clr" bindtap="onSearchClear">✕</text>
+    <view class="search-box">
+      <text class="search-emoji">🔍</text>
+      <input class="search-input" placeholder="搜索款号/款名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
+      <text class="search-clear" wx:if="{{keyword}}" catchtap="onSearchClear">✕</text>
+    </view>
   </view>
 
   <view wx:if="{{loading}}" class="state-wrap"><text>加载中...</text></view>
@@ -15,14 +16,16 @@
   <scroll-view wx:else scroll-y class="grid-scroll">
     <view class="grid">
       <view class="card" wx:for="{{filteredStyles}}" wx:key="id" data-id="{{item.id}}" data-cover="{{item.displayCover}}" data-no="{{item.styleNo}}" data-name="{{item.styleName}}" data-colors="{{item.color}}" data-sizes="{{item.size}}" data-cat="{{item.displayCategory}}" bindtap="onStyleTap">
-        <view class="card-img" catchtap="onCoverPreview" data-url="{{item.displayCover}}">
+        <view class="card-img">
           <image wx:if="{{item.displayCover}}" src="{{item.displayCover}}" mode="aspectFill" lazy-load />
           <text wx:else class="card-img-ph">{{item.styleNo}}</text>
         </view>
         <view class="card-body">
+          <text class="card-cat" wx:if="{{item.displayCategory}}">{{item.displayCategory}}</text>
           <text class="card-no">{{item.styleNo || '-'}}</text>
           <text class="card-name">{{item.styleName || '-'}}</text>
-          <text wx:if="{{item.displayCategory}}" class="card-tag">{{item.displayCategory}}</text>
+          <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
+          <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
         </view>
       </view>
     </view>

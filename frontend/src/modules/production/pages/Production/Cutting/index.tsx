@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Form, Segmented, Select, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
 import PageLayout from '@/components/common/PageLayout';
@@ -37,7 +37,7 @@ import {
   useCuttingCreateTask,
 } from './hooks';
 import type { CuttingBundleRow } from './hooks';
-import { CuttingCreateTaskModal, CuttingPrintPreviewModal, CuttingRatioPanel } from './components';
+import { CuttingCreateTaskModal, CuttingFreeBundlePanel, CuttingPrintPreviewModal, CuttingRatioPanel } from './components';
 import { usePurchaseColumns, useBundleColumns } from './columns';
 
 const CuttingManagement: React.FC = () => {
@@ -72,6 +72,7 @@ const CuttingManagement: React.FC = () => {
 
   const [orderId, setOrderId] = useState<string>('');
   const [activeTask, setActiveTask] = useState<CuttingTask | null>(null);
+  const [bundleMode, setBundleMode] = useState<'auto' | 'free'>('auto');
   const [cuttingSheetPrintOpen, setCuttingSheetPrintOpen] = useState(false);
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
@@ -201,9 +202,20 @@ const CuttingManagement: React.FC = () => {
         <PageLayout
           title={isEntryPage ? '裁剪明细' : '裁剪管理'}
           titleExtra={isEntryPage ? (
-            <Button type="primary" className="cutting-entry-back-btn" onClick={() => resetActiveTask(true)}>
-              返回
-            </Button>
+            <Space>
+              {activeTask?.status === 'pending' && (
+                <Button
+                  type="primary"
+                  loading={tasks.receiveTaskLoading}
+                  onClick={() => tasks.handleReceiveTask(activeTask)}
+                >
+                  领取
+                </Button>
+              )}
+              <Button type="primary" className="cutting-entry-back-btn" onClick={() => resetActiveTask(true)}>
+                返回
+              </Button>
+            </Space>
           ) : undefined}
         >
 
@@ -562,15 +574,44 @@ const CuttingManagement: React.FC = () => {
                       </div>
                     ) : null}
 
-                    <Form layout="vertical">
-                      <CuttingRatioPanel
-                        entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
-                        entrySizeItems={bundles.entrySizeItems}
+                    <div style={{ marginBottom: 12 }}>
+                      <Segmented
+                        options={[
+                          { label: '一键生成', value: 'auto' },
+                          { label: '自由编菲', value: 'free' },
+                        ]}
+                        value={bundleMode}
+                        onChange={(val) => setBundleMode(val as 'auto' | 'free')}
+                        disabled={bundles.importLocked}
+                      />
+                    </div>
+
+                    {bundleMode === 'auto' ? (
+                      <Form layout="vertical">
+                        <CuttingRatioPanel
+                          entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
+                          entrySizeItems={bundles.entrySizeItems}
+                          entryOrderLines={bundles.entryOrderLines}
+                          defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
+                          sizeUsageMap={bundles.entrySizeUsageMap}
+                          fabricUsageRows={bundles.entryFabricUsageRows}
+                          arrivedFabricM={bundles.entryMainFabricArrived}
+                          generating={bundles.generateLoading}
+                          disabled={bundles.importLocked}
+                          onConfirm={(rows) => {
+                            bundles.setBundlesInput(rows);
+                            bundles.handleGenerate(rows);
+                          }}
+                          onClear={() => {
+                            bundles.setImportLocked(false);
+                            bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
+                          }}
+                          existingCutQtyByKey={existingCutQtyByKey}
+                        />
+                      </Form>
+                    ) : (
+                      <CuttingFreeBundlePanel
                         entryOrderLines={bundles.entryOrderLines}
-                        defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
-                        sizeUsageMap={bundles.entrySizeUsageMap}
-                        fabricUsageRows={bundles.entryFabricUsageRows}
-                        arrivedFabricM={bundles.entryMainFabricArrived}
                         generating={bundles.generateLoading}
                         disabled={bundles.importLocked}
                         onConfirm={(rows) => {
@@ -581,9 +622,8 @@ const CuttingManagement: React.FC = () => {
                           bundles.setImportLocked(false);
                           bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
                         }}
-                        existingCutQtyByKey={existingCutQtyByKey}
                       />
-                    </Form>
+                    )}
 
                     <Card
                       size="small"

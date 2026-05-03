@@ -37,7 +37,7 @@ public class TenantSmartFeatureOrchestrator {
     public static final List<String> MINIPROGRAM_MENU_KEYS = Arrays.asList(
             "miniprogram.menu.smartOps",
             "miniprogram.menu.dashboard",
-            "miniprogram.menu.quality",
+            "miniprogram.menu.orderCreate",
             "miniprogram.menu.bundleSplit",
             "miniprogram.menu.cuttingDetail"
     );

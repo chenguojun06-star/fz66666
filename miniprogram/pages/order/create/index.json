@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "选择款式下单",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }

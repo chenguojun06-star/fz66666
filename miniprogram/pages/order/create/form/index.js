@@ -34,13 +34,15 @@ Page({
     pricingMode: 'PROCESS', pricingModeIdx: 0,
     pricingModeLabels: ['工序单价', '尺码单价', '外发整件', '手动单价'],
     manualOrderUnitPrice: '',
-    orderQuantity: 0,
+    orderQuantity: 0, computedUnitPrice: 0,
     selectedColors: [], selectedSizes: [],
     orderLines: [],
+    gridRows: [], gridSizes: [],
     colorInput: '', sizeInput: '',
     colorOptions: [], sizeOptions: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     factoryList: [], orgUnitList: [], categoryOptions: [],
+    processPrices: [],
     quickFillQty: 1, submitting: false
   },
 
@@ -68,6 +70,7 @@ Page({
 
     this._loadAux();
     this._genOrderNo();
+    this._loadProcessPrices();
   },
 
   _rebuildLines: function () {
@@ -78,6 +81,7 @@ Page({
     cs.forEach(function (c) { ss.forEach(function (s) { lines.push({ color: c, size: s, quantity: old[c + '|' + s] || 0 }); }); });
     this.setData({ orderLines: lines });
     this._recalcTotal();
+    this._rebuildGrid();
   },
 
   _recalcTotal: function () {
@@ -86,23 +90,49 @@ Page({
     this.setData({ orderQuantity: t });
   },
 
+  _rebuildGrid: function () {
+    var cs = this.data.selectedColors, ss = this.data.selectedSizes;
+    var rows = [];
+    cs.forEach(function (c) {
+      var cells = [];
+      ss.forEach(function (s) {
+        var q = 0;
+        for (var i = 0; i < this.data.orderLines.length; i++) {
+          var l = this.data.orderLines[i];
+          if (l.color === c && l.size === s) { q = l.quantity || 0; break; }
+        }
+        cells.push({ size: s, quantity: q });
+      }.bind(this));
+      rows.push({ color: c, cells: cells });
+    }.bind(this));
+    this.setData({ gridRows: rows, gridSizes: ss });
+    this._recalcComputedPrice();
+  },
+
+  _recalcComputedPrice: function () {
+    var pps = this.data.processPrices || [];
+    var total = 0;
+    pps.forEach(function (p) { total += parseFloat(p.unitPrice || p.price || 0); });
+    this.setData({ computedUnitPrice: total.toFixed(2) });
+  },
+
   _loadAux: function () {
     var self = this;
 
     api.factory.list().then(function (res) {
-      var list = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+      var list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
       self.setData({ factoryList: list.map(function (f) { return { factoryName: f.factoryName || f.name || f.label || '', id: f.id }; }) });
     }).catch(function () {});
 
     api.system.listOrganizationDepartments().then(function (res) {
-      var list = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+      var list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
       self.setData({ orgUnitList: list.map(function (d) {
-        return { name: d.name || d.unitName || d.label || '', id: d.id };
+        return { name: d.pathNames || d.nodeName || d.name || d.unitName || d.label || '', id: d.id };
       })});
     }).catch(function () {});
 
     api.system.getDictList('category').then(function (res) {
-      var data = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+      var data = Array.isArray(res) ? res : (res && res.records ? res.records : []);
       self.setData({ categoryOptions: data });
       if (data.length) {
         self.setData({ productCategory: data[0].dictLabel || data[0].label || '' });
@@ -111,6 +141,15 @@ Page({
 
     api.system.getMe().then(function (me) {
       self.setData({ merchandiser: me.name || me.username || '' });
+    }).catch(function () {});
+  },
+
+  _loadProcessPrices: function () {
+    var self = this;
+    api.production.listStyleProcesses(self.data.styleId).then(function (res) {
+      var list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+      self.setData({ processPrices: list });
+      self._recalcComputedPrice();
     }).catch(function () {});
   },
 
@@ -223,20 +262,41 @@ Page({
     var lines = this.data.orderLines.map(function (l) { return { color: l.color, size: l.size, quantity: q }; });
     this.setData({ orderLines: lines });
     this._recalcTotal();
+    this._rebuildGrid();
   },
 
-  /* 矩阵 */
+  /* 网格矩阵单个输入 */
+  onGridQtyInput: function (e) {
+    var color = e.currentTarget.dataset.color;
+    var size = e.currentTarget.dataset.size;
+    var v = parseInt(e.detail.value) || 0;
+    var idx = -1;
+    for (var i = 0; i < this.data.orderLines.length; i++) {
+      if (this.data.orderLines[i].color === color && this.data.orderLines[i].size === size) {
+        idx = i; break;
+      }
+    }
+    if (idx >= 0) {
+      this.setData({ ['orderLines[' + idx + '].quantity']: v });
+      this._recalcTotal();
+      this._rebuildGrid();
+    }
+  },
+
+  /* 旧版矩阵输入（保留兼容） */
   onLineQtyInput: function (e) {
     var idx = e.currentTarget.dataset.idx;
     var v = parseInt(e.detail.value) || 0;
     this.setData({ ['orderLines[' + idx + '].quantity']: v });
     this._recalcTotal();
+    this._rebuildGrid();
   },
 
   /* 单价 */
   onPricingModeChange: function (e) {
     var idx = e.detail.value;
     this.setData({ pricingMode: PRICING_MODES[idx] || 'PROCESS', pricingModeIdx: idx });
+    this._recalcComputedPrice();
   },
   onManualPriceInput: function (e) { this.setData({ manualOrderUnitPrice: e.detail.value }); },
 
@@ -261,6 +321,13 @@ Page({
     if (d.pricingMode === 'MANUAL') {
       up = parseFloat(d.manualOrderUnitPrice) || 0;
       if (up <= 0) return wx.showToast({ title: '请输入单价', icon: 'none' });
+    } else {
+      var pps = d.processPrices || [];
+      if (pps.length > 0) {
+        var total = 0;
+        pps.forEach(function (p) { total += parseFloat(p.unitPrice || p.price) || 0; });
+        up = total;
+      }
     }
 
     var self = this;

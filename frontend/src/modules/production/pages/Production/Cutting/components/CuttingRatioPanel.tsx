@@ -255,6 +255,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         pagination={false}
         size="small"
         bordered
+        scroll={{ x: 'max-content' }}
         style={{ marginBottom: 12 }}
         locale={{ emptyText: '暂无尺码数据，请先选择裁剪任务' }}
       />

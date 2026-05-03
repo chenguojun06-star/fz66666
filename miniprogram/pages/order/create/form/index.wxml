@@ -53,7 +53,7 @@
       </view>
     </view>
 
-    <!-- 时间 -->
+    <!-- 时间与交期 -->
     <view class="sec">
       <view class="sec-hd">时间与交期</view>
 
@@ -153,16 +153,17 @@
         <view class="f-btn" bindtap="onQuickFill"><text>铺量</text></view>
       </view>
 
-      <view wx:if="{{orderLines.length > 0}}" class="mtx">
-        <view class="mtx-row mtx-hd">
-          <text class="mtx-c">颜色</text>
-          <text class="mtx-c">码数</text>
-          <text class="mtx-c">数量</text>
+      <!-- 二维矩阵 -->
+      <view wx:if="{{gridRows.length > 0}}" class="gtable">
+        <view class="grow gh">
+          <text class="gcell gcorner">颜色</text>
+          <text class="gcell" wx:for="{{gridSizes}}" wx:key="*this">{{item}}</text>
         </view>
-        <view class="mtx-row" wx:for="{{orderLines}}" wx:key="index">
-          <text class="mtx-c">{{item.color}}</text>
-          <text class="mtx-c">{{item.size}}</text>
-          <view class="mtx-c"><input class="mtx-qty" type="number" value="{{item.quantity||''}}" data-idx="{{index}}" bindinput="onLineQtyInput" placeholder="0" /></view>
+        <view class="grow" wx:for="{{gridRows}}" wx:for-item="row" wx:key="color">
+          <text class="gcell glabel">{{row.color}}</text>
+          <view class="gcell gqcell" wx:for="{{row.cells}}" wx:for-item="cell" wx:for-index="cidx" wx:key="size">
+            <input class="gqty" type="number" value="{{cell.quantity || ''}}" data-color="{{row.color}}" data-size="{{cell.size}}" bindinput="onGridQtyInput" placeholder="0" />
+          </view>
         </view>
       </view>
 
@@ -172,15 +173,21 @@
       </view>
     </view>
 
-    <!-- 单价设置 -->
+    <!-- 定价 -->
     <view class="sec">
-      <view class="sec-hd">单价设置</view>
+      <view class="sec-hd">定价方式</view>
 
       <view class="f-row">
         <text class="f-lbl">模式</text>
         <picker range="{{pricingModeLabels}}" bindchange="onPricingModeChange" class="flex-1">
           <view class="f-pv">{{pricingModeLabels[pricingModeIdx]}}</view>
         </picker>
+      </view>
+
+      <!-- 工序合计单价 -->
+      <view wx:if="{{pricingMode !== 'MANUAL' && computedUnitPrice > 0}}" class="pp-total">
+        <text class="pp-total-lbl">{{pricingModeLabels[pricingModeIdx]}}：</text>
+        <text class="pp-total-val">{{computedUnitPrice}}</text>
       </view>
 
       <view wx:if="{{pricingMode === 'MANUAL'}}" class="f-row">

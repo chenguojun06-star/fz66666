@@ -137,7 +137,7 @@
       },
       {
         "pagePath": "pages/defect/index",
-        "text": "次品",
+        "text": "质检",
         "iconPath": "/assets/tabbar/defect.png",
         "selectedIconPath": "/assets/tabbar/defect-active.png"
       },

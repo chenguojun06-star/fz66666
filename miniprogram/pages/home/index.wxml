@@ -9,7 +9,6 @@
   <view class="weather-card">
     <view class="weather-top">
       <view class="weather-left">
-        <text class="weather-emoji">{{dateInfo.icon}}</text>
         <view class="weather-temp-wrap">
           <text class="weather-temp">{{dateInfo.date}}</text>
           <text class="weather-desc">{{dateInfo.day}}</text>

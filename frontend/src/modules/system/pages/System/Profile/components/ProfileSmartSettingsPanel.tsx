@@ -65,9 +65,9 @@ const MINIPROGRAM_MENU_LABELS: Record<MiniprogramMenuKey, { title: string; desc:
     title: '生产管理',
     desc: '小程序首页显示生产管理入口（仍需管理员角色才可见）。',
   },
-  'miniprogram.menu.quality': {
-    title: '扫码质检',
-    desc: '小程序首页显示扫码质检入口。',
+  'miniprogram.menu.orderCreate': {
+    title: '下单管理',
+    desc: '小程序首页显示下单管理入口（仍需管理员/工厂主角色才可见）。',
   },
   'miniprogram.menu.bundleSplit': {
     title: '菲号单价',

@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "新建订单",
-  "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index"
-  }
+  "usingComponents": {}
 }

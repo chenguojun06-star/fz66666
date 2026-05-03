@@ -1,7 +1,7 @@
 page { background-color: #f5f6fa; }
-.container { padding-top: env(safe-area-inset-top); min-height: 100vh; }
+.container { min-height: 100vh; }
 
-.body { height: calc(100vh - env(safe-area-inset-top) - 70px); }
+.body { height: calc(100vh - 70px); }
 
 .sec {
   margin: 8px 10px; padding: 12px 14px;
@@ -39,10 +39,7 @@ page { background-color: #f5f6fa; }
   display: flex; align-items: center; gap: 8px;
   margin-bottom: 8px; min-height: 34px;
 }
-.adjust .f-row,
-.adjust .f-row-row { margin-bottom: 8px; }
 .f-row-row .f-row { margin-bottom: 0; }
-.f-row-row .f-row + .f-row { margin-bottom: 0; }
 
 .f-lbl {
   flex-shrink: 0; width: 52px;
@@ -101,20 +98,34 @@ page { background-color: #f5f6fa; }
 .qfill { display: flex; align-items: center; gap: 6px; margin-top: 6px; margin-bottom: 6px; }
 .qfill-inp { width: 52px; height: 32px; background: #f7f8fa; border-radius: 4px; padding: 0 6px; font-size: 13px; text-align: center; }
 
-/* 矩阵 */
-.mtx { border: 1px solid #eee; border-radius: 6px; overflow: hidden; margin-top: 8px; }
-.mtx-row { display: flex; }
-.mtx-hd { background: #fafafa; }
-.mtx-row + .mtx-row { border-top: 1px solid #f0f0f0; }
-.mtx-c {
-  flex: 1; padding: 5px 4px; font-size: 12px; color: #333;
-  text-align: center; display: flex; align-items: center; justify-content: center;
+/* 二维矩阵网格 */
+.gtable { margin-top: 8px; border: 1px solid #e8e8e8; border-radius: 8px; overflow-x: auto; }
+.grow { display: flex; min-width: fit-content; }
+.grow + .grow { border-top: 1px solid #f0f0f0; }
+.gh { background: #fafafa; border-radius: 8px 8px 0 0; }
+.gcell {
+  flex: 1 0 56px; min-width: 56px; padding: 6px 2px;
+  font-size: 12px; color: #333; text-align: center;
+  display: flex; align-items: center; justify-content: center;
 }
-.mtx-hd .mtx-c { font-weight: 600; color: #888; font-size: 11px; }
-.mtx-qty {
-  width: 44px; height: 24px; background: #f7f8fa; border-radius: 4px;
-  text-align: center; font-size: 12px;
+.gh .gcell { font-size: 11px; font-weight: 600; color: #888; }
+.gcorner { flex: 1 0 50px; min-width: 50px; color: #888; }
+.glabel { flex: 0 0 50px; min-width: 50px; font-weight: 500; color: #333; background: #fafafa; }
+.gqcell { flex: 1 0 56px; min-width: 56px; }
+.gqty {
+  width: 48px; height: 26px; background: #f7f8fa; border-radius: 4px;
+  text-align: center; font-size: 13px; padding: 0 2px;
 }
+
+/* 工序合计单价 */
+.pp-total {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; padding: 8px 12px;
+  background: #f6f9ff; border: 1px solid #dbe4ff;
+  border-radius: 8px;
+}
+.pp-total-lbl { font-size: 13px; color: #555; }
+.pp-total-val { font-size: 16px; font-weight: 700; color: #1677ff; }
 
 .total {
   display: flex; justify-content: flex-end; align-items: center;

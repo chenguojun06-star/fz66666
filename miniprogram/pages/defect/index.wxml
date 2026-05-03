@@ -1,5 +1,5 @@
 <view class="container">
-  <custom-nav title="次品通知" show-back="{{true}}" />
+  <custom-nav title="质检通知" show-back="{{true}}" />
 
   <view class="card">
     <view class="filter-row">
@@ -38,7 +38,7 @@
 
     <view wx:elif="{{list.length === 0}}" class="empty-state">
       <text class="empty-icon">📋</text>
-      <text class="empty-text">暂无次品通知</text>
+      <text class="empty-text">暂无质检通知</text>
       <text class="empty-hint">质检不合格的菲号会出现在这里</text>
     </view>
 

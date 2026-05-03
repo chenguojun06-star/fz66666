@@ -1,6 +1,4 @@
 <!-- 工序编辑 · 与PC端逻辑一致 -->
-<custom-nav title="工序编辑" show-back="{{true}}" />
-
 <view class="page">
   <!-- 订单信息条：一行搞定 -->
   <view class="order-info-bar" wx:if="{{orderNo}}">

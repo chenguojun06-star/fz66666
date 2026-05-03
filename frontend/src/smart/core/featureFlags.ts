@@ -14,7 +14,7 @@ export type SmartFeatureKey =
 export type MiniprogramMenuKey =
   | 'miniprogram.menu.smartOps'
   | 'miniprogram.menu.dashboard'
-  | 'miniprogram.menu.quality'
+  | 'miniprogram.menu.orderCreate'
   | 'miniprogram.menu.bundleSplit'
   | 'miniprogram.menu.cuttingDetail';
 
@@ -24,7 +24,7 @@ export type MiniprogramMenuFlags = Record<MiniprogramMenuKey, boolean>;
 export const MINIPROGRAM_MENU_KEYS: MiniprogramMenuKey[] = [
   'miniprogram.menu.smartOps',
   'miniprogram.menu.dashboard',
-  'miniprogram.menu.quality',
+  'miniprogram.menu.orderCreate',
   'miniprogram.menu.bundleSplit',
   'miniprogram.menu.cuttingDetail',
 ];
@@ -117,7 +117,7 @@ export const getDefaultSmartFeatureFlags = (): SmartFeatureFlags => ({
 const miniprogramMenuDefaultFlags: MiniprogramMenuFlags = {
   'miniprogram.menu.smartOps': true,
   'miniprogram.menu.dashboard': true,
-  'miniprogram.menu.quality': true,
+  'miniprogram.menu.orderCreate': true,
   'miniprogram.menu.bundleSplit': true,
   'miniprogram.menu.cuttingDetail': true,
 };

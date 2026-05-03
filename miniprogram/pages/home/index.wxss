@@ -46,11 +46,6 @@ page {
   gap: var(--spacing-md);
 }
 
-.weather-emoji {
-  font-size: var(--font-size-4xl);
-  line-height: 1;
-}
-
 .weather-temp-wrap {
   display: flex;
   flex-direction: column;

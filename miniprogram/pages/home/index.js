@@ -56,12 +56,9 @@ var DAILY_SAYINGS = [
 var MENU_KEY_MAP = {
   smartOps: 'miniprogram.menu.smartOps',
   dashboard: 'miniprogram.menu.dashboard',
-  production: 'miniprogram.menu.production',
-  quality: 'miniprogram.menu.quality',
+  orderCreate: 'miniprogram.menu.orderCreate',
   bundleSplit: 'miniprogram.menu.bundleSplit',
   cuttingDetail: 'miniprogram.menu.cuttingDetail',
-  history: 'miniprogram.menu.history',
-  payroll: 'miniprogram.menu.payroll',
 };
 
 function getGreeting() {
@@ -78,20 +75,20 @@ function buildMenuItems(menuVisibility) {
   var canCreateOrder = isAdminOrSupervisor() || isFactoryOwner();
   var items = [];
 
-  if (canCreateOrder) {
-    items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-order', circleClass: 'menu-icon-circle--red', route: '/pages/order/create/index' });
-  }
   if (canSeeSmartOps && visibility.smartOps !== false) {
     items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/smart-ops/index', badge: 'AI' });
+  }
+  if (canCreateOrder && visibility.orderCreate !== false) {
+    items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' });
   }
   if (canSeeDashboard && visibility.dashboard !== false) {
     items.push({ id: 'dashboard', name: '生产管理', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' });
   }
   if (visibility.production !== false) {
-    items.push({ id: 'production', name: '次品通知', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/defect/index' });
+    items.push({ id: 'production', name: '质检通知', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/defect/index' });
   }
   if (visibility.quality !== false) {
-    items.push({ id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' });
+    items.push({ id: 'quality', name: '生产扫码', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' });
   }
   if (visibility.bundleSplit !== false) {
     items.push({ id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' });
@@ -142,6 +139,7 @@ Page({
     var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.setData({ greeting: getGreeting() });
+    this._computeDateInfo();
     this._loadUserName(true);
     this._refreshHomeData();
     this._bindWsEvents();
