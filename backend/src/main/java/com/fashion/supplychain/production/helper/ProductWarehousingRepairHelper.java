@@ -289,7 +289,7 @@ public class ProductWarehousingRepairHelper {
         if (tenantId == null) return Collections.emptyList();
 
         QueryWrapper<ProductWarehousing> qualityScanQuery = new QueryWrapper<>();
-        qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "unqualified_quantity", "defect_category", "defect_remark", "unqualified_image_urls", "process_name", "create_time", "repair_status")
+        qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "unqualified_quantity", "defect_category", "defect_remark", "unqualified_image_urls", "create_time", "repair_status")
             .eq("tenant_id", tenantId)
             .eq("warehousing_type", "quality_scan")
             .eq("delete_flag", 0)
