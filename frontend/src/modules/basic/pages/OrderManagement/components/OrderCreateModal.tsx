@@ -212,7 +212,7 @@ const OrderCreateModal: React.FC<Props> = (p) => {
                   </InlineField>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <InlineField label="单型">
+                  <InlineField label="首翻单">
                     <Form.Item name="plateType" style={{ marginBottom: 0 }}>
                       <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
                     </Form.Item>

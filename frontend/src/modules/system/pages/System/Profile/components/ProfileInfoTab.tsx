@@ -16,7 +16,12 @@ import {
     getSmartFeatureFlags,
     replaceSmartFeatureFlags,
     resetSmartFeatureFlags,
+    getMiniprogramMenuFlags,
+    replaceMiniprogramMenuFlags,
+    resetMiniprogramMenuFlags,
     type SmartFeatureKey,
+    type MiniprogramMenuKey,
+    MINIPROGRAM_MENU_KEYS,
 } from '@/smart/core/featureFlags';
 import feedbackService from '@/services/feedbackService';
 import tenantService from '@/services/tenantService';
@@ -61,6 +66,8 @@ const ProfileInfoTab: React.FC = () => {
     const [loadingSmartProfile, setLoadingSmartProfile] = useState(false);
     const [savingSmartProfile, setSavingSmartProfile] = useState(false);
     const canManageSmartFlags = isAdmin || isTenantOwner || isSuperAdmin;
+    const [miniprogramMenuFlags, setMiniprogramMenuFlags] = useState(() => getMiniprogramMenuFlags());
+    const [savingMiniprogramMenuFlags, setSavingMiniprogramMenuFlags] = useState(false);
     const fallbackTheme = 'white';
 
     // 主题
@@ -158,6 +165,10 @@ const ProfileInfoTab: React.FC = () => {
         loadProfile();
         tenantSmartFeatureService.list().then((flags) => {
             setSmartFlags(replaceSmartFeatureFlags(flags));
+        }).catch(() => {});
+
+        tenantSmartFeatureService.listMiniprogramMenus().then((flags) => {
+            setMiniprogramMenuFlags(replaceMiniprogramMenuFlags(flags));
         }).catch(() => {});
 
         // 加载租户信息
@@ -336,6 +347,41 @@ const ProfileInfoTab: React.FC = () => {
     };
 
     const enabledCount = SMART_FEATURE_KEYS.filter((key) => smartFlags[key]).length;
+
+    const saveMiniprogramMenuFlags = async (nextFlags: Record<MiniprogramMenuKey, boolean>, successText: string) => {
+        if (!canManageSmartFlags) {
+            message.error('仅租户管理员可修改小程序菜单配置');
+            return;
+        }
+        try {
+            setSavingMiniprogramMenuFlags(true);
+            const saved = await tenantSmartFeatureService.saveMiniprogramMenus(nextFlags);
+            setMiniprogramMenuFlags(replaceMiniprogramMenuFlags(saved));
+            message.success(successText);
+        } catch (e: unknown) {
+            message.error(e instanceof Error ? e.message : '保存小程序菜单配置失败');
+        } finally {
+            setSavingMiniprogramMenuFlags(false);
+        }
+    };
+
+    const updateMiniprogramMenuFlag = (key: MiniprogramMenuKey, enabled: boolean) => {
+        const next = { ...miniprogramMenuFlags, [key]: enabled } as Record<MiniprogramMenuKey, boolean>;
+        void saveMiniprogramMenuFlags(next, `小程序菜单「${key.split('.').pop()}」已${enabled ? '显示' : '隐藏'}`);
+    };
+
+    const setAllMiniprogramMenuFlags = (enabled: boolean) => {
+        let nextFlags = { ...miniprogramMenuFlags } as Record<MiniprogramMenuKey, boolean>;
+        MINIPROGRAM_MENU_KEYS.forEach((menuKey) => {
+            nextFlags = { ...nextFlags, [menuKey]: enabled };
+        });
+        void saveMiniprogramMenuFlags(nextFlags, `小程序菜单已${enabled ? '全部显示' : '全部隐藏'}`);
+    };
+
+    const resetMiniprogramMenuFlagsHandler = () => {
+        const next = resetMiniprogramMenuFlags();
+        void saveMiniprogramMenuFlags(next as Record<MiniprogramMenuKey, boolean>, '已恢复小程序菜单默认配置');
+    };
 
     const saveWebhookUrl = async () => {
         try {
@@ -609,6 +655,12 @@ const ProfileInfoTab: React.FC = () => {
                             onRefreshProfile={() => void loadSmartProfile()}
                             onResetProfile={resetSmartProfile}
                             onSaveProfile={saveSmartProfile}
+                            miniprogramMenuFlags={miniprogramMenuFlags as Record<MiniprogramMenuKey, boolean>}
+                            savingMiniprogramMenuFlags={savingMiniprogramMenuFlags}
+                            onToggleMiniprogramMenu={updateMiniprogramMenuFlag}
+                            onEnableAllMiniprogramMenus={() => setAllMiniprogramMenuFlags(true)}
+                            onDisableAllMiniprogramMenus={() => setAllMiniprogramMenuFlags(false)}
+                            onResetMiniprogramMenus={resetMiniprogramMenuFlagsHandler}
                         />
                     </div>
                     )}

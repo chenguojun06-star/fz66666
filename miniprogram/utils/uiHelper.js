@@ -163,7 +163,7 @@ let navigateTimer = null;
 // tabBar 页面路径集合（与 app.json tabBar.list 保持一致）
 const TAB_BAR_PAGES = new Set([
   '/pages/home/index',
-  '/pages/work/index',
+  '/pages/defect/index',
   '/pages/scan/index',
   '/pages/admin/index',
 ]);

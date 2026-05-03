@@ -99,7 +99,7 @@ Page({
     }
   },
 
-  /* ---- 跳转详情页 ---- */
+  /* ---- 跳转详情页（裁剪分扎） ---- */
   goDetail(e) {
     const task = e.currentTarget.dataset.task;
     if (!task) return;
@@ -110,11 +110,22 @@ Page({
     });
   },
 
+  /* ---- 跳转裁剪单明细页（数量矩阵总览） ---- */
+  goBundleDetail(e) {
+    const task = e.currentTarget.dataset.task;
+    if (!task) return;
+    const orderNo = task.productionOrderNo || task.orderNo || '';
+    const orderId = task.productionOrderId || task.orderId || '';
+    if (!orderNo) return toast.error('缺少订单号');
+    wx.navigateTo({
+      url: `/pages/cutting/bundle-detail/index?orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
+    });
+  },
+
   /* ---- 辅助方法 ---- */
   _normalizeList(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.records)) return res.records;
-    if (res && Array.isArray(res.data)) return res.data;
     return [];
   },
 

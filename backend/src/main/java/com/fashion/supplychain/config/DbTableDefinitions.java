@@ -1253,5 +1253,19 @@ public final class DbTableDefinitions {
             + "INDEX `idx_we_tenant_user`(`tenant_id`, `user_id`),"
             + "INDEX `idx_we_status`(`status`)"
             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        TABLE_FIXES.put("t_tenant_smart_feature",
+            "CREATE TABLE IF NOT EXISTS `t_tenant_smart_feature` ("
+            + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
+            + "`tenant_id` BIGINT DEFAULT NULL,"
+            + "`feature_key` VARCHAR(100) DEFAULT NULL,"
+            + "`enabled` TINYINT(1) DEFAULT 1,"
+            + "`remark` VARCHAR(500) DEFAULT NULL,"
+            + "`create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+            + "`update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            + "`delete_flag` INT DEFAULT 0,"
+            + "PRIMARY KEY (`id`),"
+            + "UNIQUE KEY `uk_tenant_feature` (`tenant_id`, `feature_key`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='租户智能功能开关'");
     }
 }

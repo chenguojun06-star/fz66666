@@ -59,19 +59,50 @@ public class NlQueryDataHandlers {
                 int progress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
                 int completed = order.getCompletedQuantity() != null ? order.getCompletedQuantity() : 0;
                 int total = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
+                int cuttingQty = order.getCuttingQuantity() != null ? order.getCuttingQuantity() : 0;
+                int bundleCount = order.getCuttingBundleCount() != null ? order.getCuttingBundleCount() : 0;
                 String statusCn = translateStatus(order.getStatus());
                 String factory = order.getFactoryName() != null ? order.getFactoryName() : "未指定";
+
+                long activeWorkers = 0;
+                try {
+                    QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
+                    aqw.eq("tenant_id", tenantId)
+                       .eq("order_id", order.getId())
+                       .eq("scan_result", "success")
+                       .ne("scan_type", "orchestration")
+                       .ge("scan_time", LocalDateTime.now().minusDays(7))
+                       .select("DISTINCT operator_id");
+                    activeWorkers = scanRecordService.list(aqw).stream()
+                            .map(ScanRecord::getOperatorId).filter(Objects::nonNull).distinct().count();
+                } catch (Exception e) {
+                    log.warn("[智能问答] 查询订单活跃工人失败: orderNo={}, error={}", orderNo, e.getMessage());
+                }
 
                 StringBuilder sb = new StringBuilder();
                 sb.append(String.format("📋 订单 %s\n", orderNo));
                 sb.append(String.format("• 状态：%s\n", statusCn));
                 sb.append(String.format("• 生产进度：%d%%（%d/%d 件）\n", progress, completed, total));
+                if (cuttingQty > 0) {
+                    sb.append(String.format("• 裁剪数量：%d 件（%d 个菲号）\n", cuttingQty, bundleCount));
+                }
                 sb.append(String.format("• 加工厂：%s\n", factory));
+                if (activeWorkers > 0) {
+                    sb.append(String.format("• 近7天参与工人：%d 人\n", activeWorkers));
+                }
                 if (order.getPlannedEndDate() != null) {
                     long daysLeft = ChronoUnit.DAYS.between(LocalDateTime.now(), order.getPlannedEndDate());
-                    sb.append(String.format("• 交期：%s（%s）",
+                    sb.append(String.format("• 交期：%s（%s）\n",
                             order.getPlannedEndDate().toLocalDate(),
                             daysLeft > 0 ? "剩余" + daysLeft + "天" : "已逾期" + Math.abs(daysLeft) + "天"));
+                    if (progress > 0 && progress < 90 && daysLeft > 0) {
+                        double dailyRate = completed > 0 && daysLeft > 0 ? (double) completed / Math.max(1, 30 - (int) daysLeft) : 0;
+                        if (dailyRate > 0) {
+                            int remaining = total - completed;
+                            long estDays = (long) Math.ceil(remaining / dailyRate);
+                            sb.append(String.format("• 预计还需 %d 天完成", estDays));
+                        }
+                    }
                 }
                 resp.setAnswer(sb.toString().trim());
                 resp.setConfidence(95);
@@ -81,6 +112,9 @@ public class NlQueryDataHandlers {
                 data.put("progress", progress);
                 data.put("completed", completed);
                 data.put("total", total);
+                data.put("cuttingQuantity", cuttingQty);
+                data.put("cuttingBundleCount", bundleCount);
+                data.put("activeWorkers", activeWorkers);
                 data.put("factory", factory);
                 resp.setData(data);
             } else {
@@ -142,14 +176,14 @@ public class NlQueryDataHandlers {
 
                 long fActiveWorkers = 0;
                 try {
-                    Set<String> factoryIds = orders.stream()
-                            .map(ProductionOrder::getFactoryId)
+                    Set<String> orderIds = orders.stream()
+                            .map(ProductionOrder::getId)
                             .filter(Objects::nonNull)
                             .collect(Collectors.toSet());
-                    if (!factoryIds.isEmpty()) {
+                    if (!orderIds.isEmpty()) {
                         QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
                         aqw.eq("tenant_id", tenantId)
-                           .in("factory_id", factoryIds)
+                           .in("order_id", orderIds)
                            .eq("scan_result", "success")
                            .ne("scan_type", "orchestration")
                            .ge("scan_time", now.minusDays(30))
@@ -362,19 +396,60 @@ public class NlQueryDataHandlers {
 
     // ── 裁剪查询 ──
 
-    public NlQueryResponse handleCuttingQuery(Long tenantId, String factoryId) {
+    public NlQueryResponse handleCuttingQuery(String question, Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("cutting");
 
-        LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
-        LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
-        long todayCutting = dashboardQueryService.sumCuttingQuantityBetween(todayStart, todayEnd);
+        var matcher = ORDER_NO_PATTERN.matcher(question != null ? question : "");
+        if (matcher.find()) {
+            String orderNo = matcher.group();
+            QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId)
+              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+              .eq("order_no", orderNo).eq("delete_flag", 0);
+            ProductionOrder order = productionOrderService.getOne(qw, false);
+            if (order != null) {
+                int orderQty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
+                int cuttingQty = order.getCuttingQuantity() != null ? order.getCuttingQuantity() : 0;
+                int bundleCount = order.getCuttingBundleCount() != null ? order.getCuttingBundleCount() : 0;
+                int completed = order.getCompletedQuantity() != null ? order.getCompletedQuantity() : 0;
+                String statusCn = translateStatus(order.getStatus());
 
-        resp.setAnswer(String.format("✂️ 今日裁剪数量：%d 件", todayCutting));
-        resp.setConfidence(85);
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("todayCutting", todayCutting);
-        resp.setData(data);
+                StringBuilder sb = new StringBuilder();
+                sb.append(String.format("✂️ 订单 %s 裁剪情况\n", orderNo));
+                sb.append(String.format("• 订单数量：%d 件\n", orderQty));
+                sb.append(String.format("• 裁剪数量：%d 件\n", cuttingQty));
+                sb.append(String.format("• 菲号数量：%d 个\n", bundleCount));
+                sb.append(String.format("• 完成数量：%d 件\n", completed));
+                sb.append(String.format("• 状态：%s\n", statusCn));
+                if (orderQty > 0 && cuttingQty > 0) {
+                    int cuttingPct = Math.min(100, cuttingQty * 100 / orderQty);
+                    sb.append(String.format("• 裁剪完成率：%d%%", cuttingPct));
+                }
+                resp.setAnswer(sb.toString().trim());
+                resp.setConfidence(92);
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("orderNo", orderNo);
+                data.put("orderQuantity", orderQty);
+                data.put("cuttingQuantity", cuttingQty);
+                data.put("cuttingBundleCount", bundleCount);
+                data.put("completedQuantity", completed);
+                resp.setData(data);
+            } else {
+                resp.setAnswer(String.format("未找到订单 %s，请确认订单号是否正确", orderNo));
+                resp.setConfidence(80);
+            }
+        } else {
+            LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+            LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+            long todayCutting = dashboardQueryService.sumCuttingQuantityBetween(todayStart, todayEnd);
+
+            resp.setAnswer(String.format("✂️ 今日裁剪数量：%d 件", todayCutting));
+            resp.setConfidence(85);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("todayCutting", todayCutting);
+            resp.setData(data);
+        }
         resp.setSuggestions(Arrays.asList("今日产量多少？", "入库情况如何？", "整体情况怎么样？"));
         return resp;
     }

@@ -112,21 +112,21 @@ public class ProductWarehousingController {
      * @return 统计结果
      */
     /**
-     * 待返修任务列表（铃铛专用）
-     * 返回当前租户中 status=unqualified 的菲号列表供工人认领
+     * 待返修任务列表（次品页面 / 铃铛专用）
+     * 按质检扫码人过滤，每人只能看到自己扫码质检产生的次品
      */
     @GetMapping("/pending-repair-tasks")
     public Result<?> listPendingRepairTasks() {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        // 工厂账号只能查看自己工厂的返修任务
+        String operatorId = com.fashion.supplychain.common.UserContext.userId();
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
             if (ctxFactoryId == null) {
                 return Result.success(java.util.Collections.emptyList());
             }
-            return Result.success(productWarehousingOrchestrator.listPendingRepairTasksByFactory(tenantId, ctxFactoryId));
+            return Result.success(productWarehousingOrchestrator.listPendingRepairTasksByFactoryAndOperator(tenantId, ctxFactoryId, operatorId));
         }
-        return Result.success(productWarehousingOrchestrator.listPendingRepairTasks(tenantId));
+        return Result.success(productWarehousingOrchestrator.listPendingRepairTasksByOperator(tenantId, operatorId));
     }
 
     /**
@@ -138,6 +138,23 @@ public class ProductWarehousingController {
     public Result<?> markBundleRepaired(@RequestBody java.util.Map<String, Object> body) {
         String bundleId = String.valueOf(body.getOrDefault("bundleId", "")).trim();
         return Result.success(productWarehousingOrchestrator.markBundleRepaired(bundleId));
+    }
+
+    @PostMapping("/mark-bundle-repairing")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> markBundleRepairing(@RequestBody java.util.Map<String, Object> body) {
+        String bundleId = String.valueOf(body.getOrDefault("bundleId", "")).trim();
+        String operatorName = String.valueOf(body.getOrDefault("operatorName", "")).trim();
+        productWarehousingOrchestrator.startBundleRepair(bundleId, operatorName);
+        return Result.success(true);
+    }
+
+    @PostMapping("/scrap-bundle")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> scrapBundle(@RequestBody java.util.Map<String, Object> body) {
+        String bundleId = String.valueOf(body.getOrDefault("bundleId", "")).trim();
+        productWarehousingOrchestrator.scrapBundle(bundleId);
+        return Result.success(true);
     }
 
     @RequestMapping(value = "/repair-stats", method = {RequestMethod.GET, RequestMethod.POST})

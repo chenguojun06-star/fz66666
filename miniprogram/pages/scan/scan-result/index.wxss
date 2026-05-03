@@ -112,7 +112,7 @@
   padding: 16rpx 20rpx;
   border-radius: 12rpx;
   background: rgba(16,185,129,0.08);
-  border-left: 6rpx solid #10b981;
+  border-left: 1px solid #10b981;
 }
 .stage-hints-title {
   font-size: 22rpx;

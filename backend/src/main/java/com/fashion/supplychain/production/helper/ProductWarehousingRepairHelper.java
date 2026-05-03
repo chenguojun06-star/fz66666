@@ -269,25 +269,31 @@ public class ProductWarehousingRepairHelper {
      * 逻辑：quality_scan 记录（次品池）关联的菲号中，bundle.status 仍为 unqualified 的
      */
     public List<Map<String, Object>> listPendingRepairTasks(Long tenantId) {
-        return listPendingRepairTasks(tenantId, null);
+        return listPendingRepairTasks(tenantId, null, null);
     }
 
     /**
      * 待返修任务列表（按工厂隔离）
-     * @param tenantId 租户ID
-     * @param factoryId 工厂ID（null=不限制）
      */
     public List<Map<String, Object>> listPendingRepairTasks(Long tenantId, String factoryId) {
+        return listPendingRepairTasks(tenantId, factoryId, null);
+    }
+
+    /**
+     * 待返修任务列表（按操作人过滤）
+     * @param tenantId 租户ID
+     * @param factoryId 工厂ID（null=不限制）
+     * @param operatorId 质检操作人ID（null=不限制，管理员/AI查看全部）
+     */
+    public List<Map<String, Object>> listPendingRepairTasks(Long tenantId, String factoryId, String operatorId) {
         if (tenantId == null) return Collections.emptyList();
 
-        // 1) 从 t_product_warehousing 查当前租户的 quality_scan 记录（次品来源）
         QueryWrapper<ProductWarehousing> qualityScanQuery = new QueryWrapper<>();
-        qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "unqualified_quantity", "defect_category")
+        qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "unqualified_quantity", "defect_category", "defect_remark", "unqualified_image_urls", "process_name", "create_time", "repair_status")
             .eq("tenant_id", tenantId)
             .eq("warehousing_type", "quality_scan")
             .eq("delete_flag", 0)
             .gt("unqualified_quantity", 0);
-        // 工厂隔离：通过 order_id 关联到工厂
         if (StringUtils.hasText(factoryId)) {
             qualityScanQuery.in("order_id",
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.ProductionOrder>()
@@ -295,11 +301,13 @@ public class ProductWarehousingRepairHelper {
                     .eq("factory_id", factoryId)
                     .eq("tenant_id", tenantId));
         }
+        if (StringUtils.hasText(operatorId)) {
+            qualityScanQuery.eq("quality_operator_id", operatorId);
+        }
         List<Map<String, Object>> qualityScans = productWarehousingService.listMaps(qualityScanQuery);
 
         if (qualityScans == null || qualityScans.isEmpty()) return Collections.emptyList();
 
-        // 2) 按 bundleId 去重（同一菲号多轮质检取 unqualifiedQty 最大那条）
         Map<String, Map<String, Object>> qsMap = new HashMap<>();
         for (Map<String, Object> qs : qualityScans) {
             String bid = TextUtils.safeText(qs.get("cutting_bundle_id"));
@@ -313,7 +321,6 @@ public class ProductWarehousingRepairHelper {
         }
         if (qsMap.isEmpty()) return Collections.emptyList();
 
-        // 3) 查 t_cutting_bundle：只取 status=unqualified（已申报返修则 status=repaired_waiting_qc 不出现）
         List<CuttingBundle> bundleList = cuttingBundleService.lambdaQuery()
             .select(CuttingBundle::getId,
                 CuttingBundle::getBundleNo,
@@ -326,12 +333,11 @@ public class ProductWarehousingRepairHelper {
                 CuttingBundle::getQuantity,
                 CuttingBundle::getStatus)
                 .in(CuttingBundle::getId, qsMap.keySet())
-                .eq(CuttingBundle::getStatus, "unqualified")
+                .in(CuttingBundle::getStatus, "unqualified", "repaired_waiting_qc", "scrapped")
                 .list();
 
         if (bundleList == null || bundleList.isEmpty()) return Collections.emptyList();
 
-        // 4) 组装响应 DTO
         List<Map<String, Object>> result = new ArrayList<>();
         for (CuttingBundle bundle : bundleList) {
             Map<String, Object> qs = qsMap.get(bundle.getId());
@@ -348,7 +354,25 @@ public class ProductWarehousingRepairHelper {
                     ? parseIntOrDefault(qs.get("unqualified_quantity"), 0)
                     : (bundle.getQuantity() == null ? 0 : bundle.getQuantity());
             item.put("defectQty", defectQty);
+            item.put("unqualifiedQuantity", defectQty);
             item.put("defectCategory", qs != null ? TextUtils.safeText(qs.get("defect_category")) : "");
+            item.put("defectRemark", qs != null ? TextUtils.safeText(qs.get("defect_remark")) : "");
+            item.put("unqualifiedImageUrls", qs != null ? TextUtils.safeText(qs.get("unqualified_image_urls")) : "");
+            item.put("processName", qs != null ? TextUtils.safeText(qs.get("process_name")) : "");
+            item.put("createTime", qs != null ? qs.get("create_time") : null);
+            String repairStatus = qs != null ? TextUtils.safeText(qs.get("repair_status")) : "";
+            if (!StringUtils.hasText(repairStatus)) {
+                String bundleStatus = bundle.getStatus() == null ? "" : bundle.getStatus().trim();
+                if ("unqualified".equals(bundleStatus)) {
+                    repairStatus = "pending";
+                } else if ("repaired_waiting_qc".equals(bundleStatus)) {
+                    repairStatus = "repair_done";
+                } else if ("scrapped".equals(bundleStatus)) {
+                    repairStatus = "scrapped";
+                }
+            }
+            item.put("repairStatus", repairStatus);
+            item.put("bundleStatus", bundle.getStatus());
             result.add(item);
         }
         return result;

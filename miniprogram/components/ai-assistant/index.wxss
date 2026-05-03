@@ -670,7 +670,7 @@
   border-radius: 8px;
   padding: 8px 10px;
   margin-bottom: 6px;
-  border-left: 3px solid #1677ff;
+  border-left: 1px solid #1677ff;
 }
 .insight-danger { border-left-color: #ff4d4f; background: #fff1f0; }
 .insight-warning { border-left-color: #fa8c16; background: #fff7e6; }

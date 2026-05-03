@@ -306,7 +306,7 @@ Page({
     try {
       // 加载成品仓库库位（默认）
       var res = await api.system.getDictList('finished_warehouse_location');
-      var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res && res.data ? res.data : []));
+      var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : []);
       if (records.length > 0) {
         var options = records
           .filter(function(item) { return item.dictLabel; })

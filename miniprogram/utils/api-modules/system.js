@@ -44,11 +44,17 @@ const system = {
   getDictList(type) {
     return ok('/api/system/dict/list-by-type', 'POST', { type });
   },
+  getMiniprogramMenuConfig() {
+    return ok('/api/system/tenant-miniprogram-menu/my-menus', 'GET', {});
+  },
+  saveMiniprogramMenuConfig(menus) {
+    return ok('/api/system/tenant-miniprogram-menu', 'PUT', { menus });
+  },
 };
 
 const serial = {
-  generate(type) {
-    return ok('/api/system/serial/generate', 'GET', { type });
+  generate(ruleCode) {
+    return ok('/api/system/serial/generate', 'GET', { ruleCode });
   },
 };
 

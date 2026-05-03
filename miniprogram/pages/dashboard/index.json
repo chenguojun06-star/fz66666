@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "进度看板",
+  "navigationBarTitleText": "生产管理",
   "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "usingComponents": {

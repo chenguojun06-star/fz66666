@@ -117,9 +117,9 @@ page {
 }
 
 .menu-icon-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 22px;
+  width: 53px;
+  height: 53px;
+  border-radius: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,17 +127,22 @@ page {
   border: 1px solid rgba(var(--color-primary-rgb), 0.08);
 }
 
-/* 菜单图标放大 */
+/* 菜单图标缩小1/3 */
 .menu-icon-circle .line-icon--lg {
-  width: 46px;
-  height: 46px;
-  background-size: 46px 46px;
+  width: 31px;
+  height: 31px;
+  background-size: 31px 31px;
 }
 
 .menu-name {
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   text-align: center;
+}
+
+.menu-icon-circle--red {
+  background: rgba(255, 77, 79, 0.08);
+  border-color: rgba(255, 77, 79, 0.15);
 }
 
 

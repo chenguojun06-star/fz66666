@@ -34,6 +34,21 @@ public class TenantSmartFeatureOrchestrator {
             "smart.material.purchase.ai.enabled"
     );
 
+    public static final List<String> MINIPROGRAM_MENU_KEYS = Arrays.asList(
+            "miniprogram.menu.smartOps",
+            "miniprogram.menu.dashboard",
+            "miniprogram.menu.quality",
+            "miniprogram.menu.bundleSplit",
+            "miniprogram.menu.cuttingDetail"
+    );
+
+    public static final List<String> ALL_FEATURE_KEYS;
+    static {
+        List<String> all = new ArrayList<>(SUPPORTED_FEATURE_KEYS);
+        all.addAll(MINIPROGRAM_MENU_KEYS);
+        ALL_FEATURE_KEYS = all;
+    }
+
     @Autowired
     private TenantSmartFeatureService tenantSmartFeatureService;
 
@@ -42,18 +57,23 @@ public class TenantSmartFeatureOrchestrator {
         if (tenantId == null) {
             return defaultFeatureFlags();
         }
-        Map<String, Boolean> flags = defaultFeatureFlags();
-        List<TenantSmartFeature> rows = tenantSmartFeatureService.list(
-                new LambdaQueryWrapper<TenantSmartFeature>()
-                        .eq(TenantSmartFeature::getTenantId, tenantId)
-                        .in(TenantSmartFeature::getFeatureKey, SUPPORTED_FEATURE_KEYS)
-        );
-        for (TenantSmartFeature row : rows) {
-            if (StringUtils.hasText(row.getFeatureKey())) {
-                flags.put(row.getFeatureKey(), Boolean.TRUE.equals(row.getEnabled()));
+        try {
+            Map<String, Boolean> flags = defaultFeatureFlags();
+            List<TenantSmartFeature> rows = tenantSmartFeatureService.list(
+                    new LambdaQueryWrapper<TenantSmartFeature>()
+                            .eq(TenantSmartFeature::getTenantId, tenantId)
+                            .in(TenantSmartFeature::getFeatureKey, SUPPORTED_FEATURE_KEYS)
+            );
+            for (TenantSmartFeature row : rows) {
+                if (StringUtils.hasText(row.getFeatureKey())) {
+                    flags.put(row.getFeatureKey(), Boolean.TRUE.equals(row.getEnabled()));
+                }
             }
+            return flags;
+        } catch (Exception e) {
+            log.warn("[TenantSmartFeature] 查询智能开关失败，返回默认值 tenantId={}", tenantId, e);
+            return defaultFeatureFlags();
         }
-        return flags;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -100,10 +120,86 @@ public class TenantSmartFeatureOrchestrator {
         return nextFlags;
     }
 
+    public Map<String, Boolean> listMiniprogramMenuFlags() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return defaultMiniprogramMenuFlags();
+        }
+        try {
+            Map<String, Boolean> flags = defaultMiniprogramMenuFlags();
+            List<TenantSmartFeature> rows = tenantSmartFeatureService.list(
+                    new LambdaQueryWrapper<TenantSmartFeature>()
+                            .eq(TenantSmartFeature::getTenantId, tenantId)
+                            .in(TenantSmartFeature::getFeatureKey, MINIPROGRAM_MENU_KEYS)
+            );
+            for (TenantSmartFeature row : rows) {
+                if (StringUtils.hasText(row.getFeatureKey())) {
+                    flags.put(row.getFeatureKey(), Boolean.TRUE.equals(row.getEnabled()));
+                }
+            }
+            return flags;
+        } catch (Exception e) {
+            log.warn("[TenantSmartFeature] 查询小程序菜单配置失败，返回默认值 tenantId={}", tenantId, e);
+            return defaultMiniprogramMenuFlags();
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Boolean> saveMiniprogramMenuFlags(Map<String, Boolean> menus) {
+        TenantAssert.assertTenantContext();
+        assertWritable();
+        Long tenantId = TenantAssert.requireTenantId();
+
+        Map<String, Boolean> nextFlags = defaultMiniprogramMenuFlags();
+        if (menus != null) {
+            menus.forEach((key, value) -> {
+                if (MINIPROGRAM_MENU_KEYS.contains(key)) {
+                    nextFlags.put(key, Boolean.TRUE.equals(value));
+                }
+            });
+        }
+
+        List<TenantSmartFeature> existing = tenantSmartFeatureService.list(
+                new LambdaQueryWrapper<TenantSmartFeature>()
+                        .eq(TenantSmartFeature::getTenantId, tenantId)
+                        .in(TenantSmartFeature::getFeatureKey, MINIPROGRAM_MENU_KEYS)
+        );
+        Map<String, TenantSmartFeature> existingMap = existing.stream()
+                .filter(item -> StringUtils.hasText(item.getFeatureKey()))
+                .collect(Collectors.toMap(TenantSmartFeature::getFeatureKey, item -> item, (a, b) -> a, LinkedHashMap::new));
+
+        List<TenantSmartFeature> updates = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        for (String menuKey : MINIPROGRAM_MENU_KEYS) {
+            TenantSmartFeature row = existingMap.get(menuKey);
+            if (row == null) {
+                row = new TenantSmartFeature();
+                row.setTenantId(tenantId);
+                row.setFeatureKey(menuKey);
+                row.setCreateTime(now);
+            }
+            row.setEnabled(Boolean.TRUE.equals(nextFlags.get(menuKey)));
+            row.setUpdateTime(now);
+            updates.add(row);
+        }
+
+        tenantSmartFeatureService.saveOrUpdateBatch(updates);
+        log.info("[TenantSmartFeature] 保存小程序菜单配置 tenantId={} count={}", tenantId, updates.size());
+        return nextFlags;
+    }
+
     private Map<String, Boolean> defaultFeatureFlags() {
         Map<String, Boolean> flags = new LinkedHashMap<>();
         for (String key : SUPPORTED_FEATURE_KEYS) {
             flags.put(key, false);
+        }
+        return flags;
+    }
+
+    private Map<String, Boolean> defaultMiniprogramMenuFlags() {
+        Map<String, Boolean> flags = new LinkedHashMap<>();
+        for (String key : MINIPROGRAM_MENU_KEYS) {
+            flags.put(key, true);
         }
         return flags;
     }

@@ -97,7 +97,7 @@ Page({
     if (notice.orderNo) {
       wx.setStorageSync('scroll_to_order_no', notice.orderNo);
       wx.setStorageSync('highlight_order_no', notice.orderNo);
-      wx.switchTab({ url: '/pages/work/index' });
+      wx.switchTab({ url: '/pages/defect/index' });
     }
   },
 

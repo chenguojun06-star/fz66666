@@ -1,0 +1,33 @@
+page { background-color: #f5f6fa; }
+.container { padding-top: env(safe-area-inset-top); min-height: 100vh; }
+
+.search-bar {
+  display: flex; align-items: center;
+  margin: 8px 10px; padding: 8px 12px;
+  background: #fff; border-radius: 10px;
+}
+.search-inp { flex: 1; height: 32px; font-size: 14px; color: #333; }
+.search-clr { font-size: 14px; color: #bbb; padding: 4px; margin-left: 8px; }
+
+.state-wrap { display: flex; justify-content: center; padding-top: 120px; font-size: 14px; color: #999; }
+
+.grid-scroll { height: calc(100vh - env(safe-area-inset-top) - 44px - 58px); }
+.grid { display: flex; flex-wrap: wrap; padding: 0 10px; }
+
+.card {
+  width: calc(50% - 5px); margin: 0 10px 10px 0;
+  background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #eee;
+}
+.card:nth-child(2n) { margin-right: 0; }
+
+.card-img {
+  width: 100%; height: 140px; background: #f0f2f5; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-img image { width: 100%; height: 100%; display: block; }
+.card-img-ph { font-size: 16px; font-weight: 700; color: #1677ff; word-break: break-all; padding: 8px; text-align: center; }
+
+.card-body { padding: 8px 10px 10px; }
+.card-no { display: block; font-size: 13px; font-weight: 600; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-name { display: block; font-size: 11px; color: #777; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-tag { display: inline-block; font-size: 10px; margin-top: 4px; padding: 1px 7px; border-radius: 8px; background: #edf2ff; color: #1677ff; }

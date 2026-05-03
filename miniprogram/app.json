@@ -2,7 +2,7 @@
   "pages": [
     "pages/login/index",
     "pages/home/index",
-    "pages/work/index",
+    "pages/defect/index",
     "pages/scan/index",
     "pages/admin/index"
   ],
@@ -63,7 +63,7 @@
     {
       "root": "pages/cutting",
       "name": "pkg-cutting",
-      "pages": ["task-list/index", "task-detail/index"]
+      "pages": ["task-list/index", "task-detail/index", "bundle-detail/index", "transfer/index"]
     },
     {
       "root": "pages/procurement",
@@ -96,19 +96,24 @@
       "pages": ["index"]
     },
     {
-      "root": "pages/dashboard",
-      "name": "pkg-dashboard",
-      "pages": ["index"]
-    },
+        "root": "pages/dashboard",
+        "name": "pkg-dashboard",
+        "pages": ["index", "process-edit/index"]
+      },
     {
       "root": "pages/smart-ops",
       "name": "pkg-smart-ops",
       "pages": ["index"]
+    },
+    {
+      "root": "pages/order",
+      "name": "pkg-order",
+      "pages": ["create/index", "create/form/index"]
     }
   ],
   "preloadRule": {
     "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops"] },
-    "pages/work/index":  { "network": "wifi", "packages": ["pkg-work-inbox", "pkg-work-ai", "pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
+    "pages/defect/index":  { "network": "wifi", "packages": ["pkg-work-inbox", "pkg-work-ai", "pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
     "pages/scan/index":  { "network": "wifi", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
     "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-misc"] }
   },
@@ -125,16 +130,16 @@
         "selectedIconPath": "/assets/tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/work/index",
-        "text": "生产",
-        "iconPath": "/assets/tabbar/work.png",
-        "selectedIconPath": "/assets/tabbar/work-active.png"
-      },
-      {
         "pagePath": "pages/scan/index",
         "text": "扫码",
         "iconPath": "/assets/tabbar/scan.png",
         "selectedIconPath": "/assets/tabbar/scan-active.png"
+      },
+      {
+        "pagePath": "pages/defect/index",
+        "text": "次品",
+        "iconPath": "/assets/tabbar/defect.png",
+        "selectedIconPath": "/assets/tabbar/defect-active.png"
       },
       {
         "pagePath": "pages/admin/index",

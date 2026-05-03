@@ -107,7 +107,7 @@
             <text class="qm-field-label">照片（可选，最多5张）</text>
             <view class="qm-images">
               <view wx:for="{{qualityModal.images}}" wx:key="*this" class="qm-image-item">
-                <image class="qm-image" src="{{item}}" mode="aspectFill" />
+                <image class="qm-image" src="{{item}}" mode="aspectFill" bindtap="onPreviewQualityImage" data-url="{{item}}" />
                 <view class="qm-image-del" data-index="{{index}}" bindtap="onDeleteQualityImage">×</view>
               </view>
               <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload qm-image-upload-hover" bindtap="onUploadQualityImage">

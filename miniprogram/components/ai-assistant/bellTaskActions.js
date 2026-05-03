@@ -36,7 +36,7 @@ function handleProcurementTask(task) {
     const url = `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
+    safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
   }
 }
 
@@ -217,7 +217,7 @@ function handleReminderTask(task) {
 
   // 采购提醒 → 跳转工作台（采购任务列表页已移除）
   if (type === '采购') {
-    safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
+    safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
     return;
   }
 
@@ -262,7 +262,7 @@ function handleOverdueOrder(task) {
   }
 
   // 跳转到工作页面
-  safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
+  safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
 }
 
 /**

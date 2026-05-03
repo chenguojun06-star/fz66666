@@ -1,0 +1,341 @@
+<view class="container">
+  <custom-nav title="裁剪" show-back="{{true}}" />
+
+  <!-- 订单选择列表（从首页直接进来时显示） -->
+  <block wx:if="{{showOrderList}}">
+    <view class="order-list-wrap">
+      <!-- 搜索框 -->
+      <view class="order-search-bar">
+        <input
+          class="order-search-input"
+          placeholder="搜索订单号 / 款号"
+          value="{{orderSearchKeyword}}"
+          bindinput="onOrderSearchInput"
+          confirm-type="search"
+          bindconfirm="onOrderSearchConfirm"
+        />
+        <view class="order-search-icon">
+          <text class="icon-search">S</text>
+        </view>
+      </view>
+
+      <!-- 列表加载中 -->
+      <view wx:if="{{orderListLoading}}" class="order-list-loading">
+        <text>加载订单列表…</text>
+      </view>
+
+      <!-- 无结果 -->
+      <view wx:elif="{{!orderList.length}}" class="order-list-empty">
+        <text class="empty-text">暂无裁剪中的订单</text>
+      </view>
+
+      <!-- 订单卡片列表 -->
+      <view wx:else class="order-list">
+        <view
+          wx:for="{{orderList}}"
+          wx:key="id"
+          class="order-sel-card"
+          bindtap="onSelectOrder"
+          data-order="{{item}}"
+        >
+          <!-- 款式缩略图（点击放大） -->
+          <view class="sel-cover-box" catchtap="onPreviewSelImage" data-url="{{item.styleCoverUrl}}">
+            <image wx:if="{{item.styleCoverUrl}}" class="sel-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+            <view wx:else class="sel-cover-empty">
+              <text class="cover-abbr">{{item.styleNo ? item.styleNo.substring(0,2) : '--'}}</text>
+            </view>
+          </view>
+          <!-- 订单信息 -->
+          <view class="sel-card-info">
+            <view class="sel-card-top">
+              <text class="sel-order-no">{{item.orderNo}}</text>
+              <text class="sel-status-tag">{{item.statusText || '生产中'}}</text>
+            </view>
+            <view class="sel-card-row">
+              <text class="sel-label">款号：</text>
+              <text class="sel-value">{{item.styleNo || '-'}}</text>
+              <text class="sel-label ml">数量：</text>
+              <text class="sel-value primary">{{item.orderQuantity || 0}}件</text>
+            </view>
+            <view class="sel-card-row" wx:if="{{item.expectedShipDate || item.deliveryDate}}">
+              <text class="sel-label">交货：</text>
+              <text class="sel-value">{{item.expectedShipDate || item.deliveryDate}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 加载中（加载订单明细时） -->
+  <view wx:elif="{{loading}}" class="loading-state">
+    <text>加载中…</text>
+  </view>
+
+  <block wx:else>
+    <!-- ① 订单信息头部卡片 -->
+    <view class="info-card">
+      <view class="info-card-title">订单信息</view>
+      <view class="info-card-body">
+        <!-- 左侧款式缩略图 -->
+        <view class="cover-wrap" bindtap="previewImage">
+          <image-preview
+            wx:if="{{coverImage}}"
+            class="cover-img"
+            src="{{coverImage}}"
+            mode="aspectFill"
+          />
+          <view wx:else class="cover-placeholder">
+            <text class="cover-abbr">{{orderInfo.styleNo ? orderInfo.styleNo.substring(0,2) : '--'}}</text>
+          </view>
+        </view>
+        <!-- 右侧信息网格 -->
+        <view class="info-grid">
+          <view class="grid-item">
+            <text class="grid-label">订单号</text>
+            <text class="grid-value bold">{{orderNo}}</text>
+          </view>
+          <view class="grid-item">
+            <text class="grid-label">款号</text>
+            <text class="grid-value">{{orderInfo.styleNo || '-'}}</text>
+          </view>
+          <view class="grid-item">
+            <text class="grid-label">订单数量</text>
+            <text class="grid-value primary">{{orderTotal || 0}}件</text>
+          </view>
+          <view class="grid-item">
+            <text class="grid-label">交货日期</text>
+            <text class="grid-value">{{orderInfo.expectedShipDate || orderInfo.deliveryDate || '-'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ② 工序导航行 -->
+    <view class="process-row {{showProcessList ? 'process-row-expanded' : ''}}" bindtap="onGoProcess">
+      <view class="process-row-left">
+        <text class="process-label">工序</text>
+        <text wx:if="{{processCount > 0}}" class="process-count"> 共{{processCount}}道</text>
+        <text wx:else class="process-count"> -</text>
+      </view>
+      <text class="process-arrow {{showProcessList ? 'process-arrow-open' : ''}}">›</text>
+    </view>
+
+    <!-- 工序列表展开区域 -->
+    <view wx:if="{{showProcessList && processList.length > 0}}" class="process-list-card">
+      <view
+        wx:for="{{processList}}"
+        wx:key="index"
+        class="process-item {{index < processList.length - 1 ? 'process-item-border' : ''}}"
+      >
+        <view class="process-item-left">
+          <text class="process-seq">{{index + 1}}</text>
+          <view class="process-item-info">
+            <text class="process-item-name">{{item.processName || item.process_name || '-'}}</text>
+            <text wx:if="{{item.progressStage || item.progress_stage}}" class="process-item-stage">
+              {{item.progressStage || item.progress_stage}}
+            </text>
+          </view>
+        </view>
+        <view class="process-item-right">
+          <text wx:if="{{item.price > 0}}" class="process-item-price">¥{{item.price}}/件</text>
+          <text wx:elif="{{item.unitPrice > 0}}" class="process-item-price">¥{{item.unitPrice}}/件</text>
+          <text wx:else class="process-item-price-none">待定价</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ③ 下单数量 -->
+    <view class="section-card">
+      <!-- 标题行 + 模式切换 -->
+      <view class="section-header">
+        <text class="section-title">下单数量</text>
+        <view class="mode-toggle">
+          <view
+            class="mode-btn {{viewMode === 'detailed' ? 'mode-btn-active' : ''}}"
+            data-mode="detailed"
+            bindtap="onModeChange"
+          >详细</view>
+          <view
+            class="mode-btn {{viewMode === 'simple' ? 'mode-btn-active' : ''}}"
+            data-mode="simple"
+            bindtap="onModeChange"
+          >简单</view>
+        </view>
+      </view>
+
+      <!-- 统计行 -->
+      <view class="stat-bar">
+        <text class="stat-item">
+          <text class="stat-label">下单总数 </text>
+          <text class="stat-value primary">{{orderTotal}}件</text>
+        </text>
+        <text wx:if="{{cuttingExcess > 0}}" class="stat-item">
+          <text class="stat-label"> / 多：</text>
+          <text class="stat-value warning">{{cuttingExcess}}件</text>
+        </text>
+      </view>
+
+      <!-- 无数据 -->
+      <view wx:if="{{!orderMatrix.rows.length}}" class="empty-hint">
+        <text>暂无下单明细</text>
+      </view>
+
+      <!-- 详细模式：颜色×尺码矩阵 -->
+      <block wx:elif="{{viewMode === 'detailed'}}">
+        <sku-matrix sizeMatrix="{{orderMatrix}}" mode="compact" />
+      </block>
+
+      <!-- 简单模式：颜色合计列表 -->
+      <block wx:else>
+        <view class="simple-list">
+          <view class="simple-header">
+            <text class="simple-cell simple-cell-color">颜色</text>
+            <text class="simple-cell simple-cell-qty">合计件数</text>
+          </view>
+          <view
+            wx:for="{{orderSimpleRows}}"
+            wx:key="color"
+            class="simple-row"
+          >
+            <text class="simple-cell simple-cell-color">{{item.color}}</text>
+            <text class="simple-cell simple-cell-qty bold">{{item.total}}</text>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <!-- ④ 裁货数量 -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">裁货数量</text>
+      </view>
+
+      <!-- 裁货元信息行 -->
+      <view class="cut-meta-row">
+        <view class="cut-meta-item">
+          <text class="cut-meta-label">裁货总数</text>
+          <text class="cut-meta-value primary">{{cuttingTotal}}件</text>
+        </view>
+        <view class="cut-meta-item">
+          <text class="cut-meta-label">床次</text>
+          <text class="cut-meta-value">{{maxBedNo}}</text>
+        </view>
+        <view class="cut-meta-item">
+          <text class="cut-meta-label">操作人</text>
+          <text class="cut-meta-value">{{operatorName}}</text>
+        </view>
+      </view>
+      <view class="cut-meta-time">
+        <text class="cut-meta-label">编菲时间 </text>
+        <text class="cut-meta-value-sm">{{latestBundleTime}}</text>
+      </view>
+
+      <!-- 无数据 -->
+      <view wx:if="{{!cuttingMatrix.rows.length}}" class="empty-hint">
+        <text>暂无裁货记录</text>
+      </view>
+
+      <!-- 详细模式 -->
+      <block wx:elif="{{viewMode === 'detailed'}}">
+        <sku-matrix sizeMatrix="{{cuttingMatrix}}" mode="compact" />
+      </block>
+
+      <!-- 简单模式 -->
+      <block wx:else>
+        <view class="simple-list">
+          <view class="simple-header">
+            <text class="simple-cell simple-cell-color">颜色</text>
+            <text class="simple-cell simple-cell-qty">合计件数</text>
+          </view>
+          <view
+            wx:for="{{cuttingSimpleRows}}"
+            wx:key="color"
+            class="simple-row"
+          >
+            <text class="simple-cell simple-cell-color">{{item.color}}</text>
+            <text class="simple-cell simple-cell-qty bold">{{item.total}}</text>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <!-- ⑤ 菲号明细列表 -->
+    <view class="section-card" wx:if="{{_rawBundles.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">菲号明细</text>
+        <text class="section-sub">共 {{_rawBundles.length}} 个菲号</text>
+      </view>
+      <view class="bundle-list">
+        <view class="bundle-list-header">
+          <text class="blh-cell blh-cell--no">菲号</text>
+          <text class="blh-cell blh-cell--code">二维码</text>
+          <text class="blh-cell blh-cell--color">颜色</text>
+          <text class="blh-cell blh-cell--size">尺码</text>
+          <text class="blh-cell blh-cell--qty">数量</text>
+        </view>
+        <view class="bundle-list-body">
+          <view
+            wx:for="{{_rawBundles}}"
+            wx:key="id"
+            class="bundle-row"
+          >
+            <text class="blc-cell blc-cell--no bold">{{item.bundleNo}}</text>
+            <text class="blc-cell blc-cell--code">{{item.qrCode || '-'}}</text>
+            <text class="blc-cell blc-cell--color">{{item.color || '-'}}</text>
+            <text class="blc-cell blc-cell--size">{{item.size || '-'}}</text>
+            <text class="blc-cell blc-cell--qty">{{item.quantity || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar" wx:if="{{orderNo}}">
+    <button class="print-btn print-btn--bundle" bindtap="onPrintBundleLabels" wx:if="{{hasBundles}}">打印菲号</button>
+    <button class="print-btn print-btn--transfer" bindtap="onTransfer">转单</button>
+  </view>
+
+  <!-- 菲号标签预览弹层 -->
+  <view class="bpo-overlay {{showBundlePrintModal ? 'bpo-overlay--show' : ''}}" wx:if="{{showBundlePrintModal}}" catchtap="onCloseBundlePrint">
+    <view class="bpo-panel" catchtap="">
+      <view class="bpo-panel-header">
+        <text class="bpo-panel-title">菲号标签预览</text>
+        <view class="bpo-panel-close" bindtap="onCloseBundlePrint">✕</view>
+      </view>
+      <scroll-view class="bpo-panel-body" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="bpo-grid">
+          <view class="bpo-label-card" wx:for="{{_rawBundles}}" wx:key="id">
+            <view class="bpol-top">
+              <text class="bpol-fno">F{{item.bundleNo}}</text>
+            </view>
+            <view class="bpol-divider"></view>
+            <view class="bpol-meta">
+              <view class="bpol-meta-row">
+                <text class="bpol-meta-label">订单</text>
+                <text class="bpol-meta-value">{{orderNo}}</text>
+              </view>
+              <view class="bpol-meta-row">
+                <text class="bpol-meta-label">款号</text>
+                <text class="bpol-meta-value">{{orderInfo.styleNo || '-'}}</text>
+              </view>
+            </view>
+            <view class="bpol-spec">
+              <text class="bpol-spec-item"><text class="bpol-spec-label">颜色</text>{{item.color || '-'}}</text>
+              <text class="bpol-spec-item"><text class="bpol-spec-label">尺码</text>{{item.size || '-'}}</text>
+            </view>
+            <view class="bpol-qty-row">
+              <text class="bpol-qty-label">数量</text>
+              <text class="bpol-qty-value">{{item.quantity || 0}} 件</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="bpo-panel-footer">
+        <button class="bpo-btn bpo-btn--cancel" bindtap="onCloseBundlePrint">取消</button>
+        <button class="bpo-btn bpo-btn--print" bindtap="onDoBundlePrint">打印</button>
+      </view>
+    </view>
+  </view>
+</view>

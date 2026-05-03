@@ -127,14 +127,14 @@ public class DashboardStatsHelper {
 
     private int countActiveWorkers(List<ProductionOrder> orders, LocalDateTime now) {
         try {
-            Set<String> factoryIds = orders.stream()
-                    .map(ProductionOrder::getFactoryId)
+            Set<String> orderIds = orders.stream()
+                    .map(ProductionOrder::getId)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
-            if (factoryIds.isEmpty()) return 0;
+            if (orderIds.isEmpty()) return 0;
             QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
             aqw.eq("tenant_id", com.fashion.supplychain.common.UserContext.tenantId())
-               .in("factory_id", factoryIds)
+               .in("order_id", orderIds)
                .eq("scan_result", "success")
                .ne("scan_type", "orchestration")
                .ge("scan_time", now.minusDays(30))

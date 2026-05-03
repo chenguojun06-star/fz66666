@@ -22,7 +22,7 @@ var app = getApp();
 
 /* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
 var STATUS_FILTERS = [
-  { key: 'all',           label: '全部',   value: '' },
+  { key: 'all',           label: '进行中', value: '' },
   { key: 'in_production', label: '生产中', value: 'production' },
   { key: 'completed',     label: '已完成', value: 'completed' },
   { key: 'overdue',       label: '延期',   value: '' },
@@ -242,6 +242,13 @@ Page({
     this.setData({ [path]: !this.data.orders.list[idx].expanded });
   },
 
+  /* ======== 封面图预览 ======== */
+  onCoverPreview: function (e) {
+    var url = e.currentTarget.dataset.url;
+    if (!url) return;
+    wx.previewImage({ current: url, urls: [url] });
+  },
+
   /* ======== 复制订单号 ======== */
   onCopyOrderNo: function (e) {
     var orderNo = e.currentTarget.dataset.orderNo;
@@ -249,6 +256,34 @@ Page({
     wx.setClipboardData({ data: orderNo, success: function () {
       wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
     }});
+  },
+
+  /* ======== 查看裁剪明细 ======== */
+  onViewCuttingBundles: function (e) {
+    var orderNo = e.currentTarget.dataset.orderNo;
+    if (!orderNo) return;
+    wx.navigateTo({ url: '/pages/cutting/bundle-detail/index?orderNo=' + encodeURIComponent(orderNo) });
+  },
+
+  /* ======== 转单 ======== */
+  onTransferOrder: function (e) {
+    var orderId = e.currentTarget.dataset.orderId;
+    var orderNo = e.currentTarget.dataset.orderNo;
+    if (!orderId && !orderNo) return;
+    wx.navigateTo({ url: '/pages/cutting/transfer/index?orderId=' + encodeURIComponent(orderId || '') + '&orderNo=' + encodeURIComponent(orderNo || '') });
+  },
+
+  /* ======== 工序编辑 ======== */
+  onEditProcess: function (e) {
+    var orderId = e.currentTarget.dataset.orderId;
+    var orderNo = e.currentTarget.dataset.orderNo;
+    var status = e.currentTarget.dataset.status;
+    if (!orderId) return;
+    if (status !== 'production') {
+      wx.showToast({ title: '仅生产中的订单可编辑工序', icon: 'none' });
+      return;
+    }
+    wx.navigateTo({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(orderId) + '&orderNo=' + encodeURIComponent(orderNo || '') });
   },
 
   /* ======== 搜索：输入（防抖 500ms） ======== */
@@ -272,7 +307,7 @@ Page({
   _loadUnreadCount: function () {
     return api.notice.unreadCount()
       .then(function (res) {
-        var count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
+        var count = Number(res) || 0;
         this.setData({ unreadNoticeCount: count });
       }.bind(this))
       .catch(function (e) { console.warn('[dashboard] _loadUnreadCount失败:', e.message || e); });

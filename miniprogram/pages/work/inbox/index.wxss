@@ -54,11 +54,11 @@
 }
 
 .notice-unread {
-  border-left: 3px solid rgba(var(--color-primary-rgb), 0.38);
+  border-left: 1px solid rgba(var(--color-primary-rgb), 0.38);
 }
 
 .notice-read {
-  border-left: 3px solid rgba(15, 23, 42, 0.06);
+  border-left: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .notice-read .notice-title {

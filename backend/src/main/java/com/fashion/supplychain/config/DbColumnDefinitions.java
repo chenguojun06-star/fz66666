@@ -20,6 +20,7 @@ public final class DbColumnDefinitions {
         addFactoryColumns();
         addBillingColumns();
         addOtherColumns();
+        addSmartFeatureColumns();
     }
 
     private DbColumnDefinitions() {}
@@ -969,5 +970,16 @@ public final class DbColumnDefinitions {
         add("t_style_quotation", "variance_rate", "DECIMAL(5,2) DEFAULT NULL COMMENT '差异率'");
         add("t_style_quotation", "overhead_allocation_rate", "DECIMAL(5,2) DEFAULT NULL COMMENT '制造费用分摊率'");
         add("t_style_quotation", "allocated_overhead_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '分摊制造费用'");
+    }
+
+    private static void addSmartFeatureColumns() {
+        add("t_tenant_smart_feature", "id", "BIGINT NOT NULL AUTO_INCREMENT");
+        add("t_tenant_smart_feature", "tenant_id", "BIGINT DEFAULT NULL");
+        add("t_tenant_smart_feature", "feature_key", "VARCHAR(100) DEFAULT NULL");
+        add("t_tenant_smart_feature", "enabled", "TINYINT(1) DEFAULT 1");
+        add("t_tenant_smart_feature", "remark", "VARCHAR(500) DEFAULT NULL");
+        add("t_tenant_smart_feature", "create_time", "DATETIME DEFAULT CURRENT_TIMESTAMP");
+        add("t_tenant_smart_feature", "update_time", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        add("t_tenant_smart_feature", "delete_flag", "INT DEFAULT 0");
     }
 }

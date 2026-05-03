@@ -214,7 +214,7 @@
   padding: 10px 12px;
   border-radius: var(--radius-md);
   background: var(--color-bg-light);
-  border-left: 3px solid var(--color-primary);
+  border-left: 1px solid var(--color-primary);
 }
 .action-card.card-danger { border-left-color: var(--color-danger); }
 .action-card.card-warning { border-left-color: var(--color-warning); }
@@ -261,7 +261,7 @@
   padding: 10px 12px;
   border-radius: var(--radius-md);
   background: var(--color-bg-light);
-  border-left: 3px solid var(--color-primary-light);
+  border-left: 1px solid var(--color-primary-light);
 }
 .chart-card-hd, .team-card-hd, .bundle-card-hd {
   font-size: var(--font-size-md);
@@ -370,7 +370,7 @@
   padding: 6px 8px;
   background: #fafafa;
   border-radius: 6px;
-  border-left: 3px solid var(--color-primary);
+  border-left: 1px solid var(--color-primary);
 }
 .sw-field { margin-bottom: 8px; }
 .sw-label { display: block; font-size: var(--font-size-xs); font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
@@ -429,7 +429,7 @@
   margin-top: 8px;
   border-radius: 8px;
   padding: 10px 12px;
-  border-left: 3px solid #1677ff;
+  border-left: 1px solid #1677ff;
 }
 .insight-danger { border-left-color: #ff4d4f; background: #fff1f0; }
 .insight-warning { border-left-color: #fa8c16; background: #fff7e6; }

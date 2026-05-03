@@ -109,7 +109,8 @@ public class NlQueryOrchestrator {
         // ── 关键词匹配兜底 ──
         // 1) 具体订单查询（含订单号或"订单+进度"）
         if (NlQueryDataHandlers.ORDER_NO_PATTERN.matcher(question).find()
-                || (containsAny(question, "订单") && containsAny(question, "进度", "多少", "怎样", "如何", "状态"))) {
+                || (containsAny(question, "订单") && containsAny(question, "进度", "多少", "怎样", "如何", "状态",
+                        "做了", "完成", "出货", "交期", "工人", "裁剪", "菲号"))) {
             return dataHandlers.handleOrderQuery(question, tenantId, factoryId);
         }
         // 2a) 人员延期分析（跟单员/纸样师/工厂延期率）
@@ -149,7 +150,7 @@ public class NlQueryOrchestrator {
             return smartHandlers.handleAnomalyQuery();
         }
         // 8) 产量/扫码
-        if (containsAny(question, "产量", "扫码", "今日", "今天", "多少件")) {
+        if (containsAny(question, "产量", "扫码", "今日", "今天", "多少件", "做了多少", "做了几件", "生产了多少")) {
             return dataHandlers.handleProductionQuery(tenantId, factoryId);
         }
         // 9) 质检/缺陷
@@ -169,7 +170,8 @@ public class NlQueryOrchestrator {
             return smartHandlers.handlePulseQuery();
         }
         // 12) 员工效率（升级为多维评估）
-        if (containsAny(question, "效率", "绩效", "排名", "谁最", "最快", "最好", "人员", "人数", "工人")) {
+        if (containsAny(question, "效率", "绩效", "排名", "谁最", "最快", "最好", "人员", "人数", "工人",
+                "多少人在做", "多少人在生产", "几个人在做")) {
             return smartHandlers.handleWorkerEfficiencyQuery();
         }
         // 13) 入库/仓库
@@ -178,7 +180,7 @@ public class NlQueryOrchestrator {
         }
         // 14) 裁剪
         if (containsAny(question, "裁剪", "裁片", "菲号")) {
-            return dataHandlers.handleCuttingQuery(tenantId, factoryId);
+            return dataHandlers.handleCuttingQuery(question, tenantId, factoryId);
         }
         // 15) 成本/利润（升级为利润预估）
         if (containsAny(question, "成本", "利润", "费用", "花了", "赚了", "毛利")) {
@@ -308,7 +310,7 @@ public class NlQueryOrchestrator {
             "你是一个意图分类器。根据用户问题，从以下意图列表中选择最匹配的一个意图，只返回意图名称（英文），"
             + "不要解释不要加任何前缀后缀。如果无法匹配任何意图，返回 unknown。\n"
             + "意图列表：\n"
-            + "order_query - 查询具体订单信息/进度\n"
+            + "order_query - 查询具体订单信息/进度/做了多少/多少人在做/什么时候完成/裁剪数量\n"
             + "overdue - 延期/逾期/超期订单\n"
             + "compare - 对比/环比/同比/趋势\n"
             + "health - 健康指数/系统健康/生产健康\n"
@@ -382,7 +384,7 @@ public class NlQueryOrchestrator {
             case "pulse":             return smartHandlers.handlePulseQuery();
             case "worker_efficiency": return smartHandlers.handleWorkerEfficiencyQuery();
             case "warehousing":       return dataHandlers.handleWarehousingQuery(tenantId, factoryId);
-            case "cutting":           return dataHandlers.handleCuttingQuery(tenantId, factoryId);
+            case "cutting":           return dataHandlers.handleCuttingQuery(question, tenantId, factoryId);
             case "cost":              return smartHandlers.handleCostQuery();
             case "rhythm":            return smartHandlers.handleRhythmQuery();
             case "scheduling":        return smartHandlers.handleSchedulingQuery();

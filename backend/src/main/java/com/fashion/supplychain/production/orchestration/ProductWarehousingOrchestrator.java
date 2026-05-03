@@ -513,11 +513,19 @@ public class ProductWarehousingOrchestrator {
     }
 
     public List<Map<String, Object>> listPendingRepairTasks(Long tenantId) {
-        return repairHelper.listPendingRepairTasks(tenantId);
+        return repairHelper.listPendingRepairTasks(tenantId, null, null);
     }
 
     public List<Map<String, Object>> listPendingRepairTasksByFactory(Long tenantId, String factoryId) {
-        return repairHelper.listPendingRepairTasks(tenantId, factoryId);
+        return repairHelper.listPendingRepairTasks(tenantId, factoryId, null);
+    }
+
+    public List<Map<String, Object>> listPendingRepairTasksByOperator(Long tenantId, String operatorId) {
+        return repairHelper.listPendingRepairTasks(tenantId, null, operatorId);
+    }
+
+    public List<Map<String, Object>> listPendingRepairTasksByFactoryAndOperator(Long tenantId, String factoryId, String operatorId) {
+        return repairHelper.listPendingRepairTasks(tenantId, factoryId, operatorId);
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -1,0 +1,133 @@
+<view class="container">
+  <custom-nav title="次品通知" show-back="{{true}}" />
+
+  <view class="card">
+    <view class="filter-row">
+      <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">全部</view>
+      <view class="filter-pill {{activeFilter === 'pending' ? 'filter-pill-active' : ''}}" data-filter="pending" bindtap="onFilter">待返修</view>
+      <view class="filter-pill {{activeFilter === 'repairing' ? 'filter-pill-active' : ''}}" data-filter="repairing" bindtap="onFilter">返修中</view>
+      <view class="filter-pill {{activeFilter === 'repaired' ? 'filter-pill-active' : ''}}" data-filter="repaired" bindtap="onFilter">待复检</view>
+    </view>
+
+    <view class="stats-bar">
+      <view class="stats-item">
+        <text class="stats-value stats-error">{{stats.pendingCount || 0}}</text>
+        <text class="stats-label">待返修</text>
+      </view>
+      <view class="stats-divider"></view>
+      <view class="stats-item">
+        <text class="stats-value stats-warning">{{stats.repairingCount || 0}}</text>
+        <text class="stats-label">返修中</text>
+      </view>
+      <view class="stats-divider"></view>
+      <view class="stats-item">
+        <text class="stats-value stats-info">{{stats.repairedCount || 0}}</text>
+        <text class="stats-label">待复检</text>
+      </view>
+      <view class="stats-divider"></view>
+      <view class="stats-item">
+        <text class="stats-value stats-success">{{stats.completedCount || 0}}</text>
+        <text class="stats-label">已通过</text>
+      </view>
+    </view>
+
+    <view wx:if="{{loading && list.length === 0}}" class="loading-state">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <view wx:elif="{{list.length === 0}}" class="empty-state">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无次品通知</text>
+      <text class="empty-hint">质检不合格的菲号会出现在这里</text>
+    </view>
+
+    <view wx:else class="list">
+      <view wx:for="{{list}}" wx:key="id" class="defect-card {{item.repairStatus === 'pending' ? 'defect-card-urgent' : ''}}">
+        <view class="defect-header" bindtap="onToggleDetail" data-index="{{index}}">
+          <view class="defect-header-left">
+            <view class="defect-status-dot {{item.repairStatus === 'pending' ? 'dot-error' : item.repairStatus === 'repairing' ? 'dot-warning' : item.repairStatus === 'repair_done' ? 'dot-info' : 'dot-success'}}"></view>
+            <view class="defect-title-area">
+              <text class="defect-order-no">{{item.orderNo || '-'}}</text>
+              <text class="defect-bundle-no" wx:if="{{item.bundleNo}}">菲号 {{item.bundleNo}}</text>
+            </view>
+          </view>
+          <view class="defect-header-right">
+            <text class="defect-status-tag {{item.repairStatus === 'pending' ? 'tag-error' : item.repairStatus === 'repairing' ? 'tag-warning' : item.repairStatus === 'repair_done' ? 'tag-info' : 'tag-success'}}">
+              {{item.repairStatusText || '-'}}
+            </text>
+            <text class="collapse-arrow {{item.expanded ? 'collapse-up' : ''}}">▾</text>
+          </view>
+        </view>
+
+        <view class="defect-summary">
+          <view class="defect-info-row">
+            <text class="defect-info-label">款号</text>
+            <text class="defect-info-value">{{item.styleNo || '-'}}</text>
+          </view>
+          <view class="defect-info-row" wx:if="{{item.color || item.size}}">
+            <text class="defect-info-label">颜色/码数</text>
+            <text class="defect-info-value">{{item.color || '-'}} / {{item.size || '-'}}</text>
+          </view>
+          <view class="defect-info-row">
+            <text class="defect-info-label">次品数</text>
+            <text class="defect-info-value defect-qty">{{item.unqualifiedQuantity || 0}} 件</text>
+          </view>
+          <view class="defect-info-row" wx:if="{{item.defectCategoryText}}">
+            <text class="defect-info-label">缺陷类别</text>
+            <text class="defect-info-value">{{item.defectCategoryText}}</text>
+          </view>
+          <view class="defect-info-row" wx:if="{{item.defectRemark}}">
+            <text class="defect-info-label">处理方式</text>
+            <text class="defect-info-value">{{item.defectRemark}}</text>
+          </view>
+          <view class="defect-info-row" wx:if="{{item.processName}}">
+            <text class="defect-info-label">工序</text>
+            <text class="defect-info-value">{{item.processName}}</text>
+          </view>
+          <view class="defect-info-row" wx:if="{{item.createTimeText}}">
+            <text class="defect-info-label">发现时间</text>
+            <text class="defect-info-value">{{item.createTimeText}}</text>
+          </view>
+        </view>
+
+        <view wx:if="{{item.expanded}}" class="defect-detail">
+          <view wx:if="{{item.unqualifiedImageUrls && item.unqualifiedImageUrls.length > 0}}" class="defect-images">
+            <text class="detail-section-label">不良品照片</text>
+            <view class="photo-grid">
+              <image wx:for="{{item.unqualifiedImageUrls}}" wx:key="*this" wx:for-item="imgUrl"
+                     class="defect-photo" src="{{imgUrl}}" mode="aspectFill"
+                     data-url="{{imgUrl}}" data-urls="{{item.unqualifiedImageUrls}}" bindtap="onPreviewImage" />
+            </view>
+          </view>
+
+          <view wx:if="{{item.remark}}" class="defect-remark-section">
+            <text class="detail-section-label">备注</text>
+            <text class="defect-remark-text">{{item.remark}}</text>
+          </view>
+
+          <view class="defect-actions">
+            <view wx:if="{{item.repairStatus === 'pending'}}" class="action-row">
+              <view class="action-btn action-btn-primary" data-index="{{index}}" bindtap="onStartRepair">开始返修</view>
+              <view class="action-btn action-btn-danger" data-index="{{index}}" bindtap="onScrap">报废</view>
+            </view>
+            <view wx:elif="{{item.repairStatus === 'repairing'}}" class="action-row">
+              <view class="action-btn action-btn-primary" data-index="{{index}}" bindtap="onCompleteRepair">返修完成</view>
+            </view>
+            <view wx:elif="{{item.repairStatus === 'repair_done'}}" class="action-row">
+              <view class="action-btn action-btn-primary" data-index="{{index}}" bindtap="onGoQuality">去复检</view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{list.length > 0}}" class="load-more">
+      <view class="load-more-btn {{loadingMore ? '' : ''}}" bindtap="onLoadMore">
+        {{loadingMore ? '加载中...' : (hasMore ? '加载更多' : '没有更多了')}}
+      </view>
+    </view>
+  </view>
+
+  <privacy-dialog id="privacyDialog" />
+</view>

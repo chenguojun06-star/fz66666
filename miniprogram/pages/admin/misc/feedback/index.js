@@ -76,7 +76,7 @@ Page({
   async loadMyFeedbacks() {
     try {
       const res = await api.system.myFeedbackList({ page: 1, pageSize: 20 });
-      const list = (res.records || res.data || res || []).map(item => ({
+      const list = (res.records || (Array.isArray(res) ? res : [])).map(item => ({
         ...item,
         statusText: STATUS_MAP[item.status] || item.status
       }));

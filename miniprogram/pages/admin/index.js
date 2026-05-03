@@ -1,31 +1,43 @@
-const api = require('../../utils/api');
-const { getUserInfo, getToken, setUserInfo, isFactoryOwner } = require('../../utils/storage');
-const { getBaseUrl } = require('../../config');
-const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
-const { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
-const { safeNavigate } = require('../../utils/uiHelper');
-const { getAuthedImageUrl } = require('../../utils/fileUrl');
-const i18n = require('../../utils/i18n/index');
+var api = require('../../utils/api');
+var { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner, isSuperAdmin } = require('../../utils/storage');
+var { getBaseUrl } = require('../../config');
+var { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
+var { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
+var { safeNavigate } = require('../../utils/uiHelper');
+var { getAuthedImageUrl } = require('../../utils/fileUrl');
+var i18n = require('../../utils/i18n/index');
 
-function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName: _currentLanguageName }) {
-  const items = [
-    { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' },
-    { id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' },
-    { id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/misc/feedback/index' },
-  ];
+var HOME_MENU_KEY_MAP = {
+  smartOps: { fullKey: 'miniprogram.menu.smartOps', label: '运营看板' },
+  dashboard: { fullKey: 'miniprogram.menu.dashboard', label: '生产管理' },
+  quality: { fullKey: 'miniprogram.menu.quality', label: '扫码质检' },
+  bundleSplit: { fullKey: 'miniprogram.menu.bundleSplit', label: '菲号单价' },
+  cuttingDetail: { fullKey: 'miniprogram.menu.cuttingDetail', label: '裁剪明细' },
+};
+
+function buildMenuItems(opts) {
+  var showInviteSection = opts.showInviteSection || false;
+  var showApprovalEntry = opts.showApprovalEntry || false;
+  var showMenuManage = opts.showMenuManage || false;
+  var items = [];
+
+  items.push({ id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' });
+  items.push({ id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' });
 
   if (showInviteSection) {
-    items.splice(2, 0, { id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/misc/invite/index' });
+    items.push({ id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/misc/invite/index' });
   }
+
+  items.push({ id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/misc/feedback/index' });
 
   if (showApprovalEntry) {
-    items.push(
-      { id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pages/admin/user-approval/index' },
-    );
+    items.push({ id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pages/admin/user-approval/index' });
   }
 
-  // 语言切换暂时隐藏（i18n 模块保留，仅隐藏入口）
-  // items.push({ id: 'language', label: '切换语言', iconClass: 'icon-globe', action: 'switchLanguage', value: currentLanguageName || '中文' });
+  if (showMenuManage) {
+    items.push({ id: 'menu-manage', label: '菜单管理', iconClass: 'icon-setting', action: 'openMenuManage' });
+  }
+
   return items;
 }
 
@@ -37,33 +49,36 @@ Page({
     avatarImgUrl: '',
     onlineCount: 0,
     showApprovalEntry: false,
-    // showInviteSection / recruitInfo 已迁移到 this._showInviteSection / this._recruitInfo 实例属性
-    // 这两个变量只作为 buildMenuItems / onCopyRecruitCode 的输入，不参与 WXML 渲染，
-    // 避免 setData 传入未绑定 WXML 变量的性能告警。
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
     menuItems: [],
+    showMenuManage: false,
+    menuManageVisible: false,
+    menuManageList: [],
+    savingMenuConfig: false,
   },
 
-  onShow() {
+  onShow: function () {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 3 });
     }
-    const lang = i18n.getLanguage();
+    var lang = i18n.getLanguage();
     if (lang !== this.data.currentLanguage) {
       this.applyLanguage(lang);
     }
-    const app = getApp();
+    var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
-    this.loadUserInfo(isAdminOrSupervisor() || isFactoryOwner());
+    var canManage = isAdminOrSupervisor() || isFactoryOwner();
+    this.setData({ showMenuManage: canManage });
+    this.loadUserInfo(canManage);
     this.loadSystemInfo();
     this.setupDataRefreshListener();
   },
 
-  applyLanguage(language) {
-    const languageNameMap = {
+  applyLanguage: function (language) {
+    var languageNameMap = {
       'zh-CN': i18n.t('language.names.zh-CN', language),
       'en-US': i18n.t('language.names.en-US', language),
       'vi-VN': i18n.t('language.names.vi-VN', language),
@@ -77,22 +92,26 @@ Page({
     this.refreshMenuItems();
   },
 
-  refreshMenuItems() {
+  refreshMenuItems: function () {
     this.setData({
       menuItems: buildMenuItems({
         showInviteSection: this._showInviteSection || false,
         showApprovalEntry: this.data.showApprovalEntry,
-        currentLanguageName: this.data.currentLanguageName,
+        showMenuManage: this.data.showMenuManage,
       }),
     });
   },
 
-  onMenuTap(e) {
-    const { index } = e.currentTarget.dataset;
-    const item = this.data.menuItems[index];
+  onMenuTap: function (e) {
+    var index = e.currentTarget.dataset.index;
+    var item = this.data.menuItems[index];
     if (!item) return;
     if (item.action === 'switchLanguage') {
       this.onLanguageSwitchTap();
+      return;
+    }
+    if (item.action === 'openMenuManage') {
+      this.openMenuManage();
       return;
     }
     if (item.url) {
@@ -100,45 +119,102 @@ Page({
     }
   },
 
-  onLanguageSwitchTap() {
-    const languageNameMap = this._languageNameMap || { 'zh-CN': '中文', 'en-US': 'English', 'vi-VN': 'Tiếng Việt', 'km-KH': 'ភាសាខ្មែរ' };
-    const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
-    const itemList = langList.map((lang) => languageNameMap[lang] || lang);
+  openMenuManage: function () {
+    var self = this;
+    api.system.getMiniprogramMenuConfig().then(function (resp) {
+      return resp;
+    }).catch(function () {
+      return null;
+    }).then(function (resp) {
+      var flags = (resp && resp.data) || resp || {};
+      var list = [];
+      Object.keys(HOME_MENU_KEY_MAP).forEach(function (shortKey) {
+        var meta = HOME_MENU_KEY_MAP[shortKey];
+        var enabled = true;
+        if (typeof flags[meta.fullKey] === 'boolean') {
+          enabled = flags[meta.fullKey];
+        }
+        list.push({ key: meta.fullKey, shortKey: shortKey, label: meta.label, enabled: enabled });
+      });
+      self.setData({ menuManageVisible: true, menuManageList: list });
+    });
+  },
+
+  closeMenuManage: function () {
+    this.setData({ menuManageVisible: false });
+  },
+
+  onMenuSwitch: function (e) {
+    var shortKey = e.currentTarget.dataset.key;
+    var list = this.data.menuManageList;
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].shortKey === shortKey) { idx = i; break; }
+    }
+    if (idx === -1) return;
+    var path = 'menuManageList[' + idx + '].enabled';
+    this.setData({ [path]: !list[idx].enabled });
+  },
+
+  saveMenuConfig: function () {
+    if (this.data.savingMenuConfig) return;
+    var self = this;
+    var list = this.data.menuManageList;
+    var menus = {};
+    list.forEach(function (item) {
+      menus[item.key] = item.enabled;
+    });
+    this.setData({ savingMenuConfig: true });
+    api.system.saveMiniprogramMenuConfig(menus).then(function (resp) {
+      self.setData({ menuManageVisible: false, savingMenuConfig: false });
+      wx.showToast({ title: '菜单配置已保存', icon: 'success' });
+    }).catch(function (err) {
+      console.error('保存菜单配置失败', err);
+      self.setData({ savingMenuConfig: false });
+      wx.showToast({ title: '保存失败', icon: 'none' });
+    });
+  },
+
+  onLanguageSwitchTap: function () {
+    var languageNameMap = this._languageNameMap || { 'zh-CN': '中文', 'en-US': 'English', 'vi-VN': 'Tiếng Việt', 'km-KH': 'ភាសាខ្មែរ' };
+    var langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
+    var itemList = langList.map(function (lang) { return languageNameMap[lang] || lang; });
+    var that = this;
     wx.showActionSheet({
-      itemList,
-      alertText: i18n.t('admin.switchLanguage', this.data.currentLanguage),
-      success: ({ tapIndex }) => {
-        const nextLang = langList[tapIndex] || 'zh-CN';
-        const appliedLang = i18n.setLanguage(nextLang);
-        this.applyLanguage(appliedLang);
-        const tab = typeof this.getTabBar === 'function' ? this.getTabBar() : null;
+      itemList: itemList,
+      alertText: i18n.t('admin.switchLanguage', that.data.currentLanguage),
+      success: function (res) {
+        var nextLang = langList[res.tapIndex] || 'zh-CN';
+        var appliedLang = i18n.setLanguage(nextLang);
+        that.applyLanguage(appliedLang);
+        var tab = typeof that.getTabBar === 'function' ? that.getTabBar() : null;
         if (tab && typeof tab.refreshLanguage === 'function') {
           tab.refreshLanguage(appliedLang);
         }
         wx.showToast({ title: i18n.t('admin.languageSwitched', appliedLang), icon: 'success' });
       },
-      fail: () => {},
+      fail: function () {},
     });
   },
 
-  setupDataRefreshListener() {
+  setupDataRefreshListener: function () {
     if (this._unsubscribeRefresh) {
       this._unsubscribeRefresh();
     }
-    this._unsubscribeRefresh = onDataRefresh(() => {
+    this._unsubscribeRefresh = onDataRefresh(function () {
       this.loadUserInfo(isAdminOrSupervisor());
       this.loadSystemInfo();
-    });
+    }.bind(this));
 
     if (this._wsBound) return;
     this._wsBound = true;
-    this._onApprovalPending = () => { this.loadUserInfo(isAdminOrSupervisor()); };
-    this._onApprovalResult = () => { this.loadUserInfo(isAdminOrSupervisor()); };
-    this._onRefreshAll = () => { this.loadSystemInfo(); };
+    this._onApprovalPending = function () { this.loadUserInfo(isAdminOrSupervisor()); }.bind(this);
+    this._onApprovalResult = function () { this.loadUserInfo(isAdminOrSupervisor()); }.bind(this);
+    this._onRefreshAll = function () { this.loadSystemInfo(); }.bind(this);
     eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
   },
 
-  _unbindWsEvents() {
+  _unbindWsEvents: function () {
     if (!this._wsBound) return;
     this._wsBound = false;
     if (this._onApprovalPending) eventBus.off('approval:pending', this._onApprovalPending);
@@ -146,7 +222,7 @@ Page({
     if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 
-  onHide() {
+  onHide: function () {
     if (this._unsubscribeRefresh) {
       this._unsubscribeRefresh();
       this._unsubscribeRefresh = null;
@@ -154,7 +230,7 @@ Page({
     this._unbindWsEvents();
   },
 
-  onUnload() {
+  onUnload: function () {
     if (this._unsubscribeRefresh) {
       this._unsubscribeRefresh();
       this._unsubscribeRefresh = null;
@@ -162,127 +238,129 @@ Page({
     this._unbindWsEvents();
   },
 
-  onPullDownRefresh() {
-    this.loadSystemInfo().finally(() => wx.stopPullDownRefresh());
+  onPullDownRefresh: function () {
+    this.loadSystemInfo().finally(function () { wx.stopPullDownRefresh(); });
   },
 
-  loadUserInfo(showApprovalEntry) {
-    const userInfo = getUserInfo();
-    const roleDisplayName = getRoleDisplayName();
-    const userName = userInfo?.name || userInfo?.username || '未知';
-    const avatarLetter = userName.charAt(0);
+  loadUserInfo: function (showApprovalEntry) {
+    var userInfo = getUserInfo();
+    var roleDisplayName = getRoleDisplayName();
+    var userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || '未知';
+    var avatarLetter = userName.charAt(0);
 
-    let avatarImgUrl = '';
-    const rawAvatar = userInfo?.avatarUrl || userInfo?.avatar || userInfo?.headUrl || '';
+    var avatarImgUrl = '';
+    var rawAvatar = (userInfo && (userInfo.avatarUrl || userInfo.avatar || userInfo.headUrl)) || '';
     if (rawAvatar) {
       avatarImgUrl = getAuthedImageUrl(rawAvatar);
     }
 
-    const patch = { userInfo, roleDisplayName, avatarLetter, avatarImgUrl };
+    var patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl };
     if (typeof showApprovalEntry === 'boolean') {
       patch.showApprovalEntry = showApprovalEntry;
     }
     this.setData(patch);
     this.refreshMenuItems();
 
-    // 后台静默刷新用户信息（PC端改头像后小程序自动同步）
-    api.system.getMe().then(res => {
-      const freshUser = res?.data || res;
+    api.system.getMe().then(function (res) {
+      var freshUser = res;
       if (!freshUser || !freshUser.name) return;
       setUserInfo(freshUser);
-      const freshAvatar = freshUser.avatarUrl || freshUser.avatar || freshUser.headUrl || '';
-      let freshImgUrl = '';
+      var freshAvatar = freshUser.avatarUrl || freshUser.avatar || freshUser.headUrl || '';
+      var freshImgUrl = '';
       if (freshAvatar) {
-        if (freshAvatar.startsWith('http://') || freshAvatar.startsWith('https://')) {
+        if (freshAvatar.indexOf('http://') === 0 || freshAvatar.indexOf('https://') === 0) {
           freshImgUrl = freshAvatar;
         } else {
-          const token = getToken();
-          const base = getBaseUrl().replace(/\/$/, '');
-          const sep = freshAvatar.includes('?') ? '&' : '?';
-          freshImgUrl = `${base}${freshAvatar}${sep}token=${encodeURIComponent(token)}`;
+          var token = getToken();
+          var base = getBaseUrl().replace(/\/$/, '');
+          var sep = freshAvatar.indexOf('?') !== -1 ? '&' : '?';
+          freshImgUrl = base + freshAvatar + sep + 'token=' + encodeURIComponent(token);
         }
       }
       if (freshImgUrl !== avatarImgUrl) {
         this.setData({ avatarImgUrl: freshImgUrl });
       }
-    }).catch(() => {});
+    }.bind(this)).catch(function () {});
   },
 
-  async loadSystemInfo() {
+  loadSystemInfo: function () {
     if (this._loadingSystemInfo) return;
     this._loadingSystemInfo = true;
-    try {
-      const onlineCount = await api.system.getOnlineCount();
-      const userInfo = getUserInfo();
-      const hasTenant = !!(userInfo && userInfo.tenantId);
-      // 所有有租户的用户均加载招募卡（管理员/工人/工厂主均可见）
+    var self = this;
+    api.system.getOnlineCount().then(function (onlineCount) {
+      var userInfo = getUserInfo();
+      var hasTenant = !!(userInfo && userInfo.tenantId);
       if (hasTenant) {
-        try {
-          const tenantResp = await api.tenant.myTenant();
-          const tenantCode = (tenantResp && tenantResp.tenantCode) || '';
-          const tenantName = (tenantResp && tenantResp.tenantName) || '';
+        return api.tenant.myTenant().then(function (tenantResp) {
+          var tenantCode = (tenantResp && tenantResp.tenantCode) || '';
+          var tenantName = (tenantResp && tenantResp.tenantName) || '';
           if (tenantCode) {
-            this._recruitInfo = { show: true, tenantCode, tenantName };
+            self._recruitInfo = { show: true, tenantCode: tenantCode, tenantName: tenantName };
           }
-          // 所有有租户的用户均显示「邀请员工」菜单项（工人/管理员均可扫码邀请同事）
-          this._showInviteSection = true;
-          this.refreshMenuItems();
-        } catch (e) {
+          self._showInviteSection = true;
+          self.refreshMenuItems();
+          return onlineCount;
+        }).catch(function (e) {
           console.error('加载租户信息失败', e);
-        }
+          return onlineCount;
+        });
       }
-      this.setData({ onlineCount: Number(onlineCount) || 0 });
-    } catch (e) {
+      return onlineCount;
+    }).then(function (onlineCount) {
+      self.setData({ onlineCount: Number(onlineCount) || 0 });
+    }).catch(function (e) {
       console.error('加载系统信息失败', e);
-    } finally {
-      this._loadingSystemInfo = false;
-    }
+    }).finally(function () {
+      self._loadingSystemInfo = false;
+    });
   },
 
-  onCopyRecruitCode() {
-    const code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
+  onCopyRecruitCode: function () {
+    var code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
     if (!code) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
     }
     wx.setClipboardData({
       data: code,
-      success: () => wx.showToast({ title: '工厂码已复制', icon: 'success' }),
+      success: function () { wx.showToast({ title: '工厂码已复制', icon: 'success' }); },
     });
   },
 
-  onCopyRecruitUrl() {
-    const { tenantCode = '', tenantName = '' } = this._recruitInfo || {};
+  onCopyRecruitUrl: function () {
+    var recruitInfo = this._recruitInfo || {};
+    var tenantCode = recruitInfo.tenantCode || '';
+    var tenantName = recruitInfo.tenantName || '';
     if (!tenantCode) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
     }
-    let baseUrl = '';
+    var baseUrl = '';
     try {
-      const app = getApp();
+      var app = getApp();
       baseUrl = (app.globalData && app.globalData.baseUrl) || getBaseUrl();
     } catch (e) {
       baseUrl = getBaseUrl();
     }
-    const origin = baseUrl.replace(/^(https?:\/\/)api\./, '$1www.').replace(/\/api\/?$/, '');
-    const url = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
+    var origin = baseUrl.replace(/^(https?:\/\/)api\./, '$1www.').replace(/\/api\/?$/, '');
+    var url = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
       + '&tenantName=' + encodeURIComponent(tenantName || '');
     wx.setClipboardData({
       data: url,
-      success: () => wx.showToast({ title: '注册链接已复制', icon: 'success' }),
+      success: function () { wx.showToast({ title: '注册链接已复制', icon: 'success' }); },
     });
   },
 
-  onLogout() {
-    const app = getApp();
+  onLogout: function () {
+    var app = getApp();
     if (app && typeof app.logout === 'function') {
       app.logout();
     } else {
-      safeNavigate({ url: '/pages/login/index' }, 'reLaunch').catch(() => {});
+      safeNavigate({ url: '/pages/login/index' }, 'reLaunch').catch(function () {});
     }
   },
 
-  onAvatarError() {
+  onAvatarError: function () {
     this.setData({ avatarImgUrl: '' });
   },
 });

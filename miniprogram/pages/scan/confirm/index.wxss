@@ -154,7 +154,7 @@
   background: var(--color-bg-gray);
   border-radius: var(--radius-md);
   padding: 20rpx;
-  border-left: 6rpx solid var(--color-warning);
+  border-left: 1px solid var(--color-warning);
 }
 .process-item-header {
   display: flex;
@@ -426,7 +426,7 @@
   padding: 20rpx 24rpx;
   border-radius: 16rpx;
   background: var(--color-info-bg);
-  border-left: 6rpx solid var(--color-primary);
+  border-left: 1px solid var(--color-primary);
   position: relative;
 }
 .ai-bubble-high {

@@ -95,7 +95,7 @@ const scanLifecycleMixin = Behavior({
    */
   async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2 });
+      this.getTabBar().setData({ selected: 1 });
     }
 
     // 从扫码确认页返回时，读取最新扫码结果并显示成功提示

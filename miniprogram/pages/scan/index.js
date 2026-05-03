@@ -412,6 +412,11 @@ Page({
    * @param {Object} e - 事件对象
    * @returns {void} 无返回值
    */
+  onPreviewQualityImage(e) {
+    var url = e.currentTarget.dataset.url;
+    if (url) wx.previewImage({ current: url, urls: [url] });
+  },
+
   onDeleteQualityImage(e) {
     QualityHandler.onDeleteQualityImage(this, e);
   },

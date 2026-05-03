@@ -27,7 +27,11 @@ public class AiAgentToolAdvisor {
         INTENT_TOOL_MAP.put("query_progress", compileAll(
                 "进度", "跟进", "查询进度", "做到哪了", "完成多少", "扫码记录", "工序进度",
                 "出货", "多久", "什么时候", "菲号进度", "几个人", "几个工人", "还要多久",
-                "能出货吗", "预计完成", "交期", "生产进度", "订单进度", "做到哪"));
+                "能出货吗", "预计完成", "交期", "生产进度", "订单进度", "做到哪",
+                "做了多少", "做了几件", "多少人在做", "多少人在生产", "几个人在做",
+                "什么时候做好", "什么时候完成", "什么时候交货", "还要几天",
+                "完成情况", "生产情况", "进展", "做完了没有", "能按时交吗",
+                "延期了吗", "会延期吗", "赶得上吗"));
         INTENT_TOOL_MAP.put("query_payroll", compileAll(
                 "工资", "计件", "薪资", "结算金额", "我的工资", "多少钱"));
         INTENT_TOOL_MAP.put("query_stock", compileAll(
@@ -40,8 +44,11 @@ public class AiAgentToolAdvisor {
                 "加快", "加急", "催", "紧急", "expedite"));
         INTENT_TOOL_MAP.put("action_scan_undo", compileAll(
                 "撤回扫码", "撤销扫码", "扫码撤回", "撤销扫描", "扫错了"));
+        INTENT_TOOL_MAP.put("query_cutting", compileAll(
+                "裁剪数量", "裁剪多少", "裁了多少", "裁剪进度", "裁了几个", "裁了几件",
+                "菲号数量", "几个菲号", "菲号进度", "扎了多少", "分菲情况"));
         INTENT_TOOL_MAP.put("action_cutting", compileAll(
-                "裁剪", "开裁", "裁床", "创建裁剪"));
+                "创建裁剪", "开裁", "裁床", "新建裁剪", "添加裁剪", "建裁剪单"));
         INTENT_TOOL_MAP.put("action_edit_order", compileAll(
                 "编辑订单", "修改订单", "改订单", "改交期", "改备注"));
         INTENT_TOOL_MAP.put("action_approve", compileAll(
@@ -83,6 +90,7 @@ public class AiAgentToolAdvisor {
             Map.entry("action_expedite", List.of("tool_action_executor", "tool_order_contact_urge", "tool_think")),
             Map.entry("action_scan_undo", List.of("tool_scan_undo", "tool_think")),
             Map.entry("action_cutting", List.of("tool_cutting_task_create", "tool_think")),
+            Map.entry("query_cutting", List.of("tool_query_production_progress", "tool_cutting_task_create", "tool_think")),
             Map.entry("action_edit_order", List.of("tool_order_edit", "tool_query_order_remarks", "tool_think")),
             Map.entry("action_approve", List.of("tool_change_approval", "tool_payroll_approve", "tool_finance_workflow", "tool_think")),
             Map.entry("action_reconcile", List.of("tool_material_reconciliation", "tool_shipment_reconciliation", "tool_think")),

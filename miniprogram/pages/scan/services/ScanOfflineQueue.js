@@ -201,7 +201,7 @@ const ScanOfflineQueue = {
       for (const item of queue) {
         try {
           const res = await api.production.executeScan(item.scanData);
-          if (res && (res.success === true || res.code === 200 || res.scanRecord)) {
+          if (res && (res.scanRecord || res.success === true)) {
             const saved = this.dequeue(item.queueId);
             if (saved) {
               submitted++;

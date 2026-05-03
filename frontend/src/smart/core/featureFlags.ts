@@ -11,7 +11,23 @@ export type SmartFeatureKey =
   | 'smart.material.inventory.ai.enabled'
   | 'smart.material.purchase.ai.enabled';
 
+export type MiniprogramMenuKey =
+  | 'miniprogram.menu.smartOps'
+  | 'miniprogram.menu.dashboard'
+  | 'miniprogram.menu.quality'
+  | 'miniprogram.menu.bundleSplit'
+  | 'miniprogram.menu.cuttingDetail';
+
 export type SmartFeatureFlags = Record<SmartFeatureKey, boolean>;
+export type MiniprogramMenuFlags = Record<MiniprogramMenuKey, boolean>;
+
+export const MINIPROGRAM_MENU_KEYS: MiniprogramMenuKey[] = [
+  'miniprogram.menu.smartOps',
+  'miniprogram.menu.dashboard',
+  'miniprogram.menu.quality',
+  'miniprogram.menu.bundleSplit',
+  'miniprogram.menu.cuttingDetail',
+];
 
 const defaultFlags: SmartFeatureFlags = {
   'smart.guide.enabled': false,
@@ -97,3 +113,56 @@ export const resetSmartFeatureFlags = (): Record<SmartFeatureKey, boolean> => {
 export const getDefaultSmartFeatureFlags = (): SmartFeatureFlags => ({
   ...defaultFlags,
 });
+
+const miniprogramMenuDefaultFlags: MiniprogramMenuFlags = {
+  'miniprogram.menu.smartOps': true,
+  'miniprogram.menu.dashboard': true,
+  'miniprogram.menu.quality': true,
+  'miniprogram.menu.bundleSplit': true,
+  'miniprogram.menu.cuttingDetail': true,
+};
+
+const miniprogramMenuStorageKey = 'miniprogram-menu-flags';
+
+const readStoredMiniprogramMenu = (): Partial<Record<MiniprogramMenuKey, boolean>> => {
+  if (!isBrowser) return {};
+  try {
+    const raw = window.localStorage.getItem(miniprogramMenuStorageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const next: Partial<Record<MiniprogramMenuKey, boolean>> = {};
+    (Object.keys(miniprogramMenuDefaultFlags) as MiniprogramMenuKey[]).forEach((key) => {
+      if (typeof parsed[key] === 'boolean') {
+        next[key] = parsed[key] as boolean;
+      }
+    });
+    return next;
+  } catch {
+    return {};
+  }
+};
+
+export const getMiniprogramMenuFlags = (): MiniprogramMenuFlags => ({
+  ...miniprogramMenuDefaultFlags,
+  ...readStoredMiniprogramMenu(),
+});
+
+export const replaceMiniprogramMenuFlags = (
+  nextFlags: Partial<Record<MiniprogramMenuKey, boolean>>,
+): MiniprogramMenuFlags => {
+  const next: MiniprogramMenuFlags = {
+    ...miniprogramMenuDefaultFlags,
+    ...nextFlags,
+  };
+  if (isBrowser) {
+    window.localStorage.setItem(miniprogramMenuStorageKey, JSON.stringify(next));
+  }
+  return next;
+};
+
+export const resetMiniprogramMenuFlags = (): MiniprogramMenuFlags => {
+  if (isBrowser) {
+    window.localStorage.removeItem(miniprogramMenuStorageKey);
+  }
+  return { ...miniprogramMenuDefaultFlags };
+};

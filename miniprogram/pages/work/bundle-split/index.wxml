@@ -52,7 +52,7 @@ module.exports = { abbr: abbr };
           <!-- 卡片头部：左图右信息 -->
           <view class="bundle-card-hd">
             <!-- 左侧款式图 -->
-            <view class="bundle-thumb">
+            <view class="bundle-thumb" catchtap="onCoverPreview" data-url="{{orderStyleCover}}">
               <image wx:if="{{orderStyleCover}}" class="bundle-thumb-img" src="{{orderStyleCover}}" mode="aspectFill" lazy-load="{{true}}" />
               <view wx:else class="bundle-thumb-placeholder">
                 <text class="thumb-abbr">{{fmt.abbr(item.styleNo)}}</text>

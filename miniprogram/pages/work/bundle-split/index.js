@@ -4,6 +4,11 @@ const { toast } = require('../../../utils/uiHelper');
 function showTip(msg) { toast.info(msg); }
 
 Page({
+  onCoverPreview: function (e) {
+    var url = e.currentTarget.dataset.url;
+    if (url) wx.previewImage({ current: url, urls: [url] });
+  },
+
   data: {
     activeTab: 0,
 
@@ -118,7 +123,7 @@ Page({
     this.setData({ loading: true, bundles: [], selectedIdx: -1 });
     try {
       const bundle = await api.production.getBundleByCode(qrCode);
-      const data = (bundle && bundle.data) || bundle || {};
+      const data = bundle || {};
       if (!data || !data.id) {
         showTip('未找到该菲号，请确认扫的是菲号二维码');
         this.setData({ loading: false });
@@ -181,7 +186,7 @@ Page({
     this.setData({ loading: true, bundles: [], selectedIdx: -1 });
     try {
       const res = await api.production.listBundles(this.data.orderNo);
-      const raw = (res && res.data && res.data.records) || (res && res.data) || res || [];
+      const raw = Array.isArray(res) ? res : (res && res.records) || [];
       const list = Array.isArray(raw) ? raw : [];
       // 仅一条菲号时自动选中，直接展示表单
       const autoIdx = list.length === 1 ? 0 : -1;
@@ -203,7 +208,7 @@ Page({
     if (!orderNo) return;
     try {
       const res = await api.production.queryOrderProcesses(orderNo);
-      const raw = (res && res.data) || res || [];
+      const raw = Array.isArray(res) ? res : (res || []);
       const hiddenStages = this._HIDDEN_STAGES;
       // 过滤顶层阶段名（裁剪/采购/质检入库等）
       const list = (Array.isArray(raw) ? raw : []).filter(p => {
@@ -239,7 +244,7 @@ Page({
       const factoryId = (app.globalData && app.globalData.factoryId) || '';
       if (!factoryId) return;
       const res = await api.factoryWorker.list(factoryId);
-      const list = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+      const list = Array.isArray(res) ? res : [];
       this.setData({ workers: list });
     } catch (e) {
       console.warn('[bundle-split] loadWorkers fail', e);
@@ -327,7 +332,7 @@ Page({
         reason: '',
       };
       const res = await api.production.requestSplit(body);
-      const data = (res && res.data) || res || {};
+      const data = res || {};
       showTip(data.message || '已发送拆菲请求，等待 ' + worker.workerName + ' 确认');
       this.saveSplitRecord(body.orderNo, bundle.bundleNo || bundle.bundleLabel, qty, worker.workerName);
       this.setData({ submitting: false, selectedIdx: -1, splitQty: '', workerIdx: -1, processIdx: -1 });
@@ -354,7 +359,7 @@ Page({
     this.setData({ pendingLoading: true });
     try {
       const res = await api.production.listPendingSplits();
-      const list = (res && res.data) || res || [];
+      const list = Array.isArray(res) ? res : (res || []);
       this.setData({ pendingSplits: Array.isArray(list) ? list : [], pendingLoading: false });
     } catch (e) {
       console.warn('[bundle-split] loadPendingSplits fail', e);
@@ -368,7 +373,7 @@ Page({
     this.setData({ confirmingId: splitLogId });
     try {
       const res = await api.production.confirmSplit(splitLogId);
-      const data = (res && res.data) || res || {};
+      const data = res || {};
       showTip(data.message || '已确认接收，菲号已转到你的名下');
       this.loadPendingSplits();
     } catch (err) {
@@ -421,7 +426,7 @@ Page({
     this.setData({ priceLoading: true, priceProcesses: [] });
     try {
       const res = await api.production.queryOrderProcesses(orderNo);
-      const list = (res && res.data) || res || [];
+      const list = Array.isArray(res) ? res : (res || []);
       this.setData({ priceProcesses: Array.isArray(list) ? list : [], priceLoading: false });
       if (!list.length) showTip('该订单暂无工序数据');
     } catch (e) {
@@ -436,7 +441,7 @@ Page({
     if (!orderNo) return;
     try {
       const res = await api.production.priceAdjustHistory(orderNo);
-      const list = (res && res.data) || res || [];
+      const list = Array.isArray(res) ? res : (res || []);
       this.setData({ adjustHistory: Array.isArray(list) ? list.slice(0, 20) : [] });
     } catch (e) {
       console.warn('[price-adjust] fetchHistory fail', e);
@@ -495,7 +500,7 @@ Page({
   _loadUnreadCount() {
     api.notice.unreadCount()
       .then(res => {
-        const count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
+        const count = Number(res) || 0;
         this.setData({ unreadNoticeCount: count });
       })
       .catch(e => { console.warn('[bundle-split] _loadUnreadCount fail:', e.message || e); });

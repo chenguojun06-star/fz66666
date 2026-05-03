@@ -300,7 +300,6 @@ Page({
   _normalizeToArray(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.records)) return res.records;
-    if (res && Array.isArray(res.data)) return res.data;
     return [];
   },
 

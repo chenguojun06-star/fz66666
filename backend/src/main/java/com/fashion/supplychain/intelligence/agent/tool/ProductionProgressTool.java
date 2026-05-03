@@ -53,8 +53,8 @@ public class ProductionProgressTool extends AbstractAgentTool {
         props.put("endDate", stringProp("创建时间结束(yyyy-MM-dd)"));
         props.put("limit", intProp("返回最大条数(默认10，最大50)"));
         return buildToolDef(
-                "查询订单生产进度详情。包含：6大工序节点进度、当前扫码数量、参与工人数量、出货预测（预计达到80-90%可出货的时间）。" +
-                        "用户问「某个订单进度」「这单还要多久」「什么时候能出货」「菲号进度」「几个人在做」时必须调用。",
+                "查询订单生产进度详情。包含：6大工序节点进度、当前扫码数量、裁剪数量、菲号数量、参与工人数量、出货预测（预计达到80-90%可出货的时间）。" +
+                        "用户问「某个订单进度」「这单还要多久」「什么时候能出货」「菲号进度」「几个人在做」「裁剪数量」「裁了多少」时必须调用。",
                 props, Collections.emptyList());
     }
 
@@ -125,6 +125,18 @@ public class ProductionProgressTool extends AbstractAgentTool {
         d.put("factoryName", order.getFactoryName());
         d.put("orderQuantity", order.getOrderQuantity());
         d.put("completedQuantity", order.getCompletedQuantity());
+        d.put("cuttingQuantity", order.getCuttingQuantity());
+        d.put("cuttingBundleCount", order.getCuttingBundleCount());
+        if (order.getCuttingQuantity() == null && order.getId() != null) {
+            List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
+                    .select(CuttingBundle::getQuantity)
+                    .eq(CuttingBundle::getProductionOrderId, order.getId())
+                    .eq(CuttingBundle::getTenantId, tenantId)
+                    .list();
+            int cuttingQty = bundles.stream().mapToInt(b -> b.getQuantity() != null ? b.getQuantity() : 0).sum();
+            d.put("cuttingQuantity", cuttingQty);
+            d.put("cuttingBundleCount", bundles.size());
+        }
         d.put("overallProgress", order.getProductionProgress() != null ? order.getProductionProgress() + "%" : "0%");
         d.put("status", order.getStatus());
         d.put("urgencyLevel", order.getUrgencyLevel());

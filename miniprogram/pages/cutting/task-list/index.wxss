@@ -126,6 +126,14 @@
   background: var(--color-bg-page);
   color: var(--color-text-secondary);
 }
+.btn-outline {
+  border: 1rpx solid var(--color-primary);
+  color: var(--color-primary);
+  background: transparent;
+}
+.btn-outline-hover {
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
 .card-arrow {
   font-size: var(--font-size-md-lg);
   color: var(--color-text-tertiary);

@@ -70,6 +70,10 @@
         <view wx:else class="btn-action btn-disabled">
           {{item.statusText}}
         </view>
+        <!-- 裁剪单明细入口 -->
+        <view class="btn-action btn-outline" hover-class="btn-outline-hover" hover-stay-time="100" catchtap="goBundleDetail" data-task="{{item}}">
+          裁剪明细
+        </view>
         <text class="card-arrow">›</text>
       </view>
     </view>

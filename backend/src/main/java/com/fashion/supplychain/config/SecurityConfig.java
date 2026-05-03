@@ -188,6 +188,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                         // 租户智能配置/功能开关（查看当前租户配置；save/reset 由兜底规则限为管理员）
                         .requestMatchers(HttpMethod.GET, "/api/system/tenant-intelligence-profile/current").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/system/tenant-smart-feature/list").authenticated()
+                        // 小程序菜单配置：所有登录用户可查看，保存由 Orchestrator 层限为管理员
+                        .requestMatchers("/api/system/tenant-miniprogram-menu/**").authenticated()
                         // 字典查询：工序名/机器类型等词典数据，前端下拉/自动完成组件需要，所有登录用户可读
                         // （写操作 POST/PUT/DELETE 由兜底规则限为管理员）
                         .requestMatchers(HttpMethod.GET, "/api/system/dict/list").authenticated()

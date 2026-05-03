@@ -463,7 +463,7 @@ Page({
   _loadDynamicSuggestions() {
     var self = this;
     api.intelligence.getMyPendingTaskSummary().then(function (res) {
-      var data = res && res.data ? res.data : res;
+      var data = res;
       if (!data) return;
       var suggestions = [];
       if (data.overdueOrderCount > 0) {
