@@ -912,6 +912,11 @@ public final class DbColumnDefinitions {
         add("t_agent_checkpoint", "metadata_json", "TEXT DEFAULT NULL COMMENT '元数据JSON'");
         add("t_agent_checkpoint", "step_index", "INT NOT NULL DEFAULT 0 COMMENT '步骤索引'");
         add("t_agent_checkpoint", "status", "VARCHAR(32) DEFAULT 'ACTIVE' COMMENT '状态'");
+        add("t_agent_memory_archival", "agent_id", "VARCHAR(128) NOT NULL COMMENT 'Agent ID'");
+        add("t_agent_memory_archival", "content_type", "VARCHAR(64) DEFAULT NULL COMMENT '内容类型'");
+        add("t_agent_memory_archival", "access_count", "INT NOT NULL DEFAULT 0 COMMENT '访问次数'");
+        add("t_agent_memory_archival", "decay_weight", "DOUBLE NOT NULL DEFAULT 1.0 COMMENT '衰减权重'");
+        add("t_agent_memory_archival", "embedding_id", "VARCHAR(256) DEFAULT NULL COMMENT '嵌入向量ID'");
         add("t_style_attachment", "biz_type", "VARCHAR(128) DEFAULT 'general' COMMENT '业务类型'");
     }
 
