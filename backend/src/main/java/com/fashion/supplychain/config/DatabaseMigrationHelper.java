@@ -142,11 +142,18 @@ public class DatabaseMigrationHelper {
         return count != null && count > 0;
     }
 
-    public void addIndexIfAbsent(String tableName, String indexName, String columnsSql) {
+    public boolean addIndexIfAbsent(String tableName, String indexName, String columnsSql) {
         if (indexExists(tableName, indexName)) {
-            return;
+            return false;
         }
-        execSilently("ALTER TABLE " + tableName + " ADD INDEX " + indexName + " (" + columnsSql + ")");
+        try {
+            jdbcTemplate.execute("ALTER TABLE " + tableName + " ADD INDEX " + indexName + " (" + columnsSql + ")");
+            log.info("[DBMigration] 已创建索引: {}.{}", tableName, indexName);
+            return true;
+        } catch (Exception e) {
+            log.warn("[DBMigration] 创建索引失败: {}.{} - {}", tableName, indexName, e.getMessage());
+            return false;
+        }
     }
 
     public void addUniqueKeyIfAbsent(String tableName, String keyName, String columnsSql) {

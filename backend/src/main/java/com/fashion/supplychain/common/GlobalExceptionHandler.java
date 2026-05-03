@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.NoSuchElementException;
 import java.util.Map;
@@ -265,6 +266,25 @@ public class GlobalExceptionHandler {
                 logger.error("DB访问异常: {} {} - {}", method, uri, e.getMessage(), e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(Result.fail(500, "数据库操作失败，请稍后重试"));
+        }
+
+        @ExceptionHandler(IOException.class)
+        public ResponseEntity<Result<?>> handleIOException(IOException e, HttpServletRequest request) {
+                String method = request == null ? "" : request.getMethod();
+                String uri = request == null ? "" : request.getRequestURI();
+                String msg = e.getMessage();
+                if (msg != null && (msg.contains("Broken pipe")
+                                || msg.contains("Connection reset")
+                                || msg.contains("断开的管道")
+                                || msg.contains("forcibly closed")
+                                || msg.contains("An established connection was aborted")
+                                || msg.contains("AsyncRequestNotUsableException"))) {
+                        logger.debug("客户端断开连接: {} {}", method, uri);
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                }
+                logger.error("IO异常: {} {}", method, uri, e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Result.fail(500, "系统内部错误，请联系管理员"));
         }
 
         /**

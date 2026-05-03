@@ -28,6 +28,9 @@ public class DbColumnRepairRunner implements ApplicationRunner {
     @Autowired(required = false)
     private RedisService redisService;
 
+    @Autowired
+    private DatabaseMigrationHelper dbHelper;
+
     @Override
     public void run(ApplicationArguments args) {
         try (Connection conn = dataSource.getConnection()) {
@@ -98,6 +101,29 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             } catch (Exception e) {
                 log.warn("[DbRepair] role:perms:* 缓存清理失败（忽略）: {}", e.getMessage());
             }
+        }
+
+        ensureCriticalCompositeIndexes();
+    }
+
+    private void ensureCriticalCompositeIndexes() {
+        int created = 0;
+        if (dbHelper.tableExists("t_scan_record")) {
+            if (dbHelper.addIndexIfAbsent("t_scan_record", "idx_sr_tenant_order", "tenant_id, order_id")) created++;
+            if (dbHelper.addIndexIfAbsent("t_scan_record", "idx_sr_tenant_scantime", "tenant_id, scan_time")) created++;
+        }
+        if (dbHelper.tableExists("t_product_warehousing")) {
+            if (dbHelper.addIndexIfAbsent("t_product_warehousing", "idx_pw_tenant_order_delete", "tenant_id, order_id, delete_flag")) created++;
+        }
+        if (dbHelper.tableExists("t_production_process_tracking")) {
+            if (dbHelper.addIndexIfAbsent("t_production_process_tracking", "idx_ppt_tenant_order", "tenant_id, production_order_id")) created++;
+            if (dbHelper.addIndexIfAbsent("t_production_process_tracking", "idx_ppt_tenant_bundle", "tenant_id, cutting_bundle_id")) created++;
+        }
+        if (dbHelper.tableExists("t_material_purchase")) {
+            if (dbHelper.addIndexIfAbsent("t_material_purchase", "idx_mpu_tenant_order", "tenant_id, order_id")) created++;
+        }
+        if (created > 0) {
+            log.warn("[DbRepair] 已创建 {} 个缺失联合索引", created);
         }
     }
 

@@ -126,11 +126,11 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         String exMsg = exception.getMessage();
-        // 常见的客户端主动断开（网络切换/关闭标签页），降为 WARN 避免日志噪音
         if (isClientDisconnect(exception, exMsg)) {
-            log.warn("[WebSocket] 客户端断开连接: sessionId={}, reason={}", session.getId(), exMsg);
+            log.debug("[WebSocket] 客户端断开连接: sessionId={}, reason={}", session.getId(), exMsg);
         } else {
-            log.error("[WebSocket] 传输错误: sessionId={}", session.getId(), exception);
+            log.warn("[WebSocket] 传输错误: sessionId={}, type={}, msg={}",
+                    session.getId(), exception.getClass().getSimpleName(), exMsg);
         }
         sessionManager.removeSession(session.getId());
         lastPingTime.remove(session.getId());
@@ -299,7 +299,10 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     }
 
     private boolean isClientDisconnect(Throwable exception, String exMsg) {
-        return exMsg != null && (exMsg.contains("Connection reset")
+        if (exception instanceof java.io.EOFException) return true;
+        if (exception instanceof java.net.SocketException) return true;
+        if (exMsg == null) return false;
+        return exMsg.contains("Connection reset")
                 || exMsg.contains("Broken pipe")
                 || exMsg.contains("closed")
                 || exMsg.contains("closing")
@@ -309,8 +312,10 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
                 || exMsg.contains("ServletOutputStream failed to write")
                 || exMsg.contains("The client aborted")
                 || exMsg.contains("forcibly closed")
-                || exception instanceof java.io.EOFException
-                || exception instanceof java.net.SocketException
-                || exception instanceof IllegalStateException);
+                || exMsg.contains("断开的管道")
+                || exMsg.contains("Connection timed out")
+                || exMsg.contains("No route to host")
+                || exMsg.contains("Network is unreachable")
+                || exMsg.contains("Invalid Upgrade header");
     }
 }
