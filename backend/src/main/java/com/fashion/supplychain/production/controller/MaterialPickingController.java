@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
@@ -202,8 +203,10 @@ public class MaterialPickingController {
         if (picking == null) {
             throw new java.util.NoSuchElementException("领料单不存在");
         }
-        if (tenantId != null && !tenantId.equals(picking.getTenantId())) {
-            throw new IllegalStateException("无权操作此领料单");
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !tenantId.equals(picking.getTenantId())) {
+                throw new IllegalStateException("无权操作此领料单");
+            }
         }
         if (!"pending".equals(picking.getStatus())) {
             throw new IllegalStateException("仅待出库状态的领料单可取消");
@@ -269,8 +272,10 @@ public class MaterialPickingController {
     public Result<Void> audit(@PathVariable String id, @RequestBody java.util.Map<String, Object> body) {
         MaterialPicking picking = materialPickingService.getById(id);
         if (picking == null) throw new java.util.NoSuchElementException("领料单不存在");
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(picking.getTenantId())) throw new IllegalStateException("无权操作此领料单");
+        Long tenantId = UserContext.tenantId();
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !tenantId.equals(picking.getTenantId())) throw new IllegalStateException("无权操作此领料单");
+        }
         if (!"completed".equals(picking.getStatus())) throw new IllegalStateException("仅已出库的领料单可审核");
 
         String action = body.get("action") == null ? "approve" : String.valueOf(body.get("action")).trim();

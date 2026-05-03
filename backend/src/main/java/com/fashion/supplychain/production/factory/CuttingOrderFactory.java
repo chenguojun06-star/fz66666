@@ -73,7 +73,7 @@ public class CuttingOrderFactory {
         }
         String resolvedStyleId = style == null || style.getId() == null ? null : String.valueOf(style.getId());
         if (!StringUtils.hasText(resolvedStyleId)) {
-            resolvedStyleId = styleNo;
+            throw new IllegalStateException("无法解析款式ID: styleNo=" + styleNo + "，款式自动创建失败且无可用ID");
         }
         int totalOrderQuantity = requestedOrderLines.stream()
                 .map(line -> line.get("quantity"))

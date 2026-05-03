@@ -5,7 +5,7 @@ var { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
   data: {
-    styles: [], filteredStyles: [], keyword: '', loading: true
+    filteredStyles: [], keyword: '', loading: true
   },
 
   onLoad: function () {
@@ -17,7 +17,6 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    var self = this;
     this.loadStyles().then(function () { wx.stopPullDownRefresh(); });
   },
 
@@ -62,7 +61,8 @@ Page({
 
         list.sort(function (a, b) { return (b.orderCount || 0) - (a.orderCount || 0); });
 
-        self.setData({ styles: list, filteredStyles: list, loading: false });
+        self._styles = list;
+        self.setData({ filteredStyles: list, loading: false });
       })
       .catch(function () {
         self.setData({ loading: false });
@@ -73,15 +73,15 @@ Page({
   onSearchInput: function (e) {
     var kw = (e.detail.value || '').trim().toLowerCase();
     this.setData({ keyword: kw });
-    if (!kw) { this.setData({ filteredStyles: this.data.styles }); return; }
-    var list = this.data.styles.filter(function (s) {
+    if (!kw) { this.setData({ filteredStyles: this._styles }); return; }
+    var list = (this._styles || []).filter(function (s) {
       return (s.styleNo + '|' + s.styleName + '|' + (s.displayCategory || '')).toLowerCase().indexOf(kw) !== -1;
     });
     this.setData({ filteredStyles: list });
   },
 
   onSearchClear: function () {
-    this.setData({ keyword: '', filteredStyles: this.data.styles });
+    this.setData({ keyword: '', filteredStyles: this._styles });
   },
 
   onStyleTap: function (e) {

@@ -1,7 +1,7 @@
 page { background-color: #f5f6fa; }
 .container { padding-top: env(safe-area-inset-top); min-height: 100vh; }
 
-.search-bar { padding: 0 16px 12px; }
+.search-bar { padding: 0 var(--page-padding-x) 12rpx; }
 .search-box {
   display: flex; align-items: center;
   background: #fff; border-radius: 22px;
@@ -14,11 +14,11 @@ page { background-color: #f5f6fa; }
 .state-wrap { display: flex; justify-content: center; padding-top: 120px; font-size: 14px; color: #999; }
 
 .grid-scroll { height: calc(100vh - env(safe-area-inset-top) - 64px); }
-.grid { display: flex; flex-wrap: wrap; padding: 8px 10px; box-sizing: border-box; }
+.grid { display: flex; flex-wrap: wrap; padding: 8rpx var(--page-padding-x); box-sizing: border-box; }
 
 .card {
-  width: calc(50% - 5px);
-  margin: 0 10px 10px 0;
+  width: calc(50% - 6rpx);
+  margin: 0 12rpx 12rpx 0;
   background: #fff; border-radius: 10px;
   overflow: hidden; border: 1px solid #eee;
   box-sizing: border-box;

@@ -100,7 +100,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             <!-- 左边：款式图片 -->
             <div class="header-left">
               ${imageUrl ? `
-                <img loading="lazy" src="${imageUrl}" alt="款式图" class="style-image" />
+                <img src="${imageUrl}" alt="款式图" class="style-image" />
               ` : '<div class="no-image">无图片</div>'}
             </div>
 

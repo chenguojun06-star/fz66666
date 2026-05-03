@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import QRCode from 'qrcode';
 import type { CuttingBundleRow } from './useCuttingBundles';
 import { safePrint } from '@/utils/safePrint';
@@ -17,16 +17,30 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
   const [highlightedBundleIds, setHighlightedBundleIds] = useState<string[]>([]);
   const [printUnlocked, setPrintUnlocked] = useState(false);
 
-  // 打印配置：自由输入纸张宽高（单位：cm），默认 7×4
+  const qrCacheRef = useRef<{ qrSize: number; urls: Record<string, string> }>({ qrSize: 0, urls: {} });
+
   const [printConfig, setPrintConfig] = useState<{
+    orientation: 'horizontal' | 'vertical';
     paperWidth: number;
     paperHeight: number;
     qrSize: number;
   }>({
+    orientation: 'horizontal',
     paperWidth: 7,
     paperHeight: 4,
     qrSize: 84,
   });
+
+  const setOrientation = (orientation: 'horizontal' | 'vertical') => {
+    setPrintConfig(prev => {
+      if (prev.orientation === orientation) return prev;
+      if (orientation === 'vertical') {
+        return { ...prev, orientation, paperWidth: 4, paperHeight: 6, qrSize: 72 };
+      }
+      return { ...prev, orientation, paperWidth: 7, paperHeight: 4, qrSize: 84 };
+    });
+    qrCacheRef.current = { qrSize: 0, urls: {} };
+  };
 
   const openBatchPrint = (selectedBundles: CuttingBundleRow[], options?: { highlightedBundleIds?: string[] }) => {
     if (!printUnlocked) {
@@ -40,6 +54,24 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     setPrintBundles(selectedBundles.slice());
     setHighlightedBundleIds((options?.highlightedBundleIds || []).filter(Boolean));
     setPrintPreviewOpen(true);
+
+    const qrSize = printConfig.qrSize;
+    qrCacheRef.current = { qrSize, urls: {} };
+    const codes = [...new Set(selectedBundles.map(b => b.qrCode).filter(Boolean))] as string[];
+    if (codes.length) {
+      Promise.all(codes.map(async (code) => {
+        try {
+          qrCacheRef.current.urls[code] = await QRCode.toDataURL(code, {
+            width: qrSize,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+          });
+        } catch (e) {
+          console.error('[print] QR预生成失败:', code.substring(0, 50), e);
+          qrCacheRef.current.urls[code] = '';
+        }
+      })).catch(() => { /* 并行生成中的个别失败已由 per-code catch 处理 */ });
+    }
   };
 
   const triggerPrint = async () => {
@@ -52,28 +84,40 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       return;
     }
 
-    const labelW = Math.round(printConfig.paperWidth * 10);   // cm → mm
+    const labelW = Math.round(printConfig.paperWidth * 10);
     const labelH = Math.round(printConfig.paperHeight * 10);
     const pageSize = `${labelW}mm ${labelH}mm`;
     const qrSize = printConfig.qrSize;
     const minDim = Math.min(labelW, labelH);
     const fontSize = minDim <= 35 ? 5.5 : minDim <= 50 ? 7 : minDim <= 80 ? 8.5 : 10;
 
-    // 本地生成 QR 码 DataURL（替代外部 api.qrserver.com，防止业务数据泄露）
-    const qrDataUrls: Record<string, string> = {};
-    for (const b of printBundles) {
-      const code = b.qrCode || '';
-      if (code && !qrDataUrls[code]) {
+    const cache = qrCacheRef.current;
+    let useCache = cache.qrSize === qrSize;
+    if (useCache) {
+      for (const b of printBundles) {
+        const code = b.qrCode || '';
+        if (code && cache.urls[code] === undefined) { useCache = false; break; }
+      }
+    }
+
+    const qrDataUrls: Record<string, string> = useCache ? { ...cache.urls } : {};
+    if (!useCache) {
+      qrCacheRef.current = { qrSize, urls: {} };
+      const codes = [...new Set(printBundles.map(b => b.qrCode).filter(Boolean))] as string[];
+      await Promise.all(codes.map(async (code) => {
         try {
           qrDataUrls[code] = await QRCode.toDataURL(code, {
             width: qrSize,
             margin: 1,
             errorCorrectionLevel: 'M',
           });
-        } catch {
+          qrCacheRef.current.urls[code] = qrDataUrls[code];
+        } catch (e) {
+          console.error('[print] QR生成失败:', code.substring(0, 50), e);
           qrDataUrls[code] = '';
+          qrCacheRef.current.urls[code] = '';
         }
-      }
+      }));
     }
 
     const getQRUrl = (code: string) => {
@@ -83,9 +127,9 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
 
     const labelsHtml = printBundles.map((b) => `
       <div class="print-page">
-        <div class="label">
+        <div class="label ${printConfig.orientation === 'vertical' ? 'label--vertical' : ''}">
           <div class="qr">
-            <img loading="lazy" src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" />
+            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" onerror="this.outerHTML='<span style=display:flex;align-items:center;justify-content:center;width:'+this.width+'px;height:'+this.height+'px;font-size:10px;color:#999>QR错误</span>'" />
           </div>
           <div class="text">
             <div>订单：${String(b.productionOrderNo || '').trim() || '-'}</div>
@@ -126,8 +170,11 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             gap: 3mm;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif;
           }
+          .label:not(.label--vertical) { flex-direction: row; }
+          .label--vertical { flex-direction: column; align-items: center; }
           .qr { flex: 0 0 auto; display: flex; align-items: center; }
-          .qr img { display: block; max-width: ${labelH * 0.6}mm; max-height: ${labelH * 0.7}mm; }
+          .label:not(.label--vertical) .qr img { max-width: ${labelH * 0.6}mm; max-height: ${labelH * 0.7}mm; }
+          .label--vertical .qr img { max-width: ${labelW * 0.7}mm; max-height: ${labelW * 0.7}mm; }
           .text {
             flex: 1 1 auto;
             font-size: ${fontSize}pt;
@@ -139,6 +186,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             overflow: hidden;
             min-width: 0;
           }
+          .label--vertical .text { align-items: center; text-align: center; }
           .text div {
             color: #000;
             white-space: nowrap;
@@ -154,7 +202,6 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     `;
 
     safePrint(printHtml);
-
     setPrintPreviewOpen(false);
   };
 
@@ -164,6 +211,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     highlightedBundleIds, setHighlightedBundleIds,
     printUnlocked, setPrintUnlocked,
     printConfig, setPrintConfig,
+    setOrientation,
     openBatchPrint, triggerPrint,
   };
 }

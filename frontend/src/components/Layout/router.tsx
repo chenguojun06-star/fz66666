@@ -170,12 +170,18 @@ export function useRecentPages(
       const activeTab = activeTabRef.current;
       const containerRect = container.getBoundingClientRect();
       const tabRect = activeTab.getBoundingClientRect();
-      const tabLeft = tabRect.left - containerRect.left + container.scrollLeft;
+      const currentScrollLeft = container.scrollLeft;
+      const containerWidth = containerRect.width;
+      const tabLeft = tabRect.left - containerRect.left + currentScrollLeft;
       const tabRight = tabLeft + tabRect.width;
-      if (tabLeft < container.scrollLeft) {
-        container.scrollLeft = tabLeft - 10;
-      } else if (tabRight > container.scrollLeft + containerRect.width) {
-        container.scrollLeft = tabRight - containerRect.width + 10;
+      let targetScrollLeft = currentScrollLeft;
+      if (tabLeft < currentScrollLeft) {
+        targetScrollLeft = tabLeft - 10;
+      } else if (tabRight > currentScrollLeft + containerWidth) {
+        targetScrollLeft = tabRight - containerWidth + 10;
+      }
+      if (targetScrollLeft !== currentScrollLeft) {
+        container.scrollLeft = targetScrollLeft;
       }
     });
   }, [effectiveFullPath]);

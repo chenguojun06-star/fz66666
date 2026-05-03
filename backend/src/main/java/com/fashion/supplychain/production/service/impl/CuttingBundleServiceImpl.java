@@ -68,6 +68,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         String color = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "color"));
         String size = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "size"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "status"));
+        String splitStatus = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "splitStatus"));
 
         // 工厂账号隔离：优先使用菲号级 factoryId 隔离（支持部分转单）
         String ctxFactoryId = UserContext.factoryId();
@@ -105,6 +106,15 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                 .eq(StringUtils.hasText(size), CuttingBundle::getSize, size)
                 .eq(StringUtils.hasText(status), CuttingBundle::getStatus, status)
                 .orderByAsc(CuttingBundle::getBundleNo);
+
+        if ("all".equals(splitStatus)) {
+            // 管理员视图：不做过滤
+        } else if (StringUtils.hasText(splitStatus)) {
+            wrapper.eq(CuttingBundle::getSplitStatus, splitStatus);
+        } else {
+            // 默认：排除已拆分的父菲号，防止重复计数
+            wrapper.ne(CuttingBundle::getSplitStatus, "split_parent");
+        }
 
         // 工厂账号隔离：优先使用菲号级 factoryId（支持部分转单场景）
         if (isFactoryAccount && StringUtils.hasText(ctxFactoryId)) {
@@ -452,6 +462,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             wrapper.eq(CuttingBundle::getProductionOrderId, oid);
         }
         wrapper.orderByAsc(CuttingBundle::getBundleNo);
+        wrapper.ne(CuttingBundle::getSplitStatus, "split_parent");
 
         List<CuttingBundle> bundles = this.list(wrapper);
 
@@ -529,6 +540,25 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         }
         // 追加 HMAC 签名防伪
         return qrCodeSigner.sign(content);
+    }
+
+    @Override
+    public int sumEffectiveQuantity(String orderId) {
+        String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
+        if (!StringUtils.hasText(oid)) return 0;
+        LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<CuttingBundle>()
+                .select(CuttingBundle::getQuantity)
+                .eq(CuttingBundle::getProductionOrderId, oid)
+                .ne(CuttingBundle::getSplitStatus, "split_parent");
+        List<CuttingBundle> bundles = this.list(wrapper);
+        int total = 0;
+        if (bundles != null) {
+            for (CuttingBundle b : bundles) {
+                if (b == null) continue;
+                total += b.getQuantity() == null ? 0 : b.getQuantity();
+            }
+        }
+        return total;
     }
 
     @Override

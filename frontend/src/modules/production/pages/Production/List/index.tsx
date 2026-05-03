@@ -261,6 +261,7 @@ const ProductionList: React.FC = () => {
           }).filterRight}
         >
           {viewMode === 'smart' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <ExternalFactorySmartView
               data={sortedProductionList}
               loading={loading}
@@ -288,6 +289,7 @@ const ProductionList: React.FC = () => {
               isFactoryAccount={isFactoryAccount}
               onOpenRemark={(record) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', merchandiser: record.merchandiser })}
             />
+            </div>
           ) : viewMode === 'list' ? (
             <ResizableTable<any>
               storageKey="production-order-table"

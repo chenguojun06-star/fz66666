@@ -25,7 +25,7 @@ async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
       @media print { body { min-height: unset; } }
     </style>
   </head><body><div class="qr-wrap">
-    <img loading="lazy" src="${qrDataUrl}" width="200" height="200" />
+    <img src="${qrDataUrl}" width="200" height="200" />
     <div class="no">${warehousingNo}</div>
     ${orderNo ? `<div class="order">订单号：${orderNo}</div>` : ''}
   </div></body></html>`;

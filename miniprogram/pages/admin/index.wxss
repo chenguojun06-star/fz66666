@@ -5,12 +5,12 @@ page {
 
 .container {
   min-height: 100vh;
-  padding-top: env(safe-area-inset-top);
+  padding: 0 var(--page-padding-x);
+  padding-top: calc(var(--page-padding-x) + env(safe-area-inset-top));
 }
 
-/* 用户信息卡片 */
 .user-profile-card {
-  margin: 16px;
+  margin: 0 0 var(--card-gap-y);
   padding: 14px;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
@@ -99,7 +99,7 @@ page {
 
 /* 功能菜单列表 */
 .menu-list {
-  margin: 0 16px 16px;
+  margin: 0 0 var(--card-gap-y);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid rgba(var(--color-primary-rgb), 0.1);
@@ -220,6 +220,7 @@ page {
 .mm-list {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mm-item {

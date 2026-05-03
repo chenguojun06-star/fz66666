@@ -88,5 +88,8 @@
       ],
       "prefer-const": "warn"
     }
+  },
+  "dependencies": {
+    "weapp-qrcode-canvas-2d": "^1.1.6"
   }
 }

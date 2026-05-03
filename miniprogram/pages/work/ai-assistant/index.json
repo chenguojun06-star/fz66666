@@ -1,8 +1,0 @@
-{
-  "navigationBarTitleText": "小云帮助中心",
-  "navigationBarBackgroundColor": "#5B6AF0",
-  "navigationBarTextStyle": "white",
-  "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
-  }
-}

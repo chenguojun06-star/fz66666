@@ -111,7 +111,8 @@ Page({
       wx.showModal({ title: '权限不足', content: '运营看板仅限租户主账号使用', showCancel: false, complete: function () { wx.navigateBack(); } });
       return;
     }
-    this._refreshAll();
+    var self = this;
+    wx.nextTick(function () { self._refreshAll(); });
     this._startTimer();
   },
 

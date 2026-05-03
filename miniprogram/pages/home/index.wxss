@@ -9,7 +9,7 @@ page {
 
 /* -- 顶部问候 -- */
 .header {
-  padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
+  padding: var(--spacing-xl) var(--page-padding-x) var(--spacing-lg);
 }
 
 .greeting-name {
@@ -28,8 +28,8 @@ page {
 .weather-card {
   display: flex;
   flex-direction: column;
-  margin: 0 var(--spacing-xl) var(--spacing-lg);
-  padding: 14px 16px;
+  margin: 0 var(--page-padding-x) var(--spacing-lg);
+  padding: 14rpx 16rpx;
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
 }
@@ -81,7 +81,7 @@ page {
 
 /* -- 全部菜单 -- */
 .menu-section {
-  padding: var(--spacing-lg) var(--spacing-xl);
+  padding: var(--spacing-lg) var(--page-padding-x);
   border-top: 1px solid var(--color-divider);
 }
 

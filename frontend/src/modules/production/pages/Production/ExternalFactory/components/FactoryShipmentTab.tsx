@@ -505,7 +505,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
                 max={receiveRecord.shipQuantity}
                 onChange={val => setReceiveQty(Number(val) || 0)}
                 style={{ width: '100%' }}
-                addonAfter="件"
+                suffix="件"
               />
               <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>
                 默认等于发货数量，如实际到货数量不同请修改

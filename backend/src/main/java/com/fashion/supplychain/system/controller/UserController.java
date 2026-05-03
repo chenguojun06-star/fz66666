@@ -404,6 +404,7 @@ public class UserController {
     /**
      * 租户管理员重置工厂成员密码（无需旧密码，仅限同租户下工厂账号）
      */
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管')")
     @PostMapping("/admin-reset-member-pwd")
     public Result<Void> adminResetMemberPwd(@RequestBody java.util.Map<String, String> body) {
         String userId = body.get("userId");
@@ -422,6 +423,7 @@ public class UserController {
      * 租户主账号（老板）重置任意员工密码为默认值 123456
      * 无需旧密码，不可重置主账号或超管账号
      */
+    @PreAuthorize("hasAnyAuthority('ROLE_tenant_owner', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/owner-reset-member-pwd")
     public Result<Void> ownerResetMemberPwd(@RequestBody java.util.Map<String, String> body) {
         String userId = body.get("userId");

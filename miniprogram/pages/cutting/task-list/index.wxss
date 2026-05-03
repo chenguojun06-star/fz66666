@@ -5,13 +5,13 @@
   background:
     radial-gradient(ellipse at 20% 0%, rgba(var(--color-primary-rgb, 37,99,235), 0.06) 0%, transparent 60%),
     linear-gradient(180deg, rgba(var(--color-primary-rgb, 37,99,235), 0.03) 0%, var(--color-bg-page) 30%);
-  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  padding: 0 var(--page-padding-x) calc(40rpx + env(safe-area-inset-bottom));
 }
 
 /* ---- 筛选 Tab ---- */
 .filter-tabs {
   display: flex;
-  padding: 20rpx 32rpx;
+  padding: 20rpx 0;
   gap: 16rpx;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -53,7 +53,7 @@
 
 /* ---- 任务卡片 ---- */
 .task-card {
-  margin: 16rpx 32rpx;
+  margin: 0 0 var(--card-gap-y);
   background: var(--color-bg-card);
   border-radius: var(--radius-xl, 24rpx);
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);

@@ -1,5 +1,5 @@
 .container {
-  padding: 12px;
+  padding: 12rpx var(--page-padding-x);
   background: var(--color-bg-page, var(--color-bg-light));
   min-height: 100vh;
 }

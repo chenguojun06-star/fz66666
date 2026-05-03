@@ -16,10 +16,10 @@ function handleCuttingTask(task) {
   const orderId = task.orderId || task.productionOrderId || '';
 
   if (taskId && orderNo) {
-    const url = `/pages/cutting/task-detail/index?taskId=${taskId}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`;
+    const url = `/pages/cutting/bundle-detail/index?taskId=${taskId}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    safeNavigate({ url: '/pages/cutting/task-list/index' }, 'navigateTo').catch(() => {});
+    safeNavigate({ url: '/pages/cutting/bundle-detail/index' }, 'navigateTo').catch(() => {});
   }
 }
 
@@ -224,9 +224,8 @@ function handleReminderTask(task) {
 
   // 裁剪提醒 → 跳转裁剪任务列表页
   if (type === '裁剪') {
-    safeNavigate({ url: '/pages/cutting/task-list/index' }, 'navigateTo').catch(() => {});
-    return;
-  }
+    safeNavigate({ url: '/pages/cutting/bundle-detail/index' }, 'navigateTo').catch(() => {});
+    return;}
 
   // 其他提醒类型 → 保持原有扫码页跳转
   try {

@@ -120,6 +120,8 @@ public class QualityScanExecutor {
             throw new IllegalStateException("未匹配到菲号");
         }
 
+        validateBundleFactoryAccess(bundle);
+
         if (order == null) {
             throw new IllegalStateException("未匹配到订单");
         }
@@ -522,6 +524,17 @@ public class QualityScanExecutor {
 
     private boolean hasText(String str) {
         return StringUtils.hasText(str);
+    }
+
+    private void validateBundleFactoryAccess(CuttingBundle bundle) {
+        if (bundle == null) return;
+        String bundleFactoryId = bundle.getFactoryId();
+        if (!StringUtils.hasText(bundleFactoryId)) return;
+        String workerFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (!bundleFactoryId.equals(workerFactoryId)) {
+            log.warn("[工厂隔离-质检] 扫码被拒绝: bundleId={}, bundleFactory={}, workerFactory={}", bundle.getId(), bundleFactoryId, workerFactoryId);
+            throw new com.fashion.supplychain.common.BusinessException("该菲号已转派至外发工厂，您无权质检扫码");
+        }
     }
 
     private void broadcastProcessStage(String processName, ProductionOrder order,

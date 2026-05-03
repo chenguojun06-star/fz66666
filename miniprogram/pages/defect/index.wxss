@@ -4,7 +4,7 @@ page {
 }
 
 .container {
-  padding: 16px;
+  padding: 12rpx var(--page-padding-x);
 }
 
 .card {

@@ -13,16 +13,6 @@
       "pages": ["index"]
     },
     {
-      "root": "pages/work/inbox",
-      "name": "pkg-work-inbox",
-      "pages": ["index"]
-    },
-    {
-      "root": "pages/work/ai-assistant",
-      "name": "pkg-work-ai",
-      "pages": ["index"]
-    },
-    {
       "root": "pages/scan/history",
       "name": "pkg-scan-history",
       "pages": ["index"]
@@ -63,7 +53,7 @@
     {
       "root": "pages/cutting",
       "name": "pkg-cutting",
-      "pages": ["task-list/index", "task-detail/index", "bundle-detail/index", "transfer/index"]
+      "pages": ["task-list/index", "bundle-detail/index"]
     },
     {
       "root": "pages/procurement",
@@ -113,7 +103,7 @@
   ],
   "preloadRule": {
     "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops"] },
-    "pages/defect/index":  { "network": "wifi", "packages": ["pkg-work-inbox", "pkg-work-ai", "pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
+    "pages/defect/index":  { "network": "wifi", "packages": ["pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
     "pages/scan/index":  { "network": "wifi", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
     "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-misc"] }
   },

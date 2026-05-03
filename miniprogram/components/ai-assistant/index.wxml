@@ -1,3 +1,4 @@
+<wxs module="h" src="./helper.wxs" />
 <view class="ai-assistant-container" hover-class="none" hover-stop-propagation="false" wx:if="{{visible}}">
   <view class="ai-trigger-btn" wx:if="{{!isOpen}}" catchtouchstart="onTriggerTouchStart" catchtouchmove="onTriggerTouchMove" catchtouchend="onTriggerTouchEnd" hover-class="ai-trigger-hover" hover-stay-time="50" style="left:{{triggerX}}px;top:{{triggerY}}px;border-radius:{{edgeSide==='left'?'0 16px 16px 0':'16px 0 0 16px'}};box-shadow:{{edgeSide==='left'?'3px 2px 10px rgba(0,0,0,0.14)':'-3px 2px 10px rgba(0,0,0,0.14)'}};z-index:9999;">
     <view class="mini-cloud-wrapper">
@@ -124,6 +125,119 @@
                     class="clarification-btn" hover-class="clarification-btn-hover"
                     catchtap="autoAsk" data-question="{{hint}}">{{hint}}</view>
                 </view>
+              </view>
+              <view class="wizard-cards" wx:if="{{item.stepWizardCards && item.stepWizardCards.length > 0}}">
+                <block wx:for="{{item.stepWizardCards}}" wx:for-item="wizard" wx:for-index="wizIdx" wx:key="title">
+                  <view class="wizard-card">
+                    <view class="wizard-header">
+                      <text class="wizard-icon">{{wizard.icon || '📋'}}</text>
+                      <view class="wizard-header-text">
+                        <text class="wizard-title">{{wizard.title}}</text>
+                        <text class="wizard-desc" wx:if="{{wizard.desc}}">{{wizard.desc}}</text>
+                      </view>
+                    </view>
+                    <block wx:for="{{wizard.steps}}" wx:for-item="step" wx:for-index="stepIdx" wx:key="stepKey">
+                      <view class="wizard-step-section" wx:if="{{wizard.steps.length > 1}}">
+                        <text class="wizard-step-title">{{stepIdx + 1}}. {{step.title}}</text>
+                      </view>
+                      <view class="wizard-fields">
+                        <block wx:for="{{step.fields}}" wx:for-item="field" wx:for-index="fieldIdx" wx:key="key">
+                          <view class="wizard-field">
+                            <text class="wizard-field-label">{{field.label}}{{field.required ? ' *' : ''}}</text>
+                            <view class="wizard-options" wx:if="{{field.inputType === 'select'}}">
+                              <view class="wizard-option {{wizardStates[item.id + '_' + field.key] === opt.value ? 'wizard-option-selected' : ''}}"
+                                wx:for="{{field.options}}" wx:for-item="opt" wx:key="value"
+                                hover-class="wizard-option-hover"
+                                catchtap="onWizardOptionTap"
+                                data-msg-id="{{item.id}}" data-field-key="{{field.key}}" data-value="{{opt.value}}">
+                                <text>{{opt.label}}</text>
+                              </view>
+                            </view>
+                            <view class="wizard-options" wx:elif="{{field.inputType === 'multi_select'}}">
+                              <view class="wizard-option {{h.arrayIncludes(wizardStates[item.id + '_' + field.key], opt.value) ? 'wizard-option-selected' : ''}}"
+                                wx:for="{{field.options}}" wx:for-item="opt" wx:key="value"
+                                hover-class="wizard-option-hover"
+                                catchtap="onWizardMultiOptionTap"
+                                data-msg-id="{{item.id}}" data-field-key="{{field.key}}" data-value="{{opt.value}}">
+                                <text>{{opt.label}}</text>
+                              </view>
+                            </view>
+                            <input class="wizard-input" wx:elif="{{field.inputType === 'text'}}"
+                              placeholder="{{field.placeholder || '请输入'}}"
+                              value="{{wizardStates[item.id + '_' + field.key] || ''}}"
+                              bindinput="onWizardInput"
+                              data-msg-id="{{item.id}}" data-field-key="{{field.key}}" />
+                            <input class="wizard-input" wx:elif="{{field.inputType === 'number'}}"
+                              type="digit"
+                              placeholder="{{field.placeholder || '请输入数字'}}"
+                              value="{{wizardStates[item.id + '_' + field.key] || ''}}"
+                              bindinput="onWizardInput"
+                              data-msg-id="{{item.id}}" data-field-key="{{field.key}}" />
+                            <view class="wizard-date-trigger" wx:elif="{{field.inputType === 'date'}}"
+                              catchtap="onWizardDateTap"
+                              data-msg-id="{{item.id}}" data-field-key="{{field.key}}">
+                              <text class="{{wizardStates[item.id + '_' + field.key] ? '' : 'wizard-date-placeholder'}}">{{wizardStates[item.id + '_' + field.key] || '选择日期'}}</text>
+                              <text class="wizard-date-arrow">▸</text>
+                            </view>
+                          </view>
+                        </block>
+                      </view>
+                    </block>
+                    <view class="wizard-submit" hover-class="wizard-submit-hover"
+                      catchtap="onWizardSubmit"
+                      data-msg-id="{{item.id}}" data-wizard-idx="{{wizIdx}}">
+                      {{wizard.submitLabel || '提交'}}
+                    </view>
+                  </view>
+                </block>
+              </view>
+              <view class="team-status-cards" wx:if="{{item.teamStatusCards && item.teamStatusCards.length > 0}}">
+                <block wx:for="{{item.teamStatusCards}}" wx:for-item="ts" wx:key="summary">
+                  <view class="team-status-card">
+                    <view class="ts-header">
+                      <text class="ts-icon">👥</text>
+                      <text class="ts-summary">{{ts.summary}}</text>
+                    </view>
+                    <view class="ts-meta" wx:if="{{ts.orderNo || ts.currentStage}}">
+                      <view class="ts-meta-item" wx:if="{{ts.orderNo}}">
+                        <text class="ts-meta-label">订单</text>
+                        <text class="ts-meta-value ts-order-no">{{ts.orderNo}}</text>
+                      </view>
+                      <view class="ts-meta-item" wx:if="{{ts.currentStage}}">
+                        <text class="ts-meta-label">阶段</text>
+                        <text class="ts-meta-value ts-stage-tag">{{ts.currentStage}}</text>
+                      </view>
+                      <view class="ts-meta-item" wx:if="{{ts.nextStep}}">
+                        <text class="ts-meta-label">下一步</text>
+                        <text class="ts-meta-value">{{ts.nextStep}}</text>
+                      </view>
+                      <view class="ts-meta-item" wx:if="{{ts.dueHint}}">
+                        <text class="ts-meta-label">时效</text>
+                        <text class="ts-meta-value ts-due">{{ts.dueHint}}</text>
+                      </view>
+                    </view>
+                    <view class="ts-recipients" wx:if="{{ts.recipients && ts.recipients.length > 0}}">
+                      <text class="ts-section-title">处理人</text>
+                      <view class="ts-recipient" wx:for="{{ts.recipients}}" wx:for-item="r" wx:key="name">
+                        <view class="ts-recipient-info">
+                          <text class="ts-recipient-name">{{r.name}}</text>
+                          <text class="ts-recipient-role">{{r.roleName}}</text>
+                        </view>
+                        <text class="ts-status-tag ts-status-{{r.dispatchStatus === '已通知' ? 'notified' : 'pending'}}">{{r.dispatchStatus}}</text>
+                      </view>
+                    </view>
+                    <view class="ts-history" wx:if="{{ts.history && ts.history.length > 0}}">
+                      <text class="ts-section-title">处理记录</text>
+                      <view class="ts-history-item" wx:for="{{ts.history}}" wx:for-item="h" wx:key="createdAt">
+                        <text class="ts-history-dot"></text>
+                        <view class="ts-history-content">
+                          <text class="ts-history-main">{{h.action}} · {{h.actor}}</text>
+                          <text class="ts-history-time">{{h.createdAt}}</text>
+                        </view>
+                      </view>
+                    </view>
+                  </view>
+                </block>
               </view>
               <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
                 <view class="recommend-title">猜你想问</view>

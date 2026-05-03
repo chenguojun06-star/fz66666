@@ -83,11 +83,18 @@ function parseAiCards(text) {
   }
   text = text.replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '');
 
+  var teamStatusCards = [];
+  var tsRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
+  while ((m = tsRe.exec(text)) !== null) {
+    var tsp = safeParse(m[1]);
+    if (Array.isArray(tsp)) teamStatusCards = teamStatusCards.concat(tsp);
+    else if (tsp) teamStatusCards.push(tsp);
+  }
   text = text.replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '');
   text = text.replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '');
   text = text.replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '');
 
-  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards };
+  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards, teamStatusCards: teamStatusCards };
 }
 
 Component({
@@ -118,6 +125,7 @@ Component({
     pageSuggestions: [],
     conversationId: '',
     dynamicSuggestions: [],
+    wizardStates: {},
   },
   lifetimes: {
     attached() {
@@ -491,6 +499,8 @@ Component({
               actions: actions,
               insightCards: parsed.insightCards || [],
               clarificationHints: parsed.clarificationHints || [],
+              stepWizardCards: parsed.stepWizardCards && parsed.stepWizardCards.length > 0 ? parsed.stepWizardCards : null,
+              teamStatusCards: parsed.teamStatusCards && parsed.teamStatusCards.length > 0 ? parsed.teamStatusCards : null,
             };
             self._setMessages([].concat(self.data.messages, [completedAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
@@ -551,6 +561,8 @@ Component({
                 actions: actions,
                 insightCards: parsed.insightCards || [],
                 clarificationHints: parsed.clarificationHints || [],
+                stepWizardCards: parsed.stepWizardCards && parsed.stepWizardCards.length > 0 ? parsed.stepWizardCards : null,
+                teamStatusCards: parsed.teamStatusCards && parsed.teamStatusCards.length > 0 ? parsed.teamStatusCards : null,
               };
               self._setMessages([].concat(self.data.messages, [syncAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
@@ -576,13 +588,139 @@ Component({
     onActionTap(e) {
       var action = e.currentTarget.dataset.action;
       if (!action) return;
-      if (action.type === 'execute' || action.type === 'urge_order' || action.type === 'mark_urgent') {
+      if (action.type === 'execute') {
+        this._executeAction(action);
+      } else if (action.type === 'urge_order' || action.type === 'mark_urgent') {
         this.setData({ inputValue: action.label || action.command || '', isOpen: true });
       } else if (action.actionCommand && action.actionCommand !== 'IGNORE') {
         this.setData({ inputValue: action.actionCommand }, () => { this.sendMessage(); });
       } else if (action.command) {
         this.setData({ inputValue: action.command }, () => { this.sendMessage(); });
       }
+    },
+
+    _executeAction(action) {
+      var self = this;
+      var command = action.command || action.label || '';
+      if (!command) return;
+      wx.showModal({
+        title: '确认执行',
+        content: command,
+        confirmText: '执行',
+        confirmColor: '#1677FF',
+        success: function (res) {
+          if (!res.confirm) return;
+          wx.showLoading({ title: '执行中...' });
+          api.intelligence.naturalLanguageExecute({ text: command }).then(function (res) {
+            wx.hideLoading();
+            var data = res && res.data ? res.data : res;
+            if (data && data.status === 'SUCCESS') {
+              wx.showToast({ title: '执行成功', icon: 'success' });
+              self.sendMessage();
+            } else if (data && data.status === 'REQUIRES_APPROVAL') {
+              wx.showModal({ title: '需要审批', content: data.reason || '高风险操作需审批后执行', showCancel: false });
+            } else {
+              wx.showToast({ title: (data && data.message) || '执行失败', icon: 'none' });
+            }
+          }).catch(function () {
+            wx.hideLoading();
+            wx.showToast({ title: '执行失败', icon: 'none' });
+          });
+        }
+      });
+    },
+
+    onWizardOptionTap(e) {
+      var ds = e.currentTarget.dataset;
+      var key = ds.msgId + '_' + ds.fieldKey;
+      var update = {};
+      update['wizardStates.' + key] = ds.value;
+      this.setData(update);
+    },
+
+    onWizardMultiOptionTap(e) {
+      var ds = e.currentTarget.dataset;
+      var key = ds.msgId + '_' + ds.fieldKey;
+      var current = this.data.wizardStates[key] || [];
+      var idx = current.indexOf(ds.value);
+      var next = idx >= 0 ? current.filter(function (v) { return v !== ds.value; }) : current.concat([ds.value]);
+      var update = {};
+      update['wizardStates.' + key] = next;
+      this.setData(update);
+    },
+
+    onWizardInput(e) {
+      var ds = e.currentTarget.dataset;
+      var key = ds.msgId + '_' + ds.fieldKey;
+      var update = {};
+      update['wizardStates.' + key] = e.detail.value;
+      this.setData(update);
+    },
+
+    onWizardDateTap(e) {
+      var self = this;
+      var ds = e.currentTarget.dataset;
+      var key = ds.msgId + '_' + ds.fieldKey;
+      wx.showModal({
+        title: '输入日期',
+        editable: true,
+        placeholderText: '如 2026-05-10',
+        content: this.data.wizardStates[key] || '',
+        success: function (res) {
+          if (res.confirm && res.content) {
+            var update = {};
+            update['wizardStates.' + key] = res.content.trim();
+            self.setData(update);
+          }
+        }
+      });
+    },
+
+    onWizardSubmit(e) {
+      var ds = e.currentTarget.dataset;
+      var msgId = ds.msgId;
+      var wizIdx = ds.wizardIdx;
+      var msg = null;
+      for (var i = 0; i < this.data.messages.length; i++) {
+        if (this.data.messages[i].id === msgId) { msg = this.data.messages[i]; break; }
+      }
+      if (!msg || !msg.stepWizardCards || !msg.stepWizardCards[wizIdx]) return;
+      var wizard = msg.stepWizardCards[wizIdx];
+      var parts = [];
+      for (var si = 0; si < wizard.steps.length; si++) {
+        var step = wizard.steps[si];
+        for (var fi = 0; fi < step.fields.length; fi++) {
+          var field = step.fields[fi];
+          var stateKey = msgId + '_' + field.key;
+          var value = this.data.wizardStates[stateKey];
+          if (value) {
+            if (field.inputType === 'select' && field.options) {
+              for (var oi = 0; oi < field.options.length; oi++) {
+                if (field.options[oi].value === value) {
+                  parts.push(field.label + '=' + field.options[oi].label);
+                  break;
+                }
+              }
+            } else if (field.inputType === 'multi_select' && Array.isArray(value) && field.options) {
+              var labels = [];
+              for (var vi = 0; vi < value.length; vi++) {
+                for (var oi2 = 0; oi2 < field.options.length; oi2++) {
+                  if (field.options[oi2].value === value[vi]) { labels.push(field.options[oi2].label); break; }
+                }
+              }
+              if (labels.length > 0) parts.push(field.label + '=' + labels.join(','));
+            } else {
+              parts.push(field.label + '=' + value);
+            }
+          }
+        }
+      }
+      if (parts.length === 0) {
+        wx.showToast({ title: '请至少填写一项', icon: 'none' });
+        return;
+      }
+      var command = (wizard.submitCommand || wizard.title) + '：' + parts.join('，');
+      this.setData({ inputValue: command }, function () { this.sendMessage(); }.bind(this));
     },
 
     clearMessages() {

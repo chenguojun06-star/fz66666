@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -19,19 +21,36 @@ public class ScanRecordPermissionHelper {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
+
     public void assertUndoRecordPermission(ScanRecord target) {
         if (target == null) {
             return;
         }
         Long currentTenantId = UserContext.tenantId();
         Long recordTenantId = target.getTenantId();
-        if (currentTenantId != null && recordTenantId != null && !currentTenantId.equals(recordTenantId)) {
-            throw new AccessDeniedException("无权撤回该扫码记录");
+        if (!UserContext.isSuperAdmin()) {
+            if (currentTenantId == null || recordTenantId == null || !currentTenantId.equals(recordTenantId)) {
+                throw new AccessDeniedException("无权撤回该扫码记录");
+            }
         }
 
         String factoryId = UserContext.factoryId();
         if (!StringUtils.hasText(factoryId)) {
             return;
+        }
+
+        // 菲号级工厂隔离：优先检测 bundle.factoryId
+        String bundleId = TextUtils.safeText(target.getCuttingBundleId());
+        if (StringUtils.hasText(bundleId)) {
+            CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+            if (bundle != null && StringUtils.hasText(bundle.getFactoryId())) {
+                if (!factoryId.equals(bundle.getFactoryId())) {
+                    throw new AccessDeniedException("该菲号不属于您的工厂，无权撤回");
+                }
+                return;
+            }
         }
 
         String orderId = TextUtils.safeText(target.getOrderId());

@@ -245,7 +245,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           disabled={disabled}
           onChange={(val) => setExcessRate(val ?? 0)}
           style={{ width: 80 }}
-          addonAfter="%"
+          suffix="%"
         />
       </Space>
 

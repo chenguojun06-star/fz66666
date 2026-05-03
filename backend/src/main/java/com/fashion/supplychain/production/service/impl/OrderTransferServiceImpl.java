@@ -117,8 +117,10 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
 
         // ✅ 租户隔离：只能转给同租户系统内部用户，禁止跨租户
         Long currentTenantId = UserContext.tenantId();
-        if (currentTenantId != null && !currentTenantId.equals(toUser.getTenantId())) {
-            throw new BusinessException("只能转移给本系统内部人员，禁止转移给外部用户");
+        if (!UserContext.isSuperAdmin()) {
+            if (currentTenantId == null || !currentTenantId.equals(toUser.getTenantId())) {
+                throw new BusinessException("只能转移给本系统内部人员，禁止转移给外部用户");
+            }
         }
 
         // 不能转移给自己
@@ -185,8 +187,10 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         }
 
         Long currentTenantId = UserContext.tenantId();
-        if (currentTenantId != null && !currentTenantId.equals(toFactory.getTenantId())) {
-            throw new BusinessException("只能转移给本系统内部工厂，禁止转移给外部工厂");
+        if (!UserContext.isSuperAdmin()) {
+            if (currentTenantId == null || !currentTenantId.equals(toFactory.getTenantId())) {
+                throw new BusinessException("只能转移给本系统内部工厂，禁止转移给外部工厂");
+            }
         }
 
         if (!"active".equals(toFactory.getStatus())) {
@@ -369,6 +373,13 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
                             order.getId(), toUser.getId(), toUser.getName());
                 }
             }
+            String currentFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+            if (!StringUtils.hasText(currentFactoryId)) {
+                String bundleIds = transfer.getBundleIds();
+                log.info("[转单生效] 内部人员接受转单，清空菲号工厂归属: orderId={}, bundleIds={}",
+                        order.getId(), bundleIds);
+                clearBundleFactoryIds(order.getId(), bundleIds);
+            }
         }
     }
 
@@ -403,7 +414,8 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
                         orderId, factoryId, tasks.size());
             }
         } catch (Exception e) {
-            log.warn("[转单同步] 裁剪任务工厂更新失败: orderId={}, error={}", orderId, e.getMessage());
+            log.error("[转单同步] 裁剪任务工厂更新失败: orderId={}, error={}", orderId, e.getMessage());
+            throw new BusinessException("裁剪任务工厂同步失败，转单已回滚: " + e.getMessage());
         }
 
         // 2. 更新菲号的 factoryId
@@ -433,7 +445,8 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
                         orderId, factoryId, bundles.size());
             }
         } catch (Exception e) {
-            log.warn("[转单同步] 菲号工厂更新失败: orderId={}, error={}", orderId, e.getMessage());
+            log.error("[转单同步] 菲号工厂更新失败: orderId={}, error={}", orderId, e.getMessage());
+            throw new BusinessException("菲号工厂同步失败，转单已回滚: " + e.getMessage());
         }
     }
 
@@ -559,6 +572,32 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         }
         scanRecordService.updateBatchById(records);
         log.info("[转单] 已同步 {} 条扫码记录的factoryId → {}", records.size(), newFactoryId);
+    }
+
+    private void clearBundleFactoryIds(String orderId, String bundleIds) {
+        if (!StringUtils.hasText(orderId)) return;
+        var query = cuttingBundleService.lambdaQuery().eq(CuttingBundle::getProductionOrderId, orderId);
+        if (StringUtils.hasText(bundleIds)) {
+            List<String> ids = new ArrayList<>();
+            for (String bid : bundleIds.split(",")) {
+                String trimmed = bid.trim();
+                if (!trimmed.isEmpty()) ids.add(trimmed);
+            }
+            if (!ids.isEmpty()) {
+                if (ids.size() == 1) {
+                    query.eq(CuttingBundle::getId, ids.get(0));
+                } else {
+                    query.in(CuttingBundle::getId, ids);
+                }
+            }
+        }
+        List<CuttingBundle> bundles = query.list();
+        if (bundles == null || bundles.isEmpty()) return;
+        for (CuttingBundle b : bundles) {
+            b.setFactoryId(null);
+        }
+        cuttingBundleService.updateBatchById(bundles);
+        log.info("[转单-归回] 已清空 {} 个菲号的factoryId: orderId={}, bundleIds={}", bundles.size(), orderId, bundleIds);
     }
 
     private String statusLabel(String status) {

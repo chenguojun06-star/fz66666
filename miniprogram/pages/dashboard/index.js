@@ -270,7 +270,7 @@ Page({
     var orderId = e.currentTarget.dataset.orderId;
     var orderNo = e.currentTarget.dataset.orderNo;
     if (!orderId && !orderNo) return;
-    wx.navigateTo({ url: '/pages/cutting/transfer/index?orderId=' + encodeURIComponent(orderId || '') + '&orderNo=' + encodeURIComponent(orderNo || '') });
+    wx.navigateTo({ url: '/pages/cutting/bundle-detail/index?orderId=' + encodeURIComponent(orderId || '') + '&orderNo=' + encodeURIComponent(orderNo || '') + '&tab=transfer' });
   },
 
   /* ======== 工序编辑 ======== */

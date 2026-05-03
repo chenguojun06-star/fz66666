@@ -597,8 +597,10 @@ public class TenantRoleInitHelper {
         }
 
         Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权审批其他租户的注册申请");
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !tenantId.equals(user.getTenantId())) {
+                throw new AccessDeniedException("无权审批其他租户的注册申请");
+            }
         }
 
         String currentFactoryId = UserContext.factoryId();
@@ -666,8 +668,10 @@ public class TenantRoleInitHelper {
         }
 
         Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权拒绝其他租户的注册申请");
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !tenantId.equals(user.getTenantId())) {
+                throw new AccessDeniedException("无权拒绝其他租户的注册申请");
+            }
         }
 
         String currentFactoryId = UserContext.factoryId();
@@ -714,8 +718,10 @@ public class TenantRoleInitHelper {
 
         // 租户隔离检查
         Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权操作其他租户的用户");
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !tenantId.equals(user.getTenantId())) {
+                throw new AccessDeniedException("无权操作其他租户的用户");
+            }
         }
 
         List<Long> grantIds = overrideService.getGrantPermissionIds(userId);
@@ -740,8 +746,10 @@ public class TenantRoleInitHelper {
         }
 
         Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权操作其他租户的用户");
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !tenantId.equals(user.getTenantId())) {
+                throw new AccessDeniedException("无权操作其他租户的用户");
+            }
         }
 
         overrideService.replaceOverrides(userId, user.getTenantId(), grantIds, revokeIds);

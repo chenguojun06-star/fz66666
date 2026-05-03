@@ -150,7 +150,20 @@ public class ProductionScanExecutor {
         String orderStatus = ctx.order.getStatus() == null ? "" : ctx.order.getStatus().trim();
         if (OrderStatusConstants.isTerminal(orderStatus)) throw new IllegalStateException("订单已终态(" + orderStatus + ")，无法继续扫码");
         if (quantity <= 0) throw new IllegalArgumentException("扫码数量必须大于0");
+
+        validateBundleFactoryAccess(ctx.bundle);
         return ctx;
+    }
+
+    private void validateBundleFactoryAccess(CuttingBundle bundle) {
+        if (bundle == null) return;
+        String bundleFactoryId = bundle.getFactoryId();
+        if (!StringUtils.hasText(bundleFactoryId)) return;
+        String workerFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        if (!bundleFactoryId.equals(workerFactoryId)) {
+            log.warn("[工厂隔离] 扫码被拒绝: bundleId={}, bundleFactory={}, workerFactory={}", bundle.getId(), bundleFactoryId, workerFactoryId);
+            throw new com.fashion.supplychain.common.BusinessException("该菲号已转派至外发工厂，您无权扫码");
+        }
     }
 
     private void resolveProcessStage(ScanContext ctx, Map<String, Object> params, boolean autoProcess) {

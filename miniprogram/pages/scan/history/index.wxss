@@ -9,7 +9,7 @@ page {
 }
 
 .container {
-  padding: 10px;
+  padding: var(--page-padding-x);
 }
 
 /* ===== 搜索栏（从 app.wxss 按需引入） ===== */

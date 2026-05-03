@@ -8,7 +8,7 @@ page {
   padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
 .page {
-  padding: 10px;
+  padding: var(--page-padding-x);
 }
 
 /* ===== 拆分样式文件（按原始顺序导入，禁止调换顺序） ===== */

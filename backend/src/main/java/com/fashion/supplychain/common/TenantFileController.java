@@ -80,11 +80,12 @@ public class TenantFileController {
                 ? requestUri.substring(requestUri.indexOf(prefix) + prefix.length()) : "";
         try {
             // 强制校验租户归属（超级管理员可访问所有租户文件）
-            Long currentTenantId = UserContext.tenantId();
-            if (currentTenantId != null && !UserContext.isSuperAdmin()) {
-                if (!currentTenantId.equals(tenantId)) {
-                    log.warn("[租户文件] 跨租户文件访问被拦截: currentTenant={}, fileTenant={}, fileName={}",
-                            currentTenantId, tenantId, fileName);
+            // 安全修复：tenantId 为 null 时也拒绝访问，防止 UserContext 补全失败导致校验绕过
+            if (!UserContext.isSuperAdmin()) {
+                Long currentTenantId = UserContext.tenantId();
+                if (currentTenantId == null || !currentTenantId.equals(tenantId)) {
+                    log.warn("[租户文件] 跨租户文件访问被拦截: currentTenant={}, fileTenant={}, fileName={}, userId={}",
+                            currentTenantId, tenantId, fileName, UserContext.userId());
                     return ResponseEntity.status(403).build();
                 }
             }

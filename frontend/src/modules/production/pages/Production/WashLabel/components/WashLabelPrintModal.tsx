@@ -198,7 +198,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
         <div class="print-page">
           <div class="label">
             <div class="qr">
-              <img loading="lazy" src="${qrMap[lb.qrCode] || ''}" width="84" height="84" />
+              <img src="${qrMap[lb.qrCode] || ''}" width="84" height="84" />
             </div>
             <div class="text">
               <div class="top-code">${lb.qrCode}</div>

@@ -74,6 +74,13 @@ function _orderStatusText(status) {
   return s || '-';
 }
 
+function _paymentStatusText(status) {
+  if (!status) return '未发放';
+  if (status === 'success') return '已发放';
+  if (status === 'pending') return '待支付';
+  return status;
+}
+
 Page({
   data: {
     // 筛选条件
@@ -279,6 +286,9 @@ Page({
         actualOperatorName: item.actualOperatorName || '',
         orderStatus: item.orderStatus || '',
         orderStatusText: _orderStatusText(item.orderStatus),
+        paymentStatus: item.paymentStatus || '',
+        paymentStatusText: _paymentStatusText(item.paymentStatus),
+        settlementId: item.settlementId || '',
         quantity: qty,
         unitPrice: (Number(item.unitPrice) || 0).toFixed(2),
         totalAmount: amt.toFixed(2),
@@ -351,7 +361,10 @@ Page({
     });
   },
 
-  goFeedback() {
-    wx.navigateTo({ url: '/pages/payroll/feedback/index' });
+  goFeedback(e) {
+    var sid = e && e.currentTarget ? e.currentTarget.dataset.sid : '';
+    var url = '/pages/payroll/feedback/index';
+    if (sid) url += '?settlementId=' + encodeURIComponent(sid);
+    wx.navigateTo({ url: url });
   },
 });

@@ -17,6 +17,9 @@ const style = {
   updateInventory(styleId, data) {
     return ok('/api/warehouse/finished-inventory/outbound', 'POST', data || {});
   },
+  getQuotation(styleId) {
+    return ok('/api/style/quotation', 'GET', { styleId });
+  },
 };
 
 const warehouse = {

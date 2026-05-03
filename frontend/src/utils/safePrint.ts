@@ -7,6 +7,7 @@
  * 1. font-family 用 serif 做最终回退（macOS sans-serif→Helvetica无中文，serif→宋体有中文）
  * 2. * 通配符确保所有元素都使用支持中文的字体
  * 3. 强制亮色模式 + 黑色文字，修复暗色主题干扰
+ * 4. 智能图片等待：dataURL/blob 图片立即打印，外部图片最多等 1.5s
  */
 
 const PRINT_FIX_CSS = `
@@ -46,6 +47,11 @@ function injectFix(html: string): string {
   return fixed;
 }
 
+function isDataOrBlobUrl(src: string): boolean {
+  if (!src) return true;
+  return src.startsWith('data:') || src.startsWith('blob:');
+}
+
 export function safePrint(htmlContent: string, _title: string = '打印'): boolean {
   try {
     const fixedHtml = injectFix(htmlContent);
@@ -75,21 +81,38 @@ export function safePrint(htmlContent: string, _title: string = '打印'): boole
       };
 
       if (images.length === 0) {
-        setTimeout(doPrint, 300);
-      } else {
-        let settled = 0;
-        const onSettled = () => {
+        doPrint();
+        return;
+      }
+
+      const hasExternal = images.some((img) => !isDataOrBlobUrl(img.src));
+
+      if (!hasExternal) {
+        doPrint();
+        return;
+      }
+
+      let settled = 0;
+      const onSettled = () => {
+        settled++;
+        if (settled >= images.length) doPrint();
+      };
+
+      images.forEach((img) => {
+        if (isDataOrBlobUrl(img.src)) {
           settled++;
-          if (settled >= images.length) doPrint();
-        };
-        images.forEach((img) => {
-          if (img.complete) onSettled();
-          else {
-            img.addEventListener('load', onSettled, { once: true });
-            img.addEventListener('error', onSettled, { once: true });
-          }
-        });
-        setTimeout(() => { if (settled < images.length) doPrint(); }, 5000);
+        } else if (img.complete) {
+          settled++;
+        } else {
+          img.addEventListener('load', onSettled, { once: true });
+          img.addEventListener('error', onSettled, { once: true });
+        }
+      });
+
+      if (settled >= images.length) {
+        doPrint();
+      } else {
+        setTimeout(() => { if (settled < images.length) doPrint(); }, 1500);
       }
     };
 

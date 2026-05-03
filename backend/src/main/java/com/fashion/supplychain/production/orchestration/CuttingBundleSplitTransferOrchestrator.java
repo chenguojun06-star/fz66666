@@ -89,6 +89,16 @@ public class CuttingBundleSplitTransferOrchestrator {
         CuttingBundle completedBundle = buildChildBundle(source, request.getCompletedQuantity(), maxSeq + 1, request.getToWorkerId(), request.getToWorkerName(), false, splitProcessName, currentOrder);
         CuttingBundle transferBundle = buildChildBundle(source, request.getTransferQuantity(), maxSeq + 2, request.getToWorkerId(), request.getToWorkerName(), true, splitProcessName, currentOrder);
         cuttingBundleService.saveBatch(List.of(completedBundle, transferBundle));
+
+        String confirmerFactoryId = UserContext.factoryId();
+        if (!StringUtils.hasText(confirmerFactoryId)) {
+            completedBundle.setFactoryId(null);
+            transferBundle.setFactoryId(null);
+            cuttingBundleService.updateBatchById(List.of(completedBundle, transferBundle));
+            log.info("[拆菲确认] 内部人员确认，清空子菲号工厂归属: completedId={}, transferId={}",
+                    completedBundle.getId(), transferBundle.getId());
+        }
+
         persistTrackingAndScans(source, completedBundle, transferBundle, sourceTrackings, scanByProcess, currentOrder, request);
         archiveSourceBundle(source, splitProcessName, currentOrder);
         splitLogService.save(buildSplitLog(source, completedBundle, transferBundle, request));
@@ -137,6 +147,10 @@ public class CuttingBundleSplitTransferOrchestrator {
         }
         if (!"PENDING".equals(splitLog.getSplitStatus())) {
             throw new BusinessException("该拆菲请求已处理，无法重复确认");
+        }
+        String currentUserId = UserContext.userId();
+        if (!currentUserId.equals(splitLog.getToWorkerId())) {
+            throw new BusinessException("该拆菲请求不属于当前用户，无权确认");
         }
         CuttingBundle source = cuttingBundleService.getById(splitLog.getSourceBundleId());
         if (source == null) {
@@ -372,6 +386,7 @@ public class CuttingBundleSplitTransferOrchestrator {
         target.setSplitProcessOrder(splitProcessOrder);
         target.setOperatorId(toWorkerId);
         target.setOperatorName(toWorkerName);
+        target.setFactoryId(source.getFactoryId());
         target.setTenantId(UserContext.tenantId());
         return target;
     }

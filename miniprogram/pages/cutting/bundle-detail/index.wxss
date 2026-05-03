@@ -4,7 +4,7 @@
 .container {
   min-height: 100vh;
   background: linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.1) 0%, var(--color-bg-page) 220rpx);
-  padding-bottom: 160rpx;
+  padding: 0 var(--page-padding-x) 160rpx;
 }
 
 /* ── 加载状态 ── */
@@ -18,9 +18,7 @@
 }
 
 /* ── 订单选择列表（无参入口模式）── */
-.order-list-wrap {
-  padding: 24rpx;
-}
+.order-list-wrap { padding: 0; }
 .order-search-bar {
   display: flex;
   align-items: center;
@@ -127,7 +125,7 @@
 
 /* ── 订单信息卡片 ── */
 .info-card {
-  margin: 24rpx 32rpx 0;
+  margin: 12rpx 0 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   padding: 28rpx;
@@ -204,134 +202,9 @@
 }
 
 /* ── 工序导航行 ── */
-.process-row {
-  margin: 16rpx 32rpx 0;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  padding: 24rpx 28rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: var(--shadow-sm);
-}
-
-.process-row-left {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-
-.process-icon {
-  font-size: var(--font-size-sm);
-}
-
-.process-label {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.process-count {
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-}
-
-.process-arrow {
-  font-size: 40rpx;
-  color: var(--color-text-secondary);
-  font-weight: 300;
-  line-height: 1;
-  transition: transform 0.2s;
-}
-
-.process-arrow-open {
-  transform: rotate(90deg);
-  color: var(--color-primary);
-}
-
-.process-row-expanded {
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-}
-
-/* ── 工序列表展开卡片 ── */
-.process-list-card {
-  margin: 0 32rpx 0;
-  background: var(--color-bg-card);
-  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
-  padding: 0 28rpx;
-  box-shadow: var(--shadow-sm);
-}
-
-.process-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22rpx 0;
-}
-
-.process-item-border {
-  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
-}
-
-.process-item-left {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  flex: 1;
-}
-
-.process-seq {
-  width: 44rpx;
-  height: 44rpx;
-  border-radius: 50%;
-  background: rgba(var(--color-primary-rgb), 0.1);
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  text-align: center;
-  line-height: 44rpx;
-}
-
-.process-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4rpx;
-}
-
-.process-item-name {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
-
-.process-item-stage {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.process-item-right {
-  flex-shrink: 0;
-}
-
-.process-item-price {
-  font-size: var(--font-size-sm);
-  color: var(--color-success);
-  font-weight: 500;
-}
-
-.process-item-price-none {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
 /* ── 通用区块卡片 ── */
 .section-card {
-  margin: 16rpx 32rpx 0;
+  margin: var(--card-gap-y) 0 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   padding: 24rpx 28rpx;
@@ -518,7 +391,7 @@
   left: 0;
   right: 0;
   background: var(--color-bg-card);
-  padding: 20rpx 32rpx;
+  padding: 20rpx 16rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
   display: flex;
@@ -625,7 +498,7 @@
   color: var(--color-primary);
 }
 
-/* ── 菲号标签预览弹层 ── */
+/* ── 菲号标签预览弹层（与PC端 CuttingPrintPreviewModal 一致） ── */
 .bpo-overlay {
   position: fixed;
   top: 0;
@@ -636,12 +509,6 @@
   z-index: 1000;
   display: flex;
   align-items: flex-end;
-  opacity: 0;
-  transition: opacity 0.25s;
-}
-
-.bpo-overlay--show {
-  opacity: 1;
 }
 
 .bpo-panel {
@@ -657,10 +524,10 @@
 .bpo-panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 28rpx 32rpx 20rpx;
   border-bottom: 1rpx solid #f0f0f0;
   flex-shrink: 0;
+  gap: 16rpx;
 }
 
 .bpo-panel-title {
@@ -669,7 +536,13 @@
   color: var(--color-text-primary);
 }
 
+.bpo-panel-count {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
 .bpo-panel-close {
+  margin-left: auto;
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
@@ -681,104 +554,159 @@
   color: var(--color-text-secondary);
 }
 
+/* ── 打印尺寸配置栏（与PC端 CuttingPrintPreviewModal 一致） ── */
+.bpo-config-bar {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 32rpx;
+  background: #fafafa;
+  border-bottom: 1rpx solid #f0f0f0;
+  flex-shrink: 0;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+
+.bpo-config-label {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.bpo-config-item {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.bpo-config-input {
+  width: 80rpx;
+  height: 52rpx;
+  border: 1rpx solid #d9d9d9;
+  border-radius: 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--color-text-primary);
+  background: #fff;
+  padding: 0 4rpx;
+}
+
+.bpo-config-unit {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+/* 打印方向选择（横版/竖版） */
+.bpo-orient-bar {
+  padding: 8rpx 24rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.bpo-orient-btn {
+  padding: 6rpx 20rpx;
+  border-radius: 6rpx;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  background: #f5f5f5;
+  margin-left: 8rpx;
+}
+
+.bpo-orient-btn--active {
+  color: #fff;
+  background: #1677ff;
+}
+
+/* 竖版预览卡片 */
+.bpo-label-card--vertical {
+  flex-direction: column;
+  align-items: center;
+  padding: 16rpx 12rpx;
+}
+
+.bpol-qr--vertical {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10rpx;
+}
+
+.bpol-text--vertical {
+  width: 100%;
+  text-align: center;
+  align-items: center;
+}
+
 .bpo-panel-body {
   flex: 1;
   padding: 20rpx 24rpx;
 }
 
-.bpo-grid {
+.bpo-label-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 16rpx;
 }
 
-/* 菲号卡片 — 模拟标签贴纸 */
+/* 菲号标签卡片 — 左QR + 右文字，与PC端一致 */
 .bpo-label-card {
-  width: calc(50% - 8rpx);
+  width: 100%;
   background: #fff;
-  border: 2rpx solid #333;
-  border-radius: 12rpx;
-  padding: 20rpx 16rpx 16rpx;
+  border: 2rpx solid #000;
+  border-radius: 8rpx;
+  padding: 24rpx;
   box-sizing: border-box;
+  display: flex;
+  gap: 24rpx;
 }
 
-.bpol-top {
+.bpol-qr {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-bottom: 12rpx;
 }
 
-.bpol-fno {
-  font-size: 48rpx;
-  font-weight: 900;
-  color: #000;
-  letter-spacing: 4rpx;
+.bpol-qr-img {
+  border-radius: 4rpx;
 }
 
-.bpol-divider {
-  border-top: 1rpx dashed #ccc;
-  margin-bottom: 12rpx;
-}
-
-.bpol-meta {
-  margin-bottom: 8rpx;
-}
-
-.bpol-meta-row {
+.bpol-qr-loading {
+  width: 160rpx;
+  height: 160rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
   display: flex;
   align-items: center;
-  margin-bottom: 4rpx;
+  justify-content: center;
 }
 
-.bpol-meta-label {
-  font-size: 20rpx;
+.bpol-qr-loading-text {
+  font-size: 24rpx;
   color: #999;
-  width: 56rpx;
-  flex-shrink: 0;
 }
 
-.bpol-meta-value {
-  font-size: 22rpx;
-  color: #333;
+/* 隐藏的 canvas 用于生成 QR 码 */
+
+.bpol-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  min-width: 0;
+}
+
+.bpol-line {
+  font-size: 24rpx;
+  color: #000;
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.bpol-spec {
-  display: flex;
-  align-items: center;
-  gap: 24rpx;
-  margin-bottom: 8rpx;
-}
-
-.bpol-spec-item {
-  font-size: 22rpx;
-  color: #333;
-}
-
-.bpol-spec-label {
-  font-size: 20rpx;
-  color: #999;
-  margin-right: 6rpx;
-}
-
-.bpol-qty-row {
-  display: flex;
-  align-items: center;
-}
-
-.bpol-qty-label {
-  font-size: 20rpx;
-  color: #999;
-  margin-right: 8rpx;
-}
-
-.bpol-qty-value {
-  font-size: 30rpx;
+.bpol-line--bold {
   font-weight: 700;
-  color: #000;
+  font-size: 28rpx;
 }
 
 /* 弹层底部 */
@@ -815,4 +743,477 @@
 
 .bpo-btn::after {
   border: none;
+}
+
+/* ═══════ Tab 栏（菲号明细 | 转单）═══════ */
+.hub-tabs {
+  display: flex;
+  gap: 0;
+}
+
+.hub-tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 28rpx;
+  color: #999;
+  border-bottom: 2rpx solid transparent;
+}
+
+.hub-tab--active {
+  color: #1677ff;
+  font-weight: 600;
+  border-bottom-color: #1677ff;
+}
+
+/* ═══════ 转单 Panel 样式 ═══════ */
+
+/* 模式选择 */
+.tf-mode-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.tf-mode-options {
+  display: flex;
+  gap: 12rpx;
+  margin-left: 16rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  padding: 4rpx;
+}
+
+.tf-mode-opt {
+  padding: 12rpx 28rpx;
+  border-radius: 10rpx;
+  font-size: 26rpx;
+  color: #666;
+}
+
+.tf-mode-opt--active {
+  background: #fff;
+  color: #1677ff;
+  font-weight: 600;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.06);
+}
+
+/* 分区标题 */
+.tf-section {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.tf-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12rpx;
+  display: block;
+}
+
+.tf-flex-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.tf-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #1677ff;
+}
+
+.tf-select-all-icon {
+  font-size: 28rpx;
+}
+
+.tf-count {
+  font-size: 24rpx;
+  color: #999;
+  margin-left: 12rpx;
+  flex: 1;
+}
+
+/* 菲号列表 */
+.tf-bundles-list {
+  max-height: 300rpx;
+}
+
+.tf-bundle-item {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.tf-bundle-item--disabled {
+  opacity: 0.45;
+}
+
+.tf-bundle-item--checked {
+  background: rgba(22,119,255,0.04);
+  border-radius: 8rpx;
+  margin: 0 -8rpx;
+  padding: 14rpx 8rpx;
+}
+
+.tf-bundle-check {
+  width: 44rpx;
+  font-size: 32rpx;
+  color: #1677ff;
+  text-align: center;
+}
+
+.tf-bundle-info {
+  flex: 1;
+  margin-left: 8rpx;
+}
+
+.tf-bundle-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+}
+
+.tf-bundle-detail {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 2rpx;
+}
+
+.tf-bundle-status {
+  font-size: 22rpx;
+  color: #ff4d4f;
+}
+
+/* 工序列表 */
+.tf-processes-list {
+  margin-top: 8rpx;
+}
+
+.tf-process-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.tf-process-check {
+  width: 52rpx;
+  font-size: 34rpx;
+  color: #1677ff;
+  text-align: center;
+  padding-top: 4rpx;
+}
+
+.tf-process-body {
+  flex: 1;
+}
+
+.tf-process-top {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.tf-process-code {
+  font-size: 22rpx;
+  color: #999;
+  background: #f5f5f5;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.tf-process-name {
+  font-size: 28rpx;
+  color: #333;
+  flex: 1;
+}
+
+.tf-process-price {
+  font-size: 28rpx;
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+.tf-process-price-row {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+  gap: 12rpx;
+}
+
+.tf-new-price-label {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.tf-price-input {
+  width: 160rpx;
+  height: 60rpx;
+  border: 1rpx solid #d9d9d9;
+  border-radius: 8rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #333;
+}
+
+.tf-price-unit {
+  font-size: 22rpx;
+  color: #999;
+}
+
+/* 工厂/人员 Tab */
+.tf-tab-row {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16rpx;
+}
+
+.tf-tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 26rpx;
+  color: #999;
+  border-bottom: 2rpx solid transparent;
+}
+
+.tf-tab-item--active {
+  color: #1677ff;
+  font-weight: 600;
+  border-bottom-color: #1677ff;
+}
+
+/* 搜索结果 */
+.tf-result-list {
+  max-height: 320rpx;
+}
+
+.tf-result-item {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 12rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.tf-result-item--active {
+  background: rgba(22,119,255,0.06);
+  border-radius: 8rpx;
+}
+
+.tf-result-name {
+  font-size: 28rpx;
+  color: #333;
+  flex: 1;
+}
+
+.tf-result-sub {
+  font-size: 24rpx;
+  color: #999;
+  margin-right: 12rpx;
+}
+
+.tf-result-check {
+  font-size: 28rpx;
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.tf-loading,
+.tf-more {
+  text-align: center;
+  padding: 20rpx 0;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.tf-more {
+  color: #1677ff;
+}
+
+/* 备注 */
+.tf-remark {
+  width: 100%;
+  min-height: 100rpx;
+  font-size: 26rpx;
+  color: #333;
+  background: #f8f8f8;
+  border-radius: 12rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+}
+
+/* 提交按钮 */
+.submit-btn {
+  flex: 1;
+  height: 88rpx;
+  background: #1677ff;
+  color: #fff;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.submit-btn::after {
+  border: none;
+}
+
+/* ═══════ 裁剪分扎表单（来自 task-detail，与 PC 端 CuttingRatioPanel 一致）═══════ */
+
+.common-inputs {
+  margin-bottom: 24rpx;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.input-label {
+  width: 160rpx;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.input-field {
+  flex: 1;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  padding: 8rpx 0;
+}
+
+.input-suffix {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-left: 8rpx;
+}
+
+.empty-hint-box {
+  padding: 60rpx 0;
+  text-align: center;
+}
+
+.empty-hint-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.cutting-table {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12rpx;
+  margin-top: 8rpx;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 0 14rpx;
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.th { text-align: center; }
+.th-color { width: 110rpx; text-align: left; }
+.th-size  { width: 80rpx; }
+.th-order { width: 80rpx; }
+.th-cut   { width: 80rpx; }
+.th-bundles { width: 80rpx; }
+.th-last  { flex: 1; }
+
+.table-row {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.td {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.td-color { width: 110rpx; text-align: left; font-size: var(--font-size-xs); color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-size  { width: 80rpx; }
+.td-order { width: 80rpx; }
+.td-cut   { width: 80rpx; font-weight: 600; color: var(--color-primary); }
+.td-cut.highlight { color: var(--color-primary); }
+.td-bundles { width: 80rpx; }
+.td-last  { flex: 1; display: flex; justify-content: center; }
+
+.td-last-input {
+  width: 100rpx;
+  text-align: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 8rpx 4rpx;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
+}
+
+.bundle-desc-area {
+  margin-top: 16rpx;
+  padding: 12rpx 0;
+}
+
+.bundle-desc-row {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 0;
+}
+
+.bundle-desc-label {
+  width: 180rpx;
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-secondary);
+}
+
+.bundle-desc-value {
+  flex: 1;
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-primary);
+}
+
+.cutting-summary-bar {
+  display: flex;
+  justify-content: space-around;
+  padding: 20rpx 0 8rpx;
+  border-top: 1px solid var(--color-border);
+  margin-top: 12rpx;
+}
+
+.cutting-summary-item {
+  text-align: center;
+}
+
+.cutting-summary-label {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-secondary);
+  display: block;
+}
+
+.cutting-summary-value {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.cutting-summary-value.green  { color: var(--color-success); }
+.cutting-summary-value.orange { color: var(--color-warning); }
+.cutting-summary-value.purple { color: var(--color-purple, #9333ea); }
+
+.print-btn--generate {
+  background: #1677ff;
+  flex: 1;
 }

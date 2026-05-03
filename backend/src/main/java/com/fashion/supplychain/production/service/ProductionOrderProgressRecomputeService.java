@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
-import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
@@ -119,13 +118,7 @@ public class ProductionOrderProgressRecomputeService {
     }
 
     private int queryActualCuttingQty(String oid) {
-        int actualCuttingQty = 0;
-        try {
-            List<CuttingBundle> bundles = cuttingBundleService.list(
-                    new LambdaQueryWrapper<CuttingBundle>().select(CuttingBundle::getQuantity).eq(CuttingBundle::getProductionOrderId, oid));
-            if (bundles != null) { for (CuttingBundle b : bundles) { actualCuttingQty += b.getQuantity() == null ? 0 : b.getQuantity(); } }
-        } catch (Exception e) { log.warn("Failed to get actual cutting quantity: orderId={}", oid, e); }
-        return actualCuttingQty;
+        return cuttingBundleService.sumEffectiveQuantity(oid);
     }
 
     private static class ScanAggregationResult {

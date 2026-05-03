@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, InputNumber } from 'antd';
+import { Button, InputNumber, Segmented } from 'antd';
 import { QRCodeCanvas } from 'qrcode.react';
 import ResizableModal from '@/components/common/ResizableModal';
 import type { CuttingPrintState } from '../hooks';
@@ -55,15 +55,24 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         }}
       >
         <span style={{ fontWeight: 600, fontSize: '13px' }}>纸张设置：</span>
+        <Segmented
+          size="small"
+          value={print.printConfig.orientation}
+          onChange={(v) => print.setOrientation(v as 'horizontal' | 'vertical')}
+          options={[
+            { label: '横版 7×4cm', value: 'horizontal' },
+            { label: '竖版 4×6cm', value: 'vertical' },
+          ]}
+        />
         <span style={{ fontSize: '13px' }}>
           宽&nbsp;
           <InputNumber
             size="small"
-            min={3}
+            min={2}
             max={30}
             step={0.5}
             value={print.printConfig.paperWidth}
-            onChange={(v) => print.setPrintConfig({ ...print.printConfig, paperWidth: v ?? 7 })}
+            onChange={(v) => print.setPrintConfig({ ...print.printConfig, paperWidth: v ?? 4 })}
             style={{ width: 70 }}
           />
           &nbsp;cm
@@ -73,10 +82,10 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
           <InputNumber
             size="small"
             min={2}
-            max={20}
+            max={30}
             step={0.5}
             value={print.printConfig.paperHeight}
-            onChange={(v) => print.setPrintConfig({ ...print.printConfig, paperHeight: v ?? 4 })}
+            onChange={(v) => print.setPrintConfig({ ...print.printConfig, paperHeight: v ?? 6 })}
             style={{ width: 70 }}
           />
           &nbsp;cm
@@ -89,7 +98,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
             max={200}
             step={4}
             value={print.printConfig.qrSize}
-            onChange={(v) => print.setPrintConfig({ ...print.printConfig, qrSize: v ?? 84 })}
+            onChange={(v) => print.setPrintConfig({ ...print.printConfig, qrSize: v ?? 72 })}
             style={{ width: 70 }}
           />
           &nbsp;px
@@ -155,10 +164,14 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
       {/* QR标签预览列表 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {print.printBundles.map((b, idx) => {
+          const isVertical = print.printConfig.orientation === 'vertical';
           const paperRatio = print.printConfig.paperWidth / print.printConfig.paperHeight;
-          const previewWidth = 280;
+          const previewWidth = isVertical ? 160 : 280;
           const previewHeight = Math.round(previewWidth / paperRatio);
-          const qrDisplaySize = Math.min(previewHeight - 20, print.printConfig.qrSize);
+          const qrDisplaySize = Math.min(
+            isVertical ? previewWidth - 40 : previewHeight - 20,
+            print.printConfig.qrSize
+          );
 
           return (
             <div
@@ -182,10 +195,12 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
                   border: '1px solid #000',
                   padding: '6px',
                   display: 'flex',
+                  flexDirection: isVertical ? 'column' : 'row',
+                  alignItems: isVertical ? 'center' : undefined,
                   gap: '6px',
                 }}
               >
-                <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
+                <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {b.qrCode ? (
                     <QRCodeCanvas value={b.qrCode} size={qrDisplaySize} includeMargin />
                   ) : (
@@ -196,12 +211,14 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
                 </div>
                 <div
                   style={{
-                    flex: '1 1 auto',
+                    flex: isVertical ? '0 0 auto' : '1 1 auto',
                     fontSize: '11px',
                     lineHeight: '1.3',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-around',
+                    alignItems: isVertical ? 'center' : undefined,
+                    textAlign: isVertical ? 'center' : undefined,
                   }}
                 >
                   <div>{`订单：${String(b.productionOrderNo || '').trim() || '-'}`}</div>

@@ -20,13 +20,14 @@ page {
 }
 
 .container {
-  padding: 16px 16px calc(16px + 44px + env(safe-area-inset-bottom));
+  padding: var(--page-padding-x) var(--page-padding-x) calc(16px + 44px + env(safe-area-inset-bottom));
 }
 
 .card {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 24rpx;
+  margin-bottom: var(--card-gap-y);
   border: 1px solid var(--color-border-light);
   box-shadow: var(--shadow-sm);
 }
@@ -137,11 +138,11 @@ page {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  padding: 16px;
+  padding: 24rpx;
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-lg);
   background: var(--color-bg-card);
-  margin-top: 12px;
+  margin-bottom: var(--card-gap-y);
 }
 
 .progress-bar {
@@ -170,8 +171,8 @@ page {
 
 /* ============ 空状态 ============ */
 .empty-state-card {
-  padding: 48px 24px;
-  margin: 0 16px;
+  padding: 48rpx 24rpx;
+  margin: 0 var(--page-padding-x);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
@@ -302,8 +303,8 @@ page {
   left: 0;
   right: 0;
   display: flex;
-  gap: 12px;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  gap: 12rpx;
+  padding: 12rpx 16rpx calc(12rpx + env(safe-area-inset-bottom));
   background: var(--color-bg-card);
   border-top: 1px solid var(--color-border-light);
   z-index: var(--z-dropdown);

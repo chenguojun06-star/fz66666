@@ -117,7 +117,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
       onCancel={onClose}
       width="90vw"
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Descriptions column={6} size="small" bordered style={{ marginBottom: 16 }}>
         <Descriptions.Item label="工厂类型">

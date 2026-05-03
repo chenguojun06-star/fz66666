@@ -75,6 +75,11 @@ public class SystemOperationLogAspect {
         "入库", "物料入库", "出库", "结算"
     );
 
+    private static final Set<String> SENSITIVE_FIELDS = Set.of(
+        "password", "newPassword", "oldPassword", "confirmPassword",
+        "secret", "appSecret", "privateKey", "accessToken", "refreshToken"
+    );
+
     /** 跳过列表：系统配置类接口，不是业务操作，不记录 */
     private static final String[] SKIP_PREFIXES = {
         "/api/system/dict",
@@ -302,7 +307,11 @@ public class SystemOperationLogAspect {
                             if (map.containsKey(key)) {
                                 Object value = map.get(key);
                                 if (value != null) {
-                                    detailMap.put(key, value);
+                                    if (SENSITIVE_FIELDS.contains(key)) {
+                                        detailMap.put(key, "***");
+                                    } else {
+                                        detailMap.put(key, value);
+                                    }
                                 }
                             }
                         }
@@ -326,7 +335,6 @@ public class SystemOperationLogAspect {
      * 从 Map 中提取关键字段
      */
     private void extractKeyFields(Map<String, Object> detailMap, Map<String, Object> source) {
-        // 关键字段列表（优先记录）
         String[] importantFields = {
             "id", "orderNo", "styleNo", "name", "code", "status",
             "price", "unitPrice", "quantity", "amount", "totalAmount",
@@ -340,7 +348,11 @@ public class SystemOperationLogAspect {
             if (source.containsKey(field)) {
                 Object value = source.get(field);
                 if (value != null) {
-                    detailMap.put(field, value);
+                    if (SENSITIVE_FIELDS.contains(field)) {
+                        detailMap.put(field, "***");
+                    } else {
+                        detailMap.put(field, value);
+                    }
                 }
             }
         }
@@ -364,7 +376,11 @@ public class SystemOperationLogAspect {
                     Object value = method.invoke(obj);
                     if (value != null) {
                         String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
-                        detailMap.put(fieldName, value);
+                        if (SENSITIVE_FIELDS.contains(fieldName)) {
+                            detailMap.put(fieldName, "***");
+                        } else {
+                            detailMap.put(fieldName, value);
+                        }
                     }
                 } catch (NoSuchMethodException e) {
                     log.trace("[OpLog] 反射方法不存在，跳过: {}", e.getMessage());

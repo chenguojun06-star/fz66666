@@ -127,8 +127,10 @@ public class UserOrchestrator {
         User user = userService.getById(id);
         if (user == null) throw new NoSuchElementException("用户不存在");
         Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权查看其他租户的用户");
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !tenantId.equals(user.getTenantId())) {
+                throw new AccessDeniedException("无权查看其他租户的用户");
+            }
         }
         sanitizeUser(user);
         return user;

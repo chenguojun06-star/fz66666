@@ -276,10 +276,16 @@ public class PayrollAggregationOrchestrator {
         dto.setEndTime(endTime);
         dto.setApprovalId(buildDetailApprovalId(first));
 
-        // Phase 6: 填充指派信息（从第一条记录获取）
         dto.setDelegateTargetType(first.getDelegateTargetType());
         dto.setDelegateTargetName(first.getDelegateTargetName());
         dto.setActualOperatorName(first.getActualOperatorName());
+
+        String sid = records.stream()
+                .map(ScanRecord::getPayrollSettlementId)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        dto.setSettlementId(sid);
 
         return dto;
     }
@@ -359,6 +365,12 @@ public class PayrollAggregationOrchestrator {
 
         /** 审核状态：pending/approved */
         private String approvalStatus;
+
+        /** 发放状态：null=未发放, pending=待支付, success=已支付 */
+        private String paymentStatus;
+
+        /** 结算单ID（用于反馈关联） */
+        private String settlementId;
 
         private String delegateTargetType;
         private String delegateTargetName;

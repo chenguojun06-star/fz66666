@@ -2,7 +2,7 @@
 .page-container {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding-bottom: 160rpx;
+  padding: 0 var(--page-padding-x) 160rpx;
 }
 
 /* ===== 订单头 ===== */
@@ -91,7 +91,7 @@
 
 /* ===== 物料列表 ===== */
 .material-list {
-  padding: 16rpx 24rpx 0;
+  padding: 12rpx 0 0;
 }
 .material-item {
   background: var(--color-bg-card);
@@ -249,7 +249,7 @@
 
 /* ===== 备注区 ===== */
 .remark-section {
-  margin: 16rpx 24rpx;
+  margin: var(--card-gap-y) 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   padding: 20rpx;

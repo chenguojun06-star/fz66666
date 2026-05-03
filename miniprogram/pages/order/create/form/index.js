@@ -12,7 +12,8 @@ function daysLater(n) {
 
 var PLATE_MAP = ['', 'FIRST', 'REORDER'];
 var BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
-var PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'MANUAL'];
+var PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
+var PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
 
 Page({
   onCoverPreview: function (e) {
@@ -32,7 +33,7 @@ Page({
     orderBizType: '',
     patternMaker: '', merchandiser: '',
     pricingMode: 'PROCESS', pricingModeIdx: 0,
-    pricingModeLabels: ['工序单价', '尺码单价', '外发整件', '手动单价'],
+    pricingModeLabels: ['工序单价', '尺码单价', '外发整件', '报价单价', '手动单价'],
     manualOrderUnitPrice: '',
     orderQuantity: 0, computedUnitPrice: 0,
     selectedColors: [], selectedSizes: [],
@@ -42,24 +43,22 @@ Page({
     colorOptions: [], sizeOptions: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     factoryList: [], orgUnitList: [], categoryOptions: [],
-    processPrices: [],
+    processPrices: [], processTotal: 0,
+    quotation: null, quotationTotalCost: 0, quotationTotalPrice: 0,
     quickFillQty: 1, submitting: false
   },
 
   onLoad: function (opts) {
+    var colors = (decodeURIComponent(opts.colors || '')).split(',').filter(function (c) { return c.trim(); });
+    var sizes = (decodeURIComponent(opts.sizes || '')).split(',').filter(function (s) { return s.trim(); });
+
     this.setData({
       styleId: decodeURIComponent(opts.styleId || ''),
       styleNo: decodeURIComponent(opts.styleNo || ''),
       styleName: decodeURIComponent(opts.styleName || ''),
       coverImage: decodeURIComponent(opts.coverImage || ''),
       plannedStartDate: today(),
-      plannedEndDate: daysLater(7)
-    });
-
-    var colors = (decodeURIComponent(opts.colors || '')).split(',').filter(function (c) { return c.trim(); });
-    var sizes = (decodeURIComponent(opts.sizes || '')).split(',').filter(function (s) { return s.trim(); });
-
-    this.setData({
+      plannedEndDate: daysLater(7),
       colorOptions: colors,
       sizeOptions: sizes,
       selectedColors: colors.slice(),
@@ -68,9 +67,14 @@ Page({
 
     if (colors.length && sizes.length) { this._rebuildLines(); }
 
-    this._loadAux();
     this._genOrderNo();
-    this._loadProcessPrices();
+
+    var self = this;
+    wx.nextTick(function () {
+      self._loadAux();
+      self._loadProcessPrices();
+      self._loadQuotation();
+    });
   },
 
   _rebuildLines: function () {
@@ -106,15 +110,46 @@ Page({
       rows.push({ color: c, cells: cells });
     }.bind(this));
     this.setData({ gridRows: rows, gridSizes: ss });
-    this._recalcComputedPrice();
+  },
+
+  /* ═══ 报价 + 工序 + 核价 → 五模定价 ═══ */
+
+  _loadProcessPrices: function () {
+    var self = this;
+    api.production.listStyleProcesses(self.data.styleId).then(function (res) {
+      var list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+      var total = 0;
+      list.forEach(function (p) { total += parseFloat(p.unitPrice || p.price || 0); });
+      self.setData({ processPrices: list, processTotal: total });
+      self._recalcComputedPrice();
+    }).catch(function () {});
+  },
+
+  _loadQuotation: function () {
+    var self = this;
+    api.style.getQuotation(self.data.styleId).then(function (q) {
+      if (!q) return;
+      self.setData({
+        quotation: q,
+        quotationTotalCost: parseFloat(q.totalCost || 0),
+        quotationTotalPrice: parseFloat(q.totalPrice || 0)
+      });
+      self._recalcComputedPrice();
+    }).catch(function () {});
   },
 
   _recalcComputedPrice: function () {
-    var pps = this.data.processPrices || [];
-    var total = 0;
-    pps.forEach(function (p) { total += parseFloat(p.unitPrice || p.price || 0); });
-    this.setData({ computedUnitPrice: total.toFixed(2) });
+    var d = this.data, mode = d.pricingMode;
+    var price = 0;
+    if (mode === 'PROCESS') price = d.processTotal || 0;
+    else if (mode === 'SIZE') price = d.processTotal || 0;
+    else if (mode === 'COST') price = d.quotationTotalCost || d.processTotal || 0;
+    else if (mode === 'QUOTE') price = d.quotationTotalPrice || 0;
+    else if (mode === 'MANUAL') price = parseFloat(d.manualOrderUnitPrice) || 0;
+    this.setData({ computedUnitPrice: price.toFixed(2) });
   },
+
+  /* ═══ 工厂 / 部门（对标PC端） ═══ */
 
   _loadAux: function () {
     var self = this;
@@ -126,7 +161,13 @@ Page({
 
     api.system.listOrganizationDepartments().then(function (res) {
       var list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
-      self.setData({ orgUnitList: list.map(function (d) {
+      var filtered = list.filter(function (d) {
+        var name = d.nodeName || d.name || d.unitName || '';
+        var path = d.pathNames || '';
+        var content = name + ' ' + path;
+        return PROD_DEPT_KEYWORDS.some(function (kw) { return content.indexOf(kw) !== -1; });
+      });
+      self.setData({ orgUnitList: filtered.map(function (d) {
         return { name: d.pathNames || d.nodeName || d.name || d.unitName || d.label || '', id: d.id };
       })});
     }).catch(function () {});
@@ -144,15 +185,6 @@ Page({
     }).catch(function () {});
   },
 
-  _loadProcessPrices: function () {
-    var self = this;
-    api.production.listStyleProcesses(self.data.styleId).then(function (res) {
-      var list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
-      self.setData({ processPrices: list });
-      self._recalcComputedPrice();
-    }).catch(function () {});
-  },
-
   _genOrderNo: function () {
     var self = this;
     api.serial.generate('ORDER_NO').then(function (no) {
@@ -162,35 +194,29 @@ Page({
     });
   },
 
-  /* 订单号 */
+  /* ═══ 字段 bind ═══ */
   onOrderNoInput: function (e) { this.setData({ orderNo: e.detail.value }); },
   onAutoGenOrderNo: function () { this._genOrderNo(); },
 
-  /* 生产方 */
   onFactoryModeTap: function (e) {
     this.setData({ factoryMode: e.currentTarget.dataset.v, orgUnitId: '', orgUnitName: '', factoryId: '', factoryName: '' });
   },
 
-  /* 部门 */
   onOrgUnitChange: function (e) {
     var item = this.data.orgUnitList[e.detail.value];
     if (item) this.setData({ orgUnitId: item.id, orgUnitName: item.name || '' });
   },
 
-  /* 外发 */
   onFactoryChange: function (e) {
     var item = this.data.factoryList[e.detail.value];
     if (item) this.setData({ factoryId: item.id, factoryName: item.factoryName || '' });
   },
 
-  /* 日期 */
   onStartDateChange: function (e) { this.setData({ plannedStartDate: e.detail.value }); },
   onEndDateChange: function (e) { this.setData({ plannedEndDate: e.detail.value }); },
 
-  /* 急单 */
   onUrgencyTap: function (e) { this.setData({ urgencyLevel: e.currentTarget.dataset.v }); },
 
-  /* 业务 */
   onCompanyInput: function (e) { this.setData({ company: e.detail.value }); },
 
   onCategoryChange: function (e) {
@@ -210,7 +236,7 @@ Page({
   onPatternMakerInput: function (e) { this.setData({ patternMaker: e.detail.value }); },
   onMerchandiserInput: function (e) { this.setData({ merchandiser: e.detail.value }); },
 
-  /* 颜色添加 */
+  /* ═══ 颜色 / 码数 ═══ */
   onColorInput: function (e) { this.setData({ colorInput: e.detail.value }); },
   onColorAdd: function () {
     var v = (this.data.colorInput || '').trim();
@@ -232,7 +258,6 @@ Page({
     this._rebuildLines();
   },
 
-  /* 码数添加 */
   onSizeInput: function (e) { this.setData({ sizeInput: e.detail.value }); },
   onSizeAdd: function () {
     var v = (this.data.sizeInput || '').trim();
@@ -254,7 +279,7 @@ Page({
     this._rebuildLines();
   },
 
-  /* 铺量 */
+  /* ═══ 铺量 / 网格 ═══ */
   onQuickFillInput: function (e) { this.setData({ quickFillQty: parseInt(e.detail.value) || 0 }); },
   onQuickFill: function () {
     var q = this.data.quickFillQty;
@@ -265,7 +290,6 @@ Page({
     this._rebuildGrid();
   },
 
-  /* 网格矩阵单个输入 */
   onGridQtyInput: function (e) {
     var color = e.currentTarget.dataset.color;
     var size = e.currentTarget.dataset.size;
@@ -283,7 +307,6 @@ Page({
     }
   },
 
-  /* 旧版矩阵输入（保留兼容） */
   onLineQtyInput: function (e) {
     var idx = e.currentTarget.dataset.idx;
     var v = parseInt(e.detail.value) || 0;
@@ -292,7 +315,7 @@ Page({
     this._rebuildGrid();
   },
 
-  /* 单价 */
+  /* ═══ 定价模式（对标PC端五模：工序 / 尺码 / 外发整件 / 报价 / 手动） ═══ */
   onPricingModeChange: function (e) {
     var idx = e.detail.value;
     this.setData({ pricingMode: PRICING_MODES[idx] || 'PROCESS', pricingModeIdx: idx });
@@ -300,7 +323,7 @@ Page({
   },
   onManualPriceInput: function (e) { this.setData({ manualOrderUnitPrice: e.detail.value }); },
 
-  /* 提交 */
+  /* ═══ 提交 ═══ */
   onSubmit: function () {
     if (this.data.submitting) return;
     var d = this.data;
@@ -317,23 +340,18 @@ Page({
     }
     if (!hasQ) return wx.showToast({ title: '请填写下单数量', icon: 'none' });
 
-    var up = 0;
+    var up = parseFloat(d.computedUnitPrice) || 0;
     if (d.pricingMode === 'MANUAL') {
-      up = parseFloat(d.manualOrderUnitPrice) || 0;
-      if (up <= 0) return wx.showToast({ title: '请输入单价', icon: 'none' });
-    } else {
-      var pps = d.processPrices || [];
-      if (pps.length > 0) {
-        var total = 0;
-        pps.forEach(function (p) { total += parseFloat(p.unitPrice || p.price) || 0; });
-        up = total;
-      }
+      var mup = parseFloat(d.manualOrderUnitPrice) || 0;
+      if (mup <= 0) return wx.showToast({ title: '请输入单价', icon: 'none' });
+      up = mup;
     }
+    if (up <= 0) return wx.showToast({ title: '请选择定价方式', icon: 'none' });
 
     var self = this;
     wx.showModal({
       title: '确认下单',
-      content: '款号：' + d.styleNo + '\n数量：' + d.orderQuantity + '\n确认提交？',
+      content: '款号：' + d.styleNo + '\n数量：' + d.orderQuantity + '\n单价：¥' + up + '\n确认提交？',
       success: function (r) { if (r.confirm) self._doSubmit(up); }
     });
   },
@@ -353,6 +371,17 @@ Page({
       return { color: l.color, size: l.size, quantity: l.quantity, materialPriceSource: '物料采购系统', materialPriceAcquiredAt: new Date().toISOString(), materialPriceVersion: 'purchase.v1' };
     });
 
+    var pricingObj = {
+      pricingMode: d.pricingMode,
+      processBasedUnitPrice: d.processTotal || 0,
+      sizeBasedUnitPrice: d.processTotal || 0,
+      totalCostUnitPrice: d.quotationTotalCost || d.processTotal || 0,
+      quotationUnitPrice: d.quotationTotalPrice || 0,
+      suggestedQuotationUnitPrice: d.quotationTotalPrice || 0,
+      orderUnitPrice: unitPrice || 0,
+      sizeLabels: d.selectedSizes || [],
+    };
+
     var payload = {
       orderNo: d.orderNo, styleId: d.styleId, styleNo: d.styleNo, styleName: d.styleName,
       color: colors.join(','), size: sizes.join(','),
@@ -365,8 +394,10 @@ Page({
       productCategory: d.productCategory || null, patternMaker: d.patternMaker || null,
       urgencyLevel: d.urgencyLevel, plateType: d.plateType || null,
       orderBizType: d.orderBizType || null, orderQuantity: d.orderQuantity,
-      orderDetails: JSON.stringify({ lines: details, pricing: { pricingMode: d.pricingMode, orderUnitPrice: unitPrice || 0 } }),
-      factoryUnitPrice: unitPrice || 0, pricingMode: d.pricingMode,
+      orderDetails: JSON.stringify({ lines: details, pricing: pricingObj }),
+      factoryUnitPrice: unitPrice || 0,
+      quotationUnitPrice: d.quotationTotalPrice > 0 ? d.quotationTotalPrice : null,
+      pricingMode: d.pricingMode,
       plannedStartDate: d.plannedStartDate + 'T09:00:00',
       plannedEndDate: d.plannedEndDate + 'T18:00:00',
       scatterPricingMode: 'FOLLOW_ORDER'

@@ -1,10 +1,10 @@
 page { background-color: #f5f6fa; }
-.container { min-height: 100vh; }
+.container { padding: 0 var(--page-padding-x); min-height: 100vh; }
 
 .body { height: calc(100vh - 70px); }
 
 .sec {
-  margin: 8px 10px; padding: 12px 14px;
+  margin: var(--card-gap-y) 0; padding: 12rpx 14rpx;
   background: #fff; border-radius: 10px;
 }
 .sec-hd {
@@ -136,7 +136,7 @@ page { background-color: #f5f6fa; }
 /* 底部 */
 .bar {
   position: fixed; bottom: 0; left: 0; right: 0;
-  padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  padding: 10rpx 16rpx; padding-bottom: calc(10rpx + env(safe-area-inset-bottom));
   background: #fff; border-top: 1px solid #eee;
 }
 .bar-btn {

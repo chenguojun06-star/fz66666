@@ -341,7 +341,7 @@ export const buildPurchaseSheetHtml = (
             </div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-            ${styleImageUrl ? `<img loading="lazy" class="cover-img" src="${styleImageUrl}" alt="款式图" />` : ''}
+            ${styleImageUrl ? `<img class="cover-img" src="${styleImageUrl}" alt="款式图" />` : ''}
             <div class="actions no-print">
               <button class="ant-btn ant-btn-default" onclick="window.print()">打印</button>
               <button class="ant-btn ant-btn-primary" onclick="window.close()">关闭</button>

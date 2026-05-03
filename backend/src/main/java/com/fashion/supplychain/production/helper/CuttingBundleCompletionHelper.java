@@ -87,7 +87,8 @@ public class CuttingBundleCompletionHelper {
         long cuttingQty = 0;
         List<CuttingBundle> bundles = cuttingBundleMapper.selectList(new LambdaQueryWrapper<CuttingBundle>()
                 .select(CuttingBundle::getQuantity)
-                .eq(CuttingBundle::getProductionOrderId, orderId));
+                .eq(CuttingBundle::getProductionOrderId, orderId)
+                .ne(CuttingBundle::getSplitStatus, "split_parent"));
         if (bundles != null) {
             for (CuttingBundle b : bundles) {
                 if (b == null) continue;
@@ -101,16 +102,19 @@ public class CuttingBundleCompletionHelper {
     private long computeAlreadyScannedQuantity(String orderId, String requestId) {
         long already = 0;
         List<ScanRecord> otherCutting = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
-                .select(ScanRecord::getRequestId, ScanRecord::getQuantity)
+                .select(ScanRecord::getRequestId, ScanRecord::getQuantity, ScanRecord::getProcessName, ScanRecord::getProgressStage)
                 .eq(ScanRecord::getOrderId, orderId)
                 .in(ScanRecord::getScanType, Arrays.asList("production", "cutting"))
-                .eq(ScanRecord::getScanResult, "success")
-                .eq(ScanRecord::getProcessName, CUTTING_PROCESS_NAME));
+                .eq(ScanRecord::getScanResult, "success"));
         if (otherCutting != null) {
             for (ScanRecord r : otherCutting) {
                 if (r == null) continue;
                 String rid = r.getRequestId() == null ? null : r.getRequestId().trim();
                 if (StringUtils.hasText(rid) && requestId.equals(rid)) continue;
+                String pn = r.getProgressStage() == null ? null : r.getProgressStage().trim();
+                if (!StringUtils.hasText(pn)) pn = r.getProcessName() == null ? null : r.getProcessName().trim();
+                if (!StringUtils.hasText(pn)) continue;
+                if (!ProcessSynonymMapping.isEquivalent(CUTTING_PROCESS_NAME, pn)) continue;
                 int q = r.getQuantity() == null ? 0 : r.getQuantity();
                 if (q > 0) already += q;
             }

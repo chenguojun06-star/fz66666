@@ -3,7 +3,7 @@
   min-height: 100vh;
   background: radial-gradient(ellipse at 20% 0%, rgba(var(--color-primary-rgb,37,99,235),0.06) 0%, transparent 60%),
               var(--page-bg);
-  padding: 24rpx 24rpx calc(env(safe-area-inset-bottom) + 160rpx);
+  padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
 /* ---- info-card ---- */

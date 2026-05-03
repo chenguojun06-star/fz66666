@@ -459,7 +459,7 @@ async function printUCodeLabels(
     return `<div class="page">
       <div class="label">
         <div class="qr-col">
-          <img loading="lazy" src="${qrUrls[idx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/>
+          <img src="${qrUrls[idx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/>
         </div>
         <div class="info-col">
           <div class="ucode-row">${entry.qrContent}</div>

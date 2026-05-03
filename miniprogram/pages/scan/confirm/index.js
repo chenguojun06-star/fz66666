@@ -334,7 +334,7 @@ Page({
       this._emitRefresh();
 
       wx.redirectTo({
-        url: '/pages/cutting/task-detail/index?orderNo=' + encodeURIComponent(this.data.detail.orderNo) + '&styleNo=' + encodeURIComponent(this.data.detail.styleNo)
+        url: '/pages/cutting/bundle-detail/index?orderNo=' + encodeURIComponent(this.data.detail.orderNo) + '&styleNo=' + encodeURIComponent(this.data.detail.styleNo)
       });
     } catch (e) {
       wx.hideLoading();

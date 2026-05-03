@@ -30,7 +30,7 @@ const system = {
     return ok('/api/system/user/online-count', 'GET', {});
   },
   listOrganizationDepartments() {
-    return ok('/api/system/organization/departments', 'GET', {});
+    return ok('/api/system/organization/production-groups', 'GET', {});
   },
   changePassword(data) {
     return ok('/api/system/user/me/change-password', 'POST', data || {});

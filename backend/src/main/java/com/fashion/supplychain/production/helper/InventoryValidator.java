@@ -153,20 +153,7 @@ public class InventoryValidator {
      */
     private int calculateTotalCuttingQuantity(String orderId) {
         try {
-            QueryWrapper<CuttingBundle> qw = new QueryWrapper<CuttingBundle>()
-                    .select("COALESCE(SUM(quantity), 0) as totalQty")
-                    .eq("production_order_id", orderId);
-            List<Map<String, Object>> result = cuttingBundleService.listMaps(qw);
-            if (result != null && !result.isEmpty()) {
-                Object val = result.get(0).get("totalQty");
-                if (val instanceof Number) {
-                    int total = ((Number) val).intValue();
-                    log.debug("计算裁剪总量(SQL聚合): orderId={}, totalQty={}", orderId, total);
-                    return total;
-                }
-            }
-            log.debug("订单没有裁剪菲号: orderId={}", orderId);
-            return 0;
+            return cuttingBundleService.sumEffectiveQuantity(orderId);
         } catch (Exception e) {
             log.error("计算裁剪总量失败: orderId={}", orderId, e);
             return -1;

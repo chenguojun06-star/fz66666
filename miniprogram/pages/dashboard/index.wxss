@@ -6,7 +6,7 @@
 
 .page {
   min-height: 100vh;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+  padding: 0 var(--page-padding-x) calc(env(safe-area-inset-bottom) + 20px);
   background: var(--color-bg-page);
 }
 
@@ -15,7 +15,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 12rpx 0;
 }
 .today-left {
   display: flex;
@@ -42,13 +42,13 @@
 /* ============ 4 摘要卡片 ============ */
 .stats-row {
   display: flex;
-  gap: 8px;
-  padding: 0 16px 12px;
+  gap: 8rpx;
+  padding: 0 0 12rpx;
 }
 .stat-card {
   flex: 1;
   text-align: center;
-  padding: 12px 4px;
+  padding: 12rpx 4rpx;
   border-radius: 10px;
   background: var(--color-bg-card);
 }
@@ -84,9 +84,7 @@
 .skel-line--long  { width: 70%; height: 10px; }
 
 /* ============ 搜索栏 ============ */
-.search-bar {
-  padding: 0 16px 12px;
-}
+.search-bar { padding: 0 0 12rpx; }
 .search-box {
   display: flex;
   align-items: center;
@@ -107,10 +105,9 @@
   padding: 0 4px;
 }
 
-/* ============ 状态过滤 ============ */
 .filter-scroll {
   white-space: nowrap;
-  padding: 0 16px 12px;
+  padding: 0 0 12rpx;
 }
 .filter-pill {
   display: inline-flex;
@@ -152,9 +149,7 @@
 .filter-pill--done.filter-pill--on .filter-num { color: #fff; }
 
 /* ============ 订单列表 ============ */
-.order-list {
-  padding: 0 16px;
-}
+.order-list { padding: 0; }
 
 /* ============ 订单卡片 ============ */
 .order-card {

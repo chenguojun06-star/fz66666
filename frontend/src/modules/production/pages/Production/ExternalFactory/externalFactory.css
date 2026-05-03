@@ -1,5 +1,12 @@
 /* 外发工厂订单 — 覆盖 style-smart 共享样式 */
 
+/* ── 容器撑满可用高度，让 Virtuoso 虚拟列表自适配 ── */
+.ef-compact {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
 /* ── 行高压低 ── */
 .ef-compact .style-smart-row {
   padding: 10px 14px;
@@ -244,6 +251,38 @@
 .ef-compact .style-smart-row__overview .ant-progress {
   flex: 0 0 60px;
   width: 60px;
+}
+
+/* ── 外发工厂 Tabs flex 布局：让 Virtuoso 自适应填充可用高度 ── */
+.ef-tabs.ant-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ef-tabs .ant-tabs-nav {
+  flex-shrink: 0;
+}
+
+.ef-tabs .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ef-tabs .ant-tabs-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.ef-tabs .ant-tabs-tabpane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 进度条纤细化 */

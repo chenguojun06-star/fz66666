@@ -88,8 +88,10 @@ public class FactoryOrchestrator {
             throw new NoSuchElementException("供应商不存在");
         }
         Long currentTenantId = UserContext.tenantId();
-        if (!UserContext.isSuperAdmin() && currentTenantId != null && !currentTenantId.equals(factory.getTenantId())) {
-            throw new IllegalStateException("无权访问其他租户的工厂信息");
+        if (!UserContext.isSuperAdmin()) {
+            if (currentTenantId == null || !currentTenantId.equals(factory.getTenantId())) {
+                throw new IllegalStateException("无权访问其他租户的工厂信息");
+            }
         }
         applySnapshot(factory, organizationUnitBindingHelper.getFactorySnapshot(factory));
         return factory;

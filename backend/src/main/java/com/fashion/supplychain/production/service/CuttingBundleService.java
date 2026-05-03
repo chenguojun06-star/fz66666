@@ -18,5 +18,7 @@ public interface CuttingBundleService extends IService<CuttingBundle> {
 
     Map<String, Object> summarize(String orderNo, String orderId);
 
+    int sumEffectiveQuantity(String orderId);
+
     void deleteByOrderId(String orderId);
 }

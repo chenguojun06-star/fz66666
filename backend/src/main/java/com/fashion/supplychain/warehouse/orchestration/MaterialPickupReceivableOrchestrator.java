@@ -269,8 +269,10 @@ public class MaterialPickupReceivableOrchestrator {
         if (record == null || record.getDeleteFlag() != null && record.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("记录不存在");
         }
-        if (tenantId != null && !String.valueOf(tenantId).equals(record.getTenantId())) {
-            throw new SecurityException("无权操作该记录");
+        if (!UserContext.isSuperAdmin()) {
+            if (tenantId == null || !String.valueOf(tenantId).equals(record.getTenantId())) {
+                throw new SecurityException("无权操作该记录");
+            }
         }
         return record;
     }

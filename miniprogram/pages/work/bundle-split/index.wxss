@@ -2,7 +2,7 @@
 
 /* ======== 搜索栏（两个面板共用）======== */
 .search-bar-wrap {
-  padding: 24rpx 32rpx 8rpx;
+  padding: 24rpx 0 8rpx;
 }
 .search-bar-row {
   display: flex;
@@ -59,7 +59,7 @@
 .container {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  padding: 0 var(--page-padding-x) calc(40rpx + env(safe-area-inset-bottom));
 }
 
 /* ======== Tab 切换栏 ======== */
@@ -98,7 +98,7 @@
   display: flex;
   align-items: center;
   gap: 12rpx;
-  margin: 24rpx 32rpx 16rpx;
+  margin: 24rpx 0 16rpx;
   padding: 20rpx 24rpx;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
@@ -151,9 +151,7 @@
 }
 
 /* ======== 菲号列表 ======== */
-.bundle-list {
-  padding: 0 32rpx;
-}
+.bundle-list { padding: 0; }
 .bundle-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
@@ -376,9 +374,7 @@
 .confirm-btn { background: var(--color-success); }
 
 /* ======== 待确认列表 ======== */
-.pending-list {
-  padding: 0 32rpx;
-}
+.pending-list { padding: 0; }
 .pending-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
@@ -427,9 +423,7 @@
 }
 
 /* ======== 工序列表（Panel 2）======== */
-.process-list {
-  padding: 0 32rpx;
-}
+.process-list { padding: 0; }
 .process-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
@@ -494,7 +488,7 @@
 
 /* ======== 记录区域（拆分记录 + 调整历史共用）======== */
 .records-section {
-  margin: 24rpx 32rpx 0;
+  margin: 24rpx 0 0;
 }
 .records-header {
   display: flex;

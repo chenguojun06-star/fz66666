@@ -44,7 +44,7 @@
 
       <view class="form-group">
         <text class="form-label">结算单ID</text>
-        <input class="form-input" placeholder="请输入结算单ID" value="{{settlementId}}" bindinput="onSettlementIdInput" />
+        <input class="form-input {{settlementId ? 'form-input-readonly' : ''}}" placeholder="请输入结算单ID" value="{{settlementId}}" bindinput="onSettlementIdInput" disabled="{{!!settlementId}}" />
       </view>
 
       <view class="form-group">

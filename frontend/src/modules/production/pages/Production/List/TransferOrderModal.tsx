@@ -268,7 +268,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
                             value={newPrice != null ? newPrice : undefined}
                             onChange={(val) => handlePriceChange(code, val)}
                             style={{ width: 130 }}
-                            addonAfter="元"
+                            suffix="元"
                           />
                         </td>
                       </tr>

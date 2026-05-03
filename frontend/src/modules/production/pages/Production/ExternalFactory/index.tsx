@@ -204,13 +204,13 @@ const ExternalFactory: React.FC = () => {
           onSelect={handleFactorySelect}
           loading={loading}
         />
-        <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-          <Tabs defaultActiveKey="orders" items={[
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, padding: 16 }}>
+          <Tabs defaultActiveKey="orders" className="ef-tabs" items={[
             {
               key: 'orders',
               label: <span><ShopOutlined /> 订单管理</span>,
               children: (
-                <>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
                   <StickyFilterBar>
                   <Card
                     size="small"
@@ -263,13 +263,13 @@ const ExternalFactory: React.FC = () => {
                       onPageChange={handlePageChange}
                     />
                   )}
-                </>
+                </div>
               ),
             },
             {
               key: 'shipments',
               label: <span><InboxOutlined /> 收货管理</span>,
-              children: <FactoryShipmentTab selectedFactoryId={selectedFactoryId} />,
+              children: <div style={{ overflow: 'auto', height: '100%' }}><FactoryShipmentTab selectedFactoryId={selectedFactoryId} /></div>,
             },
           ]} />
         </div>

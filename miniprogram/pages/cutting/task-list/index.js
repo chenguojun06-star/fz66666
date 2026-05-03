@@ -106,7 +106,7 @@ Page({
     const orderNo = task.productionOrderNo || task.orderNo || '';
     const orderId = task.productionOrderId || task.orderId || '';
     wx.navigateTo({
-      url: `/pages/cutting/task-detail/index?taskId=${task.id}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
+      url: `/pages/cutting/bundle-detail/index?taskId=${task.id}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
     });
   },
 

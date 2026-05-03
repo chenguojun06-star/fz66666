@@ -132,7 +132,7 @@ export function useCuttingBundles({
     setListLoading(true);
     try {
       const res = await api.get<{ code: number; message: string; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
-        params: { ...queryParams, orderNo: activeTask.productionOrderNo },
+        params: { ...queryParams, orderNo: activeTask.productionOrderNo, splitStatus: '' },
       });
       if (res.code === 200) {
         const records = res.data.records || [];
@@ -372,7 +372,7 @@ export function useCuttingBundles({
       if (!activeTask?.productionOrderNo) return null;
       try {
         const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
-          params: { ...queryParams, orderNo: activeTask.productionOrderNo }
+          params: { ...queryParams, orderNo: activeTask.productionOrderNo, splitStatus: '' }
         });
         if (res.code === 200) return { records: res.data.records || [], total: res.data.total || 0 };
         return null;

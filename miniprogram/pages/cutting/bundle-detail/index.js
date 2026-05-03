@@ -1,12 +1,14 @@
 const api = require('../../../utils/api');
-const { parseProductionOrderLines } = require('../../../utils/orderParser');
+const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
+const blePrinter = require('../../../utils/blePrinter');
 
 /**
  * 裁剪单明细页 bundle-detail
  * 入参：orderNo（订单号）
- * 功能：展示订单的下单数量、裁货数量、成品数量的颜色×尺码矩阵，支持详细/简单模式切换
+ * 功能：展示订单的下单数量、裁货数量、菲号明细，支持菲号标签打印
  */
 Page({
   data: {
@@ -23,9 +25,6 @@ Page({
     /* 订单基础信息 */
     orderInfo: null,
     coverImage: '',
-    processCount: 0,
-    processList: [],       // 工序详情列表
-    showProcessList: false, // 是否展开工序列表
 
     /* 模式：detailed = 详细（矩阵），simple = 简单（汇总行） */
     viewMode: 'detailed',
@@ -48,6 +47,57 @@ Page({
 
     /* 菲号标签预览弹层 */
     showBundlePrintModal: false,
+
+    /* 打印尺寸配置（与PC端 useCuttingPrint 一致） */
+    printConfig: {
+      orientation: 'horizontal',
+      paperWidth: 7,
+      paperHeight: 4,
+      qrSize: 84,
+    },
+    configFocused: '',
+
+    /* ── 裁剪分扎表单（无菲号时显示，与 PC 端 CuttingRatioPanel 一致）── */
+    showCuttingForm: false,
+    bundleSize: 20,
+    excessRate: '',
+    cuttingOrderLines: [],
+    cuttingLinesHasData: false,
+    cuttingSummary: { totalOrdered: 0, totalCutting: 0, totalBundles: 0 },
+    cuttingSubmitting: false,
+
+    /* ── Tab: detail(菲号明细) | transfer(转单) ── */
+    activeTab: 'detail',
+
+    /* ── 转单 Panel 数据 ── */
+    transferTab: 'factory',
+    transferMode: 'whole',
+    transferModes: [{ id: 'whole', name: '整单转' }, { id: 'bundle', name: '菲号裁片转' }],
+    _tfBundles: [],
+    _tfBundlesLoading: false,
+    selectedBundles: {},
+    allSelected: false,
+    selectedBundleCount: 0,
+    processes: [],
+    processesLoading: false,
+    selectedProcessCodes: {},
+    allProcessSelected: false,
+    selectedProcessCount: 0,
+    priceOverrides: {},
+    factories: [],
+    factoriesLoading: false,
+    factoryKeyword: '',
+    factoryPage: 1,
+    factoryHasMore: false,
+    selectedFactory: null,
+    users: [],
+    usersLoading: false,
+    userKeyword: '',
+    userPage: 1,
+    userHasMore: false,
+    selectedUser: null,
+    remark: '',
+    submitting: false,
   },
 
   onLoad(options) {
@@ -60,6 +110,10 @@ Page({
 
     if (orderNo) {
       this.loadAll(orderNo);
+      if (options.tab === 'transfer') {
+        this.setData({ activeTab: 'transfer' });
+        setTimeout(() => this._initTransferPanel(), 800);
+      }
     } else {
       // 从首页直接进来（无参数）→ 显示订单列表供选择
       this.setData({ showOrderList: true });
@@ -151,19 +205,11 @@ Page({
   /** 加载订单信息 + 工序数 + 下单矩阵 */
   async loadOrderInfo(orderNo) {
     try {
-      const [orderRes, processRes] = await Promise.all([
-        api.production.orderDetailByOrderNo(orderNo).catch(() => null),
-        api.production.getProcessConfig(orderNo).catch(() => null),
-      ]);
+      const orderRes = await api.production.orderDetailByOrderNo(orderNo).catch(() => null);
 
       const order = this._extractOrder(orderRes);
-      const processCount = this._extractProcessCount(processRes);
-      const processList = this._extractProcessList(processRes);
 
-      if (!order) {
-        this.setData({ processCount, processList });
-        return;
-      }
+      if (!order) return;
 
       const coverImage = getAuthedImageUrl(order.styleImageUrl || order.coverImage || order.imgUrl || '');
       const orderLines = parseProductionOrderLines(order);
@@ -175,8 +221,6 @@ Page({
       this.setData({
         orderInfo: order,
         coverImage,
-        processCount,
-        processList,
         orderTotal,
         orderMatrix,
         orderSimpleRows,
@@ -192,17 +236,27 @@ Page({
       const res = await api.production.listBundles(orderNo, 1, 500).catch(() => null);
       const bundles = this._extractList(res);
 
-      if (!bundles.length) return;
+      if (!bundles.length) {
+        this.setData({
+          cuttingTotal: 0, cuttingExcess: 0, maxBedNo: '-',
+          operatorName: '-', latestBundleTime: '-',
+          hasBundles: false, _rawBundles: [],
+          cuttingMatrix: { sizes: [], rows: [] },
+          cuttingSimpleRows: [],
+          showCuttingForm: true,
+        });
+        this._parseAndSetCuttingLines(this.data.orderInfo);
+        return;
+      }
 
-      // 聚合颜色×尺码矩阵
+      const cuttingTotal = bundles.reduce((s, b) => s + (b.quantity || 0), 0);
+
       const lines = [];
       bundles.forEach(b => {
         if (b.color && b.size) {
           lines.push({ color: b.color, size: b.size, quantity: b.quantity || 0 });
         }
       });
-
-      const cuttingTotal = lines.reduce((s, l) => s + l.quantity, 0);
       const { sizes, matrix } = this._buildMatrixData(lines);
       const cuttingMatrix = this._toSkuMatrix(matrix, sizes);
       const cuttingSimpleRows = this._toSimpleRows(matrix);
@@ -211,9 +265,9 @@ Page({
       const bedNos = bundles.map(b => parseInt(b.bedNo, 10) || 0).filter(n => n > 0);
       const maxBedNo = bedNos.length ? Math.max(...bedNos) : '-';
 
-      // 操作人（使用菲号创建者姓名，非最后修改人）
-      const creators = bundles.filter(b => b.creatorName);
-      const operatorName = creators.length ? creators[creators.length - 1].creatorName : '-';
+      // 操作人（使用 operatorName，后端 select 返回此字段）
+      const withOp = bundles.filter(b => b.operatorName);
+      const operatorName = withOp.length ? withOp[withOp.length - 1].operatorName : '-';
 
       // 编菲时间（最新 createTime）
       const times = bundles
@@ -252,23 +306,17 @@ Page({
     this.setData({ viewMode: mode });
   },
 
-  onTransfer() {
-    const { orderNo, orderId } = this.data;
-    if (!orderNo) return toast.error('数据未加载完成');
-    wx.navigateTo({
-      url: '/pages/cutting/transfer/index?orderId=' + encodeURIComponent(orderId || '') + '&orderNo=' + encodeURIComponent(orderNo),
-    });
+  onTabSwitch(e) {
+    var tab = e.currentTarget.dataset.tab;
+    this.setData({ activeTab: tab });
+    if (tab === 'transfer') {
+      this._initTransferPanel();
+    }
   },
 
-  onGoProcess() {
-    const { orderNo, processCount } = this.data;
-    if (!orderNo) return;
-    if (processCount === 0) {
-      toast.info('暂无工序信息');
-      return;
-    }
-    // 展开/折叠工序列表
-    this.setData({ showProcessList: !this.data.showProcessList });
+  onTransfer() {
+    this.setData({ activeTab: 'transfer' });
+    this._initTransferPanel();
   },
 
   /* ─── 菲号标签预览 & 打印 ─── */
@@ -281,6 +329,99 @@ Page({
       return;
     }
     this.setData({ showBundlePrintModal: true });
+    this._generateQrImages(_rawBundles);
+  },
+
+  onPaperWidthInput(e) {
+    var v = parseFloat(e.detail.value);
+    if (isNaN(v) || v < 3) v = 3;
+    if (v > 30) v = 30;
+    this.setData({ 'printConfig.paperWidth': v });
+  },
+
+  onPaperHeightInput(e) {
+    var v = parseFloat(e.detail.value);
+    if (isNaN(v) || v < 2) v = 2;
+    if (v > 20) v = 20;
+    this.setData({ 'printConfig.paperHeight': v });
+  },
+
+  onQrSizeInput(e) {
+    var v = parseInt(e.detail.value, 10);
+    if (isNaN(v) || v < 40) v = 40;
+    if (v > 200) v = 200;
+    this.setData({ 'printConfig.qrSize': v });
+    var bundles = this.data._rawBundles || [];
+    for (var i = 0; i < bundles.length; i++) {
+      bundles[i]._qrImg = null;
+    }
+    this.setData({ _rawBundles: bundles });
+    var that = this;
+    setTimeout(function () { that._generateQrImages(bundles); }, 200);
+  },
+
+  onPaperWidthInputFocus() { this.setData({ configFocused: 'w' }); },
+  onPaperHeightInputFocus() { this.setData({ configFocused: 'h' }); },
+  onQrSizeInputFocus() { this.setData({ configFocused: 'q' }); },
+  onConfigBarTap() { /* 阻止事件穿透到卡片 */ },
+  onConfigItemTap() { /* 阻止事件穿透到卡片 */ },
+
+  _generateQrImages(bundles) {
+    var that = this;
+    var drawQrcode = require('../../../utils/weapp-qrcode');
+    var qrSize = that.data.printConfig.qrSize || 84;
+
+    var query = wx.createSelectorQuery();
+    query.select('#qrCanvas').fields({ node: true, size: true }).exec(function (res) {
+      if (!res || !res[0] || !res[0].node) {
+        console.warn('[bundle-detail] canvas node not found');
+        return;
+      }
+      var canvas = res[0].node;
+
+      var idx = 0;
+      function drawNext() {
+        if (idx >= bundles.length) return;
+        var b = bundles[idx];
+        if (!b.qrCode || b._qrImg) { idx++; drawNext(); return; }
+
+        try {
+          drawQrcode({
+            canvas: canvas,
+            canvasId: 'qrCanvas',
+            width: qrSize,
+            padding: 10,
+            background: '#ffffff',
+            foreground: '#000000',
+            text: b.qrCode,
+          });
+        } catch (e) {
+          console.warn('[bundle-detail] QR draw error', e);
+          idx++;
+          drawNext();
+          return;
+        }
+
+        setTimeout(function () {
+          wx.canvasToTempFilePath({
+            canvas: canvas,
+            x: 0, y: 0, width: qrSize, height: qrSize,
+            destWidth: qrSize, destHeight: qrSize,
+            success: function (tmpRes) {
+              b._qrImg = tmpRes.tempFilePath;
+              that.setData({ ['_rawBundles[' + idx + ']._qrImg']: tmpRes.tempFilePath });
+              idx++;
+              drawNext();
+            },
+            fail: function () {
+              idx++;
+              drawNext();
+            }
+          });
+        }, 150);
+      }
+      drawNext();
+    });
   },
 
   onCloseBundlePrint() {
@@ -288,114 +429,42 @@ Page({
   },
 
   onDoBundlePrint() {
-    const d = this.data;
-    const bundles = d._rawBundles || [];
+    var d = this.data;
+    var bundles = d._rawBundles || [];
     if (!bundles.length) return;
-    var html = this._buildPrintText(bundles);
-    this._bluetoothPrint(html);
-  },
+    var cfg = d.printConfig || {};
+    var paperW = cfg.paperWidth || 7;
+    var paperH = cfg.paperHeight || 4;
+    var minDim = Math.min(Math.round(paperW * 10), Math.round(paperH * 10));
+    var qrCellSize = 5;
+    if (minDim <= 35) qrCellSize = 3;
+    else if (minDim <= 50) qrCellSize = 4;
+    else if (minDim <= 80) qrCellSize = 5;
+    else qrCellSize = 6;
 
-  _buildPrintText(bundles) {
-    var lines = [];
-    lines.push('══════════════════');
-    lines.push('订单：' + this.data.orderNo);
-    lines.push('款号：' + (this.data.orderInfo && this.data.orderInfo.styleNo || '-'));
-    lines.push('══════════════════');
-    lines.push('');
-    bundles.forEach(function (b) {
-      lines.push('【F' + (b.bundleNo != null ? b.bundleNo : '-') + '】');
-      lines.push('  颜色：' + (b.color || '-'));
-      lines.push('  尺码：' + (b.size || '-'));
-      lines.push('  数量：' + (b.quantity || 0) + ' 件');
-      lines.push('  ──────────────');
-    });
-    lines.push('');
-    lines.push('打印时间：' + this._nowStr());
-    return lines.join('\n');
-  },
-
-  _nowStr() {
-    var d = new Date();
-    var pad = function (n) { return String(n).padStart(2, '0'); };
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-      + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-  },
-
-  /* ─── 蓝牙打印 ─── */
-
-  _bluetoothPrint(html) {
-    wx.openBluetoothAdapter({
-      success: function () {
-        wx.startBluetoothDevicesDiscovery({
-          success: function () {
-            wx.showLoading({ title: '搜索打印机...' });
-            setTimeout(function () {
-              wx.stopBluetoothDevicesDiscovery();
-              wx.getBluetoothDevices({
-                success: function (res) {
-                  wx.hideLoading();
-                  var devices = (res.devices || []).filter(function (d) {
-                    return d.name && d.name.length > 0;
-                  });
-                  if (!devices.length) {
-                    wx.showToast({ title: '未找到蓝牙打印机', icon: 'none' });
-                    return;
-                  }
-                  wx.showActionSheet({
-                    itemList: devices.map(function (d) { return d.name; }),
-                    success: function (tapRes) {
-                      var device = devices[tapRes.tapIndex];
-                      this._connectBtPrinter(device.deviceId, html);
-                    }.bind(this)
-                  });
-                }.bind(this),
-                fail: function () { wx.hideLoading(); }
-              });
-            }.bind(this), 3000);
-          }.bind(this),
-          fail: function () { wx.showToast({ title: '请开启蓝牙', icon: 'none' }); }
-        });
-      }.bind(this),
-      fail: function () { wx.showToast({ title: '请开启手机蓝牙', icon: 'none' }); }
+    blePrinter.blePrint(bundles, d.orderNo, d.orderInfo, {
+      qrCellSize: qrCellSize,
+      orientation: cfg.orientation,
+      paperWidth: paperW,
+      paperHeight: paperH,
+      qrPxSize: cfg.qrSize,
+    }).catch(function (err) {
+      toast.error(err.message || '打印失败');
     });
   },
 
-  _connectBtPrinter(deviceId, html) {
-    wx.createBLEConnection({
-      deviceId: deviceId,
-      success: function () {
-        wx.getBLEDeviceServices({
-          deviceId: deviceId,
-          success: function (res) {
-            var services = res.services || [];
-            if (!services.length) { wx.showToast({ title: '打印机服务不可用', icon: 'none' }); return; }
-            var serviceId = services[0].uuid;
-            wx.getBLEDeviceCharacteristics({
-              deviceId: deviceId,
-              serviceId: serviceId,
-              success: function (charRes) {
-                var chars = charRes.characteristics || [];
-                var writeChar = chars.find(function (c) { return c.properties.write; });
-                if (!writeChar) { wx.showToast({ title: '打印机不支持写入', icon: 'none' }); return; }
-                var plainText = html.trim();
-                var buffer = new ArrayBuffer(plainText.length);
-                var view = new Uint8Array(buffer);
-                for (var i = 0; i < plainText.length; i++) { view[i] = plainText.charCodeAt(i); }
-                wx.writeBLECharacteristicValue({
-                  deviceId: deviceId, serviceId: serviceId, characteristicId: writeChar.uuid, value: buffer,
-                  success: function () {
-                    wx.showToast({ title: '打印指令已发送', icon: 'success' });
-                    setTimeout(function () { wx.closeBLEConnection({ deviceId: deviceId }); }, 2000);
-                  },
-                  fail: function () { wx.showToast({ title: '打印失败', icon: 'none' }); }
-                });
-              }
-            });
-          }
-        });
-      },
-      fail: function () { wx.showToast({ title: '连接打印机失败', icon: 'none' }); }
-    });
+  onOrientationChange(e) {
+    var orient = e.currentTarget.dataset.orient;
+    var cfg = this.data.printConfig;
+    if (cfg.orientation === orient) return;
+    var newCfg;
+    if (orient === 'vertical') {
+      newCfg = { orientation: 'vertical', paperWidth: 4, paperHeight: 6, qrSize: 72 };
+    } else {
+      newCfg = { orientation: 'horizontal', paperWidth: 7, paperHeight: 4, qrSize: 84 };
+    }
+    this.setData({ printConfig: newCfg });
+    this._generateQrImages(this.data._rawBundles);
   },
 
   previewImage() {
@@ -415,21 +484,6 @@ Page({
     if (Array.isArray(res) && res.length) return res[0];
     if (res.id) return res;
     return null;
-  },
-
-  _extractProcessCount(res) {
-    if (!res) return 0;
-    if (Array.isArray(res)) return res.length;
-    if (res.processes && Array.isArray(res.processes)) return res.processes.length;
-    if (res.total) return res.total;
-    return 0;
-  },
-
-  _extractProcessList(res) {
-    if (!res) return [];
-    if (Array.isArray(res)) return res;
-    if (res.processes && Array.isArray(res.processes)) return res.processes;
-    return [];
   },
 
   _extractList(res) {
@@ -494,5 +548,463 @@ Page({
     } catch (e) {
       return str.substring(0, 16);
     }
+  },
+
+  /* =================== 转单 Panel =================== */
+
+  _initTransferPanel() {
+    var d = this.data;
+    if (d.activeTab !== 'transfer') return;
+    this._tfLoadBundles();
+    this._tfLoadProcesses();
+  },
+
+  onTransferModeChange(e) {
+    var mode = e.currentTarget.dataset.mode;
+    this.setData({ transferMode: mode, selectedBundles: {}, allSelected: false, selectedBundleCount: 0 });
+  },
+
+  /* ── 菲号选择 ── */
+
+  _tfLoadBundles() {
+    var that = this;
+    var d = that.data;
+    that.setData({ _tfBundlesLoading: true });
+
+    api.production.orderDetailByOrderNo(d.orderNo).then(function (res) {
+      var order = Array.isArray(res) ? res[0] : (res && res.records ? res.records[0] : res);
+      var bundles = (order && order.bundles) || (order && order.cuttingBundles) || [];
+      bundles = bundles.filter(function (b) {
+        return !b.receiveStatus || (b.receiveStatus !== 'FINISHED' && b.receiveStatus !== 'TRANSFERRED');
+      });
+      var list = bundles.map(function (b) {
+        return {
+          id: b.id || b.bundleNo,
+          bundleLabel: b.bundleLabel || b.bundleNo,
+          bundleNo: b.bundleNo || b.id,
+          qrCode: b.qrCode,
+          color: b.color,
+          size: b.size,
+          quantity: b.quantity,
+          _disabled: !!(b.receiveStatus || b.status),
+          _statusCn: b.receiveStatus ? '已领取' : '',
+        };
+      });
+      that.setData({ _tfBundles: list, _tfBundlesLoading: false });
+    }).catch(function () {
+      that.setData({ _tfBundlesLoading: false });
+    });
+  },
+
+  onToggleAllBundles() {
+    var d = this.data;
+    var bundles = d._tfBundles;
+    var selected = {};
+    var cnt = 0;
+    if (!d.allSelected) {
+      bundles.forEach(function (b) {
+        if (!b._disabled) { selected[b.id] = true; cnt++; }
+      });
+    }
+    this.setData({ selectedBundles: selected, allSelected: !d.allSelected, selectedBundleCount: cnt });
+  },
+
+  onToggleBundle(e) {
+    var id = e.currentTarget.dataset.id;
+    var d = this.data;
+    var selected = {};
+    Object.keys(d.selectedBundles).forEach(function (k) { selected[k] = d.selectedBundles[k]; });
+    if (selected[id]) { delete selected[id]; } else { selected[id] = true; }
+    var cnt = Object.keys(selected).length;
+    this.setData({
+      selectedBundles: selected,
+      selectedBundleCount: cnt,
+      allSelected: cnt > 0 && cnt === d._tfBundles.filter(function (b) { return !b._disabled; }).length,
+    });
+  },
+
+  /* ── 工序单价 ── */
+
+  _tfLoadProcesses() {
+    var that = this;
+    var d = that.data;
+    that.setData({ processesLoading: true });
+
+    api.production.queryOrderProcesses(d.orderNo).then(function (res) {
+      var list = Array.isArray(res) ? res : (res && res.records) || [];
+      var processes = list.map(function (p) {
+        var price = Number(p.unitPrice || p.price || 0);
+        return {
+          processCode: p.processCode || p.code || '-',
+          processName: p.processName || p.name || '-',
+          unitPrice: price,
+          priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
+          pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
+          progressStage: p.progressStage || p.stage || '-',
+        };
+      });
+      that.setData({ processes: processes, processesLoading: false });
+    }).catch(function () {
+      that.setData({ processes: [], processesLoading: false });
+    });
+  },
+
+  onToggleAllProcesses() {
+    var d = this.data;
+    var allCodes = {};
+    var cnt = 0;
+    if (!d.allProcessSelected) {
+      d.processes.forEach(function (p) { allCodes[p.processCode] = true; cnt++; });
+    }
+    this.setData({ selectedProcessCodes: allCodes, allProcessSelected: !d.allProcessSelected, selectedProcessCount: cnt });
+  },
+
+  onToggleTransferProcess(e) {
+    var code = e.currentTarget.dataset.code;
+    var d = this.data;
+    var selected = {};
+    Object.keys(d.selectedProcessCodes).forEach(function (k) { selected[k] = d.selectedProcessCodes[k]; });
+    if (selected[code]) { delete selected[code]; } else { selected[code] = true; }
+    var cnt = Object.keys(selected).length;
+    this.setData({
+      selectedProcessCodes: selected,
+      selectedProcessCount: cnt,
+      allProcessSelected: cnt > 0 && cnt === d.processes.length,
+    });
+  },
+
+  onPriceInput(e) {
+    var code = e.currentTarget.dataset.code;
+    var v = e.detail.value;
+    var d = this.data;
+    var overrides = {};
+    Object.keys(d.priceOverrides).forEach(function (k) { overrides[k] = d.priceOverrides[k]; });
+    if (v === '' || v === null || v === undefined) { delete overrides[code]; } else {
+      var n = parseFloat(v);
+      if (!isNaN(n) && n >= 0) overrides[code] = n;
+    }
+    this.setData({ priceOverrides: overrides });
+  },
+
+  /* ── 工厂/人员 Tab ── */
+
+  onTransferTabChange(e) {
+    this.setData({ transferTab: e.currentTarget.dataset.tab });
+  },
+
+  /* ── 工厂搜索 ── */
+
+  _tfLoadFactories() {
+    var that = this;
+    var d = that.data;
+    if (!d.factoryKeyword) return;
+    that.setData({ factoriesLoading: true });
+
+    api.production.transferSearchFactories(d.factoryKeyword, d.factoryPage || 1, 20).then(function (res) {
+      var list = (res && res.list) || (Array.isArray(res) ? res : []);
+      var factories = (d.factoryPage || 1) > 1 ? d.factories.concat(list) : list;
+      that.setData({
+        factories: factories,
+        factoriesLoading: false,
+        factoryHasMore: (res && res.hasMore) || list.length >= 20,
+      });
+    }).catch(function () {
+      that.setData({ factoriesLoading: false });
+    });
+  },
+
+  onFactoryKeywordInput(e) {
+    this.setData({ factoryKeyword: e.detail.value, factoryPage: 1, factories: [] });
+    this._tfLoadFactories();
+  },
+
+  onSelectFactory(e) {
+    var factory = e.currentTarget.dataset.factory;
+    this.setData({ selectedFactory: factory });
+  },
+
+  onLoadMoreFactories() {
+    var d = this.data;
+    if (d.factoriesLoading || !d.factoryHasMore) return;
+    var nextPage = (d.factoryPage || 1) + 1;
+    this.setData({ factoryPage: nextPage });
+    this._tfLoadFactories();
+  },
+
+  /* ── 人员搜索 ── */
+
+  _tfLoadUsers() {
+    var that = this;
+    var d = that.data;
+    if (!d.userKeyword) return;
+    that.setData({ usersLoading: true });
+
+    api.production.transferSearchUsers(d.userKeyword, d.userPage || 1, 20).then(function (res) {
+      var list = (res && res.list) || (Array.isArray(res) ? res : []);
+      var users = (d.userPage || 1) > 1 ? d.users.concat(list) : list;
+      that.setData({
+        users: users,
+        usersLoading: false,
+        userHasMore: (res && res.hasMore) || list.length >= 20,
+      });
+    }).catch(function () {
+      that.setData({ usersLoading: false });
+    });
+  },
+
+  onUserKeywordInput(e) {
+    this.setData({ userKeyword: e.detail.value, userPage: 1, users: [] });
+    this._tfLoadUsers();
+  },
+
+  onSelectUser(e) {
+    var user = e.currentTarget.dataset.user;
+    this.setData({ selectedUser: user });
+  },
+
+  onLoadMoreUsers() {
+    var d = this.data;
+    if (d.usersLoading || !d.userHasMore) return;
+    var nextPage = (d.userPage || 0) + 1;
+    this.setData({ userPage: nextPage });
+    this._tfLoadUsers();
+  },
+
+  onRemarkInput(e) {
+    this.setData({ remark: e.detail.value });
+  },
+
+  /* ── 提交转单 ── */
+
+  onSubmitTransfer() {
+    var d = this.data;
+    if (d.submitting) return;
+
+    if (d.transferTab === 'factory' && !d.selectedFactory) return toast.info('请选择目标工厂');
+    if (d.transferTab === 'user' && !d.selectedUser) return toast.info('请选择目标人员');
+
+    if (d.transferMode === 'bundle') {
+      var cnt = Object.keys(d.selectedBundles).length;
+      if (!cnt) return toast.info('请至少选择一个菲号');
+    }
+
+    var payload = {
+      orderNo: d.orderNo,
+      orderId: d.orderId,
+      transferMode: d.transferMode,
+      transferTarget: d.transferTab === 'factory' ? 'factory' : 'user',
+    };
+
+    if (d.transferTab === 'factory') {
+      payload.targetFactoryId = d.selectedFactory.id;
+      payload.targetFactoryName = d.selectedFactory.factoryName || d.selectedFactory.name;
+    } else {
+      payload.targetUserId = d.selectedUser.id;
+      payload.targetUserName = d.selectedUser.name || d.selectedUser.username;
+    }
+
+    if (d.transferMode === 'bundle') {
+      payload.bundleIds = Object.keys(d.selectedBundles);
+    }
+
+    payload.processes = Object.keys(d.selectedProcessCodes).map(function (code) {
+      var p = { processCode: code };
+      if (d.priceOverrides[code] != null) p.newPrice = d.priceOverrides[code];
+      return p;
+    });
+
+    if (d.remark) payload.remark = d.remark;
+
+    this.setData({ submitting: true });
+
+    var that = this;
+    var apiFn = d.transferTab === 'factory'
+      ? api.production.transferCreateToFactory
+      : api.production.transferCreate;
+    apiFn(payload).then(function () {
+      toast.success('转单成功');
+      that.setData({
+        activeTab: 'detail', submitting: false,
+        selectedBundles: {}, selectedBundleCount: 0, allSelected: false,
+        selectedProcessCodes: {}, selectedProcessCount: 0, allProcessSelected: false,
+        priceOverrides: {}, remark: '',
+      });
+    }).catch(function (err) {
+      that.setData({ submitting: false });
+      toast.error(err.message || '转单失败');
+    });
+  },
+
+  /* =================== 裁剪分扎（来自 task-detail，与 PC 端 CuttingRatioPanel 一致）=================== */
+
+  _parseAndSetCuttingLines(order) {
+    if (!order) { this.setData({ cuttingLinesHasData: false }); return; }
+
+    var lines = parseProductionOrderLines(order);
+    if (!lines || !lines.length) {
+      this.setData({ cuttingLinesHasData: false });
+      return;
+    }
+
+    lines.sort(function (a, b) {
+      if (a.color !== b.color) return (a.color || '').localeCompare(b.color || '');
+      var ai = SIZE_ORDER.indexOf(a.size);
+      var bi = SIZE_ORDER.indexOf(b.size);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+
+    var cuttingOrderLines = lines.map(function (line, idx) {
+      return {
+        color: line.color || '',
+        size: line.size || '',
+        orderedQty: line.quantity || 0,
+        cuttingQty: 0,
+        bundleCount: 0,
+        lastBundleQty: 0,
+        defaultLastQty: 0,
+        bundleDisplay: '-',
+        lastBundleOverride: null,
+        key: (line.color || '') + '_' + (line.size || '') + '_' + idx,
+      };
+    });
+
+    this.setData({ cuttingOrderLines: cuttingOrderLines });
+    this._recalculateCutting();
+  },
+
+  _recalculateCutting() {
+    var bsVal = parseInt(this.data.bundleSize, 10);
+    var bs = isNaN(bsVal) || bsVal < 1 ? 20 : bsVal;
+    var rateVal = parseFloat(this.data.excessRate);
+    var rate = isNaN(rateVal) ? 0 : rateVal;
+    var lines = this.data.cuttingOrderLines;
+
+    var totalOrdered = 0;
+    var totalCutting = 0;
+    var totalBundles = 0;
+
+    var updated = lines.map(function (line) {
+      var orderQty = line.orderedQty || 0;
+      totalOrdered += orderQty;
+
+      var baseCuttingQty = rate > 0
+        ? Math.ceil(orderQty * (1 + rate / 100))
+        : orderQty;
+
+      var bundles = baseCuttingQty > 0 ? Math.ceil(baseCuttingQty / bs) : 0;
+      var remainder = bs > 0 ? baseCuttingQty % bs : 0;
+      var defaultLastQty = remainder > 0 ? remainder : (bundles > 0 ? bs : 0);
+      var lastQty = line.lastBundleOverride != null
+        ? line.lastBundleOverride
+        : defaultLastQty;
+      var cuttingQty = bundles > 1
+        ? (bundles - 1) * bs + lastQty
+        : bundles === 1
+          ? lastQty
+          : 0;
+
+      totalCutting += cuttingQty;
+      totalBundles += bundles;
+
+      var bundleDisplay = '-';
+      if (bundles === 1) {
+        bundleDisplay = '1\u00D7' + lastQty + '件';
+      } else if (bundles > 1) {
+        bundleDisplay = (bundles - 1) + '\u00D7' + bs + ' + 1\u00D7' + lastQty;
+      }
+
+      return {
+        color: line.color,
+        size: line.size,
+        orderedQty: orderQty,
+        cuttingQty: cuttingQty,
+        bundleCount: bundles,
+        lastBundleQty: lastQty,
+        defaultLastQty: defaultLastQty,
+        bundleDisplay: bundleDisplay,
+        lastBundleOverride: line.lastBundleOverride,
+        key: line.key,
+      };
+    });
+
+    this.setData({
+      cuttingOrderLines: updated,
+      cuttingSummary: { totalOrdered: totalOrdered, totalCutting: totalCutting, totalBundles: totalBundles },
+      cuttingLinesHasData: updated.length > 0,
+    });
+  },
+
+  onBundleSizeInput(e) {
+    var val = (e.detail.value || '').trim();
+    var parsed = parseInt(val, 10);
+    var lines = this.data.cuttingOrderLines.map(function (l) {
+      return Object.assign({}, l, { lastBundleOverride: null });
+    });
+    this.setData({
+      bundleSize: isNaN(parsed) || parsed < 1 ? '' : parsed,
+      cuttingOrderLines: lines,
+    });
+    this._recalculateCutting();
+  },
+
+  onExcessRateInput(e) {
+    var val = (e.detail.value || '').trim();
+    var parsed = parseFloat(val);
+    var lines = this.data.cuttingOrderLines.map(function (l) {
+      return Object.assign({}, l, { lastBundleOverride: null });
+    });
+    this.setData({
+      excessRate: isNaN(parsed) ? '' : parsed,
+      cuttingOrderLines: lines,
+    });
+    this._recalculateCutting();
+  },
+
+  onLastBundleQtyInput(e) {
+    var idx = parseInt(e.currentTarget.dataset.idx, 10);
+    var val = parseInt(e.detail.value, 10);
+    if (isNaN(idx) || idx < 0 || idx >= this.data.cuttingOrderLines.length) return;
+    var override = isNaN(val) || val < 1 ? null : val;
+    var key = 'cuttingOrderLines[' + idx + '].lastBundleOverride';
+    var obj = {};
+    obj[key] = override;
+    this.setData(obj);
+    this._recalculateCutting();
+  },
+
+  onGenerateBundles() {
+    if (this.data.cuttingSubmitting) return;
+    var d = this.data;
+    var cuttingOrderLines = d.cuttingOrderLines;
+    var bundleSize = parseInt(d.bundleSize, 10) || 20;
+    var orderId = d.orderId;
+    var orderNo = d.orderNo;
+
+    if (!orderId) return toast.error('缺少订单信息');
+    if (!cuttingOrderLines.length) return toast.error('无可裁剪的尺码数据');
+
+    var items = [];
+    cuttingOrderLines.forEach(function (line) {
+      if (line.cuttingQty <= 0 || line.bundleCount <= 0) return;
+      for (var b = 0; b < line.bundleCount - 1; b++) {
+        items.push({ color: String(line.color || ''), size: String(line.size || ''), quantity: bundleSize });
+      }
+      items.push({ color: String(line.color || ''), size: String(line.size || ''), quantity: line.lastBundleQty || bundleSize });
+    });
+
+    if (!items.length) return toast.error('无有效裁剪数量');
+
+    var that = this;
+    this.setData({ cuttingSubmitting: true });
+    api.production.generateCuttingBundles(orderId, items).then(function () {
+      toast.success('菲号生成成功');
+      triggerDataRefresh('cutting');
+      that.setData({ cuttingSubmitting: false, showCuttingForm: false });
+      that.loadAll(orderNo);
+    }).catch(function (err) {
+      console.error('[bundle-detail] generateBundles error', err);
+      toast.error('生成失败：' + (err.message || '请稍后重试'));
+      that.setData({ cuttingSubmitting: false });
+    });
   },
 });

@@ -2,7 +2,7 @@
 .container {
   min-height: 100vh;
   background: radial-gradient(ellipse at 50% 0%, rgba(var(--color-primary-rgb),0.06) 0%, transparent 70%);
-  padding: 24rpx 24rpx calc(env(safe-area-inset-bottom) + 160rpx);
+  padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
 .info-card {

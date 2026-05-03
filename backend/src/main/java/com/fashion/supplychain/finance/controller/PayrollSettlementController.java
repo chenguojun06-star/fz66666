@@ -3,17 +3,20 @@ package com.fashion.supplychain.finance.controller;
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator;
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
+import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
+import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 工资结算 Controller
@@ -28,6 +31,7 @@ public class PayrollSettlementController {
     private final PayrollAggregationOrchestrator payrollAggregationOrchestrator;
     private final PayrollSettlementOrchestrator payrollSettlementOrchestrator;
     private final FinishedSettlementApprovalStatusService approvalStatusService;
+    private final WagePaymentService wagePaymentService;
 
     /**
      * 获取人员工序汇总数据
@@ -101,6 +105,34 @@ public class PayrollSettlementController {
                     row.setApprovalStatus(approvalStatusService.getApprovalStatus(row.getApprovalId(), tenantId));
                 }
             });
+
+            Set<String> settlementIds = result.stream()
+                    .filter(r -> r != null && r.getSettlementId() != null)
+                    .map(PayrollOperatorProcessSummaryDTO::getSettlementId)
+                    .collect(Collectors.toSet());
+            if (!settlementIds.isEmpty()) {
+                LambdaQueryWrapper<WagePayment> wpWrapper = new LambdaQueryWrapper<>();
+                wpWrapper.eq(WagePayment::getBizType, "PAYROLL_SETTLEMENT")
+                         .eq(WagePayment::getTenantId, tenantId)
+                         .in(WagePayment::getBizId, settlementIds)
+                         .in(WagePayment::getStatus, Arrays.asList("pending", "success"))
+                         .last("LIMIT 5000");
+                List<WagePayment> payments = wagePaymentService.list(wpWrapper);
+                Map<String, String> settlementPaymentStatus = new HashMap<>();
+                for (WagePayment wp : payments) {
+                    String bid = wp.getBizId();
+                    if ("success".equals(wp.getStatus())) {
+                        settlementPaymentStatus.put(bid, "success");
+                    } else if (!"success".equals(settlementPaymentStatus.get(bid))) {
+                        settlementPaymentStatus.put(bid, "pending");
+                    }
+                }
+                result.forEach(row -> {
+                    if (row != null && row.getSettlementId() != null) {
+                        row.setPaymentStatus(settlementPaymentStatus.getOrDefault(row.getSettlementId(), null));
+                    }
+                });
+            }
         }
 
         return Result.success(result);

@@ -2,7 +2,7 @@
 .container {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding: 20rpx 24rpx calc(env(safe-area-inset-bottom) + 160rpx);
+  padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
 /* ===== 头部卡片 ===== */

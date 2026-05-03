@@ -173,12 +173,14 @@ const ExternalFactorySmartView: React.FC<Props> = ({
 
   return (
     <div className="style-smart-list ef-compact">
-      <Virtuoso
-        totalCount={rows.length}
-        itemContent={rowRenderer}
-        style={{ height: Math.min(rows.length * 88, 600) }}
-        overscan={400}
-      />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Virtuoso
+          totalCount={rows.length}
+          itemContent={rowRenderer}
+          style={{ height: '100%' }}
+          overscan={400}
+        />
+      </div>
       <div className="style-smart-list__pagination">
         <StandardPagination
           current={currentPage}

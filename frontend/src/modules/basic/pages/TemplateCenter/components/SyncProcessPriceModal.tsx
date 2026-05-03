@@ -184,7 +184,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
       width="90vw"
       style={{ top: 20 }}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       {renderStyleSelector()}
       {renderToolbar()}
