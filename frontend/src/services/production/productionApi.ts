@@ -192,10 +192,9 @@ export const sysNoticeApi = {
     api.post('/production/notice/send', { orderNo, noticeType }),
   /** 获取当前用户通知列表 */
   getMyNotices: () =>
-    api.get<{ code: number; data: SysNotice[] }>('/production/notice/my'),
-  /** 获取未读数 */
+    api.get<{ code: number; data: SysNotice[] }>('/production/notice/my', { retry: 0 } as any),
   getUnreadCount: () =>
-    api.get<{ code: number; data: { count: number } }>('/production/notice/unread-count'),
+    api.get<{ code: number; data: { count: number } }>('/production/notice/unread-count', { retry: 0 } as any),
   /** 标记单条已读 */
   markRead: (id: number) =>
     api.post(`/production/notice/${id}/read`),

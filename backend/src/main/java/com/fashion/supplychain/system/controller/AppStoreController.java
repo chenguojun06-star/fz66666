@@ -391,6 +391,76 @@ public class AppStoreController {
     }
 
     /**
+     * 获取订单详情（按订单号查询）
+     */
+    @GetMapping("/order/{orderNo}")
+    public Result<AppOrder> getOrder(@PathVariable String orderNo) {
+        Long tenantId = UserContext.tenantId();
+        QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("order_no", orderNo);
+        if (!UserContext.isSuperAdmin()) {
+            wrapper.eq("tenant_id", tenantId);
+        }
+        AppOrder order = appOrderService.getOne(wrapper);
+        if (order == null) {
+            return Result.fail("订单不存在");
+        }
+        return Result.success(order);
+    }
+
+    /**
+     * 取消订单
+     */
+    @PostMapping("/order/{orderNo}/cancel")
+    public Result<Void> cancelOrder(@PathVariable String orderNo) {
+        Long tenantId = UserContext.tenantId();
+        QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("order_no", orderNo)
+               .eq("tenant_id", tenantId)
+               .ne("status", "PAID")
+               .ne("status", "ACTIVATED")
+               .ne("status", "CANCELLED");
+        AppOrder order = appOrderService.getOne(wrapper);
+        if (order == null) {
+            return Result.fail("订单不存在或不可取消");
+        }
+        order.setStatus("CANCELLED");
+        order.setRemark("用户主动取消");
+        appOrderService.updateById(order);
+        log.info("[应用订单] 取消订单: orderNo={} tenant={}", orderNo, tenantId);
+        return Result.success(null);
+    }
+
+    /**
+     * 续费订阅
+     */
+    @PostMapping("/subscription/{subscriptionId}/renew")
+    public Result<AppOrder> renewSubscription(@PathVariable Long subscriptionId,
+                                               @RequestBody Map<String, String> body) {
+        Long tenantId = UserContext.tenantId();
+        String subscriptionType = body.getOrDefault("subscriptionType", "MONTHLY");
+
+        TenantSubscription sub = tenantSubscriptionService.getById(subscriptionId);
+        if (sub == null || !sub.getTenantId().equals(tenantId)) {
+            return Result.fail("订阅记录不存在");
+        }
+
+        AppStore app = appStoreService.getById(sub.getAppId());
+        if (app == null) {
+            return Result.fail("关联应用已下架");
+        }
+
+        AppOrder order = appStoreOrchestrator.createOrder(app, tenantId, subscriptionType,
+                sub.getUserCount(), null, null, null, null,
+                false, null, null);
+        order.setOrderType("RENEW");
+        appOrderService.updateById(order);
+
+        log.info("[应用订单] 续费创建: orderNo={} subscriptionId={}", order.getOrderNo(), subscriptionId);
+        return Result.success(order);
+    }
+
+    /**
      * 管理员激活订单请求
      */
     @Data

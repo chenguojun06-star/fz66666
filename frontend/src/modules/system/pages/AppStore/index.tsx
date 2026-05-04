@@ -91,7 +91,7 @@ const AppStore: React.FC = () => {
       {/* 应用详情弹窗 */}
       <ResizableModal title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 20 }}>{selectedApp?.appIcon}</span><span style={{ fontSize: 15 }}>{selectedApp?.appName}</span>{isAppActivated(selectedApp?.appCode || '') && <Tag color="green">已开通</Tag>}</div>}
         open={detailVisible} onCancel={() => setDetailVisible(false)} width="40vw"
-        footer={isAppActivated(selectedApp?.appCode || '') ? [<Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate('/system/tenant?tab=apps'); }}>管理配置</Button>] : [
+        footer={isAppActivated(selectedApp?.appCode || '') ? [<Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate(isEcApp(selectedApp?.appCode || '') ? '/integration/center' : '/system/tenant?tab=apps'); }}>管理配置</Button>] : [
           <Button key="cancel" size="small" onClick={() => setDetailVisible(false)}>取消</Button>,
           selectedApp?.trialDays ? <Button key="trial" size="small" icon={<GiftOutlined />} loading={trialLoading} onClick={handleTrialClick} style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>一键开通试用 {selectedApp.trialDays} 天</Button> : null,
           <Button key="buy" size="small" type="primary" icon={<ShoppingCartOutlined />} onClick={handleBuyClick}>立即购买</Button>,
@@ -168,7 +168,18 @@ const AppStore: React.FC = () => {
             <Col span={12}><Card size="small" style={{ borderLeft: '3px solid var(--color-success)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 已完成</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>API凭证自动生成</li><li>内部端点自动匹配</li><li>接口地址已配置</li></ul></Card></Col>
             <Col span={12}><Card size="small" style={{ borderLeft: '3px solid var(--color-primary)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 下一步</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>查看对接教程了解详情</li><li>在您的系统中集成API</li><li>发送第一个请求测试</li></ul></Card></Col>
           </Row>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}><Button onClick={() => setWizardVisible(false)}>关闭</Button><Button type="primary" icon={<BookOutlined />} onClick={() => { setWizardVisible(false); navigate('/system/tenant?tab=guide'); }}>查看对接教程</Button></div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+            <Button onClick={() => setWizardVisible(false)}>关闭</Button>
+            {isEcApp(wizardData.appCode || '') ? (
+              <Button type="primary" icon={<SettingOutlined />} onClick={() => { setWizardVisible(false); navigate('/integration/center'); }}>
+                前往集成中心管理平台
+              </Button>
+            ) : (
+              <Button type="primary" icon={<BookOutlined />} onClick={() => { setWizardVisible(false); navigate('/system/tenant?tab=guide'); }}>
+                查看对接教程
+              </Button>
+            )}
+          </div>
         </div>)}
       </ResizableModal>
 

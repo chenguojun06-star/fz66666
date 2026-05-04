@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.intelligence.dto.NlQueryResponse;
+import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -36,6 +37,7 @@ public class NlQueryDataHandlers {
     @Autowired private DashboardQueryService dashboardQueryService;
     @Autowired private AiAdvisorService aiAdvisorService;
     @Autowired private NlQuerySmartHandlers smartHandlers;
+    @Autowired private MaterialShortageOrchestrator materialShortageOrchestrator;
 
     static final Pattern ORDER_NO_PATTERN = Pattern.compile("PO\\d{8,}");
 
@@ -232,8 +234,53 @@ public class NlQueryDataHandlers {
             int overallAvgProgress = count > 0 ? totalProgress / (int) count : 0;
             int overallAvgOverdueDays = count > 0 ? totalOverdueDays / (int) count : 0;
 
-            StringBuilder sb = new StringBuilder(String.format("⚠️ 当前共有 %d 个延期订单，涉及 %d 家工厂", count, byFactory.size()));
-            sb.append(String.format("，总件数 %d，平均进度 %d%%，平均延期 %d 天", totalQuantity, overallAvgProgress, overallAvgOverdueDays));
+            List<Map<String, Object>> flatOverdueList = new ArrayList<>();
+            for (Map<String, Object> group : factoryGroups) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> orders = (List<Map<String, Object>>) group.get("orders");
+                if (orders != null) {
+                    for (Map<String, Object> o : orders) {
+                        Map<String, Object> flat = new LinkedHashMap<>(o);
+                        flat.put("factoryName", group.get("factoryName"));
+                        flatOverdueList.add(flat);
+                    }
+                }
+            }
+            flatOverdueList.sort((a, b) -> Integer.compare(
+                    (int) b.getOrDefault("overdueDays", 0),
+                    (int) a.getOrDefault("overdueDays", 0)));
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("⚠️ 当前共有 %d 个延期订单，涉及 %d 家工厂", count, byFactory.size()));
+            sb.append(String.format("，总件数 %d，平均进度 %d%%，平均延期 %d 天\n", totalQuantity, overallAvgProgress, overallAvgOverdueDays));
+
+            int showLimit = Math.min(flatOverdueList.size(), 15);
+            sb.append("\n📋 具体延期订单（按逾期天数排序）：\n");
+            for (int i = 0; i < showLimit; i++) {
+                Map<String, Object> o = flatOverdueList.get(i);
+                String orderNo = String.valueOf(o.getOrDefault("orderNo", "?"));
+                int progress = (int) o.getOrDefault("progress", 0);
+                int overdueDays = (int) o.getOrDefault("overdueDays", 0);
+                int qty = (int) o.getOrDefault("quantity", 0);
+                String factory = String.valueOf(o.getOrDefault("factoryName", "未指定"));
+                String plannedDate = String.valueOf(o.getOrDefault("plannedEndDate", "?"));
+                sb.append(String.format("  %d. %s | %s | 进度%d%% | 逾期%d天 | %d件 | 交期%s\n",
+                        i + 1, orderNo, factory, progress, overdueDays, qty, plannedDate));
+            }
+            if (flatOverdueList.size() > showLimit) {
+                sb.append(String.format("  ... 还有 %d 个延期订单，可在订单列表中查看完整数据", flatOverdueList.size() - showLimit));
+            }
+
+            sb.append("\n\n🏭 工厂维度汇总：\n");
+            for (Map<String, Object> group : factoryGroups) {
+                String fName = String.valueOf(group.get("factoryName"));
+                int fCount = (int) group.get("totalOrders");
+                int fQty = (int) group.get("totalQuantity");
+                int fAvgP = (int) group.get("avgProgress");
+                int fAvgO = (int) group.get("avgOverdueDays");
+                sb.append(String.format("  • %s：%d单延期，%d件，平均进度%d%%，平均逾期%d天\n",
+                        fName, fCount, fQty, fAvgP, fAvgO));
+            }
 
             try {
                 String factoryGroupsJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(factoryGroups);
@@ -624,5 +671,65 @@ public class NlQueryDataHandlers {
             case "PENDING" -> "待审核";
             default -> status;
         };
+    }
+
+    // ── 物料缺口查询 ──
+
+    public NlQueryResponse handleMaterialGapQuery(Long tenantId) {
+        NlQueryResponse resp = new NlQueryResponse();
+        resp.setIntent("material_gap");
+        resp.setComponentName("MaterialGapCard");
+        try {
+            MaterialShortageResponse result = materialShortageOrchestrator.predict();
+
+            if (result == null || result.getShortageItems().isEmpty()) {
+                resp.setAnswer("✅ 当前物料库存充足，未发现缺口");
+                resp.setConfidence(90);
+                return resp;
+            }
+
+            List<MaterialShortageResponse.ShortageItem> items = result.getShortageItems();
+            StringBuilder sb = new StringBuilder("📦 面料缺口预警：\n");
+            sb.append(String.format("• 总计 %d 种物料存在缺口（其中 %d 种高风险）\n",
+                    items.size(),
+                    items.stream().filter(i -> "HIGH".equals(i.getRiskLevel())).count()));
+
+            int showLimit = Math.min(items.size(), 8);
+            sb.append("\n📋 缺口明细（按严重程度排序）：\n");
+            for (int i = 0; i < showLimit; i++) {
+                MaterialShortageResponse.ShortageItem item = items.get(i);
+                String riskTag = switch (item.getRiskLevel()) {
+                    case "HIGH" -> "🔴";
+                    case "MEDIUM" -> "🟠";
+                    default -> "🟡";
+                };
+                sb.append(String.format("  %d. %s %s %s | 需%d | 库存%d | 缺%d\n",
+                        i + 1, riskTag,
+                        item.getMaterialName(),
+                        item.getSpec() != null ? item.getSpec() : "",
+                        item.getDemandQuantity(), item.getCurrentStock(), item.getShortageQuantity()));
+            }
+            if (items.size() > showLimit) {
+                sb.append(String.format("  ... 还有 %d 种物料缺口\n", items.size() - showLimit));
+            }
+
+            sb.append("\n💡 建议：高风险物料请尽快联系供应商补货，避免生产中断");
+
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(85);
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("totalGaps", items.size());
+            data.put("highRisk", items.stream().filter(i -> "HIGH".equals(i.getRiskLevel())).count());
+            resp.setData(data);
+            resp.setSuggestions(Arrays.asList("采购面料", "查看BOM表", "库存盘点"));
+        } catch (Exception e) {
+            String traceId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            log.warn("[NlQuery] 物料缺口查询失败 traceId={}: {}", traceId, e.getMessage());
+            resp.setErrorTraceId(traceId);
+            resp.setAnswer("面料缺口数据查询失败（追踪ID: " + traceId + "），请稍后重试");
+            resp.setConfidence(20);
+        }
+        return resp;
     }
 }

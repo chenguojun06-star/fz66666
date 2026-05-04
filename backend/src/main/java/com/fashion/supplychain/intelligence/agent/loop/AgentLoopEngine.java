@@ -3,6 +3,8 @@ package com.fashion.supplychain.intelligence.agent.loop;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.agent.AgentModeContext;
+import com.fashion.supplychain.intelligence.agent.command.CompensableTool;
+import com.fashion.supplychain.intelligence.agent.command.CompensationResult;
 import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
@@ -11,6 +13,7 @@ import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.gateway.StreamChunkConsumer;
 import com.fashion.supplychain.intelligence.orchestration.AiCriticOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.CompensatingTransactionManager;
 import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.FollowUpSuggestionEngine;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
@@ -27,7 +30,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -49,10 +54,13 @@ public class AgentLoopEngine {
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
     @Autowired private SelfConsistencyVerifier selfConsistencyVerifier;
+    @Autowired private CompensatingTransactionManager compensatingTxManager;
     @Autowired private XiaoyunResponseParser xiaoyunResponseParser;
 
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
-        cb.onThinking(0, "开始思考...");
+        String sessionId = ctx.getCommandId();
+        compensatingTxManager.beginSession(sessionId);
+        try {
 
         while (ctx.getCurrentIteration() < ctx.getMaxIterations()) {
             if (ctx.isCancelled()) {
@@ -138,6 +146,18 @@ public class AgentLoopEngine {
                                 result.getToolCalls(), ctx.getVisibleToolMap(),
                                 ctx.getCommandId(), ctx.getToolResultCache());
 
+                recordCompensableExecs(ctx.getCommandId(), ctx.getVisibleToolMap(), execRecords);
+
+                boolean hasFailure = execRecords.stream()
+                        .anyMatch(r -> r.rawResult.startsWith("{\"error\""));
+                if (hasFailure && compensatingTxManager.activeSessionCount() > 0) {
+                    CompensationResult rollbackResult = compensatingTxManager.rollbackSession(ctx.getCommandId());
+                    String rollbackMsg = buildRollbackMessage(rollbackResult);
+                    cb.onError(rollbackMsg);
+                    failSession(ctx, rollbackMsg);
+                    return "rollback_performed";
+                }
+
                 processToolResults(ctx, execRecords);
                 ctx.addExecRecords(execRecords);
 
@@ -159,6 +179,9 @@ public class AgentLoopEngine {
         failSession(ctx, "对话轮数超过限制");
         cb.onMaxIterationsExceeded();
         return "max_iterations_exceeded";
+        } finally {
+            compensatingTxManager.endSession(sessionId);
+        }
     }
 
     private void injectProgressHint(AgentLoopContext ctx, int iteration) {
@@ -346,5 +369,41 @@ public class AgentLoopEngine {
             return true;
         }
         return totalToolCalls <= 1;
+    }
+
+    private void recordCompensableExecs(String sessionId,
+                                         Map<String, com.fashion.supplychain.intelligence.agent.tool.AgentTool> toolMap,
+                                         List<AiAgentToolExecHelper.ToolExecRecord> execRecords) {
+        for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
+            if (rec.rawResult.startsWith("{\"error\"")) {
+                continue;
+            }
+            com.fashion.supplychain.intelligence.agent.tool.AgentTool tool = toolMap.get(rec.toolName);
+            if (tool instanceof CompensableTool && ((CompensableTool) tool).isCompensable()) {
+                Map<String, Object> snapshot = new LinkedHashMap<>();
+                snapshot.put("toolName", rec.toolName);
+                snapshot.put("execResult", rec.rawResult);
+                snapshot.put("toolDef", tool.getName());
+                compensatingTxManager.recordExecution(sessionId, rec.toolName,
+                        (CompensableTool) tool, snapshot);
+            }
+        }
+    }
+
+    private String buildRollbackMessage(CompensationResult result) {
+        if (result.isSuccess()) {
+            return "操作已成功回滚（" + String.join(", ", result.getRolledBack()) + "）";
+        }
+        StringBuilder sb = new StringBuilder("⚠️ 部分操作回滚失败，请联系管理员核查：\n");
+        if (!result.getRolledBack().isEmpty()) {
+            sb.append("• 已回滚: ").append(String.join(", ", result.getRolledBack())).append("\n");
+        }
+        if (!result.getFailed().isEmpty()) {
+            sb.append("• 回滚失败: ").append(String.join(", ", result.getFailed())).append("\n");
+        }
+        if (!result.getUnrecoverable().isEmpty()) {
+            sb.append("• 无法回滚: ").append(String.join(", ", result.getUnrecoverable())).append("\n");
+        }
+        return sb.toString().trim();
     }
 }

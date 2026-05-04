@@ -118,9 +118,9 @@
           <text class="section-title">裁剪分扎</text>
         </view>
 
-        <!-- 每扎件数 + 损耗加放 -->
-        <view class="common-inputs">
-          <view class="input-row">
+        <!-- 每扎件数 + 损耗加放 — 同行 -->
+        <view class="common-inputs-row">
+          <view class="half-input">
             <text class="input-label">每扎件数</text>
             <input
               class="input-field"
@@ -131,7 +131,7 @@
             />
             <text class="input-suffix">件/扎</text>
           </view>
-          <view class="input-row">
+          <view class="half-input">
             <text class="input-label">损耗加放</text>
             <input
               class="input-field"
@@ -375,7 +375,7 @@
               <text class="tf-bundle-label">{{item.bundleLabel}}</text>
               <text class="tf-bundle-detail">{{item.color}} / {{item.size}} × {{item.quantity}}</text>
             </view>
-            <text class="tf-bundle-status" wx:if="{{item._disabled}}">{{item._statusCn}}</text>
+            <text class="tf-bundle-status" wx:if="{{item._disabled || item._partialScanned}}">{{item._statusCn}}</text>
           </view>
         </scroll-view>
       </view>
@@ -391,15 +391,17 @@
           </view>
         </view>
         <view wx:if="{{processes.length}}" class="tf-processes-list">
-          <view wx:for="{{processes}}" wx:key="processCode" class="tf-process-row">
+          <view wx:for="{{processes}}" wx:key="processCode" class="tf-process-row {{item._completed ? 'tf-process-row--disabled' : ''}}">
             <view class="tf-process-check" bindtap="onToggleTransferProcess" data-code="{{item.processCode}}">
-              <text>{{selectedProcessCodes[item.processCode] ? '☑' : '☐'}}</text>
+              <text>{{item._completed ? '⊠' : (selectedProcessCodes[item.processCode] ? '☑' : '☐')}}</text>
             </view>
             <view class="tf-process-body">
               <view class="tf-process-top">
                 <text class="tf-process-code">{{item.processCode}}</text>
                 <text class="tf-process-name">{{item.processName}}</text>
                 <text class="tf-process-price">{{item.priceText}}</text>
+                <text class="tf-process-status" wx:if="{{item._completed}}">已完成</text>
+                <text class="tf-process-status tf-process-status--partial" wx:elif="{{item._partialScanned}}">部分已扫</text>
               </view>
               <view class="tf-process-price-row" wx:if="{{selectedProcessCodes[item.processCode]}}">
                 <text class="tf-new-price-label">新单价</text>

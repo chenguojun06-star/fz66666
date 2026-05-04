@@ -601,11 +601,10 @@ export const intelligenceApi = {
 
   /** 小云全域待办任务聚合：裁剪/质检/返修/物料/逾期订单/异常/样衣/工资/对账/报销 */
   getMyPendingTasks: () =>
-    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskDTO[] }>('/intelligence/pending-tasks/my'),
+    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskDTO[] }>('/intelligence/pending-tasks/my', { retry: 0 } as any),
 
-  /** 小云待办任务统计摘要（气泡通知用，轻量级） */
   getMyPendingTaskSummary: () =>
-    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary'),
+    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary', { retry: 0 } as any),
 
   scanOrphanData: () =>
     api.get<{ code: number; data: import('./intelligenceTypes').OrphanDataScanResultDTO }>('/intelligence/orphan-data/scan'),

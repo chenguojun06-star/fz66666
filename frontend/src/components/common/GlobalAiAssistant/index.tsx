@@ -245,12 +245,16 @@ const GlobalAiAssistant: React.FC = () => {
 
   // ── 滚动到底部 ──
   useEffect(() => {
-    if (!chatAreaRef.current) return;
-    if (messages.length > 1 || isTyping) {
-      chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
-    } else if (isOpen && messages.length <= 1) {
-      chatAreaRef.current.scrollTop = 0;
-    }
+    const el = chatAreaRef.current;
+    if (!el) return;
+    const raf = requestAnimationFrame(() => {
+      if (messages.length > 1 || isTyping) {
+        el.scrollTop = el.scrollHeight;
+      } else if (isOpen && messages.length <= 1) {
+        el.scrollTop = 0;
+      }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [messages, isTyping, isOpen]);
 
   // ── 打开时聚焦 ──

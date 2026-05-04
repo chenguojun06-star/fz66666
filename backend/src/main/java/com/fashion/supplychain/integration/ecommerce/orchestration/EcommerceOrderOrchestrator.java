@@ -102,24 +102,27 @@ public class EcommerceOrderOrchestrator {
         log.info("[EC接入] 平台={} 平台单号={} 内部单号={} tenantId={}", platformCode, platformOrderNo, order.getOrderNo(), tenantId);
 
         try {
-            if (StringUtils.hasText(order.getSkuCode())) {
-                String styleNo = order.getSkuCode().split("-")[0];
-                if (StringUtils.hasText(styleNo)) {
-                    ProductionOrder matched = productionOrderService.getOne(
-                            new LambdaQueryWrapper<ProductionOrder>()
-                                    .eq(ProductionOrder::getStyleNo, styleNo)
-                                    .eq(ProductionOrder::getTenantId, tenantId)
-                                    .ne(ProductionOrder::getStatus, "completed")
-                                    .eq(ProductionOrder::getDeleteFlag, 0)
-                                    .orderByAsc(ProductionOrder::getCreateTime)
-                                    .last("LIMIT 1"), false);
-                    if (matched != null) {
-                        order.setProductionOrderNo(matched.getOrderNo());
-                        order.setWarehouseStatus(1);
-                        ecOrderService.updateById(order);
-                        log.info("[EC自动匹配] EC单={} 关联生产单={} styleNo={}",
-                                order.getOrderNo(), matched.getOrderNo(), styleNo);
-                    }
+            // 优先用 body 里的 styleNo（聚水潭 i_id 直接=款号），
+            // 没有则从 skuCode 提取第一段（shop_sku_id 格式 = 款号-颜色-尺码）
+            String styleNo = (String) body.getOrDefault("styleNo", "");
+            if (!StringUtils.hasText(styleNo) && StringUtils.hasText(order.getSkuCode())) {
+                styleNo = order.getSkuCode().split("-")[0];
+            }
+            if (StringUtils.hasText(styleNo)) {
+                ProductionOrder matched = productionOrderService.getOne(
+                        new LambdaQueryWrapper<ProductionOrder>()
+                                .eq(ProductionOrder::getStyleNo, styleNo)
+                                .eq(ProductionOrder::getTenantId, tenantId)
+                                .ne(ProductionOrder::getStatus, "completed")
+                                .eq(ProductionOrder::getDeleteFlag, 0)
+                                .orderByAsc(ProductionOrder::getCreateTime)
+                                .last("LIMIT 1"), false);
+                if (matched != null) {
+                    order.setProductionOrderNo(matched.getOrderNo());
+                    order.setWarehouseStatus(1);
+                    ecOrderService.updateById(order);
+                    log.info("[EC自动匹配] EC单={} 关联生产单={} styleNo={}",
+                            order.getOrderNo(), matched.getOrderNo(), styleNo);
                 }
             }
         } catch (Exception e) {
@@ -238,6 +241,8 @@ public class EcommerceOrderOrchestrator {
             case "WECHAT_SHOP" -> "WC";
             case "SHOPIFY" -> "SFY";
             case "SHEIN" -> "SY";
+            case "JST" -> "JST";
+            case "DONGFANG" -> "DF";
             default -> "EC";
         };
         return prefix + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmssSSS"));
@@ -254,6 +259,8 @@ public class EcommerceOrderOrchestrator {
             case "WECHAT_SHOP" -> "WC";
             case "SHOPIFY" -> "SFY";
             case "SHEIN" -> "SY";
+            case "JST" -> "JST";
+            case "DONGFANG" -> "DF";
             default -> code;
         };
     }

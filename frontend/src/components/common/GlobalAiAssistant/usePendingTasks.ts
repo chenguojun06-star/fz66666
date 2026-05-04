@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { intelligenceApi, type PendingTaskDTO } from '@/services/intelligence/intelligenceApi';
 
-const POLL_INTERVAL = 60_000; // 每60秒轮询一次
+const POLL_INTERVAL = 60_000;
+const MAX_BACKOFF = 5 * 60_000;
 
 export interface UsePendingTasksResult {
   tasks: PendingTaskDTO[];
@@ -12,28 +13,38 @@ export interface UsePendingTasksResult {
 
 export function usePendingTasks(): UsePendingTasksResult {
   const [tasks, setTasks] = useState<PendingTaskDTO[]>([]);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const failCountRef = useRef(0);
 
   const fetchTasks = useCallback(async () => {
     try {
       const res = await intelligenceApi.getMyPendingTasks();
-      // api拦截器会自动解包 .data，兼容两种响应结构
       const data: PendingTaskDTO[] = (res as any)?.code === 200
         ? (res as any).data
         : ((res as any)?.data ?? res ?? []);
       setTasks(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error('[usePendingTasks] fetch failed', e);
+      failCountRef.current = 0;
+    } catch {
+      failCountRef.current += 1;
     }
   }, []);
 
-  useEffect(() => {
-    void fetchTasks();
-    timerRef.current = setInterval(() => void fetchTasks(), POLL_INTERVAL);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+  const scheduleNext = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const delay = failCountRef.current === 0
+      ? POLL_INTERVAL
+      : Math.min(POLL_INTERVAL * Math.pow(2, failCountRef.current - 1), MAX_BACKOFF);
+    timerRef.current = setTimeout(() => {
+      void fetchTasks().then(scheduleNext);
+    }, delay);
   }, [fetchTasks]);
+
+  useEffect(() => {
+    void fetchTasks().then(scheduleNext);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [fetchTasks, scheduleNext]);
 
   return {
     tasks,

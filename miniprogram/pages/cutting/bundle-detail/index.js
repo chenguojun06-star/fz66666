@@ -555,8 +555,7 @@ Page({
   _initTransferPanel() {
     var d = this.data;
     if (d.activeTab !== 'transfer') return;
-    this._tfLoadBundles();
-    this._tfLoadProcesses();
+    this._tfLoadTracking();
   },
 
   onTransferModeChange(e) {
@@ -564,30 +563,65 @@ Page({
     this.setData({ transferMode: mode, selectedBundles: {}, allSelected: false, selectedBundleCount: 0 });
   },
 
+  /* ── 跟踪记录（菲号×工序扫码状态，用于判定已完成/可转单）── */
+
+  _tfLoadTracking() {
+    var that = this;
+    var d = that.data;
+    if (!d.orderId) return;
+
+    api.production.getOrderTracking(d.orderId).then(function (records) {
+      var list = Array.isArray(records) ? records : (records && records.records) || [];
+      that._tfTracking = list;
+      that._tfLoadBundles(list);
+      that._tfLoadProcesses(list);
+    }).catch(function () {
+      that._tfTracking = [];
+      that._tfLoadBundles([]);
+      that._tfLoadProcesses([]);
+    });
+  },
+
+  /* 根据 tracking 记录计算菲号是否已完成（所有工序皆已扫码 → 不可转单） */
+  _tfBundleScanMap(trackingRecords) {
+    var map = {};
+    if (!trackingRecords || !trackingRecords.length) return map;
+    trackingRecords.forEach(function (t) {
+      var bid = t.cuttingBundleId;
+      if (!bid) return;
+      if (!map[bid]) map[bid] = { total: 0, scanned: 0 };
+      map[bid].total += 1;
+      if (t.scanStatus === 'scanned') map[bid].scanned += 1;
+    });
+    return map;
+  },
+
   /* ── 菲号选择 ── */
 
-  _tfLoadBundles() {
+  _tfLoadBundles(trackingRecords) {
     var that = this;
     var d = that.data;
     that.setData({ _tfBundlesLoading: true });
 
-    api.production.orderDetailByOrderNo(d.orderNo).then(function (res) {
-      var order = Array.isArray(res) ? res[0] : (res && res.records ? res.records[0] : res);
-      var bundles = (order && order.bundles) || (order && order.cuttingBundles) || [];
-      bundles = bundles.filter(function (b) {
-        return !b.receiveStatus || (b.receiveStatus !== 'FINISHED' && b.receiveStatus !== 'TRANSFERRED');
-      });
+    var scanMap = that._tfBundleScanMap(trackingRecords);
+
+    api.production.listBundles(d.orderNo, 1, 500).then(function (res) {
+      var bundles = that._extractList(res);
       var list = bundles.map(function (b) {
+        var bid = b.id;
+        var s = scanMap[bid];
+        var completed = s && s.total > 0 && s.scanned === s.total;
+        var partialScanned = s && s.scanned > 0 && s.scanned < s.total;
         return {
-          id: b.id || b.bundleNo,
-          bundleLabel: b.bundleLabel || b.bundleNo,
-          bundleNo: b.bundleNo || b.id,
-          qrCode: b.qrCode,
+          id: bid || b.bundleNo,
+          bundleLabel: b.bundleNo || b.bundleLabel || bid,
+          bundleNo: b.bundleNo || bid,
           color: b.color,
           size: b.size,
           quantity: b.quantity,
-          _disabled: !!(b.receiveStatus || b.status),
-          _statusCn: b.receiveStatus ? '已领取' : '',
+          _disabled: completed,
+          _partialScanned: partialScanned,
+          _statusCn: completed ? '已完成' : (partialScanned ? '部分已扫' : ''),
         };
       });
       that.setData({ _tfBundles: list, _tfBundlesLoading: false });
@@ -612,6 +646,8 @@ Page({
   onToggleBundle(e) {
     var id = e.currentTarget.dataset.id;
     var d = this.data;
+    var bundle = d._tfBundles.find(function (b) { return b.id === id; });
+    if (bundle && bundle._disabled) return;
     var selected = {};
     Object.keys(d.selectedBundles).forEach(function (k) { selected[k] = d.selectedBundles[k]; });
     if (selected[id]) { delete selected[id]; } else { selected[id] = true; }
@@ -625,22 +661,39 @@ Page({
 
   /* ── 工序单价 ── */
 
-  _tfLoadProcesses() {
+  _tfLoadProcesses(trackingRecords) {
     var that = this;
     var d = that.data;
     that.setData({ processesLoading: true });
 
+    var scanMap = {};
+    if (trackingRecords && trackingRecords.length) {
+      trackingRecords.forEach(function (t) {
+        var code = t.processCode;
+        if (!code) return;
+        if (!scanMap[code]) scanMap[code] = { total: 0, scanned: 0 };
+        scanMap[code].total += 1;
+        if (t.scanStatus === 'scanned') scanMap[code].scanned += 1;
+      });
+    }
+
     api.production.queryOrderProcesses(d.orderNo).then(function (res) {
       var list = Array.isArray(res) ? res : (res && res.records) || [];
       var processes = list.map(function (p) {
+        var code = p.processCode || p.code || '-';
         var price = Number(p.unitPrice || p.price || 0);
+        var s = scanMap[code];
+        var completed = s && s.total > 0 && s.scanned === s.total;
+        var partialScanned = s && s.scanned > 0 && s.scanned < s.total;
         return {
-          processCode: p.processCode || p.code || '-',
+          processCode: code,
           processName: p.processName || p.name || '-',
           unitPrice: price,
           priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
           pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
           progressStage: p.progressStage || p.stage || '-',
+          _completed: completed,
+          _partialScanned: partialScanned,
         };
       });
       that.setData({ processes: processes, processesLoading: false });
@@ -654,7 +707,9 @@ Page({
     var allCodes = {};
     var cnt = 0;
     if (!d.allProcessSelected) {
-      d.processes.forEach(function (p) { allCodes[p.processCode] = true; cnt++; });
+      d.processes.forEach(function (p) {
+        if (!p._completed) { allCodes[p.processCode] = true; cnt++; }
+      });
     }
     this.setData({ selectedProcessCodes: allCodes, allProcessSelected: !d.allProcessSelected, selectedProcessCount: cnt });
   },
@@ -662,6 +717,8 @@ Page({
   onToggleTransferProcess(e) {
     var code = e.currentTarget.dataset.code;
     var d = this.data;
+    var proc = d.processes.find(function (p) { return p.processCode === code; });
+    if (proc && proc._completed) return;
     var selected = {};
     Object.keys(d.selectedProcessCodes).forEach(function (k) { selected[k] = d.selectedProcessCodes[k]; });
     if (selected[code]) { delete selected[code]; } else { selected[code] = true; }
@@ -669,7 +726,7 @@ Page({
     this.setData({
       selectedProcessCodes: selected,
       selectedProcessCount: cnt,
-      allProcessSelected: cnt > 0 && cnt === d.processes.length,
+      allProcessSelected: cnt > 0 && cnt === d.processes.filter(function (p) { return !p._completed; }).length,
     });
   },
 

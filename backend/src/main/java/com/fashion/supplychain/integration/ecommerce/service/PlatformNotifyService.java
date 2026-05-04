@@ -67,6 +67,8 @@ public class PlatformNotifyService {
             case "WECHAT_SHOP"     -> notifyWechat(config, order);
             case "SHOPIFY"         -> notifyShopify(config, order);
             case "SHEIN"           -> notifyShein(config, order);
+            case "JST"            -> notifyJst(config, order);
+            case "DONGFANG"       -> notifyDongfang(config, order);
             default -> log.info("[物流回调] 平台={} 暂不支持自动回传，快递单号={} 需人工处理",
                     platform, order.getTrackingNo());
         }
@@ -182,6 +184,47 @@ public class PlatformNotifyService {
         payload.put("expressCompany", order.getExpressCompany());
         payload.put("status", "shipped");
         sendPlatformRequest("希音", config, payload);
+    }
+
+    private void notifyJst(EcPlatformConfig config, EcommerceOrder order) {
+        String callbackUrl = config.getCallbackUrl();
+        if (!StringUtils.hasText(callbackUrl)) {
+            callbackUrl = "https://open.jushuitan.com/open/logistics/upload";
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("so_id", order.getPlatformOrderNo());
+        payload.put("tracking_no", order.getTrackingNo());
+        payload.put("express_company", order.getExpressCompany());
+        payload.put("status", "shipped");
+        try {
+            Map<String, String> headers = new LinkedHashMap<>();
+            headers.put("Content-Type", "application/json");
+            httpClient.postJson(callbackUrl, payload, Map.class, headers);
+            log.info("[物流回调][聚水潭] 回传成功 platformOrderNo={}", order.getPlatformOrderNo());
+        } catch (Exception e) {
+            log.warn("[物流回调][聚水潭] 回传失败: {}", e.getMessage());
+        }
+    }
+
+    private void notifyDongfang(EcPlatformConfig config, EcommerceOrder order) {
+        String callbackUrl = config.getCallbackUrl();
+        if (StringUtils.hasText(callbackUrl)) {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("orderNo", order.getPlatformOrderNo());
+            payload.put("trackingNo", order.getTrackingNo());
+            payload.put("expressCompany", order.getExpressCompany());
+            payload.put("status", "shipped");
+            try {
+                Map<String, String> headers = new LinkedHashMap<>();
+                headers.put("Content-Type", "application/json");
+                httpClient.postJson(callbackUrl, payload, Map.class, headers);
+                log.info("[物流回调][东纺] 回传成功 platformOrderNo={}", order.getPlatformOrderNo());
+            } catch (Exception e) {
+                log.warn("[物流回调][东纺] 回传失败: {}", e.getMessage());
+            }
+        } else {
+            log.info("[物流回调][东纺] 未配置回调URL，快递单号={} 需人工处理", order.getTrackingNo());
+        }
     }
 
     private static final Map<String, String> PLATFORM_API_URLS = Map.of(

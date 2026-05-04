@@ -227,6 +227,9 @@ const production = {
   getProcessStatus(orderId) {
     return ok('/api/production/order/process-status/' + encodeURIComponent(orderId), 'GET', {});
   },
+  getOrderTracking(orderId) {
+    return ok('/api/production/process-tracking/order/' + encodeURIComponent(orderId), 'GET', {});
+  },
   getNodeOperations(orderId) {
     return ok('/api/production/order/node-operations/' + encodeURIComponent(orderId), 'GET', {});
   },

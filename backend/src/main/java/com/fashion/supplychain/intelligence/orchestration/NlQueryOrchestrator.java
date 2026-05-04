@@ -64,10 +64,12 @@ public class NlQueryOrchestrator {
         try {
             resp = routeIntent(question, tenantId, factoryId, sessionKey);
         } catch (Exception e) {
-            log.error("[NL查询] 数据加载异常（降级返回兜底）: {}", e.getMessage(), e);
+            String traceId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            log.error("[NL查询] 数据加载异常 traceId={}: {}", traceId, e.getMessage(), e);
             resp = new NlQueryResponse();
             resp.setIntent("error");
-            resp.setAnswer("系统暂时无法处理您的询问，请稍后重试");
+            resp.setErrorTraceId(traceId);
+            resp.setAnswer("系统暂时无法处理您的询问（追踪ID: " + traceId + "），请稍后重试");
             resp.setConfidence(0);
         }
 
@@ -258,6 +260,11 @@ public class NlQueryOrchestrator {
         // 21.7) 费用明细/花了多少钱
         if (containsAny(question, "费用明细", "花多少钱", "花了多少", "总支出", "开支", "物料费")) {
             return smartHandlers.handleExpenseBreakdownQuery();
+        }
+        // 21.7a) 面料缺口
+        if (containsAny(question, "面料缺口", "缺料", "物料缺口", "库存不够", "物料不够")
+                || (containsAny(question, "面料", "物料") && containsAny(question, "缺", "不够", "够吗", "够不够"))) {
+            return dataHandlers.handleMaterialGapQuery(tenantId);
         }
         // 21.8) 上周/这周/本周/本月对比
         if (containsAny(question, "上周", "本周", "这周", "这个月", "上个月", "环比")) {

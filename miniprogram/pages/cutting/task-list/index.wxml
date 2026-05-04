@@ -53,6 +53,10 @@
           <text class="info-label">数量</text>
           <text class="info-value bold">{{item.orderQuantity || 0}} 件</text>
         </view>
+        <view wx:if="{{item.expectedShipDate || item.deliveryDate}}" class="info-row">
+          <text class="info-label">交货日期</text>
+          <text class="info-value">{{item.expectedShipDate || item.deliveryDate}}</text>
+        </view>
         <view wx:if="{{item.receiverName}}" class="info-row">
           <text class="info-label">领取人</text>
           <text class="info-value">{{item.receiverName}}</text>

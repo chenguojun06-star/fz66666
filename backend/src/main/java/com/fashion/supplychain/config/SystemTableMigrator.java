@@ -538,6 +538,8 @@ public class SystemTableMigrator {
                 jdbc.update("UPDATE t_app_store SET price_monthly=149.00,  price_yearly=1490.00, price_once=19999.00 WHERE app_code='LOGISTICS_SYNC'");
                 jdbc.update("UPDATE t_app_store SET price_monthly=199.00,  price_yearly=1990.00, price_once=19999.00 WHERE app_code='PAYMENT_SYNC'");
                 jdbc.update("UPDATE t_app_store SET price_monthly=249.00,  price_yearly=2490.00, price_once=19999.00 WHERE app_code='MATERIAL_SUPPLY'");
+                jdbc.update("UPDATE t_app_store SET price_monthly=299.00,  price_yearly=2990.00, price_once=19999.00 WHERE app_code='EC_JST'");
+                jdbc.update("UPDATE t_app_store SET price_monthly=199.00,  price_yearly=1990.00, price_once=19999.00 WHERE app_code='EC_DONGFANG'");
                 log.info("App store prices fixed successfully.");
             }
         } catch (Exception e) {
@@ -605,6 +607,8 @@ public class SystemTableMigrator {
             jdbc.update("UPDATE t_app_store SET app_name='小红书', app_desc='对接小红书商城，内容种草带来的订单管理', features='[\"订单管理\",\"笔记联动\",\"库存同步\"]' WHERE app_code='EC_XIAOHONGSHU'");
             jdbc.update("UPDATE t_app_store SET app_name='微信小店', app_desc='对接微信小店与视频号，私域订单全管理', features='[\"订单同步\",\"私域管理\",\"客户管理\"]' WHERE app_code='EC_WECHAT_SHOP'");
             jdbc.update("UPDATE t_app_store SET app_name='Shopify', app_desc='对接 Shopify 独立站，跨境订单一体化管理', features='[\"订单同步\",\"多币种\",\"物流对接\"]' WHERE app_code='EC_SHOPIFY'");
+            jdbc.update("UPDATE t_app_store SET app_name='聚水潭', app_desc='对接聚水潭ERP中台，聚合多平台订单，自动拉取订单、客户、店铺数据', features='[\"多平台订单聚合\",\"自动店铺发现\",\"客户归集\",\"物流回传\"]' WHERE app_code='EC_JST'");
+            jdbc.update("UPDATE t_app_store SET app_name='东纺纺织', app_desc='对接东纺纺织平台，同步面料产品、供应商、采购订单数据', features='[\"面料同步\",\"供应商对接\",\"采购订单\",\"库存联动\"]' WHERE app_code='EC_DONGFANG'");
             jdbc.update("UPDATE t_app_store SET app_name='客户管理', app_desc='客户档案管理、应收账款跟踪、客户查询门户（扫码查进度）。深度整合生产数据，一站式管理您的客户关系与回款。', features='[\"客户档案\",\"应收账款\",\"客户查询门户\",\"历史订单汇总\",\"催款提醒\"]' WHERE app_code='CRM_MODULE'");
             jdbc.update("UPDATE t_app_store SET app_name='财税对接', app_desc='一键导出金蝶KIS / 用友T3 格式账目，工资汇总表、物料对账单、发货记录单全覆盖，告别手工录入，3分钟完成月结。', features='[\"金蝶KIS导出\",\"用友T3导出\",\"工资汇总\",\"物料对账\",\"发货记录\"]' WHERE app_code='FINANCE_TAX'");
             jdbc.update("UPDATE t_app_store SET app_name='供应商采购', app_desc='采购订单管理、收货确认、应付账款核算，与仓库库存深度联动，自动触发缺料预警，告别 Excel 采购台账。', features='[\"采购订单\",\"收货确认\",\"应付账款\",\"缺料预警\",\"仓库联动\"]' WHERE app_code='PROCUREMENT'");

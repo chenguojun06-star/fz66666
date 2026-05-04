@@ -6,6 +6,7 @@ import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import styles from './SmartBubble.module.css';
 
 const POLL_INTERVAL = 30_000;
+const MAX_BACKOFF = 5 * 60_000;
 const BUBBLE_AUTO_DISMISS_MS = 15_000;
 const STORAGE_KEY = 'xiaoyun_bubble_dismissed';
 
@@ -20,6 +21,8 @@ const SmartBubble: React.FC<SmartBubbleProps> = ({ onOpenTaskPanel, triggerEdge 
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const failCountRef = useRef(0);
   const prevTotalRef = useRef(0);
 
   const loadDismissed = useCallback(() => {
@@ -60,19 +63,29 @@ const SmartBubble: React.FC<SmartBubbleProps> = ({ onOpenTaskPanel, triggerEdge 
         setSummary(null);
         setVisible(false);
       }
-    } catch (e) {
-      console.error('[SmartBubble] fetch failed', e);
+      failCountRef.current = 0;
+    } catch {
+      failCountRef.current += 1;
     }
   }, [loadDismissed]);
 
+  const scheduleNext = useCallback(() => {
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    const delay = failCountRef.current === 0
+      ? POLL_INTERVAL
+      : Math.min(POLL_INTERVAL * Math.pow(2, failCountRef.current - 1), MAX_BACKOFF);
+    pollTimerRef.current = setTimeout(() => {
+      void fetchSummary().then(scheduleNext);
+    }, delay);
+  }, [fetchSummary]);
+
   useEffect(() => {
-    void fetchSummary();
-    const timer = setInterval(() => void fetchSummary(), POLL_INTERVAL);
+    void fetchSummary().then(scheduleNext);
     return () => {
-      clearInterval(timer);
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
       if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
     };
-  }, [fetchSummary]);
+  }, [fetchSummary, scheduleNext]);
 
   const handleDismiss = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

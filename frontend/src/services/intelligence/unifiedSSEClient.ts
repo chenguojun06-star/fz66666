@@ -55,6 +55,8 @@ export interface UnifiedSSEClientOptions {
   headers?: Record<string, string>;
   timeoutMs?: number;
   heartbeatIntervalMs?: number;
+  reconnectMs?: number;
+  maxReconnectAttempts?: number;
   onEvent?: SseEventHandler;
   onError?: (error: Error) => void;
   onDone?: () => void;
@@ -64,13 +66,17 @@ export class UnifiedSSEClient {
   private controller: AbortController | null = null;
   private lastActivityMs = 0;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-  private readonly options: Required<Pick<UnifiedSSEClientOptions, 'timeoutMs' | 'heartbeatIntervalMs'>> & Omit<UnifiedSSEClientOptions, 'timeoutMs' | 'heartbeatIntervalMs'>;
+  private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly options: Required<Pick<UnifiedSSEClientOptions, 'timeoutMs' | 'heartbeatIntervalMs' | 'reconnectMs' | 'maxReconnectAttempts'>> & Omit<UnifiedSSEClientOptions, 'timeoutMs' | 'heartbeatIntervalMs' | 'reconnectMs' | 'maxReconnectAttempts'>;
 
   constructor(options: UnifiedSSEClientOptions) {
     this.options = {
       ...options,
       timeoutMs: options.timeoutMs ?? 120_000,
       heartbeatIntervalMs: options.heartbeatIntervalMs ?? 15_000,
+      reconnectMs: options.reconnectMs ?? 3000,
+      maxReconnectAttempts: options.maxReconnectAttempts ?? 3,
     };
   }
 
@@ -94,21 +100,49 @@ export class UnifiedSSEClient {
       });
 
       if (!response.ok) {
+        const statusCode = response.status;
+        if (statusCode === 401 || statusCode === 403) {
+          throw new Error(`SSE_AUTH_ERROR:${statusCode}`);
+        }
         throw new Error(`SSE connection failed: ${response.status}`);
       }
 
+      this.reconnectAttempts = 0;
       this.startHeartbeatMonitor();
       await this.readStream(response);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       const error = err instanceof Error ? err : new Error(String(err));
-      this.options.onError?.(error);
+
+      if (error.message.startsWith('SSE_AUTH_ERROR')) {
+        this.options.onError?.(new Error('登录已过期，请重新登录'));
+        return;
+      }
+
+      if (this.reconnectAttempts < this.options.maxReconnectAttempts) {
+        this.reconnectAttempts++;
+        const delay = this.options.reconnectMs * Math.pow(2, this.reconnectAttempts - 1);
+        console.warn(`[SSE] 连接断开，${delay}ms 后第 ${this.reconnectAttempts}/${this.options.maxReconnectAttempts} 次重连...`);
+        this.options.onError?.(new Error(`网络中断，正在重连...（${this.reconnectAttempts}/${this.options.maxReconnectAttempts}）`));
+        this.reconnectTimer = setTimeout(() => {
+          this.connect();
+        }, delay);
+      } else {
+        this.options.onError?.(new Error('网络连接失败，已尝试 ' + this.options.maxReconnectAttempts + ' 次重连，请检查网络后重试'));
+      }
     } finally {
-      this.disconnect();
+      if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
+        this.disconnect();
+      }
     }
   }
 
   disconnect(): void {
+    this.reconnectAttempts = this.options.maxReconnectAttempts;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.controller) {
       this.controller.abort();
       this.controller = null;

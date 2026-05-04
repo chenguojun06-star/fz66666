@@ -2,8 +2,8 @@
  * 订单数据转换工具
  * 从 work/index.js 提取的纯函数，负责订单数据格式化
  */
-const { validateProductionOrder, normalizeData } = require('../../../utils/dataValidator');
-const { orderStatusText } = require('../../../utils/orderStatusHelper');
+const { validateProductionOrder, normalizeData } = require('./dataValidator');
+const { orderStatusText } = require('./orderStatusHelper');
 const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { calcOrderProgress } = require('./progressNodes');

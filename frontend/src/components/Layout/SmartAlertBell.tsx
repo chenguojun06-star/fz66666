@@ -80,6 +80,9 @@ const saveDismissedNotices = (ids: Set<number>) => {
 };
 
 // ─── 主组件 ─────────────────────────────────────────────────
+const NOTICE_POLL_INTERVAL = 60_000;
+const MAX_BACKOFF = 5 * 60_000;
+
 const SmartAlertBell: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -119,7 +122,11 @@ const SmartAlertBell: React.FC = () => {
       if (countRes.status === 'fulfilled' && countRes.value?.data?.count !== undefined) {
         setMyUnreadCount(Number(countRes.value.data.count));
       }
-    } catch { /* ignore */ }
+      const bothFailed = noticesRes.status === 'rejected' && countRes.status === 'rejected';
+      return bothFailed ? 'failed' : 'ok';
+    } catch {
+      return 'failed';
+    }
   }, []);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -156,17 +163,39 @@ const SmartAlertBell: React.FC = () => {
     }
   }, []);
 
+  const noticeFailRef = useRef(0);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleNoticePoll = useCallback(() => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    const delay = noticeFailRef.current === 0
+      ? NOTICE_POLL_INTERVAL
+      : Math.min(NOTICE_POLL_INTERVAL * Math.pow(2, noticeFailRef.current - 1), MAX_BACKOFF);
+    noticeTimerRef.current = setTimeout(async () => {
+      const result = await fetchMyNotices();
+      if (result === 'failed') {
+        noticeFailRef.current += 1;
+      } else {
+        noticeFailRef.current = 0;
+      }
+      scheduleNoticePoll();
+    }, delay);
+  }, [fetchMyNotices]);
+
   useEffect(() => {
     fetchData();
-    fetchMyNotices();
+    void fetchMyNotices().then((result) => {
+      if (result === 'failed') noticeFailRef.current += 1;
+      else noticeFailRef.current = 0;
+      scheduleNoticePoll();
+    });
     const timer = setInterval(() => setFetchedToday(''), 10 * 60 * 1000);
-    const noticeTimer = setInterval(fetchMyNotices, 60 * 1000);
     return () => {
       clearInterval(timer);
-      clearInterval(noticeTimer);
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
       abortRef.current?.abort();
     };
-  }, [fetchData, fetchMyNotices]);
+  }, [fetchData, fetchMyNotices, scheduleNoticePoll]);
 
   useEffect(() => {
     if (!fetchedToday) fetchData();

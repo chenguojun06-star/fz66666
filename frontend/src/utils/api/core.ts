@@ -284,8 +284,8 @@ export const createApiClient = (): ApiClient => {
       const shouldRetryError = !error?.response || status === 408 || status === 429 || status === 502 || status === 503 || status === 504;
 
       // 自动重试机制：仅针对幂等 GET 且属于网络/超时/限流/5xx 错误
-      if (config && !config.retry) {
-        config.retry = 2; // 默认重试2次
+      if (config && config.retry === undefined) {
+        config.retry = 2;
       }
 
       if (config && shouldRetryError && (config.__retryCount ?? 0) < (config.retry ?? 0)) {

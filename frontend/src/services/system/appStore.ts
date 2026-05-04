@@ -127,17 +127,14 @@ export const appStoreService = {
     return request.post('/system/app-store/my-subscriptions');
   },
 
-  // 获取订单详情（TODO: 后端暂未实现独立的订单详情查询端点，需要时再添加）
   getOrder: (orderNo: string): Promise<AppOrder> => {
     return request.get(`/system/app-store/order/${orderNo}`);
   },
 
-  // 取消订单（TODO: 后端暂未实现取消订单端点，需要时再添加）
   cancelOrder: (orderNo: string): Promise<void> => {
     return request.post(`/system/app-store/order/${orderNo}/cancel`);
   },
 
-  // 续费订阅（TODO: 后端暂未实现续费端点，需要时再添加）
   renewSubscription: (subscriptionId: number, subscriptionType: string): Promise<AppOrder> => {
     return request.post(`/system/app-store/subscription/${subscriptionId}/renew`, { subscriptionType });
   },

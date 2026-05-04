@@ -13,4 +13,5 @@ public class NlQueryResponse {
     private String componentName;
     private List<String> suggestions;
     private String aiInsight;
+    private String errorTraceId;
 }

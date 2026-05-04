@@ -36,6 +36,8 @@ export const EC_PLATFORM_MAP: Record<string, { code: string; label: string; extr
   EC_XIAOHONGSHU: { code: 'XIAOHONGSHU', label: '小红书',  extraHint: '' },
   EC_WECHAT_SHOP: { code: 'WECHAT_SHOP', label: '微信小店', extraHint: '' },
   EC_SHOPIFY:     { code: 'SHOPIFY',     label: 'Shopify', extraHint: '店铺域名，如 mystore.myshopify.com' },
+  EC_JST:         { code: 'JST',         label: '聚水潭',  extraHint: '聚水潭开放平台AppKey/AppSecret' },
+  EC_DONGFANG:    { code: 'DONGFANG',    label: '东纺纺织',extraHint: '东纺纺织平台API密钥' },
 };
 
 export const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: string }> = {
@@ -51,6 +53,8 @@ export const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHin
   EC_XIAOHONGSHU: { icon: '', color: '#FF2442', urlHint: '如: https://your-system.com/webhook/xiaohongshu' },
   EC_WECHAT_SHOP: { icon: '', color: '#07C160', urlHint: '如: https://your-system.com/webhook/wechat-shop' },
   EC_SHOPIFY:     { icon: '', color: '#5C6AC4', urlHint: '如: https://your-system.com/webhook/shopify' },
+  EC_JST:      { icon: '', color: '#E85D04', urlHint: '如: https://your-system.com/webhook/jst' },
+  EC_DONGFANG: { icon: '', color: '#2D6A4F', urlHint: '如: https://your-system.com/webhook/dongfang' },
   CRM_MODULE:  { icon: '', color: 'var(--color-primary)', urlHint: '' },
   FINANCE_TAX: { icon: '', color: 'var(--color-success)', urlHint: '' },
   PROCUREMENT: { icon: '', color: 'var(--color-warning)', urlHint: '' },

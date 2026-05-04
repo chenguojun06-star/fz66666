@@ -1,6 +1,11 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.*;
+import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.dashboard.service.DashboardQueryService;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +22,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class NlQuerySmartHandlers {
 
+    @Autowired private ScanRecordService scanRecordService;
+    @Autowired private DashboardQueryService dashboardQueryService;
     @Autowired private HealthIndexOrchestrator healthIndexOrchestrator;
     @Autowired private BottleneckDetectionOrchestrator bottleneckDetectionOrchestrator;
     @Autowired private WorkerEfficiencyOrchestrator workerEfficiencyOrchestrator;
@@ -716,17 +723,51 @@ public class NlQuerySmartHandlers {
         NlQueryResponse resp = build("payroll");
         resp.setComponentName("PayrollSummaryCard");
         try {
-            // 从AI Agent获取工资数据（使用tool_financial_payroll）
-            StringBuilder sb = new StringBuilder("💰 工资总览：\n");
-            sb.append("💡 完整工资数据请在小云AI对话框中输入「查询我的工资」，或管理员输入「本月工资汇总」\n\n");
-            sb.append("可用工资功能：\n");
-            sb.append("• 个人工资明细 — 说「我的工资」\n");
-            sb.append("• 计件工资单价 — 说「XX工序单价」\n");
-            sb.append("• 工资异常检测 — 说「检测工资异常」\n");
-            sb.append("• 月度工资汇总 — 说「这个月工资总额」\n");
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            String userId = com.fashion.supplychain.common.UserContext.userId();
+
+            long todayScanQty = dashboardQueryService.sumTodayScanQuantity();
+            long totalScanQty = dashboardQueryService.sumTotalScanQuantity();
+
+            LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+            LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+            LocalDateTime monthStart = LocalDateTime.of(LocalDate.now().withDayOfMonth(1), LocalTime.MIN);
+
+            long todayScanCount = dashboardQueryService.countScansBetween(todayStart, todayEnd);
+            long monthScanQty = 0;
+            try {
+                com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> mqw =
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+                mqw.eq("tenant_id", tenantId)
+                   .eq("scan_result", "success")
+                   .ne("scan_type", "orchestration")
+                   .ge("scan_time", monthStart);
+                monthScanQty = scanRecordService.count(mqw);
+            } catch (Exception ex) {
+                log.debug("[NlQuery] 月扫码件数查询失败: {}", ex.getMessage());
+            }
+
+            StringBuilder sb = new StringBuilder("💰 生产工资数据概览：\n");
+            sb.append(String.format("• 今日扫码：%d 次 / %d 件\n", todayScanCount, todayScanQty));
+            sb.append(String.format("• 本月累计扫码：%d 条\n", monthScanQty));
+            sb.append(String.format("• 历史累计扫码：%d 件\n", totalScanQty));
+
+            sb.append("\n💡 更多工资功能：\n");
+            sb.append("• 个人工资明细 — 在小云AI对话框输入「查询我的工资」\n");
+            sb.append("• 工资异常检测 — 输入「检测工资异常」\n");
+            sb.append("• 月度工资汇总 — 输入「本月工资汇总」\n");
+            sb.append("• 工资结算审批 — 管理员输入「审批工资」");
+
             resp.setAnswer(sb.toString().trim());
-            resp.setConfidence(85);
-            resp.setSuggestions(Arrays.asList("给张三发工资", "工资异常检测", "上个月总工资", "导出工资单"));
+            resp.setConfidence(88);
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("todayScanCount", todayScanCount);
+            data.put("todayScanQty", todayScanQty);
+            data.put("monthScanQty", monthScanQty);
+            data.put("totalScanQty", totalScanQty);
+            resp.setData(data);
+            resp.setSuggestions(Arrays.asList("查询我的工资", "工资异常检测", "本月工资汇总", "审批工资"));
         } catch (Exception e) {
             fallback(resp, "工资", e);
         }
@@ -767,8 +808,10 @@ public class NlQuerySmartHandlers {
     }
 
     private void fallback(NlQueryResponse resp, String module, Exception e) {
-        log.warn("[NlQuery] {}查询失败: {}", module, e.getMessage());
-        resp.setAnswer(module + "数据暂时不可用，请稍后再试");
+        String traceId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        log.warn("[NlQuery] {}查询失败 traceId={}: {}", module, traceId, e.getMessage());
+        resp.setErrorTraceId(traceId);
+        resp.setAnswer(module + "数据暂时不可用（追踪ID: " + traceId + "），请稍后再试");
         resp.setConfidence(30);
     }
 

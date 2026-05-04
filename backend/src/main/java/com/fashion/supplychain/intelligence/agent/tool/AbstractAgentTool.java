@@ -6,6 +6,8 @@ import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.agent.command.CompensableTool;
+import com.fashion.supplychain.intelligence.agent.command.CompensationResult;
 import com.fashion.supplychain.intelligence.agent.tracker.AiOperationAudit;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +17,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 @Slf4j
-public abstract class AbstractAgentTool implements AgentTool {
+public abstract class AbstractAgentTool implements AgentTool, CompensableTool {
 
     protected static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -319,5 +321,15 @@ public abstract class AbstractAgentTool implements AgentTool {
         function.setParameters(params);
         tool.setFunction(function);
         return tool;
+    }
+
+    @Override
+    public CompensationResult compensate(Map<String, Object> execSnapshot) {
+        return CompensationResult.fail("工具 " + getName() + " 暂不支持自动回滚");
+    }
+
+    @Override
+    public boolean isCompensable() {
+        return false;
     }
 }
