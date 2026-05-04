@@ -211,9 +211,9 @@ public class ReportDataCollector {
         q.eq("delete_flag", 0);
         if (userId != null) {
             q.and(w -> {
-                w.eq("created_by", userId);
+                w.eq("created_by_id", userId);
                 if (username != null) {
-                    w.or().like("merchandiser_name", username);
+                    w.or().like("merchandiser", username);
                 }
             });
         }
