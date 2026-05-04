@@ -1,7 +1,7 @@
 page { background-color: #f5f6fa; }
 .container { padding: 0 var(--page-padding-x); min-height: 100vh; }
 
-.body { height: calc(100vh - 70px); }
+.body { height: calc(100vh - 70px); -webkit-overflow-scrolling: touch; }
 
 .sec {
   margin: var(--card-gap-y) 0; padding: 12rpx 14rpx;

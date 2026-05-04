@@ -44,6 +44,11 @@ Page({
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
+    if (this._dataLoaded && !this._needsRefresh) {
+      this._bindWsEvents();
+      return;
+    }
+    this._needsRefresh = false;
     this.loadDefectList(true);
     this._bindWsEvents();
   },
@@ -122,6 +127,7 @@ Page({
           stats: stats,
         });
 
+        self._dataLoaded = true;
         return newList;
       })
       .catch(function (err) {

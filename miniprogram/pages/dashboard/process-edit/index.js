@@ -29,7 +29,6 @@ Page({
     orderId: '',
     orderNo: '',
     styleNo: '',
-    styleId: '',
     status: '',
     statusCn: '',
     statusClass: '',
@@ -40,7 +39,6 @@ Page({
     editForm: {},
     showAddModal: false,
     addForm: { stageId: '', stageName: '', processName: '', machineType: '', price: '', standardTime: '', difficulty: '中' },
-    _originalProcesses: [],
     _deletedIds: [],
     _newProcesses: [],
     processDict: []
@@ -93,7 +91,6 @@ Page({
         orderId: order.id || that.data.orderId,
         orderNo: order.orderNo || that.data.orderNo,
         styleNo: order.styleNo || order.styleNumber || '',
-        styleId: order.styleId || '',
         status: status,
         statusCn: STATUS_CN[status] || status,
         statusClass: STATUS_CLASS[status] || 'order-status--other',
@@ -102,7 +99,8 @@ Page({
 
       var processes = that._extractProcesses(order);
       that._buildStages(processes);
-      that.setData({ loading: false, _originalProcesses: JSON.parse(JSON.stringify(processes)) });
+      that._originalProcesses = JSON.parse(JSON.stringify(processes));
+      that.setData({ loading: false });
     }).catch(function (err) {
       console.error('[process-edit] 加载订单失败:', err);
       that.setData({ loading: false });
@@ -315,7 +313,7 @@ Page({
       content: '将撤销所有修改，确定？',
       success: function (res) {
         if (!res.confirm) return;
-        that._buildStages(that.data._originalProcesses);
+        that._buildStages(that._originalProcesses || []);
         that.setData({ hasChanges: false, _deletedIds: [], _newProcesses: [], processEditId: null, editForm: {} });
       }
     });
@@ -371,14 +369,14 @@ Page({
           sortOrder: n.sortOrder
         };
       }));
-      that.setData({ _originalProcesses: JSON.parse(JSON.stringify(nodes.map(function (n, i) {
+      that._originalProcesses = JSON.parse(JSON.stringify(nodes.map(function (n, i) {
         return {
           id: n.id, processName: n.name, processCode: n.processCode,
           progressStage: n.progressStage, machineType: n.machineType,
           standardTime: n.standardTime, price: n.unitPrice,
           difficulty: n.difficulty, sortOrder: n.sortOrder
         };
-      }))) });
+      })));
       wx.showToast({ title: '保存成功', icon: 'success' });
     }).catch(function (err) {
       wx.hideLoading();

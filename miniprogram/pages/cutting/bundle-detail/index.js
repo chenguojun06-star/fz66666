@@ -31,9 +31,6 @@ Page({
 
     /* 下单数量相关 */
     orderTotal: 0,
-    orderMatrix: { sizes: [], rows: [] },
-    orderSimpleRows: [],   // [{color, total}]
-
     /* 裁货数量相关 */
     cuttingTotal: 0,
     cuttingExcess: 0,
@@ -169,6 +166,9 @@ Page({
         list = list.map(order => ({
           ...order,
           styleCoverUrl: getAuthedImageUrl(order.styleCover || order.styleImageUrl || order.coverImage || ''),
+          // 交期兜底：PC 端下单用 plannedEndDate，统一归一到 deliveryDate 供模板显示
+          deliveryDate: order.expectedShipDate || order.deliveryDate
+            || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
         }));
         this.setData({ orderList: list, orderListLoading: false });
       })
@@ -231,6 +231,14 @@ Page({
 
       if (!order) return;
 
+      // 交期兜底：PC 端创建订单时"交期"字段存入 plannedEndDate (LocalDateTime，如 "2026-06-15T00:00:00")
+      // 小程序模板读 expectedShipDate || deliveryDate，故此处把 plannedEndDate 的日期部分归一到 deliveryDate
+      if (!order.expectedShipDate && !order.deliveryDate && order.plannedEndDate) {
+        order.deliveryDate = typeof order.plannedEndDate === 'string'
+          ? order.plannedEndDate.slice(0, 10)
+          : '';
+      }
+
       const coverImage = getAuthedImageUrl(order.styleImageUrl || order.coverImage || order.imgUrl || '');
       const orderLines = parseProductionOrderLines(order);
       const { sizes, matrix } = this._buildMatrixData(orderLines);
@@ -238,12 +246,12 @@ Page({
       const orderMatrix = this._toSkuMatrix(matrix, sizes);
       const orderSimpleRows = this._toSimpleRows(matrix);
 
+      this._orderMatrix = orderMatrix;
+      this._orderSimpleRows = orderSimpleRows;
       this.setData({
         orderInfo: order,
         coverImage,
         orderTotal,
-        orderMatrix,
-        orderSimpleRows,
       });
     } catch (e) {
       console.error('[bundle-detail] loadOrderInfo error', e);

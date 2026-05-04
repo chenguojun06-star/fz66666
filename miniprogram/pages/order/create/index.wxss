@@ -13,7 +13,7 @@ page { background-color: #f5f6fa; }
 
 .state-wrap { display: flex; justify-content: center; padding-top: 120px; font-size: 14px; color: #999; }
 
-.grid-scroll { height: calc(100vh - env(safe-area-inset-top) - 64px); }
+.grid-scroll { height: calc(100vh - env(safe-area-inset-top) - 64px); -webkit-overflow-scrolling: touch; }
 .grid { display: flex; flex-wrap: wrap; padding: 8rpx var(--page-padding-x); box-sizing: border-box; }
 
 .card {

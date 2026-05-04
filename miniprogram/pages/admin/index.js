@@ -52,7 +52,6 @@ Page({
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
     menuItems: [],
-    showMenuManage: false,
     menuManageVisible: false,
     menuManageList: [],
     savingMenuConfig: false,
@@ -71,7 +70,7 @@ Page({
       return;
     }
     var canManage = isAdminOrSupervisor() || isFactoryOwner();
-    this.setData({ showMenuManage: canManage });
+    this._showMenuManage = canManage;
     this.loadUserInfo(canManage);
     this.loadSystemInfo();
     this.setupDataRefreshListener();
@@ -97,7 +96,7 @@ Page({
       menuItems: buildMenuItems({
         showInviteSection: this._showInviteSection || false,
         showApprovalEntry: this.data.showApprovalEntry,
-        showMenuManage: this.data.showMenuManage,
+        showMenuManage: this._showMenuManage || false,
       }),
     });
   },

@@ -43,8 +43,6 @@ Page({
     colorOptions: [], sizeOptions: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     factoryList: [], orgUnitList: [], categoryOptions: [],
-    processPrices: [], processTotal: 0,
-    quotation: null, quotationTotalCost: 0, quotationTotalPrice: 0,
     quickFillQty: 1, submitting: false
   },
 
@@ -120,7 +118,8 @@ Page({
       var list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
       var total = 0;
       list.forEach(function (p) { total += parseFloat(p.unitPrice || p.price || 0); });
-      self.setData({ processPrices: list, processTotal: total });
+      self._processPrices = list;
+      self._processTotal = total;
       self._recalcComputedPrice();
     }).catch(function () {});
   },
@@ -129,22 +128,23 @@ Page({
     var self = this;
     api.style.getQuotation(self.data.styleId).then(function (q) {
       if (!q) return;
-      self.setData({
-        quotation: q,
-        quotationTotalCost: parseFloat(q.totalCost || 0),
-        quotationTotalPrice: parseFloat(q.totalPrice || 0)
-      });
+      self._quotation = q;
+      self._quotationTotalCost = parseFloat(q.totalCost || 0);
+      self._quotationTotalPrice = parseFloat(q.totalPrice || 0);
       self._recalcComputedPrice();
     }).catch(function () {});
   },
 
   _recalcComputedPrice: function () {
     var d = this.data, mode = d.pricingMode;
+    var processTotal = this._processTotal || 0;
+    var quotationTotalCost = this._quotationTotalCost || 0;
+    var quotationTotalPrice = this._quotationTotalPrice || 0;
     var price = 0;
-    if (mode === 'PROCESS') price = d.processTotal || 0;
-    else if (mode === 'SIZE') price = d.processTotal || 0;
-    else if (mode === 'COST') price = d.quotationTotalCost || d.processTotal || 0;
-    else if (mode === 'QUOTE') price = d.quotationTotalPrice || 0;
+    if (mode === 'PROCESS') price = processTotal;
+    else if (mode === 'SIZE') price = processTotal;
+    else if (mode === 'COST') price = quotationTotalCost || processTotal;
+    else if (mode === 'QUOTE') price = quotationTotalPrice;
     else if (mode === 'MANUAL') price = parseFloat(d.manualOrderUnitPrice) || 0;
     this.setData({ computedUnitPrice: price.toFixed(2) });
   },
@@ -373,11 +373,11 @@ Page({
 
     var pricingObj = {
       pricingMode: d.pricingMode,
-      processBasedUnitPrice: d.processTotal || 0,
-      sizeBasedUnitPrice: d.processTotal || 0,
-      totalCostUnitPrice: d.quotationTotalCost || d.processTotal || 0,
-      quotationUnitPrice: d.quotationTotalPrice || 0,
-      suggestedQuotationUnitPrice: d.quotationTotalPrice || 0,
+      processBasedUnitPrice: this._processTotal || 0,
+      sizeBasedUnitPrice: this._processTotal || 0,
+      totalCostUnitPrice: this._quotationTotalCost || this._processTotal || 0,
+      quotationUnitPrice: this._quotationTotalPrice || 0,
+      suggestedQuotationUnitPrice: this._quotationTotalPrice || 0,
       orderUnitPrice: unitPrice || 0,
       sizeLabels: d.selectedSizes || [],
     };

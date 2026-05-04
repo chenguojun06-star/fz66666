@@ -4,7 +4,7 @@
 .sku-cell { flex: 1; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary); min-width: 0; }
 .sku-col-label { text-align: left; color: var(--color-text-primary); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); flex: 1.2; }
 
-.matrix-scroll { width: 100%; }
+.matrix-scroll { width: 100%; -webkit-overflow-scrolling: touch; }
 .matrix-table { display: flex; flex-direction: column; min-width: 100%; }
 .matrix-row { display: flex; border-bottom: 1rpx solid var(--color-border-light); }
 .matrix-header { background: var(--color-bg-gray); font-weight: var(--font-weight-semibold); }

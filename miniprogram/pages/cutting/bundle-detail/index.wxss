@@ -911,6 +911,7 @@
 /* 菲号列表 */
 .tf-bundles-list {
   max-height: 300rpx;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tf-bundle-item {
@@ -1083,6 +1084,7 @@
 /* 搜索结果 */
 .tf-result-list {
   max-height: 320rpx;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tf-result-item {
