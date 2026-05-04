@@ -45,6 +45,26 @@ public class AsyncConfig implements AsyncConfigurer {
         return executor;
     }
 
+    /**
+     * AI自我批评专用线程池（低优先级，不影响主业务）。
+     */
+    @Bean("aiSelfCriticExecutor")
+    public Executor aiSelfCriticExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(12);
+        executor.setQueueCapacity(500);
+        executor.setKeepAliveSeconds(120);
+        executor.setThreadNamePrefix("ai-critic-");
+        executor.setTaskDecorator(contextCopyingDecorator());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy()); // 队列满时丢弃，不阻塞主流程
+        executor.setWaitForTasksToCompleteOnShutdown(false); // 不等待，快速关闭
+        executor.initialize();
+        log.info("AI Self-Critic thread pool initialized: core={}, max={}, queue={}",
+                executor.getCorePoolSize(), executor.getMaxPoolSize(), 500);
+        return executor;
+    }
+
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
         return (Throwable ex, Method method, Object... params) -> {
