@@ -41,7 +41,7 @@ public class PayrollAnomalyDetectorTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "tool_payroll_anomaly_detect";
+        return "tool_payroll_anomaly_detector";
     }
 
     @Override

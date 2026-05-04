@@ -13,6 +13,8 @@ import com.fashion.supplychain.intelligence.agent.loop.SyncAgentLoopCallback;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.service.SelfCriticService;
+import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,12 @@ public class AiAgentOrchestrator {
     @Autowired private com.fashion.supplychain.intelligence.gateway.AiInferenceGateway inferenceGateway;
     @Autowired(required = false) private com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService;
     @Autowired private com.fashion.supplychain.intelligence.helper.PromptContextProvider promptContextProvider;
+
+    // 自我进化系统组件
+    @Autowired(required = false) private SelfCriticService selfCriticService;
+    @Autowired(required = false) private RealTimeLearningLoop realTimeLearningLoop;
+    @Autowired(required = false) private QuickPathQualityGate quickPathQualityGate;
+    @Autowired(required = false) private DynamicFollowUpEngine dynamicFollowUpEngine;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -159,7 +167,7 @@ public class AiAgentOrchestrator {
                 return Result.fail("推理服务暂时不可用");
             }
 
-            triggerPostTurnHooks(ctx, userMessage, content, cb.getExecRecords());
+            triggerPostTurnHooks(ctx, userMessage, content, cb.getExecRecords(), false);
 
             return Result.success(content);
         } finally {
@@ -228,7 +236,7 @@ public class AiAgentOrchestrator {
                 queryCache.put(cacheKey, deduplicateAnswer(cb.getFinalContent()));
             }
 
-            triggerPostTurnHooks(ctx, userMessage, cb.getFinalContent(), cb.getExecRecords());
+            triggerPostTurnHooks(ctx, userMessage, cb.getFinalContent(), cb.getExecRecords(), false);
 
         } catch (Exception e) {
             log.error("[AiAgent-Stream] 流式执行异常", e);
@@ -259,13 +267,15 @@ public class AiAgentOrchestrator {
 
     private void triggerPostTurnHooks(AgentLoopContext ctx, String userMessage,
                                        String assistantResponse,
-                                       java.util.List<AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
+                                       java.util.List<AiAgentToolExecHelper.ToolExecRecord> toolRecords,
+                                       boolean usedQuickPath) {
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
         String sessionId = "default";
         String conversationId = ctx != null ? ctx.getCommandId() : java.util.UUID.randomUUID().toString();
 
         String toolResultsStr = "";
+        java.util.List<String> toolResultsList = new java.util.ArrayList<>();
         if (toolRecords != null && !toolRecords.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             for (AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
@@ -273,8 +283,33 @@ public class AiAgentOrchestrator {
                         ? rec.rawResult.substring(0, 200) + "..."
                         : rec.rawResult;
                 sb.append(rec.toolName).append(": ").append(preview).append("\n");
+                toolResultsList.add(rec.rawResult != null ? rec.rawResult : "");
             }
             toolResultsStr = sb.toString();
+        }
+
+        // === 自我批评与实时学习（新增）===
+        if (selfCriticService != null) {
+            try {
+                AgentExecutionMetrics metrics = AgentExecutionMetrics.empty();
+                metrics.setToolCallCount(toolRecords != null ? toolRecords.size() : 0);
+
+                selfCriticService.critique(
+                        conversationId, userMessage, assistantResponse,
+                        null, toolResultsList, metrics, usedQuickPath);
+            } catch (Exception e) {
+                log.debug("[AiAgent] SelfCritic触发失败（非关键）: {}", e.getMessage());
+            }
+        }
+
+        if (realTimeLearningLoop != null) {
+            try {
+                realTimeLearningLoop.trigger(
+                        conversationId, userMessage, assistantResponse,
+                        80.0, tenantId); // 默认80分，SelfCritic会独立计算
+            } catch (Exception e) {
+                log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
+            }
         }
 
         if (reflectionOrchestrator != null) {
@@ -380,12 +415,15 @@ public class AiAgentOrchestrator {
             java.util.regex.Pattern.compile("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|辛苦了|好的|收到|明白|知道了|了解).*");
     private static final java.util.regex.Pattern COMPLEX_TRIGGER =
             java.util.regex.Pattern.compile("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作|对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*");
+    private static final java.util.regex.Pattern BUSINESS_KEYWORD =
+            java.util.regex.Pattern.compile("(?s).*(订单|进度|逾期|异常|风险|工厂|工资|库存|物料|裁剪|扫码|入库|出货|对账|结算|款式|样衣|采购|催单|备注|紧急|延期|交期|产能|成本|利润|质量|次品|领料|盘点|发票|税务|报价|BOM|模板|工序|菲号|转厂|撤回|审批|通知|跟单|客户|供应商|成品|面辅|面料|辅料|报价单|生产|完成率|准时率|逾期率|在制|待处理|待审批|待质检|待入库).*");
 
     private boolean isQuickPathEligible(String userMessage) {
         if (userMessage == null || userMessage.length() > 200) return false;
         if (COMPLEX_TRIGGER.matcher(userMessage).matches()) return false;
+        if (BUSINESS_KEYWORD.matcher(userMessage).matches()) return false;
         if (QUICK_GREETING.matcher(userMessage).matches()) return true;
-        if (userMessage.length() <= 25) return true;
+        if (userMessage.length() <= 15) return true;
         return false;
     }
 
@@ -432,6 +470,16 @@ public class AiAgentOrchestrator {
             }
 
             String answer = result.getContent();
+
+            // === 快速通道质量门审查（新增）===
+            if (quickPathQualityGate != null) {
+                QuickPathQualityGate.QualityGateResult gateResult = quickPathQualityGate.review(userMessage, answer);
+                if (!gateResult.isPassed()) {
+                    log.warn("[QuickPath] 质量门未通过: {}，降级到Agent循环", gateResult.getReason());
+                    return false;
+                }
+            }
+
             long elapsed = System.currentTimeMillis() - requestStartAt;
             log.info("[QuickPath] 快速通道完成: {}字符, {}ms", answer.length(), elapsed);
 
@@ -440,6 +488,9 @@ public class AiAgentOrchestrator {
             emitter.complete();
 
             queryCache.put(cacheKey, deduplicateAnswer(answer));
+
+            // 触发后处理（标记为快速通道）
+            triggerPostTurnHooks(null, userMessage, answer, java.util.Collections.emptyList(), true);
 
             return true;
         } catch (Exception e) {

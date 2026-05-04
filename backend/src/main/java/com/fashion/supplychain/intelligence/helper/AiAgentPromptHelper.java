@@ -19,7 +19,7 @@ import java.util.concurrent.*;
 @Slf4j
 public class AiAgentPromptHelper {
 
-    @Value("${xiaoyun.agent.max-system-prompt-chars:12000}")
+    @Value("${xiaoyun.agent.max-system-prompt-chars:16000}")
     private int maxSystemPromptChars;
 
     private volatile String masAnalysisCache = "";
@@ -171,7 +171,7 @@ public class AiAgentPromptHelper {
     private interface Supplier<T> { T get(); }
 
     private String safeJoin(CompletableFuture<String> future, String label) {
-        try { return future.get(2, TimeUnit.SECONDS); }
+        try { return future.get(5, TimeUnit.SECONDS); }
         catch (Exception e) { log.debug("[AiAgent-Prompt] {}构建超时或失败，跳过: {}", label, e.getMessage()); return ""; }
     }
 
