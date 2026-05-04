@@ -66,7 +66,18 @@ public class ProfessionalReportOrchestrator {
         result.put("scanTypes", buildSummaryScanTypes(ctx));
         result.put("orderStatus", buildSummaryOrderStatus(ctx));
         result.put("factoryRanking", buildSummaryFactoryRanking(ctx));
-        result.put("riskSummary", buildSummaryRisk(ctx));
+
+        // buildSummaryRisk 返回含 overdueCount/highRiskCount/stagnantCount/overdueOrders/highRiskOrders 的 Map
+        // riskSummary 仅保留三个计数字段，overdueOrders/highRiskOrders 提升到顶层（前端 ReportPreviewData 类型约定）
+        Map<String, Object> riskResult = buildSummaryRisk(ctx);
+        Map<String, Object> riskSummaryCounts = new LinkedHashMap<>();
+        riskSummaryCounts.put("overdueCount", riskResult.get("overdueCount"));
+        riskSummaryCounts.put("highRiskCount", riskResult.get("highRiskCount"));
+        riskSummaryCounts.put("stagnantCount", riskResult.get("stagnantCount"));
+        result.put("riskSummary", riskSummaryCounts);
+        result.put("overdueOrders", riskResult.getOrDefault("overdueOrders", Collections.emptyList()));
+        result.put("highRiskOrders", riskResult.getOrDefault("highRiskOrders", Collections.emptyList()));
+
         result.put("costSummary", buildSummaryCost(ctx));
 
         return result;

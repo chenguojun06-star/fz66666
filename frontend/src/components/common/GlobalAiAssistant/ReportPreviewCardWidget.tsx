@@ -37,7 +37,7 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
       <div className={styles.reportSection}>
         <div className={styles.sectionTitle}>📈 核心指标</div>
         <div className={styles.kpiGrid}>
-          {data.kpis.map((kpi, i) => (
+          {(data.kpis ?? []).map((kpi, i) => (
             <div key={i} className={styles.kpiCard}>
               <div className={styles.kpiName}>{kpi.name}</div>
               <div className={styles.kpiValue}>
@@ -55,11 +55,11 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* 扫码类型分布 */}
-      {data.scanTypes.length > 0 && data.scanTypes.some(s => s.count > 0) && (
+      {(data.scanTypes ?? []).length > 0 && (data.scanTypes ?? []).some(s => s.count > 0) && (
         <div className={styles.reportSection}>
           <div className={styles.sectionTitle}>🔍 扫码类型分布</div>
           <div className={styles.distRow}>
-            {data.scanTypes.map((s, i) => (
+            {(data.scanTypes ?? []).map((s, i) => (
               <div key={i} className={styles.distChip}>
                 {s.name} <strong>{s.count}</strong> 次（{s.percent}%）
               </div>
@@ -69,11 +69,11 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
       )}
 
       {/* 工厂排名 */}
-      {data.factoryRanking.length > 0 && (
+      {(data.factoryRanking ?? []).length > 0 && (
         <div className={styles.reportSection}>
-          <div className={styles.sectionTitle}>🏭 工厂排名 Top {data.factoryRanking.length}</div>
+          <div className={styles.sectionTitle}>🏭 工厂排名 Top {(data.factoryRanking ?? []).length}</div>
           <div className={styles.rankList}>
-            {data.factoryRanking.map(f => (
+            {(data.factoryRanking ?? []).map(f => (
               <div key={f.rank} className={styles.rankItem}>
                 <span className={rankBadgeClass(f.rank)}>{f.rank}</span>
                 <span className={styles.rankName}>{f.name || '未命名'}</span>
@@ -106,11 +106,11 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* 逾期订单 Top 5 */}
-      {data.overdueOrders.length > 0 && (
+      {(data.overdueOrders ?? []).length > 0 && (
         <div className={styles.reportSection}>
-          <div className={styles.sectionTitle}>🔴 逾期订单 Top {data.overdueOrders.length}</div>
+          <div className={styles.sectionTitle}>🔴 逾期订单 Top {(data.overdueOrders ?? []).length}</div>
           <div className={styles.orderList}>
-            {data.overdueOrders.map((o, i) => (
+            {(data.overdueOrders ?? []).map((o, i) => (
               <div key={i} className={styles.orderItem}>
                 <div>
                   <span className={styles.orderNo}>{o.orderNo}</span>
@@ -127,11 +127,11 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
       )}
 
       {/* 高风险订单 Top 5 */}
-      {data.highRiskOrders.length > 0 && (
+      {(data.highRiskOrders ?? []).length > 0 && (
         <div className={styles.reportSection}>
-          <div className={styles.sectionTitle}>🟡 高风险订单 Top {data.highRiskOrders.length}</div>
+          <div className={styles.sectionTitle}>🟡 高风险订单 Top {(data.highRiskOrders ?? []).length}</div>
           <div className={styles.orderList}>
-            {data.highRiskOrders.map((o, i) => (
+            {(data.highRiskOrders ?? []).map((o, i) => (
               <div key={i} className={`${styles.orderItem} ${styles.highRisk}`}>
                 <div>
                   <span className={styles.orderNo}>{o.orderNo}</span>
