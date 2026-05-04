@@ -330,6 +330,8 @@ Page({
     this._generateQrImages(_rawBundles);
   },
 
+  noop() {},
+
   onPaperWidthInput(e) {
     var v = parseFloat(e.detail.value);
     if (isNaN(v) || v < 3) v = 3;

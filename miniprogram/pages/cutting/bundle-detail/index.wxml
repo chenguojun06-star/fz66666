@@ -498,7 +498,7 @@
 
   <!-- 菲号标签预览弹层（与PC端 CuttingPrintPreviewModal 一致） -->
   <view class="bpo-overlay" wx:if="{{showBundlePrintModal}}" catchtap="onCloseBundlePrint">
-    <view class="bpo-panel" catchtap="">
+    <view class="bpo-panel" catchtap="noop">
       <view class="bpo-panel-header">
         <text class="bpo-panel-title">菲号标签</text>
         <text class="bpo-panel-count">共 {{_rawBundles.length}} 个</text>
@@ -506,7 +506,7 @@
       </view>
 
       <!-- 打印尺寸配置 -->
-      <view class="bpo-config-bar" catchtap="">
+      <view class="bpo-config-bar" catchtap="noop">
         <text class="bpo-config-label">纸张设置：</text>
         <view class="bpo-config-item">
           <text class="bpo-config-unit">宽</text>
@@ -526,17 +526,17 @@
       </view>
 
       <!-- 打印方向选择 -->
-      <view class="bpo-config-bar bpo-orient-bar" catchtap="">
+      <view class="bpo-config-bar bpo-orient-bar" catchtap="noop">
         <text class="bpo-config-label">打印方向：</text>
         <view
           class="bpo-orient-btn {{printConfig.orientation == 'horizontal' ? 'bpo-orient-btn--active' : ''}}"
           data-orient="horizontal"
-          bindtap="onOrientationChange"
+          catchtap="onOrientationChange"
         >横版</view>
         <view
           class="bpo-orient-btn {{printConfig.orientation == 'vertical' ? 'bpo-orient-btn--active' : ''}}"
           data-orient="vertical"
-          bindtap="onOrientationChange"
+          catchtap="onOrientationChange"
         >竖版</view>
       </view>
 
