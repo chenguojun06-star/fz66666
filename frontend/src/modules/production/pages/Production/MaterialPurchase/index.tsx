@@ -431,7 +431,7 @@ const MaterialPurchase: React.FC = () => {
                               },
                             ]}
                           >
-                            <InputNumber min={0} precision={0} step={1} style={{ width: 140 }} />
+                            <InputNumber min={0} precision={2} step={0.01} style={{ width: 140 }} />
                           </Form.Item>
                         );
                       },

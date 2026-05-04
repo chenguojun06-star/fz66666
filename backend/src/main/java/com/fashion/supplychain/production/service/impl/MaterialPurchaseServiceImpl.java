@@ -285,7 +285,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             if (purchase.getReturnConfirmed() == null || purchase.getReturnConfirmed() != 1) {
                 continue;
             }
-            total += Math.max(0, purchase.getReturnQuantity() == null ? 0 : purchase.getReturnQuantity());
+            total += Math.max(0, purchase.getReturnQuantity() == null ? 0 : purchase.getReturnQuantity().intValue());
         }
         return total;
     }
@@ -524,7 +524,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean confirmReturnPurchase(String purchaseId, String confirmerId, String confirmerName,
-            Integer returnQuantity) {
+            java.math.BigDecimal returnQuantity) {
         return returnHelper.confirmReturnPurchase(this, purchaseId, confirmerId, confirmerName, returnQuantity);
     }
 

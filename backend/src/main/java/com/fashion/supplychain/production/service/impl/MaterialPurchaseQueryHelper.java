@@ -68,7 +68,7 @@ class MaterialPurchaseQueryHelper {
             if (record.getReturnConfirmed() != null && record.getReturnConfirmed() == 1) {
                 Integer beforeArrivedQuantity = record.getArrivedQuantity();
                 int arrived = beforeArrivedQuantity == null ? 0 : beforeArrivedQuantity;
-                int rq = record.getReturnQuantity() == null ? 0 : record.getReturnQuantity();
+                int rq = record.getReturnQuantity() == null ? 0 : record.getReturnQuantity().intValue();
                 if (arrived != rq) {
                     record.setArrivedQuantity(rq);
                     if (record.getUnitPrice() != null) record.setTotalAmount(record.getUnitPrice().multiply(BigDecimal.valueOf(rq)));

@@ -103,7 +103,7 @@ public class MaterialPurchase {
 
     private Integer returnConfirmed;
 
-    private Integer returnQuantity;
+    private BigDecimal returnQuantity;
 
     private String returnConfirmerId;
 

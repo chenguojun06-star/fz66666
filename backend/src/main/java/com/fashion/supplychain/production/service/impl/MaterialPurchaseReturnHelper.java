@@ -22,7 +22,7 @@ public class MaterialPurchaseReturnHelper {
     private MaterialStockService materialStockService;
 
     boolean confirmReturnPurchase(MaterialPurchaseServiceImpl svc, String purchaseId, String confirmerId,
-            String confirmerName, Integer returnQuantity) {
+            String confirmerName, BigDecimal returnQuantity) {
         if (!StringUtils.hasText(purchaseId)) {
             log.warn("confirmReturnPurchase: purchaseId为空");
             return false;
@@ -99,10 +99,10 @@ public class MaterialPurchaseReturnHelper {
 
         if (ok && !isOrderDrivenPurchase(existed)) {
             try {
-                Integer returnQty = existed.getReturnQuantity();
+                BigDecimal returnQtyBd = existed.getReturnQuantity();
                 Integer arrivedQty = existed.getArrivedQuantity();
-                if (returnQty != null && returnQty > 0 && arrivedQty != null) {
-                    int delta = returnQty - arrivedQty;
+                if (returnQtyBd != null && returnQtyBd.compareTo(BigDecimal.ZERO) > 0 && arrivedQty != null) {
+                    int delta = returnQtyBd.intValue() - arrivedQty;
                     if (delta > 0) {
                         materialStockService.decreaseStockForCancelReceive(existed, delta);
                         log.info("resetReturnConfirm 已回退库存: purchaseId={}, delta={}", purchaseId, delta);
@@ -151,25 +151,23 @@ public class MaterialPurchaseReturnHelper {
         return existed;
     }
 
-    private void validateReturnQuantity(MaterialPurchase existed, Integer returnQuantity, String purchaseId) {
+    private void validateReturnQuantity(MaterialPurchase existed, BigDecimal returnQuantity, String purchaseId) {
         if (returnQuantity == null) {
             throw new IllegalArgumentException("returnQuantity不能为null");
         }
-        int rq = returnQuantity;
-        if (rq < 0) {
+        if (returnQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("returnQuantity不能为负数");
         }
-        int purchaseQty = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity().intValue();
+        BigDecimal purchaseQty = existed.getPurchaseQuantity() == null ? BigDecimal.ZERO : existed.getPurchaseQuantity();
         int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
-        int max = arrivedQty > 0 ? arrivedQty : purchaseQty;
-        if (max > 10 && rq > max) {
-            throw new IllegalArgumentException("回料数量超限: rq=" + rq + ", max=" + max);
+        BigDecimal max = arrivedQty > 0 ? BigDecimal.valueOf(arrivedQty) : purchaseQty;
+        if (max.compareTo(BigDecimal.TEN) > 0 && returnQuantity.compareTo(max) > 0) {
+            throw new IllegalArgumentException("回料数量超限: rq=" + returnQuantity + ", max=" + max);
         }
     }
 
     private MaterialPurchase buildReturnPatch(MaterialPurchase existed, String confirmerId, String confirmerName,
-            Integer returnQuantity, String who) {
-        int rq = returnQuantity;
+            BigDecimal returnQuantity, String who) {
         String remark = existed.getRemark() == null ? "" : existed.getRemark().trim();
         BigDecimal unitPrice = existed.getUnitPrice() == null ? BigDecimal.ZERO : existed.getUnitPrice();
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
@@ -177,9 +175,9 @@ public class MaterialPurchaseReturnHelper {
         MaterialPurchase patch = new MaterialPurchase();
         patch.setId(existed.getId());
         patch.setReturnConfirmed(1);
-        patch.setReturnQuantity(rq);
-        patch.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(rq)));
-        patch.setStatus(rq > 0 ? MaterialConstants.STATUS_AWAITING_CONFIRM : status);
+        patch.setReturnQuantity(returnQuantity);
+        patch.setTotalAmount(unitPrice.multiply(returnQuantity));
+        patch.setStatus(returnQuantity.compareTo(BigDecimal.ZERO) > 0 ? MaterialConstants.STATUS_AWAITING_CONFIRM : status);
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);
         patch.setReturnConfirmerName(StringUtils.hasText(confirmerName) ? confirmerName.trim() : who);
         patch.setReturnConfirmTime(LocalDateTime.now());
@@ -188,10 +186,9 @@ public class MaterialPurchaseReturnHelper {
         return patch;
     }
 
-    private void syncStockOnReturnConfirm(MaterialPurchase existed, Integer returnQuantity, String purchaseId) {
-        int rq = returnQuantity;
+    private void syncStockOnReturnConfirm(MaterialPurchase existed, BigDecimal returnQuantity, String purchaseId) {
         int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
-        int delta = rq - arrivedQty;
+        int delta = returnQuantity.intValue() - arrivedQty;
         if (delta == 0 || isOrderDrivenPurchase(existed)) return;
         try {
             materialStockService.increaseStock(existed, delta);
@@ -202,7 +199,7 @@ public class MaterialPurchaseReturnHelper {
     }
 
     private boolean persistReturnPatch(MaterialPurchaseServiceImpl svc, String purchaseId, MaterialPurchase patch,
-            MaterialPurchase existed, Integer returnQuantity, String confirmerId, String confirmerName, String who) {
+            MaterialPurchase existed, BigDecimal returnQuantity, String confirmerId, String confirmerName, String who) {
         try {
             return svc.updateById(patch);
         } catch (Exception e) {
@@ -211,14 +208,14 @@ public class MaterialPurchaseReturnHelper {
         }
     }
 
-    private boolean fallbackUpdateReturn(MaterialPurchaseServiceImpl svc, String purchaseId, int rq, BigDecimal unitPrice,
+    private boolean fallbackUpdateReturn(MaterialPurchaseServiceImpl svc, String purchaseId, BigDecimal rq, BigDecimal unitPrice,
             String newStatus, String confirmerId, String confirmerName, String who, String remark) {
         try {
             svc.lambdaUpdate()
                     .eq(MaterialPurchase::getId, purchaseId)
                     .set(MaterialPurchase::getReturnConfirmed, 1)
                     .set(MaterialPurchase::getReturnQuantity, rq)
-                    .set(MaterialPurchase::getTotalAmount, unitPrice.multiply(BigDecimal.valueOf(rq)))
+                    .set(MaterialPurchase::getTotalAmount, unitPrice.multiply(rq))
                     .set(MaterialPurchase::getStatus, newStatus)
                     .set(MaterialPurchase::getReturnConfirmerId, StringUtils.hasText(confirmerId) ? confirmerId.trim() : null)
                     .set(MaterialPurchase::getReturnConfirmerName, StringUtils.hasText(confirmerName) ? confirmerName.trim() : who)

@@ -589,4 +589,13 @@ public class MaterialPurchaseOrchestratorHelper {
         if (!StringUtils.hasText(s)) return null;
         try { return Integer.valueOf(s); } catch (Exception e) { log.debug("[MaterialPurchase] coerceInt失败: {}", s); return null; }
     }
+
+    public java.math.BigDecimal coerceBigDecimal(Object v) {
+        if (v == null) return null;
+        if (v instanceof java.math.BigDecimal bd) return bd;
+        if (v instanceof Number number) return java.math.BigDecimal.valueOf(number.doubleValue());
+        String s = String.valueOf(v).trim();
+        if (!StringUtils.hasText(s)) return null;
+        try { return new java.math.BigDecimal(s); } catch (Exception e) { log.debug("[MaterialPurchase] coerceBigDecimal失败: {}", s); return null; }
+    }
 }

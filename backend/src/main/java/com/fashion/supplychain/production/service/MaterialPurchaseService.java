@@ -106,7 +106,7 @@ public interface MaterialPurchaseService extends IService<MaterialPurchase> {
 
     boolean receivePurchase(String purchaseId, String receiverId, String receiverName);
 
-    boolean confirmReturnPurchase(String purchaseId, String confirmerId, String confirmerName, Integer returnQuantity);
+    boolean confirmReturnPurchase(String purchaseId, String confirmerId, String confirmerName, java.math.BigDecimal returnQuantity);
 
     boolean resetReturnConfirm(String purchaseId, String reason, String operatorId, String operatorName);
 

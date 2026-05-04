@@ -45,7 +45,7 @@ public class MaterialPurchaseSyncHelper {
     }
 
     public boolean returnConfirmAndSync(String purchaseId, String confirmerId, String confirmerName,
-            Integer returnQuantity) {
+            java.math.BigDecimal returnQuantity) {
         boolean ok = materialPurchaseService.confirmReturnPurchase(purchaseId, confirmerId, confirmerName,
                 returnQuantity);
         if (!ok) {

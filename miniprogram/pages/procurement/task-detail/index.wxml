@@ -75,6 +75,7 @@
         <view class="item-confirm-row" wx:if="{{item.canConfirmReturn && !item.returnConfirmed}}">
           <view class="btn-return-confirm" data-id="{{item.id || item.purchaseId}}"
             data-name="{{item.materialName}}" data-arrived="{{item.arrivedQuantity}}"
+            data-purchase="{{item.purchaseQuantity}}"
             data-unit="{{item.unit || ''}}" bindtap="onReturnConfirm">
             确认回料
           </view>

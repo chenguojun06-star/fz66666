@@ -277,7 +277,7 @@ public class MaterialPurchaseStatusHelper {
                 : (body.get("confirmerId") == null ? null : String.valueOf(body.get("confirmerId")));
         String confirmerName = body == null ? null
                 : (body.get("confirmerName") == null ? null : String.valueOf(body.get("confirmerName")));
-        Integer returnQuantity = helper.coerceInt(body == null ? null : body.get("returnQuantity"));
+        java.math.BigDecimal returnQuantity = helper.coerceBigDecimal(body == null ? null : body.get("returnQuantity"));
 
         if (!StringUtils.hasText(purchaseId)) {
             throw new IllegalArgumentException("参数错误");
@@ -312,7 +312,7 @@ public class MaterialPurchaseStatusHelper {
         return updated;
     }
 
-    private MaterialPurchase validateReturnConfirm(String purchaseId, Integer returnQuantity) {
+    private MaterialPurchase validateReturnConfirm(String purchaseId, java.math.BigDecimal returnQuantity) {
         MaterialPurchase purchase = materialPurchaseService.getOne(
                 new LambdaQueryWrapper<MaterialPurchase>()
                         .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
@@ -334,7 +334,7 @@ public class MaterialPurchaseStatusHelper {
         if (returnQuantity == null) {
             throw new IllegalArgumentException("请填写实际回料数量");
         }
-        if (returnQuantity < 0) {
+        if (returnQuantity.compareTo(java.math.BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("实际回料数量不能小于0");
         }
         return purchase;
@@ -374,7 +374,7 @@ public class MaterialPurchaseStatusHelper {
 
         for (Map<String, Object> item : items) {
             String purchaseId = item.get("purchaseId") == null ? null : String.valueOf(item.get("purchaseId"));
-            Integer returnQuantity = helper.coerceInt(item.get("returnQuantity"));
+            java.math.BigDecimal returnQuantity = helper.coerceBigDecimal(item.get("returnQuantity"));
             if (!StringUtils.hasText(purchaseId)) { failCount++; errors.add("缺少purchaseId"); continue; }
 
             try {
@@ -652,7 +652,7 @@ public class MaterialPurchaseStatusHelper {
     }
 
     public boolean returnConfirmAndSync(String purchaseId, String confirmerId, String confirmerName,
-            Integer returnQuantity) {
+            java.math.BigDecimal returnQuantity) {
         return materialPurchaseSyncHelper.returnConfirmAndSync(purchaseId, confirmerId, confirmerName, returnQuantity);
     }
 

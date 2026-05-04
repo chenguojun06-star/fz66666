@@ -145,16 +145,28 @@ Page({
   },
 
   async onReturnConfirm(e) {
-    const { id, name, arrived, unit } = e.currentTarget.dataset;
+    const { id, name, arrived, purchase, unit } = e.currentTarget.dataset;
     if (!id) return;
+
+    const defaultQty = (Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0;
 
     wx.showModal({
       title: '确认回料',
-      content: `确认「${name || '该物料'}」回料 ${arrived || 0}${unit || ''}？`,
+      content: `确认「${name || '该物料'}」回料数量（可修改）:`,
+      editable: true,
+      placeholderText: String(defaultQty),
       confirmText: '确认回料',
       confirmColor: '#1677ff',
       success: async (res) => {
         if (!res.confirm) return;
+
+        const qty = (res.content !== undefined && res.content !== '')
+          ? Number(res.content)
+          : defaultQty;
+        if (isNaN(qty) || qty < 0) {
+          toast.error('请输入有效的回料数量');
+          return;
+        }
 
         const userInfo = getUserInfo() || {};
         const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
@@ -166,7 +178,7 @@ Page({
             purchaseId: id,
             confirmerId,
             confirmerName,
-            returnQuantity: Number(arrived) || 0,
+            returnQuantity: qty,
           });
           wx.hideLoading();
           toast.success('回料确认成功');
