@@ -3,7 +3,7 @@ const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderP
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
-const blePrinter = require('../../../utils/blePrinter');
+const blePrinter = require('../utils/blePrinter');
 
 /**
  * 裁剪单明细页 bundle-detail
@@ -368,7 +368,7 @@ Page({
 
   _generateQrImages(bundles) {
     var that = this;
-    var drawQrcode = require('../../../utils/weapp-qrcode');
+    var drawQrcode = require('../utils/weapp-qrcode');
     var qrSize = that.data.printConfig.qrSize || 84;
 
     var query = wx.createSelectorQuery();

@@ -12,8 +12,8 @@
  *   production.listOrders      → 订单列表 + 状态计数
  */
 var api = require('../../utils/api');
-var { transformOrderData } = require('../work/utils/orderTransform');
-var { buildProcessNodesWithRates, calcOrderProgress } = require('../work/utils/progressNodes');
+var { transformOrderData } = require('./utils/orderTransform');
+var { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
 var { eventBus, Events } = require('../../utils/eventBus');
