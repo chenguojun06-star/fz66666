@@ -28,7 +28,7 @@
         <text class="field-value">{{detail.cuttingDateDisplay}}</text>
       </view>
       <view wx:if="{{detail.deliveryDateDisplay}}" class="field-row">
-        <text class="field-label">交货日期</text>
+        <text class="field-label">交期</text>
         <text class="field-value">{{detail.deliveryDateDisplay}}</text>
       </view>
     </view>

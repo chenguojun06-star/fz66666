@@ -132,7 +132,7 @@ const OverdueOrderTable: React.FC = () => {
       render: (value: number) => value.toLocaleString(),
     },
     {
-      title: <SortableColumnTitle title="交货日期" fieldName="deliveryDate" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
+      title: <SortableColumnTitle title="交期" fieldName="deliveryDate" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
       dataIndex: 'deliveryDate',
       key: 'deliveryDate',
     },

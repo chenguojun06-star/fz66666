@@ -251,7 +251,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                   valueStyle: metaValueStyle,
                 },
                 {
-                  label: '交货日期',
+                  label: '交期',
                   value: (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <span style={metaValueStyle}>{shipDate}</span>

@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
+const { parseProductionOrderLines, SIZE_ORDER } = require('../utils/orderParser');
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
@@ -73,6 +73,9 @@ Page({
       printMode: 'ble',
       wifiHost: '',
       wifiPort: 9100,
+      previewW: 0,
+      previewH: 0,
+      previewQrSize: 0,
     },
     /* ── 裁剪分扎表单（无菲号时显示，与 PC 端 CuttingRatioPanel 一致）── */
     showCuttingForm: false,
@@ -346,10 +349,29 @@ Page({
       return;
     }
     this.setData({ showBundlePrintModal: true });
+    this._computePreviewSize();
     this._generateQrImages(_rawBundles);
   },
 
   noop() {},
+
+  _computePreviewSize() {
+    var cfg = this.data.printConfig || {};
+    var pw = cfg.paperWidth || 7;
+    var ph = cfg.paperHeight || 4;
+    var maxW = 650;
+    var maxH = 400;
+    var scale = Math.min(maxW / (pw * 10), maxH / (ph * 10));
+    var w = Math.round(pw * 10 * scale);
+    var h = Math.round(ph * 10 * scale);
+    var minDim = Math.min(w, h);
+    var qrSize = Math.round(minDim * 0.45);
+    this.setData({
+      'printConfig.previewW': w,
+      'printConfig.previewH': h,
+      'printConfig.previewQrSize': qrSize,
+    });
+  },
 
   onLabelSizeSelect(e) {
     var label = e.currentTarget.dataset.label;
@@ -365,6 +387,7 @@ Page({
       'printConfig.paperHeight': found.h,
       'printConfig.selectedSizeLabel': found.label,
     });
+    this._computePreviewSize();
     this._generateQrImages(d._rawBundles);
   },
 
@@ -510,6 +533,7 @@ Page({
       'printConfig.paperHeight': first.h,
       'printConfig.selectedSizeLabel': first.label,
     });
+    this._computePreviewSize();
     this._generateQrImages(this.data._rawBundles);
   },
 

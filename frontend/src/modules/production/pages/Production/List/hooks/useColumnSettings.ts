@@ -63,7 +63,7 @@ export const columnOptions = [
   { key: 'repairQuantity', label: '返修数' },
   { key: 'inStockQuantity', label: '库存' },
   { key: 'status', label: '状态/进度' },
-  { key: 'plannedEndDate', label: '订单交期' },
+  { key: 'plannedEndDate', label: '交期' },
 ];
 
 const STORAGE_KEY = 'production-list-visible-columns';

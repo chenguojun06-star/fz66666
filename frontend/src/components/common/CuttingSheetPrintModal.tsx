@@ -14,9 +14,10 @@ interface CuttingSheetPrintModalProps {
   companyName?: string;
   /** 裁剪任务信息（用于打印操作人/创建人，优先级高于bundle自带字段） */
   cuttingTask?: {
-    receiverName?: string;    // 裁布人（领取人）
-    creatorName?: string;     // 创建人
-    orderCreatorName?: string; // 下单人
+    receiverName?: string;
+    creatorName?: string;
+    orderCreatorName?: string;
+    expectedShipDate?: string;
   };
 }
 
@@ -72,6 +73,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       // 获取操作人信息：优先用裁剪任务的receiverName/creatorName（真实姓名），其次用bundle字段
       const operatorName = cuttingTask?.receiverName || firstBundle.operatorName || firstBundle.creatorName || '-';
       const creatorName = cuttingTask?.orderCreatorName || cuttingTask?.creatorName || firstBundle.creatorName || '-';
+      const expectedShipDate = cuttingTask?.expectedShipDate || (firstBundle as any).expectedShipDate || '';
 
       // 款式图片URL
       const imageUrl = styleImageUrl ? getFullAuthedFileUrl(styleImageUrl) : '';
@@ -128,6 +130,12 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
                   <span class="info-label">床号：</span>
                   <span class="info-value bed-no-value">${bedNoDisplay}</span>
                 </div>
+                ${expectedShipDate ? `
+                <div class="info-item delivery-date-item">
+                  <span class="info-label">交期：</span>
+                  <span class="info-value delivery-date-value">${expectedShipDate}</span>
+                </div>
+                ` : ''}
               </div>
             </div>
           </div>
@@ -293,6 +301,19 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             font-size: 18px;
             font-weight: 700;
             color: #2D7FF9 !important;
+          }
+          .delivery-date-item {
+            grid-column: 1 / -1;
+            border: 2px solid #fa8c16;
+            padding: 8px 12px;
+            border-radius: 4px;
+            background: #fff7e6;
+            margin-top: 4px;
+          }
+          .delivery-date-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fa8c16 !important;
           }
 
           /* 明细表格 */

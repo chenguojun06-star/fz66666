@@ -455,7 +455,7 @@ export function useProductionColumns({
       },
     },
     {
-      title: <SortableColumnTitle title="订单交期" fieldName="plannedEndDate" onSort={handleSort} sortField={sortField} sortOrder={sortOrder} />,
+      title: <SortableColumnTitle title="交期" fieldName="plannedEndDate" onSort={handleSort} sortField={sortField} sortOrder={sortOrder} />,
       dataIndex: 'plannedEndDate',
       key: 'plannedEndDate',
       width: 155,

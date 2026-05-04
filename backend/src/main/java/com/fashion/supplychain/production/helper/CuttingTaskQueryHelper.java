@@ -219,7 +219,8 @@ public class CuttingTaskQueryHelper {
                         })
                         .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getStyleNo,
                                 ProductionOrder::getCreatedByName, ProductionOrder::getCreateTime,
-                                ProductionOrder::getFactoryName, ProductionOrder::getFactoryType));
+                                ProductionOrder::getFactoryName, ProductionOrder::getFactoryType,
+                                ProductionOrder::getExpectedShipDate));
         productionOrderQueryService.fillStyleCover(orders);
 
         Map<String, ProductionOrder> orderMap = orders.stream()
@@ -244,6 +245,9 @@ public class CuttingTaskQueryHelper {
                 t.setFactoryName(order.getFactoryName());
                 t.setFactoryType(order.getFactoryType());
                 t.setStyleCover(order.getStyleCover());
+                if (t.getExpectedShipDate() == null && order.getExpectedShipDate() != null) {
+                    t.setExpectedShipDate(order.getExpectedShipDate());
+                }
             }
         }
 

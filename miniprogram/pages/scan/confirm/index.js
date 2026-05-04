@@ -5,7 +5,7 @@ const SKUProcessor = require('../processors/SKUProcessor');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
-const { sortBySizeOrder } = require('../../../utils/orderParser');
+const { sortBySizeOrder } = require('./orderParser');
 
 Page({
   data: {

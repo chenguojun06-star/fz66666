@@ -753,6 +753,7 @@ const CuttingManagement: React.FC = () => {
               receiverName: (activeTask as any).receiverName,
               creatorName: (activeTask as any).creatorName,
               orderCreatorName: (activeTask as any).orderCreatorName,
+              expectedShipDate: (activeTask as any).expectedShipDate,
             } : undefined}
           />
 

@@ -104,7 +104,7 @@
             <text class="grid-value primary">{{orderTotal || 0}}件</text>
           </view>
           <view class="grid-item">
-            <text class="grid-label">交货日期</text>
+            <text class="grid-label">交期</text>
             <text class="grid-value">{{orderInfo.expectedShipDate || orderInfo.deliveryDate || '-'}}</text>
           </view>
         </view>
@@ -576,17 +576,26 @@
 
       <scroll-view class="bpo-panel-body" scroll-y enhanced show-scrollbar="{{false}}">
         <view class="bpo-label-list">
-          <view class="bpo-label-card {{printConfig.orientation == 'vertical' ? 'bpo-label-card--vertical' : ''}}" wx:for="{{_rawBundles}}" wx:key="id">
+          <view class="bpo-size-indicator">
+            <text class="bpo-size-indicator-text">{{printConfig.selectedSizeLabel}}mm · {{printConfig.orientation == 'vertical' ? '竖版' : '横版'}}</text>
+          </view>
+          <view
+            class="bpo-label-card {{printConfig.orientation == 'vertical' ? 'bpo-label-card--vertical' : ''}}"
+            wx:for="{{_rawBundles}}"
+            wx:key="id"
+            style="width:{{printConfig.previewW}}rpx; height:{{printConfig.previewH}}rpx;"
+          >
             <!-- 二维码 -->
-            <view class="bpol-qr {{printConfig.orientation == 'vertical' ? 'bpol-qr--vertical' : ''}}">
+            <view class="bpol-qr {{printConfig.orientation == 'vertical' ? 'bpol-qr--vertical' : ''}}" style="width:{{printConfig.previewQrSize}}rpx; height:{{printConfig.previewQrSize}}rpx;">
               <image
                 wx:if="{{item._qrImg}}"
                 class="bpol-qr-img"
+                style="width:{{printConfig.previewQrSize}}rpx; height:{{printConfig.previewQrSize}}rpx;"
                 src="{{item._qrImg}}"
                 mode="aspectFit"
                 show-menu-by-longpress="{{true}}"
               />
-              <view wx:else class="bpol-qr-loading">
+              <view wx:else class="bpol-qr-loading" style="width:{{printConfig.previewQrSize}}rpx; height:{{printConfig.previewQrSize}}rpx;">
                 <text class="bpol-qr-loading-text">QR</text>
               </view>
             </view>

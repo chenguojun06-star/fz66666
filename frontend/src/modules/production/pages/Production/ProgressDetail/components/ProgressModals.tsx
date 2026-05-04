@@ -160,7 +160,7 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
           '订单数量': printingRecord?.orderQuantity,
           '加工厂': printingRecord?.factoryName,
           '跟单员': printingRecord?.merchandiser,
-          '订单交期': printingRecord?.plannedEndDate,
+          '交期': printingRecord?.plannedEndDate,
         }}
         sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
       />
