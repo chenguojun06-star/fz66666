@@ -48,12 +48,31 @@ Page({
     /* 菲号标签预览弹层 */
     showBundlePrintModal: false,
 
-    /* 打印尺寸配置（与PC端 useCuttingPrint 一致） */
+    LABEL_SIZES: {
+      vertical: [
+        { label: '40×60', w: 4, h: 6 },
+        { label: '40×70', w: 4, h: 7 },
+        { label: '40×80', w: 4, h: 8 },
+        { label: '50×70', w: 5, h: 7 },
+        { label: '50×100', w: 5, h: 10 },
+      ],
+      horizontal: [
+        { label: '60×40', w: 6, h: 4 },
+        { label: '70×40', w: 7, h: 4 },
+        { label: '70×50', w: 7, h: 5 },
+        { label: '80×40', w: 8, h: 4 },
+        { label: '100×50', w: 10, h: 5 },
+      ],
+    },
+
     printConfig: {
       orientation: 'horizontal',
       paperWidth: 7,
       paperHeight: 4,
-      qrSize: 84,
+      selectedSizeLabel: '70×40',
+      printMode: 'ble',
+      wifiHost: '',
+      wifiPort: 9100,
     },
     /* ── 裁剪分扎表单（无菲号时显示，与 PC 端 CuttingRatioPanel 一致）── */
     showCuttingForm: false,
@@ -332,39 +351,48 @@ Page({
 
   noop() {},
 
-  onPaperWidthInput(e) {
-    var v = parseFloat(e.detail.value);
-    if (isNaN(v) || v < 3) v = 3;
-    if (v > 30) v = 30;
-    this.setData({ 'printConfig.paperWidth': v });
-  },
-
-  onPaperHeightInput(e) {
-    var v = parseFloat(e.detail.value);
-    if (isNaN(v) || v < 2) v = 2;
-    if (v > 20) v = 20;
-    this.setData({ 'printConfig.paperHeight': v });
-  },
-
-  onQrSizeInput(e) {
-    var v = parseInt(e.detail.value, 10);
-    if (isNaN(v) || v < 40) v = 40;
-    if (v > 200) v = 200;
-    this.setData({ 'printConfig.qrSize': v });
-    var bundles = this.data._rawBundles || [];
-    for (var i = 0; i < bundles.length; i++) {
-      bundles[i]._qrImg = null;
+  onLabelSizeSelect(e) {
+    var label = e.currentTarget.dataset.label;
+    var d = this.data;
+    var sizes = d.LABEL_SIZES[d.printConfig.orientation] || [];
+    var found = null;
+    for (var i = 0; i < sizes.length; i++) {
+      if (sizes[i].label === label) { found = sizes[i]; break; }
     }
-    this.setData({ _rawBundles: bundles });
-    var that = this;
-    setTimeout(function () { that._generateQrImages(bundles); }, 200);
+    if (!found) return;
+    this.setData({
+      'printConfig.paperWidth': found.w,
+      'printConfig.paperHeight': found.h,
+      'printConfig.selectedSizeLabel': found.label,
+    });
+    this._generateQrImages(d._rawBundles);
+  },
+
+  onPrintModeChange(e) {
+    var mode = e.currentTarget.dataset.mode;
+    this.setData({ 'printConfig.printMode': mode });
+  },
+
+  onWifiHostInput(e) {
+    this.setData({ 'printConfig.wifiHost': (e.detail.value || '').replace(/^\s+|\s+$/g, '') });
+  },
+
+  onWifiPortInput(e) {
+    var v = parseInt(e.detail.value, 10);
+    if (isNaN(v) || v < 1) v = 9100;
+    if (v > 65535) v = 65535;
+    this.setData({ 'printConfig.wifiPort': v });
   },
 
 
   _generateQrImages(bundles) {
     var that = this;
     var drawQrcode = require('../utils/weapp-qrcode');
-    var qrSize = that.data.printConfig.qrSize || 84;
+    var cfg = that.data.printConfig || {};
+    var paperW = cfg.paperWidth || 7;
+    var paperH = cfg.paperHeight || 4;
+    var minDim = Math.min(Math.round(paperW * 10), Math.round(paperH * 10));
+    var qrSize = minDim <= 40 ? 72 : minDim <= 50 ? 84 : minDim <= 70 ? 100 : 120;
 
     var query = wx.createSelectorQuery();
     query.select('#qrCanvas').fields({ node: true, size: true }).exec(function (res) {
@@ -437,14 +465,36 @@ Page({
     else if (minDim <= 80) qrCellSize = 5;
     else qrCellSize = 6;
 
-    blePrinter.blePrint(bundles, d.orderNo, d.orderInfo, {
+    var printOpts = {
       qrCellSize: qrCellSize,
       orientation: cfg.orientation,
       paperWidth: paperW,
       paperHeight: paperH,
-      qrPxSize: cfg.qrSize,
-    }).catch(function (err) {
-      toast.error(err.message || '打印失败');
+    };
+
+    var printFn;
+    if (cfg.printMode === 'wifi') {
+      if (!cfg.wifiHost) {
+        toast.info('请输入打印机IP地址');
+        return;
+      }
+      printOpts.wifiHost = cfg.wifiHost;
+      printOpts.wifiPort = cfg.wifiPort || 9100;
+      printFn = blePrinter.wifiPrint;
+      wx.showLoading({ title: '连接WiFi打印机...', mask: true });
+    } else {
+      printFn = blePrinter.blePrint;
+      wx.showLoading({ title: '初始化蓝牙...', mask: true });
+    }
+
+    printFn(bundles, d.orderNo, d.orderInfo, printOpts).catch(function (err) {
+      wx.hideLoading();
+      var msg = err && err.message ? err.message : '打印失败';
+      wx.showModal({
+        title: cfg.printMode === 'wifi' ? 'WiFi打印失败' : '蓝牙打印失败',
+        content: msg,
+        showCancel: false,
+      });
     });
   },
 
@@ -452,7 +502,14 @@ Page({
     var orient = e.currentTarget.dataset.orient;
     var cfg = this.data.printConfig;
     if (cfg.orientation === orient) return;
-    this.setData({ 'printConfig.orientation': orient });
+    var sizes = this.data.LABEL_SIZES[orient] || [];
+    var first = sizes[0] || { w: orient === 'vertical' ? 4 : 7, h: orient === 'vertical' ? 6 : 4, label: orient === 'vertical' ? '40×60' : '60×40' };
+    this.setData({
+      'printConfig.orientation': orient,
+      'printConfig.paperWidth': first.w,
+      'printConfig.paperHeight': first.h,
+      'printConfig.selectedSizeLabel': first.label,
+    });
     this._generateQrImages(this.data._rawBundles);
   },
 

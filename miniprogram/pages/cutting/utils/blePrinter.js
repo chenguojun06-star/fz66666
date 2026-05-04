@@ -342,22 +342,20 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
   var options = opts || {};
   var qrCellSize = options.qrCellSize;
   if (!qrCellSize || qrCellSize < 2 || qrCellSize > 8) {
-    qrCellSize = computeQrCellSize(options.paperWidth || 7, options.qrPxSize || 84);
+    qrCellSize = computeQrCellSize(options.paperWidth || 7, 80);
   }
   var printData = buildAllLabels(bundles, orderNo, orderInfo, qrCellSize);
   var deviceId = null;
   var adapterClosed = false;
 
   return new Promise(function (resolve, reject) {
-    // Step 1: 打开蓝牙适配器
     wx.openBluetoothAdapter({
       mode: 'central',
       success: function () {
-        // Step 2: 开始搜索设备
+        wx.showLoading({ title: '搜索打印机...', mask: true });
         wx.startBluetoothDevicesDiscovery({
           allowDuplicatesKey: false,
           success: function () {
-            wx.showLoading({ title: '搜索打印机...', mask: true });
             var found = [];
             var timer = null;
 
@@ -417,6 +415,7 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
             }, DISCOVERY_TIMEOUT_MS);
           },
           fail: function (err) {
+            wx.hideLoading();
             wx.closeBluetoothAdapter();
             adapterClosed = true;
             var msg = (err && err.errMsg) || '';
@@ -429,6 +428,7 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
         });
       },
       fail: function (err) {
+        wx.hideLoading();
         var msg = (err && err.errMsg) || '';
         if (msg.indexOf('103') !== -1 || msg.indexOf('unauthorized') !== -1 || msg.indexOf('授权') !== -1) {
           reject(new Error('请授权蓝牙权限：点击右上角 ··· → 设置 → 蓝牙 → 允许'));
@@ -440,7 +440,7 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
       }
     });
   }).finally(function () {
-    // iOS 需要延时后再断开连接（否则数据可能未发送完）
+    wx.hideLoading();
     if (deviceId && !adapterClosed) {
       setTimeout(function () {
         wx.closeBLEConnection({ deviceId: deviceId });
@@ -471,7 +471,6 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
     }
   }
 
-  // 连接超时保护
   var connTimer = setTimeout(function () {
     if (!connectionEstablished) {
       cleanup();
@@ -555,8 +554,117 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
   });
 }
 
+var WIFI_PRINT_PORT = 9100;
+var WIFI_CONNECT_TIMEOUT_MS = 5000;
+
+function wifiPrint(bundles, orderNo, orderInfo, opts) {
+  var options = opts || {};
+  var host = (options.wifiHost || '').replace(/^\s+|\s+$/g, '');
+  var port = options.wifiPort || WIFI_PRINT_PORT;
+
+  if (!host) {
+    return Promise.reject(new Error('请输入打印机IP地址'));
+  }
+
+  var qrCellSize = options.qrCellSize;
+  if (!qrCellSize || qrCellSize < 2 || qrCellSize > 8) {
+    qrCellSize = computeQrCellSize(options.paperWidth || 7, 80);
+  }
+  var printData = buildAllLabels(bundles, orderNo, orderInfo, qrCellSize);
+
+  return new Promise(function (resolve, reject) {
+    var tcpSocket = null;
+    var connected = false;
+    var done = false;
+
+    function cleanup() {
+      if (done) return;
+      done = true;
+      if (tcpSocket) {
+        try { tcpSocket.close(); } catch (e) {}
+        tcpSocket = null;
+      }
+    }
+
+    try {
+      tcpSocket = wx.createTCPSocket();
+    } catch (e) {
+      reject(new Error('当前微信版本不支持TCP打印，请升级微信或使用蓝牙打印'));
+      return;
+    }
+
+    var connTimer = setTimeout(function () {
+      if (!connected) {
+        cleanup();
+        reject(new Error('连接打印机超时，请确认IP地址正确且打印机与手机在同一WiFi'));
+      }
+    }, WIFI_CONNECT_TIMEOUT_MS);
+
+    wx.showLoading({ title: '连接 ' + host + '...', mask: true });
+
+    tcpSocket.onConnect(function () {
+      clearTimeout(connTimer);
+      connected = true;
+      wx.hideLoading();
+      wx.showLoading({ title: '打印中 (' + printData.length + ' 字节)...', mask: true });
+
+      var CHUNK_SIZE = 4096;
+      var offset = 0;
+
+      function sendChunk() {
+        if (offset >= printData.length) {
+          wx.hideLoading();
+          wx.showToast({ title: '打印完成', icon: 'success', duration: 2000 });
+          setTimeout(function () { cleanup(); }, 500);
+          resolve();
+          return;
+        }
+        var end = Math.min(offset + CHUNK_SIZE, printData.length);
+        var chunk = printData.slice(offset, end);
+        try {
+          tcpSocket.write(chunk.buffer);
+          offset = end;
+          setTimeout(sendChunk, 20);
+        } catch (e) {
+          wx.hideLoading();
+          cleanup();
+          reject(new Error('发送打印数据失败'));
+        }
+      }
+
+      sendChunk();
+    });
+
+    tcpSocket.onError(function (err) {
+      clearTimeout(connTimer);
+      wx.hideLoading();
+      cleanup();
+      if (!connected) {
+        reject(new Error('无法连接 ' + host + ':' + port + '\n请确认：\n1. IP地址和端口正确\n2. 打印机与手机在同一WiFi\n3. 打印机已开机'));
+      } else {
+        reject(new Error('打印连接中断: ' + (err.errMsg || '未知错误')));
+      }
+    });
+
+    tcpSocket.onClose(function () {
+      if (!done) {
+        wx.hideLoading();
+        cleanup();
+        if (connected) {
+          resolve();
+        } else {
+          reject(new Error('连接被关闭'));
+        }
+      }
+    });
+
+    tcpSocket.connect({ address: host, port: port });
+  });
+}
+
 module.exports = {
   blePrint: blePrint,
+  wifiPrint: wifiPrint,
   buildAllLabels: buildAllLabels,
   buildOneLabel: buildOneLabel,
   cmdInit: cmdInit,

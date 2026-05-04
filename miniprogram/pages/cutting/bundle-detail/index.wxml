@@ -505,23 +505,57 @@
         <view class="bpo-panel-close" bindtap="onCloseBundlePrint">✕</view>
       </view>
 
-      <!-- 打印尺寸配置 -->
+      <!-- 打印方式选择 -->
       <view class="bpo-config-bar" catchtap="noop">
-        <text class="bpo-config-label">纸张设置：</text>
-        <view class="bpo-config-item">
-          <text class="bpo-config-unit">宽</text>
-          <input class="bpo-config-input" type="digit" value="{{printConfig.paperWidth}}" bindinput="onPaperWidthInput" placeholder="7" />
-          <text class="bpo-config-unit">cm</text>
+        <text class="bpo-config-label">打印方式：</text>
+        <view class="bpo-mode-options">
+          <view
+            class="bpo-mode-opt {{printConfig.printMode == 'ble' ? 'bpo-mode-opt--active' : ''}}"
+            data-mode="ble"
+            catchtap="onPrintModeChange"
+          >蓝牙</view>
+          <view
+            class="bpo-mode-opt {{printConfig.printMode == 'wifi' ? 'bpo-mode-opt--active' : ''}}"
+            data-mode="wifi"
+            catchtap="onPrintModeChange"
+          >WiFi</view>
         </view>
-        <view class="bpo-config-item">
-          <text class="bpo-config-unit">高</text>
-          <input class="bpo-config-input" type="digit" value="{{printConfig.paperHeight}}" bindinput="onPaperHeightInput" placeholder="4" />
-          <text class="bpo-config-unit">cm</text>
-        </view>
-        <view class="bpo-config-item">
-          <text class="bpo-config-unit">QR</text>
-          <input class="bpo-config-input" type="digit" value="{{printConfig.qrSize}}" bindinput="onQrSizeInput" placeholder="84" />
-          <text class="bpo-config-unit">px</text>
+      </view>
+
+      <!-- WiFi 打印配置 -->
+      <view class="bpo-config-bar bpo-wifi-bar" wx:if="{{printConfig.printMode == 'wifi'}}" catchtap="noop">
+        <text class="bpo-config-label">打印机IP：</text>
+        <input
+          class="bpo-wifi-input"
+          type="text"
+          value="{{printConfig.wifiHost}}"
+          bindinput="onWifiHostInput"
+          placeholder="如 192.168.1.100"
+        />
+        <text class="bpo-config-label bpo-port-label">端口：</text>
+        <input
+          class="bpo-wifi-input bpo-wifi-port"
+          type="number"
+          value="{{printConfig.wifiPort}}"
+          bindinput="onWifiPortInput"
+          placeholder="9100"
+        />
+      </view>
+      <view class="bpo-wifi-hint" wx:if="{{printConfig.printMode == 'wifi'}}">
+        <text class="bpo-wifi-hint-text">手机与打印机需在同一WiFi网络，打印机端口默认9100</text>
+      </view>
+
+      <!-- 打印尺寸选择 -->
+      <view class="bpo-config-bar" catchtap="noop">
+        <text class="bpo-config-label">标签尺寸：</text>
+        <view class="bpo-size-grid">
+          <view
+            wx:for="{{LABEL_SIZES[printConfig.orientation]}}"
+            wx:key="label"
+            class="bpo-size-chip {{printConfig.selectedSizeLabel == item.label ? 'bpo-size-chip--active' : ''}}"
+            data-label="{{item.label}}"
+            catchtap="onLabelSizeSelect"
+          >{{item.label}}mm</view>
         </view>
       </view>
 
@@ -544,11 +578,10 @@
         <view class="bpo-label-list">
           <view class="bpo-label-card {{printConfig.orientation == 'vertical' ? 'bpo-label-card--vertical' : ''}}" wx:for="{{_rawBundles}}" wx:key="id">
             <!-- 二维码 -->
-            <view class="bpol-qr {{printConfig.orientation == 'vertical' ? 'bpol-qr--vertical' : ''}}" style="width: {{printConfig.qrSize * 2}}rpx; height: {{printConfig.qrSize * 2}}rpx;">
+            <view class="bpol-qr {{printConfig.orientation == 'vertical' ? 'bpol-qr--vertical' : ''}}">
               <image
                 wx:if="{{item._qrImg}}"
                 class="bpol-qr-img"
-                style="width: {{printConfig.qrSize * 2}}rpx; height: {{printConfig.qrSize * 2}}rpx;"
                 src="{{item._qrImg}}"
                 mode="aspectFit"
                 show-menu-by-longpress="{{true}}"

@@ -554,10 +554,10 @@
   color: var(--color-text-secondary);
 }
 
-/* ── 打印尺寸配置栏（与PC端 CuttingPrintPreviewModal 一致） ── */
+/* ── 打印尺寸选择栏 ── */
 .bpo-config-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 16rpx 32rpx;
   background: #fafafa;
   border-bottom: 1rpx solid #f0f0f0;
@@ -570,30 +570,84 @@
   font-size: 24rpx;
   color: var(--color-text-secondary);
   flex-shrink: 0;
+  line-height: 56rpx;
 }
 
-.bpo-config-item {
+.bpo-size-grid {
   display: flex;
-  align-items: center;
-  gap: 4rpx;
+  flex-wrap: wrap;
+  gap: 12rpx;
 }
 
-.bpo-config-input {
-  width: 80rpx;
+.bpo-size-chip {
+  padding: 8rpx 20rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  background: #fff;
+  border: 1rpx solid #d9d9d9;
+}
+
+.bpo-size-chip--active {
+  color: #fff;
+  background: #1677ff;
+  border-color: #1677ff;
+}
+
+/* 打印方式选择 */
+.bpo-mode-options {
+  display: flex;
+  gap: 12rpx;
+}
+
+.bpo-mode-opt {
+  padding: 8rpx 24rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  background: #fff;
+  border: 1rpx solid #d9d9d9;
+}
+
+.bpo-mode-opt--active {
+  color: #fff;
+  background: #1677ff;
+  border-color: #1677ff;
+}
+
+/* WiFi 配置 */
+.bpo-wifi-bar {
+  gap: 8rpx;
+}
+
+.bpo-wifi-input {
+  flex: 1;
   height: 52rpx;
   border: 1rpx solid #d9d9d9;
   border-radius: 8rpx;
-  text-align: center;
+  padding: 0 12rpx;
   font-size: 24rpx;
   color: var(--color-text-primary);
   background: #fff;
-  padding: 0 4rpx;
+  min-width: 0;
 }
 
-.bpo-config-unit {
-  font-size: 22rpx;
-  color: var(--color-text-secondary);
+.bpo-wifi-port {
+  flex: 0 0 100rpx;
+}
+
+.bpo-port-label {
   flex-shrink: 0;
+}
+
+.bpo-wifi-hint {
+  padding: 8rpx 32rpx 12rpx;
+  background: #fafafa;
+}
+
+.bpo-wifi-hint-text {
+  font-size: 20rpx;
+  color: var(--color-text-tertiary);
 }
 
 /* 打印方向选择（横版/竖版） */
