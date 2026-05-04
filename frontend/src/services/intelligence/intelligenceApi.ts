@@ -382,6 +382,7 @@ export const intelligenceApi = {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';
+        let eventName = '';
         let doneCalled = false;
         const safeDone = () => { if (doneCalled) return; doneCalled = true; onDone(); };
         while (true) {
@@ -390,19 +391,23 @@ export const intelligenceApi = {
           buf += decoder.decode(value, { stream: true });
           const lines = buf.split('\n');
           buf = lines.pop() || '';
-          let eventName = '';
           for (const line of lines) {
             if (line.startsWith('event:')) {
               eventName = line.slice(6).trim();
-            } else if (line.startsWith('data:') && eventName) {
-              try {
-                const parsed = JSON.parse(line.slice(5).trim());
-                if (eventName === 'done') {
-                  safeDone();
-                } else {
-                  onEvent({ type: eventName, data: parsed });
+            } else if (line.startsWith('data:')) {
+              const dataStr = line.slice(5).trim();
+              if (eventName) {
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  if (eventName === 'done') {
+                    safeDone();
+                  } else {
+                    onEvent({ type: eventName, data: parsed });
+                  }
+                } catch {
+                  onEvent({ type: eventName, data: { content: dataStr } });
                 }
-              } catch { /* ignore malformed */ }
+              }
               eventName = '';
             } else if (line.trim() === '') {
               eventName = '';

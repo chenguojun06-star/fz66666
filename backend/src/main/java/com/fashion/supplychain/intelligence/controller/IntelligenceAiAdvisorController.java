@@ -108,7 +108,10 @@ public class IntelligenceAiAdvisorController {
                                           @RequestParam(required = false) String orderNo,
                                           @RequestParam(required = false) String processName,
                                           @RequestParam(required = false) String stage,
-                                          @RequestParam(required = false) String mode) {
+                                          @RequestParam(required = false) String mode,
+                                          jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         // 前置鉴权：必须在 SseEmitter 创建（响应头提交）之前完成 Token 校验。
         // 若 UserContext 未填充（Token 过期/无效），此时响应头尚未发出，Spring Security
         // 能正常返回 401，避免 "response is already committed" 异常。

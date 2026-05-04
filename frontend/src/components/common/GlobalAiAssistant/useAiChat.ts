@@ -265,8 +265,11 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             const chunk = String(event.data.chunk || '');
             if (chunk) {
               accumulatedText += chunk;
-              setMessages(prev => prev.map(m => m.id === aiMsgId
-                ? { ...m, text: accumulatedText } : m));
+              setMessages(prev => {
+                const existing = prev.find(m => m.id === aiMsgId);
+                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m);
+                return [...prev, { id: aiMsgId, role: 'ai' as const, text: accumulatedText }];
+              });
             }
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
@@ -276,9 +279,18 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
               displayText = '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
             }
             accumulatedText = displayText;
-            setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload || parsedReportType, reportPreview: reportPreview, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, agentCommandId: commandId }
-              : m));
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === aiMsgId);
+              const msgData = {
+                text: accumulatedText,
+                reportType: reportTypeToDownload || parsedReportType,
+                reportPreview: reportPreview,
+                charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard,
+                agentCommandId: commandId,
+              };
+              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
+              return [...prev, { id: aiMsgId, role: 'ai' as const, ...msgData }];
+            });
             if (!answerReceived) {
               answerReceived = true;
               if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
@@ -287,7 +299,11 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           } else if (event.type === 'follow_up_actions') {
             const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
             if (actions.length) {
-              setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, followUpActions: actions } : m));
+              setMessages(prev => {
+                const existing = prev.find(m => m.id === aiMsgId);
+                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, followUpActions: actions } : m);
+                return [...prev, { id: aiMsgId, role: 'ai' as const, text: '', followUpActions: actions }];
+              });
             }
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
@@ -299,6 +315,10 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           completed = true;
           if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
           if (!answerReceived) {
+            if (!accumulatedText) {
+              setMessages(prev => prev.map(m => m.id === aiMsgId
+                ? { ...m, text: '小云未返回有效回答，请重试或换个问法 🤔' } : m));
+            }
             finishTyping();
           }
           // auto-speak removed: 用户通过喇叭按钮手动触发，避免与手动点击冲突导致重复朗读
