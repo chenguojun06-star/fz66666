@@ -349,9 +349,21 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
   var adapterClosed = false;
 
   return new Promise(function (resolve, reject) {
+    wx.showLoading({ title: '初始化蓝牙...', mask: true });
+    // 超时保护：防止 openBluetoothAdapter 在开发者工具/不支持蓝牙的环境下无任何回调
+    var adapterReady = false;
+    var adapterTimer = setTimeout(function () {
+      if (!adapterReady) {
+        wx.hideLoading();
+        reject(new Error('蓝牙初始化无响应\n\n• 开发者工具不支持蓝牙，请使用真机测试\n• 真机上请确认已授权蓝牙权限并开启蓝牙'));
+      }
+    }, 3000);
+
     wx.openBluetoothAdapter({
       mode: 'central',
       success: function () {
+        adapterReady = true;
+        clearTimeout(adapterTimer);
         wx.showLoading({ title: '搜索打印机...', mask: true });
         wx.startBluetoothDevicesDiscovery({
           allowDuplicatesKey: false,
@@ -428,6 +440,8 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
         });
       },
       fail: function (err) {
+        adapterReady = true;
+        clearTimeout(adapterTimer);
         wx.hideLoading();
         var msg = (err && err.errMsg) || '';
         if (msg.indexOf('103') !== -1 || msg.indexOf('unauthorized') !== -1 || msg.indexOf('授权') !== -1) {
@@ -512,7 +526,7 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
               // MTU 协商
               negotiateMtu(deviceId).then(function (mtu) {
                 wx.hideLoading();
-                wx.showLoading({ title: '打印中 (' + printData.length + ' 字节)...', mask: true });
+                wx.showLoading({ title: '正在打印...', mask: true });
 
                 // Step 4: 分片写入
                 writeInChunks(deviceId, serviceId, charId, printData, mtu).then(function () {
@@ -606,7 +620,7 @@ function wifiPrint(bundles, orderNo, orderInfo, opts) {
       clearTimeout(connTimer);
       connected = true;
       wx.hideLoading();
-      wx.showLoading({ title: '打印中 (' + printData.length + ' 字节)...', mask: true });
+      wx.showLoading({ title: '正在打印...', mask: true });
 
       var CHUNK_SIZE = 4096;
       var offset = 0;

@@ -512,10 +512,8 @@ Page({
       printOpts.wifiHost = cfg.wifiHost;
       printOpts.wifiPort = cfg.wifiPort || 9100;
       printFn = blePrinter.wifiPrint;
-      wx.showLoading({ title: '连接WiFi打印机...', mask: true });
     } else {
       printFn = blePrinter.blePrint;
-      wx.showLoading({ title: '初始化蓝牙...', mask: true });
     }
 
     printFn(bundles, d.orderNo, d.orderInfo, printOpts).catch(function (err) {
