@@ -46,24 +46,35 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
         if (budgetCheck != null) return budgetCheck;
 
-        ChatClient chatClient = chatClientProvider.getIfAvailable();
-        if (chatClient == null) {
-            return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+        Exception lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                ChatClient chatClient = chatClientProvider.getIfAvailable();
+                if (chatClient == null) {
+                    return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+                }
+                ChatResponse response = chatClient.prompt()
+                        .system(systemPrompt)
+                        .user(userMessage)
+                        .options(buildOptions(scene))
+                        .call()
+                        .chatResponse();
+                IntelligenceInferenceResult result = convertResult(response, start);
+                recordTokenUsage(result);
+                return result;
+            } catch (Exception e) {
+                lastError = e;
+                if (isRetryable(e) && attempt < 2) {
+                    long backoffMs = (long) Math.pow(2, attempt) * 1000 + (long)(Math.random() * 500);
+                    log.warn("[SpringAiAdapter] chat failed (attempt={}), retrying in {}ms: {}", attempt + 1, backoffMs, e.getMessage());
+                    try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                } else {
+                    break;
+                }
+            }
         }
-        try {
-            ChatResponse response = chatClient.prompt()
-                    .system(systemPrompt)
-                    .user(userMessage)
-                    .options(buildOptions(scene))
-                    .call()
-                    .chatResponse();
-            IntelligenceInferenceResult result = convertResult(response, start);
-            recordTokenUsage(result);
-            return result;
-        } catch (Exception e) {
-            log.warn("[SpringAiAdapter] chat failed: {}", e.getMessage());
-            return buildErrorResult(e, start);
-        }
+        log.warn("[SpringAiAdapter] chat failed after retries: {}", lastError != null ? lastError.getMessage() : "unknown");
+        return buildErrorResult(lastError, start);
     }
 
     @Override
@@ -73,7 +84,7 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         if (budgetCheck != null) return budgetCheck;
 
         Exception lastError = null;
-        for (int attempt = 0; attempt < 2; attempt++) {
+        for (int attempt = 0; attempt < 3; attempt++) {
             try {
                 ChatClient chatClient = chatClientProvider.getIfAvailable();
                 if (chatClient == null) {
@@ -105,8 +116,8 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                 return result;
             } catch (Exception e) {
                 lastError = e;
-                if (isRetryable(e) && attempt == 0) {
-                    long backoffMs = 1000 + (long)(Math.random() * 500);
+                if (isRetryable(e) && attempt < 2) {
+                    long backoffMs = (long) Math.pow(2, attempt) * 1000 + (long)(Math.random() * 500);
                     log.warn("[SpringAiAdapter] chat failed (attempt={}), retrying in {}ms: {}", attempt + 1, backoffMs, e.getMessage());
                     try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 } else {

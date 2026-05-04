@@ -18,11 +18,11 @@ public class AiCriticOrchestrator {
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
 
-    private final ExecutorService criticExecutor = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "critic-worker");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ExecutorService criticExecutor = new ThreadPoolExecutor(
+            2, 4, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(32),
+            r -> { Thread t = new Thread(r, "critic-worker"); t.setDaemon(true); return t; },
+            new ThreadPoolExecutor.CallerRunsPolicy());
 
     public String reviewAndRevise(String userIntent, String draftResponse) {
         return reviewAndRevise(userIntent, draftResponse, null);

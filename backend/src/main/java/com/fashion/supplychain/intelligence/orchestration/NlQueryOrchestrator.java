@@ -362,7 +362,11 @@ public class NlQueryOrchestrator {
             if (!aiAdvisorService.isEnabled()) return null;
             String userMsg = contextPrompt.isEmpty() ? "用户问题：" + question
                     : contextPrompt + "\n用户当前问题：" + question;
-            String reply = aiAdvisorService.chat(LLM_INTENT_PROMPT, userMsg);
+            String reply = java.util.concurrent.CompletableFuture
+                    .supplyAsync(() -> aiAdvisorService.chat(LLM_INTENT_PROMPT, userMsg))
+                    .orTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .exceptionally(ex -> null)
+                    .join();
             if (reply == null || reply.isBlank()) return null;
             String intent = reply.trim().toLowerCase().replaceAll("[^a-z_]", "");
             if (KNOWN_INTENTS.contains(intent)) return intent;

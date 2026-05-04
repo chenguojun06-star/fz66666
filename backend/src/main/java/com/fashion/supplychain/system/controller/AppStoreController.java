@@ -130,7 +130,7 @@ public class AppStoreController {
         try {
             Long appId = Long.valueOf(params.get("appId").toString());
             Long tenantId = UserContext.tenantId();
-            if (tenantId == null) tenantId = 0L;
+            if (tenantId == null) return Result.fail("租户信息缺失，请重新登录");
 
             String callbackUrl = params.get("callbackUrl") != null ? params.get("callbackUrl").toString().trim() : null;
             String externalApiUrl = params.get("externalApiUrl") != null ? params.get("externalApiUrl").toString().trim() : null;

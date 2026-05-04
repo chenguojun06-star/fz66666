@@ -19,7 +19,6 @@ import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -137,7 +136,6 @@ public class ProductionOrderCreationTool implements AgentTool {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public String execute(String argumentsJson) {
         try {
             JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
