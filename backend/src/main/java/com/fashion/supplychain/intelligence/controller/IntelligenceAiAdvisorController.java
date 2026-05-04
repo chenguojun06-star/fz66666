@@ -132,17 +132,7 @@ public class IntelligenceAiAdvisorController {
             } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             return emitter;
         }
-        UserContext currentCtx = UserContext.get();
-        UserContext snapshot = new UserContext();
-        if (currentCtx != null) {
-            snapshot.setTenantId(currentCtx.getTenantId());
-            snapshot.setUserId(currentCtx.getUserId());
-            snapshot.setUsername(currentCtx.getUsername());
-            snapshot.setRole(currentCtx.getRole());
-            snapshot.setSuperAdmin(currentCtx.getSuperAdmin());
-            snapshot.setTenantOwner(currentCtx.getTenantOwner());
-            snapshot.setFactoryId(currentCtx.getFactoryId());
-        }
+        UserContext snapshot = UserContext.get() != null ? UserContext.get().copy() : null;
         Thread.startVirtualThread(() -> {
             try {
                 UserContext.set(snapshot);
