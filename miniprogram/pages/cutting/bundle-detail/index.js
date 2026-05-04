@@ -545,6 +545,8 @@ Page({
     var d = this.data;
     if (d.activeTab !== 'transfer') return;
     this._tfLoadTracking();
+    this._tfLoadFactories();
+    this._tfLoadUsers();
   },
 
   onTransferModeChange(e) {
@@ -557,9 +559,15 @@ Page({
   _tfLoadTracking() {
     var that = this;
     var d = that.data;
-    if (!d.orderId) return;
+    var oid = d.orderId || (d.orderInfo && d.orderInfo.id) || '';
+    if (!oid) {
+      that._tfTracking = [];
+      that._tfLoadBundles([]);
+      that._tfLoadProcesses([]);
+      return;
+    }
 
-    api.production.getOrderTracking(d.orderId).then(function (records) {
+    api.production.getOrderTracking(String(oid)).then(function (records) {
       var list = Array.isArray(records) ? records : (records && records.records) || [];
       that._tfTracking = list;
       that._tfLoadBundles(list);
@@ -743,16 +751,15 @@ Page({
   _tfLoadFactories() {
     var that = this;
     var d = that.data;
-    if (!d.factoryKeyword) return;
     that.setData({ factoriesLoading: true });
 
-    api.production.transferSearchFactories(d.factoryKeyword, d.factoryPage || 1, 20).then(function (res) {
-      var list = (res && res.list) || (Array.isArray(res) ? res : []);
+    api.production.transferSearchFactories(d.factoryKeyword || '', d.factoryPage || 1, 20).then(function (res) {
+      var list = (res && res.records) || (res && res.list) || (Array.isArray(res) ? res : []);
       var factories = (d.factoryPage || 1) > 1 ? d.factories.concat(list) : list;
       that.setData({
         factories: factories,
         factoriesLoading: false,
-        factoryHasMore: (res && res.hasMore) || list.length >= 20,
+        factoryHasMore: (res && (res.hasMore || res.total > factories.length)) || list.length >= 20,
       });
     }).catch(function () {
       that.setData({ factoriesLoading: false });
@@ -782,16 +789,15 @@ Page({
   _tfLoadUsers() {
     var that = this;
     var d = that.data;
-    if (!d.userKeyword) return;
     that.setData({ usersLoading: true });
 
-    api.production.transferSearchUsers(d.userKeyword, d.userPage || 1, 20).then(function (res) {
-      var list = (res && res.list) || (Array.isArray(res) ? res : []);
+    api.production.transferSearchUsers(d.userKeyword || '', d.userPage || 1, 20).then(function (res) {
+      var list = (res && res.records) || (res && res.list) || (Array.isArray(res) ? res : []);
       var users = (d.userPage || 1) > 1 ? d.users.concat(list) : list;
       that.setData({
         users: users,
         usersLoading: false,
-        userHasMore: (res && res.hasMore) || list.length >= 20,
+        userHasMore: (res && (res.hasMore || res.total > users.length)) || list.length >= 20,
       });
     }).catch(function () {
       that.setData({ usersLoading: false });
@@ -836,7 +842,7 @@ Page({
 
     var payload = {
       orderNo: d.orderNo,
-      orderId: d.orderId,
+      orderId: d.orderId || (d.orderInfo && d.orderInfo.id) || '',
       transferMode: d.transferMode,
       transferTarget: d.transferTab === 'factory' ? 'factory' : 'user',
     };

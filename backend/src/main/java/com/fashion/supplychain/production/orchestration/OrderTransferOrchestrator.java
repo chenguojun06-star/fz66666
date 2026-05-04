@@ -103,7 +103,7 @@ public class OrderTransferOrchestrator {
 
         // 只查启用状态的工厂
         queryWrapper.eq(Factory::getStatus, "active")
-                .eq(Factory::getDeleteFlag, 0)
+                .and(w -> w.eq(Factory::getDeleteFlag, 0).or().isNull(Factory::getDeleteFlag))
                 .orderByAsc(Factory::getFactoryName);
 
         Page<Factory> factoryPage = factoryService.page(new Page<>(page, pageSize), queryWrapper);

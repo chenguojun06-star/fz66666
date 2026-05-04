@@ -441,7 +441,7 @@
               data-factory="{{item}}"
             >
               <text class="tf-result-name">{{item.factoryName || item.name || '-'}}</text>
-              <text class="tf-result-sub">{{item.contact || item.phone || ''}}</text>
+              <text class="tf-result-sub">{{item.contactPerson || item.contact || item.contactPhone || item.phone || ''}}</text>
               <text class="tf-result-check" wx:if="{{selectedFactory && selectedFactory.id == item.id}}">✓</text>
             </view>
           </scroll-view>
@@ -463,7 +463,7 @@
               data-user="{{item}}"
             >
               <text class="tf-result-name">{{item.name || item.username || '-'}}</text>
-              <text class="tf-result-sub">{{item.phone || ''}}</text>
+              <text class="tf-result-sub">{{item.username || item.phone || ''}}</text>
               <text class="tf-result-check" wx:if="{{selectedUser && selectedUser.id == item.id}}">✓</text>
             </view>
           </scroll-view>
