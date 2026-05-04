@@ -158,12 +158,7 @@ public class MaterialPurchaseReturnHelper {
         if (returnQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("returnQuantity不能为负数");
         }
-        BigDecimal purchaseQty = existed.getPurchaseQuantity() == null ? BigDecimal.ZERO : existed.getPurchaseQuantity();
-        int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
-        BigDecimal max = arrivedQty > 0 ? BigDecimal.valueOf(arrivedQty) : purchaseQty;
-        if (max.compareTo(BigDecimal.TEN) > 0 && returnQuantity.compareTo(max) > 0) {
-            throw new IllegalArgumentException("回料数量超限: rq=" + returnQuantity + ", max=" + max);
-        }
+        // 不限制回料数量上限，用户可填写任意合法数量
     }
 
     private MaterialPurchase buildReturnPatch(MaterialPurchase existed, String confirmerId, String confirmerName,
