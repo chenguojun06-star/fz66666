@@ -263,6 +263,16 @@ public class AgentLoopEngine {
             }
         }
 
+        if (revisedContent == null || revisedContent.isBlank()) {
+            String toolSummary = ctx.getAllExecRecords().stream()
+                    .map(r -> r.toolName + ": " + (r.evidence != null && r.evidence.length() > 100 ? r.evidence.substring(0, 100) + "..." : r.evidence))
+                    .reduce("", (a, b) -> a.isEmpty() ? b : a + "\n" + b);
+            revisedContent = "抱歉，我暂时无法给出完整的分析结果。"
+                    + (toolSummary.isEmpty() ? "" : "\n\n已查询到的信息：\n" + toolSummary)
+                    + "\n\n请尝试换个方式描述您的问题，或联系管理员检查模型配置。";
+            log.warn("[AgentLoop] 最终回答为空，工具记录={}条，返回兜底提示", ctx.getAllExecRecords().size());
+        }
+
         aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), revisedContent, null,
                 System.currentTimeMillis() - ctx.getRequestStartAt());
 

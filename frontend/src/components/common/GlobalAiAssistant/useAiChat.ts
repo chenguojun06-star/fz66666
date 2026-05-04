@@ -271,12 +271,15 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
             const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
-            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, reportPreview, reportType: parsedReportType } = parseAiResponse(rawContent);
+            let { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, reportPreview, reportType: parsedReportType } = parseAiResponse(rawContent);
+            if (!displayText || !displayText.trim()) {
+              displayText = '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
+            }
             accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
               ? { ...m, text: accumulatedText, reportType: reportTypeToDownload || parsedReportType, reportPreview: reportPreview, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, agentCommandId: commandId }
               : m));
-            if (!answerReceived && rawContent.trim()) {
+            if (!answerReceived) {
               answerReceived = true;
               if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
               finishTyping();
