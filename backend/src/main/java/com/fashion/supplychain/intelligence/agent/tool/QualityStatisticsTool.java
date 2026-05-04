@@ -5,7 +5,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
-import com.fashion.supplychain.warehouse.mapper.MaterialStockMapper;
+import com.fashion.supplychain.production.mapper.MaterialStockMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

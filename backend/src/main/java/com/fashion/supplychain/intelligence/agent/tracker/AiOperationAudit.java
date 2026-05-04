@@ -4,7 +4,6 @@ import com.fashion.supplychain.common.UserContext;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.annotation.RequestScope;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -12,11 +11,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
-@RequestScope
 public class AiOperationAudit {
 
-    private final Map<String, AuditEntry> entries = new ConcurrentHashMap<>();
-    private final List<String> order = Collections.synchronizedList(new ArrayList<>());
+    private static final ThreadLocal<Map<String, AuditEntry>> ENTRIES =
+            ThreadLocal.withInitial(ConcurrentHashMap::new);
+    private static final ThreadLocal<List<String>> ORDER =
+            ThreadLocal.withInitial(() -> Collections.synchronizedList(new ArrayList<>()));
 
     public String recordStart(String toolName, Map<String, Object> arguments) {
         String auditId = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
@@ -29,15 +29,15 @@ public class AiOperationAudit {
         entry.setFactoryId(UserContext.factoryId());
         entry.setStartTime(LocalDateTime.now());
         entry.setBusinessTarget(extractBusinessTarget(toolName, arguments));
-        entries.put(auditId, entry);
-        order.add(auditId);
+        ENTRIES.get().put(auditId, entry);
+        ORDER.get().add(auditId);
         log.debug("[Audit] AI操作开始: id={}, tool={}, operator={}, target={}",
                 auditId, toolName, entry.getOperatorName(), entry.getBusinessTarget());
         return auditId;
     }
 
     public void recordComplete(String auditId, boolean success, String summary) {
-        AuditEntry entry = entries.get(auditId);
+        AuditEntry entry = ENTRIES.get().get(auditId);
         if (entry == null) {
             log.warn("[Audit] 未找到审计记录: id={}", auditId);
             return;
@@ -51,7 +51,7 @@ public class AiOperationAudit {
     }
 
     public List<AuditEntry> getEntries() {
-        return order.stream().map(entries::get).filter(Objects::nonNull).toList();
+        return ORDER.get().stream().map(id -> ENTRIES.get().get(id)).filter(Objects::nonNull).toList();
     }
 
     public List<AuditEntry> getFailedEntries() {
@@ -72,6 +72,11 @@ public class AiOperationAudit {
                     icon, e.getToolName(), e.getBusinessTarget(), e.getOperatorName()));
         }
         return sb.toString();
+    }
+
+    public void clear() {
+        ENTRIES.remove();
+        ORDER.remove();
     }
 
     private String extractBusinessTarget(String toolName, Map<String, Object> arguments) {

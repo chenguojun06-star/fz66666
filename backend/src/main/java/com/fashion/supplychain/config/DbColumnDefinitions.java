@@ -920,6 +920,19 @@ public final class DbColumnDefinitions {
         add("t_agent_memory_archival", "decay_weight", "DOUBLE NOT NULL DEFAULT 1.0 COMMENT '衰减权重'");
         add("t_agent_memory_archival", "embedding_id", "VARCHAR(256) DEFAULT NULL COMMENT '嵌入向量ID'");
         add("t_style_attachment", "biz_type", "VARCHAR(128) DEFAULT 'general' COMMENT '业务类型'");
+
+        add("t_intelligence_feedback", "prediction_id", "VARCHAR(100) DEFAULT NULL COMMENT '关联预测记录ID'");
+        add("t_intelligence_feedback", "feedback_type", "VARCHAR(50) DEFAULT NULL COMMENT '反馈类型'");
+        add("t_intelligence_feedback", "suggestion_type", "VARCHAR(100) DEFAULT NULL COMMENT '建议类型'");
+        add("t_intelligence_feedback", "suggestion_content", "TEXT DEFAULT NULL COMMENT '建议内容摘要'");
+        add("t_intelligence_feedback", "feedback_result", "VARCHAR(20) DEFAULT NULL COMMENT '反馈结果'");
+        add("t_intelligence_feedback", "feedback_reason", "VARCHAR(500) DEFAULT NULL COMMENT '用户反馈原因'");
+        add("t_intelligence_feedback", "feedback_analysis", "TEXT DEFAULT NULL COMMENT 'AI自动分析反馈原因'");
+        add("t_intelligence_feedback", "deviation_minutes", "BIGINT DEFAULT NULL COMMENT '预测偏差分钟'");
+        add("t_intelligence_feedback", "optimization_action", "VARCHAR(500) DEFAULT NULL COMMENT 'AI生成的优化措施'");
+
+        add("t_intelligence_metrics", "accepted", "TINYINT(1) DEFAULT NULL COMMENT '建议是否被采纳'");
+        add("t_intelligence_metrics", "overridden", "TINYINT(1) DEFAULT NULL COMMENT '是否被人工改写'");
     }
 
     private static void addOtherColumns() {

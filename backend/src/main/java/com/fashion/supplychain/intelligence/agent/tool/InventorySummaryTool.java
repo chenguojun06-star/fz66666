@@ -3,8 +3,10 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
-import com.fashion.supplychain.warehouse.mapper.MaterialStockMapper;
-import com.fashion.supplychain.warehouse.mapper.ProductSkuMapper;
+import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.mapper.MaterialStockMapper;
+import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.mapper.ProductSkuMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -88,7 +90,7 @@ public class InventorySummaryTool implements AgentTool {
         try {
             // 面辅料库存汇总
             List<Map<String, Object>> materialSummary = materialStockMapper.selectMaps(
-                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>()
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<MaterialStock>()
                             .select("COUNT(*) as totalTypes",
                                     "COALESCE(SUM(quantity),0) as totalQuantity",
                                     "COALESCE(SUM(quantity * unit_price),0) as totalValue",
@@ -97,7 +99,7 @@ public class InventorySummaryTool implements AgentTool {
 
             // 成品库存汇总
             List<Map<String, Object>> finishedSummary = productSkuMapper.selectMaps(
-                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>()
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductSku>()
                             .select("COUNT(*) as totalSkus",
                                     "COALESCE(SUM(stock_quantity),0) as totalQuantity",
                                     "COALESCE(SUM(stock_quantity * cost_price),0) as totalValue")
@@ -140,7 +142,7 @@ public class InventorySummaryTool implements AgentTool {
     private String executeMaterialByType(Long tenantId, int topN) {
         try {
             List<Map<String, Object>> byType = materialStockMapper.selectMaps(
-                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>()
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<MaterialStock>()
                             .select("material_type as type",
                                     "COUNT(*) as typeCount",
                                     "COALESCE(SUM(quantity),0) as totalQuantity",
@@ -167,7 +169,7 @@ public class InventorySummaryTool implements AgentTool {
     private String executeFinishedByStyle(Long tenantId, int topN) {
         try {
             List<Map<String, Object>> byStyle = productSkuMapper.selectMaps(
-                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>()
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductSku>()
                             .select("style_no as styleNo",
                                     "COUNT(*) as skuCount",
                                     "COALESCE(SUM(stock_quantity),0) as totalQuantity",
@@ -195,7 +197,7 @@ public class InventorySummaryTool implements AgentTool {
         try {
             // 查询可用量低于安全库存的物料（简化：可用量<10视为低库存）
             List<Map<String, Object>> alerts = materialStockMapper.selectMaps(
-                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>()
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<MaterialStock>()
                             .select("material_name as name",
                                     "material_type as type",
                                     "quantity",

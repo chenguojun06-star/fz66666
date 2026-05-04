@@ -68,4 +68,10 @@ public class IntelligenceMetrics {
 
     /** 关联命令ID，用于反馈追溯 */
     private String commandId;
+
+    /** 建议是否被采纳（Phase B） */
+    private Boolean accepted;
+
+    /** 是否被人工改写（Phase B） */
+    private Boolean overridden;
 }

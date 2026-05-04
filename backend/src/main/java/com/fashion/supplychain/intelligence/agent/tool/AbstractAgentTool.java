@@ -34,7 +34,7 @@ public abstract class AbstractAgentTool implements AgentTool, CompensableTool {
     @Autowired
     private AiAgentToolAccessService accessService;
 
-    @Autowired(required = false)
+    @Autowired
     private AiOperationAudit operationAudit;
 
     @Override

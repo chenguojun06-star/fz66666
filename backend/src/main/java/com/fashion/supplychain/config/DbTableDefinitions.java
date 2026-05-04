@@ -1267,5 +1267,24 @@ public final class DbTableDefinitions {
             + "PRIMARY KEY (`id`),"
             + "UNIQUE KEY `uk_tenant_feature` (`tenant_id`, `feature_key`)"
             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='租户智能功能开关'");
+
+        TABLE_FIXES.put("t_intelligence_feedback",
+            "CREATE TABLE IF NOT EXISTS `t_intelligence_feedback` ("
+            + "`id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+            + "`tenant_id` BIGINT NOT NULL,"
+            + "`prediction_id` VARCHAR(100) DEFAULT NULL COMMENT '关联预测记录ID',"
+            + "`feedback_type` VARCHAR(50) DEFAULT NULL COMMENT '反馈类型',"
+            + "`suggestion_type` VARCHAR(100) DEFAULT NULL COMMENT '建议类型',"
+            + "`suggestion_content` TEXT DEFAULT NULL COMMENT '建议内容摘要',"
+            + "`feedback_result` VARCHAR(20) DEFAULT NULL COMMENT '反馈结果',"
+            + "`feedback_reason` VARCHAR(500) DEFAULT NULL COMMENT '用户反馈原因',"
+            + "`feedback_analysis` TEXT DEFAULT NULL COMMENT 'AI自动分析反馈原因',"
+            + "`deviation_minutes` BIGINT DEFAULT NULL COMMENT '预测偏差分钟',"
+            + "`optimization_action` VARCHAR(500) DEFAULT NULL COMMENT 'AI生成的优化措施',"
+            + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+            + "`update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            + "INDEX `idx_tenant_type`(`tenant_id`, `feedback_type`, `create_time`),"
+            + "INDEX `idx_prediction_id`(`prediction_id`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智能反馈分析表（学习闭环）'");
     }
 }
