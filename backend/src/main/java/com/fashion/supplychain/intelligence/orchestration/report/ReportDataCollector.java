@@ -134,7 +134,7 @@ public class ReportDataCollector {
 
     public List<ProductionOrder> getOverdueOrders(Long tenantId, String userId, String username, String factoryId) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, userId, username, factoryId);
-        q.lt("delivery_date", LocalDate.now()).ne("status", "COMPLETED").ne("status", "CANCELLED");
+        q.lt("expected_ship_date", LocalDate.now()).ne("status", "COMPLETED").ne("status", "CANCELLED");
         q.last("LIMIT 5000");
         return productionOrderService.list(q);
     }

@@ -55,8 +55,6 @@ Page({
       paperHeight: 4,
       qrSize: 84,
     },
-    configFocused: '',
-
     /* ── 裁剪分扎表单（无菲号时显示，与 PC 端 CuttingRatioPanel 一致）── */
     showCuttingForm: false,
     bundleSize: 20,
@@ -360,11 +358,6 @@ Page({
     setTimeout(function () { that._generateQrImages(bundles); }, 200);
   },
 
-  onPaperWidthInputFocus() { this.setData({ configFocused: 'w' }); },
-  onPaperHeightInputFocus() { this.setData({ configFocused: 'h' }); },
-  onQrSizeInputFocus() { this.setData({ configFocused: 'q' }); },
-  onConfigBarTap() { /* 阻止事件穿透到卡片 */ },
-  onConfigItemTap() { /* 阻止事件穿透到卡片 */ },
 
   _generateQrImages(bundles) {
     var that = this;
@@ -457,13 +450,7 @@ Page({
     var orient = e.currentTarget.dataset.orient;
     var cfg = this.data.printConfig;
     if (cfg.orientation === orient) return;
-    var newCfg;
-    if (orient === 'vertical') {
-      newCfg = { orientation: 'vertical', paperWidth: 4, paperHeight: 6, qrSize: 72 };
-    } else {
-      newCfg = { orientation: 'horizontal', paperWidth: 7, paperHeight: 4, qrSize: 84 };
-    }
-    this.setData({ printConfig: newCfg });
+    this.setData({ 'printConfig.orientation': orient });
     this._generateQrImages(this.data._rawBundles);
   },
 

@@ -505,28 +505,28 @@
         <view class="bpo-panel-close" bindtap="onCloseBundlePrint">✕</view>
       </view>
 
-      <!-- 打印尺寸配置（与PC端 useCuttingPrint 一致，catchtap 隔离防止穿透到卡片） -->
-      <view class="bpo-config-bar" catchtap="onConfigBarTap">
+      <!-- 打印尺寸配置 -->
+      <view class="bpo-config-bar" catchtap="">
         <text class="bpo-config-label">纸张设置：</text>
-        <view class="bpo-config-item" catchtap="onConfigItemTap">
+        <view class="bpo-config-item">
           <text class="bpo-config-unit">宽</text>
-          <input class="bpo-config-input" type="digit" value="{{printConfig.paperWidth}}" bindinput="onPaperWidthInput" focus="{{configFocused == 'w'}}" bindfocus="onPaperWidthInputFocus" />
+          <input class="bpo-config-input" type="digit" value="{{printConfig.paperWidth}}" bindinput="onPaperWidthInput" placeholder="7" />
           <text class="bpo-config-unit">cm</text>
         </view>
-        <view class="bpo-config-item" catchtap="onConfigItemTap">
+        <view class="bpo-config-item">
           <text class="bpo-config-unit">高</text>
-          <input class="bpo-config-input" type="digit" value="{{printConfig.paperHeight}}" bindinput="onPaperHeightInput" focus="{{configFocused == 'h'}}" bindfocus="onPaperHeightInputFocus" />
+          <input class="bpo-config-input" type="digit" value="{{printConfig.paperHeight}}" bindinput="onPaperHeightInput" placeholder="4" />
           <text class="bpo-config-unit">cm</text>
         </view>
-        <view class="bpo-config-item" catchtap="onConfigItemTap">
+        <view class="bpo-config-item">
           <text class="bpo-config-unit">QR</text>
-          <input class="bpo-config-input" type="digit" value="{{printConfig.qrSize}}" bindinput="onQrSizeInput" focus="{{configFocused == 'q'}}" bindfocus="onQrSizeInputFocus" />
+          <input class="bpo-config-input" type="digit" value="{{printConfig.qrSize}}" bindinput="onQrSizeInput" placeholder="84" />
           <text class="bpo-config-unit">px</text>
         </view>
       </view>
 
-      <!-- 打印方向选择（横版/竖版） -->
-      <view class="bpo-config-bar bpo-orient-bar" catchtap="onConfigBarTap">
+      <!-- 打印方向选择 -->
+      <view class="bpo-config-bar bpo-orient-bar" catchtap="">
         <text class="bpo-config-label">打印方向：</text>
         <view
           class="bpo-orient-btn {{printConfig.orientation == 'horizontal' ? 'bpo-orient-btn--active' : ''}}"
@@ -577,5 +577,5 @@
   </view>
 
   <!-- 隐藏的 canvas 用于生成 QR 码 -->
-  <canvas type="2d" id="qrCanvas" style="position:fixed;left:0;top:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1;"></canvas>
+  <canvas type="2d" id="qrCanvas" style="position:fixed;left:-9999px;top:-9999px;width:200px;height:200px;"></canvas>
 </view>
