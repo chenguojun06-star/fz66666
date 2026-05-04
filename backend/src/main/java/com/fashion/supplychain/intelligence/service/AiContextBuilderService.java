@@ -8,12 +8,19 @@ import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
 import com.fashion.supplychain.intelligence.orchestration.AiChatContextOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.HealthIndexOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.MaterialShortageOrchestrator;
+import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.mapper.MaterialStockMapper;
+import com.fashion.supplychain.style.mapper.ProductSkuMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,6 +46,9 @@ public class AiContextBuilderService {
     private final HealthIndexOrchestrator healthIndexOrchestrator;
     private final MaterialShortageOrchestrator materialShortageOrchestrator;
     private final AiChatContextOrchestrator aiChatContextOrchestrator;
+    private final ProductionOrderMapper productionOrderMapper;
+    private final MaterialStockMapper materialStockMapper;
+    private final ProductSkuMapper productSkuMapper;
 
     /** 租户级上下文缓存，TTL 60 秒（避免同一租户连续对话反复查 4 个 Orchestrator） */
     private static final long CONTEXT_CACHE_TTL_MS = 60_000;
@@ -138,6 +148,71 @@ public class AiContextBuilderService {
             log.warn("[AiContext] 获取面料缺口失败: {}", e.getMessage());
         }
 
+        // === 价格/成本/库存概要（新增）===
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId != null) {
+                sb.append("【经营数据概要】\n");
+
+                // 本月订单总金额
+                try {
+                    List<Map<String, Object>> orderStats = productionOrderMapper.selectMaps(
+                            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductionOrder>()
+                                    .select("COUNT(*) as totalOrders",
+                                            "COALESCE(SUM(factory_unit_price * order_quantity),0) as totalFactoryAmount",
+                                            "COALESCE(SUM(quotation_unit_price * order_quantity),0) as totalQuotationAmount")
+                                    .eq("tenant_id", tenantId)
+                                    .ge("create_time", LocalDate.now().withDayOfMonth(1).atStartOfDay()));
+                    if (!orderStats.isEmpty() && orderStats.get(0) != null) {
+                        Map<String, Object> s = orderStats.get(0);
+                        sb.append("- 本月订单：").append(s.get("totalOrders")).append("张");
+                        Object factoryAmt = s.get("totalFactoryAmount");
+                        if (factoryAmt != null) {
+                            sb.append("，加工总金额").append(formatWan(factoryAmt));
+                        }
+                        sb.append("\n");
+                    }
+                } catch (Exception e) {
+                    log.debug("[AiContext] 订单金额查询失败: {}", e.getMessage());
+                }
+
+                // 库存价值
+                try {
+                    List<Map<String, Object>> matStats = materialStockMapper.selectMaps(
+                            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.MaterialStock>()
+                                    .select("COUNT(*) as totalTypes",
+                                            "COALESCE(SUM(quantity * unit_price),0) as totalValue")
+                                    .eq("tenant_id", tenantId));
+                    if (!matStats.isEmpty() && matStats.get(0) != null) {
+                        Map<String, Object> m = matStats.get(0);
+                        sb.append("- 面辅料库存：").append(m.get("totalTypes")).append("种");
+                        sb.append("，价值").append(formatWan(m.get("totalValue"))).append("\n");
+                    }
+                } catch (Exception e) {
+                    log.debug("[AiContext] 面辅料库存查询失败: {}", e.getMessage());
+                }
+
+                try {
+                    List<Map<String, Object>> skuStats = productSkuMapper.selectMaps(
+                            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.style.entity.ProductSku>()
+                                    .select("COUNT(*) as totalSkus",
+                                            "COALESCE(SUM(stock_quantity * cost_price),0) as totalValue")
+                                    .eq("tenant_id", tenantId));
+                    if (!skuStats.isEmpty() && skuStats.get(0) != null) {
+                        Map<String, Object> s = skuStats.get(0);
+                        sb.append("- 成品库存：").append(s.get("totalSkus")).append("个SKU");
+                        sb.append("，价值").append(formatWan(s.get("totalValue"))).append("\n");
+                    }
+                } catch (Exception e) {
+                    log.debug("[AiContext] 成品库存查询失败: {}", e.getMessage());
+                }
+
+                sb.append("（用户询问单价/成本/库存金额时，请调用 tool_unit_price_query / tool_inventory_summary / tool_style_quotation 获取详细数据）\n\n");
+            }
+        } catch (Exception e) {
+            log.warn("[AiContext] 经营数据概要构建失败: {}", e.getMessage());
+        }
+
         try {
             String tenantIntelligenceContext = aiChatContextOrchestrator.buildTenantIntelligenceContext();
             if (tenantIntelligenceContext != null && !tenantIntelligenceContext.isBlank()) {
@@ -160,5 +235,14 @@ public class AiContextBuilderService {
         String result = sb.toString();
         log.debug("[AiContext] 构建完毕，prompt长度={}", result.length());
         return result;
+    }
+
+    private String formatWan(Object value) {
+        if (value == null) return "¥0";
+        BigDecimal bd = value instanceof BigDecimal ? (BigDecimal) value : new BigDecimal(value.toString());
+        if (bd.compareTo(BigDecimal.valueOf(10000)) >= 0) {
+            return "¥" + bd.divide(BigDecimal.valueOf(10000), 2, RoundingMode.HALF_UP) + "万";
+        }
+        return "¥" + bd.setScale(2, RoundingMode.HALF_UP);
     }
 }

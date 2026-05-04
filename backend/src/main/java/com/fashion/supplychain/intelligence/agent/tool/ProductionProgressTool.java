@@ -144,6 +144,18 @@ public class ProductionProgressTool extends AbstractAgentTool {
         d.put("merchandiser", order.getMerchandiser());
         d.put("plannedEndDate", order.getPlannedEndDate() != null ? order.getPlannedEndDate().format(DTF) : "-");
 
+        // 单价与成本信息
+        d.put("factoryUnitPrice", order.getFactoryUnitPrice());
+        d.put("quotationUnitPrice", order.getQuotationUnitPrice());
+        if (order.getFactoryUnitPrice() != null && order.getOrderQuantity() > 0) {
+            d.put("totalFactoryAmount", order.getFactoryUnitPrice().multiply(java.math.BigDecimal.valueOf(order.getOrderQuantity())));
+        }
+        if (order.getQuotationUnitPrice() != null && order.getOrderQuantity() > 0) {
+            d.put("totalQuotationAmount", order.getQuotationUnitPrice().multiply(java.math.BigDecimal.valueOf(order.getOrderQuantity())));
+        }
+        d.put("progressNodeUnitPrices", order.getProgressNodeUnitPrices());
+        d.put("scatterCuttingUnitPrice", order.getScatterCuttingUnitPrice());
+
         List<ScanRecord> allScans = scanRecordService.lambdaQuery()
                 .eq(ScanRecord::getOrderId, order.getId())
                 .eq(ScanRecord::getTenantId, tenantId)
