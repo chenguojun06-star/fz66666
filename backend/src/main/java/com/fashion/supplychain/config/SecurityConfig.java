@@ -103,7 +103,6 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .requestMatchers("/api/system/tenant/public-list").permitAll()
                         .requestMatchers("/api/system/user/login").permitAll()
                         .requestMatchers("/api/system/user/refresh-token").permitAll()
-                        .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register").permitAll()
                         // 文件下载：旧公共下载保持 permitAll（无租户信息），租户隔离文件要求认证
                         // 前端通过 getAuthedFileUrl() 在 URL 追加 ?token=xxx，TokenAuthFilter 会解析

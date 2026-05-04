@@ -142,7 +142,7 @@ public class ReportDataCollector {
     public List<ProductionOrder> getHighRiskOrders(Long tenantId, String userId, String username, String factoryId) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, userId, username, factoryId);
         q.ne("status", "COMPLETED").ne("status", "CANCELLED");
-        q.and(w -> w.likeRight("order_no", "URGENT").or().like("remark", "紧急").or().like("remark", "加急"));
+        q.and(w -> w.likeRight("order_no", "URGENT").or().like("remarks", "紧急").or().like("remarks", "加急"));
         q.last("LIMIT 5000");
         return productionOrderService.list(q);
     }

@@ -98,6 +98,7 @@ public final class DbColumnDefinitions {
         add("t_style_info", "plate_worker", "VARCHAR(100) DEFAULT NULL COMMENT '车板师'");
         add("t_style_info", "plate_type", "VARCHAR(20) DEFAULT NULL COMMENT '板类'");
         add("t_style_info", "order_type", "VARCHAR(100) DEFAULT NULL COMMENT '订单类型'");
+        add("t_style_info", "delivery_date", "DATETIME DEFAULT NULL COMMENT '交货日期'");
         add("t_style_bom", "image_urls", "TEXT DEFAULT NULL COMMENT '物料图片URLs'");
         add("t_style_bom", "fabric_composition", "VARCHAR(100) DEFAULT NULL COMMENT '物料成分'");
         add("t_style_bom", "fabric_weight", "VARCHAR(50) DEFAULT NULL COMMENT '克重'");
