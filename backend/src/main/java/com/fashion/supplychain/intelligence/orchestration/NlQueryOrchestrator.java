@@ -31,6 +31,7 @@ public class NlQueryOrchestrator {
     @Autowired private AiAdvisorService aiAdvisorService;
     @Autowired private NlQueryDataHandlers dataHandlers;
     @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
+    @Autowired private com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService tokenBudgetService;
 
     private static final int SESSION_CONTEXT_WINDOW = 3;
     private static final int SESSION_CACHE_MAX_SIZE = 200;
@@ -48,6 +49,15 @@ public class NlQueryOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
+
+        if (!tokenBudgetService.canInvoke()) {
+            NlQueryResponse quotaResp = new NlQueryResponse();
+            quotaResp.setIntent("token_budget_exceeded");
+            quotaResp.setAnswer("今天的回答次数已消耗完成，请明天再来或联系管理员调整额度");
+            quotaResp.setConfidence(0);
+            return quotaResp;
+        }
+
         log.info("[NlQuery] question={}, tenant={}, factory={}", question, tenantId, factoryId);
 
         String sessionId = req.getSessionId() != null ? req.getSessionId() : "";

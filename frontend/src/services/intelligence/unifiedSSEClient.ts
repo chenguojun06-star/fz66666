@@ -254,6 +254,12 @@ export function createAgentSSEClient(
         case 'error':
           handlers.onError?.(event.data as ErrorData);
           break;
+        case 'token_budget_exceeded':
+          handlers.onError?.({ message: (event.data as { message?: string })?.message || '今天的回答次数已消耗完成，请明天再来或联系管理员调整额度' });
+          break;
+        case 'max_iterations_exceeded':
+          handlers.onError?.({ message: (event.data as { message?: string })?.message || '当前问题较复杂，小云已尽力分析，请尝试分步提问' });
+          break;
         case 'done':
           handlers.onDone?.();
           break;

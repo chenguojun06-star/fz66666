@@ -155,6 +155,14 @@ export function createXiaoyunHandler(callbacks: XiaoyunCallbacks) {
           callbacks.onError?.(data?.message || '未知错误');
           break;
 
+        case 'token_budget_exceeded':
+          callbacks.onError?.(data?.message || '今天的回答次数已消耗完成，请明天再来或联系管理员调整额度');
+          break;
+
+        case 'max_iterations_exceeded':
+          callbacks.onError?.(data?.message || '当前问题较复杂，小云已尽力分析，请尝试分步提问');
+          break;
+
         case 'done':
           callbacks.onDone?.();
           break;

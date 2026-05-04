@@ -528,7 +528,7 @@ public class IntelligenceInferenceOrchestrator {
         IntelligenceInferenceResult r = new IntelligenceInferenceResult();
         r.setSuccess(false);
         r.setErrorMessage("tenant-daily-token-quota-exceeded");
-        r.setContent("当前租户今日 AI 调用已达上限（" + aiAgentTokenBudgetService.getDailyLimit() + " tokens），请明日再试或联系管理员调整额度。");
+        r.setContent("今天的回答次数已消耗完成，请明天再来或联系管理员调整额度");
         r.setTraceId(traceId);
         r.setLatencyMs(System.currentTimeMillis() - start);
         return r;

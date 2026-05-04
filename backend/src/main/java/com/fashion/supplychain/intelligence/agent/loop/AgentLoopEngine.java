@@ -111,7 +111,7 @@ public class AgentLoopEngine {
 
             ctx.addTokens(result.getPromptTokens(), result.getCompletionTokens());
             if (ctx.isTokenBudgetExceeded()) {
-                String budgetMsg = "抱歉，本次对话消耗的计算资源已达上限，请分步提问以获得更好的回答。";
+                String budgetMsg = "今天的回答次数已消耗完成，请明天再来或联系管理员调整额度";
                 log.warn("[AgentLoop] Token 预算超限: {} > {}", ctx.getTotalTokens(), ctx.getTokenBudget());
                 aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), budgetMsg, "token_budget_exceeded",
                         System.currentTimeMillis() - ctx.getRequestStartAt());
