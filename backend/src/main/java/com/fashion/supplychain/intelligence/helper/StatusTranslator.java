@@ -34,6 +34,15 @@ public final class StatusTranslator {
         STATUS_MAP.put("REJECTED",           "已驳回");
         STATUS_MAP.put("SUSPENDED",          "已暂停");
         STATUS_MAP.put("CLOSED",             "已关闭");
+        STATUS_MAP.put("SCRAPPED",           "已报废");
+        STATUS_MAP.put("ARCHIVED",           "已归档");
+        STATUS_MAP.put("closed",             "已关闭");
+        STATUS_MAP.put("scrapped",           "已报废");
+        STATUS_MAP.put("archived",           "已归档");
+        STATUS_MAP.put("completed",          "已完成");
+        STATUS_MAP.put("cancelled",          "已取消");
+        STATUS_MAP.put("in_progress",        "进行中");
+        STATUS_MAP.put("material_preparation","备料中");
         // 扫码相关
         STATUS_MAP.put("success",            "成功");
         STATUS_MAP.put("fail",               "失败");
