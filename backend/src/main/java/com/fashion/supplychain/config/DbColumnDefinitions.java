@@ -703,8 +703,12 @@ public final class DbColumnDefinitions {
         add("t_intelligence_metrics", "trace_id", "VARCHAR(64) DEFAULT NULL COMMENT 'AI调用追踪ID'");
         add("t_intelligence_metrics", "trace_url", "VARCHAR(500) DEFAULT NULL COMMENT 'Trace链接'");
         add("t_intelligence_metrics", "tool_call_count", "INT DEFAULT NULL COMMENT '工具次数'");
+        add("t_intelligence_metrics", "prompt_chars", "INT DEFAULT NULL COMMENT '提示词字符数'");
+        add("t_intelligence_metrics", "response_chars", "INT DEFAULT NULL COMMENT '回复字符数'");
         add("t_intelligence_metrics", "prompt_tokens", "INT DEFAULT NULL");
         add("t_intelligence_metrics", "completion_tokens", "INT DEFAULT NULL");
+        add("t_intelligence_metrics", "error_message", "TEXT DEFAULT NULL COMMENT '错误信息'");
+        add("t_intelligence_metrics", "user_id", "VARCHAR(64) DEFAULT NULL COMMENT '用户ID'");
         add("t_intelligence_metrics", "user_feedback", "TEXT DEFAULT NULL COMMENT '用户反馈文本'");
         add("t_intelligence_metrics", "feedback_score", "SMALLINT DEFAULT 0 COMMENT '反馈评分'");
         add("t_intelligence_metrics", "command_id", "VARCHAR(64) DEFAULT NULL COMMENT '命令ID'");
