@@ -21,4 +21,6 @@ public interface CuttingBundleService extends IService<CuttingBundle> {
     int sumEffectiveQuantity(String orderId);
 
     void deleteByOrderId(String orderId);
+
+    int revertFactoryIdByOrderId(String orderId);
 }

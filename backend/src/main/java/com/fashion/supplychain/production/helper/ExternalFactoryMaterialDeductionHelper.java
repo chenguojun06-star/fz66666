@@ -34,6 +34,9 @@ public class ExternalFactoryMaterialDeductionHelper {
     @Autowired
     private DeductionItemMapper deductionItemMapper;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialPickingService materialPickingService;
+
     public void applyMaterialDeduction(
             MaterialPicking picking,
             MaterialPurchase purchase,
@@ -176,6 +179,13 @@ public class ExternalFactoryMaterialDeductionHelper {
                         .isNull(DeductionItem::getReconciliationId));
         if (orphans == null || orphans.isEmpty()) return;
 
+        if (StringUtils.hasText(orderId)) {
+            orphans = orphans.stream()
+                    .filter(o -> orderId.equals(resolveOrderIdFromSource(o)))
+                    .collect(java.util.stream.Collectors.toList());
+            if (orphans.isEmpty()) return;
+        }
+
         BigDecimal totalOrphanAmount = BigDecimal.ZERO;
         for (DeductionItem orphan : orphans) {
             orphan.setReconciliationId(reconciliationId);
@@ -203,6 +213,19 @@ public class ExternalFactoryMaterialDeductionHelper {
                 log.info("外发工厂暂存扣款已归集到出货对账单: orderId={}, reconId={}, totalOrphanAmount={}",
                         orderId, reconciliationId, totalOrphanAmount);
             }
+        }
+    }
+
+    private String resolveOrderIdFromSource(DeductionItem item) {
+        if (!"MATERIAL_PICKING".equals(item.getSourceType()) || !StringUtils.hasText(item.getSourceId())) {
+            return null;
+        }
+        try {
+            com.fashion.supplychain.production.entity.MaterialPicking picking =
+                    materialPickingService.getById(item.getSourceId());
+            return picking != null ? picking.getOrderId() : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 }

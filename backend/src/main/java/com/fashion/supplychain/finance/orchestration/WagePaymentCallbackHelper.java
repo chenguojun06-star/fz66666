@@ -36,31 +36,27 @@ public class WagePaymentCallbackHelper {
     public void callbackPaidUpstream(String bizType, String bizId) {
         Long tenantId = UserContext.tenantId();
         String normalizedBizType = "material_reconciliation".equals(bizType) ? "RECONCILIATION" : bizType;
-        try {
-            switch (normalizedBizType) {
-                case "RECONCILIATION":
-                    markReconciliationPaid(bizId, tenantId);
-                    break;
-                case "REIMBURSEMENT":
-                    markReimbursementPaid(bizId, tenantId);
-                    break;
-                case "PAYROLL":
-                case "PAYROLL_SETTLEMENT":
-                    markPayrollSettlementPaid(bizId, tenantId);
-                    break;
-                case "ORDER_SETTLEMENT":
-                    markOrderSettlementPaid(bizId);
-                    break;
-                case "SHIPMENT_RECONCILIATION":
-                    markShipmentReconciliationPaid(bizId, tenantId);
-                    break;
-                default:
-                    log.warn("[付款中心] 未知业务类型: bizType={}", bizType);
-            }
-            syncBillAggregationOnPaid(normalizedBizType, bizId);
-        } catch (Exception e) {
-            log.error("[付款中心] 回写上游状态失败: bizType={}, bizId={}", bizType, bizId, e);
+        switch (normalizedBizType) {
+            case "RECONCILIATION":
+                markReconciliationPaid(bizId, tenantId);
+                break;
+            case "REIMBURSEMENT":
+                markReimbursementPaid(bizId, tenantId);
+                break;
+            case "PAYROLL":
+            case "PAYROLL_SETTLEMENT":
+                markPayrollSettlementPaid(bizId, tenantId);
+                break;
+            case "ORDER_SETTLEMENT":
+                markOrderSettlementPaid(bizId, tenantId);
+                break;
+            case "SHIPMENT_RECONCILIATION":
+                markShipmentReconciliationPaid(bizId, tenantId);
+                break;
+            default:
+                log.warn("[付款中心] 未知业务类型: bizType={}", bizType);
         }
+        syncBillAggregationOnPaid(normalizedBizType, bizId);
     }
 
     public void callbackRefundUpstream(com.fashion.supplychain.finance.entity.WagePayment payment) {
@@ -68,27 +64,26 @@ public class WagePaymentCallbackHelper {
             return;
         }
         String normalizedBizType = "material_reconciliation".equals(payment.getBizType()) ? "RECONCILIATION" : payment.getBizType();
-        try {
-            switch (normalizedBizType) {
-                case "RECONCILIATION":
-                    markReconciliationRefunded(payment.getBizId(), payment.getTenantId());
-                    break;
-                case "REIMBURSEMENT":
-                    markReimbursementRefunded(payment.getBizId(), payment.getTenantId());
-                    break;
-                case "PAYROLL_SETTLEMENT":
-                    markPayrollSettlementRefunded(payment.getBizId(), payment.getTenantId());
-                    break;
-                case "ORDER_SETTLEMENT":
-                    markOrderSettlementRefunded(payment.getBizId());
-                    break;
-                default:
-                    log.warn("[工资支付] 退回: 未知业务类型 {}", payment.getBizType());
-            }
-            syncBillAggregationOnRefund(normalizedBizType, payment.getBizId());
-        } catch (Exception e) {
-            log.error("[工资支付] 退回回写上游失败: bizType={}, bizId={}", payment.getBizType(), payment.getBizId(), e);
+        switch (normalizedBizType) {
+            case "RECONCILIATION":
+                markReconciliationRefunded(payment.getBizId(), payment.getTenantId());
+                break;
+            case "REIMBURSEMENT":
+                markReimbursementRefunded(payment.getBizId(), payment.getTenantId());
+                break;
+            case "PAYROLL_SETTLEMENT":
+                markPayrollSettlementRefunded(payment.getBizId(), payment.getTenantId());
+                break;
+            case "ORDER_SETTLEMENT":
+                markOrderSettlementRefunded(payment.getBizId(), payment.getTenantId());
+                break;
+            case "SHIPMENT_RECONCILIATION":
+                markShipmentReconciliationRefunded(payment.getBizId(), payment.getTenantId());
+                break;
+            default:
+                log.warn("[工资支付] 退回: 未知业务类型 {}", payment.getBizType());
         }
+        syncBillAggregationOnRefund(normalizedBizType, payment.getBizId());
     }
 
     public void callbackRejectUpstream(String bizType, String bizId, String reason) {
@@ -196,7 +191,7 @@ public class WagePaymentCallbackHelper {
         }
     }
 
-    private void markOrderSettlementPaid(String bizId) {
+    private void markOrderSettlementPaid(String bizId, Long tenantId) {
         FinishedSettlementApprovalStatus approval = finishedSettlementApprovalStatusService.lambdaQuery()
                 .eq(FinishedSettlementApprovalStatus::getSettlementId, bizId)
                 .eq(FinishedSettlementApprovalStatus::getStatus, "approved")
@@ -278,7 +273,7 @@ public class WagePaymentCallbackHelper {
         }
     }
 
-    private void markOrderSettlementRefunded(String bizId) {
+    private void markOrderSettlementRefunded(String bizId, Long tenantId) {
         FinishedSettlementApprovalStatus approvalRefund = finishedSettlementApprovalStatusService.lambdaQuery()
                 .eq(FinishedSettlementApprovalStatus::getSettlementId, bizId)
                 .eq(FinishedSettlementApprovalStatus::getStatus, "paid")
@@ -291,6 +286,21 @@ public class WagePaymentCallbackHelper {
             patchRefund.setUpdateTime(LocalDateTime.now());
             finishedSettlementApprovalStatusService.updateById(patchRefund);
             log.info("[工资支付] 退回回写成品结算审批: settlementId={}, paid->approved", bizId);
+        }
+    }
+
+    private void markShipmentReconciliationRefunded(String bizId, Long tenantId) {
+        ShipmentReconciliation sr = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getId, bizId)
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
+                .one();
+        if (sr != null && "paid".equals(sr.getStatus())) {
+            ShipmentReconciliation srPatch = new ShipmentReconciliation();
+            srPatch.setId(sr.getId());
+            srPatch.setStatus("approved");
+            srPatch.setUpdateTime(LocalDateTime.now());
+            shipmentReconciliationService.updateById(srPatch);
+            log.info("[工资支付] 退回回写出货对账: id={}, paid->approved", bizId);
         }
     }
 

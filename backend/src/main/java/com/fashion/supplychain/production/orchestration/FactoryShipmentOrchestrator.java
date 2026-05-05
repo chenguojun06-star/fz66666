@@ -70,6 +70,9 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("订单不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+        if (!"EXTERNAL".equalsIgnoreCase(order.getFactoryType())) {
+            return Result.fail("仅外发订单可创建发货单，当前订单工厂类型为 " + order.getFactoryType());
+        }
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(order.getFactoryId())) {
             return Result.fail("无权操作其他工厂的订单");
@@ -166,6 +169,8 @@ public class FactoryShipmentOrchestrator {
         if (receivedDetails != null && !receivedDetails.isEmpty()) {
             factoryShipmentDetailService.updateReceivedDetails(shipmentId, receivedDetails);
         }
+
+        revertBundleFactoryIdOnReceive(fs.getOrderId());
 
         log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} shipQty={} receivedQty={} detailLines={}",
                 shipmentId, fs.getOrderId(), fs.getShipQuantity(), actualQty,
@@ -267,5 +272,16 @@ public class FactoryShipmentOrchestrator {
             result.add(row);
         }
         return result;
+    }
+
+    private void revertBundleFactoryIdOnReceive(String orderId) {
+        try {
+            int reverted = cuttingBundleService.revertFactoryIdByOrderId(orderId);
+            if (reverted > 0) {
+                log.info("[FactoryShipment] 收货回转菲号归属 orderId={} revertedCount={}", orderId, reverted);
+            }
+        } catch (Exception e) {
+            log.error("[FactoryShipment] 收货回转菲号归属失败 orderId={}", orderId, e);
+        }
     }
 }

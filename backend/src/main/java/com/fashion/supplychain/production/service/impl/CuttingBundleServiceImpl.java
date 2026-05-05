@@ -572,4 +572,23 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         baseMapper.delete(wrapper);
         log.info("Deleted cutting bundles for order: {}", oid);
     }
+
+    @Override
+    public int revertFactoryIdByOrderId(String orderId) {
+        if (!StringUtils.hasText(orderId)) return 0;
+        Long tenantId = UserContext.tenantId();
+        LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CuttingBundle::getProductionOrderId, orderId.trim())
+               .isNotNull(CuttingBundle::getFactoryId);
+        if (tenantId != null) {
+            wrapper.eq(CuttingBundle::getTenantId, tenantId);
+        }
+        List<CuttingBundle> bundles = list(wrapper);
+        if (bundles.isEmpty()) return 0;
+        for (CuttingBundle b : bundles) {
+            b.setFactoryId(null);
+        }
+        updateBatchById(bundles);
+        return bundles.size();
+    }
 }
