@@ -130,7 +130,8 @@ public class FactoryShipmentOrchestrator {
      * 质检由 /production/warehousing 页面负责。
      */
     @Transactional(rollbackFor = Exception.class)
-    public Result<FactoryShipment> receive(String shipmentId, Integer receivedQuantity) {
+    public Result<FactoryShipment> receive(String shipmentId, Integer receivedQuantity,
+                                            List<Map<String, Object>> receivedDetails) {
         if (!StringUtils.hasText(shipmentId)) {
             return Result.fail("缺少发货单 ID");
         }
@@ -143,7 +144,6 @@ public class FactoryShipmentOrchestrator {
             return Result.fail("该发货单状态为 " + fs.getReceiveStatus() + "，无法收货");
         }
 
-        // 收货由租户（本厂）操作，外发工厂账号不操作收货
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
             return Result.fail("外发工厂账号不可操作收货，请使用本厂账号登录");
@@ -163,8 +163,13 @@ public class FactoryShipmentOrchestrator {
         fs.setReceivedByName(UserContext.username());
         factoryShipmentService.updateById(fs);
 
-        log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} shipQty={} receivedQty={}",
-                shipmentId, fs.getOrderId(), fs.getShipQuantity(), actualQty);
+        if (receivedDetails != null && !receivedDetails.isEmpty()) {
+            factoryShipmentDetailService.updateReceivedDetails(shipmentId, receivedDetails);
+        }
+
+        log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} shipQty={} receivedQty={} detailLines={}",
+                shipmentId, fs.getOrderId(), fs.getShipQuantity(), actualQty,
+                receivedDetails != null ? receivedDetails.size() : 0);
         return Result.success(fs);
     }
 

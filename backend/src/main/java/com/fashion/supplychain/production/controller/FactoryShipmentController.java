@@ -53,7 +53,10 @@ public class FactoryShipmentController {
                                            @RequestBody Map<String, Object> params) {
         Integer receivedQuantity = params.get("receivedQuantity") instanceof Number
                 ? ((Number) params.get("receivedQuantity")).intValue() : null;
-        return factoryShipmentOrchestrator.receive(id, receivedQuantity);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> receivedDetails = params.get("details") instanceof List
+                ? (List<Map<String, Object>>) params.get("details") : null;
+        return factoryShipmentOrchestrator.receive(id, receivedQuantity, receivedDetails);
     }
 
     /** 发货单列表 */

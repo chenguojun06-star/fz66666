@@ -1,18 +1,25 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.CuttingBundle;
+import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.SysNotice;
+import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.service.SysNoticeService;
+import com.fashion.supplychain.system.dto.FactoryOrganizationSnapshot;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +75,15 @@ public class OrderFactoryTransferOrchestrator {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private CuttingTaskService cuttingTaskService;
+
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private OrganizationUnitBindingHelper organizationUnitBindingHelper;
 
     // ─────────────────────────────────────────────────────────────────────────
     // 转厂入口
@@ -138,6 +154,14 @@ public class OrderFactoryTransferOrchestrator {
             } else {
                 order.setFactoryType("EXTERNAL"); // 默认外发
             }
+            // 同步更新组织架构（与PC端转单保持一致）
+            FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.getFactorySnapshot(targetFactory);
+            order.setOrgUnitId(snapshot.getOrgUnitId());
+            order.setParentOrgUnitId(snapshot.getParentOrgUnitId());
+            order.setParentOrgUnitName(snapshot.getParentOrgUnitName());
+            order.setOrgPath(snapshot.getOrgPath());
+            order.setFactoryContactPerson(targetFactory.getContactPerson());
+            order.setFactoryContactPhone(targetFactory.getContactPhone());
             appendRemark(order, String.format("[%s] 整单转厂 %s → %s，操作人:%s，原因:%s",
                     timeStr, safeStr(oldFactoryName), targetFactoryName, operator, safeStr(reason)));
         } else {
@@ -162,6 +186,8 @@ public class OrderFactoryTransferOrchestrator {
 
         if (isFullTransfer) {
             transferScanRecords(order.getId(), targetFactory.getId(), tenantId);
+            syncCuttingDataFactoryId(order.getId(), targetFactory.getId(),
+                    targetFactory.getFactoryName(), targetFactory.getFactoryType());
         }
 
         // 6. 通知原工厂（如果有）
@@ -257,6 +283,14 @@ public class OrderFactoryTransferOrchestrator {
                 } else {
                     order.setFactoryType("INTERNAL"); // 默认内部
                 }
+                // 还原组织架构
+                FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.getFactorySnapshot(oldFactory);
+                order.setOrgUnitId(snapshot.getOrgUnitId());
+                order.setParentOrgUnitId(snapshot.getParentOrgUnitId());
+                order.setParentOrgUnitName(snapshot.getParentOrgUnitName());
+                order.setOrgPath(snapshot.getOrgPath());
+                order.setFactoryContactPerson(oldFactory.getContactPerson());
+                order.setFactoryContactPhone(oldFactory.getContactPhone());
             } else {
                 order.setFactoryType("INTERNAL");
             }
@@ -285,6 +319,11 @@ public class OrderFactoryTransferOrchestrator {
 
         if (wasFullTransfer && !"(未知)".equals(oldFactoryId)) {
             transferScanRecords(order.getId(), oldFactoryId, tenantId);
+            Factory oldFactory = factoryService.getById(oldFactoryId);
+            String oldFactoryType = (oldFactory != null && StringUtils.hasText(oldFactory.getFactoryType()))
+                    ? oldFactory.getFactoryType() : "INTERNAL";
+            syncCuttingDataFactoryId(order.getId(), oldFactoryId,
+                    "(未知)".equals(oldFactoryName) ? "" : oldFactoryName, oldFactoryType);
         }
 
         // 通知原工厂（撤回后它恢复接单）
@@ -471,6 +510,45 @@ public class OrderFactoryTransferOrchestrator {
         }
         scanRecordService.updateBatchById(records);
         log.info("[转厂] 已更新 {} 条扫码记录的factoryId → {}", records.size(), newFactoryId);
+    }
+
+    private void syncCuttingDataFactoryId(String orderId, String factoryId,
+                                           String factoryName, String factoryType) {
+        if (!StringUtils.hasText(orderId) || !StringUtils.hasText(factoryId)) return;
+        String normalizedFactoryType = factoryType != null ? factoryType.toUpperCase() : "EXTERNAL";
+
+        try {
+            List<CuttingTask> tasks = cuttingTaskService.list(
+                    new LambdaQueryWrapper<CuttingTask>()
+                            .eq(CuttingTask::getProductionOrderId, orderId));
+            if (tasks != null && !tasks.isEmpty()) {
+                for (CuttingTask task : tasks) {
+                    task.setFactoryId(factoryId);
+                    task.setFactoryType(normalizedFactoryType);
+                }
+                cuttingTaskService.updateBatchById(tasks);
+                log.info("[转厂] 已更新 {} 条裁剪任务的factoryId/factoryType → {}", tasks.size(), factoryId);
+            }
+        } catch (Exception e) {
+            log.error("[转厂] 裁剪任务工厂同步失败: orderId={}, error={}", orderId, e.getMessage());
+            throw new BusinessException("裁剪任务工厂同步失败，转厂已回滚: " + e.getMessage());
+        }
+
+        try {
+            List<CuttingBundle> bundles = cuttingBundleService.list(
+                    new LambdaQueryWrapper<CuttingBundle>()
+                            .eq(CuttingBundle::getProductionOrderId, orderId));
+            if (bundles != null && !bundles.isEmpty()) {
+                for (CuttingBundle bundle : bundles) {
+                    bundle.setFactoryId(factoryId);
+                }
+                cuttingBundleService.updateBatchById(bundles);
+                log.info("[转厂] 已更新 {} 条菲号的factoryId → {}", bundles.size(), factoryId);
+            }
+        } catch (Exception e) {
+            log.error("[转厂] 菲号工厂同步失败: orderId={}, error={}", orderId, e.getMessage());
+            throw new BusinessException("菲号工厂同步失败，转厂已回滚: " + e.getMessage());
+        }
     }
 
     private void validateTransferEligibility(ProductionOrder order) {
