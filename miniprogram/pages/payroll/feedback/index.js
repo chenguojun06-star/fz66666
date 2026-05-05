@@ -37,7 +37,7 @@ Page({
       });
       this.setData({ settlements: list });
     } catch (e) {
-      toast('加载失败');
+      toast.info('加载失败');
     } finally {
       this.setData({ loading: false });
     }
@@ -74,7 +74,7 @@ Page({
   async submitFeedback() {
     const { currentSettlementId, feedbackType, feedbackContent } = this.data;
     if (feedbackType === 'OBJECTION' && (!feedbackContent || !feedbackContent.trim())) {
-      toast('提出异议时必须填写反馈内容');
+      toast.info('提出异议时必须填写反馈内容');
       return;
     }
     this.setData({ submitting: true });
@@ -84,11 +84,11 @@ Page({
         method: 'POST',
         data: { settlementId: currentSettlementId, feedbackType, feedbackContent },
       });
-      toast('提交成功');
+      toast.success('提交成功');
       this.setData({ showForm: false, feedbackContent: '' });
       this.loadSettlements();
     } catch (e) {
-      toast(e?.message || '提交失败');
+      toast.error(e?.message || '提交失败');
     } finally {
       this.setData({ submitting: false });
     }
