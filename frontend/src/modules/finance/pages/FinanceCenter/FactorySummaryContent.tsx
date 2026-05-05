@@ -201,9 +201,12 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     const totalOrders = filteredData.reduce((s, r) => s + (r.orderCount || 0), 0);
     const totalQty = filteredData.reduce((s, r) => s + (r.totalOrderQuantity || 0), 0);
     const totalWarehoused = filteredData.reduce((s, r) => s + (r.totalWarehousedQuantity || 0), 0);
+    const totalDefect = filteredData.reduce((s, r) => s + (r.totalDefectQuantity || 0), 0);
+    const totalMaterialCost = filteredData.reduce((s, r) => s + Number(r.totalMaterialCost || 0), 0);
+    const totalProductionCost = filteredData.reduce((s, r) => s + Number(r.totalProductionCost || 0), 0);
     const totalAmount = filteredData.reduce((s, r) => s + Number(r.totalAmount || 0), 0);
     const totalProfit = filteredData.reduce((s, r) => s + Number(r.totalProfit || 0), 0);
-    return { totalOrders, totalQty, totalWarehoused, totalAmount, totalProfit };
+    return { totalOrders, totalQty, totalWarehoused, totalDefect, totalMaterialCost, totalProductionCost, totalAmount, totalProfit };
   }, [filteredData]);
 
   // 驳回：将工厂所有订单从 auditedOrderNos 移除，回流Tab1重审
@@ -657,9 +660,17 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
               <ResizableTable.Summary.Cell index={4} align="right">
                 <strong>{summary.totalWarehoused.toLocaleString()}</strong>
               </ResizableTable.Summary.Cell>
-              <ResizableTable.Summary.Cell index={5} />
-              <ResizableTable.Summary.Cell index={6} />
-              <ResizableTable.Summary.Cell index={7} />
+              <ResizableTable.Summary.Cell index={5} align="right">
+                <strong style={{ color: summary.totalDefect > 0 ? 'var(--color-danger)' : undefined }}>
+                  {summary.totalDefect}
+                </strong>
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={6} align="right">
+                ¥{toMoney(summary.totalMaterialCost)}
+              </ResizableTable.Summary.Cell>
+              <ResizableTable.Summary.Cell index={7} align="right">
+                ¥{toMoney(summary.totalProductionCost)}
+              </ResizableTable.Summary.Cell>
               <ResizableTable.Summary.Cell index={8} align="right">
                 <strong style={{ color: 'var(--primary-color)' }}>
                   ¥{toMoney(summary.totalAmount)}

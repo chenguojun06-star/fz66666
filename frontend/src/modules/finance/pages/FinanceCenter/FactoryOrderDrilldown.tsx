@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Table, Tag, Descriptions, App, Empty } from 'antd';
+import { Modal, Tag, Descriptions, App, Empty } from 'antd';
 import api from '@/utils/api';
+import ResizableTable from '@/components/common/ResizableTable';
 import { toMoney } from './chartConfigs';
 import { statusMap } from './useSettlementData';
 
@@ -63,7 +64,6 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
   const fetchOrderDetails = async () => {
     setLoading(true);
     try {
-      // 批量查询订单明细
       const promises = orderNos.map(orderNo =>
         api.get('/finance/finished-settlement/detail/' + encodeURIComponent(orderNo))
           .catch(() => null)
@@ -94,15 +94,15 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
     { title: '入库数', dataIndex: 'warehousedQuantity', width: 80, align: 'right' as const },
     {
       title: '次品', dataIndex: 'defectQuantity', width: 60, align: 'right' as const,
-      render: (v: number) => v > 0 ? <span style={{ color: 'red' }}>{v}</span> : '-',
+      render: (v: number) => v > 0 ? <span style={{ color: 'var(--color-danger)' }}>{v}</span> : '-',
     },
     { title: '面辅料成本', dataIndex: 'materialCost', width: 110, align: 'right' as const, render: (v: number) => `¥${toMoney(v)}` },
     { title: '生产成本', dataIndex: 'productionCost', width: 100, align: 'right' as const, render: (v: number) => `¥${toMoney(v)}` },
-    { title: '次品报废', dataIndex: 'defectLoss', width: 100, align: 'right' as const, render: (v: number) => v > 0 ? <span style={{ color: 'red' }}>¥{toMoney(v)}</span> : '-' },
+    { title: '次品报废', dataIndex: 'defectLoss', width: 100, align: 'right' as const, render: (v: number) => v > 0 ? <span style={{ color: 'var(--color-danger)' }}>¥{toMoney(v)}</span> : '-' },
     { title: '金额', dataIndex: 'totalAmount', width: 100, align: 'right' as const, render: (v: number) => <strong>¥{toMoney(v)}</strong> },
     {
       title: '利润', dataIndex: 'profit', width: 100, align: 'right' as const,
-      render: (v: number) => <span style={{ color: v >= 0 ? 'green' : 'red', fontWeight: 500 }}>¥{toMoney(v)}</span>,
+      render: (v: number) => <span style={{ color: v >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 500 }}>¥{toMoney(v)}</span>,
     },
     { title: '利润率', dataIndex: 'profitMargin', width: 80, align: 'right' as const, render: (v: number) => `${v?.toFixed(1) ?? '-'}%` },
   ];
@@ -126,10 +126,10 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
         <Descriptions.Item label="下单总量">{totalOrderQuantity?.toLocaleString() ?? 0}</Descriptions.Item>
         <Descriptions.Item label="入库总量">{totalWarehousedQuantity?.toLocaleString() ?? 0}</Descriptions.Item>
         <Descriptions.Item label="次品量">
-          <span style={{ color: totalDefectQuantity > 0 ? 'red' : undefined }}>{totalDefectQuantity}</span>
+          <span style={{ color: totalDefectQuantity > 0 ? 'var(--color-danger)' : undefined }}>{totalDefectQuantity}</span>
         </Descriptions.Item>
         <Descriptions.Item label="利润">
-          <span style={{ color: totalProfit >= 0 ? 'green' : 'red', fontWeight: 600 }}>¥{toMoney(totalProfit)}</span>
+          <span style={{ color: totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 600 }}>¥{toMoney(totalProfit)}</span>
         </Descriptions.Item>
         <Descriptions.Item label="面辅料成本">¥{toMoney(totalMaterialCost)}</Descriptions.Item>
         <Descriptions.Item label="生产成本">¥{toMoney(totalProductionCost)}</Descriptions.Item>
@@ -139,7 +139,8 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
       </Descriptions>
 
       {orders.length > 0 ? (
-        <Table
+        <ResizableTable
+          storageKey="finance-factory-order-drilldown"
           columns={columns}
           dataSource={orders}
           rowKey="orderId"
@@ -147,28 +148,41 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
           size="small"
           pagination={false}
           scroll={{ x: 1300 }}
-          summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={4}>
-                  <strong>合计 {orders.length} 单</strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={4} align="right">{orders.reduce((s, o) => s + (o.orderQuantity || 0), 0)}</Table.Summary.Cell>
-                <Table.Summary.Cell index={5} align="right">{orders.reduce((s, o) => s + (o.warehousedQuantity || 0), 0)}</Table.Summary.Cell>
-                <Table.Summary.Cell index={6} align="right">{orders.reduce((s, o) => s + (o.defectQuantity || 0), 0)}</Table.Summary.Cell>
-                <Table.Summary.Cell index={7} align="right">¥{toMoney(orders.reduce((s, o) => s + (o.materialCost || 0), 0))}</Table.Summary.Cell>
-                <Table.Summary.Cell index={8} align="right">¥{toMoney(orders.reduce((s, o) => s + (o.productionCost || 0), 0))}</Table.Summary.Cell>
-                <Table.Summary.Cell index={9} align="right">¥{toMoney(orders.reduce((s, o) => s + (o.defectLoss || 0), 0))}</Table.Summary.Cell>
-                <Table.Summary.Cell index={10} align="right"><strong>¥{toMoney(orders.reduce((s, o) => s + (o.totalAmount || 0), 0))}</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={11} align="right">
-                  <span style={{ color: orders.reduce((s, o) => s + (o.profit || 0), 0) >= 0 ? 'green' : 'red', fontWeight: 600 }}>
-                    ¥{toMoney(orders.reduce((s, o) => s + (o.profit || 0), 0))}
-                  </span>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={12} align="right">{orders.length > 0 ? (orders.reduce((s, o) => s + (o.profit || 0), 0) / Math.max(1, orders.reduce((s, o) => s + (o.totalAmount || 0), 0)) * 100).toFixed(1) : 0}%</Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
-          )}
+          summary={() => {
+            const totOrderQty = orders.reduce((s, o) => s + (o.orderQuantity || 0), 0);
+            const totWhQty = orders.reduce((s, o) => s + (o.warehousedQuantity || 0), 0);
+            const totDefect = orders.reduce((s, o) => s + (o.defectQuantity || 0), 0);
+            const totMatCost = orders.reduce((s, o) => s + (o.materialCost || 0), 0);
+            const totProdCost = orders.reduce((s, o) => s + (o.productionCost || 0), 0);
+            const totDefectLoss = orders.reduce((s, o) => s + (o.defectLoss || 0), 0);
+            const totAmount = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
+            const totProfit = orders.reduce((s, o) => s + (o.profit || 0), 0);
+            const totMargin = orders.length > 0
+              ? (totProfit / Math.max(1, totAmount) * 100).toFixed(1)
+              : '0.0';
+            return (
+              <ResizableTable.Summary fixed>
+                <ResizableTable.Summary.Row>
+                  <ResizableTable.Summary.Cell index={0} colSpan={3}>
+                    <strong>合计 {orders.length} 单</strong>
+                  </ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={3} align="right">{totOrderQty}</ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={4} align="right">{totWhQty}</ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={5} align="right">{totDefect}</ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={6} align="right">¥{toMoney(totMatCost)}</ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={7} align="right">¥{toMoney(totProdCost)}</ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={8} align="right">¥{toMoney(totDefectLoss)}</ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={9} align="right"><strong>¥{toMoney(totAmount)}</strong></ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={10} align="right">
+                    <span style={{ color: totProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 600 }}>
+                      ¥{toMoney(totProfit)}
+                    </span>
+                  </ResizableTable.Summary.Cell>
+                  <ResizableTable.Summary.Cell index={11} align="right">{totMargin}%</ResizableTable.Summary.Cell>
+                </ResizableTable.Summary.Row>
+              </ResizableTable.Summary>
+            );
+          }}
         />
       ) : (
         !loading && <Empty description="暂无订单明细" />

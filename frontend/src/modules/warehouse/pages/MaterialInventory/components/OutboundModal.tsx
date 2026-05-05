@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Card,
-  Table,
   Space,
   Input,
   AutoComplete,
@@ -328,22 +327,22 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                 const totalOutbound = batchDetails.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
                 const totalAvailable = batchDetails.reduce((sum, item) => sum + item.availableQty, 0);
                 return (
-                  <Table.Summary fixed>
-                    <Table.Summary.Row>
-                      <Table.Summary.Cell key="label" index={0} colSpan={4} align="right">
+                  <ResizableTable.Summary fixed>
+                    <ResizableTable.Summary.Row>
+                      <ResizableTable.Summary.Cell key="label" index={0} colSpan={4} align="right">
                         <strong>合计</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell key="available" index={1} align="center">
+                      </ResizableTable.Summary.Cell>
+                      <ResizableTable.Summary.Cell key="available" index={1} align="center">
                         <strong style={{ color: 'var(--color-success)' }}>{totalAvailable}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell key="locked" index={2} />
-                      <Table.Summary.Cell key="outbound" index={3} align="center">
+                      </ResizableTable.Summary.Cell>
+                      <ResizableTable.Summary.Cell key="locked" index={2} />
+                      <ResizableTable.Summary.Cell key="outbound" index={3} align="center">
                         <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-md)" }}>
                           {totalOutbound} {outboundModal.data.unit}
                         </strong>
-                      </Table.Summary.Cell>
-                    </Table.Summary.Row>
-                  </Table.Summary>
+                      </ResizableTable.Summary.Cell>
+                    </ResizableTable.Summary.Row>
+                  </ResizableTable.Summary>
                 );
               }}
             />

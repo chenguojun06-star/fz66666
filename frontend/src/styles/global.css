@@ -886,58 +886,74 @@ body {
 }
 
 /* ========================================
-   表格统一样式规范
+   表格统一样式规范 — 响应式自适应 v2.0
    ======================================== */
 
 /* 表格基础样式 */
 .ant-table {
-  font-size: var(--font-size-sm);
+  font-size: var(--table-cell-font-size, var(--font-size-sm));
   line-height: 1.5;
+  transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
-/* 表头样式 - 一级标题 */
+/* 表头样式 - 智能自适应排版 */
 .ant-table-thead > tr > th {
-  font-size: var(--font-size-base);
+  font-size: var(--table-header-font-size, var(--font-size-base));
   font-weight: var(--font-weight-bold);
   background: var(--table-header-bg);
   color: var(--neutral-text);
   text-align: center !important;
-  height: 48px;
-  padding: 12px 8px;
+  height: var(--table-header-height, 48px);
+  padding: var(--table-header-padding-y, 12px) var(--table-header-padding-x, 8px);
   border-bottom: 2px solid var(--table-border-color) !important;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
+              padding 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
+              height 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 .ant-table-thead > tr > th.ant-table-cell-align-left {
-  text-align: center !important;
+  text-align: left !important;
 }
 
 .ant-table-thead > tr > th.ant-table-cell-align-right {
-  text-align: center !important;
+  text-align: right !important;
 }
 
+/* 表头文字：默认不换行，让列宽由表头文字自然撑开 */
 .ant-table-thead > tr > th .ant-table-column-title {
-  display: block;
+  display: inline-block;
   overflow: visible;
   text-overflow: clip;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* 当表头文字过长时允许优雅折行 */
+.ant-table-thead > tr > th .ant-table-column-title--wrappable {
   white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  display: block;
 }
 
 /* 表格单元格样式 */
 .ant-table-tbody > tr > td {
-  font-size: var(--font-size-sm);
+  font-size: var(--table-cell-font-size, var(--font-size-sm));
   font-weight: var(--font-weight-normal);
   text-align: center !important;
-  padding: 10px 8px;
+  padding: var(--table-cell-padding-y, 10px) var(--table-cell-padding-x, 8px);
   line-height: 1.5;
+  transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
+              padding 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 .ant-table-tbody > tr > td.ant-table-cell-align-left {
-  text-align: center !important;
+  text-align: left !important;
 }
 
 .ant-table-tbody > tr > td.ant-table-cell-align-right {
-  text-align: center !important;
+  text-align: right !important;
 }
 
 /* 单元格内容 */
@@ -947,6 +963,7 @@ body {
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
+  min-width: var(--table-min-col-width, 60px);
 }
 .ant-table-cell-ellipsis {
   white-space: normal;
@@ -1049,16 +1066,26 @@ body {
   border-inline-end: none !important;
 }
 
-/* ── 普通 Ant Design 表格默认撑满容器 ── */
+/* ── 所有表格统一 fixed 布局 + 撑满容器 ── */
 .ant-table-wrapper .ant-table-container table {
+  table-layout: fixed;
   width: 100%;
 }
 
-/* ── ResizableTable 使用 fixed 布局，列宽受显式定义约束 ── */
-.resizable-table .ant-table-container table,
-.resizable-table-shell .ant-table-container table {
-  table-layout: fixed;
-  width: auto;
+/* ── 表头列宽自适应：确保 nowrap 标题不被截断 ── */
+.resizable-table .ant-table-thead > tr > th {
+  min-width: fit-content;
+}
+
+/* ── 表头排序图标与标题同行，不额外占高 ── */
+.resizable-table .ant-table-thead > tr > th .ant-table-column-sorters {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.resizable-table .ant-table-thead > tr > th .ant-table-column-sorter {
+  margin-inline-start: 0;
 }
 
 .resizable-table .resizable-handle {
@@ -1112,7 +1139,7 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow: clip; /* clip 不创建滚动容器，不破坏内部 sticky-header 及 sticky pagination */
+  overflow: clip;
 }
 
 .resizable-table-shell .ant-table-wrapper {
@@ -1124,6 +1151,110 @@ body {
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
+}
+
+/* ── 表头单元格：标题不换行，排序图标不换行 ── */
+.resizable-table .ant-table-thead .ant-table-cell {
+  white-space: nowrap;
+}
+
+.resizable-table .ant-table-thead .ant-table-cell .ant-table-column-title {
+  white-space: nowrap;
+}
+
+/* ── 小屏下表头允许折行 ── */
+@media (max-width: 1280px) {
+  .resizable-table .ant-table-thead .ant-table-cell,
+  .resizable-table .ant-table-thead .ant-table-cell .ant-table-column-title {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+}
+
+/* ── 表格行高响应式 ── */
+.resizable-table .ant-table-tbody > tr {
+  transition: height 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* ── 移动端表格紧凑模式 ── */
+@media (max-width: 768px) {
+  .resizable-table .ant-table-tbody > tr > td .ant-tag {
+    font-size: 10px;
+    padding: 0 4px;
+    line-height: 18px;
+  }
+
+  .resizable-table .ant-table-tbody > tr > td .ant-btn-link {
+    font-size: 11px;
+    padding: 0 4px;
+  }
+
+  .resizable-table .ant-table-tbody > tr > td .row-actions {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+
+  .resizable-table-shell .ant-pagination {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .resizable-table-shell .ant-pagination .ant-pagination-item,
+  .resizable-table-shell .ant-pagination .ant-pagination-prev,
+  .resizable-table-shell .ant-pagination .ant-pagination-next {
+    min-width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 11px;
+  }
+
+  .resizable-table-shell .ant-pagination .ant-pagination-options {
+    display: none;
+  }
+}
+
+/* ── 平板端表格适配 ── */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .resizable-table .ant-table-tbody > tr > td .ant-tag {
+    font-size: 11px;
+    padding: 1px 6px;
+  }
+
+  .resizable-table-shell .ant-pagination {
+    padding: 10px 14px;
+  }
+}
+
+/* ── 横向滚动指示器 ── */
+.resizable-table-shell--scrollable::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.04));
+  pointer-events: none;
+  z-index: 6;
+  opacity: var(--table-scroll-indicator-opacity, 0);
+  transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] .resizable-table-shell--scrollable::after {
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.04));
+}
+
+/* ── 表格容器圆角与边框响应式 ── */
+.resizable-table-shell .ant-table-wrapper .ant-table-container {
+  border-radius: var(--table-border-radius, 8px);
+  transition: border-radius 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (max-width: 768px) {
+  .resizable-table-shell .ant-table-wrapper .ant-table-container {
+    border-radius: 6px;
+  }
 }
 
 .clickable-row td {
@@ -1936,6 +2067,15 @@ body {
 
 /* ── 4K / 超宽屏适配 (≥2560px) ── */
 @media (min-width: 2560px) {
+  :root {
+    --table-header-font-size: 15px;
+    --table-cell-font-size: 14px;
+    --table-cell-padding-x: 12px;
+    --table-cell-padding-y: 12px;
+    --table-header-padding-x: 16px;
+    --table-header-padding-y: 14px;
+    --table-header-height: 52px;
+  }
   html {
     font-size: 16px;
   }
@@ -1955,16 +2095,6 @@ body {
     height: 40px !important;
     font-size: 15px !important;
   }
-  .ant-table {
-    font-size: 15px;
-  }
-  .ant-table-thead > tr > th {
-    font-size: 15px;
-    padding: 14px 16px !important;
-  }
-  .ant-table-tbody > tr > td {
-    padding: 12px 16px !important;
-  }
   .ant-modal {
     min-width: min(960px, 90vw) !important;
   }
@@ -1978,6 +2108,15 @@ body {
 
 /* ── 4K+ 超宽屏适配 (≥3840px) ── */
 @media (min-width: 3840px) {
+  :root {
+    --table-header-font-size: 16px;
+    --table-cell-font-size: 15px;
+    --table-cell-padding-x: 16px;
+    --table-cell-padding-y: 14px;
+    --table-header-padding-x: 20px;
+    --table-header-padding-y: 16px;
+    --table-header-height: 56px;
+  }
   html {
     font-size: 18px;
   }
@@ -1997,21 +2136,45 @@ body {
     height: 44px !important;
     font-size: 16px !important;
   }
-  .ant-table {
-    font-size: 16px;
-  }
-  .ant-table-thead > tr > th {
-    font-size: 16px;
-    padding: 16px 20px !important;
-  }
-  .ant-table-tbody > tr > td {
-    padding: 14px 20px !important;
-  }
   .ant-modal {
     min-width: min(1100px, 90vw) !important;
   }
   .smart-alert-panel {
     width: 520px;
+  }
+}
+
+/* ── 小屏笔记本适配 (≤1440px) ── */
+@media (max-width: 1440px) {
+  :root {
+    --table-header-font-size: 13px;
+    --table-cell-font-size: 12px;
+    --table-cell-padding-x: 6px;
+    --table-cell-padding-y: 7px;
+    --table-header-padding-x: 6px;
+    --table-header-padding-y: 8px;
+    --table-header-height: 38px;
+  }
+}
+
+/* ── 紧凑屏适配 (≤1280px) ── */
+@media (max-width: 1280px) {
+  :root {
+    --table-header-font-size: 12px;
+    --table-cell-font-size: 12px;
+    --table-cell-padding-x: 5px;
+    --table-cell-padding-y: 6px;
+    --table-header-padding-x: 5px;
+    --table-header-padding-y: 7px;
+    --table-header-height: 36px;
+    --font-size-sm: 12px;
+    --font-size-xs: 11px;
+  }
+  .ant-table-thead > tr > th .ant-table-column-title {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    display: block;
   }
 }
 
