@@ -8,6 +8,7 @@ import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.helper.ExternalFactoryMaterialDeductionHelper;
 import com.fashion.supplychain.production.helper.OrderReconciliationHelper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -65,6 +66,9 @@ public class ShipmentReconciliationOrchestrator {
     @Autowired
     private ScanRecordService scanRecordService;
 
+    @Autowired
+    private ExternalFactoryMaterialDeductionHelper externalFactoryMaterialDeductionHelper;
+
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean ensureShipmentReconciliationForOrder(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
@@ -97,6 +101,14 @@ public class ShipmentReconciliationOrchestrator {
         fillReconciliationFields(sr, order, customerId, customerName);
         resolveUnitPriceAndCalculateAmounts(order, sr, shippedQty, oid);
         saveReconciliationWithMetadata(sr, uid, now);
+
+        try {
+            externalFactoryMaterialDeductionHelper.attachOrphanDeductionsToReconciliation(
+                    oid, order.getOrderNo(), sr.getId());
+        } catch (Exception e) {
+            log.warn("归集暂存扣款失败(不影响主流程): orderId={}", oid, e);
+        }
+
         return true;
     }
 

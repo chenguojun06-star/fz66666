@@ -175,6 +175,8 @@ public class OrderReconciliationHelper {
                 new LambdaQueryWrapper<MaterialPurchase>()
                     .and(w -> w.eq(MaterialPurchase::getOrderId, orderId)
                             .or().eq(MaterialPurchase::getOrderNo, orderNo))
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .ne(MaterialPurchase::getStatus, "cancelled")
                     .isNotNull(MaterialPurchase::getTotalAmount)
             );
             BigDecimal total = purchases.stream()

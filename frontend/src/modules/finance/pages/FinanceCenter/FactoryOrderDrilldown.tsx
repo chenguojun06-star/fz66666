@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Table, Tag, Descriptions, App, Empty } from 'antd';
 import api from '@/utils/api';
 import { toMoney } from './chartConfigs';
+import { statusMap } from './useSettlementData';
 
 interface FactoryOrderDrilldownProps {
   open: boolean;
@@ -85,11 +86,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
     {
       title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => {
-        const m: Record<string, { color: string; text: string }> = {
-          production: { color: 'blue', text: '生产中' },
-          completed: { color: 'green', text: '已完成' },
-        };
-        const info = m[v] || { color: 'default', text: v || '-' };
+        const info = statusMap[v] || { text: v || '-', color: 'default' };
         return <Tag color={info.color}>{info.text}</Tag>;
       },
     },

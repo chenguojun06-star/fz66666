@@ -48,7 +48,14 @@ public class ExternalFactoryMaterialDeductionHelper {
 
             BigDecimal totalMaterialCost = BigDecimal.ZERO;
             for (MaterialPickingItem item : items) {
-                BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+                BigDecimal unitPrice = item.getUnitPrice();
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    if (purchase != null && purchase.getUnitPrice() != null) {
+                        unitPrice = purchase.getUnitPrice();
+                    } else {
+                        unitPrice = BigDecimal.ZERO;
+                    }
+                }
                 int qty = item.getQuantity() != null ? item.getQuantity() : 0;
                 totalMaterialCost = totalMaterialCost.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
             }
@@ -66,13 +73,8 @@ public class ExternalFactoryMaterialDeductionHelper {
                     .last("LIMIT 1")
                     .one();
 
-            if (recon == null) {
-                log.info("外发工厂面料扣款: 暂无出货对账单，扣款将在关单时自动归集, orderNo={}", orderNo);
-                return;
-            }
-
             DeductionItem deduction = new DeductionItem();
-            deduction.setReconciliationId(recon.getId());
+            deduction.setReconciliationId(recon != null ? recon.getId() : null);
             deduction.setDeductionType("MATERIAL_PICKUP");
             deduction.setDeductionAmount(totalMaterialCost);
             deduction.setSourceType("MATERIAL_PICKING");
@@ -81,6 +83,11 @@ public class ExternalFactoryMaterialDeductionHelper {
                     + "|pickingNo=" + picking.getPickingNo()
                     + "|物料" + items.size() + "项|金额" + totalMaterialCost.setScale(2, RoundingMode.HALF_UP));
             deductionItemMapper.insert(deduction);
+
+            if (recon == null) {
+                log.info("外发工厂面料扣款: 暂无出货对账单，扣款已暂存(无reconciliationId)，关单时自动归集, orderNo={}, pickingNo={}", orderNo, picking.getPickingNo());
+                return;
+            }
 
             BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
             BigDecimal existingSupplement = BigDecimal.ZERO;
@@ -105,52 +112,94 @@ public class ExternalFactoryMaterialDeductionHelper {
     }
 
     public void rollbackMaterialDeduction(String pickingId) {
-        try {
-            List<DeductionItem> items = deductionItemMapper.selectList(
-                    new LambdaQueryWrapper<DeductionItem>()
-                            .eq(DeductionItem::getSourceType, "MATERIAL_PICKING")
-                            .eq(DeductionItem::getSourceId, pickingId));
-            if (items == null || items.isEmpty()) {
-                return;
-            }
-            Set<String> reconIds = items.stream()
-                    .map(DeductionItem::getReconciliationId)
-                    .filter(StringUtils::hasText)
-                    .collect(Collectors.toSet());
-            Map<String, ShipmentReconciliation> reconMap = reconIds.isEmpty()
-                    ? Collections.emptyMap()
-                    : shipmentReconciliationService.listByIds(reconIds).stream()
-                            .collect(Collectors.toMap(ShipmentReconciliation::getId, r -> r, (a, b) -> a));
-            for (DeductionItem item : items) {
-                String reconId = item.getReconciliationId();
-                BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
-                deductionItemMapper.deleteById(item.getId());
+        List<DeductionItem> items = deductionItemMapper.selectList(
+                new LambdaQueryWrapper<DeductionItem>()
+                        .eq(DeductionItem::getSourceType, "MATERIAL_PICKING")
+                        .eq(DeductionItem::getSourceId, pickingId));
+        if (items == null || items.isEmpty()) {
+            return;
+        }
 
-                ShipmentReconciliation recon = reconMap.get(reconId);
-                if (recon != null) {
-                    BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
-                    BigDecimal newDeduction = existingDeduction.subtract(amount);
-                    if (newDeduction.compareTo(BigDecimal.ZERO) < 0) {
-                        newDeduction = BigDecimal.ZERO;
-                    }
-                    recon.setDeductionAmount(newDeduction);
-                    BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
-                    List<DeductionItem> remainingItems = deductionItemMapper.selectByReconciliationId(reconId, UserContext.tenantId());
-                    BigDecimal supplementAmount = BigDecimal.ZERO;
-                    if (remainingItems != null) {
-                        for (DeductionItem di : remainingItems) {
-                            if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
-                                supplementAmount = supplementAmount.add(di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO);
-                            }
+        Set<String> reconIds = items.stream()
+                .map(DeductionItem::getReconciliationId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Map<String, ShipmentReconciliation> reconMap = reconIds.isEmpty()
+                ? Collections.emptyMap()
+                : shipmentReconciliationService.listByIds(reconIds).stream()
+                        .collect(Collectors.toMap(ShipmentReconciliation::getId, r -> r, (a, b) -> a));
+
+        for (DeductionItem item : items) {
+            String reconId = item.getReconciliationId();
+            BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
+            deductionItemMapper.deleteById(item.getId());
+
+            if (!StringUtils.hasText(reconId)) {
+                log.info("外发工厂领料扣款已回退(暂存记录): pickingId={}, rollbackAmount={}", pickingId, amount);
+                continue;
+            }
+
+            ShipmentReconciliation recon = reconMap.get(reconId);
+            if (recon != null) {
+                BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
+                BigDecimal newDeduction = existingDeduction.subtract(amount);
+                if (newDeduction.compareTo(BigDecimal.ZERO) < 0) {
+                    newDeduction = BigDecimal.ZERO;
+                }
+                recon.setDeductionAmount(newDeduction);
+                BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
+                List<DeductionItem> remainingItems = deductionItemMapper.selectByReconciliationId(reconId, UserContext.tenantId());
+                BigDecimal supplementAmount = BigDecimal.ZERO;
+                if (remainingItems != null) {
+                    for (DeductionItem di : remainingItems) {
+                        if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
+                            supplementAmount = supplementAmount.add(di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO);
                         }
                     }
-                    recon.setFinalAmount(totalAmount.subtract(newDeduction).add(supplementAmount));
-                    shipmentReconciliationService.updateById(recon);
-                    log.info("外发工厂领料扣款已回退: pickingId={}, reconId={}, rollbackAmount={}", pickingId, reconId, amount);
                 }
+                recon.setFinalAmount(totalAmount.subtract(newDeduction).add(supplementAmount));
+                shipmentReconciliationService.updateById(recon);
+                log.info("外发工厂领料扣款已回退: pickingId={}, reconId={}, rollbackAmount={}", pickingId, reconId, amount);
             }
-        } catch (Exception e) {
-            log.error("撤销外发工厂领料扣款失败: pickingId={}", pickingId, e);
+        }
+    }
+
+    public void attachOrphanDeductionsToReconciliation(String orderId, String orderNo, String reconciliationId) {
+        if (!StringUtils.hasText(reconciliationId)) return;
+
+        List<DeductionItem> orphans = deductionItemMapper.selectList(
+                new LambdaQueryWrapper<DeductionItem>()
+                        .eq(DeductionItem::getDeductionType, "MATERIAL_PICKUP")
+                        .isNull(DeductionItem::getReconciliationId));
+        if (orphans == null || orphans.isEmpty()) return;
+
+        BigDecimal totalOrphanAmount = BigDecimal.ZERO;
+        for (DeductionItem orphan : orphans) {
+            orphan.setReconciliationId(reconciliationId);
+            deductionItemMapper.updateById(orphan);
+            totalOrphanAmount = totalOrphanAmount.add(orphan.getDeductionAmount() != null ? orphan.getDeductionAmount() : BigDecimal.ZERO);
+        }
+
+        if (totalOrphanAmount.compareTo(BigDecimal.ZERO) > 0) {
+            ShipmentReconciliation recon = shipmentReconciliationService.getById(reconciliationId);
+            if (recon != null) {
+                BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
+                recon.setDeductionAmount(existingDeduction.add(totalOrphanAmount));
+                BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
+                List<DeductionItem> allItems = deductionItemMapper.selectByReconciliationId(reconciliationId, UserContext.tenantId());
+                BigDecimal supplementAmount = BigDecimal.ZERO;
+                if (allItems != null) {
+                    for (DeductionItem di : allItems) {
+                        if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
+                            supplementAmount = supplementAmount.add(di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO);
+                        }
+                    }
+                }
+                recon.setFinalAmount(totalAmount.subtract(recon.getDeductionAmount()).add(supplementAmount));
+                shipmentReconciliationService.updateById(recon);
+                log.info("外发工厂暂存扣款已归集到出货对账单: orderId={}, reconId={}, totalOrphanAmount={}",
+                        orderId, reconciliationId, totalOrphanAmount);
+            }
         }
     }
 }

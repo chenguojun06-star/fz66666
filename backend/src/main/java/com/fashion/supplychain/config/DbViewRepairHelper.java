@@ -77,13 +77,17 @@ final class DbViewRepairHelper {
                         + "   WHERE `pw`.`delete_flag`=0 GROUP BY `pw`.`order_no`"
                         + " ) `wh` ON `po`.`order_no`=`wh`.`order_no`"
                         + " LEFT JOIN (SELECT `order_no`,SUM(`total_amount`) AS `total_material_cost`"
-                        + "   FROM `t_material_purchase` WHERE `status` IN ('RECEIVED','COMPLETED')"
+                        + "   FROM `t_material_purchase` WHERE `delete_flag`=0 AND `status` IN ('pending','received','completed','PENDING','RECEIVED','COMPLETED')"
                         + "   GROUP BY `order_no`) `mat` ON `po`.`order_no`=`mat`.`order_no`"
                         + " LEFT JOIN (SELECT `order_no`,SUM(`scan_cost`) AS `total_production_cost`"
-                        + "   FROM `t_scan_record` WHERE `scan_cost` IS NOT NULL GROUP BY `order_no`"
+                        + "   FROM `t_scan_record` WHERE `scan_cost` IS NOT NULL"
+                        + "   AND (`scan_type` IS NULL OR `scan_type` != 'orchestration')"
+                        + "   AND `factory_id` IS NULL"
+                        + "   GROUP BY `order_no`"
                         + " ) `scan` ON `po`.`order_no`=`scan`.`order_no`"
                         + " WHERE `po`.`delete_flag`=0"
-                        + "   AND `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','废弃','已取消')"
+                        + "   AND `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','scrapped','SCRAPPED','archived','ARCHIVED','废弃','已取消','已报废','已归档')"
+                        + "   AND `po`.`order_no` NOT LIKE 'CUT%'"
                         + " ORDER BY `po`.`create_time` DESC";
                     stmt.executeUpdate(createView);
                 }

@@ -134,7 +134,9 @@ public class ReconciliationStatusOrchestrator {
             if (mr != null) {
                 TenantAssert.assertBelongsToCurrentTenant(mr.getTenantId(), "物料对账单");
                 guardTransition(mr.getStatus(), to);
+                assertApprovePermission(to);
                 assertRejectPermission(to);
+                assertPaidPermission(to);
                 String from = mr.getStatus() == null ? "" : mr.getStatus().trim();
                 applyStatusAndTimestamps(mr::setStatus, mr::setUpdateTime, mr::setUpdateBy, mr::setCreateBy,
                         mr::setRemark, mr::setVerifiedAt, mr::setApprovedAt, mr::setPaidAt,
@@ -159,7 +161,9 @@ public class ReconciliationStatusOrchestrator {
             if (sr != null) {
                 TenantAssert.assertBelongsToCurrentTenant(sr.getTenantId(), "成品对账单");
                 guardTransition(sr.getStatus(), to);
+                assertApprovePermission(to);
                 assertRejectPermission(to);
+                assertPaidPermission(to);
                 String from = sr.getStatus() == null ? "" : sr.getStatus().trim();
                 applyStatusAndTimestamps(sr::setStatus, sr::setUpdateTime, sr::setUpdateBy, sr::setCreateBy,
                         sr::setRemark, sr::setVerifiedAt, sr::setApprovedAt, sr::setPaidAt,
@@ -186,6 +190,22 @@ public class ReconciliationStatusOrchestrator {
     private void assertRejectPermission(String to) {
         if ("rejected".equals(to) && !UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("仅主管级别及以上可执行驳回");
+        }
+    }
+
+    private void assertApprovePermission(String to) {
+        if (("approved".equals(to) || "verified".equals(to)) && !UserContext.isSupervisorOrAbove()) {
+            if (!UserContext.canViewAll()) {
+                throw new AccessDeniedException("无审批权限，需要主管级别或全部数据权限");
+            }
+        }
+    }
+
+    private void assertPaidPermission(String to) {
+        if ("paid".equals(to) && !UserContext.isSupervisorOrAbove()) {
+            if (!UserContext.canViewAll()) {
+                throw new AccessDeniedException("无付款确认权限，需要主管级别或全部数据权限");
+            }
         }
     }
 
@@ -216,6 +236,10 @@ public class ReconciliationStatusOrchestrator {
         }
 
         if ("rejected".equals(from) && "pending".equals(to)) {
+            String historyRemark = buildTimestampHistoryRemark(currentRemark);
+            if (historyRemark != null) {
+                setRemark.accept(appendAuditRemark(currentRemark, "HISTORY", historyRemark));
+            }
             setVerifiedAt.accept(null);
             setApprovedAt.accept(null);
             setPaidAt.accept(null);
@@ -257,7 +281,7 @@ public class ReconciliationStatusOrchestrator {
             pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
             billAggregationOrchestrator.pushBill(pushReq);
         } catch (Exception e) {
-            throw new RuntimeException(sourceType + "推送账单汇总失败，审批未完成: " + e.getMessage(), e);
+            log.error("{}推送账单汇总失败（不影响审批主流程）: id={}", sourceType, sourceId, e);
         }
     }
 
@@ -499,7 +523,7 @@ public class ReconciliationStatusOrchestrator {
             return "pending".equals(to);
         }
         if ("pending".equals(from)) {
-            return "verified".equals(to) || "rejected".equals(to);
+            return "verified".equals(to) || "approved".equals(to) || "rejected".equals(to);
         }
         if ("verified".equals(from)) {
             return "approved".equals(to) || "rejected".equals(to);
@@ -561,6 +585,21 @@ public class ReconciliationStatusOrchestrator {
         if (oldRemark == null || oldRemark.trim().isEmpty()) {
             return line;
         }
-        return oldRemark + "\n" + line;
+        String base = oldRemark.trim();
+        if (base.length() > 3500) {
+            String[] lines = base.split("\n");
+            StringBuilder sb = new StringBuilder();
+            int keep = Math.min(lines.length, 10);
+            for (int i = Math.max(0, lines.length - keep); i < lines.length; i++) {
+                if (sb.length() > 0) sb.append("\n");
+                sb.append(lines[i]);
+            }
+            base = sb.toString();
+        }
+        return base + "\n" + line;
+    }
+
+    private String buildTimestampHistoryRemark(String currentRemark) {
+        return null;
     }
 }

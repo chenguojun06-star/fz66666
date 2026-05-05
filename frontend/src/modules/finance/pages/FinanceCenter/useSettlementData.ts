@@ -52,17 +52,28 @@ export interface PageParams {
 }
 
 export const statusMap: Record<string, { text: string; color: string }> = {
-  PENDING: { text: '待确认', color: 'var(--color-warning)' },
+  PENDING: { text: '待生产', color: 'var(--color-warning)' },
   CONFIRMED: { text: '已确认', color: 'var(--primary-color)' },
   IN_PRODUCTION: { text: '生产中', color: 'var(--color-success)' },
   COMPLETED: { text: '已完成', color: 'var(--info-color)' },
   CANCELLED: { text: '已取消', color: 'var(--color-danger)' },
-  pending: { text: '待确认', color: 'var(--color-warning)' },
+  CLOSED: { text: '已关单', color: 'blue' },
+  SCRAPPED: { text: '已报废', color: 'var(--color-danger)' },
+  ARCHIVED: { text: '已归档', color: 'default' },
+  PAUSED: { text: '已暂停', color: 'var(--color-warning)' },
+  RETURNED: { text: '已退回', color: 'var(--color-warning)' },
+  pending: { text: '待生产', color: 'var(--color-warning)' },
   confirmed: { text: '已确认', color: 'var(--primary-color)' },
   in_production: { text: '生产中', color: 'var(--color-success)' },
   production: { text: '生产中', color: 'var(--color-success)' },
   completed: { text: '已完成', color: 'var(--info-color)' },
   cancelled: { text: '已取消', color: 'var(--color-danger)' },
+  closed: { text: '已关单', color: 'blue' },
+  scrapped: { text: '已报废', color: 'var(--color-danger)' },
+  archived: { text: '已归档', color: 'default' },
+  paused: { text: '已暂停', color: 'var(--color-warning)' },
+  returned: { text: '已退回', color: 'var(--color-warning)' },
+  delayed: { text: '已逾期', color: 'var(--color-danger)' },
 };
 
 export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange: (s: Set<string>) => void) {

@@ -667,7 +667,7 @@ public class NlQueryDataHandlers {
             case "DRAFT" -> "草稿";
             case "IN_PROGRESS" -> "生产中";
             case "COMPLETED" -> "已完工";
-            case "CLOSED" -> "已关闭";
+            case "CLOSED" -> "已关单";
             case "PENDING" -> "待审核";
             default -> status;
         };
