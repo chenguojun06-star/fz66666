@@ -106,8 +106,7 @@ public class ShipmentReconciliationTool extends AbstractAgentTool {
             TenantAssert.assertTenantContext();
             Long tenantId = UserContext.tenantId();
             ShipmentReconciliation r = reconciliationOrchestrator.getById(id);
-            if (r == null) return errorJson("找不到对账单: " + id);
-            if (!tenantId.equals(r.getTenantId())) return errorJson("无权访问该对账单");
+            if (r == null || !tenantId.equals(r.getTenantId())) return errorJson("找不到对账单或无权访问: " + id);
 
             reconciliationOrchestrator.fillProfitInfo(r);
             Map<String, Object> detail = new LinkedHashMap<>();

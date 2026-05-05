@@ -215,7 +215,7 @@ public class FinancialPayrollTool implements AgentTool {
 
                     if (Boolean.TRUE.equals(queryItems)) {
                         QueryWrapper<PayrollSettlementItem> iQuery = new QueryWrapper<>();
-                        iQuery.eq("settlement_id", s.getId());
+                        iQuery.eq("settlement_id", s.getId()).eq("tenant_id", tenantId);
                         List<PayrollSettlementItem> items = payrollSettlementItemService.list(iQuery);
                         List<Map<String, Object>> itemDtos = new ArrayList<>();
                         for (PayrollSettlementItem item : items) {

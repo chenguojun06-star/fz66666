@@ -101,11 +101,11 @@ public class SecondaryProcessTool extends AbstractAgentTool {
                 TenantAssert.assertTenantContext();
                 Long tenantId = UserContext.tenantId();
 
-                SecondaryProcess process = secondaryProcessService.getById(processId);
+                SecondaryProcess process = secondaryProcessService.lambdaQuery()
+                        .eq(SecondaryProcess::getId, processId)
+                        .eq(SecondaryProcess::getTenantId, tenantId)
+                        .one();
                 if (process == null) {
-                    throw new IllegalStateException("工序记录不存在或无权访问：" + processId);
-                }
-                if (process.getTenantId() != null && !process.getTenantId().equals(tenantId)) {
                     throw new IllegalStateException("工序记录不存在或无权访问：" + processId);
                 }
 

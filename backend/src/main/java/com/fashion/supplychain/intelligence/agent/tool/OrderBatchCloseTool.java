@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
@@ -105,7 +106,10 @@ public class OrderBatchCloseTool extends AbstractAgentTool {
                 if (!trimmed.isEmpty()) {
                     if (trimmed.toUpperCase().startsWith(PO_PREFIX)) {
                         try {
-                            ProductionOrder order = productionOrderService.getByOrderNo(trimmed);
+                            ProductionOrder order = productionOrderService.lambdaQuery()
+                                    .eq(ProductionOrder::getOrderNo, trimmed)
+                                    .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                                    .one();
                             if (order != null) {
                                 ids.add(order.getId());
                             } else {

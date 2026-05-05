@@ -119,7 +119,7 @@ public class StyleTemplateTool implements AgentTool {
         Long styleId = resolveStyleId(args);
         QueryWrapper<StyleSizePrice> query = new QueryWrapper<>();
         query.eq("style_id", styleId);
-        if (UserContext.tenantId() != null) query.eq("tenant_id", UserContext.tenantId());
+        query.eq("tenant_id", UserContext.tenantId());
         query.orderByAsc("process_code", "size");
         List<StyleSizePrice> list = styleSizePriceService.list(query);
         return ok("已返回该款的多码单价", Map.of("styleId", styleId, "items", list.stream().map(this::toSizePriceDto).toList()));
@@ -132,7 +132,7 @@ public class StyleTemplateTool implements AgentTool {
 
         QueryWrapper<StyleSizePrice> removeQuery = new QueryWrapper<>();
         removeQuery.eq("style_id", styleId);
-        if (UserContext.tenantId() != null) removeQuery.eq("tenant_id", UserContext.tenantId());
+        removeQuery.eq("tenant_id", UserContext.tenantId());
         styleSizePriceService.remove(removeQuery);
 
         List<StyleSizePrice> rows = new ArrayList<>();

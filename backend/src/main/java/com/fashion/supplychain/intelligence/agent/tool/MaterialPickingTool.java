@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
+import com.fashion.supplychain.production.mapper.MaterialPickingItemMapper;
 import com.fashion.supplychain.production.service.MaterialPickingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ public class MaterialPickingTool extends AbstractAgentTool {
 
     @Autowired
     private MaterialPickingService materialPickingService;
+
+    @Autowired
+    private MaterialPickingItemMapper materialPickingItemMapper;
 
     @Autowired
     private AiAgentToolAccessService toolAccessService;
@@ -76,7 +80,11 @@ public class MaterialPickingTool extends AbstractAgentTool {
             }
             case "get_items" -> {
                 String pickingId = requireString(args, "pickingId");
-                List<MaterialPickingItem> items = materialPickingService.getItemsByPickingId(pickingId);
+                Long tenantId = UserContext.tenantId();
+                List<MaterialPickingItem> items = materialPickingItemMapper.selectList(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPickingItem>()
+                                .eq(MaterialPickingItem::getPickingId, pickingId)
+                                .eq(MaterialPickingItem::getTenantId, tenantId));
                 yield successJson("查询领料明细成功", Map.of("items", items, "total", items.size()));
             }
             case "create" -> {

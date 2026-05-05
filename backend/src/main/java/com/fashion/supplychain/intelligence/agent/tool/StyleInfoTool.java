@@ -83,7 +83,7 @@ public class StyleInfoTool extends AbstractAgentTool {
             if (info == null) return errorJson("未找到款号 " + styleNo + " 的款式");
 
             QueryWrapper<StyleProcess> pq = new QueryWrapper<>();
-            pq.eq("style_id", info.getId()).eq("delete_flag", 0);
+            pq.eq("style_id", info.getId()).eq("tenant_id", tenantId).eq("delete_flag", 0);
             List<StyleProcess> processes = styleProcessService.list(pq);
 
             Map<String, Object> data = new LinkedHashMap<>();
