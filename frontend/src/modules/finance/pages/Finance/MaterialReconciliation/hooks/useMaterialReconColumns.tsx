@@ -52,14 +52,12 @@ export const useMaterialReconColumns = ({
       render: (_: any, record: MaterialReconType) => {
         const id = String(record.id || '').trim();
         const status = String(record.status || '').trim();
-        const canApprove = Boolean(id) && status === 'pending' && canPerformAction('approve');
-        const canPay = Boolean(id) && status === 'approved';
-        const canReject = Boolean(id) && (status === 'approved' || status === 'paid') && canPerformAction('reject');
+        const canApprove = Boolean(id) && (status === 'pending' || status === 'verified') && canPerformAction('approve');
+        const canReject = Boolean(id) && (status === 'pending' || status === 'verified' || status === 'approved') && canPerformAction('reject');
         const canResubmit = Boolean(id) && status === 'rejected';
         return (
           <RowActions className="table-actions" maxInline={1} actions={[
             { key: 'approve', label: '审批', disabled: !canApprove || approvalSubmitting, onClick: () => updateStatusBatch([{ id, status: 'approved' }], '审批成功'), primary: true },
-            { key: 'pay', label: '付款', disabled: !canPay || approvalSubmitting, onClick: () => updateStatusBatch([{ id, status: 'paid' }], '付款成功'), primary: true },
             { key: 'resubmit', label: '重新提交', disabled: !canResubmit || approvalSubmitting, onClick: () => updateStatusBatch([{ id, status: 'pending' }], '已重新提交') },
             { key: 'reject', label: '驳回', disabled: !canReject || approvalSubmitting, onClick: () => openRejectModal([id]), danger: true },
           ]} />

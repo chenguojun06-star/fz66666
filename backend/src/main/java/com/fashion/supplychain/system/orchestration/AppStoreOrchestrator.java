@@ -667,12 +667,14 @@ public class AppStoreOrchestrator {
     }
 
     /**
-     * 【超管】直接为指定租户开通付费模块（无需下单/支付）
-     * 支持 CRM_MODULE / FINANCE_TAX / PROCUREMENT 三个 UI 模块
+     * 【超管】直接为指定租户开通应用模块（无需下单/支付）
+     * 支持应用商店中所有 PUBLISHED 状态的应用：
+     * - UI 功能模块（CRM_MODULE/FINANCE_TAX/PROCUREMENT）：仅创建订阅，无需 API 凭证
+     * - API 对接模块（ORDER_SYNC/EC_* 等）：创建订阅 + 自动创建 TenantApp API 凭证
      * 使用 JdbcTemplate 绕开 MyBatis-Plus 租户拦截器
      *
      * @param targetTenantId 目标租户 ID
-     * @param appCodes       应用编码列表，如 ["CRM_MODULE","PROCUREMENT"]
+     * @param appCodes       应用编码列表，如 ["CRM_MODULE","ORDER_SYNC","EC_TAOBAO"]
      * @param durationMonths 有效期（月）；<=0 表示永久（99年）
      */
     @Transactional(rollbackFor = Exception.class)
@@ -681,8 +683,11 @@ public class AppStoreOrchestrator {
             throw new RuntimeException("参数不完整：租户 ID 和应用码不能为空");
         }
 
+        java.util.Set<String> UI_MODULE_TYPES = java.util.Set.of("CRM_MODULE", "FINANCE_TAX", "PROCUREMENT");
+
         List<String> activated = new ArrayList<>();
         List<String> failed = new ArrayList<>();
+        Map<String, Map<String, String>> apiCredentialsMap = new java.util.LinkedHashMap<>();
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime endTime = durationMonths <= 0 ? now.plusYears(99) : now.plusMonths(durationMonths);
@@ -692,33 +697,29 @@ public class AppStoreOrchestrator {
 
         for (String appCode : appCodes) {
             try {
-                // 查找 t_app_store 记录（绕开租户拦截器，直接 JDBC 查询）
                 List<Map<String, Object>> appRows = jdbcTemplate.queryForList(
                     "SELECT id, app_code, app_name FROM t_app_store WHERE app_code = ? AND status = 'PUBLISHED' LIMIT 1",
                     appCode);
                 if (appRows.isEmpty()) {
-                    failed.add(appCode + "(应用商店中不存在，请先在云端数据库执行 V20260315 SQL)");
+                    failed.add(appCode + "(应用商店中不存在或未发布)");
                     continue;
                 }
                 Long appId = ((Number) appRows.get(0).get("id")).longValue();
                 String appName = (String) appRows.get(0).get("app_name");
                 appName = fixMojibakeString(appName);
 
-                // 查询是否已有有效订阅
                 List<Map<String, Object>> existing = jdbcTemplate.queryForList(
                     "SELECT id FROM t_tenant_subscription WHERE tenant_id = ? AND app_code = ? AND status IN ('ACTIVE','TRIAL') LIMIT 1",
                     targetTenantId, appCode);
 
                 if (!existing.isEmpty()) {
-                    // 已有订阅 → 续期并升级为 ACTIVE
                     long subId = ((Number) existing.get(0).get("id")).longValue();
                     jdbcTemplate.update(
                         "UPDATE t_tenant_subscription SET status='ACTIVE', end_time=?, " +
                         "remark=CONCAT(IFNULL(remark,''),' | 超管续期:',?), update_time=? WHERE id=?",
                         endTime, operator, now, subId);
-                    log.info("[超管直接开通] 租户{}({}) 续期签 appCode={} 到期={}", tenantName, targetTenantId, appCode, endTime);
+                    log.info("[超管直接开通] 租户{}({}) 续期 appCode={} 到期={}", tenantName, targetTenantId, appCode, endTime);
                 } else {
-                    // 新建订阅 — 直接用 JDBC 避免 @TableField(fill=INSERT) 覆盖 tenantId
                     String subNo = tenantSubscriptionService.generateSubscriptionNo();
                     jdbcTemplate.update(
                         "INSERT INTO t_tenant_subscription (subscription_no, tenant_id, tenant_name, app_id, app_code, app_name, " +
@@ -728,6 +729,38 @@ public class AppStoreOrchestrator {
                         "PERPETUAL", 0, 999, now, endTime, "ACTIVE", false, operator, "超管直接开通", now, 0);
                     log.info("[超管直接开通] 租户{}({}) 新建订阅 appCode={} 到期={}", tenantName, targetTenantId, appCode, endTime);
                 }
+
+                boolean needsApiCredential = !UI_MODULE_TYPES.contains(appCode);
+                if (needsApiCredential) {
+                    try {
+                        List<Map<String, Object>> existingApp = jdbcTemplate.queryForList(
+                            "SELECT id FROM t_tenant_app WHERE tenant_id = ? AND app_type = ? AND delete_flag = 0 LIMIT 1",
+                            targetTenantId, appCode);
+                        if (existingApp.isEmpty()) {
+                            TenantAppRequest appRequest = new TenantAppRequest();
+                            appRequest.setAppName(appName);
+                            appRequest.setAppType(appCode);
+                            appRequest.setDailyQuota(10000);
+                            appRequest.setRemark("超管直接开通 - " + operator);
+                            appRequest.setExpireTime(endTime.toString());
+                            TenantAppResponse appCredentials = tenantAppOrchestrator.createApp(targetTenantId, appRequest);
+                            apiCredentialsMap.put(appCode, Map.of(
+                                "appKey", appCredentials.getAppKey(),
+                                "appSecret", appCredentials.getAppSecret(),
+                                "appId", appCredentials.getId()
+                            ));
+                            log.info("[超管直接开通] 自动创建API凭证: appCode={} appKey={}", appCode, appCredentials.getAppKey());
+                        } else {
+                            log.info("[超管直接开通] 租户{}已有API凭证 appCode={}，跳过创建", targetTenantId, appCode);
+                        }
+                    } catch (Exception ex) {
+                        log.warn("[超管直接开通] API凭证创建失败 appCode={}，订阅已创建但凭证缺失: {}", appCode, ex.getMessage());
+                        failed.add(appCode + "(订阅已创建，但API凭证创建失败: " + ex.getMessage() + ")");
+                        activated.add(appCode);
+                        continue;
+                    }
+                }
+
                 activated.add(appCode);
             } catch (Exception e) {
                 log.error("[超管直接开通] 租户{} 开通 {} 失败: {}", targetTenantId, appCode, e.getMessage(), e);
@@ -740,7 +773,121 @@ public class AppStoreOrchestrator {
         result.put("activated", activated);
         result.put("failed", failed);
         result.put("endTime", endTime.toString());
+        if (!apiCredentialsMap.isEmpty()) {
+            result.put("apiCredentials", apiCredentialsMap);
+        }
         return result;
+    }
+
+    /**
+     * 【超管】撤销租户的应用权限
+     * 将订阅状态设为 EXPIRED，同时停用对应的 TenantApp API 凭证
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> adminRevokeFromTenant(Long targetTenantId, List<String> appCodes) {
+        if (targetTenantId == null || appCodes == null || appCodes.isEmpty()) {
+            throw new RuntimeException("参数不完整：租户 ID 和应用码不能为空");
+        }
+
+        List<String> revoked = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        String tenantName = resolveTenantName(targetTenantId);
+        UserContext ctx = UserContext.get();
+        String operator = ctx != null ? ctx.getUsername() : "super_admin";
+        LocalDateTime now = LocalDateTime.now();
+
+        for (String appCode : appCodes) {
+            try {
+                int updated = jdbcTemplate.update(
+                    "UPDATE t_tenant_subscription SET status='EXPIRED', " +
+                    "remark=CONCAT(IFNULL(remark,''),' | 超管撤销:',?), update_time=? " +
+                    "WHERE tenant_id=? AND app_code=? AND status IN ('ACTIVE','TRIAL') AND delete_flag=0",
+                    operator, now, targetTenantId, appCode);
+
+                jdbcTemplate.update(
+                    "UPDATE t_tenant_app SET status='disabled', update_time=? " +
+                    "WHERE tenant_id=? AND app_type=? AND delete_flag=0",
+                    now, targetTenantId, appCode);
+
+                if (updated > 0) {
+                    log.info("[超管撤销] 租户{}({}) 撤销 appCode={}", tenantName, targetTenantId, appCode);
+                    revoked.add(appCode);
+                } else {
+                    failed.add(appCode + "(无有效订阅可撤销)");
+                }
+            } catch (Exception e) {
+                log.error("[超管撤销] 租户{} 撤销 {} 失败: {}", targetTenantId, appCode, e.getMessage(), e);
+                failed.add(appCode + "(" + e.getMessage() + ")");
+            }
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("tenantName", tenantName);
+        result.put("revoked", revoked);
+        result.put("failed", failed);
+        return result;
+    }
+
+    /**
+     * 【超管】查询指定租户的所有订阅（含已过期），用于超管管理页面展示
+     */
+    public List<Map<String, Object>> adminGetTenantSubscriptions(Long targetTenantId) {
+        if (targetTenantId == null) {
+            throw new RuntimeException("租户 ID 不能为空");
+        }
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "SELECT id, subscription_no, app_code, app_name, subscription_type, " +
+            "price, user_count, start_time, end_time, status, remark, create_time " +
+            "FROM t_tenant_subscription WHERE tenant_id = ? AND delete_flag = 0 ORDER BY create_time DESC",
+            targetTenantId);
+        for (Map<String, Object> row : rows) {
+            if (row.get("app_name") instanceof String) {
+                row.put("app_name", fixMojibakeString((String) row.get("app_name")));
+            }
+        }
+        return rows;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelOrder(String orderNo, Long tenantId) {
+        QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("order_no", orderNo);
+        if (!UserContext.isSuperAdmin()) {
+            wrapper.eq("tenant_id", tenantId);
+        }
+        wrapper.ne("status", "PAID")
+               .ne("status", "ACTIVATED")
+               .ne("status", "CANCELLED");
+        AppOrder order = appOrderService.getOne(wrapper);
+        if (order == null) {
+            throw new RuntimeException("订单不存在或不可取消");
+        }
+        order.setStatus("CANCELLED");
+        order.setRemark("用户主动取消");
+        appOrderService.updateById(order);
+        log.info("[应用订单] 取消订单: orderNo={} tenant={}", orderNo, tenantId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public AppOrder renewSubscription(Long subscriptionId, Long tenantId, String subscriptionType) {
+        TenantSubscription sub = tenantSubscriptionService.getById(subscriptionId);
+        if (sub == null || !sub.getTenantId().equals(tenantId)) {
+            throw new RuntimeException("订阅记录不存在");
+        }
+
+        AppStore app = appStoreService.getById(sub.getAppId());
+        if (app == null) {
+            throw new RuntimeException("关联应用已下架");
+        }
+
+        AppOrder order = createOrder(app, tenantId, subscriptionType,
+                sub.getUserCount(), null, null, null, null,
+                false, null, null);
+        order.setOrderType("RENEW");
+        appOrderService.updateById(order);
+
+        log.info("[应用订单] 续费创建: orderNo={} subscriptionId={}", order.getOrderNo(), subscriptionId);
+        return order;
     }
 
     private String fixMojibakeString(String text) {

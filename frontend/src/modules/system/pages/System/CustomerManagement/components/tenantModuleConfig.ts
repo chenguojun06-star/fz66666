@@ -92,9 +92,24 @@ export const TRIAL_OPTIONS = [
 ];
 
 export const MODULE_OPTIONS = [
-  { value: 'CRM_MODULE', label: 'CRM 客户管理' },
-  { value: 'PROCUREMENT', label: '供应商采购管理' },
-  { value: 'FINANCE_TAX', label: '财税导出' },
+  { value: 'CRM_MODULE', label: 'CRM 客户管理', category: 'UI功能模块' },
+  { value: 'PROCUREMENT', label: '供应商采购管理', category: 'UI功能模块' },
+  { value: 'FINANCE_TAX', label: '财税导出', category: 'UI功能模块' },
+  { value: 'ORDER_SYNC', label: '下单对接', category: '核心对接' },
+  { value: 'QUALITY_FEEDBACK', label: '质检反馈', category: '核心对接' },
+  { value: 'LOGISTICS_SYNC', label: '物流对接', category: '核心对接' },
+  { value: 'PAYMENT_SYNC', label: '付款对接', category: '核心对接' },
+  { value: 'MATERIAL_SUPPLY', label: '面辅料供应对接', category: '核心对接' },
+  { value: 'EC_TAOBAO', label: '淘宝', category: '电商平台' },
+  { value: 'EC_TMALL', label: '天猫', category: '电商平台' },
+  { value: 'EC_JD', label: '京东', category: '电商平台' },
+  { value: 'EC_DOUYIN', label: '抖音', category: '电商平台' },
+  { value: 'EC_PINDUODUO', label: '拼多多', category: '电商平台' },
+  { value: 'EC_XIAOHONGSHU', label: '小红书', category: '电商平台' },
+  { value: 'EC_WECHAT_SHOP', label: '微信小店', category: '电商平台' },
+  { value: 'EC_SHOPIFY', label: 'Shopify', category: '电商平台' },
+  { value: 'EC_JST', label: '聚水潭', category: '电商平台' },
+  { value: 'EC_DONGFANG', label: '东纺纺织', category: '供应链' },
 ];
 
 export const DURATION_OPTIONS = [

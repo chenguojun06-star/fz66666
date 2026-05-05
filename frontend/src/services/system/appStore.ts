@@ -183,18 +183,49 @@ export const appStoreService = {
     return request.post('/system/app-store/admin/activate-order', data);
   },
 
-  // 超管直接为指定租户开通付费模块（无需下单/支付）
+  // 超管直接为指定租户开通应用模块（无需下单/支付）
   adminGrantToTenant: (data: {
     tenantId: number;
     appCodes: string[];
-    durationMonths: number; // <=0 表示永久
+    durationMonths: number;
   }): Promise<{
     tenantName: string;
     activated: string[];
     failed: string[];
     endTime: string;
+    apiCredentials?: Record<string, { appKey: string; appSecret: string; appId: string }>;
   }> => {
     return request.post('/system/app-store/admin/grant-to-tenant', data);
+  },
+
+  // 超管撤销租户的应用权限
+  adminRevokeFromTenant: (data: {
+    tenantId: number;
+    appCodes: string[];
+  }): Promise<{
+    tenantName: string;
+    revoked: string[];
+    failed: string[];
+  }> => {
+    return request.post('/system/app-store/admin/revoke-from-tenant', data);
+  },
+
+  // 超管查询指定租户的所有订阅
+  adminGetTenantSubscriptions: (tenantId: number): Promise<Array<{
+    id: number;
+    subscription_no: string;
+    app_code: string;
+    app_name: string;
+    subscription_type: string;
+    price: number;
+    user_count: number;
+    start_time: string;
+    end_time: string;
+    status: string;
+    remark: string;
+    create_time: string;
+  }>> => {
+    return request.post('/system/app-store/admin/tenant-subscriptions', { tenantId });
   },
 };
 

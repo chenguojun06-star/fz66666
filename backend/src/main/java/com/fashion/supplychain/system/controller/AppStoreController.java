@@ -371,8 +371,8 @@ public class AppStoreController {
     }
 
     /**
-     * 【管理员】直接为指定租户开通付费模块（无需下单/支付）
-     * 支持 CRM_MODULE / FINANCE_TAX / PROCUREMENT 等 UI 模块
+     * 【管理员】直接为指定租户开通应用模块（无需下单/支付）
+     * 支持应用商店中所有 PUBLISHED 状态的应用
      */
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/admin/grant-to-tenant")
@@ -387,6 +387,44 @@ public class AppStoreController {
         } catch (Exception e) {
             log.error("[超管直接开通] 失败: tenantId={}", request.getTenantId(), e);
             return Result.fail("开通失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 【管理员】撤销租户的应用权限
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/admin/revoke-from-tenant")
+    public Result<?> adminRevokeFromTenant(@RequestBody GrantToTenantRequest request) {
+        try {
+            if (request.getTenantId() == null || request.getAppCodes() == null || request.getAppCodes().isEmpty()) {
+                return Result.fail("参数不完整：tenantId 和 appCodes 不能为空");
+            }
+            Map<String, Object> result = appStoreOrchestrator.adminRevokeFromTenant(
+                    request.getTenantId(), request.getAppCodes());
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("[超管撤销] 失败: tenantId={}", request.getTenantId(), e);
+            return Result.fail("撤销失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 【管理员】查询指定租户的所有订阅
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/admin/tenant-subscriptions")
+    public Result<?> adminGetTenantSubscriptions(@RequestBody Map<String, Object> params) {
+        try {
+            Long tenantId = params.get("tenantId") != null ? Long.valueOf(params.get("tenantId").toString()) : null;
+            if (tenantId == null) {
+                return Result.fail("tenantId 不能为空");
+            }
+            List<Map<String, Object>> result = appStoreOrchestrator.adminGetTenantSubscriptions(tenantId);
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("[超管查询租户订阅] 失败", e);
+            return Result.fail("查询失败：" + e.getMessage());
         }
     }
 
@@ -413,22 +451,13 @@ public class AppStoreController {
      */
     @PostMapping("/order/{orderNo}/cancel")
     public Result<Void> cancelOrder(@PathVariable String orderNo) {
-        Long tenantId = UserContext.tenantId();
-        QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
-        wrapper.eq("order_no", orderNo)
-               .eq("tenant_id", tenantId)
-               .ne("status", "PAID")
-               .ne("status", "ACTIVATED")
-               .ne("status", "CANCELLED");
-        AppOrder order = appOrderService.getOne(wrapper);
-        if (order == null) {
-            return Result.fail("订单不存在或不可取消");
+        try {
+            appStoreOrchestrator.cancelOrder(orderNo, UserContext.tenantId());
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("[应用订单] 取消订单失败: orderNo={}", orderNo, e);
+            return Result.fail(e.getMessage());
         }
-        order.setStatus("CANCELLED");
-        order.setRemark("用户主动取消");
-        appOrderService.updateById(order);
-        log.info("[应用订单] 取消订单: orderNo={} tenant={}", orderNo, tenantId);
-        return Result.success(null);
     }
 
     /**
@@ -437,27 +466,14 @@ public class AppStoreController {
     @PostMapping("/subscription/{subscriptionId}/renew")
     public Result<AppOrder> renewSubscription(@PathVariable Long subscriptionId,
                                                @RequestBody Map<String, String> body) {
-        Long tenantId = UserContext.tenantId();
-        String subscriptionType = body.getOrDefault("subscriptionType", "MONTHLY");
-
-        TenantSubscription sub = tenantSubscriptionService.getById(subscriptionId);
-        if (sub == null || !sub.getTenantId().equals(tenantId)) {
-            return Result.fail("订阅记录不存在");
+        try {
+            String subscriptionType = body.getOrDefault("subscriptionType", "MONTHLY");
+            AppOrder order = appStoreOrchestrator.renewSubscription(subscriptionId, UserContext.tenantId(), subscriptionType);
+            return Result.success(order);
+        } catch (Exception e) {
+            log.error("[应用订单] 续费失败: subscriptionId={}", subscriptionId, e);
+            return Result.fail(e.getMessage());
         }
-
-        AppStore app = appStoreService.getById(sub.getAppId());
-        if (app == null) {
-            return Result.fail("关联应用已下架");
-        }
-
-        AppOrder order = appStoreOrchestrator.createOrder(app, tenantId, subscriptionType,
-                sub.getUserCount(), null, null, null, null,
-                false, null, null);
-        order.setOrderType("RENEW");
-        appOrderService.updateById(order);
-
-        log.info("[应用订单] 续费创建: orderNo={} subscriptionId={}", order.getOrderNo(), subscriptionId);
-        return Result.success(order);
     }
 
     /**

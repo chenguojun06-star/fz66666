@@ -61,7 +61,19 @@ public class MaterialReconciliationSyncOrchestrator {
         log.info("开始同步入库记录到物料对账: inboundNo={}, purchaseNo={}",
                 inbound.getInboundNo(), purchase.getPurchaseNo());
 
-        // 1. 检查是否已同步（避免重复）— 按采购单+物料编码+入库单号三维度去重，支持部分入库场景
+        // 1. 检查是否已同步（避免重复）— 先按采购单维度检查是否已有对账单
+        LambdaQueryWrapper<MaterialReconciliation> purchaseCheck = new LambdaQueryWrapper<>();
+        purchaseCheck.eq(MaterialReconciliation::getPurchaseId, purchase.getId())
+                     .eq(MaterialReconciliation::getDeleteFlag, 0)
+                     .last("LIMIT 1");
+        MaterialReconciliation purchaseExisting = materialReconciliationService.getOne(purchaseCheck);
+        if (purchaseExisting != null) {
+            log.warn("该采购单已有对账记录，跳过: reconciliationNo={}, purchaseId={}",
+                    purchaseExisting.getReconciliationNo(), purchase.getId());
+            return purchaseExisting.getId();
+        }
+
+        // 再按采购单+物料编码+入库单号三维度去重，支持部分入库场景
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialReconciliation::getPurchaseId, purchase.getId())
                .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode())

@@ -65,6 +65,7 @@ public class ExternalFactoryMaterialDeductionHelper {
             }
 
             ShipmentReconciliation recon = shipmentReconciliationService.lambdaQuery()
+                    .eq(ShipmentReconciliation::getTenantId, UserContext.tenantId())
                     .and(w -> {
                         if (StringUtils.hasText(orderId)) w.eq(ShipmentReconciliation::getOrderId, orderId);
                         if (StringUtils.hasText(orderNo)) w.or().eq(ShipmentReconciliation::getOrderNo, orderNo);
@@ -114,6 +115,7 @@ public class ExternalFactoryMaterialDeductionHelper {
     public void rollbackMaterialDeduction(String pickingId) {
         List<DeductionItem> items = deductionItemMapper.selectList(
                 new LambdaQueryWrapper<DeductionItem>()
+                        .eq(DeductionItem::getTenantId, UserContext.tenantId())
                         .eq(DeductionItem::getSourceType, "MATERIAL_PICKING")
                         .eq(DeductionItem::getSourceId, pickingId));
         if (items == null || items.isEmpty()) {
@@ -169,6 +171,7 @@ public class ExternalFactoryMaterialDeductionHelper {
 
         List<DeductionItem> orphans = deductionItemMapper.selectList(
                 new LambdaQueryWrapper<DeductionItem>()
+                        .eq(DeductionItem::getTenantId, UserContext.tenantId())
                         .eq(DeductionItem::getDeductionType, "MATERIAL_PICKUP")
                         .isNull(DeductionItem::getReconciliationId));
         if (orphans == null || orphans.isEmpty()) return;

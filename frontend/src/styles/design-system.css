@@ -83,22 +83,38 @@
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
 
-  /* 字体大小系统 - 三级布局规范 */
+  /* 字体大小系统 - 三级布局规范 + 响应式 clamp() */
   /* 上级（标题/重点） */
-  --font-size-title: 18px;
-  --font-size-subtitle: 16px;
-  --font-size-lg: 16px;
-  --font-size-xl: 18px;
+  --font-size-title: clamp(16px, 0.94vw, 18px);
+  --font-size-subtitle: clamp(14px, 0.83vw, 16px);
+  --font-size-lg: clamp(14px, 0.83vw, 16px);
+  --font-size-xl: clamp(16px, 0.94vw, 18px);
   /* 中级（正文/内容） */
-  --font-size-base: 14px;
-  --font-size-md: 15px;
+  --font-size-base: clamp(13px, 0.73vw, 14px);
+  --font-size-md: clamp(14px, 0.78vw, 15px);
   /* 下级（辅助/备注） */
-  --font-size-sm: 13px;
-  --font-size-xs: 12px;
-  --font-size-xxs: 11px;
+  --font-size-sm: clamp(12px, 0.68vw, 13px);
+  --font-size-xs: clamp(11px, 0.63vw, 12px);
+  --font-size-xxs: clamp(10px, 0.57vw, 11px);
   /* 特殊 */
-  --font-size-xxl: 20px;
-  --font-size-display: 24px;
+  --font-size-xxl: clamp(18px, 1.04vw, 20px);
+  --font-size-display: clamp(20px, 1.25vw, 24px);
+  /* 表格专用响应式字体 */
+  --table-header-font-size: clamp(12px, 0.73vw, 14px);
+  --table-cell-font-size: clamp(12px, 0.68vw, 13px);
+  --table-cell-padding-x: clamp(6px, 0.42vw, 8px);
+  --table-cell-padding-y: clamp(8px, 0.52vw, 10px);
+  --table-header-padding-x: clamp(6px, 0.52vw, 12px);
+  --table-header-padding-y: clamp(10px, 0.63vw, 14px);
+  --table-header-height: clamp(40px, 2.5vw, 48px);
+  /* 表格响应式布局变量 */
+  --table-min-col-width: 60px;
+  --table-action-col-width: 130px;
+  --table-row-height: 44px;
+  --table-condensed-row-height: 36px;
+  --table-border-radius: 8px;
+  --table-scroll-indicator-opacity: 0;
+  --table-cell-line-clamp: none;
 }
 
 /* ========== 深色模式 Dark Mode ========== */
@@ -496,6 +512,45 @@ html.dark-mode {
 }
 
 /* ========== 10. 响应式断点 ========== */
+
+/* ── 超宽屏 / 4K (≥2560px) ── */
+@media (min-width: 2560px) {
+  :root {
+    --spacing-base: 18px;
+    --spacing-md: 28px;
+    --spacing-lg: 36px;
+    --table-header-font-size: 15px;
+    --table-cell-font-size: 14px;
+    --table-cell-padding-x: 12px;
+    --table-cell-padding-y: 12px;
+    --table-header-padding-x: 14px;
+    --table-header-padding-y: 16px;
+    --table-header-height: 52px;
+    --table-min-col-width: 80px;
+    --table-action-col-width: 160px;
+    --table-row-height: 50px;
+  }
+}
+
+@media (min-width: 3840px) {
+  :root {
+    --spacing-base: 20px;
+    --spacing-md: 32px;
+    --spacing-lg: 40px;
+    --table-header-font-size: 16px;
+    --table-cell-font-size: 15px;
+    --table-cell-padding-x: 14px;
+    --table-cell-padding-y: 14px;
+    --table-header-padding-x: 16px;
+    --table-header-padding-y: 18px;
+    --table-header-height: 56px;
+    --table-min-col-width: 90px;
+    --table-action-col-width: 180px;
+    --table-row-height: 54px;
+  }
+}
+
+/* ── 标准桌面 (≤1400px) ── */
 @media (max-width: 1400px) {
   :root {
     --spacing-base: 14px;
@@ -503,10 +558,56 @@ html.dark-mode {
   }
 }
 
+/* ── 小屏桌面 / 大平板 (≤1280px) ── */
+@media (max-width: 1280px) {
+  :root {
+    --table-header-font-size: 13px;
+    --table-cell-font-size: 12px;
+    --table-cell-padding-x: 6px;
+    --table-cell-padding-y: 8px;
+    --table-header-padding-x: 8px;
+    --table-header-padding-y: 10px;
+    --table-header-height: 42px;
+    --table-min-col-width: 50px;
+    --table-action-col-width: 110px;
+    --table-row-height: 40px;
+  }
+}
+
+/* ── 平板 (≤1024px) ── */
+@media (max-width: 1024px) {
+  :root {
+    --table-header-font-size: 12px;
+    --table-cell-font-size: 12px;
+    --table-cell-padding-x: 5px;
+    --table-cell-padding-y: 7px;
+    --table-header-padding-x: 6px;
+    --table-header-padding-y: 8px;
+    --table-header-height: 38px;
+    --table-min-col-width: 44px;
+    --table-action-col-width: 100px;
+    --table-row-height: 36px;
+    --table-condensed-row-height: 32px;
+  }
+}
+
+/* ── 移动端 (≤768px) ── */
 @media (max-width: 768px) {
   :root {
     --spacing-base: 12px;
     --spacing-md: 16px;
+    --table-header-font-size: 11px;
+    --table-cell-font-size: 11px;
+    --table-cell-padding-x: 4px;
+    --table-cell-padding-y: 6px;
+    --table-header-padding-x: 4px;
+    --table-header-padding-y: 6px;
+    --table-header-height: 34px;
+    --table-min-col-width: 36px;
+    --table-action-col-width: 80px;
+    --table-row-height: 32px;
+    --table-condensed-row-height: 28px;
+    --table-cell-line-clamp: 2;
   }
 
   .btn-pill {
@@ -544,20 +645,3 @@ html.dark-mode {
 6. 动画：
    animation: slideInUp 0.6s var(--ease-smooth);
 */
-
-
-/* ── 4K / 超宽屏适配 ── */
-@media (min-width: 2560px) {
-  :root {
-    --spacing-base: 18px;
-    --spacing-md: 28px;
-    --spacing-lg: 36px;
-  }
-}
-@media (min-width: 3840px) {
-  :root {
-    --spacing-base: 20px;
-    --spacing-md: 32px;
-    --spacing-lg: 40px;
-  }
-}

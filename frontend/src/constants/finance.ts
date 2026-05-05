@@ -24,9 +24,9 @@ export const getMaterialReconStatusConfig = (status: any) => {
  * 定义每个状态允许转换的目标状态
  */
 export const materialReconStatusTransitions: Record<string, string[]> = {
-  pending: ['verified', 'rejected'],      // 待核实 → 已核实/已驳回
-  verified: ['approved', 'rejected'],     // 已核实 → 已审批/已驳回
-  approved: ['paid'],                     // 已审批 → 已付款
-  rejected: ['pending'],                  // 已驳回 → 待核实
-  paid: []                                // 已付款 → 无（已完成）
+  pending: ['verified', 'approved', 'rejected'],
+  verified: ['approved', 'rejected'],
+  approved: ['paid', 'rejected'],
+  rejected: ['pending'],
+  paid: []
 };

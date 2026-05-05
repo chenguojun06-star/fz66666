@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.time.format.DateTimeFormatter;
 
@@ -41,6 +41,9 @@ public class MaterialReconciliationOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private DistributedLockService distributedLockService;
 
     public IPage<MaterialReconciliation> list(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -673,9 +676,32 @@ public class MaterialReconciliationOrchestrator {
 
     private String buildFinanceNo(String prefix, LocalDateTime now) {
         String p = StringUtils.hasText(prefix) ? prefix.trim() : "NO";
-        LocalDateTime t = now == null ? LocalDateTime.now() : now;
-        String ts = t.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-        int rand = ThreadLocalRandom.current().nextInt(1000, 10000);
-        return p + ts + rand;
+        return distributedLockService.executeWithStrictLock(
+                p + ":generateNo", 5, java.util.concurrent.TimeUnit.SECONDS,
+                () -> doBuildFinanceNo(p));
+    }
+
+    private String doBuildFinanceNo(String prefix) {
+        String monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+        String fullPrefix = prefix + monthPrefix;
+
+        MaterialReconciliation last = materialReconciliationService.lambdaQuery()
+                .likeRight(MaterialReconciliation::getReconciliationNo, fullPrefix)
+                .orderByDesc(MaterialReconciliation::getReconciliationNo)
+                .last("LIMIT 1")
+                .one();
+
+        int sequence = 1;
+        if (last != null && last.getReconciliationNo() != null) {
+            String lastNo = last.getReconciliationNo();
+            try {
+                String lastSequence = lastNo.substring(lastNo.length() - 4);
+                sequence = Integer.parseInt(lastSequence) + 1;
+            } catch (NumberFormatException e) {
+                log.warn("解析对账单号序号失败: {}", lastNo, e);
+            }
+        }
+
+        return String.format("%s%04d", fullPrefix, sequence);
     }
 }

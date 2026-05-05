@@ -184,3 +184,59 @@ export const uniqueStrings = (list: string[]) => {
   }
   return out;
 };
+
+const CJK_RANGE = /[\u4e00-\u9fff\u3400-\u4dbf\u{20000}-\u{2a6df}\u{2a700}-\u{2b73f}\u{2b740}-\u{2b81f}\u{2b820}-\u{2ceaf}\u{2ceb0}-\u{2ebef}\u{30000}-\u{3134f}\u3000-\u303f\uff00-\uffef]/u;
+
+export const estimateTextWidth = (text: string, fontSize: number = 14): number => {
+  let width = 0;
+  for (const ch of text) {
+    if (CJK_RANGE.test(ch)) {
+      width += fontSize;
+    } else if (/[A-Z]/.test(ch)) {
+      width += fontSize * 0.7;
+    } else if (/[a-z0-9]/.test(ch)) {
+      width += fontSize * 0.55;
+    } else if (/\s/.test(ch)) {
+      width += fontSize * 0.3;
+    } else {
+      width += fontSize * 0.6;
+    }
+  }
+  return Math.ceil(width);
+};
+
+const getHeaderFontSize = (): number => {
+  if (typeof window === 'undefined') return 14;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--table-header-font-size').trim();
+  const parsed = parseFloat(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 14;
+};
+
+const getViewportScale = (): number => {
+  if (typeof window === 'undefined') return 1;
+  const w = window.innerWidth;
+  if (w >= 2560) return 1.2;
+  if (w <= 768) return 0.7;
+  if (w <= 1024) return 0.8;
+  if (w <= 1280) return 0.9;
+  return 1;
+};
+
+export const computeAdaptiveWidth = (col: any): { width?: number } => {
+  if (typeof col?.width === 'number' && col.width > 0) return {};
+
+  const titleText = typeof col?.title === 'string' ? col.title : '';
+
+  if (!titleText) return { width: 60 };
+
+  const fontSize = getHeaderFontSize();
+  const textWidth = estimateTextWidth(titleText, fontSize);
+  const padding = 32;
+  const naturalWidth = textWidth + padding;
+  const scale = getViewportScale();
+
+  const scaledMin = Math.round(60 * scale);
+  const scaledMax = Math.round(200 * scale);
+
+  return { width: Math.max(scaledMin, Math.min(Math.round(naturalWidth * scale), scaledMax)) };
+};

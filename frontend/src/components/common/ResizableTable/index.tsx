@@ -35,6 +35,7 @@ import {
   readArrayStorage,
   writeArrayStorage,
   uniqueStrings,
+  computeAdaptiveWidth,
 } from './utils';
 
 type ResizableTableProps<T extends object> = TableProps<T> & {
@@ -47,6 +48,8 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   reorderableColumns?: boolean;
   stickyFooter?: boolean;
   stickyHeader?: boolean | { offsetHeader?: number };
+  /** 是否自动根据屏幕宽度切换表格 size（默认 true） */
+  responsiveSize?: boolean;
 };
 
 const SortableHeaderCell: React.FC<any> = (props) => {
@@ -105,10 +108,29 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     reorderableColumns = true,
     stickyFooter: stickyFooterProp,
     stickyHeader: stickyHeaderProp,
+    responsiveSize = true,
     className,
     rowKey,
+    size: sizeProp,
     ...rest
   } = props;
+
+  const shellRef = React.useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = React.useState(false);
+
+  const checkScrollable = React.useCallback(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const tableBody = shell.querySelector('.ant-table-body') as HTMLElement | null;
+    if (!tableBody) return;
+    setIsScrollable(tableBody.scrollWidth > tableBody.clientWidth + 2);
+  }, []);
+
+  const responsiveTableSize = React.useMemo(() => {
+    if (!responsiveSize || sizeProp) return sizeProp;
+    if (typeof window === 'undefined') return undefined;
+    return window.innerWidth < 768 ? 'small' : undefined;
+  }, [responsiveSize, sizeProp]);
 
   const resolvedStorageKey = React.useMemo(() => {
     if (storageKeyProp) return storageKeyProp;
@@ -222,10 +244,12 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
         const { resizable: _stripResizable, ...safeColRecord } = colRecord;
 
+        const adaptive = computeAdaptiveWidth(colRecord);
+
         return {
           ...safeColRecord,
           colId,
-          // 操作列自动固定右侧；其他列保留原始 fixed 值（如 fixed: 'left'）；allowFixedColumns=false 时全部清除
+          ...(adaptive.width != null ? { width: adaptive.width } : {}),
           fixed: allowFixedColumns ? (maybeAction ? 'right' : colRecord.fixed) : undefined,
         };
       });
@@ -289,6 +313,22 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       };
     });
   }, [orderedColumns]);
+
+  React.useEffect(() => {
+    checkScrollable();
+    const shell = shellRef.current;
+    if (!shell) return;
+    const tableBody = shell.querySelector('.ant-table-body') as HTMLElement | null;
+    if (!tableBody) return;
+
+    const ro = new ResizeObserver(() => { checkScrollable(); });
+    ro.observe(tableBody);
+    tableBody.addEventListener('scroll', checkScrollable, { passive: true });
+    return () => {
+      ro.disconnect();
+      tableBody.removeEventListener('scroll', checkScrollable);
+    };
+  }, [checkScrollable, finalColumns]);
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, {
@@ -359,14 +399,19 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   }, [components, reorderableColumns]);
 
   const wrapperClassName = React.useMemo(() => {
-    const next = ['resizable-table-shell', className, stickyFooter ? 'resizable-table-shell-sticky-footer' : '']
+    const next = [
+      'resizable-table-shell',
+      isScrollable ? 'resizable-table-shell--scrollable' : '',
+      className,
+      stickyFooter ? 'resizable-table-shell-sticky-footer' : '',
+    ]
       .filter(Boolean)
       .join(' ');
     return next;
-  }, [className, stickyFooter]);
+  }, [className, stickyFooter, isScrollable]);
 
   const tableContent = (
-    <div className={wrapperClassName}>
+    <div className={wrapperClassName} ref={shellRef}>
       <ConfigProvider getPopupContainer={getTablePopupContainer}>
         <Table
           {...rest}
@@ -376,6 +421,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
           tableLayout={tableLayout || 'fixed'}
+          size={responsiveTableSize}
           style={{ wordBreak: 'break-all' }}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}

@@ -31,9 +31,13 @@ const TenantListTab: React.FC = () => {
   const approveModal = useModal<TenantInfo>();
   const [approveForm] = Form.useForm();
   const grantModal = useModal<TenantInfo>();
-  const [grantAppCodes, setGrantAppCodes] = useState<string[]>(['CRM_MODULE', 'PROCUREMENT', 'FINANCE_TAX']);
+  const [grantAppCodes, setGrantAppCodes] = useState<string[]>([]);
+  const [revokeAppCodes, setRevokeAppCodes] = useState<string[]>([]);
   const [grantDuration, setGrantDuration] = useState<number>(0);
   const [granting, setGranting] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [tenantSubscriptions, setTenantSubscriptions] = useState<Array<{ app_code: string; status: string; end_time: string; subscription_type: string }>>([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
   const [approveEnabledModules, setApproveEnabledModules] = useState<string[] | null>(null);
   const moduleModal = useModal<TenantInfo>();
   const [editingEnabledModules, setEditingEnabledModules] = useState<string[] | null>(null);
@@ -99,10 +103,41 @@ const TenantListTab: React.FC = () => {
     Modal.confirm({ width: '30vw', title: isPaid ? `取消「${record.tenantName}」的已付费状态` : `标记「${record.tenantName}」为已付费`, okText: isPaid ? '取消付费' : '标记已付费', cancelText: '取消', onOk: async () => { try { await tenantService.markTenantPaid(record.id, isPaid ? 'TRIAL' : 'PAID'); message.success(isPaid ? '已取消付费状态' : '已标记为已付费'); fetchData(); } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败'); } } });
   };
 
+  const handleOpenGrantModal = async (record: TenantInfo) => {
+    setGrantAppCodes([]);
+    setRevokeAppCodes([]);
+    setGrantDuration(0);
+    setTenantSubscriptions([]);
+    grantModal.open(record);
+    setLoadingSubs(true);
+    try {
+      const res: any = await appStoreService.adminGetTenantSubscriptions(record.id);
+      const subs = res?.data || res || [];
+      setTenantSubscriptions(subs);
+    } catch { setTenantSubscriptions([]); }
+    finally { setLoadingSubs(false); }
+  };
+
   const handleGrantModules = async () => {
-    const record = grantModal.data; if (!record) return; if (grantAppCodes.length === 0) { message.warning('请至少选择一个付费模块'); return; } setGranting(true);
-    try { const res: any = await appStoreService.adminGrantToTenant({ tenantId: record.id, appCodes: grantAppCodes, durationMonths: grantDuration }); const d = res?.data || res; if (d?.activated?.length > 0) message.success(`已成功为「${d.tenantName}」开通：${d.activated.join('、')}`); if (d?.failed?.length > 0) message.warning(`以下模块开通失败：${d.failed.join('；')}`); grantModal.close(); }
-    catch (e: unknown) { message.error(e instanceof Error ? e.message : '开通失败'); } finally { setGranting(false); }
+    const record = grantModal.data; if (!record) return;
+    if (grantAppCodes.length === 0 && revokeAppCodes.length === 0) { message.warning('请至少选择一个操作'); return; }
+    setGranting(true);
+    try {
+      if (revokeAppCodes.length > 0) {
+        const res: any = await appStoreService.adminRevokeFromTenant({ tenantId: record.id, appCodes: revokeAppCodes });
+        const d = res?.data || res;
+        if (d?.revoked?.length > 0) message.success(`已撤销「${d.tenantName}」的：${d.revoked.join('、')}`);
+        if (d?.failed?.length > 0) message.warning(`撤销失败：${d.failed.join('；')}`);
+      }
+      if (grantAppCodes.length > 0) {
+        const res: any = await appStoreService.adminGrantToTenant({ tenantId: record.id, appCodes: grantAppCodes, durationMonths: grantDuration });
+        const d = res?.data || res;
+        if (d?.activated?.length > 0) message.success(`已为「${d.tenantName}」开通：${d.activated.join('、')}`);
+        if (d?.failed?.length > 0) message.warning(`开通失败：${d.failed.join('；')}`);
+      }
+      grantModal.close();
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败'); }
+    finally { setGranting(false); }
   };
 
   const TENANT_TYPE_MAP: Record<string, { color: string; label: string }> = { SELF_FACTORY: { color: 'blue', label: '自建工厂' }, HYBRID: { color: 'green', label: '混合型' }, BRAND: { color: 'purple', label: '纯品牌' } };
@@ -120,7 +155,7 @@ const TenantListTab: React.FC = () => {
     { title: '申请时间', dataIndex: 'createTime', width: 150 },
     { title: '操作', key: 'actions', width: 200, render: (_: unknown, record: TenantInfo) => {
       if (record.status === 'pending_review') { return <RowActions actions={[{ key: 'approve', label: '审批通过', primary: true, disabled: processingId === record.id, onClick: () => handleApproveApplication(record) }, { key: 'reject', label: '拒绝', danger: true, onClick: () => { rejectReasonForm.resetFields(); rejectModal.open(record); } }, { key: 'delete', label: '删除', danger: true, onClick: () => handleDeleteTenant(record) }]} />; }
-      return <RowActions actions={[{ key: 'qrcode', label: '注册码', primary: true, onClick: () => qrModal.open(record) }, { key: 'grantModules', label: '付费模块', onClick: () => { setGrantAppCodes(['CRM_MODULE', 'PROCUREMENT', 'FINANCE_TAX']); setGrantDuration(0); grantModal.open(record); } }, { key: 'menuModules', label: '菜单模块', onClick: () => handleOpenModuleConfig(record) }, { key: 'markPaid', label: record.paidStatus === 'PAID' ? '取消付费' : '标记已付费', onClick: () => handleMarkPaid(record) }, { key: 'resetPwd', label: '重置密码', onClick: () => { resetPwdForm.resetFields(); resetPwdModal.open(record); } }, { key: 'webhook', label: '企微Webhook', onClick: () => { webhookForm.setFieldsValue({ wechatWorkWebhookUrl: record.wechatWorkWebhookUrl || '' }); webhookModal.open(record); } }, { key: 'toggle', label: record.status === 'active' ? '停用' : '启用', danger: record.status === 'active', onClick: () => handleToggleStatus(record) }, { key: 'delete', label: '删除', danger: true, onClick: () => handleDeleteTenant(record) }]} />;
+      return <RowActions actions={[{ key: 'qrcode', label: '注册码', primary: true, onClick: () => qrModal.open(record) }, { key: 'grantModules', label: '应用权限', onClick: () => handleOpenGrantModal(record) }, { key: 'menuModules', label: '菜单模块', onClick: () => handleOpenModuleConfig(record) }, { key: 'markPaid', label: record.paidStatus === 'PAID' ? '取消付费' : '标记已付费', onClick: () => handleMarkPaid(record) }, { key: 'resetPwd', label: '重置密码', onClick: () => { resetPwdForm.resetFields(); resetPwdModal.open(record); } }, { key: 'webhook', label: '企微Webhook', onClick: () => { webhookForm.setFieldsValue({ wechatWorkWebhookUrl: record.wechatWorkWebhookUrl || '' }); webhookModal.open(record); } }, { key: 'toggle', label: record.status === 'active' ? '停用' : '启用', danger: record.status === 'active', onClick: () => handleToggleStatus(record) }, { key: 'delete', label: '删除', danger: true, onClick: () => handleDeleteTenant(record) }]} />;
     }},
   ];
 
@@ -171,10 +206,59 @@ const TenantListTab: React.FC = () => {
         <Form form={resetPwdForm} layout="vertical"><Form.Item label="新密码" name="newPassword" rules={[{ required: true, min: 6, message: '密码不能少于6位' }]}><Input.Password placeholder="请输入新密码（至少6位）" autoComplete="new-password" /></Form.Item><Form.Item label="确认新密码" name="confirmPassword" rules={[{ required: true, message: '请再次输入新密码' }]}><Input.Password placeholder="请再次输入新密码" autoComplete="new-password" /></Form.Item></Form>
       </SmallModal>
 
-      <ResizableModal open={grantModal.visible} title={<><AppstoreOutlined style={{ marginRight: 6 }} />为「{grantModal.data?.tenantName || ''}」开通付费模块</>} onCancel={grantModal.close} width="40vw" footer={<Space><Button onClick={grantModal.close}>取消</Button><Button type="primary" loading={granting} onClick={handleGrantModules}>确认开通</Button></Space>}>
-        <Alert title="此操作将直接为该租户创建有效订阅，无需租户下单付费，适合人工确认付款后的手动开通场景。" type="info" showIcon style={{ marginBottom: 16 }} />
-        <div style={{ marginBottom: 16 }}><div style={{ fontWeight: 600, marginBottom: 8 }}>选择要开通的模块（可多选）：</div><Checkbox.Group value={grantAppCodes} onChange={(v) => setGrantAppCodes(v as string[])} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{MODULE_OPTIONS.map(opt => (<Checkbox key={opt.value} id={`appAuth-${opt.value}`} value={opt.value} style={{ marginLeft: 0 }}>{opt.label}</Checkbox>))}</Checkbox.Group></div>
-        <div><div style={{ fontWeight: 600, marginBottom: 8 }}>有效期：</div><Radio.Group value={grantDuration} onChange={(e) => setGrantDuration(e.target.value)}>{DURATION_OPTIONS.map(opt => (<Radio.Button key={opt.value} value={opt.value}>{opt.label}</Radio.Button>))}</Radio.Group></div>
+      <ResizableModal open={grantModal.visible} title={<><AppstoreOutlined style={{ marginRight: 6 }} />管理「{grantModal.data?.tenantName || ''}」的应用权限</>} onCancel={grantModal.close} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} footer={<Space><Button onClick={grantModal.close}>取消</Button><Button type="primary" loading={granting} onClick={handleGrantModules} disabled={grantAppCodes.length === 0 && revokeAppCodes.length === 0}>{grantAppCodes.length > 0 && revokeAppCodes.length > 0 ? '开通 + 撤销' : grantAppCodes.length > 0 ? '确认开通' : '确认撤销'}</Button></Space>}>
+        <Alert title="超管可直接为租户开通或撤销应用商店中的任意应用，无需租户下单付费。API 对接类应用开通后自动生成凭证。" type="info" showIcon style={{ marginBottom: 16 }} />
+        {loadingSubs ? <div style={{ textAlign: 'center', padding: 24, color: '#999' }}>加载订阅状态...</div> : (() => {
+          const activeSubs = new Set(tenantSubscriptions.filter((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL').map((s: any) => s.app_code));
+          const subMap = new Map(tenantSubscriptions.map((s: any) => [s.app_code, s]));
+          const categories = [...new Set(MODULE_OPTIONS.map(o => o.category))];
+          return (
+            <div style={{ maxHeight: 'calc(82vh - 220px)', overflowY: 'auto', paddingRight: 4 }}>
+              {categories.map(cat => {
+                const opts = MODULE_OPTIONS.filter(o => o.category === cat);
+                return (
+                  <div key={cat} style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text-secondary, #666)', marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid var(--color-border-light, #f0f0f0)' }}>{cat}</div>
+                    {opts.map(opt => {
+                      const isActive = activeSubs.has(opt.value);
+                      const sub = subMap.get(opt.value);
+                      const willGrant = grantAppCodes.includes(opt.value);
+                      const willRevoke = revokeAppCodes.includes(opt.value);
+                      return (
+                        <div key={opt.value} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, marginBottom: 4, background: willGrant ? 'rgba(82,196,26,0.06)' : willRevoke ? 'rgba(255,77,79,0.06)' : 'transparent', border: willGrant ? '1px solid rgba(82,196,26,0.2)' : willRevoke ? '1px solid rgba(255,77,79,0.2)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 500 }}>{opt.label}</span>
+                            {isActive ? <Tag color="green" style={{ margin: 0, fontSize: 11 }}>已开通</Tag> : <Tag style={{ margin: 0, fontSize: 11 }}>未开通</Tag>}
+                            {sub?.end_time && isActive && <span style={{ fontSize: 11, color: '#999' }}>到期 {String(sub.end_time).substring(0, 10)}</span>}
+                          </div>
+                          <Space size={4}>
+                            {!isActive && !willGrant && <Button size="small" type="link" onClick={() => setGrantAppCodes([...grantAppCodes, opt.value])}>开通</Button>}
+                            {willGrant && <Button size="small" type="link" style={{ color: '#52c41a' }} onClick={() => setGrantAppCodes(grantAppCodes.filter(c => c !== opt.value))}>✓ 将开通</Button>}
+                            {isActive && !willRevoke && <Button size="small" type="link" danger onClick={() => setRevokeAppCodes([...revokeAppCodes, opt.value])}>撤销</Button>}
+                            {willRevoke && <Button size="small" type="link" style={{ color: '#ff4d4f' }} onClick={() => setRevokeAppCodes(revokeAppCodes.filter(c => c !== opt.value))}>✓ 将撤销</Button>}
+                          </Space>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+        {grantAppCodes.length > 0 && (
+          <div style={{ marginTop: 16, padding: '10px 12px', background: 'rgba(82,196,26,0.06)', borderRadius: 8, border: '1px solid rgba(82,196,26,0.15)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>开通有效期：</div>
+            <Radio.Group value={grantDuration} onChange={(e) => setGrantDuration(e.target.value)}>{DURATION_OPTIONS.map(opt => (<Radio.Button key={opt.value} value={opt.value}>{opt.label}</Radio.Button>))}</Radio.Group>
+          </div>
+        )}
+        {(grantAppCodes.length > 0 || revokeAppCodes.length > 0) && (
+          <div style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
+            {grantAppCodes.length > 0 && <span>将开通 {grantAppCodes.length} 个应用</span>}
+            {grantAppCodes.length > 0 && revokeAppCodes.length > 0 && <span> · </span>}
+            {revokeAppCodes.length > 0 && <span style={{ color: '#ff4d4f' }}>将撤销 {revokeAppCodes.length} 个应用</span>}
+          </div>
+        )}
       </ResizableModal>
 
       <ResizableModal open={approveModal.visible} title={`审批通过 - ${approveModal.data?.tenantName || ''}`} onCancel={() => { approveModal.close(); approveForm.resetFields(); setApproveEnabledModules(null); }} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} footer={<Space><Button onClick={() => { approveModal.close(); approveForm.resetFields(); setApproveEnabledModules(null); }}>取消</Button><Button type="primary" loading={processingId === approveModal.data?.id} onClick={handleConfirmApprove}>确认审批</Button></Space>}>
