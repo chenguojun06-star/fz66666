@@ -255,7 +255,7 @@ Page({
     }
 
     if (!name.trim()) {
-      toast.error('请输入真实姓名');
+      toast.error('请输入姓名');
       return false;
     }
 

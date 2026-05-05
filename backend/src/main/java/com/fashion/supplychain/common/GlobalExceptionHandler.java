@@ -21,6 +21,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -166,6 +167,18 @@ public class GlobalExceptionHandler {
         public ResponseEntity<Result<?>> handleNoHandlerFoundException(NoHandlerFoundException e,
                         HttpServletRequest request) {
                 logger.warn("404: {} {}", request == null ? "" : request.getMethod(),
+                                request == null ? "" : request.getRequestURI());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "请求的资源不存在"));
+        }
+
+        /**
+         * 处理静态资源404（NoResourceFoundException，Spring 6.x 新增）。
+         * 外部扫描器/爬虫探测 /v1、/swagger 等路径时触发，降级为 WARN 避免日志噪音。
+         */
+        @ExceptionHandler(NoResourceFoundException.class)
+        public ResponseEntity<Result<?>> handleNoResourceFoundException(NoResourceFoundException e,
+                        HttpServletRequest request) {
+                logger.warn("404 static resource: {} {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI());
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "请求的资源不存在"));
         }
