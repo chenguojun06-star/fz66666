@@ -26,7 +26,7 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
-public class StyleTemplateTool implements AgentTool {
+public class StyleTemplateTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -66,7 +66,7 @@ public class StyleTemplateTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         if (UserContext.tenantId() == null) {
             return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
         }

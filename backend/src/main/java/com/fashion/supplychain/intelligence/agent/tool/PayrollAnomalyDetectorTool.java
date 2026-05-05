@@ -29,7 +29,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class PayrollAnomalyDetectorTool implements AgentTool {
+public class PayrollAnomalyDetectorTool extends AbstractAgentTool {
 
     private static final ObjectMapper OM = new ObjectMapper();
     private static final DateTimeFormatter YM = DateTimeFormatter.ofPattern("yyyy-MM");
@@ -68,7 +68,7 @@ public class PayrollAnomalyDetectorTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         try {
             TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();

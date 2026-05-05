@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class WarehouseOpLogTool implements AgentTool {
+public class WarehouseOpLogTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -84,7 +84,7 @@ public class WarehouseOpLogTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         // 安全门禁1：外发工厂账号不可查询
         if (UserContext.factoryId() != null) {
             return MAPPER.writeValueAsString(Map.of("error", "外发工厂账号无权查询仓库操作日志"));

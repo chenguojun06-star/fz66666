@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class SystemOverviewTool implements AgentTool {
+public class SystemOverviewTool extends AbstractAgentTool {
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -70,7 +70,7 @@ public class SystemOverviewTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         try {
             TenantAssert.assertTenantContext();

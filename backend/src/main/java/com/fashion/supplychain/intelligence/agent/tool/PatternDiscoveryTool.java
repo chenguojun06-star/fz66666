@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class PatternDiscoveryTool implements AgentTool {
+public class PatternDiscoveryTool extends AbstractAgentTool {
 
     @Autowired private PatternDiscoveryOrchestrator patternOrchestrator;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -60,7 +60,7 @@ public class PatternDiscoveryTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         try {
             JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String action = args.path("action").asText("list");

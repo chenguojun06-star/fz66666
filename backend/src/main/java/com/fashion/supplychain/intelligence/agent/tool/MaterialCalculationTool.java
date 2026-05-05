@@ -30,7 +30,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class MaterialCalculationTool implements AgentTool {
+public class MaterialCalculationTool extends AbstractAgentTool {
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -80,7 +80,7 @@ public class MaterialCalculationTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         try {
             JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String styleNo = args.path("styleNo").asText("").trim();

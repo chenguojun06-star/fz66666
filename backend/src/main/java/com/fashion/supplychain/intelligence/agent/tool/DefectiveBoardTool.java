@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class DefectiveBoardTool implements AgentTool {
+public class DefectiveBoardTool extends AbstractAgentTool {
 
     @Autowired
     private ProductWarehousingOrchestrator productWarehousingOrchestrator;
@@ -76,7 +76,7 @@ public class DefectiveBoardTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         TenantAssert.assertTenantContext();
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = (String) args.get("action");

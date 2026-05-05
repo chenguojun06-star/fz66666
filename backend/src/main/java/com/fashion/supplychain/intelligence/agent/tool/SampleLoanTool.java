@@ -27,7 +27,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class SampleLoanTool implements AgentTool {
+public class SampleLoanTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -102,7 +102,7 @@ public class SampleLoanTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         // 安全门禁1：外发工厂账号不允许操作仓库
         if (UserContext.factoryId() != null) {
             return MAPPER.writeValueAsString(Map.of("error", "外发工厂账号无权执行仓库操作，请联系内部管理人员"));

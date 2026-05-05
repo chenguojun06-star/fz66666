@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class RcaAnalysisTool implements AgentTool {
+public class RcaAnalysisTool extends AbstractAgentTool {
 
     @Autowired private RootCauseAnalysisOrchestrator rcaOrchestrator;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -58,7 +58,7 @@ public class RcaAnalysisTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         try {
             JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String description = args.path("description").asText("").trim();

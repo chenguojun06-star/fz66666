@@ -19,7 +19,7 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
-public class MaterialReceiveTool implements AgentTool {
+public class MaterialReceiveTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -58,7 +58,7 @@ public class MaterialReceiveTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         TenantAssert.assertTenantContext();
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));

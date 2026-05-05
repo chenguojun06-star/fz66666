@@ -27,7 +27,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class FinancialPayrollTool implements AgentTool {
+public class FinancialPayrollTool extends AbstractAgentTool {
 
     @Autowired
     private PayrollSettlementService payrollSettlementService;
@@ -86,7 +86,7 @@ public class FinancialPayrollTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         if (UserContext.factoryId() != null) {
             return "{\"success\":false,\"error\":\"外发工厂账号无权访问工资数据\"}";

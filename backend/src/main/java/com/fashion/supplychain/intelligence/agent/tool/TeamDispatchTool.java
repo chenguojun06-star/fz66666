@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class TeamDispatchTool implements AgentTool {
+public class TeamDispatchTool extends AbstractAgentTool {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -52,7 +52,7 @@ public class TeamDispatchTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         if (UserContext.tenantId() == null) {
             return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
         }

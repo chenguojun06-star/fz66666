@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class SmartReportTool implements AgentTool {
+public class SmartReportTool extends AbstractAgentTool {
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -77,7 +77,7 @@ public class SmartReportTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         Map<String, Object> args = new HashMap<>();
         if (argumentsJson != null && !argumentsJson.isBlank()) {

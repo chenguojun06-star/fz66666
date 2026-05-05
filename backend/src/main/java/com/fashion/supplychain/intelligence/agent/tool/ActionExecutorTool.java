@@ -29,7 +29,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class ActionExecutorTool implements AgentTool {
+public class ActionExecutorTool extends AbstractAgentTool {
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -102,7 +102,7 @@ public class ActionExecutorTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         Map<String, Object> args = new HashMap<>();
         if (argumentsJson != null && !argumentsJson.isBlank()) {

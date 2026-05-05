@@ -20,7 +20,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class PayrollApproveTool implements AgentTool {
+public class PayrollApproveTool extends AbstractAgentTool {
 
     @Autowired
     private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
@@ -70,7 +70,7 @@ public class PayrollApproveTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         if (!aiAgentToolAccessService.hasManagerAccess()) {
             return MAPPER.writeValueAsString(Map.of("error", "当前角色无权执行该操作"));
         }

@@ -24,7 +24,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class SampleStockTool implements AgentTool {
+public class SampleStockTool extends AbstractAgentTool {
 
     @Autowired
     private SampleStockService sampleStockService;
@@ -78,7 +78,7 @@ public class SampleStockTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         try {
             Map<String, Object> args = new HashMap<>();

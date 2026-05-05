@@ -24,7 +24,7 @@ import java.util.Map;
  * 5. 工具返回结果与预期不符需要重新推理
  */
 @Component
-public class ThinkTool implements AgentTool {
+public class ThinkTool extends AbstractAgentTool {
 
     @Override
     public String getName() {
@@ -57,7 +57,7 @@ public class ThinkTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         // No-op：AI 的思考内容已作为 arguments 写入消息历史，此处只返回确认信号
         return "思考已记录，请根据以上分析继续执行任务。";
     }

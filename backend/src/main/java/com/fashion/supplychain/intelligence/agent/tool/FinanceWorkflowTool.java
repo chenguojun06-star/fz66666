@@ -29,7 +29,7 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
-public class FinanceWorkflowTool implements AgentTool {
+public class FinanceWorkflowTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -79,7 +79,7 @@ public class FinanceWorkflowTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         TenantAssert.assertTenantContext();
         if (UserContext.tenantId() == null) {
             return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";

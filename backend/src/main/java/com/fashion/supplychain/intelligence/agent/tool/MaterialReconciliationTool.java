@@ -25,7 +25,7 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
-public class MaterialReconciliationTool implements AgentTool {
+public class MaterialReconciliationTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -64,7 +64,7 @@ public class MaterialReconciliationTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         TenantAssert.assertTenantContext();
         if (UserContext.factoryId() != null) {
             return "{\"success\":false,\"error\":\"外发工厂账号无权访问物料对账数据\"}";

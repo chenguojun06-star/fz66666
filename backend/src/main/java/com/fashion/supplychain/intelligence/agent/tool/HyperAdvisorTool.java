@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class HyperAdvisorTool implements AgentTool {
+public class HyperAdvisorTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -59,7 +59,7 @@ public class HyperAdvisorTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called", getName());
         Map<String, Object> args = Map.of();
         if (argumentsJson != null && !argumentsJson.isBlank()) {

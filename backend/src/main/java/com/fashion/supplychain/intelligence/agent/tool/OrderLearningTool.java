@@ -24,7 +24,7 @@ import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
-public class OrderLearningTool implements AgentTool {
+public class OrderLearningTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -70,7 +70,7 @@ public class OrderLearningTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         if (UserContext.factoryId() != null) {
             return MAPPER.writeValueAsString(Map.of("success", false, "error", "外发工厂账号无权使用下单学习功能"));
         }

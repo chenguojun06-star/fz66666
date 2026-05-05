@@ -23,7 +23,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class OrderContactUrgeTool implements AgentTool {
+public class OrderContactUrgeTool extends AbstractAgentTool {
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -70,7 +70,7 @@ public class OrderContactUrgeTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("[OrderContactUrge] called with args: {}", argumentsJson);
 
         Map<String, Object> args = new HashMap<>();

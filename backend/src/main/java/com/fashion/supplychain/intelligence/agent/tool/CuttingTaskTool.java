@@ -20,7 +20,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class CuttingTaskTool implements AgentTool {
+public class CuttingTaskTool extends AbstractAgentTool {
 
     @Autowired
     private CuttingTaskOrchestrator cuttingTaskOrchestrator;
@@ -99,7 +99,7 @@ public class CuttingTaskTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         if (com.fashion.supplychain.common.UserContext.tenantId() == null) {
             return MAPPER.writeValueAsString(Map.of("success", false, "error", "租户上下文丢失，请重新登录"));
         }

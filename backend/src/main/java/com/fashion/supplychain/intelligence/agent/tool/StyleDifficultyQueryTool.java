@@ -29,7 +29,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class StyleDifficultyQueryTool implements AgentTool {
+public class StyleDifficultyQueryTool extends AbstractAgentTool {
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -76,7 +76,7 @@ public class StyleDifficultyQueryTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
+    protected String doExecute(String argumentsJson) throws Exception {
         JsonNode args = MAPPER.readTree(argumentsJson);
         String styleNo = args.path("styleNo").asText(null);
         String keyword  = args.path("keyword").asText(null);

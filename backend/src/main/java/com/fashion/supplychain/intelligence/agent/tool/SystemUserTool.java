@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class SystemUserTool implements AgentTool {
+public class SystemUserTool extends AbstractAgentTool {
 
     @Autowired
     private UserService userService;
@@ -67,7 +67,7 @@ public class SystemUserTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         try {
             Map<String, Object> args = new HashMap<>();

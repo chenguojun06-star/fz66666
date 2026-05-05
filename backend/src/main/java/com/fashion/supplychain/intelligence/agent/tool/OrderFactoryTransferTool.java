@@ -32,7 +32,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class OrderFactoryTransferTool implements AgentTool {
+public class OrderFactoryTransferTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -74,7 +74,7 @@ public class OrderFactoryTransferTool implements AgentTool {
     }
 
     @Override
-    public String execute(String arguments) {
+    protected String doExecute(String arguments) throws Exception {
         try {
             TenantAssert.assertTenantContext();
             if (!aiAgentToolAccessService.hasManagerAccess()) {

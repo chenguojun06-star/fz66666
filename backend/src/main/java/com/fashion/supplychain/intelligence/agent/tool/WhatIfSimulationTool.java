@@ -19,7 +19,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-public class WhatIfSimulationTool implements AgentTool {
+public class WhatIfSimulationTool extends AbstractAgentTool {
 
     @Autowired
     private WhatIfSimulationOrchestrator whatIfOrchestrator;
@@ -57,7 +57,7 @@ public class WhatIfSimulationTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         try {
             JsonNode args = JSON.readTree(argumentsJson);
             String scenarioType = args.path("scenario_type").asText("ADVANCE_DELIVERY").trim().toUpperCase();
@@ -113,10 +113,4 @@ public class WhatIfSimulationTool implements AgentTool {
         return m;
     }
 
-    private Map<String, Object> prop(String type, String desc) {
-        Map<String, Object> p = new HashMap<>();
-        p.put("type", type);
-        p.put("description", desc);
-        return p;
-    }
 }

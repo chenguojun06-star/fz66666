@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class FinishedProductStockTool implements AgentTool {
+public class FinishedProductStockTool extends AbstractAgentTool {
 
     @Autowired
     private ProductSkuService productSkuService;
@@ -77,7 +77,7 @@ public class FinishedProductStockTool implements AgentTool {
     }
 
     @Override
-    public String execute(String argumentsJson) {
+    protected String doExecute(String argumentsJson) throws Exception {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         try {
             if (UserContext.factoryId() != null) {
