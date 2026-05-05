@@ -1,40 +1,48 @@
 <view class="page">
   <view class="header">
     <text class="title">工资结算反馈</text>
-    <view class="add-btn" hover-class="add-btn-hover" bindtap="openForm">+ 提交反馈</view>
-  </view>
-
-  <view class="filter-bar">
-    <picker mode="selector" range="{{['全部','待处理','已解决','已驳回']}}" range-key="" value="{{statusFilter}}" bindchange="onStatusFilterChange">
-      <view class="filter-picker">
-        <text>{{statusFilter === '' ? '全部状态' : statusFilter === 'PENDING' ? '待处理' : statusFilter === 'RESOLVED' ? '已解决' : '已驳回'}}</text>
-        <text class="arrow">▼</text>
-      </view>
-    </picker>
   </view>
 
   <view wx:if="{{loading}}" class="loading">加载中...</view>
 
-  <view wx:if="{{!loading && feedbackList.length === 0}}" class="empty">
-    <text>暂无反馈记录</text>
+  <view wx:if="{{!loading && settlements.length === 0}}" class="empty">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无已发放的工资结算单</text>
   </view>
 
-  <view wx:for="{{feedbackList}}" wx:key="id" class="feedback-item">
-    <view class="item-header">
-      <text class="type-tag" style="background: {{item.typeColor}}20; color: {{item.typeColor}};">{{item.typeText}}</text>
-      <text class="status-tag" style="color: {{item.statusTextColor}};">{{item.statusText}}</text>
+  <view wx:for="{{settlements}}" wx:key="id" class="settlement-card" bindtap="onSettlementTap" data-id="{{item.id}}" data-no="{{item.settlementNo}}">
+    <view class="card-header">
+      <text class="settlement-no">{{item.settlementNo || item.id}}</text>
+      <view class="feedback-status {{item.feedbackStatus ? 'status-' + item.feedbackStatus : 'status-none'}}">
+        <text wx:if="{{!item.feedbackStatus}}">待反馈</text>
+        <text wx:elif="{{item.feedbackStatus === 'PENDING'}}">已反馈·待处理</text>
+        <text wx:elif="{{item.feedbackStatus === 'RESOLVED'}}">已解决</text>
+        <text wx:elif="{{item.feedbackStatus === 'REJECTED'}}">已驳回</text>
+      </view>
     </view>
-    <view class="item-body">
-      <text class="settlement-id">结算单: {{item.settlementId}}</text>
-      <text wx:if="{{item.feedbackContent}}" class="content">{{item.feedbackContent}}</text>
+    <view class="card-body">
+      <view class="info-row">
+        <text class="info-label">订单号</text>
+        <text class="info-value">{{item.orderNo || '-'}}</text>
+      </view>
+      <view class="info-row" wx:if="{{item.styleNo}}">
+        <text class="info-label">款号</text>
+        <text class="info-value">{{item.styleNo}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">总数量</text>
+        <text class="info-value">{{item.totalQuantity || 0}}件</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">总金额</text>
+        <text class="info-value amount">¥{{item.totalAmount || 0}}</text>
+      </view>
     </view>
-    <view wx:if="{{item.resolveRemark}}" class="resolve-info">
-      <text class="resolve-label">处理结果:</text>
-      <text class="resolve-remark">{{item.resolveRemark}}</text>
-      <text wx:if="{{item.resolverName}}" class="resolver">处理人: {{item.resolverName}}</text>
-    </view>
-    <view class="item-footer">
+    <view class="card-footer">
       <text class="time">{{item.createTimeText}}</text>
+      <view wx:if="{{!item.feedbackStatus}}" class="feedback-action">
+        <text>点击反馈 ›</text>
+      </view>
     </view>
   </view>
 
@@ -43,19 +51,19 @@
       <view class="modal-title">提交工资结算反馈</view>
 
       <view class="form-group">
-        <text class="form-label">结算单ID</text>
-        <input class="form-input {{settlementId ? 'form-input-readonly' : ''}}" placeholder="请输入结算单ID" value="{{settlementId}}" bindinput="onSettlementIdInput" disabled="{{!!settlementId}}" />
+        <text class="form-label">结算单号</text>
+        <input class="form-input form-input-readonly" value="{{currentSettlementNo}}" disabled="{{true}}" />
       </view>
 
       <view class="form-group">
         <text class="form-label">反馈类型</text>
         <radio-group class="radio-group" bindchange="onFeedbackTypeChange">
           <label class="radio-item">
-            <radio value="CONFIRM" checked="{{feedbackType === 'CONFIRM'}}" color="#1677ff" />
+            <radio value="CONFIRM" checked="{{feedbackType === 'CONFIRM'}}" color="var(--color-primary)" />
             <text>确认无误</text>
           </label>
           <label class="radio-item">
-            <radio value="OBJECTION" checked="{{feedbackType === 'OBJECTION'}}" color="#faad14" />
+            <radio value="OBJECTION" checked="{{feedbackType === 'OBJECTION'}}" color="var(--color-warning)" />
             <text>提出异议</text>
           </label>
         </radio-group>

@@ -4,16 +4,19 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.finance.entity.PayrollSettlement;
+import com.fashion.supplychain.finance.entity.PayrollSettlementItem;
 import com.fashion.supplychain.finance.entity.WageSettlementFeedback;
+import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
+import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.service.WageSettlementFeedbackService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -21,6 +24,12 @@ public class WageSettlementFeedbackOrchestrator {
 
     @Autowired
     private WageSettlementFeedbackService feedbackService;
+
+    @Autowired
+    private PayrollSettlementService settlementService;
+
+    @Autowired
+    private PayrollSettlementItemService settlementItemService;
 
     public WageSettlementFeedback submitFeedback(Map<String, Object> params) {
         Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
@@ -180,5 +189,77 @@ public class WageSettlementFeedbackOrchestrator {
 
         log.info("[工资结算反馈] 处理完成: id={}, action={}, resolver={}", id, action, UserContext.username());
         return feedback;
+    }
+
+    public List<Map<String, Object>> listMyPaidSettlements() {
+        Long tenantId = TenantAssert.requireTenantIdOrSuperAdmin();
+        if (tenantId == null) {
+            return List.of();
+        }
+
+        String operatorId = UserContext.userId();
+
+        LambdaQueryWrapper<PayrollSettlementItem> itemQw = new LambdaQueryWrapper<>();
+        itemQw.eq(PayrollSettlementItem::getTenantId, tenantId)
+               .eq(PayrollSettlementItem::getOperatorId, operatorId)
+               .select(PayrollSettlementItem::getSettlementId)
+               .groupBy(PayrollSettlementItem::getSettlementId);
+        List<PayrollSettlementItem> myItems = settlementItemService.list(itemQw);
+        if (myItems.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> mySettlementIds = myItems.stream()
+                .map(PayrollSettlementItem::getSettlementId)
+                .collect(Collectors.toSet());
+
+        LambdaQueryWrapper<PayrollSettlement> sQw = new LambdaQueryWrapper<>();
+        sQw.eq(PayrollSettlement::getTenantId, tenantId)
+           .eq(PayrollSettlement::getStatus, "paid")
+           .in(PayrollSettlement::getId, mySettlementIds)
+           .orderByDesc(PayrollSettlement::getCreateTime);
+        List<PayrollSettlement> paidSettlements = settlementService.list(sQw);
+
+        if (paidSettlements.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> paidIds = paidSettlements.stream()
+                .map(PayrollSettlement::getId)
+                .collect(Collectors.toList());
+
+        LambdaQueryWrapper<WageSettlementFeedback> fbQw = new LambdaQueryWrapper<>();
+        fbQw.eq(WageSettlementFeedback::getTenantId, tenantId)
+            .eq(WageSettlementFeedback::getOperatorId, operatorId)
+            .in(WageSettlementFeedback::getSettlementId, paidIds);
+        List<WageSettlementFeedback> myFeedbacks = feedbackService.list(fbQw);
+        Map<String, WageSettlementFeedback> feedbackMap = myFeedbacks.stream()
+                .collect(Collectors.toMap(WageSettlementFeedback::getSettlementId, f -> f, (a, b) -> a));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (PayrollSettlement s : paidSettlements) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", s.getId());
+            row.put("settlementNo", s.getSettlementNo());
+            row.put("orderNo", s.getOrderNo());
+            row.put("styleNo", s.getStyleNo());
+            row.put("totalQuantity", s.getTotalQuantity());
+            row.put("totalAmount", s.getTotalAmount());
+            row.put("startTime", s.getStartTime() != null ? s.getStartTime().toString() : null);
+            row.put("endTime", s.getEndTime() != null ? s.getEndTime().toString() : null);
+            row.put("paidTime", s.getConfirmTime() != null ? s.getConfirmTime().toString() : null);
+            row.put("createTime", s.getCreateTime() != null ? s.getCreateTime().toString() : null);
+
+            WageSettlementFeedback fb = feedbackMap.get(s.getId());
+            if (fb != null) {
+                row.put("feedbackStatus", fb.getStatus());
+                row.put("feedbackType", fb.getFeedbackType());
+            } else {
+                row.put("feedbackStatus", null);
+                row.put("feedbackType", null);
+            }
+            result.add(row);
+        }
+        return result;
     }
 }

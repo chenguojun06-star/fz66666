@@ -5,12 +5,26 @@
   padding: 0 var(--page-padding-x) 160rpx;
 }
 
-/* ===== 订单头 ===== */
-.order-header {
+.detail-body {
   background: var(--color-bg-card);
-  padding: 24rpx;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.detail-section {
+  padding: 24rpx 28rpx;
   border-bottom: 1rpx solid var(--color-border-light);
 }
+
+.detail-section:last-child {
+  border-bottom: none;
+}
+
+.order-header {
+  padding-bottom: 20rpx;
+}
+
 .header-main {
   display: flex;
   align-items: baseline;
@@ -53,7 +67,6 @@
   border-radius: var(--radius-sm);
 }
 
-/* ===== 加载状态 ===== */
 .loading-wrapper {
   display: flex;
   flex-direction: column;
@@ -75,7 +88,6 @@
   margin-top: 20rpx;
 }
 
-/* ===== 空状态 ===== */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -89,16 +101,15 @@
   margin-top: 20rpx;
 }
 
-/* ===== 物料列表 ===== */
 .material-list {
-  padding: 12rpx 0 0;
+  padding: 12rpx 28rpx 0;
 }
 .material-item {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 20rpx;
-  margin-bottom: 12rpx;
-  border: 1rpx solid var(--color-border-light);
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--color-border-light);
+}
+.material-item:last-child {
+  border-bottom: none;
 }
 .item-done { opacity: 0.5; }
 .item-confirmed { border-color: var(--color-success-border); }
@@ -153,7 +164,6 @@
   color: var(--color-text-tertiary);
 }
 
-/* 状态标签 */
 .status-tag {
   font-size: var(--font-size-xs);
   padding: 2rpx 14rpx;
@@ -177,7 +187,6 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* 进度条 */
 .progress-bar {
   margin-top: 10rpx;
   height: 4rpx;
@@ -195,7 +204,6 @@
   background: var(--color-success);
 }
 
-/* 回料确认信息 */
 .confirm-info {
   margin-top: 8rpx;
 }
@@ -204,7 +212,6 @@
   color: var(--color-text-tertiary);
 }
 
-/* 输入行 */
 .item-input {
   margin-top: 14rpx;
   padding-top: 14rpx;
@@ -221,7 +228,6 @@
   box-sizing: border-box;
 }
 
-/* 回料确认按钮 */
 .item-confirm-row {
   margin-top: 12rpx;
   padding-top: 12rpx;
@@ -238,7 +244,6 @@
   border-radius: var(--radius-sm);
 }
 
-/* 领取提示 */
 .receive-hint {
   margin-top: 10rpx;
 }
@@ -247,13 +252,8 @@
   color: var(--color-warning);
 }
 
-/* ===== 备注区 ===== */
 .remark-section {
-  margin: var(--card-gap-y) 0;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 20rpx;
-  border: 1rpx solid var(--color-border-light);
+  padding-top: 20rpx;
 }
 .remark-label {
   font-size: var(--font-size-sm);
@@ -271,5 +271,3 @@
   padding: 16rpx;
   box-sizing: border-box;
 }
-
-

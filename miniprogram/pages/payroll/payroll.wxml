@@ -80,9 +80,6 @@
           <text class="time">{{item.scanTime}}</text>
         </view>
       </view>
-      <view wx:if="{{item.settlementId}}" class="record-actions">
-        <view class="feedback-btn" hover-class="feedback-btn-hover" catchtap="goFeedback" data-sid="{{item.settlementId}}">反馈</view>
-      </view>
     </view>
 
     <!-- 底部统计 -->

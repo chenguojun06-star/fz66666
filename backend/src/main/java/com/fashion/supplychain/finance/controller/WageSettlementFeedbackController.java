@@ -29,6 +29,11 @@ public class WageSettlementFeedbackController {
         return Result.success(feedbackOrchestrator.listMyFeedback(params != null ? params : Map.of()));
     }
 
+    @PostMapping("/my-paid-settlements")
+    public Result<List<Map<String, Object>>> listMyPaidSettlements() {
+        return Result.success(feedbackOrchestrator.listMyPaidSettlements());
+    }
+
     @PostMapping("/list")
     public Result<List<WageSettlementFeedback>> listAllFeedback(@RequestBody(required = false) Map<String, Object> params) {
         if (!UserContext.isSupervisorOrAbove()) {

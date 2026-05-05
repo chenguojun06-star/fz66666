@@ -292,15 +292,6 @@
   padding-top: 6px;
   border-top: 1px solid var(--color-border-light);
 }
-.feedback-btn {
-  font-size: var(--font-size-xs);
-  padding: 4px 14px;
-  border-radius: 14px;
-  background: var(--color-primary);
-  color: var(--color-text-white);
-  font-weight: 500;
-}
-.feedback-btn-hover { opacity: 0.8; }
 
 /* 底部统计 */
 .bottom-summary {

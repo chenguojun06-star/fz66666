@@ -7,6 +7,7 @@ import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -50,6 +51,8 @@ public class ProductionOrderCreationHelper {
     private OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
     @Autowired
     private StyleInfoService styleInfoService;
+    @Autowired
+    private CuttingWorkflowBuilderHelper cuttingWorkflowBuilderHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
@@ -84,6 +87,22 @@ public class ProductionOrderCreationHelper {
         helper.validatePersonnelFields(productionOrder);
 
         helper.validateUnitPriceSources(productionOrder);
+
+        if (isCreate) {
+            boolean hasWorkflow = StringUtils.hasText(productionOrder.getProgressWorkflowJson());
+            if (!hasWorkflow && StringUtils.hasText(productionOrder.getStyleNo())) {
+                String autoWorkflow = cuttingWorkflowBuilderHelper.buildProgressWorkflowJson(productionOrder.getStyleNo().trim());
+                if (StringUtils.hasText(autoWorkflow)) {
+                    productionOrder.setProgressWorkflowJson(autoWorkflow);
+                    log.info("[订单创建] 自动从模板填充工序单价: styleNo={}, workflowLen={}",
+                            productionOrder.getStyleNo(), autoWorkflow.length());
+                } else {
+                    log.warn("[订单创建] 款号 {} 无工序模板，progressWorkflowJson 将为空", productionOrder.getStyleNo());
+                }
+            } else if (!hasWorkflow) {
+                log.warn("[订单创建] 新订单无款号且无 progressWorkflowJson，工序单价将为空");
+            }
+        }
 
         // 创建订单时检查纸样是否齐全（只警告，不阻止）
         if (isCreate && productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
@@ -229,6 +248,14 @@ public class ProductionOrderCreationHelper {
         newOrder.setProductionProgress(0);
         newOrder.setMaterialArrivalRate(0);
         newOrder.setStatus("pending"); // 待生产
+
+        if (StringUtils.hasText(style.getStyleNo())) {
+            String autoWorkflow = cuttingWorkflowBuilderHelper.buildProgressWorkflowJson(style.getStyleNo().trim());
+            if (StringUtils.hasText(autoWorkflow)) {
+                newOrder.setProgressWorkflowJson(autoWorkflow);
+                log.info("[样衣推单] 自动从模板填充工序单价: styleNo={}", style.getStyleNo());
+            }
+        }
 
         // 5. 保存订单获取ID
         boolean saved = productionOrderService.save(newOrder);

@@ -3,8 +3,26 @@
 /* ── 页面容器 ── */
 .container {
   min-height: 100vh;
-  background: linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.1) 0%, var(--color-bg-page) 220rpx);
+  background: var(--color-bg-page);
   padding: 0 var(--page-padding-x) 160rpx;
+}
+
+/* ── 单页连续白色主体 ── */
+.detail-body {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── 内容分区（仅分割线，无卡片断开） ── */
+.detail-section {
+  padding: 24rpx 28rpx;
+  border-bottom: 1rpx solid var(--color-border-light);
+}
+
+.detail-section:last-child {
+  border-bottom: none;
 }
 
 /* ── 加载状态 ── */
@@ -55,7 +73,7 @@
   border-radius: var(--radius-xl);
   padding: 20rpx 24rpx;
   margin-bottom: 16rpx;
-  border: 1rpx solid rgba(var(--color-primary-rgb), 0.12);
+  border: 1rpx solid var(--color-border-light);
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: row;
@@ -77,7 +95,7 @@
 .sel-cover-empty {
   width: 100%;
   height: 100%;
-  background: var(--color-bg-light);
+  background: var(--color-bg-gray);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,7 +119,7 @@
 }
 .sel-status-tag {
   font-size: var(--font-size-xs);
-  color: #fff;
+  color: var(--color-text-white);
   background: var(--color-primary);
   border-radius: 20rpx;
   padding: 4rpx 16rpx;
@@ -123,22 +141,7 @@
 .sel-value.primary { color: var(--color-primary); font-weight: 600; }
 .ml { margin-left: 16rpx; }
 
-/* ── 订单信息卡片 ── */
-.info-card {
-  margin: 12rpx 0 0;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
-  padding: 28rpx;
-  box-shadow: var(--shadow-sm);
-}
-
-.info-card-title {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 20rpx;
-}
-
+/* ── 订单信息区 ── */
 .info-card-body {
   display: flex;
   align-items: flex-start;
@@ -151,7 +154,7 @@
   flex-shrink: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: #f3f4f6;
+  background: var(--color-bg-gray);
 }
 
 .cover-img {
@@ -166,7 +169,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6;
+  background: var(--color-bg-gray);
 }
 
 .placeholder-icon {
@@ -201,14 +204,9 @@
   font-weight: 600;
 }
 
-/* ── 工序导航行 ── */
-/* ── 通用区块卡片 ── */
+/* ── 通用区块 ── */
 .section-card {
-  margin: var(--card-gap-y) 0 0;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
   padding: 24rpx 28rpx;
-  box-shadow: var(--shadow-sm);
 }
 
 .section-header {
@@ -242,7 +240,7 @@
 
 .mode-btn-active {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
 }
 
 /* ── 统计栏 ── */
@@ -274,7 +272,7 @@
 }
 
 .stat-value.warning {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 /* ── 右上角统计徽章 ── */
@@ -358,7 +356,7 @@
 .simple-row {
   display: flex;
   padding: 12rpx 12rpx;
-  border-bottom: 1rpx solid #f3f4f6;
+  border-bottom: 1rpx solid var(--color-border-light);
 }
 
 .simple-row:last-child {
@@ -401,7 +399,7 @@
 .print-btn {
   flex: 1;
   height: 88rpx;
-  color: #fff;
+  color: var(--color-text-white);
   border-radius: var(--radius-xl);
   font-size: var(--font-size-sm);
   font-weight: 600;
@@ -413,11 +411,11 @@
 }
 
 .print-btn--bundle {
-  background: #1677ff;
+  background: var(--color-primary);
 }
 
 .print-btn--transfer {
-  background: #fa8c16;
+  background: var(--color-warning);
 }
 
 .print-btn::after {
@@ -514,7 +512,7 @@
 .bpo-panel {
   width: 100%;
   height: 85vh;
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 24rpx 24rpx 0 0;
   display: flex;
   flex-direction: column;
@@ -525,7 +523,7 @@
   display: flex;
   align-items: center;
   padding: 28rpx 32rpx 20rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid var(--color-border-light);
   flex-shrink: 0;
   gap: 16rpx;
 }
@@ -546,7 +544,7 @@
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -559,8 +557,8 @@
   display: flex;
   align-items: flex-start;
   padding: 16rpx 32rpx;
-  background: #fafafa;
-  border-bottom: 1rpx solid #f0f0f0;
+  background: var(--color-bg-gray);
+  border-bottom: 1rpx solid var(--color-border-light);
   flex-shrink: 0;
   gap: 12rpx;
   flex-wrap: wrap;
@@ -584,15 +582,15 @@
   border-radius: 8rpx;
   font-size: 22rpx;
   color: var(--color-text-secondary);
-  background: #fff;
-  border: 1rpx solid #d9d9d9;
+  background: var(--color-bg-card);
+  border: 1rpx solid var(--color-border);
   transition: all 0.15s ease;
 }
 
 .bpo-size-chip--active {
-  color: #fff;
-  background: #1677ff;
-  border-color: #1677ff;
+  color: var(--color-text-white);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   transform: scale(1.05);
 }
 
@@ -607,14 +605,14 @@
   border-radius: 8rpx;
   font-size: 22rpx;
   color: var(--color-text-secondary);
-  background: #fff;
-  border: 1rpx solid #d9d9d9;
+  background: var(--color-bg-card);
+  border: 1rpx solid var(--color-border);
 }
 
 .bpo-mode-opt--active {
-  color: #fff;
-  background: #1677ff;
-  border-color: #1677ff;
+  color: var(--color-text-white);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* WiFi 配置 */
@@ -625,12 +623,12 @@
 .bpo-wifi-input {
   flex: 1;
   height: 52rpx;
-  border: 1rpx solid #d9d9d9;
+  border: 1rpx solid var(--color-border);
   border-radius: 8rpx;
   padding: 0 12rpx;
   font-size: 24rpx;
   color: var(--color-text-primary);
-  background: #fff;
+  background: var(--color-bg-card);
   min-width: 0;
 }
 
@@ -644,7 +642,7 @@
 
 .bpo-wifi-hint {
   padding: 8rpx 32rpx 12rpx;
-  background: #fafafa;
+  background: var(--color-bg-gray);
 }
 
 .bpo-wifi-hint-text {
@@ -655,7 +653,7 @@
 /* 打印方向选择（横版/竖版） */
 .bpo-orient-bar {
   padding: 8rpx 24rpx;
-  border-top: 1rpx solid #f0f0f0;
+  border-top: 1rpx solid var(--color-border-light);
 }
 
 .bpo-orient-btn {
@@ -663,13 +661,13 @@
   border-radius: 6rpx;
   font-size: 22rpx;
   color: var(--color-text-secondary);
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
   margin-left: 8rpx;
 }
 
 .bpo-orient-btn--active {
-  color: #fff;
-  background: #1677ff;
+  color: var(--color-text-white);
+  background: var(--color-primary);
 }
 
 /* 竖版预览卡片 */
@@ -717,8 +715,8 @@
 
 /* 菲号标签卡片 — 左QR + 右文字，尺寸由 inline style 动态控制 */
 .bpo-label-card {
-  background: #fff;
-  border: 2rpx solid #000;
+  background: var(--color-bg-card);
+  border: 2rpx solid var(--color-text-primary);
   border-radius: 8rpx;
   padding: 24rpx;
   box-sizing: border-box;
@@ -742,7 +740,7 @@
 }
 
 .bpol-qr-loading {
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
   border-radius: 8rpx;
   display: flex;
   align-items: center;
@@ -752,7 +750,7 @@
 
 .bpol-qr-loading-text {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 /* 隐藏的 canvas 用于生成 QR 码 */
@@ -767,7 +765,7 @@
 
 .bpol-line {
   font-size: 24rpx;
-  color: #000;
+  color: var(--color-text-primary);
   line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -785,7 +783,7 @@
   gap: 20rpx;
   padding: 20rpx 32rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-  border-top: 1rpx solid #f0f0f0;
+  border-top: 1rpx solid var(--color-border-light);
   flex-shrink: 0;
 }
 
@@ -802,13 +800,13 @@
 }
 
 .bpo-btn--cancel {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
 }
 
 .bpo-btn--print {
-  background: #1677ff;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-white);
 }
 
 .bpo-btn::after {
@@ -826,14 +824,14 @@
   text-align: center;
   padding: 16rpx 0;
   font-size: 28rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   border-bottom: 2rpx solid transparent;
 }
 
 .hub-tab--active {
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 600;
-  border-bottom-color: #1677ff;
+  border-bottom-color: var(--color-primary);
 }
 
 /* ═══════ 转单 Panel 样式 ═══════ */
@@ -849,7 +847,7 @@
   display: flex;
   gap: 12rpx;
   margin-left: 16rpx;
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
   border-radius: 12rpx;
   padding: 4rpx;
 }
@@ -858,26 +856,32 @@
   padding: 12rpx 28rpx;
   border-radius: 10rpx;
   font-size: 26rpx;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .tf-mode-opt--active {
-  background: #fff;
-  color: #1677ff;
+  background: var(--color-bg-card);
+  color: var(--color-primary);
   font-weight: 600;
   box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.06);
+}
+
+.tf-mode-opt--disabled {
+  color: var(--color-text-disabled, #bbb);
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 分区标题 */
 .tf-section {
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid var(--color-border-light);
 }
 
 .tf-label {
   font-size: 28rpx;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   margin-bottom: 12rpx;
   display: block;
 }
@@ -894,7 +898,7 @@
   align-items: center;
   gap: 8rpx;
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--color-primary);
 }
 
 .tf-select-all-icon {
@@ -903,7 +907,7 @@
 
 .tf-count {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   margin-left: 12rpx;
   flex: 1;
 }
@@ -918,7 +922,7 @@
   display: flex;
   align-items: center;
   padding: 14rpx 0;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--color-border-light);
 }
 
 .tf-bundle-item--disabled {
@@ -926,7 +930,7 @@
 }
 
 .tf-bundle-item--checked {
-  background: rgba(22,119,255,0.04);
+  background: var(--color-blue-lighter);
   border-radius: 8rpx;
   margin: 0 -8rpx;
   padding: 14rpx 8rpx;
@@ -935,7 +939,7 @@
 .tf-bundle-check {
   width: 44rpx;
   font-size: 32rpx;
-  color: #1677ff;
+  color: var(--color-primary);
   text-align: center;
 }
 
@@ -947,13 +951,13 @@
 .tf-bundle-label {
   font-size: 28rpx;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   display: block;
 }
 
 .tf-bundle-detail {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   margin-top: 2rpx;
 }
 
@@ -976,7 +980,7 @@
   display: flex;
   align-items: flex-start;
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--color-border-light);
 }
 
 .tf-process-row--disabled {
@@ -987,7 +991,7 @@
 .tf-process-check {
   width: 52rpx;
   font-size: 34rpx;
-  color: #1677ff;
+  color: var(--color-primary);
   text-align: center;
   padding-top: 4rpx;
 }
@@ -1004,15 +1008,15 @@
 
 .tf-process-code {
   font-size: 22rpx;
-  color: #999;
-  background: #f5f5f5;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-gray);
   padding: 2rpx 10rpx;
   border-radius: 6rpx;
 }
 
 .tf-process-name {
   font-size: 28rpx;
-  color: #333;
+  color: var(--color-text-primary);
   flex: 1;
 }
 
@@ -1041,22 +1045,22 @@
 
 .tf-new-price-label {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .tf-price-input {
   width: 160rpx;
   height: 60rpx;
-  border: 1rpx solid #d9d9d9;
+  border: 1rpx solid var(--color-border);
   border-radius: 8rpx;
   text-align: center;
   font-size: 26rpx;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .tf-price-unit {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 /* 工厂/人员 Tab */
@@ -1071,14 +1075,14 @@
   text-align: center;
   padding: 16rpx 0;
   font-size: 26rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   border-bottom: 2rpx solid transparent;
 }
 
 .tf-tab-item--active {
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 600;
-  border-bottom-color: #1677ff;
+  border-bottom-color: var(--color-primary);
 }
 
 /* 搜索结果 */
@@ -1091,29 +1095,29 @@
   display: flex;
   align-items: center;
   padding: 18rpx 12rpx;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--color-border-light);
 }
 
 .tf-result-item--active {
-  background: rgba(22,119,255,0.06);
+  background: var(--color-blue-lighter);
   border-radius: 8rpx;
 }
 
 .tf-result-name {
   font-size: 28rpx;
-  color: #333;
+  color: var(--color-text-primary);
   flex: 1;
 }
 
 .tf-result-sub {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   margin-right: 12rpx;
 }
 
 .tf-result-check {
   font-size: 28rpx;
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -1122,11 +1126,11 @@
   text-align: center;
   padding: 20rpx 0;
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .tf-more {
-  color: #1677ff;
+  color: var(--color-primary);
 }
 
 /* 备注 */
@@ -1134,19 +1138,18 @@
   width: 100%;
   min-height: 100rpx;
   font-size: 26rpx;
-  color: #333;
-  background: #f8f8f8;
+  color: var(--color-text-primary);
+  background: var(--color-bg-gray);
   border-radius: 12rpx;
   padding: 16rpx;
   box-sizing: border-box;
 }
 
-/* 提交按钮 */
 .submit-btn {
   flex: 1;
   height: 88rpx;
-  background: #1677ff;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-white);
   border-radius: 44rpx;
   font-size: 30rpx;
   font-weight: 600;
@@ -1328,6 +1331,6 @@
 .cutting-summary-value.purple { color: var(--color-purple, #9333ea); }
 
 .print-btn--generate {
-  background: #1677ff;
+  background: var(--color-primary);
   flex: 1;
 }

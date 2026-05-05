@@ -73,428 +73,433 @@
   </view>
 
   <block wx:else>
-    <!-- ① 订单信息头部卡片 -->
-    <view class="info-card">
-      <view class="info-card-title">订单信息</view>
-      <view class="info-card-body">
-        <!-- 左侧款式缩略图 -->
-        <view class="cover-wrap" bindtap="previewImage">
-          <image-preview
-            wx:if="{{coverImage}}"
-            class="cover-img"
-            src="{{coverImage}}"
-            mode="aspectFill"
-          />
-          <view wx:else class="cover-placeholder">
-            <text class="cover-abbr">{{orderInfo.styleNo ? orderInfo.styleNo.substring(0,2) : '--'}}</text>
-          </view>
+    <view class="detail-body">
+
+      <!-- ① 订单信息头部 -->
+      <view class="detail-section">
+        <view class="section-header">
+          <text class="section-title">订单信息</text>
         </view>
-        <!-- 右侧信息网格 -->
-        <view class="info-grid">
-          <view class="grid-item">
-            <text class="grid-label">订单号</text>
-            <text class="grid-value bold">{{orderNo}}</text>
+        <view class="info-card-body">
+          <!-- 左侧款式缩略图 -->
+          <view class="cover-wrap" bindtap="previewImage">
+            <image-preview
+              wx:if="{{coverImage}}"
+              class="cover-img"
+              src="{{coverImage}}"
+              mode="aspectFill"
+            />
+            <view wx:else class="cover-placeholder">
+              <text class="cover-abbr">{{orderInfo.styleNo ? orderInfo.styleNo.substring(0,2) : '--'}}</text>
+            </view>
           </view>
-          <view class="grid-item">
-            <text class="grid-label">款号</text>
-            <text class="grid-value">{{orderInfo.styleNo || '-'}}</text>
-          </view>
-          <view class="grid-item">
-            <text class="grid-label">订单数量</text>
-            <text class="grid-value primary">{{orderTotal || 0}}件</text>
-          </view>
-          <view class="grid-item">
-            <text class="grid-label">交期</text>
-            <text class="grid-value">{{orderInfo.expectedShipDate || orderInfo.deliveryDate || '-'}}</text>
+          <!-- 右侧信息网格 -->
+          <view class="info-grid">
+            <view class="grid-item">
+              <text class="grid-label">订单号</text>
+              <text class="grid-value bold">{{orderNo}}</text>
+            </view>
+            <view class="grid-item">
+              <text class="grid-label">款号</text>
+              <text class="grid-value">{{orderInfo.styleNo || '-'}}</text>
+            </view>
+            <view class="grid-item">
+              <text class="grid-label">订单数量</text>
+              <text class="grid-value primary">{{orderTotal || 0}}件</text>
+            </view>
+            <view class="grid-item">
+              <text class="grid-label">交期</text>
+              <text class="grid-value">{{orderInfo.expectedShipDate || orderInfo.deliveryDate || '-'}}</text>
+            </view>
           </view>
         </view>
       </view>
-    </view>
 
-    <!-- ═══════ 裁剪分扎表单（无菲号时显示，与 PC 端 CuttingRatioPanel 一致）═══════ -->
-    <block wx:if="{{showCuttingForm}}">
-      <view class="section-card">
-        <view class="section-header">
-          <text class="section-title">裁剪分扎</text>
-        </view>
-
-        <!-- 每扎件数 + 损耗加放 — 同行 -->
-        <view class="common-inputs-row">
-          <view class="half-input">
-            <text class="input-label">每扎件数</text>
-            <input
-              class="input-field"
-              type="digit"
-              value="{{bundleSize}}"
-              placeholder="默认20"
-              bindinput="onBundleSizeInput"
-            />
-            <text class="input-suffix">件/扎</text>
+      <!-- ═══════ 裁剪分扎表单（无菲号时显示）═══════ -->
+      <block wx:if="{{showCuttingForm}}">
+        <view class="detail-section">
+          <view class="section-header">
+            <text class="section-title">裁剪分扎</text>
           </view>
-          <view class="half-input">
-            <text class="input-label">损耗加放</text>
-            <input
-              class="input-field"
-              type="digit"
-              value="{{excessRate}}"
-              placeholder="0"
-              bindinput="onExcessRateInput"
-            />
-            <text class="input-suffix">%</text>
-          </view>
-        </view>
 
-        <!-- 无数据提示 -->
-        <view wx:if="{{!cuttingLinesHasData}}" class="empty-hint-box">
-          <text class="empty-hint-text">暂无尺码数据，请检查订单明细</text>
-        </view>
-
-        <!-- 裁剪明细表 -->
-        <block wx:if="{{cuttingLinesHasData}}">
-          <view class="cutting-table">
-            <view class="table-header">
-              <text class="th th-color">颜色</text>
-              <text class="th th-size">尺码</text>
-              <text class="th th-order">下单</text>
-              <text class="th th-cut">裁剪</text>
-              <text class="th th-bundles">扎数</text>
-              <text class="th th-last">末扎</text>
+          <!-- 每扎件数 + 损耗加放 — 同行 -->
+          <view class="common-inputs-row">
+            <view class="half-input">
+              <text class="input-label">每扎件数</text>
+              <input
+                class="input-field"
+                type="digit"
+                value="{{bundleSize}}"
+                placeholder="默认20"
+                bindinput="onBundleSizeInput"
+              />
+              <text class="input-suffix">件/扎</text>
             </view>
-            <view wx:for="{{cuttingOrderLines}}" wx:key="key" class="table-row">
-              <text class="td td-color">{{item.color}}</text>
-              <text class="td td-size">{{item.size}}</text>
-              <text class="td td-order">{{item.orderedQty}}</text>
-              <text class="td td-cut highlight">{{item.cuttingQty}}</text>
-              <text class="td td-bundles">{{item.bundleCount}}</text>
-              <view class="td td-last">
-                <input
-                  class="td-last-input"
-                  type="digit"
-                  value="{{item.lastBundleQty}}"
-                  data-idx="{{index}}"
-                  bindinput="onLastBundleQtyInput"
-                />
+            <view class="half-input">
+              <text class="input-label">损耗加放</text>
+              <input
+                class="input-field"
+                type="digit"
+                value="{{excessRate}}"
+                placeholder="0"
+                bindinput="onExcessRateInput"
+              />
+              <text class="input-suffix">%</text>
+            </view>
+          </view>
+
+          <!-- 无数据提示 -->
+          <view wx:if="{{!cuttingLinesHasData}}" class="empty-hint-box">
+            <text class="empty-hint-text">暂无尺码数据，请检查订单明细</text>
+          </view>
+
+          <!-- 裁剪明细表 -->
+          <block wx:if="{{cuttingLinesHasData}}">
+            <view class="cutting-table">
+              <view class="table-header">
+                <text class="th th-color">颜色</text>
+                <text class="th th-size">尺码</text>
+                <text class="th th-order">下单</text>
+                <text class="th th-cut">裁剪</text>
+                <text class="th th-bundles">扎数</text>
+                <text class="th th-last">末扎</text>
+              </view>
+              <view wx:for="{{cuttingOrderLines}}" wx:key="key" class="table-row">
+                <text class="td td-color">{{item.color}}</text>
+                <text class="td td-size">{{item.size}}</text>
+                <text class="td td-order">{{item.orderedQty}}</text>
+                <text class="td td-cut highlight">{{item.cuttingQty}}</text>
+                <text class="td td-bundles">{{item.bundleCount}}</text>
+                <view class="td td-last">
+                  <input
+                    class="td-last-input"
+                    type="digit"
+                    value="{{item.lastBundleQty}}"
+                    data-idx="{{index}}"
+                    bindinput="onLastBundleQtyInput"
+                  />
+                </view>
               </view>
             </view>
+
+            <!-- 分扎描述行 -->
+            <view class="bundle-desc-area">
+              <view
+                wx:for="{{cuttingOrderLines}}"
+                wx:key="key"
+                wx:if="{{item.bundleDisplay && item.bundleDisplay !== '-'}}"
+                class="bundle-desc-row"
+              >
+                <text class="bundle-desc-label">{{item.color}} {{item.size}}</text>
+                <text class="bundle-desc-value">{{item.bundleDisplay}}</text>
+              </view>
+            </view>
+          </block>
+
+          <!-- 汇总 -->
+          <view class="cutting-summary-bar" wx:if="{{cuttingLinesHasData}}">
+            <view class="cutting-summary-item">
+              <text class="cutting-summary-label">总下单</text>
+              <text class="cutting-summary-value green">{{cuttingSummary.totalOrdered}}</text>
+            </view>
+            <view class="cutting-summary-item">
+              <text class="cutting-summary-label">总裁剪</text>
+              <text class="cutting-summary-value orange">{{cuttingSummary.totalCutting}}</text>
+            </view>
+            <view class="cutting-summary-item">
+              <text class="cutting-summary-label">总扎数</text>
+              <text class="cutting-summary-value purple">{{cuttingSummary.totalBundles}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- ═══════ 有菲号时：Tab 栏 + 详情/转单 Panel ═══════ -->
+      <block wx:else>
+        <!-- Tab 栏（菲号明细 | 转单） -->
+        <view class="detail-section" style="padding:12rpx 16rpx;">
+          <view class="hub-tabs">
+            <view class="hub-tab {{activeTab == 'detail' ? 'hub-tab--active' : ''}}" bindtap="onTabSwitch" data-tab="detail">菲号明细</view>
+            <view class="hub-tab {{activeTab == 'transfer' ? 'hub-tab--active' : ''}}" bindtap="onTabSwitch" data-tab="transfer">转单</view>
+          </view>
+        </view>
+
+        <!-- ═══════ Panel: 菲号明细 ═══════ -->
+        <block wx:if="{{activeTab == 'detail'}}">
+          <!-- ③ 数量明细 -->
+          <view class="detail-section">
+            <view class="section-header">
+              <text class="section-title">数量明细</text>
+              <view class="mode-toggle">
+                <view
+                  class="mode-btn {{viewMode === 'detailed' ? 'mode-btn-active' : ''}}"
+                  data-mode="detailed"
+                  bindtap="onModeChange"
+                >详细</view>
+                <view
+                  class="mode-btn {{viewMode === 'simple' ? 'mode-btn-active' : ''}}"
+                  data-mode="simple"
+                  bindtap="onModeChange"
+                >简单</view>
+              </view>
+            </view>
+
+            <!-- 统计行：下单 + 裁货差异 -->
+            <view class="stat-bar">
+              <text class="stat-item">
+                <text class="stat-label">裁货总数 </text>
+                <text class="stat-value primary">{{cuttingTotal}}件</text>
+              </text>
+              <text wx:if="{{cuttingExcess > 0}}" class="stat-item">
+                <text class="stat-label">（下单{{orderTotal}} + 损耗{{cuttingExcess}}）</text>
+              </text>
+            </view>
+
+            <!-- 裁货元信息行 -->
+            <view class="cut-meta-row">
+              <view class="cut-meta-item">
+                <text class="cut-meta-label">床次</text>
+                <text class="cut-meta-value">{{maxBedNo}}</text>
+              </view>
+              <view class="cut-meta-item">
+                <text class="cut-meta-label">操作人</text>
+                <text class="cut-meta-value">{{operatorName}}</text>
+              </view>
+            </view>
+            <view class="cut-meta-time">
+              <text class="cut-meta-label">编菲时间 </text>
+              <text class="cut-meta-value-sm">{{latestBundleTime}}</text>
+            </view>
+
+            <!-- 无数据 -->
+            <view wx:if="{{!cuttingMatrix.rows.length}}" class="empty-hint">
+              <text>暂无裁货记录</text>
+            </view>
+
+            <!-- 详细模式 -->
+            <block wx:elif="{{viewMode === 'detailed'}}">
+              <sku-matrix sizeMatrix="{{cuttingMatrix}}" mode="compact" />
+            </block>
+
+            <!-- 简单模式 -->
+            <block wx:else>
+              <view class="simple-list">
+                <view class="simple-header">
+                  <text class="simple-cell simple-cell-color">颜色</text>
+                  <text class="simple-cell simple-cell-qty">合计件数</text>
+                </view>
+                <view
+                  wx:for="{{cuttingSimpleRows}}"
+                  wx:key="color"
+                  class="simple-row"
+                >
+                  <text class="simple-cell simple-cell-color">{{item.color}}</text>
+                  <text class="simple-cell simple-cell-qty bold">{{item.total}}</text>
+                </view>
+              </view>
+            </block>
           </view>
 
-          <!-- 分扎描述行 -->
-          <view class="bundle-desc-area">
-            <view
-              wx:for="{{cuttingOrderLines}}"
-              wx:key="key"
-              wx:if="{{item.bundleDisplay && item.bundleDisplay !== '-'}}"
-              class="bundle-desc-row"
-            >
-              <text class="bundle-desc-label">{{item.color}} {{item.size}}</text>
-              <text class="bundle-desc-value">{{item.bundleDisplay}}</text>
+          <!-- ⑤ 菲号明细列表 -->
+          <view class="detail-section" wx:if="{{_rawBundles.length > 0}}">
+            <view class="section-header">
+              <text class="section-title">菲号明细</text>
+              <text class="section-sub">共 {{_rawBundles.length}} 个菲号</text>
+            </view>
+            <view class="bundle-list">
+              <view class="bundle-list-header">
+                <text class="blh-cell blh-cell--no">菲号</text>
+                <text class="blh-cell blh-cell--code">二维码</text>
+                <text class="blh-cell blh-cell--color">颜色</text>
+                <text class="blh-cell blh-cell--size">尺码</text>
+                <text class="blh-cell blh-cell--qty">数量</text>
+              </view>
+              <view class="bundle-list-body">
+                <view
+                  wx:for="{{_rawBundles}}"
+                  wx:key="id"
+                  class="bundle-row"
+                >
+                  <text class="blc-cell blc-cell--no bold">{{item.bundleLabel || item.bundleNo || '-'}}</text>
+                  <text class="blc-cell blc-cell--code">{{item.qrCode || '-'}}</text>
+                  <text class="blc-cell blc-cell--color">{{item.color || '-'}}</text>
+                  <text class="blc-cell blc-cell--size">{{item.size || '-'}}</text>
+                  <text class="blc-cell blc-cell--qty">{{item.quantity || 0}}</text>
+                </view>
+              </view>
             </view>
           </view>
         </block>
 
-        <!-- 汇总 -->
-        <view class="cutting-summary-bar" wx:if="{{cuttingLinesHasData}}">
-          <view class="cutting-summary-item">
-            <text class="cutting-summary-label">总下单</text>
-            <text class="cutting-summary-value green">{{cuttingSummary.totalOrdered}}</text>
-          </view>
-          <view class="cutting-summary-item">
-            <text class="cutting-summary-label">总裁剪</text>
-            <text class="cutting-summary-value orange">{{cuttingSummary.totalCutting}}</text>
-          </view>
-          <view class="cutting-summary-item">
-            <text class="cutting-summary-label">总扎数</text>
-            <text class="cutting-summary-value purple">{{cuttingSummary.totalBundles}}</text>
-          </view>
-        </view>
-      </view>
-    </block>
-
-    <!-- ═══════ 有菲号时：Tab 栏 + 详情/转单 Panel ═══════ -->
-    <block wx:else>
-      <!-- Tab 栏（菲号明细 | 转单） -->
-      <view class="section-card" style="padding:12rpx 16rpx;">
-        <view class="hub-tabs">
-          <view class="hub-tab {{activeTab == 'detail' ? 'hub-tab--active' : ''}}" bindtap="onTabSwitch" data-tab="detail">菲号明细</view>
-          <view class="hub-tab {{activeTab == 'transfer' ? 'hub-tab--active' : ''}}" bindtap="onTabSwitch" data-tab="transfer">转单</view>
-        </view>
-      </view>
-
-    <!-- ═══════ Panel: 菲号明细 ═══════ -->
-    <block wx:if="{{activeTab == 'detail'}}">
-
-    <!-- ③ 数量明细（下单+裁货合并，去重） -->
-    <view class="section-card">
-      <view class="section-header">
-        <text class="section-title">数量明细</text>
-        <view class="mode-toggle">
-          <view
-            class="mode-btn {{viewMode === 'detailed' ? 'mode-btn-active' : ''}}"
-            data-mode="detailed"
-            bindtap="onModeChange"
-          >详细</view>
-          <view
-            class="mode-btn {{viewMode === 'simple' ? 'mode-btn-active' : ''}}"
-            data-mode="simple"
-            bindtap="onModeChange"
-          >简单</view>
-        </view>
-      </view>
-
-      <!-- 统计行：下单 + 裁货差异 -->
-      <view class="stat-bar">
-        <text class="stat-item">
-          <text class="stat-label">裁货总数 </text>
-          <text class="stat-value primary">{{cuttingTotal}}件</text>
-        </text>
-        <text wx:if="{{cuttingExcess > 0}}" class="stat-item">
-          <text class="stat-label">（下单{{orderTotal}} + 损耗{{cuttingExcess}}）</text>
-        </text>
-      </view>
-
-      <!-- 裁货元信息行 -->
-      <view class="cut-meta-row">
-        <view class="cut-meta-item">
-          <text class="cut-meta-label">床次</text>
-          <text class="cut-meta-value">{{maxBedNo}}</text>
-        </view>
-        <view class="cut-meta-item">
-          <text class="cut-meta-label">操作人</text>
-          <text class="cut-meta-value">{{operatorName}}</text>
-        </view>
-      </view>
-      <view class="cut-meta-time">
-        <text class="cut-meta-label">编菲时间 </text>
-        <text class="cut-meta-value-sm">{{latestBundleTime}}</text>
-      </view>
-
-      <!-- 无数据 -->
-      <view wx:if="{{!cuttingMatrix.rows.length}}" class="empty-hint">
-        <text>暂无裁货记录</text>
-      </view>
-
-      <!-- 详细模式 -->
-      <block wx:elif="{{viewMode === 'detailed'}}">
-        <sku-matrix sizeMatrix="{{cuttingMatrix}}" mode="compact" />
-      </block>
-
-      <!-- 简单模式 -->
-      <block wx:else>
-        <view class="simple-list">
-          <view class="simple-header">
-            <text class="simple-cell simple-cell-color">颜色</text>
-            <text class="simple-cell simple-cell-qty">合计件数</text>
-          </view>
-          <view
-            wx:for="{{cuttingSimpleRows}}"
-            wx:key="color"
-            class="simple-row"
-          >
-            <text class="simple-cell simple-cell-color">{{item.color}}</text>
-            <text class="simple-cell simple-cell-qty bold">{{item.total}}</text>
-          </view>
-        </view>
-      </block>
-    </view>
-
-    <!-- ⑤ 菲号明细列表 -->
-    <view class="section-card" wx:if="{{_rawBundles.length > 0}}">
-      <view class="section-header">
-        <text class="section-title">菲号明细</text>
-        <text class="section-sub">共 {{_rawBundles.length}} 个菲号</text>
-      </view>
-      <view class="bundle-list">
-        <view class="bundle-list-header">
-          <text class="blh-cell blh-cell--no">菲号</text>
-          <text class="blh-cell blh-cell--code">二维码</text>
-          <text class="blh-cell blh-cell--color">颜色</text>
-          <text class="blh-cell blh-cell--size">尺码</text>
-          <text class="blh-cell blh-cell--qty">数量</text>
-        </view>
-        <view class="bundle-list-body">
-          <view
-            wx:for="{{_rawBundles}}"
-            wx:key="id"
-            class="bundle-row"
-          >
-            <text class="blc-cell blc-cell--no bold">{{item.bundleLabel || item.bundleNo || '-'}}</text>
-            <text class="blc-cell blc-cell--code">{{item.qrCode || '-'}}</text>
-            <text class="blc-cell blc-cell--color">{{item.color || '-'}}</text>
-            <text class="blc-cell blc-cell--size">{{item.size || '-'}}</text>
-            <text class="blc-cell blc-cell--qty">{{item.quantity || 0}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-  </block>
-  </block>
-  </block>
-
-  <!-- ═══════ Panel: 转单 ═══════ -->
-  <block wx:if="{{activeTab == 'transfer' && !showCuttingForm}}">
-    <view class="section-card">
-      <view class="section-header" style="margin-bottom:12rpx;">
-        <text class="section-title">转单信息</text>
-      </view>
-
-      <!-- 转单模式 -->
-      <view class="tf-mode-row">
-        <text class="tf-label">模式</text>
-        <view class="tf-mode-options">
-          <view
-            class="tf-mode-opt {{transferMode == 'whole' ? 'tf-mode-opt--active' : ''}}"
-            bindtap="onTransferModeChange" data-mode="whole"
-          >整单转</view>
-          <view
-            class="tf-mode-opt {{transferMode == 'bundle' ? 'tf-mode-opt--active' : ''}}"
-            bindtap="onTransferModeChange" data-mode="bundle"
-          >菲号裁片转</view>
-        </view>
-      </view>
-
-      <!-- 菲号选择（裁片转模式） -->
-      <view class="tf-section" wx:if="{{transferMode == 'bundle'}}">
-        <view class="tf-flex-row">
-          <text class="tf-label">选择菲号</text>
-          <text class="tf-count">{{selectedBundleCount}}{{_tfBundlesLoading ? '...' : ''}}/{{_tfBundles.length}}</text>
-          <view class="tf-select-all" bindtap="onToggleAllBundles">
-            <text class="tf-select-all-icon">{{allSelected ? '✓' : '○'}}</text>
-            <text>全选</text>
-          </view>
-        </view>
-        <scroll-view scroll-y class="tf-bundles-list" wx:if="{{_tfBundles.length}}">
-          <view
-            wx:for="{{_tfBundles}}"
-            wx:key="id"
-            class="tf-bundle-item {{item._disabled ? 'tf-bundle-item--disabled' : ''}} {{selectedBundles[item.id] ? 'tf-bundle-item--checked' : ''}}"
-            bindtap="onToggleBundle"
-            data-id="{{item.id}}"
-          >
-            <view class="tf-bundle-check">{{selectedBundles[item.id] ? '✓' : '○'}}</view>
-            <view class="tf-bundle-info">
-              <text class="tf-bundle-label">{{item.bundleLabel}}</text>
-              <text class="tf-bundle-detail">{{item.color}} / {{item.size}} × {{item.quantity}}</text>
+        <!-- ═══════ Panel: 转单 ═══════ -->
+        <block wx:if="{{activeTab == 'transfer'}}">
+          <view class="detail-section">
+            <view class="section-header" style="margin-bottom:12rpx;">
+              <text class="section-title">转单信息</text>
             </view>
-            <text class="tf-bundle-status" wx:if="{{item._disabled || item._partialScanned}}">{{item._statusCn}}</text>
-          </view>
-        </scroll-view>
-      </view>
 
-      <!-- 工序单价 -->
-      <view class="tf-section">
-        <view class="tf-flex-row">
-          <text class="tf-label">工序单价</text>
-          <text class="tf-count">{{selectedProcessCount}}{{processesLoading ? '...' : ''}}/{{processes.length}}</text>
-          <view class="tf-select-all" bindtap="onToggleAllProcesses">
-            <text class="tf-select-all-icon">{{allProcessSelected ? '✓' : '○'}}</text>
-            <text>全选</text>
-          </view>
-        </view>
-        <view wx:if="{{processes.length}}" class="tf-processes-list">
-          <view wx:for="{{processes}}" wx:key="processCode" class="tf-process-row {{item._completed ? 'tf-process-row--disabled' : ''}}">
-            <view class="tf-process-check" bindtap="onToggleTransferProcess" data-code="{{item.processCode}}">
-              <text>{{item._completed ? '⊠' : (selectedProcessCodes[item.processCode] ? '☑' : '☐')}}</text>
-            </view>
-            <view class="tf-process-body">
-              <view class="tf-process-top">
-                <text class="tf-process-code">{{item.processCode}}</text>
-                <text class="tf-process-name">{{item.processName}}</text>
-                <text class="tf-process-price">{{item.priceText}}</text>
-                <text class="tf-process-status" wx:if="{{item._completed}}">已完成</text>
-                <text class="tf-process-status tf-process-status--partial" wx:elif="{{item._partialScanned}}">部分已扫</text>
-              </view>
-              <view class="tf-process-price-row" wx:if="{{selectedProcessCodes[item.processCode]}}">
-                <text class="tf-new-price-label">新单价</text>
-                <input
-                  class="tf-price-input"
-                  type="digit"
-                  placeholder="{{item.pricePlaceholder}}"
-                  value="{{priceOverrides[item.processCode] || ''}}"
-                  bindinput="onPriceInput"
-                  data-code="{{item.processCode}}"
-                />
-                <text class="tf-price-unit">元/件</text>
+            <!-- 转单模式 -->
+            <view class="tf-mode-row">
+              <text class="tf-label">模式</text>
+              <view class="tf-mode-options">
+                <view
+                  class="tf-mode-opt {{transferMode == 'whole' ? 'tf-mode-opt--active' : ''}}"
+                  bindtap="onTransferModeChange" data-mode="whole"
+                >整单转</view>
+                <view
+                  class="tf-mode-opt {{transferMode == 'bundle' ? 'tf-mode-opt--active' : ''}} {{!hasBundles ? 'tf-mode-opt--disabled' : ''}}"
+                  bindtap="onTransferModeChange" data-mode="bundle"
+                >菲号裁片转{{!hasBundles ? '(需先生成菲号)' : ''}}</view>
               </view>
             </view>
-          </view>
-        </view>
-      </view>
 
-      <!-- 目标工厂/人员 Tab -->
-      <view class="tf-section">
-        <view class="tf-tab-row">
-          <view class="tf-tab-item {{transferTab == 'factory' ? 'tf-tab-item--active' : ''}}" bindtap="onTransferTabChange" data-tab="factory">目标工厂</view>
-          <view class="tf-tab-item {{transferTab == 'user' ? 'tf-tab-item--active' : ''}}" bindtap="onTransferTabChange" data-tab="user">目标人员</view>
-        </view>
-
-        <view wx:if="{{transferTab == 'factory'}}">
-          <view class="search-row">
-            <icon type="search" size="14" color="#999"></icon>
-            <input class="search-row-input" placeholder="搜索工厂名称" value="{{factoryKeyword}}" bindinput="onFactoryKeywordInput" />
-          </view>
-          <scroll-view scroll-y class="tf-result-list" wx:if="{{factories.length}}">
-            <view
-              wx:for="{{factories}}"
-              wx:key="id"
-              class="tf-result-item {{selectedFactory && selectedFactory.id == item.id ? 'tf-result-item--active' : ''}}"
-              bindtap="onSelectFactory"
-              data-factory="{{item}}"
-            >
-              <text class="tf-result-name">{{item.factoryName || item.name || '-'}}</text>
-              <text class="tf-result-sub">{{item.contactPerson || item.contact || item.contactPhone || item.phone || ''}}</text>
-              <text class="tf-result-check" wx:if="{{selectedFactory && selectedFactory.id == item.id}}">✓</text>
+            <!-- 菲号选择（裁片转模式） -->
+            <view class="tf-section" wx:if="{{transferMode == 'bundle'}}">
+              <view class="tf-flex-row">
+                <text class="tf-label">选择菲号</text>
+                <text class="tf-count">{{selectedBundleCount}}{{_tfBundlesLoading ? '...' : ''}}/{{_tfBundles.length}}</text>
+                <view class="tf-select-all" bindtap="onToggleAllBundles">
+                  <text class="tf-select-all-icon">{{allSelected ? '✓' : '○'}}</text>
+                  <text>全选</text>
+                </view>
+              </view>
+              <scroll-view scroll-y class="tf-bundles-list" wx:if="{{_tfBundles.length}}">
+                <view
+                  wx:for="{{_tfBundles}}"
+                  wx:key="id"
+                  class="tf-bundle-item {{item._disabled ? 'tf-bundle-item--disabled' : ''}} {{selectedBundles[item.id] ? 'tf-bundle-item--checked' : ''}}"
+                  bindtap="onToggleBundle"
+                  data-id="{{item.id}}"
+                >
+                  <view class="tf-bundle-check">{{selectedBundles[item.id] ? '✓' : '○'}}</view>
+                  <view class="tf-bundle-info">
+                    <text class="tf-bundle-label">{{item.bundleLabel}}</text>
+                    <text class="tf-bundle-detail">{{item.color}} / {{item.size}} × {{item.quantity}}</text>
+                  </view>
+                  <text class="tf-bundle-status" wx:if="{{item._disabled || item._partialScanned}}">{{item._statusCn}}</text>
+                </view>
+              </scroll-view>
             </view>
-          </scroll-view>
-          <view wx:if="{{factoriesLoading}}" class="tf-loading">搜索中...</view>
-          <view wx:elif="{{factoryHasMore}}" class="tf-more" bindtap="onLoadMoreFactories">加载更多</view>
-        </view>
 
-        <view wx:if="{{transferTab == 'user'}}">
-          <view class="search-row">
-            <icon type="search" size="14" color="#999"></icon>
-            <input class="search-row-input" placeholder="搜索人员姓名" value="{{userKeyword}}" bindinput="onUserKeywordInput" />
-          </view>
-          <scroll-view scroll-y class="tf-result-list" wx:if="{{users.length}}">
-            <view
-              wx:for="{{users}}"
-              wx:key="id"
-              class="tf-result-item {{selectedUser && selectedUser.id == item.id ? 'tf-result-item--active' : ''}}"
-              bindtap="onSelectUser"
-              data-user="{{item}}"
-            >
-              <text class="tf-result-name">{{item.name || item.username || '-'}}</text>
-              <text class="tf-result-sub">{{item.username || item.phone || ''}}</text>
-              <text class="tf-result-check" wx:if="{{selectedUser && selectedUser.id == item.id}}">✓</text>
+            <!-- 工序单价 -->
+            <view class="tf-section">
+              <view class="tf-flex-row">
+                <text class="tf-label">工序单价</text>
+                <text class="tf-count">{{selectedProcessCount}}{{processesLoading ? '...' : ''}}/{{processes.length}}</text>
+                <view class="tf-select-all" bindtap="onToggleAllProcesses">
+                  <text class="tf-select-all-icon">{{allProcessSelected ? '✓' : '○'}}</text>
+                  <text>全选</text>
+                </view>
+              </view>
+              <view wx:if="{{processes.length}}" class="tf-processes-list">
+                <view wx:for="{{processes}}" wx:key="processCode" class="tf-process-row {{item._completed ? 'tf-process-row--disabled' : ''}}">
+                  <view class="tf-process-check" bindtap="onToggleTransferProcess" data-code="{{item.processCode}}">
+                    <text>{{item._completed ? '⊠' : (selectedProcessCodes[item.processCode] ? '☑' : '☐')}}</text>
+                  </view>
+                  <view class="tf-process-body">
+                    <view class="tf-process-top">
+                      <text class="tf-process-code">{{item.processCode}}</text>
+                      <text class="tf-process-name">{{item.processName}}</text>
+                      <text class="tf-process-price">{{item.priceText}}</text>
+                      <text class="tf-process-status" wx:if="{{item._completed}}">已完成</text>
+                      <text class="tf-process-status tf-process-status--partial" wx:elif="{{item._partialScanned}}">部分已扫</text>
+                    </view>
+                    <view class="tf-process-price-row" wx:if="{{selectedProcessCodes[item.processCode]}}">
+                      <text class="tf-new-price-label">新单价</text>
+                      <input
+                        class="tf-price-input"
+                        type="digit"
+                        placeholder="{{item.pricePlaceholder}}"
+                        value="{{priceOverrides[item.processCode] || ''}}"
+                        bindinput="onPriceInput"
+                        data-code="{{item.processCode}}"
+                      />
+                      <text class="tf-price-unit">元/件</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
             </view>
-          </scroll-view>
-          <view wx:if="{{usersLoading}}" class="tf-loading">搜索中...</view>
-          <view wx:elif="{{userHasMore}}" class="tf-more" bindtap="onLoadMoreUsers">加载更多</view>
-        </view>
-      </view>
 
-      <!-- 备注 -->
-      <view class="tf-section" style="border-bottom:none;">
-        <text class="tf-label">备注</text>
-        <textarea class="tf-remark" placeholder="请输入转单备注（可选）" auto-height value="{{remark}}" bindinput="onRemarkInput" />
-      </view>
+            <!-- 目标工厂/人员 Tab -->
+            <view class="tf-section">
+              <view class="tf-tab-row">
+                <view class="tf-tab-item {{transferTab == 'factory' ? 'tf-tab-item--active' : ''}}" bindtap="onTransferTabChange" data-tab="factory">目标工厂</view>
+                <view class="tf-tab-item {{transferTab == 'user' ? 'tf-tab-item--active' : ''}}" bindtap="onTransferTabChange" data-tab="user">目标人员</view>
+              </view>
+
+              <view wx:if="{{transferTab == 'factory'}}">
+                <view class="search-row">
+                  <icon type="search" size="14" color="#999"></icon>
+                  <input class="search-row-input" placeholder="搜索工厂名称" value="{{factoryKeyword}}" bindinput="onFactoryKeywordInput" />
+                </view>
+                <scroll-view scroll-y class="tf-result-list" wx:if="{{factories.length}}">
+                  <view
+                    wx:for="{{factories}}"
+                    wx:key="id"
+                    class="tf-result-item {{selectedFactory && selectedFactory.id == item.id ? 'tf-result-item--active' : ''}}"
+                    bindtap="onSelectFactory"
+                    data-factory="{{item}}"
+                  >
+                    <text class="tf-result-name">{{item.factoryName || item.name || '-'}}</text>
+                    <text class="tf-result-sub">{{item.contactPerson || item.contact || item.contactPhone || item.phone || ''}}</text>
+                    <text class="tf-result-check" wx:if="{{selectedFactory && selectedFactory.id == item.id}}">✓</text>
+                  </view>
+                </scroll-view>
+                <view wx:if="{{factoriesLoading}}" class="tf-loading">搜索中...</view>
+                <view wx:elif="{{factoryHasMore}}" class="tf-more" bindtap="onLoadMoreFactories">加载更多</view>
+              </view>
+
+              <view wx:if="{{transferTab == 'user'}}">
+                <view class="search-row">
+                  <icon type="search" size="14" color="#999"></icon>
+                  <input class="search-row-input" placeholder="搜索人员姓名" value="{{userKeyword}}" bindinput="onUserKeywordInput" />
+                </view>
+                <scroll-view scroll-y class="tf-result-list" wx:if="{{users.length}}">
+                  <view
+                    wx:for="{{users}}"
+                    wx:key="id"
+                    class="tf-result-item {{selectedUser && selectedUser.id == item.id ? 'tf-result-item--active' : ''}}"
+                    bindtap="onSelectUser"
+                    data-user="{{item}}"
+                  >
+                    <text class="tf-result-name">{{item.name || item.username || '-'}}</text>
+                    <text class="tf-result-sub">{{item.username || item.phone || ''}}</text>
+                    <text class="tf-result-check" wx:if="{{selectedUser && selectedUser.id == item.id}}">✓</text>
+                  </view>
+                </scroll-view>
+                <view wx:if="{{usersLoading}}" class="tf-loading">搜索中...</view>
+                <view wx:elif="{{userHasMore}}" class="tf-more" bindtap="onLoadMoreUsers">加载更多</view>
+              </view>
+            </view>
+
+            <!-- 备注 -->
+            <view class="tf-section" style="border-bottom:none;">
+              <text class="tf-label">备注</text>
+              <textarea class="tf-remark" placeholder="请输入转单备注（可选）" auto-height value="{{remark}}" bindinput="onRemarkInput" />
+            </view>
+          </view>
+
+          <!-- 转单提交栏 -->
+          <view class="bottom-bar" style="position:static;margin-top:0;">
+            <button class="submit-btn" bindtap="onSubmitTransfer" loading="{{submitting}}">确认转单</button>
+          </view>
+        </block>
+      </block>
+
+    </view><!-- /detail-body -->
+
+    <!-- 底部操作栏（裁剪分扎模式 → 确认生成菲号） -->
+    <view class="bottom-bar" wx:if="{{orderNo && showCuttingForm}}">
+      <button class="print-btn print-btn--generate" bindtap="onGenerateBundles" loading="{{cuttingSubmitting}}">{{cuttingSubmitting ? '生成中…' : '确认生成菲号'}}</button>
     </view>
 
-    <!-- 转单提交栏 -->
-    <view class="bottom-bar" style="position:static;margin-top:0;">
-      <button class="submit-btn" bindtap="onSubmitTransfer" loading="{{submitting}}">确认转单</button>
+    <!-- 底部操作栏（菲号明细模式 → 打印 + 转单） -->
+    <view class="bottom-bar" wx:elif="{{orderNo && activeTab == 'detail' && !showCuttingForm}}">
+      <button class="print-btn print-btn--bundle" bindtap="onPrintBundleLabels" wx:if="{{hasBundles}}">打印菲号</button>
+      <button class="print-btn print-btn--transfer" bindtap="onTransfer">转单</button>
     </view>
   </block>
-
-  <!-- 底部操作栏（裁剪分扎模式 → 确认生成菲号） -->
-  <view class="bottom-bar" wx:if="{{orderNo && showCuttingForm}}">
-    <button class="print-btn print-btn--generate" bindtap="onGenerateBundles" loading="{{cuttingSubmitting}}">{{cuttingSubmitting ? '生成中…' : '确认生成菲号'}}</button>
-  </view>
-
-  <!-- 底部操作栏（菲号明细模式 → 打印 + 转单） -->
-  <view class="bottom-bar" wx:elif="{{orderNo && activeTab == 'detail' && !showCuttingForm}}">
-    <button class="print-btn print-btn--bundle" bindtap="onPrintBundleLabels" wx:if="{{hasBundles}}">打印菲号</button>
-    <button class="print-btn print-btn--transfer" bindtap="onTransfer">转单</button>
-  </view>
 
   <!-- 菲号标签预览弹层（与PC端 CuttingPrintPreviewModal 一致） -->
   <view class="bpo-overlay" wx:if="{{showBundlePrintModal}}" catchtap="onCloseBundlePrint">

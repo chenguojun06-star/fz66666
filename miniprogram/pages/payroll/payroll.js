@@ -361,10 +361,7 @@ Page({
     });
   },
 
-  goFeedback(e) {
-    var sid = e && e.currentTarget ? e.currentTarget.dataset.sid : '';
-    var url = '/pages/payroll/feedback/index';
-    if (sid) url += '?settlementId=' + encodeURIComponent(sid);
-    wx.navigateTo({ url: url });
+  goFeedback() {
+    wx.navigateTo({ url: '/pages/payroll/feedback/index' });
   },
 });
