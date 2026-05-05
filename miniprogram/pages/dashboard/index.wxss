@@ -421,6 +421,34 @@
   background: var(--color-success);
 }
 
+/* 子工序列表 */
+.node-sub-procs {
+  margin-top: 6px;
+  padding-left: 4px;
+  border-left: 2px solid var(--color-border);
+}
+.sub-proc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+.sp-name {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+.sp-price {
+  font-size: 11px;
+  color: var(--color-primary);
+  font-weight: 500;
+  margin-left: 8px;
+}
+.sp-price--free {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
 /* SKU 表格 */
 .sku-scroll {
   width: 100%;

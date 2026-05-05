@@ -113,16 +113,43 @@ Page({
     if (typeof wf === 'string') {
       try { wf = JSON.parse(wf); } catch (e) { wf = null; }
     }
+
+    // 优先从 processesByNode 读取子工序明细（含各子工序真实单价）
+    // processesByNode 的 key 是父节点名（中文名或英文ID），value 是子工序数组
+    var processesByNode = wf && wf.processesByNode;
+    if (processesByNode && typeof processesByNode === 'object') {
+      var result = [];
+      Object.keys(processesByNode).forEach(function (stageKey) {
+        var subList = processesByNode[stageKey];
+        if (!Array.isArray(subList)) return;
+        subList.forEach(function (n, i) {
+          result.push({
+            id: n.id || ('proc_' + stageKey + '_' + i),
+            processName: n.name || n.processName || '',
+            processCode: n.processCode || String(i + 1).padStart(2, '0'),
+            progressStage: stageKey,
+            machineType: n.machineType || '',
+            standardTime: n.standardTime || 0,
+            price: Number(n.unitPrice || n.price || 0),
+            difficulty: n.difficulty || '',
+            sortOrder: n.sortOrder != null ? n.sortOrder : i
+          });
+        });
+      });
+      if (result.length > 0) return result;
+    }
+
+    // 回退：从 nodes（父节点汇总）读取，兼容旧格式或无子工序订单
     var nodes = (wf && wf.nodes) || [];
     return nodes.map(function (n, i) {
       return {
         id: n.id || ('proc_' + i),
         processName: n.name || '',
         processCode: n.processCode || String(i + 1).padStart(2, '0'),
-        progressStage: n.progressStage || '',
+        progressStage: n.progressStage || n.name || '',
         machineType: n.machineType || '',
         standardTime: n.standardTime || 0,
-        price: n.unitPrice || n.price || 0,
+        price: Number(n.unitPrice || n.price || 0),
         difficulty: n.difficulty || '',
         sortOrder: n.sortOrder != null ? n.sortOrder : i
       };
@@ -135,8 +162,12 @@ Page({
 
     processes.forEach(function (p) {
       var raw = p.progressStage || '';
-      var stageId = stageMap[raw] ? raw : STAGE_NAME_TO_ID[raw];
-      if (!stageId) stageId = 'carSewing';
+      // 1. 精确匹配英文ID（如 'tailProcess', 'carSewing'）
+      var stageId = stageMap[raw] ? raw : null;
+      // 2. 精确匹配中文名（如 '尾部', '车缝'）
+      if (!stageId) stageId = STAGE_NAME_TO_ID[raw] || null;
+      // 3. 兜底归入尾部（与PC端默认规则一致）
+      if (!stageId) stageId = 'tailProcess';
       stageMap[stageId].processes.push(p);
     });
 

@@ -126,11 +126,16 @@ Page({
     this.setData({ orderNo, orderId });
 
     if (orderNo) {
-      this.loadAll(orderNo);
-      if (options.tab === 'transfer') {
-        this.setData({ activeTab: 'transfer' });
-        setTimeout(() => this._initTransferPanel(), 800);
-      }
+      // 判断是否为外部「转单」入口（如 dashboard 的"转单"按钮传入 tab=transfer）
+      const isTransferEntry = options.tab === 'transfer';
+      this.loadAll(orderNo).then(() => {
+        if (isTransferEntry) {
+          // 整单转单不依赖菲号，loadCuttingBundles 可能已将 showCuttingForm 设为 true
+          // 这里强制覆盖：进入转单 Tab，隐藏裁剪分扎表单
+          this.setData({ activeTab: 'transfer', showCuttingForm: false });
+          this._initTransferPanel();
+        }
+      });
     } else {
       // 从首页直接进来（无参数）→ 显示订单列表供选择
       this.setData({ showOrderList: true });
@@ -638,6 +643,10 @@ Page({
 
   onTransferModeChange(e) {
     var mode = e.currentTarget.dataset.mode;
+    if (mode === 'bundle' && !this.data.hasBundles) {
+      toast.info('尚未生成菲号，请先在裁剪分扎中生成菲号后再进行裁片转单');
+      return;
+    }
     this.setData({ transferMode: mode, selectedBundles: {}, allSelected: false, selectedBundleCount: 0 });
   },
 
@@ -761,28 +770,85 @@ Page({
       });
     }
 
+    // 从 progressWorkflowJson 构建工序列表（不依赖扫码记录，订单有没有裁剪都能显示）
+    function buildFromWorkflow(wfRaw) {
+      if (!wfRaw) return [];
+      try {
+        var wf = typeof wfRaw === 'string' ? JSON.parse(wfRaw) : wfRaw;
+        var result = [];
+        // 优先用 processesByNode（含子工序明细单价）
+        var pbn = wf && wf.processesByNode;
+        if (pbn && typeof pbn === 'object') {
+          Object.keys(pbn).forEach(function (stageKey) {
+            var subList = pbn[stageKey];
+            if (!Array.isArray(subList)) return;
+            subList.forEach(function (n) {
+              var code = n.id || n.processCode || n.name || '-';
+              var price = Number(n.unitPrice || n.price || 0);
+              var s = scanMap[code];
+              result.push({
+                processCode: code,
+                processName: n.name || n.processName || '-',
+                unitPrice: price,
+                priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
+                pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
+                progressStage: stageKey,
+                _completed: !!(s && s.total > 0 && s.scanned === s.total),
+                _partialScanned: !!(s && s.scanned > 0 && s.scanned < s.total),
+              });
+            });
+          });
+          if (result.length > 0) return result;
+        }
+        // 回退：从 nodes（父节点汇总）构建
+        var nodes = (wf && wf.nodes) || [];
+        return nodes.map(function (n) {
+          var code = n.id || n.processCode || n.name || '-';
+          var price = Number(n.unitPrice || n.price || 0);
+          var s = scanMap[code];
+          return {
+            processCode: code,
+            processName: n.name || '-',
+            unitPrice: price,
+            priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
+            pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
+            progressStage: n.progressStage || '-',
+            _completed: !!(s && s.total > 0 && s.scanned === s.total),
+            _partialScanned: !!(s && s.scanned > 0 && s.scanned < s.total),
+          };
+        });
+      } catch (e) { return []; }
+    }
+
     api.production.queryOrderProcesses(d.orderNo).then(function (res) {
       var list = Array.isArray(res) ? res : (res && res.records) || [];
-      var processes = list.map(function (p) {
-        var code = p.processCode || p.code || '-';
-        var price = Number(p.unitPrice || p.price || 0);
-        var s = scanMap[code];
-        var completed = s && s.total > 0 && s.scanned === s.total;
-        var partialScanned = s && s.scanned > 0 && s.scanned < s.total;
-        return {
-          processCode: code,
-          processName: p.processName || p.name || '-',
-          unitPrice: price,
-          priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
-          pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
-          progressStage: p.progressStage || p.stage || '-',
-          _completed: completed,
-          _partialScanned: partialScanned,
-        };
-      });
-      that.setData({ processes: processes, processesLoading: false });
+      if (list.length > 0) {
+        // API 有数据时直接用（有扫码记录/跟踪记录的订单）
+        var processes = list.map(function (p) {
+          var code = p.processCode || p.code || '-';
+          var price = Number(p.unitPrice || p.price || 0);
+          var s = scanMap[code];
+          return {
+            processCode: code,
+            processName: p.processName || p.name || '-',
+            unitPrice: price,
+            priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
+            pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
+            progressStage: p.progressStage || p.stage || '-',
+            _completed: !!(s && s.total > 0 && s.scanned === s.total),
+            _partialScanned: !!(s && s.scanned > 0 && s.scanned < s.total),
+          };
+        });
+        that.setData({ processes: processes, processesLoading: false });
+      } else {
+        // API 返回空（无扫码记录时）→ fallback 到订单的 progressWorkflowJson
+        var wfProcesses = buildFromWorkflow(d.orderInfo && d.orderInfo.progressWorkflowJson);
+        that.setData({ processes: wfProcesses, processesLoading: false });
+      }
     }).catch(function () {
-      that.setData({ processes: [], processesLoading: false });
+      // 请求失败 → 同样 fallback 到 progressWorkflowJson
+      var wfProcesses = buildFromWorkflow(d.orderInfo && d.orderInfo.progressWorkflowJson);
+      that.setData({ processes: wfProcesses, processesLoading: false });
     });
   },
 

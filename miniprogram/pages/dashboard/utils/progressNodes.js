@@ -153,9 +153,39 @@ function getNodeRateFromOrder(nodeName, order) {
   return -1;
 }
 
+/**
+ * 从 progressWorkflowJson 提取各父节点的子工序列表
+ * @param {Object|string} wfRaw - progressWorkflowJson 原始值
+ * @returns {Object} { 父节点名: [{name, unitPrice}] }
+ */
+function extractChildrenMap(wfRaw) {
+  if (!wfRaw) return {};
+  try {
+    var wf = typeof wfRaw === 'string' ? JSON.parse(wfRaw) : wfRaw;
+    var pbn = wf && wf.processesByNode;
+    if (!pbn || typeof pbn !== 'object') return {};
+    var result = {};
+    Object.keys(pbn).forEach(function (stageKey) {
+      var subList = pbn[stageKey];
+      if (!Array.isArray(subList)) return;
+      result[stageKey] = subList.map(function (sp) {
+        return {
+          name: sp.name || sp.processName || '',
+          unitPrice: Number(sp.unitPrice || sp.price || 0)
+        };
+      }).filter(function (sp) { return sp.name; });
+    });
+    return result;
+  } catch (e) { return {}; }
+}
+
 function buildProcessNodesWithRates(order) {
   var nodes = resolveNodesFromOrder(order);
   if (!nodes || !nodes.length) return [];
+
+  // 预先提取子工序 map，附加到每个父节点
+  var childrenMap = extractChildrenMap(order.progressWorkflowJson);
+
   var orderStatus = (order.status || '').trim().toLowerCase();
   var isCompletedOrClosed = orderStatus === 'completed' || orderStatus === 'closed';
   var progress = Number(order.productionProgress) || 0;
@@ -175,28 +205,29 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles)
       };
     }
+    var children = childrenMap[name] || [];
     if (rate >= 0) {
       hasAnyRate = true;
       if (rate > 0 && rate < 100) hasRealRate = true;
-      return { name: name, percent: rate, bundleInfo: bundleInfo };
+      return { name: name, percent: rate, bundleInfo: bundleInfo, children: children };
     }
-    return { name: name, percent: -1, bundleInfo: bundleInfo };
+    return { name: name, percent: -1, bundleInfo: bundleInfo, children: children };
   });
   if (isCompletedOrClosed) {
     return result.map(function (r) {
-      return { name: r.name, percent: 100, bundleInfo: r.bundleInfo };
+      return { name: r.name, percent: 100, bundleInfo: r.bundleInfo, children: r.children };
     });
   }
   if (hasAnyRate && hasRealRate) {
     return result.map(function (r) {
-      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo };
+      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, children: r.children };
     });
   }
   if (hasAnyRate && !hasRealRate) {
     var allHundred = result.every(function (r) { return r.percent === 100 || r.percent < 0; });
     if (allHundred) {
       return result.map(function (r) {
-        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo };
+        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, children: r.children };
       });
     }
   }
@@ -221,7 +252,7 @@ function buildProcessNodesWithRates(order) {
         remaining: Math.max(0, totalBundles - scannedBundles2)
       };
     }
-    return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2 };
+    return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, children: childrenMap[name2] || [] };
   });
 }
 
@@ -282,6 +313,7 @@ module.exports = {
   resolveNodesFromOrder,
   getNodeRateFromOrder,
   buildProcessNodesWithRates,
+  extractChildrenMap,
   calcOrderProgress,
   STAGE_RATE_MAP,
 };

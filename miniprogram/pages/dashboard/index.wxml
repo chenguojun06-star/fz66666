@@ -121,6 +121,14 @@
               <text class="node-bundle" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
               <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width:{{node.percent}}%"></view>
             </view>
+            <!-- 子工序列表 -->
+            <view class="node-sub-procs" wx:if="{{node.children && node.children.length > 0}}">
+              <view class="sub-proc-item" wx:for="{{node.children}}" wx:for-item="sp" wx:key="name">
+                <text class="sp-name">{{sp.name}}</text>
+                <text class="sp-price" wx:if="{{sp.unitPrice > 0}}">¥{{sp.unitPrice}}</text>
+                <text class="sp-price sp-price--free" wx:else>待定价</text>
+              </view>
+            </view>
           </view>
         </view>
 
