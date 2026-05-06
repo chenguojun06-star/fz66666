@@ -79,9 +79,6 @@ public class QualityScanExecutor {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired(required = false)
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
-
     @Autowired
     private QualityScanRecordFactory recordFactory;
 
@@ -90,9 +87,6 @@ public class QualityScanExecutor {
 
     @Autowired
     private ScanExecutorSupport executorSupport;
-
-    @Autowired
-    private ScanBroadcastService broadcastService;
 
     /**
      * 执行质检扫码
@@ -159,17 +153,7 @@ public class QualityScanExecutor {
         // 异步重新计算订单进度，使手机端 productionProgress 随质检进度实时更新
         executorSupport.recomputeProgressAsync(order.getId());
 
-        broadcastQualityScanSuccess(operatorId, operatorName, order, bundle, qty);
-
         return result;
-    }
-
-    private void broadcastQualityScanSuccess(String operatorId, String operatorName,
-                                              ProductionOrder order, CuttingBundle bundle, int qty) {
-        String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-        String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
-        String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
-        broadcastService.broadcastQualityScan(operatorId, operatorName, order, bNo, bColor, bSize, qty);
     }
 
     /**
@@ -227,9 +211,6 @@ public class QualityScanExecutor {
         result.put("cuttingBundle", bundle);
         result.put("nextScanType", "warehouse");
         result.put("nextStageHint", "下一环节: warehouse");
-
-        broadcastProcessStage("receive".equals(qualityStage) ? "质检领取" : "质检验收",
-                order, bundle, operatorId, operatorName, qty, false);
 
         try {
             if (processTrackingOrchestrator != null && bundle != null && hasText(bundle.getId())) {
@@ -343,8 +324,6 @@ public class QualityScanExecutor {
         result.put("cuttingBundle", bundle);
         result.put("nextScanType", "warehouse");
         result.put("nextStageHint", "下一环节: warehouse");
-        broadcastProcessStage(isUnqualified ? "质检不合格" : "质检合格",
-                order, bundle, operatorId, operatorName, qty, true);
         return result;
     }
 
@@ -511,15 +490,5 @@ public class QualityScanExecutor {
 
     private boolean hasText(String str) {
         return ScanExecutorSupport.hasText(str);
-    }
-
-    private void broadcastProcessStage(String processName, ProductionOrder order,
-                                        CuttingBundle bundle, String operatorId, String operatorName,
-                                        int quantity, boolean isCompleted) {
-        String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-        String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
-        String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
-        broadcastService.broadcastProcessStage(operatorId, operatorName, order,
-                bNo, bColor, bSize, processName, quantity, isCompleted);
     }
 }

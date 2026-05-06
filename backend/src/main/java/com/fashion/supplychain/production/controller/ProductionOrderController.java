@@ -103,17 +103,26 @@ public class ProductionOrderController {
                         // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题
                         java.util.Map<String, Object> enriched = objectMapper
                                 .convertValue(detail, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                        // 优先用 styleId 查款式信息；若 styleId 为空则用 styleNo 兜底（老订单 styleId 可能为 null）
+                        StyleInfo si = null;
                         if (StringUtils.hasText(detail.getStyleId())) {
-                            StyleInfo si = styleInfoService.getById(detail.getStyleId());
-                            if (si != null) {
-                                if (StringUtils.hasText(si.getCover())) {
-                                    enriched.put("coverImage", si.getCover());
-                                    enriched.put("styleImage", si.getCover());
-                                }
-                                if (StringUtils.hasText(si.getDescription())) {
-                                    enriched.put("description", si.getDescription());
-                                }
+                            si = styleInfoService.getById(detail.getStyleId());
+                        } else if (StringUtils.hasText(detail.getStyleNo())) {
+                            si = styleInfoService.lambdaQuery()
+                                    .eq(StyleInfo::getStyleNo, detail.getStyleNo())
+                                    .last("LIMIT 1")
+                                    .one();
+                        }
+                        if (si != null) {
+                            if (StringUtils.hasText(si.getCover())) {
+                                enriched.put("coverImage", si.getCover());
+                                enriched.put("styleImage", si.getCover());
                             }
+                            if (StringUtils.hasText(si.getDescription())) {
+                                enriched.put("description", si.getDescription());
+                            }
+                        }
+                        if (StringUtils.hasText(detail.getStyleId())) {
                             try {
                                 java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes =
                                         secondaryProcessService.listByStyleId(Long.valueOf(detail.getStyleId()));

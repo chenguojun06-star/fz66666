@@ -167,8 +167,10 @@ Page({
     var needColor = !detail.color;
     var needSize = !detail.size;
     var needDeliveryDate = !detail.deliveryDateDisplay;
+    // 款式封面图回填：onLoad 时后端可能因 styleId 为空而未返回图片（老订单常见）
+    var needCoverImage = !detail.coverImage;
 
-    if (!needColor && !needSize && !needDeliveryDate) {
+    if (!needColor && !needSize && !needDeliveryDate && !needCoverImage) {
       return;
     }
 
@@ -193,11 +195,12 @@ Page({
       }
     }
 
-    if (needDeliveryDate) {
+    if (needDeliveryDate || needCoverImage) {
       try {
         var source = orderDetail || {};
         var hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
-        if (!hasDelivery) {
+        // needCoverImage 时强制重新请求，确保拿到后端最新 coverImage（含 styleNo 查款式三级兜底）
+        if (!hasDelivery || needCoverImage) {
           var orderRes = await api.production.orderDetailByOrderNo(raw.orderNo);
           if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
             source = orderRes.records[0] || source;
@@ -205,13 +208,22 @@ Page({
             source = orderRes;
           }
         }
-        var dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
-        var dateText = this._formatYMD(dateVal);
-        if (dateText) {
-          patch['detail.deliveryDateDisplay'] = dateText;
+        if (needDeliveryDate) {
+          var dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
+          var dateText = this._formatYMD(dateVal);
+          if (dateText) {
+            patch['detail.deliveryDateDisplay'] = dateText;
+          }
+        }
+        // 回填款式封面图（后端 queryPage 路径会通过 styleNo 三级兜底填充 coverImage）
+        if (needCoverImage) {
+          var coverUrl = source.coverImage || source.styleImage || source.styleCover || '';
+          if (coverUrl) {
+            patch['detail.coverImage'] = getAuthedImageUrl(coverUrl);
+          }
         }
       } catch (e) {
-        console.warn('[scan-result] 回填交货日期失败:', e);
+        console.warn('[scan-result] 回填交货日期/封面图失败:', e);
       }
     }
 

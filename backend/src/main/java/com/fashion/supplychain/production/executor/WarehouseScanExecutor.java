@@ -79,9 +79,6 @@ public class WarehouseScanExecutor {
     private com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
     @Autowired
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
-
-    @Autowired
     private UCodeWarehouseScanExecutor uCodeWarehouseScanExecutor;
 
     @Autowired
@@ -89,9 +86,6 @@ public class WarehouseScanExecutor {
 
     @Autowired
     private WarehousingRecordFactory warehousingRecordFactory;
-
-    @Autowired
-    private ScanBroadcastService broadcastService;
 
     /**
      * 执行仓库入库扫码
@@ -149,7 +143,6 @@ public class WarehouseScanExecutor {
                 order, bundle, qty, warehouse, colorResolver, sizeResolver);
         updateProcessTrackingForWarehouse(bundle, order, operatorId, operatorName, sr);
         Map<String, Object> result = buildResult(bundle, order, sr);
-        notifyWarehouseScanSuccess(operatorId, operatorName, order, bundle, w, sr);
         return result;
     }
 
@@ -294,18 +287,6 @@ public class WarehouseScanExecutor {
         result.put("orderInfo", executorSupport.buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
         return result;
-    }
-
-    private void notifyWarehouseScanSuccess(String operatorId, String operatorName,
-                                             ProductionOrder order, CuttingBundle bundle,
-                                             ProductWarehousing w, ScanRecord sr) {
-        String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-        String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
-        String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
-        int whQty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
-        broadcastService.broadcastWarehouseScan(operatorId, operatorName, order,
-                order.getStyleNo(), bNo, bColor, bSize,
-                whQty, w.getWarehouse(), sr.getId(), null);
     }
 
     /**

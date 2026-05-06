@@ -48,9 +48,6 @@ public class UCodeWarehouseScanExecutor {
     @Autowired
     private WarehousingRecordFactory warehousingRecordFactory;
 
-    @Autowired
-    private ScanBroadcastService broadcastService;
-
     public Map<String, Object> execute(Map<String, Object> params, String requestId,
             String operatorId, String operatorName, ProductionOrder order) {
         int quantity = NumberUtils.toInt(params.get("quantity"));
@@ -92,8 +89,6 @@ public class UCodeWarehouseScanExecutor {
             log.warn("[U编码入库] 扫码记录重复: {}", requestId);
         }
 
-        broadcastService.broadcastWarehouseScan(operatorId, operatorName, order,
-                styleNo, "", color, size, quantity, warehouse, sr.getId(), "ucode");
         return buildUCodeSuccessResult(scanCode, quantity, order, styleNo, color, size);
     }
 
