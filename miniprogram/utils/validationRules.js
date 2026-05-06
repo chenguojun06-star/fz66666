@@ -55,6 +55,24 @@ const ValidationRules = {
     maxLength: 50,
     message: '款号长度 3-50 位',
   },
+  // 颜色和尺码不能含 "-"，否则会导致菲号 QR 码按 "-" 分割后字段错位，进而 SKU 验证失败
+  // QR码格式：{订单号}-{款号}-{颜色}-{尺码}-{数量}-{序号}，颜色/尺码含"-"与款号含"-"同等危险
+  color: {
+    name: '颜色',
+    required: true,
+    minLength: 1,
+    maxLength: 50,
+    pattern: /^[^-]+$/,
+    message: '颜色名称不能包含 "-"（会导致扫码 SKU 解析错误）',
+  },
+  size: {
+    name: '尺码',
+    required: true,
+    minLength: 1,
+    maxLength: 20,
+    pattern: /^[^-]+$/,
+    message: '尺码不能包含 "-"（会导致扫码 SKU 解析错误）',
+  },
   styleName: {
     name: '款号名称',
     required: true,

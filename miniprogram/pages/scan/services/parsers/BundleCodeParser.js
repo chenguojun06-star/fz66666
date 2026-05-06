@@ -78,30 +78,54 @@ class BundleCodeParser {
 
   /**
    * 按位置解析菲号（当找不到ST款号标识时）
-   * 假定格式：订单号-款号-颜色-尺码-数量-菲号序号
+   * 格式：订单号-款号-颜色-尺码-数量-菲号序号
+   *
+   * ⚠️ 重要：款号可能含 "-"（如 CN-22828），因此必须从后往前按固定偏移取值：
+   *   parts[n-1] = bundleNo（正整数）
+   *   parts[n-2] = quantity（正整数）
+   *   parts[n-3] = size
+   *   parts[n-4] = color
+   *   parts[1..n-5] joined with "-" = styleNo（支持款号含 "-"，如 CN-22828）
+   *   parts[0]    = orderNo
+   *
+   * 原有从前往后按 index 取值的写法在款号含 "-" 时会导致：
+   *   styleNo="CN"、color="22828"、size="克色"、quantity=null → 后端 SKU 验证失败
+   *
    * @param {string[]} parts - 分割后的部分
    * @returns {Object|null} 解析结果
    */
   static parseByPosition(parts) {
-    // 至少需要6个部分
+    // 至少需要6个部分：orderNo + styleNo + color + size + quantity + bundleNo
     if (parts.length < 6) {
       return null;
     }
 
     const orderNo = (parts[0] || '').trim();
-    const styleNo = (parts[1] || '').trim();
-
-    if (!orderNo || !styleNo) {
+    if (!orderNo) {
       return null;
     }
+
+    // 从后往前固定偏移取值（与后端 buildQrCode 生成顺序对应）
+    const n = parts.length;
+    const bundleNo = ParserUtils.parsePositiveInt(parts[n - 1]);
+    const quantity = ParserUtils.parsePositiveInt(parts[n - 2]);
+    const size = (parts[n - 3] || '').trim();
+    const color = (parts[n - 4] || '').trim();
+
+    // 款号：从 index=1 到 index=n-5 的所有部分 join('-')，支持款号含 "-"
+    const styleNoParts = parts.slice(1, n - 4);
+    if (styleNoParts.length === 0 || !color || !size) {
+      return null;
+    }
+    const styleNo = styleNoParts.join('-').trim();
 
     return {
       orderNo,
       styleNo,
-      color: (parts[2] || '').trim(),
-      size: (parts[3] || '').trim(),
-      quantity: ParserUtils.parsePositiveInt(parts[4]),
-      bundleNo: ParserUtils.parsePositiveInt(parts[5]),
+      color,
+      size,
+      quantity,
+      bundleNo,
     };
   }
 

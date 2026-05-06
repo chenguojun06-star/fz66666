@@ -504,7 +504,25 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         return data;
     }
 
+    /**
+     * 构建菲号二维码字符串。
+     * 格式：{orderNo}-{styleNo}-{color}-{size}-{quantity}-{bundleNo}
+     *
+     * ⚠️ 重要约束：款号（styleNo）可能含 "-"（如 CN-22828），已在解析器兼容。
+     * 颜色（color）和尺码（size）禁止含 "-"，否则即使倒序解析也会错位。
+     * 小程序 BundleCodeParser.parseByPosition 采用"从后往前固定偏移"方式解析。
+     * 如需修改本方法的字段顺序，必须同步修改 parseByPosition。
+     */
     private String buildQrCode(String orderNo, String styleNo, String color, String size, int quantity, int bundleNo) {
+        // ⚠️ 安全断言：颜色和尺码不能含 "-"，否则 QR 码按 "-" 分割后字段会错位
+        if (StringUtils.hasText(color) && color.contains("-")) {
+            log.warn("[BuildQrCode] 颜色名称含\"-\"将导致QR码解析错位，已自动替换: color={}", color);
+            color = color.replace("-", "");
+        }
+        if (StringUtils.hasText(size) && size.contains("-")) {
+            log.warn("[BuildQrCode] 尺码含\"-\"将导致QR码解析错位，已自动替换: size={}", size);
+            size = size.replace("-", "");
+        }
         StringBuilder sb = new StringBuilder();
         if (StringUtils.hasText(orderNo)) {
             sb.append(orderNo);

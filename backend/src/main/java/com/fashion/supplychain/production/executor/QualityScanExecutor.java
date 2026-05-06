@@ -88,6 +88,12 @@ public class QualityScanExecutor {
     @Autowired
     private QualityScanValidator validator;
 
+    @Autowired
+    private ScanExecutorSupport executorSupport;
+
+    @Autowired
+    private ScanBroadcastService broadcastService;
+
     /**
      * 执行质检扫码
      */
@@ -120,16 +126,13 @@ public class QualityScanExecutor {
             throw new IllegalStateException("未匹配到菲号");
         }
 
-        validateBundleFactoryAccess(bundle);
+        executorSupport.validateBundleFactoryAccess(bundle, "质检");
 
         if (order == null) {
             throw new IllegalStateException("未匹配到订单");
         }
 
-        String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if (OrderStatusConstants.isTerminal(st)) {
-            throw new IllegalStateException("订单已终态(" + st + ")，无法继续质检");
-        }
+        executorSupport.validateOrderNotTerminal(order, "质检");
 
         validator.validateNotAlreadyQualityCheckedByPc(order.getId(), bundle.getId());
 
@@ -154,13 +157,7 @@ public class QualityScanExecutor {
         }
 
         // 异步重新计算订单进度，使手机端 productionProgress 随质检进度实时更新
-        try {
-            if (productionOrderService != null) {
-                productionOrderService.recomputeProgressAsync(order.getId());
-            }
-        } catch (Exception e) {
-            log.warn("质检后进度异步重新计算失败: orderId={}", order.getId(), e);
-        }
+        executorSupport.recomputeProgressAsync(order.getId());
 
         broadcastQualityScanSuccess(operatorId, operatorName, order, bundle, qty);
 
@@ -169,20 +166,10 @@ public class QualityScanExecutor {
 
     private void broadcastQualityScanSuccess(String operatorId, String operatorName,
                                               ProductionOrder order, CuttingBundle bundle, int qty) {
-        try {
-            if (webSocketService != null) {
-                String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
-                String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-                String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
-                String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
-                String opName = operatorName != null ? operatorName : "";
-                webSocketService.notifyQualityChecked(operatorId, orderNo, "质检", qty, 0, opName, bNo, bColor, bSize);
-                webSocketService.notifyOrderProgressChanged(operatorId, orderNo, qty, "质检");
-                webSocketService.notifyDataChanged(operatorId, "ScanRecord", null, "create");
-            }
-        } catch (Exception wsEx) {
-            log.warn("[QualityScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
-        }
+        String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+        String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
+        String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
+        broadcastService.broadcastQualityScan(operatorId, operatorName, order, bNo, bColor, bSize, qty);
     }
 
     /**
@@ -523,37 +510,16 @@ public class QualityScanExecutor {
     }
 
     private boolean hasText(String str) {
-        return StringUtils.hasText(str);
-    }
-
-    private void validateBundleFactoryAccess(CuttingBundle bundle) {
-        if (bundle == null) return;
-        String bundleFactoryId = bundle.getFactoryId();
-        if (!StringUtils.hasText(bundleFactoryId)) return;
-        String workerFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
-        if (!bundleFactoryId.equals(workerFactoryId)) {
-            log.warn("[工厂隔离-质检] 扫码被拒绝: bundleId={}, bundleFactory={}, workerFactory={}", bundle.getId(), bundleFactoryId, workerFactoryId);
-            throw new com.fashion.supplychain.common.BusinessException("该菲号已转派至外发工厂，您无权质检扫码");
-        }
+        return ScanExecutorSupport.hasText(str);
     }
 
     private void broadcastProcessStage(String processName, ProductionOrder order,
                                         CuttingBundle bundle, String operatorId, String operatorName,
                                         int quantity, boolean isCompleted) {
-        if (webSocketService == null || order == null || bundle == null) return;
-        try {
-            String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
-            String bNo = bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-            String color = bundle.getColor() != null ? bundle.getColor() : "";
-            String size = bundle.getSize() != null ? bundle.getSize() : "";
-            String opName = operatorName != null ? operatorName : "";
-            if (isCompleted) {
-                webSocketService.notifyProcessStageCompleted(operatorId, orderNo, processName, opName, bNo, color, size, quantity);
-            } else {
-                webSocketService.notifyProcessStageReceived(operatorId, orderNo, processName, opName, bNo, color, size);
-            }
-        } catch (Exception e) {
-            log.warn("[QualityScan] 工序通知推送失败（不阻断流程）: orderNo={}, process={}", order.getOrderNo(), processName, e);
-        }
+        String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+        String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
+        String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
+        broadcastService.broadcastProcessStage(operatorId, operatorName, order,
+                bNo, bColor, bSize, processName, quantity, isCompleted);
     }
 }

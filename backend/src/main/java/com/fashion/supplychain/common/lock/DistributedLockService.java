@@ -170,7 +170,7 @@ public class DistributedLockService {
     public <T> T executeWithLock(String key, long timeout, TimeUnit unit, Supplier<T> supplier) {
         String lockValue = tryLock(key, timeout, unit);
         if (lockValue == null) {
-            throw new RuntimeException("获取分布式锁失败，请稍后重试: " + key);
+            throw new IllegalStateException("获取分布式锁失败，请稍后重试: " + key);
         }
         try {
             return supplier.get();

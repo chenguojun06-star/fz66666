@@ -979,6 +979,7 @@ GET /api/production/orders/by-order-no/{o `.run/backend.env` 环境变量
 8. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 9. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。`LocalDateTime.now()` 与 DB 的 `NOW()` 相差 8 小时。`1小时撤回等时间校验会对手动插入测试数据失效`。生产数据无问题（Spring Boot 写入时用 CST），但写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 生成 CST 时间。
 10. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
+11. **【2026-05-07】菲号 QR 码含 "-" 款号导致 SKU 无效**：后端 `CuttingBundleServiceImpl.buildQrCode` 格式为 `{orderNo}-{styleNo}-{color}-{size}-{quantity}-{bundleNo}`，当款号含 "-"（如 `CN-22828`）时，小程序 `BundleCodeParser.parseByPosition` 按固定 index 从前取值会得到错误字段（styleNo="CN"，color="22828"，quantity=null）→ 后端 SKU 验证失败报 "SKU信息无效"。**已修复**：`parseByPosition` 改为从后往前固定偏移（`n-1`=bundleNo，`n-2`=quantity，`n-3`=size，`n-4`=color，`[1..n-5]` join('-')=styleNo）。**永久规律**：任何修改 `buildQrCode` 字段顺序的人必须同步修改 `parseByPosition`；款号命名允许含 "-"，解析器已兼容。
 
 // ❌ 禁止：分散的状态流转
 POST /api/style-info/{id}/pattern-start
@@ -1179,7 +1180,8 @@ SKU = styleNo + color + size
 10. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 11. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 而非 `NOW()`，否则时间型校验（如1小时撤回）会因 8 小时差导致误判。生产运行时无此问题（Spring Boot 本身用 `LocalDateTime.now()` CST 写入）。
 12. **工资已结算的扫码记录禁止撤回**：`ScanRecord.payrollSettled = true` 时，`ScanRecordOrchestrator.undo()` 必须拒绝操作并报错 `"该扫码记录已参与工资结算，无法撤回"`。撤回扫码后必须同步触发仓库数量回滚，两步操作放在同一 `@Transactional` 中。
-13. **【2026-05-03】JacksonConfig 导致全局 Badge 99+ 精度问题（已修复）**：`JacksonConfig.java` 全局注册 `Long.class + long.class → ToStringSerializer.instance`（防止 18位数字 JS 精度溢出）。**副作用**：所有统计计数（long 类型）也被序列化为 JSON String，导致 Frontend `"91" + "8" = "918"` 字符串拼接而非数值求和。
+13. **【2026-05-07】菲号 QR 码含 "-" 款号导致 SKU 无效**：后端 `CuttingBundleServiceImpl.buildQrCode` 格式为 `{orderNo}-{styleNo}-{color}-{size}-{quantity}-{bundleNo}`，当款号含 "-"（如 `CN-22828`）时，小程序 `BundleCodeParser.parseByPosition` 按固定 index 从前取值会得到错误字段（styleNo="CN"，color="22828"，quantity=null）→ 后端 SKU 验证失败报 "SKU信息无效"。**已修复**：`parseByPosition` 改为从后往前固定偏移（`n-1`=bundleNo，`n-2`=quantity，`n-3`=size，`n-4`=color，`[1..n-5]` join('-')=styleNo）。**永久规律**：任何修改 `buildQrCode` 字段顺序的人必须同步修改 `parseByPosition`；款号命名允许含 "-"，解析器已兼容。
+14. **【2026-05-03】JacksonConfig 导致全局 Badge 99+ 精度问题（已修复）**：`JacksonConfig.java` 全局注册 `Long.class + long.class → ToStringSerializer.instance`（防止 18位数字 JS 精度溢出）。**副作用**：所有统计计数（long 类型）也被序列化为 JSON String，导致 Frontend `"91" + "8" = "918"` 字符串拼接而非数值求和。
     - **表现**：DailyTodoModal/Dashboard 显示「逾期订单99+」实际仅 3 个；Alert Bell 显示「99+」
     - **永久规律**：统计计数的新 Orchestrator 方法必须在返回前转为 int（如 `map.put("overdueCount", (int) overdueCount)`），规避 JacksonConfig 序列化。不要用 Long 返回计数值
     - **Frontend 防御**：所有接收统计计数字段的组件用 `Number()` 包裹（如 `Number(brief?.overdueOrderCount ?? 0)`），增强容错性

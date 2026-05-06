@@ -52,6 +52,8 @@ public class ProductionScanExecutor {
     private final ProductionProcessTrackingService trackingService;
     private final WebSocketService webSocketService;
 
+    private final ScanExecutorSupport executorSupport;
+
     public Map<String, Object> execute(Map<String, Object> params, String requestId, String operatorId,
                                        String operatorName, String scanType, int quantity, boolean autoProcess,
                                        java.util.function.Function<String, String> colorResolver,
@@ -116,8 +118,7 @@ public class ProductionScanExecutor {
             }
         }
 
-        try { productionOrderService.recomputeProgressFromRecords(ctx.order.getId()); }
-        catch (Exception e) { log.error("重新计算订单进度失败: orderId={}", ctx.order.getId(), e); }
+        executorSupport.recomputeProgressSync(ctx.order.getId());
 
         return buildSuccessResult(sr, ctx, isCutting);
     }
@@ -151,20 +152,10 @@ public class ProductionScanExecutor {
         if (OrderStatusConstants.isTerminal(orderStatus)) throw new IllegalStateException("订单已终态(" + orderStatus + ")，无法继续扫码");
         if (quantity <= 0) throw new IllegalArgumentException("扫码数量必须大于0");
 
-        validateBundleFactoryAccess(ctx.bundle);
+        executorSupport.validateBundleFactoryAccess(ctx.bundle, "生产");
         return ctx;
     }
 
-    private void validateBundleFactoryAccess(CuttingBundle bundle) {
-        if (bundle == null) return;
-        String bundleFactoryId = bundle.getFactoryId();
-        if (!StringUtils.hasText(bundleFactoryId)) return;
-        String workerFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
-        if (!bundleFactoryId.equals(workerFactoryId)) {
-            log.warn("[工厂隔离] 扫码被拒绝: bundleId={}, bundleFactory={}, workerFactory={}", bundle.getId(), bundleFactoryId, workerFactoryId);
-            throw new com.fashion.supplychain.common.BusinessException("该菲号已转派至外发工厂，您无权扫码");
-        }
-    }
 
     private void resolveProcessStage(ScanContext ctx, Map<String, Object> params, boolean autoProcess) {
         if (autoProcess) {
@@ -611,5 +602,7 @@ public class ProductionScanExecutor {
         return info;
     }
 
-    private boolean hasText(String str) { return StringUtils.hasText(str); }
+    private boolean hasText(String str) {
+        return ScanExecutorSupport.hasText(str);
+    }
 }

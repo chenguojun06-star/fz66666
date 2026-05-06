@@ -84,6 +84,15 @@ public class WarehouseScanExecutor {
     @Autowired
     private UCodeWarehouseScanExecutor uCodeWarehouseScanExecutor;
 
+    @Autowired
+    private ScanExecutorSupport executorSupport;
+
+    @Autowired
+    private WarehousingRecordFactory warehousingRecordFactory;
+
+    @Autowired
+    private ScanBroadcastService broadcastService;
+
     /**
      * 执行仓库入库扫码
      */
@@ -119,17 +128,13 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("未匹配到菲号");
         }
 
-        validateBundleFactoryAccess(bundle);
+        executorSupport.validateBundleFactoryAccess(bundle, "入库");
 
         if (order == null) {
             throw new IllegalStateException("未匹配到订单");
         }
 
-        // ★ 订单完成状态检查：所有环节统一拦截
-        String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim();
-        if (OrderStatusConstants.isTerminal(orderStatus)) {
-            throw new IllegalStateException("订单已终态(" + orderStatus + ")，无法继续入库");
-        }
+        executorSupport.validateOrderNotTerminal(order, "入库");
 
         if (isDefectiveReentry) {
             return handleDefectiveReentry(order, bundle, qty, operatorId, operatorName, warehouse);
@@ -161,11 +166,7 @@ public class WarehouseScanExecutor {
             log.warn("返修申报保存失败（不阻断流程）: orderId={}, bundle={}, error={}",
                     order.getId(), bundle.getBundleNo(), e.getMessage(), e);
         }
-        try {
-            productionOrderService.recomputeProgressFromRecords(order.getId());
-        } catch (Exception e) {
-            log.warn("返修申报后进度重算失败(不阻断): orderNo={}", order.getOrderNo(), e);
-        }
+        executorSupport.recomputeProgressSync(order.getId());
         Map<String, Object> repairResult = new HashMap<>();
         repairResult.put("success", true);
         repairResult.put("message", "返修完成申报成功，请通知质检员进行重新验收");
@@ -204,26 +205,8 @@ public class WarehouseScanExecutor {
     private ProductWarehousing saveWarehousingRecord(ProductionOrder order, CuttingBundle bundle,
                                                       int qty, String warehouse,
                                                       String operatorId, String operatorName) {
-        ProductWarehousing w = new ProductWarehousing();
-        w.setOrderId(order.getId());
-        w.setWarehousingType("scan");
-        w.setWarehouse(warehouse);
-        w.setWarehousingQuantity(qty);
-        w.setQualifiedQuantity(qty);
-        w.setUnqualifiedQuantity(0);
-        w.setQualityStatus("qualified");
-        w.setCuttingBundleQrCode(bundle.getQrCode());
-        if (StringUtils.hasText(operatorId)) {
-            w.setWarehousingOperatorId(operatorId);
-            w.setReceiverId(operatorId);
-            w.setQualityOperatorId(operatorId);
-        }
-        if (StringUtils.hasText(operatorName)) {
-            w.setWarehousingOperatorName(operatorName);
-            w.setReceiverName(operatorName);
-            w.setQualityOperatorName(operatorName);
-        }
-        w.setTenantId(order.getTenantId());
+        ProductWarehousing w = warehousingRecordFactory.createScanWarehousingRecord(
+                order, qty, warehouse, bundle.getQrCode(), operatorId, operatorName, null);
         try {
             boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
             if (!ok) {
@@ -240,13 +223,7 @@ public class WarehouseScanExecutor {
                     order.getId(), bundle.getBundleNo(), e.getMessage(), e);
             throw new IllegalStateException("入库操作失败：" + e.getMessage());
         }
-        try {
-            if (productionOrderService != null) {
-                productionOrderService.recomputeProgressFromRecords(order.getId());
-            }
-        } catch (Exception e) {
-            log.error("重新计算订单进度失败: orderId={}", order.getId(), e);
-        }
+        executorSupport.recomputeProgressSync(order.getId());
         return w;
     }
 
@@ -314,7 +291,7 @@ public class WarehouseScanExecutor {
         String whBundleNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
         result.put("message", "入库成功" + (whBundleNo.isEmpty() ? "" : " · 菲号" + whBundleNo));
         result.put("scanRecord", sr);
-        result.put("orderInfo", buildOrderInfo(order));
+        result.put("orderInfo", executorSupport.buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
         return result;
     }
@@ -322,23 +299,13 @@ public class WarehouseScanExecutor {
     private void notifyWarehouseScanSuccess(String operatorId, String operatorName,
                                              ProductionOrder order, CuttingBundle bundle,
                                              ProductWarehousing w, ScanRecord sr) {
-        try {
-            String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
-            String wh = w.getWarehouse() != null ? w.getWarehouse() : "";
-            int whQty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
-            String styleNo = order.getStyleNo() != null ? order.getStyleNo() : "";
-            String bNo = bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-            String bColor = bundle.getColor() != null ? bundle.getColor() : "";
-            String bSize = bundle.getSize() != null ? bundle.getSize() : "";
-            String opName = operatorName != null ? operatorName : "";
-            webSocketService.notifyScanSuccess(operatorId, orderNo, styleNo, "入库", whQty, opName, bNo);
-            webSocketService.notifyWarehouseIn(operatorId, orderNo, whQty, wh);
-            webSocketService.notifyOrderProgressChanged(operatorId, orderNo, whQty, "入库");
-            webSocketService.notifyDataChanged(operatorId, "ScanRecord", sr.getId(), "create");
-            webSocketService.notifyProcessStageCompleted(operatorId, orderNo, "入库", opName, bNo, bColor, bSize, whQty);
-        } catch (Exception wsEx) {
-            log.warn("[WarehouseScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
-        }
+        String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+        String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
+        String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
+        int whQty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
+        broadcastService.broadcastWarehouseScan(operatorId, operatorName, order,
+                order.getStyleNo(), bNo, bColor, bSize,
+                whQty, w.getWarehouse(), sr.getId(), null);
     }
 
     /**
@@ -525,26 +492,8 @@ public class WarehouseScanExecutor {
     /**
      * 构建订单信息
      */
-    private Map<String, Object> buildOrderInfo(ProductionOrder order) {
-        Map<String, Object> info = new HashMap<>();
-        info.put("orderNo", order.getOrderNo());
-        info.put("styleNo", order.getStyleNo());
-        return info;
-    }
-
     private boolean hasText(String str) {
-        return StringUtils.hasText(str);
-    }
-
-    private void validateBundleFactoryAccess(CuttingBundle bundle) {
-        if (bundle == null) return;
-        String bundleFactoryId = bundle.getFactoryId();
-        if (!StringUtils.hasText(bundleFactoryId)) return;
-        String workerFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
-        if (!bundleFactoryId.equals(workerFactoryId)) {
-            log.warn("[工厂隔离-入库] 扫码被拒绝: bundleId={}, bundleFactory={}, workerFactory={}", bundle.getId(), bundleFactoryId, workerFactoryId);
-            throw new com.fashion.supplychain.common.BusinessException("该菲号已转派至外发工厂，您无权入库扫码");
-        }
+        return ScanExecutorSupport.hasText(str);
     }
 
     /**
