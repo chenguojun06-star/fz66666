@@ -323,7 +323,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
         }
         style={{ marginBottom: 12 }}
       >
-        <div style={{ marginBottom: 12, display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 8 }}>
+        <div style={{ marginBottom: 12, display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 8 }}>
           <div style={cardStyle}>
             <span style={{ fontSize: 12, color: '#8c8c8c' }}>工序单价（总计）</span>
             <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>¥{totalCost.toFixed(2)}</span>

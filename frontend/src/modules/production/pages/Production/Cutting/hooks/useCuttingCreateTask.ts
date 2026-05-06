@@ -15,10 +15,9 @@ const isSelectableInternalUnit = (unit: OrganizationUnit) => {
   if (unit.nodeType !== 'DEPARTMENT') {
     return false;
   }
+  // 只匹配部门自身名称，不匹配路径（pathNames），避免"财务部门"因上级是"车间2"而被误选入
   const name = String(unit.unitName || unit.nodeName || '').trim();
-  const path = String(unit.pathNames || '').trim();
-  const content = `${name} ${path}`;
-  return INTERNAL_UNIT_KEYWORDS.some((keyword) => content.includes(keyword));
+  return INTERNAL_UNIT_KEYWORDS.some((keyword) => name.includes(keyword));
 };
 
 interface StyleOption {

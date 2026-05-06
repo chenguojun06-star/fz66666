@@ -1,6 +1,6 @@
 export const STAGE_ORDER: string[] = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
 
-export const CUTTING_STAGE_ORDER: string[] = ['裁剪', '二次工艺', '车缝', '尾部', '入库'];
+export const CUTTING_STAGE_ORDER: string[] = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
 
 export interface StageSpanInfo {
   rowSpan: number;
