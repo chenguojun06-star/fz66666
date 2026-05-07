@@ -120,12 +120,12 @@ public class FeedbackLearningOrchestrator {
         try {
             UserContext ctx = UserContext.get();
             IntelligenceFeedbackRecord record = new IntelligenceFeedbackRecord();
-            record.setTenantId(ctx != null ? ctx.getTenantId() : null);
-            record.setPredictionId(request.getPredictionId());
-            record.setSuggestionType(request.getSuggestionType());
+            record.setTenantId(ctx != null && ctx.getTenantId() != null ? ctx.getTenantId() : 0L);
+            record.setPredictionId(truncate(request.getPredictionId(), 100));
+            record.setSuggestionType(truncate(request.getSuggestionType(), 100));
             record.setFeedbackResult(Boolean.TRUE.equals(request.getAcceptedSuggestion())
                     ? "accepted" : "rejected");
-            record.setFeedbackReason(request.getReasonText());
+            record.setFeedbackReason(truncate(request.getReasonText(), 500));
             record.setDeviationMinutes(Math.abs(deviationMinutes));
             record.setCreateTime(LocalDateTime.now());
             record.setUpdateTime(LocalDateTime.now());
@@ -255,5 +255,16 @@ public class FeedbackLearningOrchestrator {
         if (accepted) stats.incrementAndGet(0);
         else stats.incrementAndGet(1);
         stats.incrementAndGet(2);
+    }
+
+    private String truncate(String value, int maxLen) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= maxLen) {
+            return trimmed;
+        }
+        return trimmed.substring(0, maxLen);
     }
 }

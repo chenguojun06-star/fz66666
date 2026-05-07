@@ -42,12 +42,12 @@ public class IntelligenceObservabilityOrchestrator {
                                  String userId) {
         try {
             IntelligenceMetrics metrics = new IntelligenceMetrics();
-            metrics.setTenantId(tenantId);
-            metrics.setScene(scene);
-            metrics.setProvider(result.getProvider());
-            metrics.setModel(result.getModel());
-            metrics.setTraceId(result.getTraceId());
-            metrics.setTraceUrl(result.getTraceUrl());
+            metrics.setTenantId(safeTenantId(tenantId));
+            metrics.setScene(truncate(scene, 100));
+            metrics.setProvider(truncate(result.getProvider(), 50));
+            metrics.setModel(truncate(result.getModel(), 100));
+            metrics.setTraceId(truncate(result.getTraceId(), 64));
+            metrics.setTraceUrl(truncate(result.getTraceUrl(), 500));
             metrics.setSuccess(result.isSuccess());
             metrics.setFallbackUsed(result.isFallbackUsed());
             metrics.setLatencyMs((int) result.getLatencyMs());
@@ -57,7 +57,7 @@ public class IntelligenceObservabilityOrchestrator {
             metrics.setPromptTokens(result.getPromptTokens());
             metrics.setCompletionTokens(result.getCompletionTokens());
             metrics.setErrorMessage(result.getErrorMessage());
-            metrics.setUserId(userId);
+            metrics.setUserId(truncate(userId, 64));
             metrics.setCreateTime(LocalDateTime.now());
             metrics.setDeleteFlag(0);
             metricsMapper.insert(metrics);
@@ -229,5 +229,20 @@ public class IntelligenceObservabilityOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private Long safeTenantId(Long tenantId) {
+        return tenantId != null ? tenantId : 0L;
+    }
+
+    private String truncate(String value, int maxLen) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= maxLen) {
+            return trimmed;
+        }
+        return trimmed.substring(0, maxLen);
     }
 }

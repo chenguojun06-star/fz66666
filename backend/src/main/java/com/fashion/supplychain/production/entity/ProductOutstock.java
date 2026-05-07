@@ -32,6 +32,8 @@ public class ProductOutstock {
 
     private String outstockType;
 
+    private String sourceType;
+
     private String warehouse;
 
     private String remark;

@@ -13,6 +13,23 @@
     <meta name="x5-orientation" content="portrait" />
     <meta name="screen-orientation" content="portrait" />
     <title>云裳智链</title>
+    <script>
+    (function(){
+      var RK='__h5_crit_reload__',LK='__h5_crit_log__';
+      if(sessionStorage.getItem(RK))return;
+      function rl(){sessionStorage.setItem(RK,'1');location.reload();}
+      function lg(m){try{var a=JSON.parse(sessionStorage.getItem(LK)||'[]');a.push({t:Date.now(),m:m});if(a.length>10)a=a.slice(-10);sessionStorage.setItem(LK,JSON.stringify(a));}catch(e){}}
+      document.addEventListener('error',function(e){
+        var t=e.target||e.srcElement;
+        if(!t)return;
+        var tn=t.tagName;
+        if(tn==='SCRIPT'||tn==='LINK'){
+          var src=tn==='SCRIPT'?t.src:t.href;
+          if(src&&src.indexOf(location.host)!==-1){lg('404:'+src);rl();}
+        }
+      },true);
+    })();
+    </script>
     <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
     <style>
       html, body { margin: 0; padding: 0; background: #f5f5f5; -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }

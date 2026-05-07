@@ -1,6 +1,6 @@
 package com.fashion.supplychain.intelligence.service;
 
-import com.fashion.supplychain.intelligence.agent.AiMessage;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
@@ -254,14 +254,17 @@ public class SelfCriticService {
     private void autoSaveFeedback(String sessionId, String userMessage, String aiResponse,
                                    double score, String critiqueReport, boolean usedQuickPath) {
         try {
+            Long tenantId = UserContext.tenantId();
             IntelligenceFeedbackRecord feedback = new IntelligenceFeedbackRecord();
-            feedback.setPredictionId(sessionId);
-            feedback.setSuggestionType(usedQuickPath ? "quick_path_quality" : "agent_loop_quality");
+            feedback.setTenantId(tenantId != null ? tenantId : 0L);
+            feedback.setPredictionId(truncate(sessionId, 100));
+            feedback.setSuggestionType(truncate(usedQuickPath ? "quick_path_quality" : "agent_loop_quality", 100));
             feedback.setSuggestionContent(aiResponse.length() > 500 ? aiResponse.substring(0, 500) : aiResponse);
             feedback.setFeedbackResult("rejected"); // 自我批评视为"拒绝"
-            feedback.setFeedbackReason(String.format(
-                    "[自动评估] 综合评分%.1f/100。问题：%s",
-                    score, critiqueReport.length() > 300 ? critiqueReport.substring(0, 300) : critiqueReport));
+                feedback.setFeedbackReason(truncate(
+                    String.format("[自动评估] 综合评分%.1f/100。问题：%s",
+                        score, critiqueReport.length() > 300 ? critiqueReport.substring(0, 300) : critiqueReport),
+                    500));
             feedback.setFeedbackAnalysis(critiqueReport);
             feedback.setDeviationMinutes((long) (100 - score)); // 用偏差分记录差距
             feedback.setCreateTime(LocalDateTime.now());
@@ -397,5 +400,16 @@ public class SelfCriticService {
         // 简化检测：如果提到"昨天"但当前不是合理时间（需要更复杂的NLP）
         // 这里仅做示例性检测
         return false;
+    }
+
+    private String truncate(String value, int maxLen) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= maxLen) {
+            return trimmed;
+        }
+        return trimmed.substring(0, maxLen);
     }
 }

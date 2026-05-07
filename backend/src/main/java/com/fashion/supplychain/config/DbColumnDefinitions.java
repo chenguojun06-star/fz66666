@@ -288,6 +288,7 @@ public final class DbColumnDefinitions {
         add("t_product_warehousing", "quality_status", "VARCHAR(20) DEFAULT NULL COMMENT '质检状态'");
         add("t_product_warehousing", "inspection_status", "VARCHAR(20) DEFAULT NULL COMMENT '检验状态'");
         add("t_product_warehousing", "scan_mode", "VARCHAR(20) DEFAULT NULL COMMENT '扫码模式'");
+        add("t_product_warehousing", "sku_code", "VARCHAR(80) DEFAULT NULL COMMENT 'SKU编码'");
         add("t_product_warehousing", "quality_operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '质检操作员ID'");
         add("t_product_warehousing", "quality_operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '质检操作员姓名'");
         add("t_product_warehousing", "defect_category", "VARCHAR(50) DEFAULT NULL COMMENT '缺陷类别'");
@@ -339,6 +340,7 @@ public final class DbColumnDefinitions {
         add("t_product_outstock", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
         add("t_product_outstock", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
         add("t_product_outstock", "sku_code", "VARCHAR(100) DEFAULT NULL COMMENT 'SKU编码'");
+        add("t_product_outstock", "source_type", "VARCHAR(30) DEFAULT NULL COMMENT '出库来源类型'");
         add("t_product_outstock", "color", "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
         add("t_product_outstock", "size", "VARCHAR(50) DEFAULT NULL COMMENT '尺码'");
         add("t_product_outstock", "cost_price", "DECIMAL(12,2) DEFAULT NULL COMMENT '成本价'");

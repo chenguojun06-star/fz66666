@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Card, Button, Space, Input, Select, App, Tabs, Row, Col } from 'antd';
-import { HistoryOutlined, ScanOutlined } from '@ant-design/icons';
+import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
 import CustomerInfoSection from './CustomerInfoSection';
+import ScanOperationModal from './ScanOperationModal';
+import FreeInboundModal from './FreeInboundModal';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
 import type { FinishedInventory } from './finishedInventoryColumns';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -21,6 +23,8 @@ const _FinishedInventory: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { message } = App.useApp();
   const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
+  const [scanOperationOpen, setScanOperationOpen] = useState(false);
+  const [freeInboundOpen, setFreeInboundOpen] = useState(false);
   const [inboundPage, setInboundPage] = useState(1);
   const [inboundPageSize, setInboundPageSize] = useState(20);
 
@@ -39,7 +43,7 @@ const _FinishedInventory: React.FC = () => {
     <>
       {showSmartErrorNotice && smartError && <Card size="small" style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} /></Card>}
       <Card size="small" className="filter-card mb-sm">
-        <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/SKU" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={[{ label: '全部工厂', value: '' }, ...factoryTypeOptions]} /><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button></Space>} />
+        <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/SKU" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={[{ label: '全部工厂', value: '' }, ...factoryTypeOptions]} /><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>自由入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button></Space>} />
       </Card>
       <PageStatCards cards={[{ key: 'total', items: [{ label: '成品总数', value: totalRecords, unit: '款', color: 'var(--color-primary)' }] }, { key: 'available', items: [{ label: '可用库存', value: totalAvailableQty, unit: '件', color: 'var(--color-success)' }] }, { key: 'defect', items: [{ label: '次品数量', value: totalDefectQty, unit: '件', color: 'var(--color-danger)' }] }]} activeKey="" />
       <Tabs defaultActiveKey="inventory" style={{ marginTop: 12 }} items={[
@@ -78,7 +82,9 @@ const _FinishedInventory: React.FC = () => {
               </>
             )}
           </ResizableModal>
-          <QrcodeOutboundModal open={qrcodeOutboundOpen} onClose={() => setQrcodeOutboundOpen(false)} onSuccess={() => { setQrcodeOutboundOpen(false); loadData(); }} /></>),
+          <QrcodeOutboundModal open={qrcodeOutboundOpen} onClose={() => setQrcodeOutboundOpen(false)} onSuccess={() => { setQrcodeOutboundOpen(false); loadData(); }} />
+          <ScanOperationModal open={scanOperationOpen} onClose={() => setScanOperationOpen(false)} onSuccess={() => { setScanOperationOpen(false); loadData(); }} />
+          <FreeInboundModal open={freeInboundOpen} onClose={() => setFreeInboundOpen(false)} onSuccess={() => { setFreeInboundOpen(false); loadData(); }} /></>),
         },
         {
           key: 'outstock',

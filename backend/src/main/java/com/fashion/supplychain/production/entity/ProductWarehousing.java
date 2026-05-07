@@ -160,6 +160,8 @@ public class ProductWarehousing {
      */
     private String scanMode;
 
+    private String skuCode;
+
     private String inspectionType;
 
     private String aqlLevel;

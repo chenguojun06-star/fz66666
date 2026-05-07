@@ -18,7 +18,7 @@ import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, 
 import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, WagePayment, EcSalesRevenue, TaxExport } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
-import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders } from './modules/warehouse';
+import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
@@ -246,6 +246,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.finishedInventory} element={<RouteErrorBoundary pageName="成品库存"><Suspense fallback={routeFallback}><FinishedInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.sampleInventory} element={<RouteErrorBoundary pageName="样衣库存"><Suspense fallback={routeFallback}><SampleInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecommerceOrders} element={<RouteErrorBoundary pageName="电商订单"><Suspense fallback={routeFallback}><EcommerceOrders /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.inventoryCheck} element={<RouteErrorBoundary pageName="库存盘点"><Suspense fallback={routeFallback}><InventoryCheck /></Suspense></RouteErrorBoundary>} />
 
           <Route path={paths.user} element={<RouteErrorBoundary pageName="用户管理"><Suspense fallback={routeFallback}><UserList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dict} element={<RouteErrorBoundary pageName="字典管理"><Suspense fallback={routeFallback}><DictManage /></Suspense></RouteErrorBoundary>} />

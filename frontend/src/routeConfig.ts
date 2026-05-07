@@ -23,6 +23,7 @@ import {
   ThunderboltOutlined,
   FireOutlined,
   RadarChartOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -70,6 +71,7 @@ export const paths = {
   finishedInventory: '/warehouse/finished',
   sampleInventory: '/warehouse/sample',
   ecommerceOrders: '/warehouse/ecommerce',
+  inventoryCheck: '/warehouse/inventory-check',
 
   profile: '/system/profile',
   user: '/system/user',
@@ -124,7 +126,8 @@ export const permissionCodes = {
   materialDatabase: 'MENU_MATERIAL_DATABASE',
   finishedInventory: 'MENU_FINISHED_INVENTORY',
   sampleInventory: 'MENU_SAMPLE_INVENTORY',
-  ecommerceOrders: 'MENU_FINISHED_INVENTORY', // 复用成品库权限，平台订单均可查看
+  ecommerceOrders: 'MENU_FINISHED_INVENTORY',
+  inventoryCheck: 'MENU_FINISHED_INVENTORY',
 
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
@@ -223,6 +226,7 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(InboxOutlined),
     items: [
       { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
+      { label: '库存盘点', path: paths.inventoryCheck, icon: React.createElement(AuditOutlined) },
       { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },
     ],
   },
@@ -315,6 +319,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.finishedInventory]: permissionCodes.finishedInventory,
   [paths.sampleInventory]: permissionCodes.sampleInventory,
   [paths.ecommerceOrders]: permissionCodes.ecommerceOrders,
+  [paths.inventoryCheck]: permissionCodes.inventoryCheck,
 
 
   [paths.productionList]: permissionCodes.productionList,

@@ -28,10 +28,10 @@ public class AgentCheckpointService {
                                 String nodeName, AgentState state, int stepIndex) {
         try {
             AgentCheckpoint checkpoint = new AgentCheckpoint();
-            checkpoint.setTenantId(tenantId);
-            checkpoint.setThreadId(threadId);
-            checkpoint.setNodeId(nodeId);
-            checkpoint.setNodeName(nodeName);
+            checkpoint.setTenantId(safeTenantId(tenantId));
+            checkpoint.setThreadId(truncate(threadId, 128));
+            checkpoint.setNodeId(truncate(nodeId, 128));
+            checkpoint.setNodeName(truncate(nodeName, 256));
             checkpoint.setStateJson(objectMapper.writeValueAsString(state));
             checkpoint.setStepIndex(stepIndex);
             checkpoint.setStatus("ACTIVE");
@@ -48,6 +48,21 @@ public class AgentCheckpointService {
         } catch (Exception e) {
             log.warn("[Checkpoint] Save failed: {}", e.getMessage());
         }
+    }
+
+    private Long safeTenantId(Long tenantId) {
+        return tenantId != null ? tenantId : 0L;
+    }
+
+    private String truncate(String value, int maxLen) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= maxLen) {
+            return trimmed;
+        }
+        return trimmed.substring(0, maxLen);
     }
 
     @Async
