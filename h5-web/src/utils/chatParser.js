@@ -80,6 +80,39 @@ export function parseAiResponse(rawText) {
     if (Array.isArray(parsed)) clarificationHints.push(...parsed.map(String));
   });
 
+  const followUpBlocks = extractBlock('FOLLOW_UP_ACTIONS');
+  followUpBlocks.forEach((block) => {
+    const parsed = safeParse(block);
+    if (!parsed) return;
+    if (Array.isArray(parsed)) followUpActions.push(...parsed.filter(f => f && f.label));
+    else if (parsed.label) followUpActions.push(parsed);
+    else if (parsed.actions && Array.isArray(parsed.actions)) followUpActions.push(...parsed.actions.filter(f => f && f.label));
+  });
+
+  const overdueBlocks = extractBlock('OVERDUE_FACTORY');
+  overdueBlocks.forEach((block) => {
+    const parsed = safeParse(block);
+    if (!parsed) return;
+    insightCards.push({
+      title: parsed.factoryName || '逾期工厂',
+      level: 'danger',
+      summary: `逾期${parsed.overdueCount || 0}单，平均延期${parsed.avgDelayDays || 0}天`,
+      evidence: (parsed.orders || []).slice(0, 3).map(o => `${o.orderNo || ''} 延期${o.delayDays || 0}天`),
+    });
+  });
+
+  const reportBlocks = extractBlock('REPORT_PREVIEW');
+  reportBlocks.forEach((block) => {
+    const parsed = safeParse(block);
+    if (!parsed) return;
+    insightCards.push({
+      title: parsed.title || '运营报告',
+      level: 'info',
+      summary: parsed.summary || '',
+      evidence: (parsed.highlights || []).slice(0, 3).map(h => String(h)),
+    });
+  });
+
   if (text.includes('【推荐追问】：')) {
     const parts = text.split('【推荐追问】：');
     text = parts[0].trim();

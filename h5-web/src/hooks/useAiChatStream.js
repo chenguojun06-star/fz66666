@@ -31,15 +31,35 @@ export default function useAiChatStream() {
           streamPayload,
           (event) => {
             streamStarted = true;
-            if (event.type === 'answer' && event.data?.content) {
-              accumulatedText += String(event.data.content);
+            const evtType = event.type;
+            const evtData = event.data || {};
+
+            if (evtType === 'answer' && evtData?.content) {
+              accumulatedText += String(evtData.content);
               onEvent?.({ type: 'text', text: accumulatedText });
-            } else if (event.type === 'thinking') {
+            } else if (evtType === 'answer_chunk' && evtData?.content) {
+              accumulatedText += String(evtData.content);
+              onEvent?.({ type: 'text', text: accumulatedText });
+            } else if (evtType === 'thinking') {
               onEvent?.({ type: 'thinking' });
-            } else if (event.type === 'tool_call') {
-              onEvent?.({ type: 'tool_call', name: event.data?.tool || '' });
-            } else if (event.type === 'tool_result') {
-              onEvent?.({ type: 'tool_result', success: event.data?.success });
+            } else if (evtType === 'tool_call') {
+              onEvent?.({ type: 'tool_call', name: evtData.tool || evtData.name || '' });
+            } else if (evtType === 'tool_result') {
+              onEvent?.({ type: 'tool_result', success: evtData.success !== false, name: evtData.tool || evtData.name || '' });
+            } else if (evtType === 'tool_executing') {
+              onEvent?.({ type: 'tool_call', name: evtData.tool || evtData.name || '处理中' });
+            } else if (evtType === 'follow_up_actions') {
+              onEvent?.({ type: 'follow_up_actions', actions: evtData.actions || [] });
+            } else if (evtType === 'step_progress') {
+              onEvent?.({ type: 'step_progress', step: evtData.step, total: evtData.total });
+            } else if (evtType === 'xiaoyun_mood') {
+              onEvent?.({ type: 'xiaoyun_mood', mood: evtData.mood || 'normal' });
+            } else if (evtType === 'data_card') {
+              onEvent?.({ type: 'data_card', card: evtData });
+            } else if (evtType === 'time_budget') {
+              onEvent?.({ type: 'time_budget', used: evtData.used, remaining: evtData.remaining });
+            } else if (evtType === 'error') {
+              onEvent?.({ type: 'error', message: evtData.message || '' });
             }
           },
           () => {

@@ -50,7 +50,7 @@ const production = {
   getCuttingBundle: (orderNo, bundleNo) => http.get('/api/production/cutting/list', { params: { orderNo, bundleNo } }),
   generateCuttingBundles: (orderId, bundles) => http.post('/api/production/cutting/generate', { orderId, bundles }),
   listBundles: (orderNo, page = 1, pageSize = 100) => http.get('/api/production/cutting/list', { params: { orderNo, page, pageSize } }),
-  getBundleByCode: (qrCode) => http.get(`/api/production/cutting/by-code/${encodeURIComponent(qrCode)}`),
+  getBundleByCode: (qrCode) => http.post('/api/production/cutting/by-code', { qrCode }),
   splitTransfer: (data) => http.post('/api/production/cutting/split-transfer', data),
   splitRollback: (data) => http.post('/api/production/cutting/split-rollback', data),
   getBundleFamily: (bundleId) => http.get(`/api/production/cutting/family/${bundleId}`),
@@ -74,6 +74,31 @@ const production = {
   queryOrderProcesses: (orderNo) => http.get('/api/production/process-price/processes', { params: { orderNo } }),
   adjustProcessPrice: (payload) => http.post('/api/production/process-price/adjust', payload),
   priceAdjustHistory: (orderNo) => http.get('/api/production/process-price/history', { params: { orderNo } }),
+  getFactoryCapacity: (factoryId) => http.get('/api/production/order/factory-capacity', { params: { factoryId } }),
+  startBundleRepair: (payload) => http.post('/api/production/warehousing/mark-bundle-repairing', payload),
+  completeBundleRepair: (payload) => http.post('/api/production/warehousing/mark-bundle-repaired', payload),
+  scrapBundle: (payload) => http.post('/api/production/warehousing/scrap-bundle', payload),
+  requestSplit: (payload) => http.post('/api/production/cutting/split-transfer/request', payload),
+  confirmSplit: (payload) => http.post('/api/production/cutting/split-transfer/confirm', payload),
+  listPendingSplits: () => http.get('/api/production/cutting/split-transfer/pending-for-me'),
+  transferSearchFactories: (params) => http.get('/api/production/order/transfer/search-factories', { params }),
+  transferSearchUsers: (params) => http.get('/api/production/order/transfer/search-users', { params }),
+  transferCreate: (payload) => http.post('/api/production/order/transfer/create', payload),
+  transferCreateToFactory: (payload) => http.post('/api/production/order/transfer/create-to-factory', payload),
+  getProcessStatus: (orderId) => http.get(`/api/production/order/process-status/${encodeURIComponent(orderId)}`),
+  getOrderTracking: (orderId) => http.get(`/api/production/process-tracking/order/${encodeURIComponent(orderId)}`),
+  getNodeOperations: (orderId) => http.get(`/api/production/order/node-operations/${encodeURIComponent(orderId)}`),
+  saveNodeOperations: (payload) => http.post('/api/production/order/node-operations', payload),
+  delegateProcess: (payload) => http.post('/api/production/order/delegate-process', payload),
+  listStyleProcesses: (styleId) => http.get('/api/style/process/list', { params: { styleId } }),
+  saveStyleProcess: (payload) => payload.id ? http.put('/api/style/process', payload) : http.post('/api/style/process', payload),
+  deleteStyleProcess: (id) => http.delete(`/api/style/process/${id}`),
+  listSizePrices: (styleId) => http.get('/api/style/size-price/list', { params: { styleId } }),
+  batchSaveSizePrices: (payload) => http.post('/api/style/size-price/batch-save', payload),
+  completePatternByTask: (patternId, payload) => http.post(`/api/production/pattern/${encodeURIComponent(patternId)}/complete`, payload || {}),
+  listPatternProductions: (params) => http.get('/api/production/pattern/list', { params: params || {} }),
+  patternWorkflowAction: (patternId, action, payload) => http.post(`/api/production/pattern/${encodeURIComponent(patternId)}/workflow-action?action=${encodeURIComponent(action)}`, payload || {}),
+  updatePatternProgress: (patternId, payload) => http.post(`/api/production/pattern/${encodeURIComponent(patternId)}/progress`, payload || {}),
 };
 
 const system = {
@@ -89,7 +114,9 @@ const system = {
   changePassword: (data) => http.post('/api/system/user/me/change-password', data || {}),
   submitFeedback: (data) => http.post('/api/system/feedback/submit', data),
   myFeedbackList: (params) => http.post('/api/system/feedback/my-list', params || {}),
-  getDictList: (type) => http.get('/api/system/dict/by-type', { params: { type } }),
+  getDictList: (type) => http.post('/api/system/dict/list-by-type', { type }),
+  getMiniprogramMenuConfig: () => http.get('/api/system/tenant-miniprogram-menu/my-menus'),
+  saveMiniprogramMenuConfig: (payload) => http.put('/api/system/tenant-miniprogram-menu', payload),
 };
 
 const serial = {
@@ -102,7 +129,10 @@ const factory = {
 
 const factoryWorker = {
   list: (factoryId) => http.get('/api/factory-worker/list', { params: { factoryId } }),
-  save: (data) => http.post('/api/factory-worker/save', data || {}),
+  save: (data) => {
+    if (data.id) return http.put(`/api/factory-worker/${data.id}`, data);
+    return http.post('/api/factory-worker', data || {});
+  },
   remove: (id) => http.delete(`/api/factory-worker/${id}`),
 };
 
@@ -212,6 +242,37 @@ const intelligence = {
   getLivePulse: () => http.post('/api/intelligence/live-pulse'),
   getWorkerEfficiency: () => http.post('/api/intelligence/worker-efficiency'),
   getFactoryBottleneck: () => http.get('/api/intelligence/factory-bottleneck'),
+  aiAdvisorScenario: (key, payload) => http.post(`/api/intelligence/ai-advisor/scenario/${encodeURIComponent(key)}`, payload || {}),
+  getBrainSnapshot: () => http.get('/api/intelligence/brain/snapshot'),
+  getProfitEstimation: (payload) => http.post('/api/intelligence/profit-estimation', payload || {}),
+  getFactoryLeaderboard: (payload) => http.post('/api/intelligence/factory-leaderboard', payload || {}),
+  getFinanceAudit: (payload) => http.post('/api/intelligence/finance-audit', payload || {}),
+  getMonthlyBizSummary: () => http.get('/api/intelligence/monthly-biz-summary'),
+  runAiPatrol: (payload) => http.post('/api/intelligence/ai-patrol/run', payload || {}),
+  getSupplierScorecard: () => http.get('/api/intelligence/supplier-scorecard'),
+  getForecast: (payload) => http.post('/api/intelligence/forecast', payload || {}),
+  getHealthIndex: (payload) => http.post('/api/intelligence/health-index', payload || {}),
+  getSmartNotifications: (payload) => http.post('/api/intelligence/smart-notification', payload || {}),
+  getDefectHeatmap: (payload) => http.post('/api/intelligence/defect-heatmap', payload || {}),
+  getActionCenter: () => http.get('/api/intelligence/action-center'),
+  getMaterialShortage: () => http.get('/api/intelligence/material-shortage'),
+  runSelfHealing: (payload) => http.post('/api/intelligence/self-healing', payload || {}),
+  feedback: (payload) => http.post('/api/intelligence/feedback', payload || {}),
+  hyperAdvisorAsk: (payload) => http.post('/api/intelligence/hyper-advisor/ask', payload || {}),
+  getAgentTrace: (commandId) => http.get(`/api/intelligence/agent-trace/${encodeURIComponent(commandId)}`),
+  getRecentTraces: () => http.get('/api/intelligence/agent-trace/recent'),
+  ttsSpeak: (payload) => {
+    const token = useAuthStore.getState().token;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    return fetch(`${baseUrl}/api/tts/speak`, {
+      method: 'POST',
+      headers: { 'Authorization': token ? `Bearer ${token}` : '', 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    }).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.blob();
+    });
+  },
 };
 
 const notice = {
@@ -223,6 +284,7 @@ const notice = {
 const dashboard = {
   get: (params) => http.get('/api/dashboard', { params: params || {} }),
   getTopStats: (params) => http.get('/api/dashboard/top-stats', { params: params || {} }),
+  getDailyBrief: () => http.get('/api/dashboard/daily-brief'),
 };
 
 const wechat = {
@@ -263,6 +325,23 @@ const style = {
   getBomList: (styleId) => http.get('/api/style/bom/list', { params: { styleId } }),
   getInventory: (styleId) => http.get('/api/warehouse/finished-inventory/list', { params: { styleId } }),
   updateInventory: (styleId, data) => http.post('/api/warehouse/finished-inventory/outbound', data || {}),
+  getQuotation: (params) => http.get('/api/style/quotation', { params: params || {} }),
+  getStyleDetail: (id) => http.get(`/api/style/info/${encodeURIComponent(id)}`),
+  createStyle: (payload) => http.post('/api/style/info', payload),
+  updateStyle: (id, payload) => http.put(`/api/style/info/${encodeURIComponent(id)}`, payload),
+  deleteStyle: (id) => http.delete(`/api/style/info/${encodeURIComponent(id)}`),
+  listStyleAttachments: (styleId) => http.get('/api/style/attachment/list', { params: { styleId } }),
+  uploadStyleAttachment: (payload) => http.post('/api/style/attachment/upload', payload),
+  deleteStyleAttachment: (id) => http.delete(`/api/style/attachment/${encodeURIComponent(id)}`),
+  scrapStyle: (id) => http.post(`/api/style/info/${encodeURIComponent(id)}/scrap`),
+  sampleReview: (id, payload) => http.post(`/api/style/info/${encodeURIComponent(id)}/sample-review`, payload || {}),
+  copyStyle: (id) => http.post(`/api/style/info/${encodeURIComponent(id)}/copy`),
+  stageAction: (id, stage, action) => http.post(`/api/style/info/${encodeURIComponent(id)}/stage-action?stage=${encodeURIComponent(stage)}&action=${encodeURIComponent(action)}`),
+  getDevelopmentStats: (params) => http.get('/api/style/info/stats/development', { params: params || {} }),
+  listProcesses: (styleId) => http.get('/api/style/process/list', { params: { styleId } }),
+  listSizePrices: (styleId) => http.get('/api/style/size-price/list', { params: { styleId } }),
+  batchSaveSizePrices: (payload) => http.post('/api/style/size-price/batch-save', payload),
+  listSizes: (styleId) => http.get('/api/style/size/list', { params: { styleId } }),
 };
 
 const warehouse = {
@@ -287,9 +366,13 @@ const orderManagement = {
 
 const sampleStock = {
   scanQuery: (data) => http.post('/api/stock/sample/scan-query', data),
+  list: (params) => http.get('/api/stock/sample/list', { params: params || {} }),
   inbound: (data) => http.post('/api/stock/sample/inbound', data),
+  inboundBatch: (data) => http.post('/api/stock/sample/inbound/batch', data),
   loan: (data) => http.post('/api/stock/sample/loan', data),
   returnSample: (data) => http.post('/api/stock/sample/return', data),
+  destroy: (data) => http.post('/api/stock/sample/destroy', data),
+  loanList: (params) => http.get('/api/stock/sample/loan/list', { params: params || {} }),
 };
 
 const finance = {

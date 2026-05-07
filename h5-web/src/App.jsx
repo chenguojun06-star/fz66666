@@ -37,6 +37,8 @@ const CuttingTaskDetailPage = lazy(() => import('@/pages/CuttingTaskDetailPage')
 const ProcurementTaskDetailPage = lazy(() => import('@/pages/ProcurementTaskDetailPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const IntelligencePage = lazy(() => import('@/pages/IntelligencePage'));
+const StyleDevPage = lazy(() => import('@/pages/StyleDevPage'));
+const SampleInventoryPage = lazy(() => import('@/pages/SampleInventoryPage'));
 
 // CRM Client
 const CrmLogin = lazy(() => import('@/pages/crm-client/CrmLogin'));
@@ -129,6 +131,8 @@ export default function App() {
                       <Route path="/procurement/task-detail" element={<ProcurementTaskDetailPage />} />
                       <Route path="/dashboard" element={<DashboardPage />} />
                       <Route path="/intelligence" element={<IntelligencePage />} />
+                      <Route path="/style-dev" element={<StyleDevPage />} />
+                      <Route path="/sample-inventory" element={<SampleInventoryPage />} />
                       <Route path="*" element={<Navigate to="/home" replace />} />
                     </Routes>
                   </Suspense>
