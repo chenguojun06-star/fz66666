@@ -62,11 +62,6 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         repaired += addColumn(conn, table, col[0], col[1]);
                     }
                 }
-                for (String[] col : columns) {
-                    if (!existingColumns.contains(col[0])) {
-                        repaired += addColumn(conn, table, col[0], col[1]);
-                    }
-                }
             }
 
             repaired += DbViewRepairHelper.ensureSettlementViewHasCompleteTime(conn, schema);
