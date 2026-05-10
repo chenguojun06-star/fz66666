@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Tag, App, Space, Tooltip, Modal, InputNumber } from 'antd';
+import { Tag, App, Space, Tooltip, Modal, InputNumber, Form } from 'antd';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
+import SmallModal from '@/components/common/SmallModal';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
@@ -64,6 +65,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   const [, setCancelLoading] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
   const [cancelConfirmLoading, setCancelConfirmLoading] = useState(false);
+  const [arrivalTarget, setArrivalTarget] = useState<MaterialPurchaseType | null>(null);
+  const [arrivalLoading, setArrivalLoading] = useState(false);
+  const [arrivalForm] = Form.useForm();
 
   const handleCancelConfirm = async (reason: string) => {
     if (!cancelTarget) return;
@@ -461,29 +465,8 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 label: '到货入库',
                 onClick: () => {
                   const maxQty = Math.max(1, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
-                  let qty = maxQty;
-                  Modal.confirm({
-                    title: `${record.materialName || record.materialCode} — 到货入库`,
-                    icon: null,
-                    content: (
-                      <div>
-                        <p style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 12 }}>
-                          采购 {record.purchaseQuantity || '-'}{record.unit ? ' ' + record.unit : ''}，已到 {record.arrivedQuantity || 0}，待到 {maxQty}
-                        </p>
-                        <InputNumber
-                          min={1} max={maxQty} defaultValue={qty}
-                          style={{ width: '100%' }} placeholder="请输入到货数量"
-                          onChange={v => { qty = v ?? 1; }}
-                        />
-                      </div>
-                    ),
-                    okText: '确认入库',
-                    onOk: async () => {
-                      await api.post('/production/material/inbound/confirm-arrival', { purchaseId: record.id, arrivedQuantity: qty });
-                      message.success('入库成功，库存已更新');
-                      onRefresh?.();
-                    },
-                  });
+                  arrivalForm.setFieldsValue({ arrivedQuantity: maxQty });
+                  setArrivalTarget(record);
                 },
               }] : []),
               {
@@ -540,6 +523,41 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       onOk={handleCancelConfirm}
       onCancel={() => setCancelTarget(null)}
     />
+    <SmallModal
+      open={Boolean(arrivalTarget)}
+      title={`${arrivalTarget?.materialName || arrivalTarget?.materialCode || ''} — 到货入库`}
+      okText="确认入库"
+      confirmLoading={arrivalLoading}
+      onOk={() => arrivalForm.submit()}
+      onCancel={() => { setArrivalTarget(null); arrivalForm.resetFields(); }}
+      destroyOnHidden
+    >
+      <Form form={arrivalForm} layout="vertical" onFinish={async (values) => {
+        if (!arrivalTarget) return;
+        setArrivalLoading(true);
+        try {
+          await api.post('/production/material/inbound/confirm-arrival', { purchaseId: arrivalTarget.id, arrivedQuantity: values.arrivedQuantity });
+          message.success('入库成功，库存已更新');
+          setArrivalTarget(null);
+          arrivalForm.resetFields();
+          onRefresh?.();
+        } catch { message.error('入库失败'); }
+        finally { setArrivalLoading(false); }
+      }}>
+        <p style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 12 }}>
+          采购 {arrivalTarget?.purchaseQuantity || '-'}{arrivalTarget?.unit ? ' ' + arrivalTarget.unit : ''}，已到 {arrivalTarget?.arrivedQuantity || 0}，待到 {arrivalTarget ? Math.max(1, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 0}
+        </p>
+        <Form.Item name="arrivedQuantity" label="到货数量" rules={[{ required: true, message: '请输入到货数量' }]}>
+          <InputNumber
+            min={1}
+            max={arrivalTarget ? Math.max(1, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 1}
+            style={{ width: '100%' }}
+            placeholder="请输入到货数量"
+            autoFocus
+          />
+        </Form.Item>
+      </Form>
+    </SmallModal>
     <ResizableTable<MaterialPurchaseType>
       columns={columns}
       dataSource={dataSource}

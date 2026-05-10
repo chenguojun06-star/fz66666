@@ -11,7 +11,7 @@ import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategor
 import { useDictOptions } from '@/hooks/useDictOptions';
 
 interface StyleBasicInfoFormProps {
-  _form: FormInstance; // 未使用，外部Form已包含
+  _form: FormInstance;
   currentStyle: StyleInfo | null;
   editLocked: boolean;
   isNewPage: boolean;
@@ -20,6 +20,7 @@ interface StyleBasicInfoFormProps {
   onPendingImagesChange: (files: File[]) => void;
   coverRefreshToken: number;
   onCoverChange: (url: string | null) => void;
+  onSkcClick?: () => void;
   // 颜色码数配置props
   size1: string;
   setSize1: (v: string) => void;
@@ -86,7 +87,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   sizeColorMatrixRows, setSizeColorMatrixRows,
   commonSizes, setCommonSizes, commonColors, setCommonColors,
   onColorImageSync,
-  onColorImageClear
+  onColorImageClear,
+  onSkcClick
 }) => {
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
@@ -132,7 +134,16 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="skc" label="SKC" rules={[]}>
-                  <Input id="skc" placeholder="如果不填将自动生成" disabled={editLocked || Boolean(currentStyle?.id)} />
+                  {currentStyle?.skc && !isNewPage ? (
+                    <span
+                      onClick={onSkcClick}
+                      style={{ color: 'var(--color-primary, #1677FF)', cursor: 'pointer', fontWeight: 500, fontSize: 14, lineHeight: '32px' }}
+                    >
+                      {currentStyle.skc}
+                    </span>
+                  ) : (
+                    <Input id="skc" placeholder="如果不填将自动生成" disabled={editLocked || Boolean(currentStyle?.id)} />
+                  )}
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>

@@ -1,23 +1,18 @@
-/* 组织架构页面样式 — 左树右成员分栏布局 */
-
-/* ===== 分栏容器 ===== */
 .org-split-layout {
   display: flex;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light, #f0f0f0);
   border-radius: 6px;
   min-height: 520px;
 }
 
-/* ===== 左侧树面板 ===== */
 .org-tree-panel {
   width: 260px;
   flex-shrink: 0;
-  border-right: 1px solid #f0f0f0;
+  border-right: 1px solid var(--color-border-light, #f0f0f0);
   overflow-y: auto;
   padding: 6px 0;
 }
 
-/* ===== 右侧成员面板 ===== */
 .org-member-panel {
   flex: 1;
   padding: 16px 20px;
@@ -25,7 +20,6 @@
   min-width: 0;
 }
 
-/* ===== 树节点行 ===== */
 .tree-item {
   display: flex;
   align-items: center;
@@ -37,19 +31,18 @@
 }
 
 .tree-item:hover {
-  background: #f5f5f5;
+  background: var(--color-bg-highlight, #f5f5f5);
 }
 
 .tree-item-selected {
-  background: #e6f4ff;
+  background: var(--color-bg-highlight, #e6f4ff);
 }
 
 .tree-item-selected .tree-node-name {
-  color: #1677ff;
+  color: var(--primary-color, #1677ff);
   font-weight: 500;
 }
 
-/* 折叠箭头 */
 .tree-chevron {
   width: 16px;
   height: 16px;
@@ -58,11 +51,10 @@
   justify-content: center;
   flex-shrink: 0;
   font-size: 10px;
-  color: #999;
+  color: var(--neutral-text-tertiary, #999);
   margin-right: 2px;
 }
 
-/* 节点标签区（可点击部分） */
 .tree-node-label {
   flex: 1;
   display: flex;
@@ -79,7 +71,6 @@
   white-space: nowrap;
 }
 
-/* 节点操作按钮（hover 时显示） */
 .tree-item-actions {
   display: none;
   align-items: center;

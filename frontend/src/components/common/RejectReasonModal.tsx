@@ -89,7 +89,7 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
           <Input.TextArea
             id="reason"
             placeholder={placeholder}
-            rows={4}
+            autoSize={{ minRows: 3, maxRows: 8 }}
             maxLength={200}
             showCount
             autoFocus

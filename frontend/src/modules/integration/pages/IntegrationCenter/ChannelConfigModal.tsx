@@ -127,7 +127,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
       open={open}
       title={`配置${channelName}渠道`}
       onCancel={onClose}
-      onOk={handleSave}
+      onOk={() => form.submit()}
       okText="保存配置"
       confirmLoading={saving}
       width="40vw"
@@ -166,7 +166,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
           </Descriptions>
         )}
 
-        <Form form={form} layout="vertical" requiredMark="optional">
+        <Form form={form} layout="vertical" requiredMark="optional" onFinish={handleSave}>
           <Form.Item
             name="enabled"
             label="启用渠道"

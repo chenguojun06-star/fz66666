@@ -85,6 +85,12 @@ public class ProductSku {
      */
     private String status;
 
+    private String skuMode;
+
+    private Integer manuallyEdited;
+
+    private String remark;
+
     /**
      * 创建时间
      */

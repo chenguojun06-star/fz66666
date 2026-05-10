@@ -354,7 +354,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
         </div>
       ) : null}
 
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" onFinish={handleOk}>
         {(styleSnapshot?.styleNo || styleSnapshot?.styleName || styleSnapshot?.cover) ? (
           <div style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: 'var(--color-bg-subtle)' }}>
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>

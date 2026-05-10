@@ -122,6 +122,8 @@ public class QualityScanExecutor {
 
         executorSupport.validateBundleFactoryAccess(bundle, "质检");
 
+        executorSupport.validateBundleNotBlocked(bundle, "质检");
+
         if (order == null) {
             throw new IllegalStateException("未匹配到订单");
         }

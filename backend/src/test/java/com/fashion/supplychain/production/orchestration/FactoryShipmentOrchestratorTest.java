@@ -70,6 +70,7 @@ class FactoryShipmentOrchestratorTest {
         order.setStyleName("测试款式");
         order.setFactoryId(factoryId);
         order.setFactoryName("测试工厂");
+        order.setFactoryType("EXTERNAL");
         order.setTenantId(1L);
         return order;
     }

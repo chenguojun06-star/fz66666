@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Row, Col, Select, Input, Button } from 'antd';
+import { Form, Row, Col, Select, Input, Button, Popconfirm } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
 import UnqualifiedUpload from './components/UnqualifiedUpload';
 import { DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../constants';
@@ -57,12 +57,21 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button onClick={handleCancel}>取消</Button>
-          <Button type="primary" loading={submitLoading} onClick={handleOk} style={{ color: '#ff4d4f', background: '#fff', borderColor: '#ff4d4f' }}>
-            确认批量不合格
-          </Button>
+          <Popconfirm
+            title="确认批量不合格"
+            description={`将 ${totalQty} 件标记为不合格，此操作不可撤销，确认？`}
+            onConfirm={handleOk}
+            okText="确认"
+            cancelText="再想想"
+            okButtonProps={{ danger: true }}
+          >
+            <Button type="primary" loading={submitLoading} style={{ color: '#ff4d4f', background: '#fff', borderColor: '#ff4d4f' }}>
+              确认批量不合格
+            </Button>
+          </Popconfirm>
         </div>
       }
-      size="sm"
+      size="md"
       destroyOnHidden
     >
       <Form form={form} layout="vertical">
@@ -73,7 +82,7 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
               label="次品类别"
               rules={[{ required: true, message: '请选择次品类别' }]}
             >
-              <Select options={DEFECT_CATEGORY_OPTIONS} placeholder="请选择" allowClear />
+              <Select options={DEFECT_CATEGORY_OPTIONS} placeholder="请选择" allowClear showSearch optionFilterProp="label" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -82,7 +91,7 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
               label="处理方式"
               rules={[{ required: true, message: '请选择处理方式' }]}
             >
-              <Select options={DEFECT_REMARK_OPTIONS} placeholder="请选择" allowClear />
+              <Select options={DEFECT_REMARK_OPTIONS} placeholder="请选择" allowClear showSearch optionFilterProp="label" />
             </Form.Item>
           </Col>
         </Row>
@@ -96,7 +105,7 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
           />
         </Form.Item>
         <Form.Item name="repairRemark" label="返修备注（可选）">
-          <Input.TextArea rows={2} placeholder="返修说明" />
+          <Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} placeholder="返修说明" />
         </Form.Item>
       </Form>
     </StandardModal>

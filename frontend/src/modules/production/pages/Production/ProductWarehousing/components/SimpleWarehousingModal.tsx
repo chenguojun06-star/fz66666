@@ -34,6 +34,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
   setWarehouse,
   width: _width,
 }) => {
+  const [form] = Form.useForm();
   return (
     <SmallModal
       title="入库"
@@ -44,7 +45,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
       cancelText="取消"
       confirmLoading={loading}
     >
-      <Form layout="vertical">
+      <Form form={form} layout="vertical" onFinish={onSubmit}>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item label="订单号">

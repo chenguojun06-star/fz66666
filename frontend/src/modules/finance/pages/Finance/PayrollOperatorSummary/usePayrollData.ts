@@ -54,6 +54,7 @@ export function usePayrollData() {
     const [scanType, setScanType] = useState<string | undefined>(undefined);
     const [includeSettled, setIncludeSettled] = useState(true);
     const [dateRange, setDateRange] = useState<any>(null);
+    const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
 
     const [rows, setRows] = useState<PayrollOperatorProcessSummaryRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -167,14 +168,20 @@ export function usePayrollData() {
 
     const filteredRows = useMemo(() => {
         const kw = debouncedKeyword.trim().toLowerCase();
-        if (!kw) return sortedRows;
-        return sortedRows.filter((r: any) =>
+        let result = sortedRows;
+        if (approvalFilter === 'pending') {
+            result = result.filter((r: any) => !isDetailAudited(r, auditedDetailKeys));
+        } else if (approvalFilter === 'approved') {
+            result = result.filter((r: any) => isDetailAudited(r, auditedDetailKeys));
+        }
+        if (!kw) return result;
+        return result.filter((r: any) =>
             String(r.orderNo || '').toLowerCase().includes(kw) ||
             String(r.styleNo || '').toLowerCase().includes(kw) ||
             String(r.operatorName || '').toLowerCase().includes(kw) ||
             String(r.processName || '').toLowerCase().includes(kw)
         );
-    }, [sortedRows, debouncedKeyword]);
+    }, [sortedRows, debouncedKeyword, approvalFilter, auditedDetailKeys]);
 
     const summaryRows = useMemo(() => {
         const auditedRows = rows.filter(row => isDetailAudited(row, auditedDetailKeys));
@@ -306,6 +313,7 @@ export function usePayrollData() {
         scanType, setScanType,
         includeSettled, setIncludeSettled,
         dateRange, setDateRange,
+        approvalFilter, setApprovalFilter,
         rows, setRows,
         loading, smartError, setSmartError,
         auditedDetailKeys, setAuditedDetailKeys,

@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  Modal, Form, Radio, InputNumber, Button, AutoComplete, Input, Tag, Divider, Tooltip,
+  Form, Radio, InputNumber, Button, AutoComplete, Input, Tag, Divider, Tooltip, Popconfirm,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { FormInstance } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { ProductionOrder, FactoryShipment } from '@/types/production';
 import type { ShippableInfo, ShipDetailItem, ShippedDetailSum } from '@/services/production/factoryShipmentApi';
 import { parseProductionOrderLines } from '@/utils/api';
@@ -31,6 +32,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
   shipDetails, onShipDetailsChange, onSubmit, onCancel,
   shipHistory = [], detailSum = [],
 }) => {
+  const [confirmVisible, setConfirmVisible] = useState(false);
   // ── 所有尺码（从订单行 + 已有发货明细 合并去重）──
   const orderLines = useMemo(() => parseProductionOrderLines(orderRecord), [orderRecord]);
 
@@ -95,17 +97,31 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
   const hasShipSizes = allSizes.length > 0;
 
   return (
-    <Modal
+    <ResizableModal
       open={open}
       title={`工厂发货 — ${orderNo ?? ''}`}
-      width={Math.min(Math.max(560, allSizes.length * 90 + 260), 960)}
-      onOk={onSubmit}
+      width="60vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
       onCancel={onCancel}
-      okText="确认发货"
-      cancelText="取消"
-      confirmLoading={loading}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={onCancel}>取消</Button>
+          <Popconfirm
+            title="确认发货"
+            description={`本次发货 ${currentTotal} 件，确认提交？`}
+            onConfirm={onSubmit}
+            okText="确认发货"
+            cancelText="再想想"
+            open={confirmVisible}
+            onOpenChange={setConfirmVisible}
+          >
+            <Button type="primary" loading={loading} disabled={currentTotal <= 0}>
+              确认发货
+            </Button>
+          </Popconfirm>
+        </div>
+      }
       destroyOnHidden
-      styles={{ body: { maxHeight: '80vh', overflowY: 'auto', paddingRight: 8 } }}
     >
       {/* ── Part 1: 摘要栏 ── */}
       <div style={{
@@ -202,7 +218,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       <Form form={form} layout="vertical" size="small">
         <Form.Item label="发货方式" name="shipMethod" initialValue="SELF_DELIVERY" style={{ marginBottom: 10 }}>
           <Radio.Group>
-            <Radio value="SELF_DELIVERY">自发货</Radio>
+            <Radio value="SELF_DELIVERY" style={{ marginRight: 24 }}>自发货</Radio>
             <Radio value="EXPRESS">快递发货</Radio>
           </Radio.Group>
         </Form.Item>
@@ -368,10 +384,10 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
         )}
 
         <Form.Item label="备注" name="remarks" style={{ marginBottom: 0 }}>
-          <Input.TextArea rows={2} placeholder="选填备注" />
+          <Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} placeholder="选填备注" />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 
@@ -391,7 +407,7 @@ const tdStyle: React.CSSProperties = {
 const tdEditStyle: React.CSSProperties = {
   border: '1px solid #f0f0f0',
   padding: '3px 4px',
-  minWidth: 70,
+  minWidth: 64,
 };
 
 export default FactoryShipModal;

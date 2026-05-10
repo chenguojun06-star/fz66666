@@ -4,6 +4,7 @@ export interface StyleInfo extends Record<string, unknown> {
   id?: string | number;
   styleNo: string;
   skc?: string;
+  skuMode?: 'AUTO' | 'MANUAL';
   styleName: string;
   category: string;
   price: number;
@@ -241,3 +242,26 @@ export interface TemplateLibrary {
 
 /** 样衣开发工作台可切换的 Tab 段落 */
 export type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'sizePrice' | 'secondary' | 'production' | 'quotation' | 'files';
+
+export interface ProductSku {
+  id?: number;
+  skuCode: string;
+  styleId?: number;
+  styleNo?: string;
+  color: string;
+  size: string;
+  barcode?: string;
+  externalSkuId?: string;
+  externalPlatform?: string;
+  costPrice?: number;
+  salesPrice?: number;
+  stockQuantity?: number;
+  status?: string;
+  skuMode?: 'AUTO' | 'MANUAL';
+  manuallyEdited?: number;
+  remark?: string;
+  createTime?: string;
+  updateTime?: string;
+  tenantId?: number;
+  version?: number;
+}

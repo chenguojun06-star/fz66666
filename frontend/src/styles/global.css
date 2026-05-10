@@ -100,6 +100,16 @@ body {
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
 
+/* 恢复 small/large 尺寸的正确高度（覆盖上面 middle 固定值） */
+.ant-input-affix-wrapper-sm,
+.ant-input-number-sm {
+  height: 24px !important;
+}
+.ant-input-affix-wrapper-lg,
+.ant-input-number-lg {
+  height: 40px !important;
+}
+
 /* 不要覆盖 ant-input 的默认样式，让 Ant Design 自己处理 */
 
 /* ============================================

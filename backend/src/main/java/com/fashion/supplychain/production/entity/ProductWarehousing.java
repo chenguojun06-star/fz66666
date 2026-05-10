@@ -41,6 +41,10 @@ public class ProductWarehousing {
 
     private String warehouse;
 
+    private String warehouseAreaId;
+
+    private String warehouseAreaName;
+
     // ==================== 入库时间/人员字段 ====================
 
     /**

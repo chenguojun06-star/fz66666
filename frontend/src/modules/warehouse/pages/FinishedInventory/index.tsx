@@ -4,7 +4,7 @@ import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons'
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
 import CustomerInfoSection from './CustomerInfoSection';
-import ScanOperationModal from './ScanOperationModal';
+import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
 import type { FinishedInventory } from './finishedInventoryColumns';

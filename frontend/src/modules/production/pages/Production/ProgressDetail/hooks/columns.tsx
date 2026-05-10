@@ -37,6 +37,7 @@ interface UseProgressColumnsParams {
   canManageOrderLifecycle?: boolean;
   isFactoryAccount?: boolean;
   onFactoryShip?: (order: ProductionOrder) => void;
+  openKanban: (order: ProductionOrder) => void;
 }
 
 export const useProgressColumns = ({
@@ -60,6 +61,7 @@ export const useProgressColumns = ({
   canManageOrderLifecycle = false,
   isFactoryAccount = false,
   onFactoryShip,
+  openKanban,
 }: UseProgressColumnsParams) => {
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
@@ -94,6 +96,7 @@ export const useProgressColumns = ({
         canManageOrderLifecycle,
         handleCloseOrder,
         onShareOrder,
+        openKanban,
         getPredictHint,
         triggerPredict,
       }),

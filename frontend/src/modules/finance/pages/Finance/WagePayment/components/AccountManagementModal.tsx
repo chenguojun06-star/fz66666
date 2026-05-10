@@ -96,7 +96,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
       )}
 
       <Card title={editingAccount ? '编辑账户' : '添加账户'} size="small" style={{ marginTop: 16, display: accountDetailOpen ? undefined : 'none' }}>
-        <Form form={accountForm} layout="vertical" requiredMark="optional">
+        <Form form={accountForm} layout="vertical" requiredMark="optional" onFinish={onSaveAccount}>
             <Form.Item label="账户类型" name="accountType" rules={[{ required: true, message: '请选择' }]}>
               <Select options={ACCOUNT_TYPE_OPTIONS} placeholder="选择账户类型" />
             </Form.Item>
@@ -145,7 +145,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
               />
             </Form.Item>
             <Space>
-              <Button type="primary" loading={accountSaving} onClick={onSaveAccount}>保存</Button>
+              <Button type="primary" loading={accountSaving} htmlType="submit">保存</Button>
               <Button onClick={() => { setAccountDetailOpen(false); setEditingAccount(null); }}>取消</Button>
             </Space>
           </Form>

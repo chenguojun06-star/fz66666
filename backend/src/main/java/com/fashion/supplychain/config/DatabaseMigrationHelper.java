@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -14,6 +15,7 @@ import java.util.Arrays;
  * 数据库迁移工具类
  * 提供表/列/索引存在性检查和安全执行 SQL 的工具方法
  */
+@ConditionalOnProperty(name = "fashion.db.repair-enabled", havingValue = "true", matchIfMissing = true)
 @Component
 @Slf4j
 public class DatabaseMigrationHelper {

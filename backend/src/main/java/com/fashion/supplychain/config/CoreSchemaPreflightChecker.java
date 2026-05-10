@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.core.annotation.Order;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
  * 目标：在应用启动时提前暴露核心表缺列风险，避免等到页面请求命中实体查询才报 500。
  * 约束：只做 INFORMATION_SCHEMA 检查和日志告警，不自动修库，不把服务标记为 down。
  */
+@ConditionalOnProperty(name = "fashion.db.repair-enabled", havingValue = "true", matchIfMissing = true)
 @Component
 @Order(11)
 @Slf4j

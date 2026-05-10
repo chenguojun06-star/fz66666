@@ -72,6 +72,8 @@ public class CuttingBundle {
      */
     private String factoryId;
 
+    private Boolean scanBlocked;
+
     // ==================== 操作人字段（自动填充）====================
 
     @TableField(fill = FieldFill.INSERT)

@@ -35,7 +35,7 @@ spring:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
   ai:
     openai:
-      api-key: ${DEEPSEEK_API_KEY:sk-placeholder}
+      api-key: ${DEEPSEEK_API_KEY:}
       base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
       chat:
         enabled: true
@@ -219,7 +219,7 @@ app:
       - "127."
       - "0:0:0:0:0:0:0:1"
       - "::1"
-    pii-encryption-key: ${APP_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}
+    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:}
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*:*,http://10.*:*}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}

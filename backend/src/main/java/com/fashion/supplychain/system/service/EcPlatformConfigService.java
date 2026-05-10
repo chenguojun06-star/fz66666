@@ -6,8 +6,12 @@ import com.fashion.supplychain.system.entity.EcPlatformConfig;
 import com.fashion.supplychain.system.mapper.EcPlatformConfigMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.net.InetAddress;
+import java.net.URI;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 电商平台凭证配置 Service
@@ -55,7 +59,7 @@ public class EcPlatformConfigService extends ServiceImpl<EcPlatformConfigMapper,
         existing.setAppKey(appKey);
         existing.setAppSecret(appSecret);
         existing.setExtraField(extraField);
-        existing.setCallbackUrl(callbackUrl);
+        existing.setCallbackUrl(validateCallbackUrl(callbackUrl));
         saveOrUpdate(existing);
         log.info("[EcConfig] 租户{} 平台{} 凭证已保存，店铺：{}", tenantId, platformCode, shopName);
         return existing;
@@ -82,5 +86,54 @@ public class EcPlatformConfigService extends ServiceImpl<EcPlatformConfigMapper,
         return list(new QueryWrapper<EcPlatformConfig>()
                 .eq("platform_code", platformCode)
                 .eq("status", "ACTIVE"));
+    }
+
+    private static final Set<String> BLOCKED_HOSTS = Set.of(
+            "127.0.0.1", "0.0.0.0", "localhost", "::1",
+            "169.254.169.254"
+    );
+
+    private String validateCallbackUrl(String url) {
+        if (!StringUtils.hasText(url)) return url;
+        try {
+            URI uri = new URI(url.trim());
+            String scheme = uri.getScheme();
+            if (scheme == null || (!scheme.equalsIgnoreCase("https") && !scheme.equalsIgnoreCase("http"))) {
+                throw new IllegalArgumentException("callbackUrl 仅允许 HTTP/HTTPS 协议: " + scheme);
+            }
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                throw new IllegalArgumentException("callbackUrl 缺少主机地址");
+            }
+            String lowerHost = host.toLowerCase();
+            if (BLOCKED_HOSTS.contains(lowerHost)) {
+                throw new IllegalArgumentException("callbackUrl 不允许指向本机或云元数据地址: " + host);
+            }
+            if (lowerHost.startsWith("10.") || lowerHost.startsWith("192.168.")) {
+                throw new IllegalArgumentException("callbackUrl 不允许指向内网地址: " + host);
+            }
+            if (lowerHost.startsWith("172.")) {
+                String[] parts = lowerHost.split("\\.");
+                if (parts.length >= 2) {
+                    try {
+                        int second = Integer.parseInt(parts[1]);
+                        if (second >= 16 && second <= 31) {
+                            throw new IllegalArgumentException("callbackUrl 不允许指向内网地址: " + host);
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            try {
+                InetAddress resolved = InetAddress.getByName(host);
+                if (resolved.isLoopbackAddress() || resolved.isLinkLocalAddress() || resolved.isSiteLocalAddress()) {
+                    throw new IllegalArgumentException("callbackUrl 解析到内网地址，不允许: " + host);
+                }
+            } catch (java.net.UnknownHostException e) {
+                log.warn("[EcConfig] callbackUrl 主机名解析失败，放行但需关注: host={}", host);
+            }
+            return url.trim();
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalArgumentException("callbackUrl 格式无效: " + e.getMessage());
+        }
     }
 }

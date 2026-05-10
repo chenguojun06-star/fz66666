@@ -60,6 +60,8 @@ public class ProductionScanExecutor {
                                        java.util.function.Function<String, String> sizeResolver) {
         ScanContext ctx = resolveScanContext(params, scanType, quantity, autoProcess, operatorId, operatorName);
 
+        executorSupport.validateBundleNotBlocked(ctx.bundle, "生产");
+
         resolveProcessStage(ctx, params, autoProcess);
 
         stageSupport.validateParentStagePrerequisite(ctx.order, ctx.bundle, ctx.progressStage, ctx.childProcessName);

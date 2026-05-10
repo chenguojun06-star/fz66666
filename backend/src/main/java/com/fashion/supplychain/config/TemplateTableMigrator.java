@@ -2,6 +2,7 @@ package com.fashion.supplychain.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
  * 模板库表迁移器
  * 负责: t_template_library 及种子数据
  */
+@ConditionalOnProperty(name = "fashion.db.repair-enabled", havingValue = "true", matchIfMissing = true)
 @Component
 @Slf4j
 public class TemplateTableMigrator {

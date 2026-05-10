@@ -3,3 +3,4 @@ export { default as CuttingFreeBundlePanel } from './CuttingFreeBundlePanel';
 export { default as CuttingPrintPreviewModal } from './CuttingPrintPreviewModal';
 export { default as CuttingRatioPanel } from './CuttingRatioPanel';
 export { default as CuttingWorkflowEditorModal } from './CuttingWorkflowEditorModal';
+export { default as CuttingBomPanel } from './CuttingBomPanel';

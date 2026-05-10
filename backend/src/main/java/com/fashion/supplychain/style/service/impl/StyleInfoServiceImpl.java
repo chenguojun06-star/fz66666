@@ -1,7 +1,6 @@
 package com.fashion.supplychain.style.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.springframework.transaction.annotation.Transactional;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
@@ -232,7 +231,6 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateStyle(StyleInfo styleInfo) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -294,7 +292,6 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(Long id) {
         StyleInfo styleInfo = new StyleInfo();
         styleInfo.setId(id);

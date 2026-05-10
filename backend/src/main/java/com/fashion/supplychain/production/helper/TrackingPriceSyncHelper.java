@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.entity.OrderTransfer;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.OrderTransferService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
@@ -60,6 +61,9 @@ public class TrackingPriceSyncHelper {
     @Autowired
     private TrackingRecordInitHelper initHelper;
 
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
+
     /**
      * 查询订单工序跟踪记录（含模板最新单价覆盖 + 权限控制 + 质检状态填充）
      */
@@ -106,6 +110,7 @@ public class TrackingPriceSyncHelper {
         enrichWithTemplatePrices(records, order);
         fillNextStageScanned(records, productionOrderId);
         fillProgressStage(records, order);
+        fillScanBlocked(records);
         return records;
     }
 
@@ -321,6 +326,30 @@ public class TrackingPriceSyncHelper {
             }
         } catch (Exception e) {
             log.warn("填充progressStage失败，忽略 orderNo={}: {}", order.getOrderNo(), e.getMessage());
+        }
+    }
+
+    private void fillScanBlocked(List<ProductionProcessTracking> records) {
+        try {
+            Set<String> bundleIds = records.stream()
+                    .map(ProductionProcessTracking::getCuttingBundleId)
+                    .filter(id -> id != null && !id.isEmpty())
+                    .collect(java.util.stream.Collectors.toSet());
+            if (bundleIds.isEmpty()) return;
+
+            Map<String, Boolean> blockedMap = new HashMap<>();
+            List<com.fashion.supplychain.production.entity.CuttingBundle> bundles =
+                    cuttingBundleService.listByIds(bundleIds);
+            for (com.fashion.supplychain.production.entity.CuttingBundle b : bundles) {
+                blockedMap.put(b.getId(), Boolean.TRUE.equals(b.getScanBlocked()));
+            }
+            for (ProductionProcessTracking r : records) {
+                if (r.getCuttingBundleId() != null) {
+                    r.setScanBlocked(blockedMap.getOrDefault(r.getCuttingBundleId(), false));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("填充scanBlocked失败，忽略: {}", e.getMessage());
         }
     }
 

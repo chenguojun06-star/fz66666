@@ -91,7 +91,7 @@ public class FactoryWorkerController {
     }
 
     /** @deprecated 使用 POST / 或 PUT /{id} 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @PostMapping("/save")
     public Result<Boolean> save(@RequestBody FactoryWorker worker) {
         String ctxFactoryId = UserContext.factoryId();

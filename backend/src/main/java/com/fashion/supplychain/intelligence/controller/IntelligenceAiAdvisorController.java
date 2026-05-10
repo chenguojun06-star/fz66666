@@ -119,14 +119,7 @@ public class IntelligenceAiAdvisorController {
         if (userId == null || userId.isBlank()) {
             throw new org.springframework.security.access.AccessDeniedException("登录已过期，请重新登录");
         }
-        boolean rateLimited = false;
-        try {
-            rateLimited = !RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:sse:" + userId, 30, 1);
-        } catch (Exception e) {
-            // Redis 不可用时（Lettuce连接异常等），忽略限流放行，避免抛出 500 系统异常
-            log.warn("[AI对话SSE] 限流检查失败，放行请求: userId={}, error={}", userId, e.getMessage());
-        }
-        if (rateLimited) {
+        if (!RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:sse:" + userId, 30, 1)) {
             SseEmitter emitter = new SseEmitter(3000L);
             try { emitter.send(SseEmitter.event().name("error").data("AI对话请求过于频繁")); emitter.complete(); } catch (Exception e) { log.warn("[AI对话] SSE限流提示发送失败: userId={}", userId); }
             return emitter;
@@ -215,7 +208,7 @@ public class IntelligenceAiAdvisorController {
     }
 
     /** @deprecated 使用 POST /ai-advisor/conversation/persist 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @PostMapping("/ai-advisor/memory/save")
     public Result<Void> saveAiConversationMemory() {
         aiAgentOrchestrator.saveCurrentConversationToMemory();
@@ -301,7 +294,7 @@ public class IntelligenceAiAdvisorController {
     }
 
     /** @deprecated 使用 POST /memory 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @PostMapping("/memory/save")
     public Result<IntelligenceMemoryResponse> saveMemory(@RequestBody java.util.Map<String, String> body) {
         return Result.success(intelligenceMemoryOrchestrator.saveCase(

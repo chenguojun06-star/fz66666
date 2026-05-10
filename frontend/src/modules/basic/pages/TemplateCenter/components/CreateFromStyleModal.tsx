@@ -37,7 +37,7 @@ const CreateFromStyleModal: React.FC<CreateFromStyleModalProps> = ({
       cancelText="取消"
       width={modalWidth}
     >
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" onFinish={onOk}>
         <Form.Item
           name="sourceStyleNo"
           label="来源款号"

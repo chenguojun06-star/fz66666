@@ -2,6 +2,7 @@ package com.fashion.supplychain.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
  * 负责: t_user, t_factory, t_operation_log, t_login_log, t_dict,
  *       t_permission, t_role, t_role_permission, 管理员账号
  */
+@ConditionalOnProperty(name = "fashion.db.repair-enabled", havingValue = "true", matchIfMissing = true)
 @Component
 @Slf4j
 public class SystemTableMigrator {

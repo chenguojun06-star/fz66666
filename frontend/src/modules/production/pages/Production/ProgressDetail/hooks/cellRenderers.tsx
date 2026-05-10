@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import dayjs from 'dayjs';
 import { Badge, Button, Popover, Tag, Tooltip } from 'antd';
-import { ExclamationCircleOutlined, ShareAltOutlined, SendOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined, ShareAltOutlined, SendOutlined, AppstoreOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { buildOrderColorSizeMatrixModel, ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
@@ -305,6 +305,7 @@ export interface ProgressNodesContext {
   canManageOrderLifecycle?: boolean;
   handleCloseOrder: (order: ProductionOrder) => void;
   onShareOrder?: (order: ProductionOrder) => void;
+  openKanban: (order: ProductionOrder) => void;
   getPredictHint: (orderId: string, stageName: string, percent: number) => string;
   triggerPredict: (params: { orderId: string; orderNo?: string; stageName: string; currentProgress: number }) => void;
 }
@@ -689,6 +690,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
         })}
         </div>
         <div className="progress-row-actions">
+          <Button size="small" icon={<AppstoreOutlined />} onClick={() => ctx.openKanban(record)}>看板</Button>
           <Button size="small" onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>编辑</Button>
           <Button size="small" disabled={frozen} onClick={() => setPrintingRecord(record)}>打印</Button>
           <Button size="small" disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>标签</Button>

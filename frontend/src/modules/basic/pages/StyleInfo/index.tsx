@@ -17,6 +17,8 @@ import StylePatternTab from './components/StylePatternTab';
 import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
+import StyleSkuTab from './components/StyleSkuTab';
+import StyleCuttingInfoTab from './components/StyleCuttingInfoTab';
 import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileCard';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -95,6 +97,10 @@ const StyleInfoDetailPage: React.FC = () => {
     return editLocked && Boolean(currentStyle?.id);
   };
 
+  const handleSkcClick = () => {
+    setActiveTabKey('10');
+  };
+
   if (!isDetailPage && !isNewPage) {
     return null;
   }
@@ -135,6 +141,7 @@ const StyleInfoDetailPage: React.FC = () => {
               editLocked={editLocked}
               isNewPage={isNewPage}
               isFieldLocked={isFieldLocked}
+              onSkcClick={handleSkcClick}
               pendingImages={colorSize.pendingImages}
               onPendingImagesChange={colorSize.setPendingImages}
               coverRefreshToken={colorSize.coverRefreshToken}
@@ -307,6 +314,29 @@ const StyleInfoDetailPage: React.FC = () => {
                 label: '附件文件',
                 disabled: !currentStyle?.id,
                 children: <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
+              },
+              {
+                key: '10',
+                label: 'SKU管理',
+                disabled: !currentStyle?.id,
+                children: (
+                  <StyleSkuTab
+                    styleId={String(currentStyle?.id ?? '')}
+                    styleNo={currentStyle?.styleNo ?? ''}
+                    skc={(currentStyle as any)?.skc}
+                    skuMode={(currentStyle as any)?.skuMode}
+                    onModeChange={() => { void fetchDetail(styleIdParam!); }}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                  />
+                )
+              },
+              {
+                key: '11',
+                label: '裁剪信息',
+                disabled: !currentStyle?.styleNo,
+                children: (
+                  <StyleCuttingInfoTab styleNo={currentStyle?.styleNo ?? ''} />
+                )
               }
             ]}
           />
@@ -344,6 +374,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 <Checkbox value="process">工序单价</Checkbox>
                 <Checkbox value="production">生产制单</Checkbox>
                 <Checkbox value="secondary">二次工艺</Checkbox>
+                <Checkbox value="sku">SKU管理</Checkbox>
               </div>
             </Checkbox.Group>
           </Form.Item>

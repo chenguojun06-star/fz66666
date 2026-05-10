@@ -7,6 +7,7 @@ import com.fashion.supplychain.system.entity.EcPlatformConfig;
 import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
 public class JushuitanSyncService {
 
     private static final String JST_API_BASE = "https://open.jushuitan.com";

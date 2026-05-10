@@ -124,6 +124,8 @@ public class WarehouseScanExecutor {
 
         executorSupport.validateBundleFactoryAccess(bundle, "入库");
 
+        executorSupport.validateBundleNotBlocked(bundle, "入库");
+
         if (order == null) {
             throw new IllegalStateException("未匹配到订单");
         }

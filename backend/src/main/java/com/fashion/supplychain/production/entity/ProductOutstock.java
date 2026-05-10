@@ -36,6 +36,10 @@ public class ProductOutstock {
 
     private String warehouse;
 
+    private String warehouseAreaId;
+
+    private String warehouseAreaName;
+
     private String remark;
 
     private LocalDateTime createTime;

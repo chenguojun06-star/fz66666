@@ -7,6 +7,7 @@ import { formatDateTimeCompact } from '@/utils/datetime';
 import { CuttingBundle, ProductionOrder, ScanRecord } from '@/types/production';
 import { productionCuttingApi, productionOrderApi } from '@/services/production/productionApi';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
+import ProcessKanbanDrawer from './components/ProcessKanbanDrawer';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { useProductionBoardStore } from '@/stores';
 import { useProductionSmartQueue } from '../useProductionSmartQueue';
@@ -142,6 +143,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     nodeDetailVisible, nodeDetailOrder, nodeDetailType,
     nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList,
   } = useNodeDetail();
+
+  const [kanbanVisible, setKanbanVisible] = useState(false);
+  const [kanbanOrder, setKanbanOrder] = useState<ProductionOrder | null>(null);
+  const openKanban = useCallback((order: ProductionOrder) => {
+    setKanbanOrder(order);
+    setKanbanVisible(true);
+  }, []);
+
   const { printingRecord, printModalVisible, setPrintingRecord, closePrintModal } = usePrintFlow();
   const { labelPrintOpen, labelPrintOrder, labelPrintStyle, handlePrintLabel, closeLabelPrint } = useLabelPrint();
 
@@ -268,6 +277,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal, stagnantOrderIds, deliveryRiskMap,
     onShareOrder: handleShareOrder, isFactoryAccount, onFactoryShip: handleFactoryShip, canManageOrderLifecycle,
+    openKanban,
   });
   const { columns: cardColumns } = useCardGridLayout(10);
 
@@ -338,6 +348,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         closeOrderLoading={closeOrderLoading}
         confirmCloseOrder={confirmCloseOrder}
         cancelCloseOrder={cancelCloseOrder}
+      />
+
+      <ProcessKanbanDrawer
+        visible={kanbanVisible}
+        onClose={() => { setKanbanVisible(false); setKanbanOrder(null); }}
+        orderId={kanbanOrder?.id}
+        orderNo={kanbanOrder?.orderNo}
+        styleNo={kanbanOrder?.styleNo}
       />
 
       <RemarkTimelineModal

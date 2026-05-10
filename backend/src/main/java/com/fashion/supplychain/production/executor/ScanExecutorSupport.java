@@ -33,6 +33,15 @@ public class ScanExecutorSupport {
         }
     }
 
+    public void validateBundleNotBlocked(CuttingBundle bundle, String stageName) {
+        if (bundle == null) return;
+        if (Boolean.TRUE.equals(bundle.getScanBlocked())) {
+            log.warn("[扫码阻止-{}] 菲号已被阻止扫码: bundleId={}, bundleNo={}",
+                    stageName, bundle.getId(), bundle.getBundleNo());
+            throw new BusinessException("该菲号已被阻止扫码，无法继续" + stageName + "。请在工序看板中解除阻止后重试");
+        }
+    }
+
     public void validateOrderNotTerminal(ProductionOrder order, String stageName) {
         String status = order.getStatus() == null ? "" : order.getStatus().trim();
         if (OrderStatusConstants.isTerminal(status)) {

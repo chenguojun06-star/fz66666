@@ -44,8 +44,6 @@ public class ProcessParentNodeResolver {
         if ("二次工艺".equals(pn) || ProcessSynonymMapping.isEquivalent("二次工艺", pn)) return "二次工艺";
         if ("尾部".equals(pn) || ProcessSynonymMapping.isEquivalent("尾部", pn)) return "尾部";
         if ("入库".equals(pn) || ProcessSynonymMapping.isEquivalent("入库", pn)) return "入库";
-        if ("质检".equals(pn) || ProcessSynonymMapping.isEquivalent("质检", pn)) return "质检";
-        if ("包装".equals(pn) || ProcessSynonymMapping.isEquivalent("包装", pn)) return "包装";
         String mapped = processParentMappingService.resolveParentNode(pn);
         if (StringUtils.hasText(mapped)) return mapped;
         return null;

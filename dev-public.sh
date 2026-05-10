@@ -127,7 +127,7 @@ fi
 echo "[1/3] 启动后端 (Spring Boot) ..."
 # 固定 Java 17（Lombok 不兼容 Java 25）
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
-export PATH="$JAVA_HOME/bin:$PATH"
+export PATH="$JAVA_HOME/bin:/opt/homebrew/bin:$PATH"
 if is_listening 8088; then
   echo "- 后端 8088 已在运行，跳过启动"
   BACKEND_PID=""

@@ -206,7 +206,7 @@ public class IntegrationDashboardController {
     }
 
     /** @deprecated 使用 POST /channel-config 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @PostMapping("/channel-config/save")
     public Result<String> saveChannelConfig(@RequestBody Map<String, Object> params) {
         return doSaveChannelConfig(params);

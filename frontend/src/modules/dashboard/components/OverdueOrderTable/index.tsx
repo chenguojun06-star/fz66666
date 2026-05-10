@@ -238,7 +238,7 @@ const OverdueOrderTable: React.FC = () => {
             dataSource={filteredDataSource}
             rowKey="id"
             resizableColumns={false}
-            scroll={{ x: 'max-content' }}
+            scroll={{ x: 'max-content', y: 9999 }}
             pagination={{
               defaultPageSize: 10,
               showSizeChanger: true,

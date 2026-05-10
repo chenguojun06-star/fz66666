@@ -31,7 +31,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
       open={open}
       title={mode === 'create' ? '新增供应商' : mode === 'edit' ? '编辑供应商' : '供应商详情'}
       onCancel={onCancel}
-      onOk={mode === 'view' ? undefined : onOk}
+      onOk={mode === 'view' ? undefined : () => form.submit()}
       okText="保存"
       cancelText="取消"
       confirmLoading={submitLoading}
@@ -47,7 +47,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
       minWidth={isMobile ? 320 : 520}
       scaleWithViewport
     >
-      <Form form={form} layout="vertical" disabled={mode === 'view'}>
+      <Form form={form} layout="vertical" disabled={mode === 'view'} onFinish={onOk}>
         <Form.Item name="supplierType" label="供应商类型" rules={[{ required: true, message: '请选择供应商类型' }]}>
           <Select
             id="supplierType"

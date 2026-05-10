@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS t_warehouse_area (
+    id VARCHAR(64) NOT NULL,
+    area_code VARCHAR(50) NOT NULL,
+    area_name VARCHAR(100) NOT NULL,
+    warehouse_type VARCHAR(20) NOT NULL,
+    address VARCHAR(255) DEFAULT NULL,
+    contact_person VARCHAR(50) DEFAULT NULL,
+    contact_phone VARCHAR(20) DEFAULT NULL,
+    manager_id VARCHAR(64) DEFAULT NULL,
+    manager_name VARCHAR(50) DEFAULT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    sort_order INT DEFAULT 0,
+    description VARCHAR(500) DEFAULT NULL,
+    tenant_id BIGINT NOT NULL,
+    create_by VARCHAR(64) DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_by VARCHAR(64) DEFAULT NULL,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    delete_flag INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_area_code_tenant (area_code, tenant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -21,6 +21,8 @@ public final class DbColumnDefinitions {
         addBillingColumns();
         addOtherColumns();
         addSmartFeatureColumns();
+        addWarehouseAreaColumns();
+        addSkuAndTrackingColumns();
     }
 
     private DbColumnDefinitions() {}
@@ -246,6 +248,7 @@ public final class DbColumnDefinitions {
         add("t_cutting_bundle", "operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '操作人ID'");
         add("t_cutting_bundle", "operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名'");
         add("t_cutting_bundle", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_cutting_bundle", "scan_blocked", "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '扫码阻止开关'");
         add("t_cutting_task", "factory_type", "VARCHAR(20) DEFAULT NULL COMMENT '工厂类型'");
         add("t_cutting_task", "receiver_id", "VARCHAR(64) DEFAULT NULL COMMENT '领取人ID'");
         add("t_cutting_task", "receiver_name", "VARCHAR(100) DEFAULT NULL COMMENT '领取人姓名'");
@@ -1001,5 +1004,34 @@ public final class DbColumnDefinitions {
         add("t_tenant_smart_feature", "create_time", "DATETIME DEFAULT CURRENT_TIMESTAMP");
         add("t_tenant_smart_feature", "update_time", "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
         add("t_tenant_smart_feature", "delete_flag", "INT DEFAULT 0");
+    }
+
+    private static void addWarehouseAreaColumns() {
+        add("t_warehouse_location", "area_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_product_warehousing", "warehouse_area_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_product_warehousing", "warehouse_area_name", "VARCHAR(100) DEFAULT NULL");
+        add("t_product_outstock", "warehouse_area_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_product_outstock", "warehouse_area_name", "VARCHAR(100) DEFAULT NULL");
+        add("t_material_inbound", "warehouse_area_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_material_inbound", "warehouse_area_name", "VARCHAR(100) DEFAULT NULL");
+        add("t_material_stock", "warehouse_area_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_material_stock", "warehouse_area_name", "VARCHAR(100) DEFAULT NULL");
+    }
+
+    private static void addSkuAndTrackingColumns() {
+        add("t_style_info", "sku_mode", "VARCHAR(20) DEFAULT NULL");
+        add("t_product_sku", "sku_mode", "VARCHAR(20) DEFAULT NULL");
+        add("t_product_sku", "manually_edited", "TINYINT DEFAULT 0");
+        add("t_product_sku", "remark", "VARCHAR(500) DEFAULT NULL");
+        add("t_production_process_tracking", "quality_status", "VARCHAR(20) DEFAULT NULL");
+        add("t_production_process_tracking", "defect_quantity", "INT DEFAULT 0");
+        add("t_production_process_tracking", "defect_category", "VARCHAR(50) DEFAULT NULL");
+        add("t_production_process_tracking", "defect_remark", "VARCHAR(500) DEFAULT NULL");
+        add("t_production_process_tracking", "defect_problems", "TEXT");
+        add("t_production_process_tracking", "quality_operator_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_production_process_tracking", "quality_operator_name", "VARCHAR(50) DEFAULT NULL");
+        add("t_production_process_tracking", "quality_time", "DATETIME DEFAULT NULL");
+        add("t_production_process_tracking", "repair_status", "VARCHAR(20) DEFAULT NULL");
+        add("t_production_process_tracking", "repair_completed_time", "DATETIME DEFAULT NULL");
     }
 }

@@ -92,7 +92,7 @@ public class FactoryShipmentController {
     }
 
     /** @deprecated 使用 POST /list-by-order 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @GetMapping("/by-order/{orderId}")
     public Result<?> listByOrder(@PathVariable("orderId") String orderId) {
         List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);

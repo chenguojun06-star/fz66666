@@ -197,8 +197,8 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
     },
     {
       key: '6',
-      label: ' 订单结算',
-      children: <Text type="secondary">左侧菜单 → 财务管理 → 订单结算（外）。查看本工厂已完成订单的结算金额，以及各款式工序的单价明细。</Text>,
+      label: ' 外发结算',
+      children: <Text type="secondary">左侧菜单 → 财务管理 → 外发结算。查看本工厂已完成订单的结算金额，以及各款式工序的单价明细。</Text>,
     },
     {
       key: '7',

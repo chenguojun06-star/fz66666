@@ -57,6 +57,15 @@ public class OrganizationUnitController {
         return Result.success(null);
     }
 
+    @PostMapping("/assign-members")
+    public Result<Integer> assignMembers(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> userIds = (List<String>) body.get("userIds");
+        String orgUnitId = (String) body.get("orgUnitId");
+        int count = organizationUnitOrchestrator.batchAssignMembers(userIds, orgUnitId);
+        return Result.success(count);
+    }
+
     @PostMapping("/remove-member")
     public Result<Void> removeMember(@RequestBody Map<String, String> body) {
         organizationUnitOrchestrator.removeMember(body.get("userId"), body.get("remark"));

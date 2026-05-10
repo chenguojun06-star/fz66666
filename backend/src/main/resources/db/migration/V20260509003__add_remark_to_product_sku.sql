@@ -1,0 +1,1 @@
+ALTER TABLE t_product_sku ADD COLUMN remark VARCHAR(500) DEFAULT NULL COMMENT '备注(退回编辑原因等)';

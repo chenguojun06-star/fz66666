@@ -21,6 +21,7 @@ const PayrollOperatorSummary: React.FC = () => {
     const {
         activeTab, setActiveTab, keyword, setKeyword, scanType, setScanType,
         dateRange, setDateRange, includeSettled, setIncludeSettled,
+        approvalFilter, setApprovalFilter,
         kingdeeExportFormat, setKingdeeExportFormat,
         rows, setRows, loading, smartError, showSmartErrorNotice,
         detailSortField, detailSortOrder, handleDetailSort,
@@ -271,7 +272,7 @@ const PayrollOperatorSummary: React.FC = () => {
                             <>
                                 <Card size="small" className="mb-sm">
                                     <Space wrap>
-                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>行数 {rows.length}</span>
+                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>行数 {filteredRows.length}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>数量合计 {totalQuantity}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>金额合计 {totalAmount.toFixed(2)}</span>
                                         {dateRange?.[0] && dateRange?.[1] && (
@@ -279,6 +280,16 @@ const PayrollOperatorSummary: React.FC = () => {
                                                 统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD HH:mm')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD HH:mm')}
                                             </span>
                                         )}
+                                        <Select
+                                            style={{ width: 120 }}
+                                            value={approvalFilter}
+                                            onChange={setApprovalFilter}
+                                            options={[
+                                                { value: 'all', label: '全部' },
+                                                { value: 'pending', label: '待审核' },
+                                                { value: 'approved', label: '已审核' },
+                                            ]}
+                                        />
                                         <Button type="primary" disabled={detailSelectedKeys.length === 0} onClick={handleBatchAuditDetails}>
                                             批量审核 ({detailSelectedKeys.length})
                                         </Button>

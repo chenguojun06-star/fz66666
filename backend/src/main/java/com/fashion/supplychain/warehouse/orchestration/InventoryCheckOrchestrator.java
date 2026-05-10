@@ -264,10 +264,19 @@ public class InventoryCheckOrchestrator {
             if (item.getDiffQuantity() == null || item.getDiffQuantity() == 0) continue;
             if ("MATERIAL".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
                 int delta = item.getDiffQuantity();
-                int rows = ((com.fashion.supplychain.production.mapper.MaterialStockMapper) materialStockService.getBaseMapper()).updateStockQuantity(
-                        item.getStockId(), delta, tenantId);
-                if (rows == 0) {
-                    throw new IllegalStateException("盘点调整物料库存失败: stockId=" + item.getStockId());
+                if (delta < 0) {
+                    int rows = ((com.fashion.supplychain.production.mapper.MaterialStockMapper) materialStockService.getBaseMapper())
+                            .decreaseStockWithCheck(item.getStockId(), Math.abs(delta), tenantId);
+                    if (rows == 0) {
+                        log.warn("[盘点调整] 物料库存不足，跳过扣减: stockId={}, delta={}, 可能为并发消耗所致",
+                                item.getStockId(), delta);
+                    }
+                } else {
+                    int rows = ((com.fashion.supplychain.production.mapper.MaterialStockMapper) materialStockService.getBaseMapper())
+                            .updateStockQuantity(item.getStockId(), delta, tenantId);
+                    if (rows == 0) {
+                        throw new IllegalStateException("盘点调整物料库存失败: stockId=" + item.getStockId());
+                    }
                 }
                 log.info("盘点调整物料库存: stockId={}, delta={}", item.getStockId(), delta);
             } else if ("FINISHED".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {

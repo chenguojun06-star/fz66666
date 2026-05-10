@@ -23,11 +23,11 @@ const ProfileFeedbackModal: React.FC<Props> = ({
       title="提交问题反馈"
       onCancel={onCancel}
       width="40vw"
-      onOk={onSubmit}
+      onOk={() => feedbackForm.submit()}
       confirmLoading={submitting}
       okText="提交"
     >
-      <Form form={feedbackForm} layout="vertical" requiredMark={false}>
+      <Form form={feedbackForm} layout="vertical" requiredMark={false} onFinish={onSubmit}>
         <Form.Item label="分类" name="category" initialValue="BUG" rules={[{ required: true }]}>
           <Select options={[
             { value: 'BUG', label: ' 系统缺陷' },

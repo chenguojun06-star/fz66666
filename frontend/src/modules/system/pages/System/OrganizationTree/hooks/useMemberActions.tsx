@@ -60,10 +60,8 @@ export function useMemberActions(
     }
     setBatchAssignLoading(true);
     try {
-      await Promise.all(
-        batchSelectedIds.map((uid) => organizationApi.assignMember(uid, String(assignModal.node!.id))),
-      );
-      message.success(`已成功添加 ${batchSelectedIds.length} 名成员`);
+      const count = await organizationApi.batchAssignMembers(batchSelectedIds, String(assignModal.node!.id));
+      message.success(`已成功添加 ${count} 名成员`);
       setBatchSelectedIds([]);
       const [m] = await Promise.allSettled([organizationApi.members(), loadAssignableUsers()]);
       if (m.status === 'fulfilled' && m.value && typeof m.value === 'object') {

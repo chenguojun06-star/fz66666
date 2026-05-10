@@ -157,13 +157,23 @@ public class ProductionProcessTracking {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    /**
-     * 虚拟字段：后续扫码环节（质检）是否已完成扫码
-     * 如为 true，前端应隐藏撤回按钮（后端 undo() 同样会拒绝）
-     */
+    private String qualityStatus;
+    private Integer defectQuantity;
+    private String defectCategory;
+    private String defectRemark;
+    private String defectProblems;
+    private String qualityOperatorId;
+    private String qualityOperatorName;
+    private LocalDateTime qualityTime;
+    private String repairStatus;
+    private LocalDateTime repairCompletedTime;
+
     @TableField(exist = false)
     private Boolean hasNextStageScanned;
 
     @TableField(exist = false)
     private String progressStage;
+
+    @TableField(exist = false)
+    private Boolean scanBlocked;
 }

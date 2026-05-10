@@ -24,6 +24,7 @@ import {
   FireOutlined,
   RadarChartOutlined,
   AuditOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -50,6 +51,7 @@ export const paths = {
   cutting: '/production/cutting',
   cuttingTask: '/production/cutting/task/:orderNo',
   progressDetail: '/production/progress-detail',
+
   externalFactory: '/production/external-factory',
   orderFlow: '/production/order-flow',
   warehousing: '/production/warehousing',
@@ -245,8 +247,8 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(AccountBookOutlined),
     items: [
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
-      { label: '工资结算(内)', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
-      { label: '订单结算(外)', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
+      { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
+      { label: '外发结算', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
       { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
       { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },

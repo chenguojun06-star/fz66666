@@ -30,7 +30,7 @@ public interface MaterialStockMapper extends BaseMapper<MaterialStock> {
     int decreaseStockAndUnlock(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_material_stock SET " +
-            "quantity = quantity + #{delta}, " +
+            "quantity = GREATEST(0, quantity + #{delta}), " +
             "total_value = ROUND(GREATEST(0, quantity + #{delta}) * COALESCE(unit_price, 0), 2), " +
             "update_time = NOW() WHERE id = #{id} AND delete_flag = 0 " +
             "AND tenant_id = #{tenantId}")

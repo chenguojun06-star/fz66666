@@ -116,7 +116,7 @@ export interface OrganizationUnit extends Record<string, unknown> {
   /** @deprecated Use unitName instead to avoid DOM node collision */
   nodeName?: string;
   unitName: string;
-  category?: string; // 上级部门类别
+  category?: string;
   nodeType: 'DEPARTMENT' | 'FACTORY';
   ownerType?: 'INTERNAL' | 'EXTERNAL' | 'NONE';
   factoryId?: string;
@@ -124,6 +124,8 @@ export interface OrganizationUnit extends Record<string, unknown> {
   status?: 'active' | 'inactive';
   pathIds?: string;
   pathNames?: string;
+  managerUserId?: string;
+  managerUserName?: string;
   children?: OrganizationUnit[];
   operationRemark?: string;
 }

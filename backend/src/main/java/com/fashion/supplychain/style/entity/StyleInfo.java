@@ -36,6 +36,8 @@ public class StyleInfo {
      */
     private String skc;
 
+    private String skuMode;
+
     /**
      * 款名
      * 支持多种前端字段名: styleName, styleNameCN, style_name

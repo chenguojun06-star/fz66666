@@ -1,7 +1,11 @@
 package com.fashion.supplychain.style.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.mapper.ProductSkuMapper;
@@ -18,6 +22,8 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -25,10 +31,10 @@ import java.util.Map;
 public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, ProductSku> implements ProductSkuService {
 
     private final StyleInfoMapper styleInfoMapper;
+    private final ProductionOrderMapper productionOrderMapper;
     private final ObjectMapper objectMapper;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void generateSkusForStyle(Long styleId) {
         StyleInfo style = styleInfoMapper.selectById(styleId);
         if (style == null) {
@@ -41,11 +47,6 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         }
 
         try {
-            // 解析配置: [{"color": "红色", "sizes": [{"size": "S", "quantity": 10}, ...]}, ...]
-            // 或者可能是简单的 Map 结构，需根据实际情况调整。这里假设是 List<Map>
-            // 根据 StyleInfoController 中的逻辑，sizeColorConfig 通常是 JSON 字符串
-
-            // 简单处理：先尝试解析为 List<Map>
             List<Map<String, Object>> configList = objectMapper.readValue(sizeColorConfig,
                     new TypeReference<List<Map<String, Object>>>() {
                     });
@@ -76,60 +77,56 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         if (!StringUtils.hasText(skuCode)) {
             return;
         }
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        Long tenantId = UserContext.tenantId();
         int rows = baseMapper.updateStockBySkuCode(skuCode, quantity, tenantId);
         if (rows > 0) {
             log.info("Atomically updated stock for SKU {}: delta={}", skuCode, quantity);
             return;
         }
-        // SKU不存在时自动创建（入库场景）
-            if (quantity > 0) {
-                try {
-                    // skuCode 格式: styleNo-color-size
-                    String[] parts = skuCode.split("-", 3);
-                    if (parts.length >= 3) {
-                        String styleNo = parts[0];
-                        String color = parts[1];
-                        String size = parts[2];
+        if (quantity > 0) {
+            try {
+                String[] parts = skuCode.split("-", 3);
+                if (parts.length >= 3) {
+                    String styleNo = parts[0];
+                    String color = parts[1];
+                    String size = parts[2];
 
-                        // 通过款号查找StyleInfo获取styleId
-                        StyleInfo style = styleInfoMapper.selectOne(
+                    StyleInfo style = styleInfoMapper.selectOne(
                             new LambdaQueryWrapper<StyleInfo>()
-                                .eq(StyleInfo::getStyleNo, styleNo)
-                                .last("LIMIT 1"));
+                                    .eq(StyleInfo::getStyleNo, styleNo)
+                                    .last("LIMIT 1"));
 
-                        ProductSku newSku = new ProductSku();
-                        newSku.setSkuCode(skuCode);
-                        newSku.setStyleId(style != null ? style.getId() : 0L);
-                        newSku.setStyleNo(styleNo);
-                        newSku.setColor(color);
-                        newSku.setSize(size);
-                        newSku.setStatus("ENABLED");
-                        newSku.setStockQuantity(quantity);
-                        newSku.setTenantId(tenantId);
-                        if (style != null && style.getPrice() != null) {
-                            newSku.setSalesPrice(style.getPrice());
-                        }
-                        this.save(newSku);
-                        log.info("Auto-created SKU {} with stock {} (from warehousing)", skuCode, quantity);
-                    } else {
-                        log.warn("Invalid SKU code format for auto-create: {}", skuCode);
+                    ProductSku newSku = new ProductSku();
+                    newSku.setSkuCode(skuCode);
+                    newSku.setStyleId(style != null ? style.getId() : 0L);
+                    newSku.setStyleNo(styleNo);
+                    newSku.setColor(color);
+                    newSku.setSize(size);
+                    newSku.setStatus("ENABLED");
+                    newSku.setStockQuantity(quantity);
+                    newSku.setTenantId(tenantId);
+                    if (style != null && style.getPrice() != null) {
+                        newSku.setSalesPrice(style.getPrice());
                     }
-                } catch (Exception e) {
-                    log.warn("Failed to auto-create SKU {}: {}", skuCode, e.getMessage());
+                    this.save(newSku);
+                    log.info("Auto-created SKU {} with stock {} (from warehousing)", skuCode, quantity);
+                } else {
+                    log.warn("Invalid SKU code format for auto-create: {}", skuCode);
                 }
-            } else {
-                log.warn("SKU not found for stock update: {}", skuCode);
+            } catch (Exception e) {
+                log.warn("Failed to auto-create SKU {}: {}", skuCode, e.getMessage());
             }
+        } else {
+            log.warn("SKU not found for stock update: {}", skuCode);
+        }
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void updateStockById(Long id, int delta) {
         if (delta == 0 || id == null) {
             return;
         }
-        int rows = baseMapper.updateStockById(id, delta, com.fashion.supplychain.common.UserContext.tenantId());
+        int rows = baseMapper.updateStockById(id, delta, UserContext.tenantId());
         if (rows == 0) {
             throw new IllegalStateException("SKU库存更新失败: id=" + id);
         }
@@ -137,17 +134,188 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean decreaseStockBySkuCode(String skuCode, int delta) {
         if (delta <= 0 || !StringUtils.hasText(skuCode)) {
             return false;
         }
-        int rows = baseMapper.decreaseStockBySkuCode(skuCode, delta, com.fashion.supplychain.common.UserContext.tenantId());
+        int rows = baseMapper.decreaseStockBySkuCode(skuCode, delta, UserContext.tenantId());
         return rows > 0;
+    }
+
+    @Override
+    public List<ProductSku> listByStyleId(Long styleId) {
+        Long tenantId = UserContext.tenantId();
+        LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<ProductSku>()
+                .eq(ProductSku::getStyleId, styleId)
+                .orderByAsc(ProductSku::getColor, ProductSku::getSize);
+        if (tenantId != null) {
+            wrapper.eq(ProductSku::getTenantId, tenantId);
+        }
+        return this.list(wrapper);
+    }
+
+    @Override
+    public void batchUpdateSkus(Long styleId, List<ProductSku> skuList) {
+        if (skuList == null || skuList.isEmpty()) {
+            return;
+        }
+
+        StyleInfo style = styleInfoMapper.selectById(styleId);
+        if (style == null) {
+            return;
+        }
+
+        Long tenantId = UserContext.tenantId();
+
+        for (ProductSku skuUpdate : skuList) {
+            if (skuUpdate.getId() != null) {
+                ProductSku existing = this.getById(skuUpdate.getId());
+                if (existing == null) {
+                    continue;
+                }
+                if (tenantId != null && !tenantId.equals(existing.getTenantId())) {
+                    log.warn("Tenant mismatch for SKU id={}, skipping", skuUpdate.getId());
+                    continue;
+                }
+                if (Objects.equals(existing.getStyleId(), styleId)) {
+                    existing.setSkuCode(skuUpdate.getSkuCode());
+                    existing.setColor(skuUpdate.getColor());
+                    existing.setSize(skuUpdate.getSize());
+                    existing.setBarcode(skuUpdate.getBarcode());
+                    existing.setExternalSkuId(skuUpdate.getExternalSkuId());
+                    existing.setExternalPlatform(skuUpdate.getExternalPlatform());
+                    existing.setCostPrice(skuUpdate.getCostPrice());
+                    existing.setSalesPrice(skuUpdate.getSalesPrice());
+                    existing.setRemark(skuUpdate.getRemark());
+                    existing.setManuallyEdited(1);
+                    this.updateById(existing);
+                }
+            } else {
+                if (!StringUtils.hasText(skuUpdate.getColor()) || !StringUtils.hasText(skuUpdate.getSize())) {
+                    log.warn("Cannot create SKU without color and size: styleId={}", styleId);
+                    continue;
+                }
+
+                String autoCode = String.format("%s-%s-%s", style.getStyleNo(), skuUpdate.getColor(), skuUpdate.getSize());
+                if (!StringUtils.hasText(skuUpdate.getSkuCode())) {
+                    skuUpdate.setSkuCode(autoCode);
+                }
+
+                ProductSku existingByCode = this.getOne(new LambdaQueryWrapper<ProductSku>()
+                        .eq(ProductSku::getSkuCode, skuUpdate.getSkuCode()));
+                if (existingByCode != null) {
+                    log.warn("SKU code already exists: {}, skip creation", skuUpdate.getSkuCode());
+                    continue;
+                }
+
+                skuUpdate.setStyleId(styleId);
+                skuUpdate.setStyleNo(style.getStyleNo());
+                skuUpdate.setStatus("ENABLED");
+                skuUpdate.setStockQuantity(0);
+                skuUpdate.setManuallyEdited(1);
+                skuUpdate.setSkuMode(style.getSkuMode());
+                skuUpdate.setTenantId(tenantId);
+                this.save(skuUpdate);
+            }
+        }
+    }
+
+    @Override
+    public void updateSkuMode(Long styleId, String skuMode) {
+        StyleInfo style = styleInfoMapper.selectById(styleId);
+        if (style == null) {
+            return;
+        }
+
+        style.setSkuMode(skuMode);
+        styleInfoMapper.updateById(style);
+
+        if ("AUTO".equals(skuMode)) {
+            generateSkusForStyle(styleId);
+            List<ProductSku> skus = listByStyleId(styleId);
+            List<ProductSku> toUpdate = skus.stream()
+                    .filter(sku -> {
+                        String autoCode = String.format("%s-%s-%s", style.getStyleNo(), sku.getColor(), sku.getSize());
+                        if (!autoCode.equals(sku.getSkuCode())) {
+                            sku.setSkuCode(autoCode);
+                            sku.setManuallyEdited(0);
+                            return true;
+                        }
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+            if (!toUpdate.isEmpty()) {
+                this.updateBatchById(toUpdate);
+            }
+        }
+    }
+
+    @Override
+    public void syncSkusToProduction(Long styleId) {
+        StyleInfo style = styleInfoMapper.selectById(styleId);
+        if (style == null) {
+            return;
+        }
+
+        List<ProductSku> skus = listByStyleId(styleId);
+        if (skus.isEmpty()) {
+            return;
+        }
+
+        Map<String, ProductSku> skuMap = skus.stream()
+                .filter(s -> s.getColor() != null && s.getSize() != null)
+                .collect(Collectors.toMap(
+                        s -> s.getColor() + "|" + s.getSize(),
+                        s -> s,
+                        (a, b) -> a));
+
+        List<ProductionOrder> orders = productionOrderMapper.selectList(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getStyleNo, style.getStyleNo())
+                        .eq(ProductionOrder::getTenantId, style.getTenantId()));
+
+        for (ProductionOrder order : orders) {
+            try {
+                String orderDetails = order.getOrderDetails();
+                if (!StringUtils.hasText(orderDetails)) {
+                    continue;
+                }
+
+                List<Map<String, Object>> detailList = objectMapper.readValue(orderDetails,
+                        new TypeReference<List<Map<String, Object>>>() {
+                        });
+
+                boolean changed = false;
+                for (Map<String, Object> detail : detailList) {
+                    String detailColor = (String) detail.get("color");
+                    String detailSize = (String) detail.get("size");
+                    if (detailColor == null || detailSize == null) {
+                        continue;
+                    }
+                    String key = detailColor + "|" + detailSize;
+                    ProductSku matched = skuMap.get(key);
+                    if (matched != null) {
+                        detail.put("skuCode", matched.getSkuCode());
+                        detail.put("skuMode", matched.getSkuMode() != null ? matched.getSkuMode() : "AUTO");
+                        changed = true;
+                    }
+                }
+
+                if (changed) {
+                    productionOrderMapper.update(null,
+                            new LambdaUpdateWrapper<ProductionOrder>()
+                                    .eq(ProductionOrder::getId, order.getId())
+                                    .set(ProductionOrder::getOrderDetails, objectMapper.writeValueAsString(detailList)));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to sync SKU to order {}: {}", order.getOrderNo(), e.getMessage());
+            }
+        }
     }
 
     private void createOrUpdateSku(StyleInfo style, String color, String size) {
         String skuCode = String.format("%s-%s-%s", style.getStyleNo(), color, size);
+        Long tenantId = UserContext.tenantId();
 
         ProductSku existing = this.getOne(new LambdaQueryWrapper<ProductSku>()
                 .eq(ProductSku::getSkuCode, skuCode));
@@ -161,13 +329,16 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             sku.setSize(size);
             sku.setStatus("ENABLED");
             sku.setStockQuantity(0);
-            // 默认价格继承款式价格
             sku.setSalesPrice(style.getPrice());
+            sku.setSkuMode(style.getSkuMode());
+            sku.setTenantId(tenantId);
             this.save(sku);
             log.info("Created new SKU: {}", skuCode);
         } else {
-            // 仅更新基本信息，不覆盖外部ID等
-            existing.setStyleNo(style.getStyleNo()); // 防止款号变更
+            existing.setStyleNo(style.getStyleNo());
+            if (!Integer.valueOf(1).equals(existing.getManuallyEdited())) {
+                existing.setSkuCode(skuCode);
+            }
             this.updateById(existing);
         }
     }

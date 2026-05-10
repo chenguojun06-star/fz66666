@@ -37,7 +37,7 @@ public class TenantIntelligenceProfileController {
     }
 
     /** @deprecated 使用 PUT /current 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @PostMapping("/save")
     public Result<TenantIntelligenceProfileResponse> save(@RequestBody(required = false) TenantIntelligenceProfileSaveRequest request) {
         tenantIntelligenceProfileOrchestrator.saveCurrentTenantProfile(request);

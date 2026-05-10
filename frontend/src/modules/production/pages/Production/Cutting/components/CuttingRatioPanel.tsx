@@ -101,17 +101,21 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
     });
   }, [entryOrderLines, bundleSize, excessRate, lastBundleOverrides]);
 
-  const { totalQty, totalCuttingQty, totalBundles } = useMemo(
+  const { totalQty, totalAlreadyCut, totalCuttingQty, totalBundles } = useMemo(
     () =>
       tableRows.reduce(
-        (acc, row) => ({
-          totalQty: acc.totalQty + row.quantity,
-          totalCuttingQty: acc.totalCuttingQty + row.cuttingQty,
-          totalBundles: acc.totalBundles + row.bundles,
-        }),
-        { totalQty: 0, totalCuttingQty: 0, totalBundles: 0 },
+        (acc, row) => {
+          const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
+          return {
+            totalQty: acc.totalQty + row.quantity,
+            totalAlreadyCut: acc.totalAlreadyCut + alreadyCut,
+            totalCuttingQty: acc.totalCuttingQty + row.cuttingQty,
+            totalBundles: acc.totalBundles + row.bundles,
+          };
+        },
+        { totalQty: 0, totalAlreadyCut: 0, totalCuttingQty: 0, totalBundles: 0 },
       ),
-    [tableRows],
+    [tableRows, existingCutQtyByKey],
   );
 
   const valid = tableRows.some((r) => r.quantity > 0 && r.bundles > 0);
@@ -153,21 +157,24 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       render: (val: number) => <Text>{val} 件</Text>,
     },
     {
-      title: '裁剪数量',
-      dataIndex: 'cuttingQty',
-      key: 'cuttingQty',
-      width: 120,
-      render: (val: number, row: BundleRow) =>
-        val !== row.quantity ? (
-          <Text style={{ color: '#d46b08', fontWeight: 500 }}>{val} 件</Text>
-        ) : (
-          <Text>{val} 件</Text>
-        ),
+      title: '已裁剪',
+      key: 'alreadyCutQty',
+      width: 100,
+      align: 'right' as const,
+      render: (_: unknown, row: BundleRow) => {
+        const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
+        return (
+          <Text style={{ color: alreadyCut > 0 ? '#1677ff' : '#999', fontWeight: alreadyCut > 0 ? 500 : 400 }}>
+            {alreadyCut} 件
+          </Text>
+        );
+      },
     },
     {
       title: '剩余裁剪数量',
       key: 'remainingCutQty',
       width: 130,
+      align: 'right' as const,
       render: (_: unknown, row: BundleRow) => {
         const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
         const remaining = row.quantity - alreadyCut;
@@ -177,6 +184,18 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           </Text>
         );
       },
+    },
+    {
+      title: '本次裁剪',
+      dataIndex: 'cuttingQty',
+      key: 'cuttingQty',
+      width: 110,
+      render: (val: number, row: BundleRow) =>
+        val !== row.quantity ? (
+          <Text style={{ color: '#d46b08', fontWeight: 500 }}>{val} 件</Text>
+        ) : (
+          <Text>{val} 件</Text>
+        ),
     },
     {
       title: '分扎数',
@@ -262,7 +281,9 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
 
       <Space wrap style={{ marginBottom: 12 }}>
         <Tag color="green">总下单：{totalQty} 件</Tag>
-        {excessRate > 0 && <Tag color="orange">总裁剪：{totalCuttingQty} 件</Tag>}
+        {totalAlreadyCut > 0 && <Tag color="blue">已裁剪：{totalAlreadyCut} 件</Tag>}
+        <Tag color={totalQty - totalAlreadyCut > 0 ? 'cyan' : 'default'}>剩余：{totalQty - totalAlreadyCut} 件</Tag>
+        {excessRate > 0 && <Tag color="orange">本次裁剪：{totalCuttingQty} 件</Tag>}
         <Tag color="purple">总扎数：{totalBundles} 扎</Tag>
       </Space>
 

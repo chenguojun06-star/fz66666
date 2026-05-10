@@ -65,7 +65,7 @@ public class MaterialRollController {
     }
 
     /** @deprecated 使用 POST /list 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @GetMapping("/by-inbound/{inboundId}")
     public Result<?> listByInbound(@PathVariable String inboundId) {
         List<MaterialRoll> rolls = materialRollOrchestrator.listRollsByInbound(inboundId);

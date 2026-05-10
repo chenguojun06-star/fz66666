@@ -1,14 +1,22 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
+import com.fashion.supplychain.production.helper.ProcessParentNodeResolver;
 import com.fashion.supplychain.production.helper.TrackingPriceBatchHelper;
 import com.fashion.supplychain.production.helper.TrackingPriceSyncHelper;
 import com.fashion.supplychain.production.helper.TrackingRecordInitHelper;
+import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
+import com.fashion.supplychain.system.entity.OrderRemark;
+import com.fashion.supplychain.system.service.OrderRemarkService;
 import com.fashion.supplychain.common.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +55,21 @@ public class ProductionProcessTrackingOrchestrator {
 
     @Autowired
     private TrackingPriceBatchHelper priceBatchHelper;
+
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ProductWarehousingRepairHelper repairHelper;
+
+    @Autowired
+    private OrderRemarkService orderRemarkService;
+
+    @Autowired
+    private ProcessParentNodeResolver parentNodeResolver;
 
     // ========== 委托方法：初始化与追加 ==========
 
@@ -363,5 +385,460 @@ public class ProductionProcessTrackingOrchestrator {
         } catch (Exception e) {
             log.warn("[入库跟踪] 创建失败: bundleId={}, orderId={}, msg={}", bundle.getId(), order.getId(), e.getMessage());
         }
+    }
+
+    private String resolveProgressStage(String processCode, String processName) {
+        if (processName != null) {
+            String resolved = parentNodeResolver.resolveParentForAggregation(processName.trim());
+            if (resolved != null) return resolved;
+        }
+        if (processCode != null) {
+            String resolved = parentNodeResolver.resolveParentForAggregation(processCode.trim());
+            if (resolved != null) return resolved;
+        }
+        return "其他";
+    }
+
+    public List<Map<String, Object>> getProcessSummary(Map<String, Object> params) {
+        Long tenantId = UserContext.tenantId();
+        LambdaQueryWrapper<ProductionProcessTracking> wrapper = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            wrapper.eq(ProductionProcessTracking::getTenantId, tenantId);
+        }
+        if (params != null && params.containsKey("orderNo")) {
+            String orderNo = (String) params.get("orderNo");
+            if (orderNo != null && !orderNo.isEmpty()) {
+                wrapper.eq(ProductionProcessTracking::getProductionOrderNo, orderNo);
+            }
+        }
+        List<ProductionProcessTracking> all = trackingService.list(wrapper);
+        Map<String, List<ProductionProcessTracking>> grouped = all.stream()
+                .collect(Collectors.groupingBy(t -> t.getProcessName() == null ? "未知" : t.getProcessName()));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<ProductionProcessTracking>> entry : grouped.entrySet()) {
+            List<ProductionProcessTracking> records = entry.getValue();
+            int total = records.size();
+            int scanned = (int) records.stream().filter(r -> "scanned".equals(r.getScanStatus())).count();
+            int pending = (int) records.stream().filter(r -> "pending".equals(r.getScanStatus())).count();
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("processName", entry.getKey());
+            item.put("totalRecords", total);
+            item.put("scannedRecords", scanned);
+            item.put("pendingRecords", pending);
+            item.put("completionRate", total > 0 ? (int) Math.round(scanned * 100.0 / total) : 0);
+            Set<String> orderNos = records.stream()
+                    .map(ProductionProcessTracking::getProductionOrderNo)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            item.put("orderCount", orderNos.size());
+            item.put("progressStage", resolveProgressStage(
+                    records.get(0).getProcessCode(), records.get(0).getProcessName()));
+            result.add(item);
+        }
+        result.sort((a, b) -> Integer.compare((Integer) b.get("totalRecords"), (Integer) a.get("totalRecords")));
+        return result;
+    }
+
+    public List<Map<String, Object>> getNodeStats(Map<String, Object> params) {
+        Long tenantId = UserContext.tenantId();
+        LambdaQueryWrapper<ProductionProcessTracking> wrapper = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            wrapper.eq(ProductionProcessTracking::getTenantId, tenantId);
+        }
+        if (params != null && params.containsKey("orderNo")) {
+            String orderNo = (String) params.get("orderNo");
+            if (orderNo != null && !orderNo.isEmpty()) {
+                wrapper.eq(ProductionProcessTracking::getProductionOrderNo, orderNo);
+            }
+        }
+        List<ProductionProcessTracking> all = trackingService.list(wrapper);
+        Map<String, List<ProductionProcessTracking>> grouped = all.stream()
+                .collect(Collectors.groupingBy(t -> resolveProgressStage(t.getProcessCode(), t.getProcessName())));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<ProductionProcessTracking>> entry : grouped.entrySet()) {
+            List<ProductionProcessTracking> records = entry.getValue();
+            int total = records.size();
+            int scanned = (int) records.stream().filter(r -> "scanned".equals(r.getScanStatus())).count();
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("stageName", entry.getKey());
+            item.put("totalRecords", total);
+            item.put("scannedRecords", scanned);
+            item.put("pendingRecords", total - scanned);
+            item.put("completionRate", total > 0 ? (int) Math.round(scanned * 100.0 / total) : 0);
+            Map<String, Integer> processBreakdown = records.stream()
+                    .collect(Collectors.groupingBy(r -> r.getProcessName() == null ? "未知" : r.getProcessName(),
+                            Collectors.collectingAndThen(Collectors.counting(), Long::intValue)));
+            item.put("processBreakdown", processBreakdown);
+            result.add(item);
+        }
+        return result;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> qualityInspect(Map<String, Object> params) {
+        String trackingId = (String) params.get("trackingId");
+        if (trackingId == null || trackingId.isEmpty()) {
+            throw new BusinessException("trackingId 不能为空");
+        }
+
+        ProductionProcessTracking tracking = trackingService.getById(trackingId);
+        if (tracking == null) {
+            throw new BusinessException("跟踪记录不存在");
+        }
+
+        if (!"scanned".equals(tracking.getScanStatus())) {
+            throw new BusinessException("该菲号工序尚未扫码完成，无法质检");
+        }
+
+        if ("qualified".equals(tracking.getQualityStatus())) {
+            throw new BusinessException("该菲号工序已质检合格，无需重复质检");
+        }
+
+        int defectQty = 0;
+        Object defectQtyObj = params.get("defectQuantity");
+        if (defectQtyObj != null) {
+            defectQty = Integer.parseInt(String.valueOf(defectQtyObj));
+        }
+        int qualifiedQty = (tracking.getQuantity() != null ? tracking.getQuantity() : 0) - defectQty;
+        if (qualifiedQty < 0) {
+            throw new BusinessException("次品数量不能超过菲号总数量(" + tracking.getQuantity() + ")");
+        }
+
+        String defectCategory = (String) params.get("defectCategory");
+        String defectRemark = (String) params.get("defectRemark");
+        String qualityRemark = (String) params.get("qualityRemark");
+        boolean lockBundle = Boolean.TRUE.equals(params.get("lockBundle"));
+
+        Object defectProblemsObj = params.get("defectProblems");
+        String defectProblemsJson = null;
+        if (defectProblemsObj instanceof java.util.List) {
+            try {
+                defectProblemsJson = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .writeValueAsString(defectProblemsObj);
+            } catch (Exception e) {
+                defectProblemsJson = null;
+            }
+        } else if (defectProblemsObj instanceof String) {
+            defectProblemsJson = (String) defectProblemsObj;
+        }
+
+        String qualityStatus = defectQty > 0 ? "unqualified" : "qualified";
+        String operatorId = UserContext.userId() != null ? String.valueOf(UserContext.userId()) : null;
+        String operatorName = UserContext.username() != null ? UserContext.username() : "system";
+
+        LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
+        uw.eq(ProductionProcessTracking::getId, trackingId)
+                .set(ProductionProcessTracking::getQualityStatus, qualityStatus)
+                .set(ProductionProcessTracking::getDefectQuantity, defectQty)
+                .set(ProductionProcessTracking::getDefectCategory, defectCategory)
+                .set(ProductionProcessTracking::getDefectRemark, defectRemark)
+                .set(ProductionProcessTracking::getDefectProblems, defectProblemsJson)
+                .set(ProductionProcessTracking::getQualityOperatorId, operatorId)
+                .set(ProductionProcessTracking::getQualityOperatorName, operatorName)
+                .set(ProductionProcessTracking::getQualityTime, LocalDateTime.now())
+                .set(ProductionProcessTracking::getRepairStatus, defectQty > 0 ? "pending" : null)
+                .set(ProductionProcessTracking::getUpdater, operatorName);
+        trackingService.update(uw);
+
+        if (defectQty > 0 && lockBundle && tracking.getCuttingBundleId() != null) {
+            CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
+            if (bundle != null && !Boolean.TRUE.equals(bundle.getScanBlocked())) {
+                bundle.setScanBlocked(true);
+                cuttingBundleService.updateById(bundle);
+                log.info("[工序质检-锁定] bundleId={}, bundleNo={}, trackingId={}, defectQty={}",
+                        bundle.getId(), bundle.getBundleNo(), trackingId, defectQty);
+            }
+        }
+
+        if (defectQty > 0 && tracking.getCuttingBundleId() != null) {
+            CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
+            if (bundle != null && !"unqualified".equals(bundle.getStatus())) {
+                bundle.setStatus("unqualified");
+                cuttingBundleService.updateById(bundle);
+            }
+        }
+
+        log.info("[工序质检] trackingId={}, 菲号={}, 工序={}, 质检结果={}, 次品数={}, 锁定={}",
+                trackingId, tracking.getBundleNo(), tracking.getProcessName(),
+                qualityStatus, defectQty, lockBundle);
+
+        if (tracking.getProductionOrderNo() != null) {
+            try {
+                OrderRemark remark = new OrderRemark();
+                remark.setTargetType("order");
+                remark.setTargetNo(tracking.getProductionOrderNo());
+                remark.setAuthorId(operatorId);
+                remark.setAuthorName(operatorName);
+                remark.setAuthorRole("工序质检");
+                if (defectQty > 0) {
+                    String categoryLabel = defectCategory != null ? defectCategory : "未分类";
+                    String problemsStr = "";
+                    if (defectProblemsJson != null && !defectProblemsJson.isEmpty()) {
+                        try {
+                            java.util.List<String> problems = new com.fasterxml.jackson.databind.ObjectMapper()
+                                    .readValue(defectProblemsJson, java.util.List.class);
+                            problemsStr = String.join("、", problems);
+                        } catch (Exception ignored) {}
+                    }
+                    String remarkContent = String.format("[质检不合格] 菲号#%d %s: 次品%d件(总%d件), 缺陷: %s",
+                            tracking.getBundleNo(), tracking.getProcessName(),
+                            defectQty, tracking.getQuantity(), categoryLabel);
+                    if (!problemsStr.isEmpty()) {
+                        remarkContent += " — " + problemsStr;
+                    }
+                    if (defectRemark != null && !defectRemark.isEmpty()) {
+                        remarkContent += " - " + defectRemark;
+                    }
+                    if (qualityRemark != null && !qualityRemark.isEmpty()) {
+                        remarkContent += " | " + qualityRemark;
+                    }
+                    if (lockBundle) {
+                        remarkContent += " [已锁定菲号]";
+                    }
+                    remark.setContent(remarkContent);
+                } else {
+                    String remarkContent = String.format("[质检合格] 菲号#%d %s: %d件全部合格",
+                            tracking.getBundleNo(), tracking.getProcessName(), tracking.getQuantity());
+                    if (qualityRemark != null && !qualityRemark.isEmpty()) {
+                        remarkContent += " — " + qualityRemark;
+                    }
+                    remark.setContent(remarkContent);
+                }
+                remark.setTenantId(tracking.getTenantId());
+                orderRemarkService.save(remark);
+            } catch (Exception e) {
+                log.warn("[工序质检] 同步备注到订单失败: {}", e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("trackingId", trackingId);
+        result.put("qualityStatus", qualityStatus);
+        result.put("defectQuantity", defectQty);
+        result.put("locked", defectQty > 0 && lockBundle);
+        result.put("message", defectQty > 0
+                ? (lockBundle ? "质检不合格，已录入次品并锁定菲号" : "质检不合格，已录入次品")
+                : "质检合格");
+        return result;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchQualityPass(Map<String, Object> params) {
+        @SuppressWarnings("unchecked")
+        List<String> trackingIds = (List<String>) params.get("trackingIds");
+        if (trackingIds == null || trackingIds.isEmpty()) {
+            throw new BusinessException("请选择至少一条记录");
+        }
+
+        String operatorId = UserContext.userId() != null ? String.valueOf(UserContext.userId()) : null;
+        String operatorName = UserContext.username() != null ? UserContext.username() : "system";
+        int successCount = 0;
+        int skipCount = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (String trackingId : trackingIds) {
+            try {
+                ProductionProcessTracking tracking = trackingService.getById(trackingId);
+                if (tracking == null) {
+                    errors.add("记录不存在: " + trackingId);
+                    continue;
+                }
+                if (!"scanned".equals(tracking.getScanStatus())) {
+                    skipCount++;
+                    continue;
+                }
+                if ("qualified".equals(tracking.getQualityStatus())) {
+                    skipCount++;
+                    continue;
+                }
+
+                LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
+                uw.eq(ProductionProcessTracking::getId, trackingId)
+                        .set(ProductionProcessTracking::getQualityStatus, "qualified")
+                        .set(ProductionProcessTracking::getDefectQuantity, 0)
+                        .set(ProductionProcessTracking::getQualityOperatorId, operatorId)
+                        .set(ProductionProcessTracking::getQualityOperatorName, operatorName)
+                        .set(ProductionProcessTracking::getQualityTime, LocalDateTime.now())
+                        .set(ProductionProcessTracking::getUpdater, operatorName);
+                trackingService.update(uw);
+
+                if (tracking.getProductionOrderNo() != null) {
+                    try {
+                        OrderRemark remark = new OrderRemark();
+                        remark.setTargetType("order");
+                        remark.setTargetNo(tracking.getProductionOrderNo());
+                        remark.setAuthorId(operatorId);
+                        remark.setAuthorName(operatorName);
+                        remark.setAuthorRole("工序质检");
+                        remark.setContent(String.format("[质检合格] 菲号#%d %s: %d件全部合格(批量质检)",
+                                tracking.getBundleNo(), tracking.getProcessName(), tracking.getQuantity()));
+                        remark.setTenantId(tracking.getTenantId());
+                        orderRemarkService.save(remark);
+                    } catch (Exception e) {
+                        log.warn("[批量质检] 同步备注失败: {}", e.getMessage());
+                    }
+                }
+
+                successCount++;
+            } catch (Exception e) {
+                errors.add(trackingId + ": " + e.getMessage());
+            }
+        }
+
+        log.info("[批量质检合格] 总数={}, 成功={}, 跳过={}, 失败={}", trackingIds.size(), successCount, skipCount, errors.size());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", trackingIds.size());
+        result.put("success", successCount);
+        result.put("skipped", skipCount);
+        result.put("errors", errors);
+        result.put("message", String.format("批量质检完成: %d条合格, %d条跳过", successCount, skipCount));
+        return result;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean lockBundle(String trackingId) {
+        ProductionProcessTracking tracking = trackingService.getById(trackingId);
+        if (tracking == null) {
+            throw new BusinessException("跟踪记录不存在");
+        }
+        if (!"unqualified".equals(tracking.getQualityStatus())) {
+            throw new BusinessException("只有质检不合格的菲号才能锁定");
+        }
+        if (tracking.getCuttingBundleId() == null) {
+            throw new BusinessException("该记录无关联菲号");
+        }
+
+        CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
+        if (bundle == null) {
+            throw new BusinessException("菲号不存在");
+        }
+        if (Boolean.TRUE.equals(bundle.getScanBlocked())) {
+            return true;
+        }
+
+        bundle.setScanBlocked(true);
+        cuttingBundleService.updateById(bundle);
+        log.info("[锁定菲号] bundleId={}, bundleNo={}, operator={}",
+                bundle.getId(), bundle.getBundleNo(), UserContext.username());
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean unlockBundle(String trackingId) {
+        ProductionProcessTracking tracking = trackingService.getById(trackingId);
+        if (tracking == null) {
+            throw new BusinessException("跟踪记录不存在");
+        }
+        if (tracking.getCuttingBundleId() == null) {
+            throw new BusinessException("该记录无关联菲号");
+        }
+
+        if (!"repair_done".equals(tracking.getRepairStatus()) && !"unqualified".equals(tracking.getQualityStatus())) {
+            throw new BusinessException("只有返修完成的菲号才能解锁");
+        }
+
+        CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
+        if (bundle == null) {
+            throw new BusinessException("菲号不存在");
+        }
+
+        bundle.setScanBlocked(false);
+        if ("unqualified".equals(bundle.getStatus()) || "repaired_waiting_qc".equals(bundle.getStatus())) {
+            bundle.setStatus("qualified");
+        }
+        cuttingBundleService.updateById(bundle);
+
+        LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
+        uw.eq(ProductionProcessTracking::getId, trackingId)
+                .set(ProductionProcessTracking::getRepairStatus, "completed")
+                .set(ProductionProcessTracking::getRepairCompletedTime, LocalDateTime.now())
+                .set(ProductionProcessTracking::getQualityStatus, "qualified")
+                .set(ProductionProcessTracking::getUpdater, UserContext.username() != null ? UserContext.username() : "system");
+        trackingService.update(uw);
+
+        log.info("[解锁菲号] bundleId={}, bundleNo={}, operator={}",
+                bundle.getId(), bundle.getBundleNo(), UserContext.username());
+
+        if (tracking.getProductionOrderNo() != null) {
+            try {
+                OrderRemark remark = new OrderRemark();
+                remark.setTargetType("order");
+                remark.setTargetNo(tracking.getProductionOrderNo());
+                remark.setAuthorId(UserContext.userId() != null ? String.valueOf(UserContext.userId()) : null);
+                remark.setAuthorName(UserContext.username() != null ? UserContext.username() : "system");
+                remark.setAuthorRole("工序质检");
+                remark.setContent(String.format("[返修验收通过] 菲号#%d %s: 返修完成，已解锁恢复扫码",
+                        tracking.getBundleNo(), tracking.getProcessName()));
+                remark.setTenantId(tracking.getTenantId());
+                orderRemarkService.save(remark);
+            } catch (Exception e) {
+                log.warn("[解锁菲号] 同步备注到订单失败: {}", e.getMessage());
+            }
+        }
+
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean repairComplete(String trackingId) {
+        ProductionProcessTracking tracking = trackingService.getById(trackingId);
+        if (tracking == null) {
+            throw new BusinessException("跟踪记录不存在");
+        }
+        if (!"unqualified".equals(tracking.getQualityStatus())) {
+            throw new BusinessException("只有质检不合格的记录才能标记返修完成");
+        }
+        if (!"pending".equals(tracking.getRepairStatus()) && !"repairing".equals(tracking.getRepairStatus())) {
+            if (tracking.getRepairStatus() == null) {
+                LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
+                uw.eq(ProductionProcessTracking::getId, trackingId)
+                        .set(ProductionProcessTracking::getRepairStatus, "repairing");
+                trackingService.update(uw);
+            }
+        }
+
+        if (tracking.getCuttingBundleId() != null) {
+            try {
+                repairHelper.completeBundleRepair(tracking.getCuttingBundleId());
+            } catch (Exception e) {
+                log.warn("[返修完成] 调用repairHelper失败，手动更新: bundleId={}, msg={}",
+                        tracking.getCuttingBundleId(), e.getMessage());
+                CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
+                if (bundle != null) {
+                    bundle.setStatus("repaired_waiting_qc");
+                    cuttingBundleService.updateById(bundle);
+                }
+            }
+        }
+
+        LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
+        uw.eq(ProductionProcessTracking::getId, trackingId)
+                .set(ProductionProcessTracking::getRepairStatus, "repair_done")
+                .set(ProductionProcessTracking::getRepairCompletedTime, LocalDateTime.now())
+                .set(ProductionProcessTracking::getUpdater, UserContext.username() != null ? UserContext.username() : "system");
+        trackingService.update(uw);
+
+        log.info("[返修完成] trackingId={}, 菲号={}, 工序={}, operator={}",
+                trackingId, tracking.getBundleNo(), tracking.getProcessName(), UserContext.username());
+
+        if (tracking.getProductionOrderNo() != null) {
+            try {
+                OrderRemark remark = new OrderRemark();
+                remark.setTargetType("order");
+                remark.setTargetNo(tracking.getProductionOrderNo());
+                remark.setAuthorId(UserContext.userId() != null ? String.valueOf(UserContext.userId()) : null);
+                remark.setAuthorName(UserContext.username() != null ? UserContext.username() : "system");
+                remark.setAuthorRole("工序质检");
+                remark.setContent(String.format("[返修完成] 菲号#%d %s: 返修已完成，等待复检",
+                        tracking.getBundleNo(), tracking.getProcessName()));
+                remark.setTenantId(tracking.getTenantId());
+                orderRemarkService.save(remark);
+            } catch (Exception e) {
+                log.warn("[返修完成] 同步备注到订单失败: {}", e.getMessage());
+            }
+        }
+
+        return true;
     }
 }

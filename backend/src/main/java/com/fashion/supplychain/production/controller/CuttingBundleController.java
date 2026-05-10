@@ -115,4 +115,17 @@ public class CuttingBundleController {
         return Result.success(cuttingBundleSplitTransferOrchestrator.listPendingForMe());
     }
 
+    @PostMapping("/toggle-scan-blocked")
+    public Result<?> toggleScanBlocked(@RequestBody Map<String, Object> body) {
+        String bundleId = body != null ? (String) body.get("bundleId") : null;
+        Boolean blocked = body != null ? (Boolean) body.get("blocked") : null;
+        if (bundleId == null || bundleId.isEmpty()) {
+            return Result.fail("bundleId 不能为空");
+        }
+        if (blocked == null) {
+            return Result.fail("blocked 不能为空");
+        }
+        return Result.success(cuttingBundleOrchestrator.toggleScanBlocked(bundleId, blocked));
+    }
+
 }

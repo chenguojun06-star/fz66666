@@ -3,23 +3,32 @@ package com.fashion.supplychain.style.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.style.dto.StockUpdateDTO;
-import com.fashion.supplychain.style.entity.ProductSku;
-import com.fashion.supplychain.style.service.ProductSkuService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.style.dto.StockUpdateDTO;
+import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
+import com.fashion.supplychain.style.service.ProductSkuService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/style/sku")
-@RequiredArgsConstructor
+@Slf4j
 @PreAuthorize("isAuthenticated()")
 public class ProductSkuController {
 
-    private final ProductSkuService productSkuService;
+    @Autowired
+    private ProductSkuService productSkuService;
+
+    @Autowired
+    private ProductSkuOrchestrator productSkuOrchestrator;
 
     @GetMapping("/inventory/{skuCode}")
     public Result<Integer> getInventory(@PathVariable String skuCode) {
@@ -36,6 +45,10 @@ public class ProductSkuController {
 
     @PostMapping("/inventory/update")
     public Result<Void> updateInventory(@RequestBody StockUpdateDTO stockUpdate) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(stockUpdate.getSkuCode())) {
+            return Result.fail("skuCode cannot be empty");
+        }
         if (stockUpdate.getQuantity() == null) {
             return Result.fail("Quantity cannot be null");
         }
@@ -68,7 +81,8 @@ public class ProductSkuController {
 
     @PostMapping("/sync/{styleId}")
     public Result<Void> syncSkus(@PathVariable Long styleId) {
-        productSkuService.generateSkusForStyle(styleId);
+        TenantAssert.assertTenantContext();
+        productSkuOrchestrator.syncSkus(styleId);
         return Result.success();
     }
 
@@ -93,5 +107,77 @@ public class ProductSkuController {
         sku.setStyleNo(existing.getStyleNo());
 
         return Result.success(productSkuService.updateById(sku));
+    }
+
+    @PostMapping("/list-by-style")
+    public Result<List<ProductSku>> listByStyle(@RequestBody Map<String, Long> body) {
+        TenantAssert.assertTenantContext();
+        Long styleId = body.get("styleId");
+        if (styleId == null) {
+            return Result.fail("styleId不能为空");
+        }
+        return Result.success(productSkuOrchestrator.listByStyleId(styleId));
+    }
+
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
+    @GetMapping("/by-style/{styleId}")
+    public Result<List<ProductSku>> listByStyleGet(@PathVariable Long styleId) {
+        TenantAssert.assertTenantContext();
+        return Result.success(productSkuOrchestrator.listByStyleId(styleId));
+    }
+
+    @PutMapping("/batch/{styleId}")
+    public Result<Void> batchUpdate(@PathVariable Long styleId, @RequestBody Map<String, Object> body) {
+        TenantAssert.assertTenantContext();
+        @SuppressWarnings("unchecked")
+        List<ProductSku> skuList = (List<ProductSku>) body.get("skuList");
+        @SuppressWarnings("unchecked")
+        List<Long> deletedIds = (List<Long>) body.get("deletedIds");
+
+        if ((skuList == null || skuList.isEmpty()) && (deletedIds == null || deletedIds.isEmpty())) {
+            return Result.success();
+        }
+        if (skuList != null && skuList.size() > 200) {
+            return Result.fail("单次最多更新200条SKU");
+        }
+        productSkuOrchestrator.batchUpdateSkus(styleId, skuList, deletedIds);
+        return Result.success();
+    }
+
+    @PutMapping("/mode/{styleId}")
+    public Result<Void> updateMode(@PathVariable Long styleId, @RequestBody Map<String, String> body) {
+        TenantAssert.assertTenantContext();
+        String skuMode = body.get("skuMode");
+        if (!"AUTO".equals(skuMode) && !"MANUAL".equals(skuMode)) {
+            return Result.fail("skuMode must be AUTO or MANUAL");
+        }
+        productSkuOrchestrator.updateSkuMode(styleId, skuMode);
+        return Result.success();
+    }
+
+    @PostMapping("/sync-to-production/{styleId}")
+    public Result<Void> syncToProduction(@PathVariable Long styleId) {
+        TenantAssert.assertTenantContext();
+        productSkuOrchestrator.syncSkusToProduction(styleId);
+        return Result.success();
+    }
+
+    @PutMapping("/skc/{styleId}")
+    public Result<Void> updateSkc(@PathVariable Long styleId, @RequestBody Map<String, String> body) {
+        TenantAssert.assertTenantContext();
+        String skc = body.get("skc");
+        if (skc == null || skc.trim().isEmpty()) {
+            return Result.fail("SKC不能为空");
+        }
+        productSkuOrchestrator.updateSkc(styleId, skc.trim());
+        return Result.success();
+    }
+
+    @PutMapping("/rollback-remark/{styleId}")
+    public Result<Void> saveRollbackRemark(@PathVariable Long styleId, @RequestBody Map<String, String> body) {
+        TenantAssert.assertTenantContext();
+        String remark = body.get("remark");
+        productSkuOrchestrator.saveRollbackRemark(styleId, remark);
+        return Result.success();
     }
 }

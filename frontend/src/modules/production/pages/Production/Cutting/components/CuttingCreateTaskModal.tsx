@@ -92,6 +92,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       open={createTask.createTaskOpen}
       title="新建裁剪任务"
       width="70vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
       centered
       onCancel={() => createTask.setCreateTaskOpen(false)}
       okText="创建"

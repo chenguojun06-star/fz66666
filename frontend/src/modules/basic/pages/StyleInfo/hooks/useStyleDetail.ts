@@ -17,7 +17,7 @@ export const useStyleDetail = (styleId?: string) => {
 
   const [loading, setLoading] = useState(false);
   const [currentStyle, setCurrentStyle] = useState<StyleInfo | null>(null);
-  const [activeTabKey, setActiveTabKey] = useState('1');
+  const [activeTabKey, setActiveTabKey] = useState('2');
   const [editLocked, setEditLocked] = useState(false);
 
   const lastEmptyHintTabKeyRef = useRef<string | null>(null);
@@ -34,6 +34,7 @@ export const useStyleDetail = (styleId?: string) => {
     if (tab === 'attachment' || tab === 'file' || tab === 'files') return '6';
     if (tab === 'pattern' || tab === 'size' || tab === 'process') return '7';
     if (tab === 'sample') return '8';
+    if (tab === 'sku') return '10';
     return null;
   })();
 

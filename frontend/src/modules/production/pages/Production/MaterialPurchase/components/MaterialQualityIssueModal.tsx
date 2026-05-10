@@ -157,6 +157,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
         onCancel={onClose}
         footer={null}
         width="72vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
         destroyOnHidden
       >
         <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
@@ -172,10 +173,10 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
             <Form form={createForm} layout="vertical">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
                 <Form.Item name="issueType" label="异常类型" rules={[{ required: true, message: '请选择异常类型' }]}>
-                  <Select options={ISSUE_TYPE_OPTIONS} />
+                  <Select options={ISSUE_TYPE_OPTIONS} showSearch optionFilterProp="label" />
                 </Form.Item>
                 <Form.Item name="severity" label="严重等级" rules={[{ required: true, message: '请选择严重等级' }]}>
-                  <Select options={SEVERITY_OPTIONS.map(({ label, value }) => ({ label, value }))} />
+                  <Select options={SEVERITY_OPTIONS.map(({ label, value }) => ({ label, value }))} showSearch optionFilterProp="label" />
                 </Form.Item>
                 <Form.Item
                   name="issueQuantity"
@@ -185,7 +186,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                   <InputNumber min={1} max={maxIssueQuantity > 0 ? maxIssueQuantity : undefined} precision={0} style={{ width: '100%' }} />
                 </Form.Item>
                 <Form.Item name="disposition" label="建议处理" rules={[{ required: true, message: '请选择建议处理' }]}>
-                  <Select options={DISPOSITION_OPTIONS} />
+                  <Select options={DISPOSITION_OPTIONS} showSearch optionFilterProp="label" />
                 </Form.Item>
               </div>
               <Form.Item
@@ -193,7 +194,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                 label="异常说明"
                 rules={[{ required: true, message: '请填写异常说明' }, { min: 4, message: '请至少写 4 个字' }]}
               >
-                <Input.TextArea rows={3} placeholder="例如：布面抽丝 8 米，建议退货补货" />
+                <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="例如：布面抽丝 8 米，建议退货补货" />
               </Form.Item>
               <Space>
                 <Button type="primary" loading={submitting} onClick={() => void handleCreate()}>
@@ -286,14 +287,14 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
       >
         <Form form={resolveForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="disposition" label="最终处理方式" rules={[{ required: true, message: '请选择处理方式' }]}>
-            <Select options={DISPOSITION_OPTIONS} />
+            <Select options={DISPOSITION_OPTIONS} showSearch optionFilterProp="label" />
           </Form.Item>
           <Form.Item
             name="resolutionRemark"
             label="处理结果"
             rules={[{ required: true, message: '请填写处理结果' }, { min: 4, message: '请至少写 4 个字' }]}
           >
-            <Input.TextArea rows={4} placeholder="例如：供应商确认补货 8 米，本批次先退回处理" />
+            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="例如：供应商确认补货 8 米，本批次先退回处理" />
           </Form.Item>
         </Form>
       </ResizableModal>

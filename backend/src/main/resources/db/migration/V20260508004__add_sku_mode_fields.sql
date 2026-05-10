@@ -1,0 +1,5 @@
+ALTER TABLE t_style_info ADD COLUMN sku_mode VARCHAR(20) DEFAULT NULL;
+
+ALTER TABLE t_product_sku ADD COLUMN sku_mode VARCHAR(20) DEFAULT NULL;
+
+ALTER TABLE t_product_sku ADD COLUMN manually_edited TINYINT DEFAULT 0;

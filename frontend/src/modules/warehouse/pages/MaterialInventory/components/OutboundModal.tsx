@@ -107,6 +107,8 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                   >
                     <Select
                       placeholder="请选择"
+                      showSearch
+                      optionFilterProp="label"
                       onChange={(value) => {
                         const currentFactory = outboundForm.getFieldValue('factoryName');
                         if (currentFactory) {
@@ -128,7 +130,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                     name="usageType"
                     rules={[{ required: true, message: '请选择用料场景' }]}
                   >
-                    <Select placeholder="请选择">
+                    <Select placeholder="请选择" showSearch optionFilterProp="children">
                       <Option value="BULK">大货用料</Option>
                       <Option value="SAMPLE">样衣用料</Option>
                       <Option value="STOCK">备库/补库</Option>

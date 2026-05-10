@@ -44,7 +44,13 @@ const ScanConfirmModal: React.FC<ScanConfirmModalProps> = ({
       </Button>,
     ]}
   >
-    <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>请在 {remain} 秒内完成操作</div>
+    <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 13 }}>
+      {remain > 10
+        ? `确认时间充裕（${remain}秒），请核对信息后领取`
+        : remain > 0
+          ? `还剩 ${remain} 秒，请尽快确认`
+          : '确认时间已到，可重新扫码'}
+    </div>
     {detail && (
       <div style={{ display: 'grid', gap: 6 }}>
         <div>二维码：{detail.scanCode || '-'}</div>

@@ -68,13 +68,11 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void increaseStock(MaterialPurchase purchase, int quantity) {
         increaseStock(purchase, quantity, null);
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void increaseStock(MaterialPurchase purchase, int quantity, String warehouseLocation) {
         if (quantity == 0) {
             return;
@@ -90,7 +88,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void decreaseStock(MaterialPurchase purchase, int quantity) {
         if (quantity <= 0) {
             return;
@@ -104,7 +101,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void decreaseStock(String materialId, String color, String size, int quantity) {
         if (quantity <= 0) {
             return;
@@ -135,7 +131,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void decreaseStockById(String stockId, int quantity) {
         if (quantity <= 0) {
             return;
@@ -444,7 +439,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void decreaseStockForCancelReceive(MaterialPurchase purchase, int quantity) {
         if (quantity <= 0) {
             return;
@@ -467,7 +461,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void lockStock(String stockId, int quantity) {
         if (quantity <= 0 || !StringUtils.hasText(stockId)) {
             return;
@@ -481,7 +474,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void unlockStock(String stockId, int quantity) {
         if (quantity <= 0 || !StringUtils.hasText(stockId)) {
             return;
@@ -495,7 +487,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void decreaseStockAndUnlock(String stockId, int quantity) {
         if (quantity <= 0 || !StringUtils.hasText(stockId)) {
             return;
@@ -510,7 +501,6 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void updateStockQuantity(String stockId, int delta) {
         if (delta == 0 || !StringUtils.hasText(stockId)) {
             return;

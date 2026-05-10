@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS t_ec_product_mapping (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id           BIGINT       NOT NULL,
+    style_id            BIGINT       NOT NULL,
+    sku_id              BIGINT       NULL,
+    platform_code       VARCHAR(32)  NOT NULL,
+    platform_item_id    VARCHAR(128) NULL,
+    platform_sku_id     VARCHAR(128) NULL,
+    platform_product_url VARCHAR(512) NULL,
+    sync_status         VARCHAR(32)  NOT NULL DEFAULT 'PENDING',
+    last_synced_at      DATETIME     NULL,
+    sync_version        INT          NOT NULL DEFAULT 0,
+    error_message       VARCHAR(512) NULL,
+    delete_flag         TINYINT      NOT NULL DEFAULT 0,
+    create_time         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_tenant_platform (tenant_id, platform_code),
+    INDEX idx_style_platform (style_id, platform_code),
+    INDEX idx_sku_platform (sku_id, platform_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

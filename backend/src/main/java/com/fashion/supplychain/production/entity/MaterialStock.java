@@ -91,6 +91,10 @@ public class MaterialStock {
      */
     private String location;
 
+    private String warehouseAreaId;
+
+    private String warehouseAreaName;
+
     /**
      * 单价（元）
      */

@@ -56,8 +56,8 @@
     "@playwright/test": "^1.59.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@typescript-eslint/eslint-plugin": "^6.14.0",
-    "@typescript-eslint/parser": "^6.14.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^9.2.1",
     "depcheck": "^1.4.7",
@@ -69,7 +69,7 @@
     "prettier": "^3.6.2",
     "terser": "^5.36.0",
     "ts-prune": "^0.10.3",
-    "typescript": "5.3.3",
+    "typescript": "~5.7.3",
     "vite": "^7.3.1",
     "vitest": "^3.2.4"
   }

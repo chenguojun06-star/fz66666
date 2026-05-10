@@ -35,6 +35,8 @@ public class WarehouseLocation {
 
     private String warehouseType;
 
+    private String areaId;
+
     private Integer capacity;
 
     private Integer usedCapacity;

@@ -25,19 +25,36 @@ export const inventoryCheckApi = {
     api.get(`${BASE}/summary`),
 };
 
-export const warehouseOperationApi = {
+export const finishedWarehouseApi = {
   freeInbound: (params: Record<string, unknown>) =>
-    api.post('/warehouse/operation/free-inbound', params),
+    api.post('/warehouse/finished-inventory/free-inbound', params),
 
   freeOutbound: (params: Record<string, unknown>) =>
-    api.post('/warehouse/operation/free-outbound', params),
+    api.post('/warehouse/finished-inventory/free-outbound', params),
 
   scanInbound: (params: Record<string, unknown>) =>
-    api.post('/warehouse/operation/scan-inbound', params),
+    api.post('/warehouse/finished-inventory/scan-inbound', params),
 
   scanOutbound: (params: Record<string, unknown>) =>
-    api.post('/warehouse/operation/scan-outbound', params),
+    api.post('/warehouse/finished-inventory/scan-outbound', params),
 
-  scanQuery: (scanCode: string, warehouseType?: string) =>
-    api.get('/warehouse/operation/scan-query', { params: { scanCode, warehouseType: warehouseType || 'finished' } }),
+  scanQuery: (scanCode: string) =>
+    api.get('/warehouse/finished-inventory/scan-query', { params: { scanCode } }),
+};
+
+export const materialWarehouseApi = {
+  freeInbound: (params: Record<string, unknown>) =>
+    api.post('/production/material/stock/free-inbound', params),
+
+  freeOutbound: (params: Record<string, unknown>) =>
+    api.post('/production/material/stock/free-outbound', params),
+
+  scanInbound: (params: Record<string, unknown>) =>
+    api.post('/production/material/stock/scan-inbound', params),
+
+  scanOutbound: (params: Record<string, unknown>) =>
+    api.post('/production/material/stock/scan-outbound', params),
+
+  scanQuery: (materialCode: string) =>
+    api.get('/production/material/stock/scan-query', { params: { materialCode } }),
 };

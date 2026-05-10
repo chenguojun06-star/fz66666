@@ -211,7 +211,6 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean saveBatchWarehousingAndUpdateOrder(List<ProductWarehousing> list) {
         if (list == null || list.isEmpty()) {
             throw new IllegalArgumentException("入库明细不能为空");
@@ -268,7 +267,6 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean updateWarehousingAndUpdateOrder(ProductWarehousing pw) {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         ProductWarehousing oldW = this.lambdaQuery()

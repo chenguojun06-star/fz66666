@@ -14,6 +14,7 @@ import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.orchestration.MaterialStockOrchestrator;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.warehouse.orchestration.MaterialWarehouseOperationOrchestrator;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -43,6 +44,9 @@ public class MaterialStockController {
 
     @Autowired
     private MaterialStockOrchestrator materialStockOrchestrator;
+
+    @Autowired
+    private MaterialWarehouseOperationOrchestrator materialWarehouseOperationOrchestrator;
 
     @Autowired
     private MaterialOutboundLogMapper materialOutboundLogMapper;
@@ -376,5 +380,44 @@ public class MaterialStockController {
         public void setUsageType(String usageType) {
             this.usageType = usageType;
         }
+    }
+
+    @PostMapping("/free-inbound")
+    public Result<MaterialStock> freeInbound(@RequestBody Map<String, Object> params) {
+        MaterialStock result = materialWarehouseOperationOrchestrator.freeInbound(params);
+        return Result.success(result);
+    }
+
+    @PostMapping("/free-outbound")
+    public Result<MaterialOutboundLog> freeOutbound(@RequestBody Map<String, Object> params) {
+        MaterialOutboundLog result = materialWarehouseOperationOrchestrator.freeOutbound(params);
+        return Result.success(result);
+    }
+
+    @PostMapping("/scan-inbound")
+    public Result<MaterialStock> scanInbound(@RequestBody Map<String, Object> params) {
+        String materialCode = (String) params.get("materialCode");
+        Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
+        String warehouseLocation = (String) params.get("warehouseLocation");
+        String sourceType = (String) params.get("sourceType");
+        String remark = (String) params.get("remark");
+        MaterialStock result = materialWarehouseOperationOrchestrator.scanInbound(materialCode, quantity, warehouseLocation, sourceType, remark);
+        return Result.success(result);
+    }
+
+    @PostMapping("/scan-outbound")
+    public Result<MaterialOutboundLog> scanOutbound(@RequestBody Map<String, Object> params) {
+        String materialCode = (String) params.get("materialCode");
+        Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
+        String outstockType = (String) params.get("outstockType");
+        String remark = (String) params.get("remark");
+        MaterialOutboundLog result = materialWarehouseOperationOrchestrator.scanOutbound(materialCode, quantity, outstockType, remark);
+        return Result.success(result);
+    }
+
+    @GetMapping("/scan-query")
+    public Result<Map<String, Object>> scanQuery(@RequestParam String materialCode) {
+        Map<String, Object> result = materialWarehouseOperationOrchestrator.scanQuery(materialCode);
+        return Result.success(result);
     }
 }

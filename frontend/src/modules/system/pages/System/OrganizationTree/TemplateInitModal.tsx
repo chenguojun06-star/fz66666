@@ -90,6 +90,7 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
         maxLength={40}
         allowClear
         onChange={(e) => setTplModal((prev) => ({ ...prev, rootName: e.target.value }))}
+        onPressEnter={handleInitTemplate}
         style={{ marginBottom: 16 }}
       />
 

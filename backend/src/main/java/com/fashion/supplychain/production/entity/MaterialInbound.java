@@ -72,6 +72,10 @@ public class MaterialInbound implements Serializable {
      */
     private String warehouseLocation;
 
+    private String warehouseAreaId;
+
+    private String warehouseAreaName;
+
     /**
      * 供应商名称（旧字段，兼容保留）
      */

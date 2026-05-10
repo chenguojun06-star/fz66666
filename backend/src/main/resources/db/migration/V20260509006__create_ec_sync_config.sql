@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS t_ec_sync_config (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id           BIGINT       NOT NULL,
+    platform_code       VARCHAR(32)  NOT NULL,
+    config_type         VARCHAR(32)  NOT NULL DEFAULT 'ECOMMERCE',
+    enabled             TINYINT(1)   NOT NULL DEFAULT 1,
+    app_id              VARCHAR(256) NULL,
+    app_secret          VARCHAR(256) NULL,
+    private_key         TEXT         NULL,
+    public_key          TEXT         NULL,
+    callback_url        VARCHAR(512) NULL,
+    extra_config        JSON         NULL,
+    sync_rules          JSON         NULL,
+    rate_limit_per_min  INT          NOT NULL DEFAULT 60,
+    last_sync_at        DATETIME     NULL,
+    delete_flag         TINYINT      NOT NULL DEFAULT 0,
+    create_time         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_tenant_platform (tenant_id, platform_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

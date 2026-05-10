@@ -37,8 +37,8 @@ export const MODULE_SECTIONS = [
   ]},
   { key: 'finance', title: '财务管理', paths: [
     { path: '/finance/material-reconciliation', label: '物料对账' },
-    { path: '/finance/payroll-operator-summary', label: '工资结算(内)' },
-    { path: '/finance/center', label: '订单结算(外)' },
+    { path: '/finance/payroll-operator-summary', label: '工资结算' },
+    { path: '/finance/center', label: '外发结算' },
     { path: '/finance/expense-reimbursement', label: '费用报销' },
     { path: '/finance/wage-payment', label: '收付款中心' },
     { path: '/finance/ec-revenue', label: 'EC销售收入' },

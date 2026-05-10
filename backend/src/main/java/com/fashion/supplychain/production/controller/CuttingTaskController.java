@@ -2,8 +2,11 @@ package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.orchestration.CuttingBomOrchestrator;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +22,9 @@ public class CuttingTaskController {
 
     @Autowired
     private CuttingTaskService cuttingTaskService;
+
+    @Autowired
+    private CuttingBomOrchestrator cuttingBomOrchestrator;
 
     /**
      * 裁剪任务状态统计
@@ -95,6 +101,19 @@ public class CuttingTaskController {
         }
         boolean success = cuttingTaskService.update(qeUw);
         return success ? Result.success("更新成功") : Result.fail("更新失败");
+    }
+
+    @GetMapping("/by-style-no")
+    public Result<?> listByStyleNo(@RequestParam String styleNo) {
+        List<com.fashion.supplychain.production.entity.CuttingTask> tasks = cuttingTaskService.lambdaQuery()
+                .eq(com.fashion.supplychain.production.entity.CuttingTask::getStyleNo, styleNo)
+                .orderByDesc(com.fashion.supplychain.production.entity.CuttingTask::getCreateTime)
+                .list();
+        List<com.fashion.supplychain.production.entity.CuttingBom> bomList = cuttingBomOrchestrator.listByStyleNo(styleNo);
+        Map<String, Object> result = new HashMap<>();
+        result.put("tasks", tasks);
+        result.put("bomList", bomList);
+        return Result.success(result);
     }
 
 }

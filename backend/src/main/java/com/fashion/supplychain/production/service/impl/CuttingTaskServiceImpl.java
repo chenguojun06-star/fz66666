@@ -24,7 +24,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -138,7 +138,6 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean markBundledByOrderId(String productionOrderId) {
         if (!StringUtils.hasText(productionOrderId)) return false;
         String oid = productionOrderId.trim();

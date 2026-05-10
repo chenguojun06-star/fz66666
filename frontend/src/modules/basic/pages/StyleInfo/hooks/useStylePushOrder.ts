@@ -21,6 +21,7 @@ export function useStylePushOrder({ handlePushToOrderDirect, reportSmartError, s
     'production',
     'secondary',
     'sizePrice',
+    'sku',
   ]);
 
   const handlePushToOrder = () => {

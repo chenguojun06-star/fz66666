@@ -11,7 +11,7 @@ spring:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
   ai:
     openai:
-      api-key: ${DEEPSEEK_API_KEY:sk-placeholder-for-spring-ai-compatibility}
+      api-key: ${DEEPSEEK_API_KEY:}
       chat:
         enabled: true
   datasource:
@@ -83,7 +83,7 @@ app:
     allow-credentials: true
   security:
     # 生产建议配置 APP_SECURITY_PII_ENCRYPTION_KEY 专属密钥；未配置时使用内置回退密钥
-    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:FashionCloud2026PiiKeyFallback@Prod}
+    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:}
 
 # 生产环境隐藏健康检查详情
 management:

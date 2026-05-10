@@ -191,7 +191,7 @@ public class SignatureUtils {
     public static String randomNonceStr(int length) {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder sb = new StringBuilder(length);
-        java.util.Random r = new java.util.Random();
+        java.security.SecureRandom r = new java.security.SecureRandom();
         for (int i = 0; i < length; i++) {
             sb.append(chars.charAt(r.nextInt(chars.length())));
         }

@@ -46,7 +46,7 @@ public class DictController {
     }
 
     /** @deprecated 使用 POST /list-by-type 替代 */
-    @Deprecated
+    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @GetMapping("/by-type")
     public Result<List<Dict>> getByType(@RequestParam String type) {
         return Result.success(dictOrchestrator.getByType(type));

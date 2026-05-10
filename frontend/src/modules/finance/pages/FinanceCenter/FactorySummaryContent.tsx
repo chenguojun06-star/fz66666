@@ -63,6 +63,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   const [pushedFactoryIds, setPushedFactoryIds] = useState<Set<string>>(new Set());
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
 
   // ===== 工厂绩效榜 =====
   const [leaderboard, setLeaderboard] = useState<FactoryRank[]>([]);
@@ -188,13 +189,21 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     loadPushedFactories();
   }, [fetchData, loadPushedFactories]);
 
-  // 过滤：只显示含已审核订单的工厂
   const filteredData = useMemo(() => {
-    if (auditedOrderNos.size === 0) return [];
-    return data.filter(row =>
-      (row.orderNos || []).some(no => auditedOrderNos.has(no))
-    );
-  }, [data, auditedOrderNos]);
+    if (approvalFilter === 'pending') {
+      return data.filter(row =>
+        !(row.orderNos || []).some(no => auditedOrderNos.has(no)) &&
+        row.factoryType === 'EXTERNAL'
+      );
+    }
+    if (approvalFilter === 'approved') {
+      if (auditedOrderNos.size === 0) return [];
+      return data.filter(row =>
+        (row.orderNos || []).some(no => auditedOrderNos.has(no))
+      );
+    }
+    return data;
+  }, [data, auditedOrderNos, approvalFilter]);
 
   // 汇总统计基于过滤后数据
   const summary = useMemo(() => {

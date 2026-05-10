@@ -3,9 +3,11 @@ package com.fashion.supplychain.warehouse.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.ProductOutstock;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import com.fashion.supplychain.production.orchestration.OrderShareOrchestrator;
 import com.fashion.supplychain.warehouse.orchestration.FinishedInventoryOrchestrator;
+import com.fashion.supplychain.warehouse.orchestration.FinishedWarehouseOperationOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +27,7 @@ import java.util.Map;
 public class FinishedInventoryController {
 
     private final FinishedInventoryOrchestrator finishedInventoryOrchestrator;
+    private final FinishedWarehouseOperationOrchestrator finishedWarehouseOperationOrchestrator;
     private final OrderShareOrchestrator orderShareOrchestrator;
 
     /**
@@ -129,5 +132,45 @@ public class FinishedInventoryController {
         }
         String remark = (String) params.get("remark");
         return Result.success(finishedInventoryOrchestrator.batchApproveOutstocks(ids, remark));
+    }
+
+    @PostMapping("/free-inbound")
+    public Result<ProductWarehousing> freeInbound(@RequestBody Map<String, Object> params) {
+        ProductWarehousing result = finishedWarehouseOperationOrchestrator.freeInbound(params);
+        return Result.success(result);
+    }
+
+    @PostMapping("/free-outbound")
+    public Result<ProductOutstock> freeOutbound(@RequestBody Map<String, Object> params) {
+        ProductOutstock result = finishedWarehouseOperationOrchestrator.freeOutbound(params);
+        return Result.success(result);
+    }
+
+    @PostMapping("/scan-inbound")
+    public Result<ProductWarehousing> scanInbound(@RequestBody Map<String, Object> params) {
+        String scanCode = (String) params.get("scanCode");
+        Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
+        String warehouseLocation = (String) params.get("warehouseLocation");
+        String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
+        String sourceType = (String) params.get("sourceType");
+        String remark = (String) params.get("remark");
+        ProductWarehousing result = finishedWarehouseOperationOrchestrator.scanInbound(scanCode, quantity, warehouseLocation, warehouseAreaId, sourceType, remark);
+        return Result.success(result);
+    }
+
+    @PostMapping("/scan-outbound")
+    public Result<ProductOutstock> scanOutbound(@RequestBody Map<String, Object> params) {
+        String scanCode = (String) params.get("scanCode");
+        Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
+        String outstockType = (String) params.get("outstockType");
+        String remark = (String) params.get("remark");
+        ProductOutstock result = finishedWarehouseOperationOrchestrator.scanOutbound(scanCode, quantity, outstockType, remark);
+        return Result.success(result);
+    }
+
+    @GetMapping("/scan-query")
+    public Result<Map<String, Object>> scanQuery(@RequestParam String scanCode) {
+        Map<String, Object> result = finishedWarehouseOperationOrchestrator.scanQuery(scanCode);
+        return Result.success(result);
     }
 }

@@ -12,7 +12,7 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
-import type { CuttingTask, MaterialPurchase } from '@/types/production';
+import type { CuttingTask } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { formatDateTime } from '@/utils/datetime';
@@ -35,10 +35,11 @@ import {
   useCuttingBundles,
   useCuttingPrint,
   useCuttingCreateTask,
+  useCuttingBom,
 } from './hooks';
 import type { CuttingBundleRow } from './hooks';
-import { CuttingCreateTaskModal, CuttingFreeBundlePanel, CuttingPrintPreviewModal, CuttingRatioPanel } from './components';
-import { usePurchaseColumns, useBundleColumns } from './columns';
+import { CuttingCreateTaskModal, CuttingFreeBundlePanel, CuttingPrintPreviewModal, CuttingRatioPanel, CuttingBomPanel } from './components';
+import { useBundleColumns } from './columns';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -88,6 +89,8 @@ const CuttingManagement: React.FC = () => {
   const existingCutQtyByKey = bundles.allBundlesQtyMap;
   const print = useCuttingPrint({ message });
   const createTask = useCuttingCreateTask({ message, navigate, fetchTasks: tasks.fetchTasks });
+
+  const bom = useCuttingBom({ message, activeTask, isEntryPage });
 
   const processDetail = useProcessDetail({ message, fetchProductionList: tasks.fetchTasks });
 
@@ -194,7 +197,6 @@ const CuttingManagement: React.FC = () => {
     });
   };
 
-  const purchaseColumns = usePurchaseColumns();
   const columns = useBundleColumns(activeTask);
 
   return (
@@ -625,29 +627,25 @@ const CuttingManagement: React.FC = () => {
                       />
                     )}
 
-                    <Card
-                      size="small"
-                      title="面辅料用量"
-                      className="cutting-entry-purchase-card"
-                      style={{ marginTop: 12 }}
-                      loading={bundles.entryPurchaseLoading}
-                    >
-                      <ResizableTable<MaterialPurchase>
-                        storageKey="cutting-entry-purchase-table"
-                        columns={purchaseColumns}
-                        dataSource={bundles.entryPurchases}
-                        rowKey={(r) =>
-                          String(
-                            r?.id ??
-                            `${(r as unknown as any)?.materialType || ''}-${(r as unknown as any)?.materialCode || ''}-${(r as unknown as any)?.supplierName || ''}`
-                          )
-                        }
-                        loading={bundles.entryPurchaseLoading}
-                        pagination={false}
-                        size="small"
-                        scroll={{ x: 'max-content' }}
-                      />
-                    </Card>
+                    <CuttingBomPanel
+                      bomList={bom.bomList}
+                      bomLoading={bom.bomLoading}
+                      bomEditing={bom.bomEditing}
+                      bomSaving={bom.bomSaving}
+                      canEdit={bom.canEdit}
+                      isBundled={bom.isBundled}
+                      materialModalOpen={bom.materialModalOpen}
+                      onSetEditing={bom.setBomEditing}
+                      onAddRow={bom.handleAddRow}
+                      onRemoveRow={bom.handleRemoveRow}
+                      onUpdateRow={bom.handleUpdateRow}
+                      onSave={bom.handleSave}
+                      onDelete={bom.handleDelete}
+                      onOpenMaterialModal={bom.handleOpenMaterialModal}
+                      onUseMaterial={bom.handleUseMaterial}
+                      onCreateMaterial={bom.handleCreateMaterial}
+                      onSetMaterialModalOpen={bom.setMaterialModalOpen}
+                    />
                   </div>
 
                   <div className="cutting-entry-footer">

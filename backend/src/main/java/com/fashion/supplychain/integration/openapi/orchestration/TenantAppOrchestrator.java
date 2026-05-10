@@ -8,6 +8,7 @@ import com.fashion.supplychain.integration.openapi.entity.TenantApp;
 import com.fashion.supplychain.integration.openapi.entity.TenantAppLog;
 import com.fashion.supplychain.integration.openapi.service.TenantAppLogService;
 import com.fashion.supplychain.integration.openapi.service.TenantAppService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,8 @@ import org.springframework.util.StringUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.InetAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -27,6 +30,7 @@ import java.util.stream.Collectors;
  * 负责：应用CRUD、密钥管理、Webhook推送、调用日志、配额控制
  */
 @Service
+@Slf4j
 public class TenantAppOrchestrator {
 
     private static final Map<String, String> APP_TYPE_NAMES = new java.util.HashMap<String, String>() {{
@@ -78,8 +82,8 @@ public class TenantAppOrchestrator {
         app.setAppName(request.getAppName());
         app.setAppType(request.getAppType());
         app.setStatus("active");
-        app.setCallbackUrl(request.getCallbackUrl());
-        app.setExternalApiUrl(request.getExternalApiUrl());
+        app.setCallbackUrl(validateCallbackUrl(request.getCallbackUrl()));
+        app.setExternalApiUrl(validateExternalUrl(request.getExternalApiUrl()));
         app.setConfigJson(request.getConfigJson());
         app.setDailyQuota(request.getDailyQuota() != null ? request.getDailyQuota() : 0);
         app.setDailyUsed(0);
@@ -175,10 +179,10 @@ public class TenantAppOrchestrator {
             app.setAppName(request.getAppName());
         }
         if (StringUtils.hasText(request.getCallbackUrl())) {
-            app.setCallbackUrl(request.getCallbackUrl());
+            app.setCallbackUrl(validateCallbackUrl(request.getCallbackUrl()));
         }
         if (StringUtils.hasText(request.getExternalApiUrl())) {
-            app.setExternalApiUrl(request.getExternalApiUrl());
+            app.setExternalApiUrl(validateExternalUrl(request.getExternalApiUrl()));
         }
         if (request.getDailyQuota() != null) {
             app.setDailyQuota(request.getDailyQuota());
@@ -585,5 +589,63 @@ public class TenantAppOrchestrator {
     private String truncate(String str, int maxLen) {
         if (str == null) return null;
         return str.length() > maxLen ? str.substring(0, maxLen) : str;
+    }
+
+    private static final Set<String> BLOCKED_HOSTS = Set.of(
+            "127.0.0.1", "0.0.0.0", "localhost", "::1",
+            "169.254.169.254"
+    );
+
+    private String validateCallbackUrl(String url) {
+        if (url == null || url.isBlank()) return url;
+        return validateExternalUrl(url, "callbackUrl");
+    }
+
+    private String validateExternalUrl(String url) {
+        if (url == null || url.isBlank()) return url;
+        return validateExternalUrl(url, "externalApiUrl");
+    }
+
+    private String validateExternalUrl(String url, String fieldName) {
+        try {
+            URI uri = new URI(url.trim());
+            String scheme = uri.getScheme();
+            if (scheme == null || (!scheme.equalsIgnoreCase("https") && !scheme.equalsIgnoreCase("http"))) {
+                throw new IllegalArgumentException(fieldName + " 仅允许 HTTP/HTTPS 协议: " + scheme);
+            }
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                throw new IllegalArgumentException(fieldName + " 缺少主机地址");
+            }
+            String lowerHost = host.toLowerCase();
+            if (BLOCKED_HOSTS.contains(lowerHost)) {
+                throw new IllegalArgumentException(fieldName + " 不允许指向本机或云元数据地址: " + host);
+            }
+            if (lowerHost.startsWith("10.") || lowerHost.startsWith("192.168.")) {
+                throw new IllegalArgumentException(fieldName + " 不允许指向内网地址: " + host);
+            }
+            if (lowerHost.startsWith("172.")) {
+                String[] parts = lowerHost.split("\\.");
+                if (parts.length >= 2) {
+                    try {
+                        int second = Integer.parseInt(parts[1]);
+                        if (second >= 16 && second <= 31) {
+                            throw new IllegalArgumentException(fieldName + " 不允许指向内网地址: " + host);
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            try {
+                InetAddress resolved = InetAddress.getByName(host);
+                if (resolved.isLoopbackAddress() || resolved.isLinkLocalAddress() || resolved.isSiteLocalAddress()) {
+                    throw new IllegalArgumentException(fieldName + " 解析到内网地址，不允许: " + host);
+                }
+            } catch (java.net.UnknownHostException e) {
+                log.warn("[TenantApp] {} 主机名解析失败，放行但需关注: host={}", fieldName, host);
+            }
+            return url.trim();
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalArgumentException(fieldName + " 格式无效: " + e.getMessage());
+        }
     }
 }

@@ -336,6 +336,7 @@ public class MaterialPurchaseOrchestrator {
         return helper.buildBatchPreview(orderIds);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Object generateDemand(Map<String, Object> params) {
         String orderId = params == null ? null
                 : (params.get("orderId") == null ? null : String.valueOf(params.get("orderId")));

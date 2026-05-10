@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
@@ -116,6 +117,18 @@ public class CuttingBundleOrchestrator {
         if (bundle == null) {
             throw new NoSuchElementException("未找到对应的裁剪扎号");
         }
+        return bundle;
+    }
+
+    public CuttingBundle toggleScanBlocked(String bundleId, boolean blocked) {
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+        if (bundle == null) {
+            throw new NoSuchElementException("未找到对应的菲号");
+        }
+        bundle.setScanBlocked(blocked);
+        cuttingBundleService.updateById(bundle);
+        log.info("[扫码阻止开关] bundleId={}, bundleNo={}, blocked={}, operator={}",
+                bundleId, bundle.getBundleNo(), blocked, UserContext.username());
         return bundle;
     }
 }

@@ -83,7 +83,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
         </div>
       ) : null}
 
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" onFinish={handleOk}>
         <Form.Item
           name="borrower"
           label="借用人"

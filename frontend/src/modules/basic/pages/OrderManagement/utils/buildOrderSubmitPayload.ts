@@ -76,6 +76,8 @@ export const buildOrderSubmitPayload = ({
       color: line.color,
       size: line.size,
       quantity: line.quantity,
+      skuCode: `${selectedStyle.styleNo}-${line.color}-${line.size}`,
+      skuMode: (selectedStyle as any)?.skuMode || 'AUTO',
       materialPriceSource,
       materialPriceAcquiredAt,
       materialPriceVersion,

@@ -37,12 +37,12 @@ const ApplyToStyleModal: React.FC<ApplyToStyleModalProps> = ({
       open={open}
       centered
       onCancel={onCancel}
-      onOk={onOk}
+      onOk={() => form.submit()}
       okText="套用"
       cancelText="取消"
       width={modalWidth}
     >
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" onFinish={onOk}>
         <Form.Item label="模板">
           <Input
             value={activeRow ? `${activeRow.templateName || ''}（${typeLabel(activeRow.templateType)}）` : ''}

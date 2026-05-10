@@ -10,11 +10,12 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +43,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     private MaterialPurchaseReturnHelper returnHelper;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean deleteByOrderId(String orderId) {
         if (!StringUtils.hasText(orderId)) {
             return false;
@@ -92,7 +92,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(String id) {
         return this.removeById(id);
     }
@@ -113,7 +112,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean savePurchaseAndUpdateOrder(MaterialPurchase materialPurchase) {
         LocalDateTime now = LocalDateTime.now();
         materialPurchase.setCreateTime(now);
@@ -174,7 +172,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean updatePurchaseAndUpdateOrder(MaterialPurchase materialPurchase) {
         MaterialPurchase oldPurchase = null;
         if (StringUtils.hasText(materialPurchase.getId())) {
@@ -358,7 +355,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean updateArrivedQuantity(String id, Integer arrivedQuantity, String remark) {
         MaterialPurchase materialPurchase = this.getById(id);
         if (materialPurchase == null) {
@@ -434,6 +430,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<MaterialPurchase> generateDemandByOrderId(String orderId, boolean overwrite) {
         if (!StringUtils.hasText(orderId)) {
             throw new IllegalArgumentException("orderId不能为空");
@@ -459,7 +456,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean receivePurchase(String purchaseId, String receiverId, String receiverName) {
         if (!StringUtils.hasText(purchaseId)) {
             return false;
@@ -522,7 +518,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean confirmReturnPurchase(String purchaseId, String confirmerId, String confirmerName,
             java.math.BigDecimal returnQuantity) {
         return returnHelper.confirmReturnPurchase(this, purchaseId, confirmerId, confirmerName, returnQuantity);

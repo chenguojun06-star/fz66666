@@ -244,7 +244,6 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updateProductionProgress(String id, Integer progress, String rollbackRemark,
             String rollbackToProcessName) {
@@ -261,7 +260,6 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
         ProductionOrderFinanceOrchestrationService svc = financeOrchestrationServiceProvider.getIfAvailable();
@@ -271,7 +269,6 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         return svc.completeProduction(id, tolerancePercent);
     }
 
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public ProductionOrder closeOrder(String id) {
         ProductionOrderFinanceOrchestrationService svc = financeOrchestrationServiceProvider.getIfAvailable();
