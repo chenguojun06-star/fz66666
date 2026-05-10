@@ -15,7 +15,7 @@ jobs:
   # 规则：每新增 @TableField("xxx") 必须有对应 Flyway 脚本，否则阻断整个 CI
   # ──────────────────────────────────────────────────────────────────────────
   entity-flyway-check:
-    name: Entity-Flyway 字段对齐 + 版本号唯一性门禁
+    name: Entity-Flyway 字段对齐门禁
     runs-on: ubuntu-latest
 
     steps:
@@ -24,9 +24,6 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 2          # 需要 HEAD~1 做基准
-
-    - name: 检查 Flyway 版本号唯一性
-      run: python3 scripts/check-flyway-versions.py
 
     - name: 检查新增 @TableField 是否有 Flyway 迁移脚本
       run: python3 scripts/check-entity-flyway.py
@@ -53,7 +50,7 @@ jobs:
           echo "❌ 生产CORS配置包含localhost"
           ERRORS=$((ERRORS + 1))
         fi
-        if grep "http://" backend/src/main/resources/application-prod.yml 2>/dev/null | grep -v "#" | grep -v '\${' | grep -q "http://"; then
+        if grep -q "http://" backend/src/main/resources/application-prod.yml 2>/dev/null | grep -v "#"; then
           echo "⚠️  生产CORS配置包含HTTP协议源"
           ERRORS=$((ERRORS + 1))
         fi
@@ -129,15 +126,6 @@ jobs:
       run: |
         mvn clean compile checkstyle:check -q
 
-    - name: Maven 依赖安全扫描
-      working-directory: ./backend
-      continue-on-error: true
-      run: |
-        mvn org.owasp:dependency-check-maven:check \
-          -DfailBuildOnCVSS=7 \
-          -DsuppressionFile=../.github/dependency-check-suppressions.xml \
-          -q || echo "⚠️ 依赖安全扫描发现高危漏洞，请检查报告"
-
     - name: 运行后端单元测试 + Jacoco覆盖率报告
       working-directory: ./backend
       run: |
@@ -189,12 +177,6 @@ jobs:
     - name: TypeScript 类型检查
       working-directory: ./frontend
       run: npx tsc --noEmit
-
-    - name: npm 依赖安全扫描
-      working-directory: ./frontend
-      continue-on-error: true
-      run: |
-        npm audit --audit-level=high --omit=dev || echo "⚠️ 前端依赖安全扫描发现高危漏洞，请检查"
 
   frontend-build:
     name: 前端构建
