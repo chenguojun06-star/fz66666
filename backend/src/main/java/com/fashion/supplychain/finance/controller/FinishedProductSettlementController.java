@@ -321,7 +321,7 @@ public class FinishedProductSettlementController {
         if (StringUtils.isNotBlank(status)) {
             wrapper.eq(FinishedProductSettlement::getStatus, status);
         }
-        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "closed", "CLOSED", "SCRAPPED", "archived", "ARCHIVED");
+        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
         if (StringUtils.isNotBlank(startDate)) {
             wrapper.ge(FinishedProductSettlement::getCreateTime,
                     LocalDate.parse(startDate).atStartOfDay());
@@ -458,6 +458,8 @@ public class FinishedProductSettlementController {
             row.put("parentOrgUnitName", factory != null ? factory.getParentOrgUnitName() : null);
             row.put("orgPath", resolveOrgPathForFactory(row, allData, orderMap));
         }
+
+        grouped.values().removeIf(row -> "INTERNAL".equals(row.get("factoryType")));
 
         return Result.success(new ArrayList<>(grouped.values()));
     }

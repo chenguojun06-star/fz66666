@@ -187,7 +187,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   }, [fetchData, loadPushedFactories]);
 
   const filteredData = useMemo(() => {
-    return data;
+    return data.filter(r => r.factoryType !== 'INTERNAL');
   }, [data]);
 
   // 汇总统计基于过滤后数据
