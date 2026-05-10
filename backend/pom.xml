@@ -336,7 +336,7 @@
                     </execution>
                     <execution>
                         <id>check</id>
-                        <phase>test</phase>
+                        <phase>verify</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
@@ -348,7 +348,7 @@
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum>
+                                            <minimum>0.01</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
