@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Card, Form, Input, Button, Space, App, Tag, Tooltip } from 'antd';
+import { Card, Form, Input, Button, Space, App, Tag, Tooltip, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ReloadOutlined,
@@ -499,6 +499,18 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     <Form form={form} layout="inline" onFinish={fetchData}>
       <Form.Item name="factoryName">
         <Input placeholder="工厂名称" allowClear style={{ width: 160 }} />
+      </Form.Item>
+      <Form.Item>
+        <Select
+          style={{ width: 120 }}
+          value={approvalFilter}
+          onChange={setApprovalFilter}
+          options={[
+            { value: 'all', label: '全部' },
+            { value: 'pending', label: '待审核' },
+            { value: 'approved', label: '已审核' },
+          ]}
+        />
       </Form.Item>
       <Form.Item>
         <Space>

@@ -83,7 +83,7 @@ app:
     allow-credentials: true
   security:
     # 生产建议配置 APP_SECURITY_PII_ENCRYPTION_KEY 专属密钥；未配置时使用内置回退密钥
-    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:}
+    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:FashionCloud2026PiiKeyFallback@Prod}
 
 # 生产环境隐藏健康检查详情
 management:
