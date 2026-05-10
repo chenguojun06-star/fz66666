@@ -78,7 +78,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
       cancelText="取消"
     >
       {outboundModal.data && (
-        <Space direction="vertical" style={{ width: '100%' }} size={12}>
+        <Space orientation="vertical" style={{ width: '100%' }} size={12}>
           <MaterialInfoCard
             materialCode={outboundModal.data.materialCode}
             materialName={outboundModal.data.materialName}

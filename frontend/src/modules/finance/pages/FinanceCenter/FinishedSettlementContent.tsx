@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, Input, Button, Timeline } from 'antd';
+import React, { useState, useMemo } from 'react';
+import { Card, Input, Button, Timeline, Select } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import PageLayout from '@/components/common/PageLayout';
@@ -8,6 +8,7 @@ import SmallModal from '@/components/common/SmallModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useSettlementData, type PageParams } from './useSettlementData';
 import { getSettlementColumns } from './settlementColumns';
+import { isOrderFrozenByStatus } from '@/utils/api/production';
 
 interface Props {
   auditedOrderNos: Set<string>;
@@ -15,6 +16,8 @@ interface Props {
 }
 
 const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosChange }) => {
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [searchFactoryName, setSearchFactoryName] = useState('');
   const {
     searchOrderNo, setSearchOrderNo,
     searchStatus, setSearchStatus,
@@ -35,6 +38,20 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   } = useSettlementData(auditedOrderNos, onAuditNosChange);
 
   const columns = getSettlementColumns(auditedOrderNos, handleAuditOrder, openRemarkModal, openLogModal);
+
+  const filteredData = useMemo(() => {
+    let result = data;
+    if (approvalFilter === 'pending') {
+      result = result.filter(r => !auditedOrderNos.has(r.orderNo) && r.approvalStatus !== 'APPROVED');
+    } else if (approvalFilter === 'approved') {
+      result = result.filter(r => auditedOrderNos.has(r.orderNo) || r.approvalStatus === 'APPROVED');
+    }
+    if (searchFactoryName.trim()) {
+      const kw = searchFactoryName.trim().toLowerCase();
+      result = result.filter(r => String(r.factoryName || '').toLowerCase().includes(kw));
+    }
+    return result;
+  }, [data, approvalFilter, auditedOrderNos, searchFactoryName]);
 
   return (
     <>
@@ -63,11 +80,28 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                   { label: '已完成', value: 'completed' },
                 ]}
               />
+              <Input
+                placeholder="搜索工厂名"
+                allowClear
+                style={{ width: 160 }}
+                value={searchFactoryName}
+                onChange={e => setSearchFactoryName(e.target.value)}
+              />
+              <Select
+                style={{ width: 120 }}
+                value={approvalFilter}
+                onChange={setApprovalFilter}
+                options={[
+                  { value: 'all', label: '全部' },
+                  { value: 'pending', label: '待审核' },
+                  { value: 'approved', label: '已审核' },
+                ]}
+              />
           </>
         }
         filterRight={
           <>
-              <Button type="primary" onClick={handleBatchAudit} disabled={selectedRowKeys.length === 0 || !data.some(r => selectedRowKeys.includes(r.orderId) && r.factoryType !== 'INTERNAL' && !auditedOrderNos.has(r.orderNo))}>
+              <Button type="primary" onClick={handleBatchAudit} disabled={selectedRowKeys.length === 0 || !data.some(r => selectedRowKeys.includes(r.orderId) && r.factoryType !== 'INTERNAL' && !auditedOrderNos.has(r.orderNo) && r.approvalStatus !== 'APPROVED' && isOrderFrozenByStatus(r) && (r.warehousedQuantity ?? 0) > 0)}>
                 批量审核 ({selectedRowKeys.length})
               </Button>
               <Button onClick={handleReset}>重置</Button>
@@ -81,7 +115,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         <ResizableTable
           storageKey="finance-finished-settlement"
           columns={columns}
-          dataSource={data}
+          dataSource={filteredData}
           loading={loading}
           rowKey="orderId"
           rowSelection={{ selectedRowKeys, onChange: (keys: React.Key[]) => setSelectedRowKeys(keys as string[]) }}

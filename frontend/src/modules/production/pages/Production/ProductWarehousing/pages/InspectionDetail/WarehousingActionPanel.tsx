@@ -2,7 +2,8 @@ import React from 'react';
 import { Card, Alert, Button, Space, Typography, Select } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
-import DictAutoComplete from '@/components/common/DictAutoComplete';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 import { WarehousingDetailRecord } from '../../types';
 
 const { Text } = Typography;
@@ -17,14 +18,14 @@ interface Props {
   onSubmit: () => void;
 }
 
-const WAREHOUSE_TYPE_OPTIONS = [
-  { label: '成品仓', value: '成品仓' },
-];
-
 const WarehousingActionPanel: React.FC<Props> = ({
   qcRecords, warehouseValue, setWarehouseValue, warehouseType, setWarehouseType,
   warehousingLoading, onSubmit,
 }) => {
+  const { selectOptions: finishedWarehouseOptions } = useWarehouseAreaOptions('FINISHED');
+  const warehouseTypeOptions = finishedWarehouseOptions.length > 0
+    ? finishedWarehouseOptions.map(opt => ({ label: opt.label, value: opt.label as string }))
+    : [{ label: '成品仓', value: '成品仓' }];
   const pendingRecords = qcRecords.filter(r => {
     const qs = String(r.qualityStatus || '').trim().toLowerCase();
     return (!qs || qs === 'qualified') && Number(r.qualifiedQuantity || 0) > 0 && !String(r.warehouse || '').trim();
@@ -61,19 +62,19 @@ const WarehousingActionPanel: React.FC<Props> = ({
       </Card>
 
       <Card size="small" title="选择仓库并确认入库">
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <Text strong>仓库类型：</Text>
               <Select
                 value={warehouseType}
                 onChange={(v) => setWarehouseType(v)}
-                options={WAREHOUSE_TYPE_OPTIONS}
+                options={warehouseTypeOptions}
                 style={{ width: 140 }}
                 placeholder="请选择仓库类型"
               />
               <Text strong>入库仓位：</Text>
-              <DictAutoComplete
-                dictType="warehouse_location"
+              <WarehouseLocationAutoComplete
+                warehouseType="FINISHED"
                 placeholder="请选择或输入仓位"
                 value={warehouseValue || undefined}
                 onChange={(v) => setWarehouseValue(String(v || '').trim())}

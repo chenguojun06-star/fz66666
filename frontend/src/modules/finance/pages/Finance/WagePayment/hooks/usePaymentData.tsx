@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Form, Modal } from 'antd';
+import type { FormInstance } from 'antd';
 import {
   wagePaymentApi,
   type WagePayment,
@@ -11,9 +12,10 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 
 interface UsePaymentDataOptions {
   msg: { success: (text: string) => void; error: (text: string) => void; warning: (text: string) => void };
+  filterForm: FormInstance;
 }
 
-export function usePaymentData({ msg }: UsePaymentDataOptions) {
+export function usePaymentData({ msg, filterForm }: UsePaymentDataOptions) {
   // ---- Smart Error ----
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
@@ -43,7 +45,6 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   // ---- 收支记录列表 ----
   const [payments, setPayments] = useState<WagePayment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
-  const [filterForm] = Form.useForm();
 
   // ---- 数据加载 ----
   const fetchPayables = useCallback(async () => {

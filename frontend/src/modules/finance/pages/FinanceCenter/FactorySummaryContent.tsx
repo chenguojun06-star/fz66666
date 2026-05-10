@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Card, Form, Input, Button, Space, App, Tag, Tooltip, Select } from 'antd';
+import { Card, Form, Input, Button, Space, App, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ReloadOutlined,
@@ -63,7 +63,6 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   const [pushedFactoryIds, setPushedFactoryIds] = useState<Set<string>>(new Set());
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
-  const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
 
   // ===== 工厂绩效榜 =====
   const [leaderboard, setLeaderboard] = useState<FactoryRank[]>([]);
@@ -82,7 +81,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
 
   const getPrintData = () => {
     return selectedRowKeys.map(key => {
-      const summary = data.find((r: any) => r.factoryId === key);
+      const summary = data.find((r: any) => r.factoryName === key || r.factoryId === key);
       if (!summary) return null;
       return {
         factoryId: summary.factoryId,
@@ -145,7 +144,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
 
       const res = await api.get<{ code: number; data: FactorySummaryRow[] }>(
         '/finance/finished-settlement/factory-summary',
-        { params: { ...params, factoryType: 'EXTERNAL' } }
+        { params: { ...params } }
       );
       const list = res?.data ?? res ?? [];
       const rows: FactorySummaryRow[] = Array.isArray(list) ? list : [];
@@ -156,9 +155,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       rows.forEach(row => {
         (row.approvedOrderNos ?? []).forEach(no => approvedNos.add(no));
       });
-      if (approvedNos.size > 0) {
-        onAuditNosChange(approvedNos);
-      }
+      onAuditNosChange(approvedNos);
       if (showSmartErrorNotice) setSmartError(null);
     } catch (e: unknown) {
       const errMessage = e instanceof Error ? e.message : '获取工厂汇总失败';
@@ -190,20 +187,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   }, [fetchData, loadPushedFactories]);
 
   const filteredData = useMemo(() => {
-    if (approvalFilter === 'pending') {
-      return data.filter(row =>
-        !(row.orderNos || []).some(no => auditedOrderNos.has(no)) &&
-        row.factoryType === 'EXTERNAL'
-      );
-    }
-    if (approvalFilter === 'approved') {
-      if (auditedOrderNos.size === 0) return [];
-      return data.filter(row =>
-        (row.orderNos || []).some(no => auditedOrderNos.has(no))
-      );
-    }
     return data;
-  }, [data, auditedOrderNos, approvalFilter]);
+  }, [data]);
 
   // 汇总统计基于过滤后数据
   const summary = useMemo(() => {
@@ -499,18 +484,6 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     <Form form={form} layout="inline" onFinish={fetchData}>
       <Form.Item name="factoryName">
         <Input placeholder="工厂名称" allowClear style={{ width: 160 }} />
-      </Form.Item>
-      <Form.Item>
-        <Select
-          style={{ width: 120 }}
-          value={approvalFilter}
-          onChange={setApprovalFilter}
-          options={[
-            { value: 'all', label: '全部' },
-            { value: 'pending', label: '待审核' },
-            { value: 'approved', label: '已审核' },
-          ]}
-        />
       </Form.Item>
       <Form.Item>
         <Space>

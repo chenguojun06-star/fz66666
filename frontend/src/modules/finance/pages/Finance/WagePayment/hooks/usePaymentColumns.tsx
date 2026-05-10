@@ -133,6 +133,13 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'description',
         width: 200,
         ellipsis: true,
+        render: (v: string, record: PayableItem) => {
+          const count = record.billCount;
+          if (count && count > 1) {
+            return <span>{v} <Tag color="blue" style={{ marginLeft: 4, fontSize: 11 }}>{count}笔合并</Tag></span>;
+          }
+          return v || '-';
+        },
       },
       {
         title: '创建时间',

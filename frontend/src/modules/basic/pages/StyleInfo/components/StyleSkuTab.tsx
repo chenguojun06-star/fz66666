@@ -232,9 +232,9 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
     return (sku as any)[field];
   };
 
-  const getRowKey = (record: ProductSku, index?: number) => {
+  const getRowKey = (record: ProductSku) => {
     if (record.id) return record.id;
-    return (record as any)._tempKey ?? `temp-${index ?? 0}`;
+    return String((record as any)._tempKey ?? '');
   };
 
   const isManual = skuMode === 'MANUAL';
@@ -399,7 +399,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       <Table
         dataSource={skus}
         columns={columns}
-        rowKey={(record, index) => String(getRowKey(record, index))}
+        rowKey={(record) => String(getRowKey(record))}
         loading={loading}
         size="small"
         pagination={false}

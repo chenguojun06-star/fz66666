@@ -99,7 +99,7 @@ public class FinishedProductSettlementController {
         }
 
         // 始终排除已取消/报废/逻辑删除的订单（不参与结算）
-        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped");
+        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
 
         // 日期范围筛选
         if (StringUtils.isNotBlank(startDate)) {
@@ -182,7 +182,7 @@ public class FinishedProductSettlementController {
             wrapper.eq(FinishedProductSettlement::getStatus, status);
         }
         // 排除已取消/报废的订单
-        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped");
+        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
         if (StringUtils.isNotBlank(startDate)) {
             LocalDateTime startDateTime = LocalDate.parse(startDate).atStartOfDay();
             wrapper.ge(FinishedProductSettlement::getCreateTime, startDateTime);
@@ -264,6 +264,11 @@ public class FinishedProductSettlementController {
             return Result.fail("内部工厂订单请在「工资结算」中审核");
         }
 
+        Integer warehousedQty = settlement.getWarehousedQuantity();
+        if (warehousedQty == null || warehousedQty <= 0) {
+            return Result.fail("该订单无入库数量，无法审核");
+        }
+
         Long tenantId = settlement.getTenantId();
         if (tenantId == null) {
             tenantId = UserContext.tenantId();
@@ -302,7 +307,8 @@ public class FinishedProductSettlementController {
             @RequestParam(required = false) String factoryName,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String factoryType
     ) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -315,8 +321,7 @@ public class FinishedProductSettlementController {
         if (StringUtils.isNotBlank(status)) {
             wrapper.eq(FinishedProductSettlement::getStatus, status);
         }
-        // 排除已取消/报废的订单
-        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped");
+        wrapper.notIn(FinishedProductSettlement::getStatus, "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "closed", "CLOSED", "SCRAPPED", "archived", "ARCHIVED");
         if (StringUtils.isNotBlank(startDate)) {
             wrapper.ge(FinishedProductSettlement::getCreateTime,
                     LocalDate.parse(startDate).atStartOfDay());
@@ -326,7 +331,11 @@ public class FinishedProductSettlementController {
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
         }
 
-        // 外发工厂账号只能查看自己工厂的汇总数据
+        String effectiveFactoryType = StringUtils.isNotBlank(factoryType) ? factoryType : "EXTERNAL";
+        if (!applyOrderScopeFilter(wrapper, null, effectiveFactoryType)) {
+            return Result.success(Collections.emptyList());
+        }
+
         String ctxFactoryIdSummary = UserContext.factoryId();
         if (StringUtils.isNotBlank(ctxFactoryIdSummary)) {
             wrapper.eq(FinishedProductSettlement::getFactoryId, ctxFactoryIdSummary);
@@ -336,12 +345,16 @@ public class FinishedProductSettlementController {
         wrapper.last("LIMIT 5000");
         List<FinishedProductSettlement> allData = settlementService.list(wrapper);
 
-        // 查询当前租户已审批（approved）的结算单 ID 集合，用于在汇总 row 中标注 approvedOrderNos
         Set<String> approvedSettlementIds = approvalStatusService.getApprovedIds(tenantId);
 
-        // 按工厂聚合
         Map<String, Map<String, Object>> grouped = new LinkedHashMap<>();
         for (FinishedProductSettlement item : allData) {
+            boolean isApproved = StringUtils.isNotBlank(item.getOrderId())
+                    && approvedSettlementIds.contains(item.getOrderId());
+            if (!isApproved) {
+                continue;
+            }
+
             String fName = StringUtils.isNotBlank(item.getFactoryName())
                     ? item.getFactoryName() : "未分配工厂";
             String fId = item.getFactoryId() != null ? item.getFactoryId() : "";
@@ -359,7 +372,7 @@ public class FinishedProductSettlementController {
                 m.put("totalAmount", java.math.BigDecimal.ZERO);
                 m.put("totalProfit", java.math.BigDecimal.ZERO);
                 m.put("orderNos", new ArrayList<String>());
-                m.put("approvedOrderNos", new ArrayList<String>()); // 已审批的订单号，用于前端刷新后恢复审批状态
+                m.put("approvedOrderNos", new ArrayList<String>());
                 return m;
             });
 
@@ -388,11 +401,9 @@ public class FinishedProductSettlementController {
             if (StringUtils.isNotBlank(item.getOrderNo())) {
                 orderNos.add(item.getOrderNo());
             }
-            // 若该结算单已审批，同步写入 approvedOrderNos，前端刷新后据此恢复审批状态
-            if (StringUtils.isNotBlank(item.getOrderId()) && approvedSettlementIds.contains(item.getOrderId())
-                    && StringUtils.isNotBlank(item.getOrderNo())) {
-                @SuppressWarnings("unchecked")
-                List<String> approvedNos = (List<String>) row.get("approvedOrderNos");
+            @SuppressWarnings("unchecked")
+            List<String> approvedNos = (List<String>) row.get("approvedOrderNos");
+            if (StringUtils.isNotBlank(item.getOrderNo())) {
                 approvedNos.add(item.getOrderNo());
             }
         }
@@ -496,6 +507,9 @@ public class FinishedProductSettlementController {
             return;
         }
 
+        Long tenantId = UserContext.tenantId();
+        Set<String> approvedIds = approvalStatusService.getApprovedIds(tenantId);
+
         Set<String> orderIds = records.stream()
                 .map(FinishedProductSettlement::getOrderId)
                 .filter(StringUtils::isNotBlank)
@@ -529,6 +543,7 @@ public class FinishedProductSettlementController {
             record.setOrgPath(StringUtils.isNotBlank(order != null ? order.getOrgPath() : null)
                     ? order.getOrgPath()
                     : factory != null ? factory.getOrgPath() : null);
+            record.setApprovalStatus(approvedIds.contains(record.getOrderId()) ? "APPROVED" : "PENDING");
             applyLockedOrderPrice(record, order);
         }
     }
@@ -543,10 +558,15 @@ public class FinishedProductSettlementController {
         if (lockedUnitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
-        int qty = record.getWarehousedQuantity() != null && record.getWarehousedQuantity() > 0
-                ? record.getWarehousedQuantity()
-                : Math.max(0, record.getOrderQuantity() == null ? 0 : record.getOrderQuantity());
-        BigDecimal totalAmount = lockedUnitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
+        int warehousedQty = record.getWarehousedQuantity() != null ? record.getWarehousedQuantity() : 0;
+        if (warehousedQty <= 0) {
+            record.setStyleFinalPrice(lockedUnitPrice.setScale(2, RoundingMode.HALF_UP));
+            record.setTotalAmount(BigDecimal.ZERO);
+            record.setProfit(BigDecimal.ZERO);
+            record.setProfitMargin(BigDecimal.ZERO);
+            return;
+        }
+        BigDecimal totalAmount = lockedUnitPrice.multiply(BigDecimal.valueOf(warehousedQty)).setScale(2, RoundingMode.HALF_UP);
         BigDecimal materialCost = record.getMaterialCost() == null ? BigDecimal.ZERO : record.getMaterialCost();
         BigDecimal productionCost = record.getProductionCost() == null ? BigDecimal.ZERO : record.getProductionCost();
         BigDecimal defectLoss = record.getDefectLoss() == null ? BigDecimal.ZERO : record.getDefectLoss();

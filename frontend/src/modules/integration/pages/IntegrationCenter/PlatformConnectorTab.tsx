@@ -250,7 +250,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
             )}
 
             <Divider style={{ margin: '8px 0' }} />
-            <Space direction="vertical" style={{ width: '100%' }} size={6}>
+            <Space orientation="vertical" style={{ width: '100%' }} size={6}>
               <Button type={isConfigured ? 'default' : 'primary'} icon={<SettingOutlined />} block size="small" onClick={() => handleConfig(p)}>
                 {isConfigured ? '修改凭证' : '配置连接'}
               </Button>

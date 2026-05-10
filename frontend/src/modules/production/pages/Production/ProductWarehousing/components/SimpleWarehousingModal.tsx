@@ -1,7 +1,8 @@
 import React from 'react';
 import { Form, Input, Row, Col, Select } from 'antd';
 import SmallModal from '@/components/common/SmallModal';
-import DictAutoComplete from '@/components/common/DictAutoComplete';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 
 interface SimpleWarehousingModalProps {
   open: boolean;
@@ -35,6 +36,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
   width: _width,
 }) => {
   const [form] = Form.useForm();
+  const { selectOptions: finishedWarehouseOptions } = useWarehouseAreaOptions('FINISHED');
   return (
     <SmallModal
       title="入库"
@@ -81,19 +83,24 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
             <Form.Item label="仓库" required>
               <Select
                 placeholder="请选择仓库"
-                value="成品库"
+                value={finishedWarehouseOptions[0]?.label || '成品仓'}
                 onChange={() => {}}
                 style={{ width: '100%' }}
               >
-                <Select.Option value="成品库">成品库</Select.Option>
+                {finishedWarehouseOptions.length > 0
+                  ? finishedWarehouseOptions.map(opt => (
+                    <Select.Option key={opt.value} value={opt.label as string}>{opt.label}</Select.Option>
+                  ))
+                  : <Select.Option value="成品仓">成品仓</Select.Option>
+                }
               </Select>
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item label="库位" required>
-              <DictAutoComplete
-                dictType="finished_warehouse_location"
-                placeholder="请选择或输入库位（如：A-001）"
+              <WarehouseLocationAutoComplete
+                warehouseType="FINISHED"
+                placeholder="请选择或输入库位"
                 value={warehouse || undefined}
                 onChange={(v) => setWarehouse(String(v || '').trim())}
                 style={{ width: '100%' }}

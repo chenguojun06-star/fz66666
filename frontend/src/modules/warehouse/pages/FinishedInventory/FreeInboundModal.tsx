@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Modal, Form, Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message, Descriptions, Alert, Switch } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, Descriptions, Alert, Switch, App } from 'antd';
 import { InboxOutlined, SearchOutlined, PlusOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
@@ -20,6 +20,7 @@ const WAREHOUSE_TYPE_MAP: Record<string, string> = {
 };
 
 const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSuccess }) => {
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const [skuCode, setSkuCode] = useState('');
   const [skuInfo, setSkuInfo] = useState<any>(null);
@@ -74,7 +75,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const handleQuickCreateArea = async () => {
     const name = await new Promise<string | null>((resolve) => {
       let inputValue = '';
-      Modal.confirm({
+      modal.confirm({
         title: '快速创建仓库区域',
         content: (
           <Input
@@ -175,7 +176,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
         <Button key="ok" type="primary" loading={loading} onClick={() => form.submit()}>确认入库</Button>,
       ]}
     >
-      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+      <Space orientation="vertical" style={{ width: '100%' }} size={16}>
         <div>
           <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>SKU编码</div>
           <Space.Compact style={{ width: '100%' }}>
@@ -201,7 +202,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
           <Alert
             type="warning"
             showIcon
-            message="SKU不存在"
+            title="SKU不存在"
             description={
               <div style={{ marginTop: 8 }}>
                 <div style={{ marginBottom: 8 }}>
@@ -276,10 +277,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
                 >
                   {areaOptions.map((opt) => (
                     <Select.Option key={opt.value} value={opt.value}>
-                      <Space>
-                        <Tag color="blue" style={{ margin: 0 }}>{opt.area.areaCode}</Tag>
-                        {opt.area.areaName}
-                      </Space>
+                      {opt.area.areaName || opt.area.areaCode}
                     </Select.Option>
                   ))}
                 </Select>
@@ -301,10 +299,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
                 >
                   {locationOptions.map((opt) => (
                     <Select.Option key={opt.value} value={opt.value}>
-                      <Space>
-                        <Tag style={{ margin: 0 }}>{opt.location.zoneName || opt.location.zoneCode}</Tag>
-                        {opt.location.locationName}
-                      </Space>
+                      {opt.location.locationName || opt.location.locationCode}
                     </Select.Option>
                   ))}
                 </Select>
@@ -317,12 +312,8 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
-              message={
-                <Space>
-                  <Tag color="blue">{selectedArea.areaCode}</Tag>
-                  <span>入库至 <strong>{selectedArea.areaName}</strong></span>
-                  {selectedArea.address && <span style={{ color: '#999' }}>（{selectedArea.address}）</span>}
-                </Space>
+              title={
+                <span>入库至 <strong>{selectedArea.areaName || selectedArea.areaCode}</strong></span>
               }
             />
           )}

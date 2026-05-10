@@ -351,11 +351,11 @@ public class BillAggregationOrchestrator {
                     log.warn("[BillAggregation] PayableOrchestrator 不可用，跳过应付派生: billNo={}", bill.getBillNo());
                     return;
                 }
-                Payable existingPayable = payableOrchestrator.findByBillAggregationId(bill.getId());
-                if (existingPayable == null) {
-                    payableOrchestrator.createFromBill(bill);
-                    log.info("[BillAggregation] 已派生应付任务: billNo={}", bill.getBillNo());
-                }
+                Payable merged = payableOrchestrator.findOrCreateMergedPayable(bill);
+                bill.setPayableId(merged.getId());
+                billAggregationService.updateById(bill);
+                log.info("[BillAggregation] 已合并到应付任务: billNo={}, payableNo={}, mergedAmount={}",
+                        bill.getBillNo(), merged.getPayableNo(), merged.getAmount());
                 return;
             }
             if ("RECEIVABLE".equalsIgnoreCase(bill.getBillType())) {

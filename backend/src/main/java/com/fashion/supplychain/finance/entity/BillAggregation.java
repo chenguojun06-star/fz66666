@@ -55,6 +55,8 @@ public class BillAggregation {
 
     private String remark;
 
+    private String payableId;
+
     private String confirmedById;
     private String confirmedByName;
     private LocalDateTime confirmedAt;

@@ -16,6 +16,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
+import { parseCareIconCodes, getCareIconSvgs } from '@/utils/careIcons';
 
 // ─── 共用类型 ─────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export interface LabelStyleInfo {
   ironCode?: string;
   /** 干洗代码：YES/NO */
   dryCleanCode?: string;
+  careIconCodes?: string;
 }
 
 // ─── 洗涤护理图标 SVG（ISO 3758 标准符号，内联 SVG，打印安全）─────────────────
@@ -110,16 +112,21 @@ const DEFAULT_CARE_ICONS: string[] = [
 function buildCareIconsHtml(s: LabelStyleInfo | null | undefined): string {
   let icons: string[] = [];
   if (s) {
-    const codes = getDisplayWashCareCodes(s, s.washInstructions);
-    icons = [
-      codes.washTempCode ? (CARE_SVGS[`wash_${codes.washTempCode}`] ?? '') : '',
-      codes.bleachCode ? (CARE_SVGS[`bleach_${codes.bleachCode}`] ?? '') : '',
-      codes.tumbleDryCode ? (CARE_SVGS[`dry_${codes.tumbleDryCode}`] ?? '') : '',
-      codes.ironCode ? (CARE_SVGS[`iron_${codes.ironCode}`] ?? '') : '',
-      codes.dryCleanCode ? (CARE_SVGS[`dryclean_${codes.dryCleanCode}`] ?? '') : '',
-    ].filter(Boolean);
+    const explicitCodes = parseCareIconCodes(s.careIconCodes);
+    if (explicitCodes.length > 0) {
+      icons = getCareIconSvgs(explicitCodes);
+    }
+    if (icons.length === 0) {
+      const codes = getDisplayWashCareCodes(s, s.washInstructions);
+      icons = [
+        codes.washTempCode ? (CARE_SVGS[`wash_${codes.washTempCode}`] ?? '') : '',
+        codes.bleachCode ? (CARE_SVGS[`bleach_${codes.bleachCode}`] ?? '') : '',
+        codes.tumbleDryCode ? (CARE_SVGS[`dry_${codes.tumbleDryCode}`] ?? '') : '',
+        codes.ironCode ? (CARE_SVGS[`iron_${codes.ironCode}`] ?? '') : '',
+        codes.dryCleanCode ? (CARE_SVGS[`dryclean_${codes.dryCleanCode}`] ?? '') : '',
+      ].filter(Boolean);
+    }
   }
-  // 款式未配置护理代码时，自动使用默认的通用5个标准图标
   const finalIcons = icons.length > 0 ? icons : DEFAULT_CARE_ICONS;
   return `<div class="icons">${finalIcons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
 }
@@ -344,7 +351,9 @@ async function printWashLabels(
   }
 
   const perPartWashNotes = parseWashNotePerPart(styleInfo?.fabricCompositionParts);
-  const perPartNote = suitPart !== 'all' ? perPartWashNotes[suitPart] : undefined;
+  const perPartNote = suitPart !== 'all'
+    ? perPartWashNotes[suitPart]
+    : (allSections.length > 0 ? perPartWashNotes[allSections[0].key] : undefined);
   const washRaw = (perPartNote !== undefined && perPartNote.trim()) ? perPartNote : (styleInfo?.washInstructions || '');
   const washText = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
   const washInstHtml = washText

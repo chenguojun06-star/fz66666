@@ -6,7 +6,7 @@ import { Select } from 'antd';
 import { WarehousingQueryParams } from '@/types/production';
 import type { Dayjs } from 'dayjs';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
-import { useWarehouseLocationOptions } from '@/hooks/useWarehouseLocationOptions';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 
 interface SearchFormProps {
   queryParams: WarehousingQueryParams;
@@ -18,7 +18,7 @@ interface SearchFormProps {
 const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, onSearch, extra }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const { factoryTypeOptions } = useOrganizationFilterOptions();
-  const { warehouseSelectOptions } = useWarehouseLocationOptions();
+  const { selectOptions: warehouseAreaOptions } = useWarehouseAreaOptions('FINISHED');
 
   const handleSearchChange = (value: string) => {
     setQueryParams({ ...queryParams, warehousingNo: value, page: 1 });
@@ -47,7 +47,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
               onStatusChange={handleStatusChange}
               statusOptions={[
                 { label: '全部', value: '' },
-                ...warehouseSelectOptions,
+                ...warehouseAreaOptions,
               ]}
             />
             <Select

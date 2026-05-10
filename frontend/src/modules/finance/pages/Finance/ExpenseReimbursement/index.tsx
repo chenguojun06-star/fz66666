@@ -151,7 +151,7 @@ const ExpenseReimbursementPage: React.FC = () => {
             <Form.Item label="报销凭证" required={!editingRecord} validateStatus={uploadedDocs.some(d => d.docId) ? 'success' : undefined}
               help={uploadedDocs.some(d => d.docId) ? ` 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览` : editingRecord ? undefined : '请上传发票/收据图片，系统将自动识别金额和日期'}
             >
-              <Space direction="vertical" style={{ width: '100%' }} size={8}>
+              <Space orientation="vertical" style={{ width: '100%' }} size={8}>
                 <Upload accept="image/*" multiple showUploadList={false} beforeUpload={(file) => { void handleDocUpload(file); return false; }}>
                   <Button icon={uploadedDocs.some(d => d.recognizing) ? <Spin size="small" /> : <UploadOutlined />} disabled={uploadedDocs.some(d => d.recognizing)}>
                     {uploadedDocs.some(d => d.recognizing) ? 'AI识别中...' : '上传凭证图片（可多张）'}

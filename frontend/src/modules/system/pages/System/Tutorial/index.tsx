@@ -57,14 +57,17 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
   if (u.includes('youtube.com') || u.includes('youtu.be')) {
     const vid = ytMatch ? ytMatch[1] : '';
     return (
-      <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
-        <iframe
-          src={`https://www.youtube.com/embed/${vid}`}
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-          allowFullScreen
-          title="视频教程"
-        />
-      </div>
+      <Alert
+        type="warning"
+        showIcon
+        message="YouTube 视频无法播放"
+        description={
+          <>
+            <p style={{ margin: '4px 0' }}>YouTube 在国内网络环境下无法访问，请将视频上传至 Bilibili 后使用 Bilibili 链接。</p>
+            <p style={{ margin: '4px 0' }}>原始链接：<a href={u} target="_blank" rel="noopener noreferrer">{u}</a></p>
+          </>
+        }
+      />
     );
   }
 

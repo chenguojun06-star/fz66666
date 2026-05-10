@@ -10,8 +10,9 @@ import React, { useState } from 'react';
 import { Alert, Button, Divider, InputNumber, Radio, Space, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
-import { buildWashLabelSections, getDisplayWashCareCodes } from '@/utils/washLabel';
+import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
+import { parseCareIconCodes, getCareIconSvgs } from '@/utils/careIcons';
 
 export interface WashLabelItem {
   orderNo: string;
@@ -29,6 +30,7 @@ export interface WashLabelItem {
   tumbleDryCode?: string;
   ironCode?: string;
   dryCleanCode?: string;
+  careIconCodes?: string;
 }
 
 /** U码固定两档规格 */
@@ -84,6 +86,13 @@ const CARE_SVGS: Record<string, string> = {
   dryclean_NO: _circSvg(_CARE_X),
 };
 function buildCareIconsHtml(item: WashLabelItem): string {
+  const explicitCodes = parseCareIconCodes(item.careIconCodes);
+  if (explicitCodes.length > 0) {
+    const icons = getCareIconSvgs(explicitCodes);
+    if (icons.length > 0) {
+      return `<div class="icons">${icons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
+    }
+  }
   const codes = getDisplayWashCareCodes(item, item.washInstructions);
   const icons = [
     codes.washTempCode ? (CARE_SVGS[`wash_${codes.washTempCode}`] ?? '') : '',
@@ -125,7 +134,11 @@ function buildWashHtml(item: WashLabelItem): string {
     ).join('');
   if (!compositionHtml) compositionHtml = '<div class="comp-mats">（成分未填写）</div>';
   // 洗护文字说明（从款式档案原文透传）
-  const washText = (item.washInstructions || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
+  const perPartNotes = parseWashNotePerPart(item.fabricCompositionParts);
+  const sectionKeys = sections.map(s => s.key);
+  const firstPartNote = sectionKeys.length > 0 ? perPartNotes[sectionKeys[0]] : undefined;
+  const washRaw = (firstPartNote !== undefined && firstPartNote.trim()) ? firstPartNote : (item.washInstructions || '');
+  const washText = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
   const washInstHtml = washText
     ? `<div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>`
     : '';

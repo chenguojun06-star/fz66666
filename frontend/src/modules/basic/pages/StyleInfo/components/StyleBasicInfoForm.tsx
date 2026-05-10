@@ -1,6 +1,5 @@
 import React from 'react';
 import { Form, Input, InputNumber, Row, Col, FormInstance, Select } from 'antd';
-import CompositionPartsEditor from './CompositionPartsEditor';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CustomerSearcher from '@/components/common/CustomerSearcher';
@@ -297,52 +296,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 </Form.Item>
               </Col>
             </Row>
-          </div>
-
-          {/* 洗水唛 / 标签信息区域 */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #13C2C2' }}>
-              洗水唛 / 标签信息
-            </div>
-            <Row gutter={[16, 0]}>
-              <Col xs={24}>
-                <Form.Item
-                  name="fabricCompositionParts"
-                  label="洗水唛成分 / 洗涤说明"
-                >
-                  <CompositionPartsEditor disabled={editLocked} />
-                </Form.Item>
-                <div style={{ marginTop: -8, marginBottom: 10, fontSize: 12, lineHeight: 1.6, color: '#8c8c8c' }}>
-                  每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出
-                </div>
-              </Col>
-            </Row>
-            <Form.Item name="washInstructions" hidden><Input /></Form.Item>
-            <div style={{ marginTop: 0, fontSize: 12, lineHeight: 1.6, color: '#8c8c8c' }}>
-              打印洗水唛时会自动带出 5 个标准护理图标；旧款式如果已经维护过专属护理码，打印时仍优先使用旧值。
-            </div>
-
-            <Form.Item name="fabricComposition" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="uCode" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="washTempCode" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="bleachCode" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="tumbleDryCode" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="ironCode" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="dryCleanCode" hidden>
-              <Input />
-            </Form.Item>
           </div>
 
           {/* 颜色码数配置 */}

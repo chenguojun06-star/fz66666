@@ -90,7 +90,9 @@ public class FinishedWarehouseOperationOrchestrator {
         }
 
         ProductSku sku = productSkuService.getOne(
-                new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getSkuCode, skuCode));
+                new LambdaQueryWrapper<ProductSku>()
+                        .eq(ProductSku::getSkuCode, skuCode)
+                        .eq(ProductSku::getTenantId, tenantId));
 
         if (sku == null) {
             if (!autoCreateSku) {
@@ -218,7 +220,9 @@ public class FinishedWarehouseOperationOrchestrator {
         }
 
         ProductSku sku = productSkuService.getOne(
-                new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getSkuCode, skuCode));
+                new LambdaQueryWrapper<ProductSku>()
+                        .eq(ProductSku::getSkuCode, skuCode)
+                        .eq(ProductSku::getTenantId, tenantId));
         if (sku == null) {
             throw new IllegalArgumentException("SKU不存在: " + skuCode);
         }
@@ -300,7 +304,9 @@ public class FinishedWarehouseOperationOrchestrator {
         Long tenantId = UserContext.tenantId();
         String skuCode = resolveSkuCodeFromScan(scanCode);
         ProductSku sku = productSkuService.getOne(
-                new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getSkuCode, skuCode));
+                new LambdaQueryWrapper<ProductSku>()
+                        .eq(ProductSku::getSkuCode, skuCode)
+                        .eq(ProductSku::getTenantId, tenantId));
 
         if (sku == null) {
             String[] parts = skuCode.split("-", 3);
@@ -370,9 +376,11 @@ public class FinishedWarehouseOperationOrchestrator {
             return scanCode;
         }
         if (scanCode.matches("^\\d{13}$")) {
+            Long tenantId = UserContext.tenantId();
             ProductSku byBarcode = productSkuService.getOne(
                     new LambdaQueryWrapper<ProductSku>()
                             .eq(ProductSku::getBarcode, scanCode)
+                            .eq(ProductSku::getTenantId, tenantId)
                             .last("LIMIT 1"));
             if (byBarcode != null) {
                 return byBarcode.getSkuCode();

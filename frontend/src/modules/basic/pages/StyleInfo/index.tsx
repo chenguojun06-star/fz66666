@@ -19,6 +19,7 @@ import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
 import StyleSkuTab from './components/StyleSkuTab';
 import StyleCuttingInfoTab from './components/StyleCuttingInfoTab';
+import StyleWashLabelTab from './components/StyleWashLabelTab';
 import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileCard';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -326,6 +327,29 @@ const StyleInfoDetailPage: React.FC = () => {
                     skc={(currentStyle as any)?.skc}
                     skuMode={(currentStyle as any)?.skuMode}
                     onModeChange={() => { void fetchDetail(styleIdParam!); }}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                  />
+                )
+              },
+              {
+                key: '12',
+                label: '洗水唛',
+                disabled: !currentStyle?.id,
+                children: (
+                  <StyleWashLabelTab
+                    styleId={String(currentStyle?.id ?? '')}
+                    styleNo={currentStyle?.styleNo ?? ''}
+                    styleName={(currentStyle as any)?.styleName}
+                    fabricCompositionParts={(currentStyle as any)?.fabricCompositionParts}
+                    fabricComposition={(currentStyle as any)?.fabricComposition}
+                    washInstructions={(currentStyle as any)?.washInstructions}
+                    uCode={(currentStyle as any)?.uCode}
+                    washTempCode={(currentStyle as any)?.washTempCode}
+                    bleachCode={(currentStyle as any)?.bleachCode}
+                    tumbleDryCode={(currentStyle as any)?.tumbleDryCode}
+                    ironCode={(currentStyle as any)?.ironCode}
+                    dryCleanCode={(currentStyle as any)?.dryCleanCode}
+                    careIconCodes={(currentStyle as any)?.careIconCodes}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )

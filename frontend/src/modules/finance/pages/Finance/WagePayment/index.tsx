@@ -74,9 +74,10 @@ export const exportToExcelFile = async (data: any[], columns: any[], filename: s
 // ============================================================
 const PaymentCenterPage: React.FC = () => {
   const { message: msg } = App.useApp();
+  const [filterForm] = Form.useForm();
 
   // ---- 数据与业务逻辑 ----
-  const data = usePaymentData({ msg });
+  const data = usePaymentData({ msg, filterForm });
   const pay = usePayModal({ msg, fetchPayables: data.fetchPayables, fetchPayments: data.fetchPayments, reportSmartError: data.reportSmartError });
   const acct = useAccountModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError });
   const proof = useProofModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError, fetchPayments: data.fetchPayments, fetchPayables: data.fetchPayables });

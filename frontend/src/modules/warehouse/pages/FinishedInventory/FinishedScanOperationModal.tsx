@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Modal, Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message, Descriptions } from 'antd';
 import { ScanOutlined, InboxOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
-import DictAutoComplete from '@/components/common/DictAutoComplete';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 
 interface FinishedScanOperationModalProps {
   open: boolean;
@@ -66,7 +66,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   return (
     <Modal title={<Space><ScanOutlined />成品扫码出入库</Space>} open={open} onCancel={onClose} width={640}
       footer={[<Button key="cancel" onClick={onClose}>取消</Button>, <Button key="ok" type="primary" loading={loading} onClick={handleConfirm}>{operationType === 'inbound' ? '确认入库' : '确认出库'}</Button>]}>
-      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+      <Space orientation="vertical" style={{ width: '100%' }} size={16}>
         <Row gutter={12}>
           <Col span={12}>
             <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>操作类型</div>
@@ -114,7 +114,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
               </Col>
               <Col span={8}>
                 <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>仓位</div>
-                <DictAutoComplete dictType="finished_warehouse_location" value={warehouseLocation} onChange={setWarehouseLocation} placeholder="默认仓" />
+                <WarehouseLocationAutoComplete warehouseType="FINISHED" value={warehouseLocation} onChange={setWarehouseLocation} placeholder="默认仓" />
               </Col>
             </>
           ) : (

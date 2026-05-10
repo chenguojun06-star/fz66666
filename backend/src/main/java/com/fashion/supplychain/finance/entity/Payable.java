@@ -53,6 +53,18 @@ public class Payable {
 
     private String billAggregationId;
 
+    private String billType;
+    private String billCategory;
+    private String sourceType;
+    private String sourceId;
+    private String sourceNo;
+    private String counterpartyType;
+    private String counterpartyId;
+    private String counterpartyName;
+    private String styleNo;
+    private String settlementMonth;
+    private Integer billCount;
+
     private Integer deleteFlag;
     private String creatorId;
     private String creatorName;

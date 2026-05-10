@@ -159,7 +159,7 @@ const StyleCuttingInfoTab: React.FC<CuttingInfoTabProps> = ({ styleNo }) => {
   ];
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="middle">
+    <Space orientation="vertical" style={{ width: '100%' }} size="middle">
       <Card size="small" title={`裁剪任务（${tasks.length}）`}>
         {tasks.length === 0 ? (
           <Empty description="该款号暂无裁剪任务" image={Empty.PRESENTED_IMAGE_SIMPLE} />

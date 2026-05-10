@@ -191,13 +191,14 @@ export function getSettlementColumns(
       fixed: 'right' as const,
       render: (_: unknown, record: FinishedSettlementRow) => {
         const isInternalFactory = record.factoryType === 'INTERNAL';
-        const canAudit = !isInternalFactory && isOrderFrozenByStatus(record) && !auditedOrderNos.has(record.orderNo);
-        const isAudited = auditedOrderNos.has(record.orderNo);
+        const isAudited = auditedOrderNos.has(record.orderNo) || record.approvalStatus === 'APPROVED';
+        const hasWarehousedQty = (record.warehousedQuantity ?? 0) > 0;
+        const canAudit = !isInternalFactory && isOrderFrozenByStatus(record) && hasWarehousedQty && !isAudited;
         const isCancelled = ['CANCELLED', 'cancelled', 'DELETED', 'deleted', 'scrapped', '废弃', '已取消'].includes(record.status || '');
         return (
           <RowActions
             actions={[
-              { key: 'approve', label: isAudited ? '已审核' : '审核', primary: canAudit, disabled: isInternalFactory || isCancelled || isAudited || !isOrderFrozenByStatus(record), onClick: () => handleAuditOrder(record) },
+              { key: 'approve', label: isAudited ? '已审核' : '审核', primary: canAudit, disabled: isInternalFactory || isCancelled || isAudited || !isOrderFrozenByStatus(record) || !hasWarehousedQty, onClick: () => handleAuditOrder(record) },
               { key: 'remark', label: '备注', onClick: () => openRemarkModal(record) },
               { key: 'log', label: '日志', onClick: () => openLogModal(record.orderId) },
             ]}

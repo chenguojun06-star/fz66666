@@ -11,7 +11,8 @@ import {
   Col,
   InputNumber,
 } from 'antd';
-import DictAutoComplete from '@/components/common/DictAutoComplete';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 import {
   ScanOutlined,
 } from '@ant-design/icons';
@@ -35,6 +36,7 @@ interface MaterialInventoryModalsProps {
 const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
   inventoryData,
 }) => {
+  const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
   const {
     instructionVisible,
     closeInstruction,
@@ -366,10 +368,15 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
               <Form.Item label="仓库">
                 <Select
                   placeholder="请选择仓库"
-                  defaultValue="物料仓库"
+                  defaultValue={materialWarehouseOptions[0]?.label || '物料仓库'}
                   style={{ width: '100%' }}
                 >
-                  <Option value="物料仓库">物料仓库</Option>
+                  {materialWarehouseOptions.length > 0
+                    ? materialWarehouseOptions.map(opt => (
+                      <Option key={opt.value} value={opt.label as string}>{opt.label}</Option>
+                    ))
+                    : <Option value="物料仓库">物料仓库</Option>
+                  }
                 </Select>
               </Form.Item>
             </Col>
@@ -379,9 +386,9 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
                 name="warehouseLocation"
                 rules={[{ required: true, message: '请选择库位' }]}
               >
-                <DictAutoComplete
-                  dictType="material_warehouse_location"
-                  placeholder="请选择或输入库位（如：A-001）"
+                <WarehouseLocationAutoComplete
+                  warehouseType="MATERIAL"
+                  placeholder="请选择或输入库位"
                   style={{ width: '100%' }}
                 />
               </Form.Item>

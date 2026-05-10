@@ -467,6 +467,15 @@ public class StyleInfo {
     private String fabricCompositionParts;
 
     /**
+     * 洗涤护理图标代码（JSON数组字符串）
+     * 格式：["wash_W30","bleach_NO","dry_NORMAL","iron_LOW","dryclean_A"]
+     * 存储用户在洗水唛Tab中选择的护理图标代码列表
+     * 优先于 washTempCode/bleachCode 等旧字段使用
+     */
+    @TableField("care_icon_codes")
+    private String careIconCodes;
+
+    /**
      * 租户ID（多租户隔离，自动填充）
      */
     @TableField(fill = FieldFill.INSERT)

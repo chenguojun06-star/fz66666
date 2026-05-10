@@ -68,6 +68,8 @@ export interface StyleInfo extends Record<string, unknown> {
   tumbleDryCode?: string;
   ironCode?: string;
   dryCleanCode?: string;
+  /** 洗涤护理图标代码（JSON数组），格式：["wash_W30","bleach_NO"]，优先于旧5字段 */
+  careIconCodes?: string;
 
   // 退回编辑锁定字段
   descriptionLocked?: number;

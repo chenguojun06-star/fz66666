@@ -195,7 +195,76 @@ public class PayableOrchestrator {
         p.setPaidAmount(bill.getSettledAmount() == null ? BigDecimal.ZERO : bill.getSettledAmount());
         p.setDescription("账单派生: " + bill.getBillNo() + " / " + bill.getBillCategory());
         p.setBillAggregationId(bill.getId());
+        p.setBillType(bill.getBillType());
+        p.setBillCategory(bill.getBillCategory());
+        p.setSourceType(bill.getSourceType());
+        p.setSourceId(bill.getSourceId());
+        p.setSourceNo(bill.getSourceNo());
+        p.setCounterpartyType(bill.getCounterpartyType());
+        p.setCounterpartyId(bill.getCounterpartyId());
+        p.setCounterpartyName(bill.getCounterpartyName());
+        p.setStyleNo(bill.getStyleNo());
+        p.setSettlementMonth(bill.getSettlementMonth());
         return create(p);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Payable findOrCreateMergedPayable(BillAggregation bill) {
+        if (bill == null || !StringUtils.hasText(bill.getId())) {
+            throw new RuntimeException("账单不存在，无法派生应付任务");
+        }
+        Long tenantId = TenantAssert.requireTenantId();
+        String groupKey = buildMergeGroupKey(bill);
+
+        Payable merged = findMergedPayable(bill, tenantId);
+        if (merged != null) {
+            BigDecimal addAmount = bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO;
+            merged.setAmount(merged.getAmount().add(addAmount));
+            merged.setBillCount((merged.getBillCount() != null ? merged.getBillCount() : 1) + 1);
+            merged.setDescription(merged.getBillCount() + "笔账单合并 - " + bill.getCounterpartyName()
+                    + (StringUtils.hasText(bill.getSettlementMonth()) ? " (" + bill.getSettlementMonth() + ")" : ""));
+            payableService.updateById(merged);
+            log.info("[PayableOrchestrator] 合并应付单: payableNo={}, +{}, total={}, billCount={}",
+                    merged.getPayableNo(), addAmount, merged.getAmount(), merged.getBillCount());
+            return merged;
+        }
+
+        Payable p = new Payable();
+        p.setSupplierId(bill.getCounterpartyId());
+        p.setSupplierName(bill.getCounterpartyName());
+        p.setCounterpartyType(bill.getCounterpartyType());
+        p.setCounterpartyId(bill.getCounterpartyId());
+        p.setCounterpartyName(bill.getCounterpartyName());
+        p.setAmount(bill.getAmount() == null ? BigDecimal.ZERO : bill.getAmount());
+        p.setPaidAmount(BigDecimal.ZERO);
+        p.setBillType(bill.getBillType());
+        p.setBillCategory(bill.getBillCategory());
+        p.setSettlementMonth(bill.getSettlementMonth());
+        p.setBillCount(1);
+        p.setDescription("1笔账单合并 - " + bill.getCounterpartyName()
+                + (StringUtils.hasText(bill.getSettlementMonth()) ? " (" + bill.getSettlementMonth() + ")" : ""));
+        return create(p);
+    }
+
+    private Payable findMergedPayable(BillAggregation bill, Long tenantId) {
+        LambdaQueryWrapper<Payable> wrapper = new LambdaQueryWrapper<Payable>()
+                .eq(Payable::getTenantId, tenantId)
+                .eq(Payable::getDeleteFlag, 0)
+                .in(Payable::getStatus, "PENDING", "PARTIAL")
+                .eq(Payable::getBillType, bill.getBillType())
+                .eq(Payable::getBillCategory, bill.getBillCategory())
+                .eq(Payable::getCounterpartyId, bill.getCounterpartyId())
+                .eq(Payable::getSettlementMonth, bill.getSettlementMonth())
+                .last("LIMIT 1");
+        return payableService.getOne(wrapper);
+    }
+
+    private String buildMergeGroupKey(BillAggregation bill) {
+        return String.join("|",
+                bill.getBillType() != null ? bill.getBillType() : "",
+                bill.getBillCategory() != null ? bill.getBillCategory() : "",
+                bill.getCounterpartyId() != null ? bill.getCounterpartyId() : "",
+                bill.getSettlementMonth() != null ? bill.getSettlementMonth() : "");
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -136,7 +136,7 @@ public class FinanceWorkflowTool extends AbstractAgentTool {
         java.util.Set<String> approvedIds = approvedRows.stream().map(FinishedSettlementApprovalStatus::getSettlementId).collect(java.util.stream.Collectors.toSet());
         List<FinishedProductSettlement> finishedPending = finishedProductSettlementService.list(new LambdaQueryWrapper<FinishedProductSettlement>()
                 .eq(FinishedProductSettlement::getTenantId, tenantId)
-                .notIn(FinishedProductSettlement::getStatus, "cancelled", "CANCELLED", "deleted", "DELETED", "scrapped")
+                .notIn(FinishedProductSettlement::getStatus, "cancelled", "CANCELLED", "deleted", "DELETED", "scrapped", "SCRAPPED", "closed", "CLOSED", "archived", "ARCHIVED")
                 .orderByDesc(FinishedProductSettlement::getCreateTime)
                 .last("LIMIT 100"));
 

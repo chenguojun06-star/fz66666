@@ -36,6 +36,7 @@ export interface FinishedSettlementRow {
   createTime: string;
   completeTime?: string;
   remark?: string;
+  approvalStatus?: string;
   [key: string]: unknown;
 }
 
@@ -120,8 +121,16 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     try {
       const finalParams = { ...params, factoryType: 'EXTERNAL' };
       const response = await api.get('/finance/finished-settlement/list', { params: finalParams });
-      setData(response.data?.records || []);
+      const records = response.data?.records || [];
+      setData(records);
       setTotal(response.data?.total || 0);
+      const persistedApproved = new Set(auditedOrderNos);
+      records.forEach((r: any) => {
+        if (r.approvalStatus === 'APPROVED') persistedApproved.add(r.orderNo);
+      });
+      if (persistedApproved.size > auditedOrderNos.size) {
+        onAuditNosChange(persistedApproved);
+      }
       if (showSmartErrorNotice) setSmartError(null);
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : '加载数据失败';
@@ -157,6 +166,10 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
       message.warning('该订单尚未关单，无法审核');
       return;
     }
+    if ((record.warehousedQuantity ?? 0) <= 0) {
+      message.warning('该订单无入库数量，无法审核');
+      return;
+    }
     try {
       // 调用后端审批接口，将审批结果持久化到 t_finished_settlement_approval
       await api.post('/finance/finished-settlement/approve', { id: record.orderId });
@@ -173,10 +186,11 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
       selectedRowKeys.includes(r.orderId) &&
       r.factoryType !== 'INTERNAL' &&
       isOrderFrozenByStatus(r) &&
+      (r.warehousedQuantity ?? 0) > 0 &&
       !auditedOrderNos.has(r.orderNo)
     );
     if (eligible.length === 0) {
-      message.warning('选中订单中没有可审核的（外部工厂·已关单且未审核）');
+      message.warning('选中订单中没有可审核的（外部工厂·已关单·有入库数量且未审核）');
       return;
     }
     // 逐条调用后端审批接口并收集成功结果

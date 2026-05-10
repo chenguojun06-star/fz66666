@@ -300,14 +300,14 @@ const scanLifecycleMixin = Behavior({
      */
     async _loadWarehouseOptions() {
       try {
-        // 加载成品仓库库位（默认）
-        const res = await api.system.getDictList('finished_warehouse_location');
-        const records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res?.data || []));
-        if (Array.isArray(records) && records.length > 0) {
-          const options = records
-            .filter(item => item.dictLabel)
-            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-            .map(item => item.dictLabel);
+        const res = await api.warehouse.listWarehouseAreas('FINISHED');
+        const data = res?.data || res;
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          const options = list
+            .filter(function(item) { return item.areaName; })
+            .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); })
+            .map(function(item) { return item.areaName; });
           if (options.length > 0) {
             this.setData({ warehouseOptions: options });
           }

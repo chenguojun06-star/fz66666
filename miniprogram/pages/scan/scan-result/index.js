@@ -316,14 +316,14 @@ Page({
 
   async _loadWarehouseOptions() {
     try {
-      // 加载成品仓库库位（默认）
-      var res = await api.system.getDictList('finished_warehouse_location');
-      var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : []);
-      if (records.length > 0) {
-        var options = records
-          .filter(function(item) { return item.dictLabel; })
-          .sort(function(a, b) { return (a.sort || a.sortOrder || 0) - (b.sort || b.sortOrder || 0); })
-          .map(function(item) { return item.dictLabel; });
+      var res = await api.warehouse.listWarehouseAreas('FINISHED');
+      var data = res && res.data ? res.data : res;
+      var list = Array.isArray(data) ? data : [];
+      if (list.length > 0) {
+        var options = list
+          .filter(function(item) { return item.areaName; })
+          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); })
+          .map(function(item) { return item.areaName; });
         if (options.length > 0) {
           this.setData({ warehouseOptions: options });
         }

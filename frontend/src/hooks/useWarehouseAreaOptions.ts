@@ -41,7 +41,7 @@ export function useWarehouseAreaOptions(warehouseType?: WarehouseAreaType) {
 
   const selectOptions = useMemo(
     () => areas.map((a) => ({
-      label: `${a.areaName}（${a.areaCode}）`,
+      label: a.areaName || a.areaCode,
       value: a.id,
       area: a,
     })),
@@ -93,7 +93,7 @@ export function useWarehouseLocationByArea(warehouseType?: string, areaId?: stri
 
   const selectOptions = useMemo(
     () => locations.map((l) => ({
-      label: `${l.locationName}（${l.locationCode}）`,
+      label: l.locationName || l.locationCode,
       value: l.locationCode,
       location: l,
     })),

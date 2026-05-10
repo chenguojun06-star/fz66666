@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Form, Input, Select, Row, Col, Image, Tag, Alert } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import DictAutoComplete from '@/components/common/DictAutoComplete';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
 import api, { type ApiResult, isApiSuccess } from '@/utils/api';
@@ -170,6 +171,7 @@ const isNotFoundError = (error: unknown) => {
 
 const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSuccess, initialValues }) => {
   const [form] = Form.useForm();
+  const { selectOptions: sampleWarehouseOptions } = useWarehouseAreaOptions('SAMPLE');
   const [loading, setLoading] = React.useState(false);
   const [smartError, setSmartError] = React.useState<SmartErrorInfo | null>(null);
   const [prefillLoading, setPrefillLoading] = React.useState(false);
@@ -487,18 +489,23 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
             <Form.Item label="仓库">
               <Select
                 placeholder="请选择仓库"
-                defaultValue="样衣库"
+                defaultValue={sampleWarehouseOptions[0]?.label || '样衣仓'}
                 style={{ width: '100%' }}
               >
-                <Option value="样衣库">样衣库</Option>
+                {sampleWarehouseOptions.length > 0
+                  ? sampleWarehouseOptions.map(opt => (
+                    <Option key={opt.value} value={opt.label as string}>{opt.label}</Option>
+                  ))
+                  : <Option value="样衣仓">样衣仓</Option>
+                }
               </Select>
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item name="location" label="库位">
-              <DictAutoComplete
-                dictType="sample_warehouse_location"
-                placeholder="请选择或输入库位（如：A-001）"
+              <WarehouseLocationAutoComplete
+                warehouseType="SAMPLE"
+                placeholder="请选择或输入库位"
                 style={{ width: '100%' }}
               />
             </Form.Item>

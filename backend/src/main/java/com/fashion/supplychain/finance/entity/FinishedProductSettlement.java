@@ -59,6 +59,9 @@ public class FinishedProductSettlement implements Serializable {
     @TableField(exist = false)
     private String orgPath;
 
+    @TableField(exist = false)
+    private String approvalStatus;
+
     /**
      * 款号
      */

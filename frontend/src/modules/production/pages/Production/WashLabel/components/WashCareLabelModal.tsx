@@ -4,9 +4,10 @@ import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
-import { buildWashLabelSections, getDisplayWashCareCodes } from '@/utils/washLabel';
+import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { safePrint } from '@/utils/safePrint';
+import { parseCareIconCodes, getCareIconSvgs } from '@/utils/careIcons';
 
 type PaperSize = '30x80' | '40x60' | '50x80' | '60x90';
 
@@ -19,19 +20,14 @@ const PAPER_OPTS: { value: PaperSize; label: string; w: number; h: number }[] = 
 
 interface StyleData {
   fabricComposition?: string;
-  /** 多部位成分 JSON：[{part,materials}]，两件套/拼接款使用 */
   fabricCompositionParts?: string;
   washInstructions?: string;
-  /** 洗涤温度代码：W30/W40/W60/W95/HAND/NO */
   washTempCode?: string;
-  /** 漂白代码：ANY/NON_CHL/NO */
   bleachCode?: string;
-  /** 烘干代码：NORMAL/LOW/NO */
   tumbleDryCode?: string;
-  /** 熨烫代码：LOW/MED/HIGH/NO */
   ironCode?: string;
-  /** 干洗代码：YES/NO */
   dryCleanCode?: string;
+  careIconCodes?: string;
 }
 interface Props { open: boolean; onCancel: () => void; order: ProductionOrder | null; }
 
@@ -71,6 +67,13 @@ const CARE_SVGS: Record<string, string> = {
   dryclean_NO: circSvg(_X),
 };
 function buildCareIconsHtml(s: StyleData): string {
+  const explicitCodes = parseCareIconCodes(s.careIconCodes);
+  if (explicitCodes.length > 0) {
+    const icons = getCareIconSvgs(explicitCodes);
+    if (icons.length > 0) {
+      return `<div class="icons">${icons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
+    }
+  }
   const codes = getDisplayWashCareCodes(s, s.washInstructions);
   const icons = [
     codes.washTempCode ? (CARE_SVGS[`wash_${codes.washTempCode}`] ?? '') : '',
@@ -106,6 +109,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
           tumbleDryCode:  d.tumbleDryCode,
           ironCode:       d.ironCode,
           dryCleanCode:   d.dryCleanCode,
+          careIconCodes:  d.careIconCodes,
         });
       })
       .catch((err) => { console.warn('[WashCare] 款式数据加载失败:', err?.message || err); setStyleData({}); })
@@ -146,7 +150,13 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
     const now     = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
-    const washText = (styleData.washInstructions || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
+    const washText = (() => {
+      const perPartNotes = parseWashNotePerPart(styleData.fabricCompositionParts);
+      const sectionKeys = sections.map(s => s.key);
+      const firstPartNote = sectionKeys.length > 0 ? perPartNotes[sectionKeys[0]] : undefined;
+      const raw = (firstPartNote !== undefined && firstPartNote.trim()) ? firstPartNote : (styleData.washInstructions || '');
+      return raw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
+    })();
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>洗水唛</title><style>
 @page{size:${w}mm ${h}mm;margin:0}

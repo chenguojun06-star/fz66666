@@ -29,6 +29,9 @@ const warehouse = {
   outboundFinishedInventory(data) {
     return ok('/api/warehouse/finished-inventory/outbound', 'POST', data || {});
   },
+  listWarehouseAreas(warehouseType) {
+    return ok('/api/warehouse/area/list-by-type', 'GET', { warehouseType: warehouseType || '' });
+  },
 };
 
 
