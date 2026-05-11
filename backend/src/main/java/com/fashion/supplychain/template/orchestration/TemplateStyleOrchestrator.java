@@ -140,7 +140,7 @@ public class TemplateStyleOrchestrator {
 
     private TemplateLibrary createTemplateByType(String sourceStyleNo, Long styleId, String templateType) {
         String key = sourceStyleNo + "_" + templateType;
-        String name = sourceStyleNo + " " + templateType + " 模板";
+        String name = sourceStyleNo + " " + toChineseType(templateType) + "模板";
         String content = "";
 
         try {
@@ -564,5 +564,16 @@ public class TemplateStyleOrchestrator {
                 templateId, targetStyleIds.size(), successCount);
 
         return successCount;
+    }
+
+    private static String toChineseType(String templateType) {
+        return switch (templateType) {
+            case "bom" -> "BOM";
+            case "size" -> "尺寸";
+            case "process" -> "工序进度单价";
+            case "process_price" -> "工序单价";
+            case "progress" -> "进度";
+            default -> templateType;
+        };
     }
 }
