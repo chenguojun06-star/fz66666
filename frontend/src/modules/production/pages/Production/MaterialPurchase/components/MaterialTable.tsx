@@ -464,7 +464,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 key: 'confirm-arrival',
                 label: '到货入库',
                 onClick: () => {
-                  const maxQty = Math.max(1, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+                  const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
                   arrivalForm.setFieldsValue({ arrivedQuantity: maxQty });
                   setArrivalTarget(record);
                 },
@@ -545,14 +545,15 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         finally { setArrivalLoading(false); }
       }}>
         <p style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 12 }}>
-          采购 {arrivalTarget?.purchaseQuantity || '-'}{arrivalTarget?.unit ? ' ' + arrivalTarget.unit : ''}，已到 {arrivalTarget?.arrivedQuantity || 0}，待到 {arrivalTarget ? Math.max(1, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 0}
+          采购 {arrivalTarget?.purchaseQuantity || '-'}{arrivalTarget?.unit ? ' ' + arrivalTarget.unit : ''}，已到 {arrivalTarget?.arrivedQuantity || 0}，待到 {arrivalTarget ? Math.max(0.01, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 0}
         </p>
         <Form.Item name="arrivedQuantity" label="到货数量" rules={[{ required: true, message: '请输入到货数量' }]}>
           <InputNumber
-            min={1}
-            max={arrivalTarget ? Math.max(1, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 1}
+            min={0.01}
+            max={arrivalTarget ? Math.max(0.01, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 1}
+            step={0.01} precision={2}
             style={{ width: '100%' }}
-            placeholder="请输入到货数量"
+            placeholder="请输入到货数量（支持小数）"
             autoFocus
           />
         </Form.Item>

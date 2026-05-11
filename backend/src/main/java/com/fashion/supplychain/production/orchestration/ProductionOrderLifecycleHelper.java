@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
+import com.fashion.supplychain.intelligence.service.ClosedOrderAiDataCleanupService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingTaskService;
@@ -69,6 +70,8 @@ public class ProductionOrderLifecycleHelper {
     private OrderDecisionCaptureOrchestrator orderDecisionCaptureOrchestrator;
     @Autowired(required = false)
     private OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
+    @Autowired(required = false)
+    private ClosedOrderAiDataCleanupService closedOrderAiDataCleanupService;
 
     @Autowired
     private ProductionProcessTrackingService processTrackingService;
@@ -189,6 +192,13 @@ public class ProductionOrderLifecycleHelper {
 
         try { scanRecordDomainService.insertOrderOperationRecord(existed, "报废", r, LocalDateTime.now()); }
         catch (Exception e) { log.warn("Failed to log order scrap: orderId={}", oid, e); }
+
+        try {
+            if (closedOrderAiDataCleanupService != null) {
+                closedOrderAiDataCleanupService.cleanupAsync(oid, existed.getOrderNo());
+            }
+        } catch (Exception e) { log.warn("报废订单AI数据异步清理失败: orderId={}", oid, e); }
+
         return true;
     }
 
@@ -228,6 +238,13 @@ public class ProductionOrderLifecycleHelper {
                 }
             );
         }
+
+        try {
+            if (closedOrderAiDataCleanupService != null && result != null) {
+                closedOrderAiDataCleanupService.cleanupAsync(result.getId(), result.getOrderNo());
+            }
+        } catch (Exception e) { log.warn("关闭订单AI数据异步清理失败: orderId={}", id, e); }
+
         return result;
     }
 }

@@ -483,15 +483,18 @@ Component({
             var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
             if (!actions && pendingFollowUpActions && pendingFollowUpActions.length > 0) {
               actions = pendingFollowUpActions.map(function (a) {
+                var actType = a.actionType ? String(a.actionType).toLowerCase() : 'navigate';
+                // 过滤掉NAVIGATE动作手机端看不到,只保留ASK/EXECUTE
+                if (actType === 'navigate') return null;
                 return {
                   label: a.label || a.command || '',
-                  type: a.actionType ? String(a.actionType).toLowerCase() : 'navigate',
+                  type: actType,
                   description: a.dataSummary || '',
                   command: a.command || '',
                   urgency: a.icon === 'alert' ? 'high' : 'medium',
-                  buttonText: a.actionType === 'EXECUTE' ? '执行' : a.actionType === 'ASK' ? '追问' : '查看',
+                  buttonText: actType === 'execute' ? '执行' : '追问',
                 };
-              });
+              }).filter(Boolean);
             }
             var completedAiMsg = {
               id: aiMsgId, role: 'ai', content: parsed.text,

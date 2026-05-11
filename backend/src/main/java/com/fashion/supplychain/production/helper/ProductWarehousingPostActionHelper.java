@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.service.OrderRemarkService;
 import com.fashion.supplychain.websocket.service.WebSocketService;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,9 @@ public class ProductWarehousingPostActionHelper {
     @Autowired
     private ProductWarehousingService productWarehousingService;
 
+    @Autowired(required = false)
+    private ExternalFactoryDefectDeductionHelper defectDeductionHelper;
+
     public void triggerPostSaveActions(String orderId, ProductWarehousing w) {
         if (!StringUtils.hasText(orderId)) {
             return;
@@ -50,6 +54,7 @@ public class ProductWarehousingPostActionHelper {
         pushWebSocketNotification(w);
         writeQualityRemark(w);
         pushWebhookQualityResult(w);
+        applyDefectDeductionIfNeeded(w);
     }
 
     public void triggerPostBatchSaveActions(String orderId, int itemCount) {
@@ -214,6 +219,28 @@ public class ProductWarehousingPostActionHelper {
             }
         } catch (Exception e) {
             log.warn("[Webhook] 质检结果推送失败，不影响主流程: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 外发工厂成品次品/报废自动扣款。
+     * 仅当入库类型为质检扫码、存在次品、且订单属于外发工厂时触发。
+     */
+    private void applyDefectDeductionIfNeeded(ProductWarehousing w) {
+        if (w == null || defectDeductionHelper == null) return;
+        int unqualified = w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0;
+        if (unqualified <= 0) return;
+        if (!StringUtils.hasText(w.getFactoryName())
+                || !"EXTERNAL".equalsIgnoreCase(w.getFactoryType())) {
+            return;
+        }
+        try {
+            int totalOrderQty = w.getCuttingQuantity() != null && w.getCuttingQuantity() > 0
+                    ? w.getCuttingQuantity() : 1;
+            // 使用扫码成本作为单件成本（后续可从结算视图获取更精确的成本）
+            defectDeductionHelper.applyDefectDeduction(w, BigDecimal.ZERO, BigDecimal.ZERO, totalOrderQty);
+        } catch (Exception e) {
+            log.warn("[DefectDeduction] 次品扣款触发失败，不影响主流程: {}", e.getMessage());
         }
     }
 }

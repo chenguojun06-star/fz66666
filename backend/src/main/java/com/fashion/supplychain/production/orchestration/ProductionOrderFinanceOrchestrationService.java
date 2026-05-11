@@ -72,6 +72,9 @@ public class ProductionOrderFinanceOrchestrationService {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.ClosedOrderAiDataCleanupService closedOrderAiDataCleanupService;
+
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
         assertCompletePermission();
@@ -91,6 +94,13 @@ public class ProductionOrderFinanceOrchestrationService {
         pushCompletionWebhook(order, qualifiedSum, orderQty);
         backfillPredictionLogs(oid);
         triggerPayrollSettlementGeneration(oid);
+
+        try {
+            if (closedOrderAiDataCleanupService != null) {
+                closedOrderAiDataCleanupService.cleanupAsync(oid, order.getOrderNo());
+            }
+        } catch (Exception e) { log.warn("完成订单AI数据异步清理失败: orderId={}", oid, e); }
+
         return true;
     }
 

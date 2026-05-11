@@ -21,6 +21,7 @@ interface UseMaterialInventoryColumnsProps {
   handlePrintOutbound: (record: MaterialInventory) => void;
   handleViewDetail: (record: MaterialInventory) => void;
   handleEditSafetyStock: (record: MaterialInventory) => void;
+  onPickStock?: (record: MaterialInventory) => void;
 }
 
 const compactInfoRowStyle: React.CSSProperties = {
@@ -58,6 +59,7 @@ export function useMaterialInventoryColumns({
   handlePrintOutbound,
   handleViewDetail,
   handleEditSafetyStock,
+  onPickStock,
 }: UseMaterialInventoryColumnsProps): ColumnsType<MaterialInventory> {
   return [
     {
@@ -158,8 +160,12 @@ export function useMaterialInventoryColumns({
         return (
           <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <div className="stock-grid">
-              <div>
-                <div className="stock-label">可用库存</div>
+              <div
+                style={{ cursor: onPickStock ? 'pointer' : undefined }}
+                onClick={() => onPickStock?.(record)}
+                title={onPickStock ? '点击领取库存' : undefined}
+              >
+                <div className="stock-label">可用库存 <span style={{fontSize:10,color:'#1890ff'}}>📦领</span></div>
                 <div className="stock-value stock-value--ok">
                   {availableQty.toLocaleString()}
                 </div>

@@ -28,6 +28,7 @@ import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
 import { useMaterialPickupData } from './hooks/useMaterialPickupData';
 import type { PickingRow } from './hooks/useMaterialPickupData';
 import MaterialOutboundPrintModal from './components/MaterialOutboundPrintModal';
+import StockPickModal from './components/StockPickModal';
 import MaterialInventoryModals from './MaterialInventoryModals';
 
 const { Option } = Select;
@@ -67,6 +68,9 @@ const _MaterialInventory: React.FC = () => {
   const pickupPageSize = pickupData.pagination.pagination.pageSize;
   const pickupCurrent = pickupData.pagination.pagination.current;
 
+  const [pickModalOpen, setPickModalOpen] = React.useState(false);
+  const [pickTarget, setPickTarget] = React.useState<any>(null);
+
   const columns = useMaterialInventoryColumns({
     user,
     openInstructionFromRecord,
@@ -77,6 +81,7 @@ const _MaterialInventory: React.FC = () => {
     handlePrintOutbound,
     handleViewDetail,
     handleEditSafetyStock,
+    onPickStock: (record) => { setPickTarget(record); setPickModalOpen(true); },
   });
 
   const tabParam = searchParams.get('tab') || 'overview';
@@ -492,6 +497,13 @@ const _MaterialInventory: React.FC = () => {
       />
 
       <MaterialInventoryModals inventoryData={inventoryData} />
+
+      <StockPickModal
+        open={pickModalOpen}
+        record={pickTarget}
+        onClose={() => { setPickModalOpen(false); setPickTarget(null); }}
+        onPicked={fetchData}
+      />
 
       {pickupData.printVisible && pickupData.printPayload && (
         <MaterialOutboundPrintModal
