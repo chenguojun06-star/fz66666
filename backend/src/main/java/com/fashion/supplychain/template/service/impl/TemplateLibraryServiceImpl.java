@@ -102,12 +102,19 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         String templateType = String.valueOf(params.getOrDefault("templateType", "")).trim();
         String keyword = String.valueOf(params.getOrDefault("keyword", "")).trim();
         String sourceStyleNo = String.valueOf(params.getOrDefault("sourceStyleNo", "")).trim();
+        boolean isFactoryTemplate = "true".equalsIgnoreCase(String.valueOf(params.getOrDefault("isFactoryTemplate", "")));
 
         LambdaQueryWrapper<TemplateLibrary> wrapper = new LambdaQueryWrapper<TemplateLibrary>()
                 .like(StringUtils.hasText(keyword), TemplateLibrary::getTemplateName, keyword)
                 .eq(StringUtils.hasText(sourceStyleNo), TemplateLibrary::getSourceStyleNo, sourceStyleNo)
                 .orderByDesc(TemplateLibrary::getUpdateTime)
                 .orderByDesc(TemplateLibrary::getCreateTime);
+
+        if (isFactoryTemplate) {
+            wrapper.and(q -> q.isNull(TemplateLibrary::getSourceStyleNo)
+                    .or().eq(TemplateLibrary::getSourceStyleNo, "")
+                    .or().likeRight(TemplateLibrary::getTemplateKey, "factory_"));
+        }
 
         @SuppressWarnings("unchecked")
         java.util.List<String> allowedStyleNos = (java.util.List<String>) params.get("allowedStyleNos");

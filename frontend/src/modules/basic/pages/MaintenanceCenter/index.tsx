@@ -11,6 +11,7 @@ import SizeTablePanel from './components/SizeTablePanel';
 import BomPanel from './components/BomPanel';
 import UnitPricePanel from './components/UnitPricePanel';
 import StyleProcessKnowledgeTab from '../TemplateCenter/components/StyleProcessKnowledgeTab';
+import FactoryTemplateTab from './components/FactoryTemplateTab';
 import api from '@/utils/api';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
@@ -51,7 +52,7 @@ const MaintenanceCenter: React.FC = () => {
 
   /* ── search ── */
   const [keyword, setKeyword] = useState('');
-  const [pageTab, setPageTab] = useState<'maintenance' | 'knowledge'>('maintenance');
+  const [pageTab, setPageTab] = useState<'maintenance' | 'knowledge' | 'template'>('maintenance');
   const [knowledgeKeyword, setKnowledgeKeyword] = useState('');
   const [knowledgePage, setKnowledgePage] = useState(1);
   const [knowledgePageSize, setKnowledgePageSize] = useState(10);
@@ -201,7 +202,7 @@ const MaintenanceCenter: React.FC = () => {
         <Tabs
           activeKey={pageTab}
           onChange={(key) => {
-            setPageTab(key as 'maintenance' | 'knowledge');
+            setPageTab(key as 'maintenance' | 'knowledge' | 'template');
             if (panelType) handlePanelClose();
           }}
           items={[
@@ -331,6 +332,11 @@ const MaintenanceCenter: React.FC = () => {
                   onSelectionChange={setKnowledgeSelectedKeys}
                 />
               ),
+            },
+            {
+              key: 'template',
+              label: '模板库',
+              children: <FactoryTemplateTab />,
             },
           ]}
         />

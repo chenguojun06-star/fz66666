@@ -1,0 +1,11 @@
+.factory-template-tab__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.factory-template-tab__toolbar .ant-space-item .ant-btn {
+  border-radius: 6px;
+}

@@ -60,9 +60,9 @@ public class TemplateQueryHelper {
     }
 
     public IPage<TemplateLibrary> list(Map<String, Object> params) {
-        // 外发工厂用户：只能看到分配给自己工厂的款式的模板
+        boolean isFactoryTemplate = "true".equalsIgnoreCase(String.valueOf(params.getOrDefault("isFactoryTemplate", "")));
         String currentFactoryId = UserContext.factoryId();
-        if (StringUtils.hasText(currentFactoryId)) {
+        if (StringUtils.hasText(currentFactoryId) && !isFactoryTemplate) {
             Long tenantId = TenantAssert.requireTenantId();
             List<String> allowedStyleNos = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getDeleteFlag, 0)
