@@ -8,6 +8,7 @@ import java.util.Map;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
@@ -122,4 +123,11 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
         @Param("materialType") String materialType,
         @Param("tenantId") Long tenantId
     );
+
+    @Update("UPDATE t_material_purchase SET " +
+            "arrived_quantity = COALESCE(arrived_quantity, 0) + #{delta}, " +
+            "actual_arrival_date = NOW(), " +
+            "update_time = NOW() " +
+            "WHERE id = #{id} AND delete_flag = 0")
+    int atomicAddArrivedQuantity(@Param("id") String id, @Param("delta") int delta);
 }

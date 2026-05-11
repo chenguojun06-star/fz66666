@@ -136,6 +136,8 @@ public class ProductWarehousingRollbackHelper {
             throw new IllegalArgumentException("请填写问题点");
         }
 
+        assertRelatedScansNotPayrollSettled(orderId, cuttingBundleQrCode);
+
         boolean ok = rollbackQualifiedByBundleQrCode(orderId, cuttingBundleQrCode, qty, remark);
         if (!ok) {
             throw new IllegalStateException("回退失败");
@@ -385,6 +387,24 @@ public class ProductWarehousingRollbackHelper {
         }
         if (!toUpdate.isEmpty()) {
             scanRecordService.batchUpdateRecords(toUpdate);
+        }
+    }
+
+    private void assertRelatedScansNotPayrollSettled(String orderId, String cuttingBundleQrCode) {
+        if (!StringUtils.hasText(orderId) || !StringUtils.hasText(cuttingBundleQrCode)) return;
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ScanRecord> w =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        w.eq(ScanRecord::getOrderId, orderId.trim())
+         .eq(ScanRecord::getCuttingBundleId, cuttingBundleQrCode.trim())
+         .eq(ScanRecord::getScanResult, "success")
+         .eq(ScanRecord::getScanType, "warehousing");
+        java.util.List<ScanRecord> records = scanRecordService.list(w);
+        for (ScanRecord sr : records) {
+            if (StringUtils.hasText(sr.getPayrollSettlementId())
+                    || "payroll_settled".equals(sr.getSettlementStatus())) {
+                throw new IllegalStateException(
+                        "该扎号存在已参与工资结算的入库扫码记录，无法回退。请先撤销工资结算后再操作。");
+            }
         }
     }
 }

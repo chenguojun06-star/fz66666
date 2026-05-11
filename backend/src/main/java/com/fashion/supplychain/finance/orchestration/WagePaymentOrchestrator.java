@@ -385,19 +385,17 @@ public class WagePaymentOrchestrator {
     }
 
     private void syncPayableStatusOnPaid(Payable payable, BigDecimal paymentAmount) {
-        BigDecimal newPaid = (payable.getPaidAmount() != null ? payable.getPaidAmount() : BigDecimal.ZERO)
-                .add(paymentAmount != null ? paymentAmount : BigDecimal.ZERO);
-        payable.setPaidAmount(newPaid);
-        if (payable.getAmount() != null && newPaid.compareTo(payable.getAmount()) >= 0) {
-            payable.setStatus("PAID");
-        } else {
-            payable.setStatus("PARTIAL");
+        BigDecimal delta = paymentAmount != null ? paymentAmount : BigDecimal.ZERO;
+        int rows = payableService.atomicAddPaidAmount(payable.getId(), delta);
+        if (rows == 0) {
+            log.warn("[付款中心] 原子更新应付单失败: payableId={}", payable.getId());
+            return;
         }
-        payable.setUpdateTime(LocalDateTime.now());
-        payableService.updateById(payable);
-        log.info("[付款中心] 同步应付单状态: payableNo={}, newStatus={}, paid={}", payable.getPayableNo(), payable.getStatus(), newPaid);
+        Payable refreshed = payableService.getById(payable.getId());
+        BigDecimal newPaid = refreshed != null ? refreshed.getPaidAmount() : BigDecimal.ZERO;
+        log.info("[付款中心] 同步应付单状态: payableNo={}, newStatus={}, paid={}", payable.getPayableNo(), refreshed != null ? refreshed.getStatus() : "UNKNOWN", newPaid);
 
-        syncLinkedBillsOnPaid(payable, newPaid);
+        syncLinkedBillsOnPaid(refreshed != null ? refreshed : payable, newPaid);
     }
 
     private void syncLinkedBillsOnPaid(Payable payable, BigDecimal totalPaid) {

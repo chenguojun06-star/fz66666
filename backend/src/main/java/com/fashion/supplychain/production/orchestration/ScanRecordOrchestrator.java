@@ -178,6 +178,7 @@ public class ScanRecordOrchestrator {
         return scanType;
     }
 
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public Map<String, Object> undo(Map<String, Object> params) {
         return scanUndoHelper.undo(params);
     }

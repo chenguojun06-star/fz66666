@@ -449,6 +449,7 @@ public class ShipmentReconciliationOrchestrator {
                     .ne(ScanRecord::getScanType, "orchestration")
                     .eq(ScanRecord::getScanResult, "success")
                     .isNull(ScanRecord::getFactoryId)
+                    .isNotNull(ScanRecord::getScanCost)
             );
             return scans.stream()
                 .map(s -> s.getScanCost() != null ? s.getScanCost() : BigDecimal.ZERO)

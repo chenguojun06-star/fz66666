@@ -54,6 +54,10 @@ public class AiAgentOrchestrator {
     @Autowired(required = false) private QuickPathQualityGate quickPathQualityGate;
     @Autowired(required = false) private DynamicFollowUpEngine dynamicFollowUpEngine;
 
+    // 五大Agent框架增强组件
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService;
+
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
 
@@ -306,9 +310,29 @@ public class AiAgentOrchestrator {
             try {
                 realTimeLearningLoop.trigger(
                         conversationId, userMessage, assistantResponse,
-                        80.0, tenantId); // 默认80分，SelfCritic会独立计算
+                        80.0, tenantId);
             } catch (Exception e) {
                 log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
+            }
+        }
+
+        if (memoryBankService != null) {
+            try {
+                memoryBankService.onFocusChange(tenantId,
+                        userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage);
+            } catch (Exception e) {
+                log.debug("[AiAgent] MemoryBank更新失败（非关键）: {}", e.getMessage());
+            }
+        }
+
+        if (skillAutoCreationService != null && reflectionOrchestrator == null
+                && toolRecords != null && toolRecords.size() >= 3) {
+            try {
+                skillAutoCreationService.tryAutoCreateFromTask(
+                        tenantId, conversationId, userMessage,
+                        toolResultsStr, assistantResponse, 0.75);
+            } catch (Exception e) {
+                log.debug("[AiAgent] SkillAutoCreation触发失败（非关键）: {}", e.getMessage());
             }
         }
 
@@ -449,8 +473,9 @@ public class AiAgentOrchestrator {
             }
 
             StringBuilder sysPrompt = new StringBuilder();
-            sysPrompt.append("你是「小云」，服装供应链智能助手。请简洁、准确地回答用户问题。\n");
-            sysPrompt.append("如果下方有知识库参考资料，优先引用；如无相关内容，根据业务经验作答，不要编造。\n\n");
+            sysPrompt.append("你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。\n");
+            sysPrompt.append("当用户问你是谁、谁开发的你等身份问题时，只回答：我是小云，由云裳智链Trivia团队开发的服装供应链智能顾问。不要编造任何公司名称。\n");
+            sysPrompt.append("请简洁、准确地回答用户问题。如果下方有知识库参考资料，优先引用；如无相关内容，根据业务经验作答，不要编造。\n\n");
             if (intelligenceCtx != null && !intelligenceCtx.isBlank()) {
                 sysPrompt.append(intelligenceCtx).append("\n\n");
             }

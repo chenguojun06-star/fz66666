@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.service.MaterialInboundService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
@@ -42,6 +43,8 @@ public class MaterialInboundOrchestrator {
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
+    @Autowired
+    private MaterialPurchaseMapper materialPurchaseMapper;
 
     @Autowired
     private MaterialStockService materialStockService;
@@ -125,12 +128,16 @@ public class MaterialInboundOrchestrator {
         materialStockService.increaseStock(purchase, arrivedQuantity, warehouseLocation);
         log.info("库存已更新: materialCode={}, quantity=+{}, location={}", purchase.getMaterialCode(), arrivedQuantity, warehouseLocation);
 
-        // 5. 更新采购单
-        purchase.setArrivedQuantity(totalArrived);
-        purchase.setInboundRecordId(inbound.getId()); // 关联最新入库记录
-        purchase.setActualArrivalDate(LocalDateTime.now());
+        // 5. 原子更新采购单到货数量
+        int rows = materialPurchaseMapper.atomicAddArrivedQuantity(purchaseId, arrivedQuantity);
+        if (rows == 0) {
+            throw new RuntimeException("更新采购单到货数量失败: purchaseId=" + purchaseId);
+        }
 
-        // 根据到货情况更新状态
+        purchase = materialPurchaseService.getById(purchaseId);
+        totalArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
+        purchase.setInboundRecordId(inbound.getId());
+
         if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(java.math.BigDecimal.valueOf(totalArrived)) <= 0) {
             purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
         } else {

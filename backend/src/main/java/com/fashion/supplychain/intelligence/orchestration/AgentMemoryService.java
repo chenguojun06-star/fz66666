@@ -141,14 +141,22 @@ public class AgentMemoryService {
         }
     }
 
+    private static final java.util.Set<String> MEMORY_BANK_RESERVED_KEYS = java.util.Set.of(
+            "product_context", "active_context", "system_patterns", "decision_log", "progress");
+
     public String compileContext(Long tenantId, String agentId, int coreLimit, int archivalLimit) {
         StringBuilder sb = new StringBuilder();
 
         List<AgentMemoryCore> coreMemories = getAllCoreMemory(tenantId, agentId);
         if (!coreMemories.isEmpty()) {
-            sb.append("【核心记忆】\n");
-            for (AgentMemoryCore cm : coreMemories.subList(0, Math.min(coreLimit, coreMemories.size()))) {
-                sb.append("- ").append(cm.getMemoryKey()).append(": ").append(cm.getMemoryValue()).append("\n");
+            List<AgentMemoryCore> filtered = coreMemories.stream()
+                    .filter(cm -> !MEMORY_BANK_RESERVED_KEYS.contains(cm.getMemoryKey()))
+                    .toList();
+            if (!filtered.isEmpty()) {
+                sb.append("【核心记忆】\n");
+                for (AgentMemoryCore cm : filtered.subList(0, Math.min(coreLimit, filtered.size()))) {
+                    sb.append("- ").append(cm.getMemoryKey()).append(": ").append(cm.getMemoryValue()).append("\n");
+                }
             }
         }
 

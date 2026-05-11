@@ -26,6 +26,7 @@ public class ProductionSpecialistAgent implements SpecialistAgent {
     private final ProductionOrderMapper productionOrderMapper;
     private final ProductionProcessTrackingMapper processTrackingMapper;
     private final StyleProcessMapper styleProcessMapper;
+    private final com.fashion.supplychain.intelligence.service.SpecialistPersonaService personaService;
 
     @Override
     public String getRoute() { return "production"; }
@@ -35,8 +36,11 @@ public class ProductionSpecialistAgent implements SpecialistAgent {
         String dataContext = buildDataContext(state);
         String prompt = buildPrompt(state, dataContext);
         var profile = routingConfig.getProfile("full");
-        var result = inference.chat("production_specialist",
-                "你是一名服装生产管理专家，擅长产能分析、工序瓶颈识别和排产优化。\n" + buildSystemPrompt(), prompt);
+        String systemPrompt = personaService.buildFullPrompt("production");
+        if (systemPrompt.isBlank()) {
+            systemPrompt = "你是一名服装生产管理专家，擅长产能分析、工序瓶颈识别和排产优化。\n" + buildFallbackSystemPrompt();
+        }
+        var result = inference.chat("production_specialist", systemPrompt, prompt);
         if (result.isSuccess()) {
             String analysis = result.getContent();
             state.getSpecialistResults().put("production", analysis);
@@ -101,8 +105,12 @@ public class ProductionSpecialistAgent implements SpecialistAgent {
         return sb.toString();
     }
 
-    private String buildSystemPrompt() {
+    private String buildFallbackSystemPrompt() {
         return "基于提供的真实生产订单、工序跟踪和工序配置数据进行分析。输出产能瓶颈+排产建议。";
+    }
+
+    private String buildSystemPrompt() {
+        return buildFallbackSystemPrompt();
     }
 
     private String buildPrompt(AgentState state, String dataContext) {

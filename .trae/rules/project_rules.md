@@ -1,5 +1,31 @@
 # 项目核心铁律速查手册
 > 提取自 `.github/copilot-instructions.md`（3261行）— 2026-05-02
+> **⚡ 开发工作流**：详见 [agent-workflow.md](agent-workflow.md)（融合 DeerFlow/RooFlow/agency-agents/Ruflo/Hermes 五大方法论）
+
+---
+
+## ⚡ 智能体驱动开发流程（每次必做）
+
+> 完整7步流程详见 [agent-workflow.md](agent-workflow.md)，以下是速查版：
+
+```
+[1] 读取 Memory Bank（memory-bank/）→ 不丢上下文
+[2] 选择角色（.github/agents/）→ 专业分工
+[3] 深度调研（DeerFlow法）→ 先调研再动手
+[4] 任务编排（Ruflo法）→ 拆解子任务
+[5] 逐层执行 → DB→后端→前端→小程序
+[6] 质量门控 → 每层完成即验证
+[7] 更新记忆（Hermes法）→ 记录学习点
+```
+
+| 任务类型 | 角色 | Agent文件 |
+|---------|------|----------|
+| 修bug | Bug调查员 | `bug-investigator.agent.md` |
+| 新功能 | 全栈功能编排师 | `fullstack-feature.agent.md` |
+| DB变更 | Flyway迁移助手 | `flyway-migration.agent.md` |
+| 前端页面 | 前端脚手架 | `new-feature-page.agent.md` |
+| AI系统 | AI智能体工程师 | `ai-agent-engineer.agent.md` |
+| 推送检查 | 质量守门员 | `quality-gatekeeper.agent.md` |
 
 ---
 

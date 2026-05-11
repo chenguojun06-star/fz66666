@@ -70,6 +70,7 @@ public class ShipmentReconciliationOrchestrator {
                     .eq(ScanRecord::getOrderId, orderId)
                     .isNull(ScanRecord::getFactoryId)
                     .ne(ScanRecord::getScanType, "orchestration")
+                    .eq(ScanRecord::getScanResult, "success")
                     .isNotNull(ScanRecord::getScanCost)
             );
             return records.stream()

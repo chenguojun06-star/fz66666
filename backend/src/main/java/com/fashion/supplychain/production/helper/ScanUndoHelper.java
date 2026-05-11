@@ -204,6 +204,9 @@ public class ScanUndoHelper {
         if (StringUtils.hasText(target.getPayrollSettlementId())) {
             throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
         }
+        if ("payroll_settled".equals(target.getSettlementStatus())) {
+            throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
+        }
     }
 
     private void assertNoNextStageScan(ScanRecord target) {
