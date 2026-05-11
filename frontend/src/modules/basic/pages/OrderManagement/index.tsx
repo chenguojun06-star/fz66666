@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, Card, Form, Tabs } from 'antd';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
@@ -14,6 +14,8 @@ import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
+import { useCuttingCreateTask } from '@/modules/production/pages/Production/Cutting/hooks';
+import { CuttingCreateTaskModal } from '@/modules/production/pages/Production/Cutting/components';
 
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import type { StyleBom } from '@/types/style';
@@ -40,8 +42,11 @@ const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const location = useLocation();
+  const navigate = useNavigate();
   const { isMobile, modalWidth } = useViewport();
   const { columns: cardColumns } = useCardGridLayout(10);
+
+  const cuttingCreateTask = useCuttingCreateTask({ message, navigate, fetchTasks: async () => {} });
 
   const tooltipTheme = useMemo(() => {
     const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
@@ -255,6 +260,7 @@ const OrderManagement: React.FC = () => {
                   cardColumns={cardColumns}
                   openCreate={openCreate}
                   fetchStyles={fetchStyles}
+                  onNoDataOrder={cuttingCreateTask.openCreateTask}
                 />
               </>
             ),
@@ -333,6 +339,8 @@ const OrderManagement: React.FC = () => {
           '设计师': printingRecord?.designer,
         }}
       />
+
+      <CuttingCreateTaskModal createTask={cuttingCreateTask} />
     </>
   );
 };

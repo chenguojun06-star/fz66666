@@ -13,7 +13,7 @@ import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import type { CuttingTask } from '@/types/production';
-import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
+import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb, PatternSupplementButton } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { formatDateTime } from '@/utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -297,7 +297,7 @@ const CuttingManagement: React.FC = () => {
                 )}
                 right={(
                   <Button type="primary" onClick={createTask.openCreateTask}>
-                    新建裁剪任务
+                    无资料下单
                   </Button>
                 )}
               />
@@ -427,9 +427,12 @@ const CuttingManagement: React.FC = () => {
                   {
                     title: '纸样',
                     key: 'attachments',
-                    width: 80,
+                    width: 130,
                     render: (_: any, record: CuttingTask) => (
-                      <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
+                      <Space size={4}>
+                        <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
+                        <PatternSupplementButton styleId={record.styleId} styleNo={record.styleNo} />
+                      </Space>
                     ),
                   },
                   {

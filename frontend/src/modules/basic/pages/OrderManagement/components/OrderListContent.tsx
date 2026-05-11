@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Card, Space } from 'antd';
-import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -25,11 +25,12 @@ interface Props {
   cardColumns: number;
   openCreate: (style: StyleInfo) => void;
   fetchStyles: () => void;
+  onNoDataOrder?: () => void;
 }
 
 const OrderListContent: React.FC<Props> = ({
   viewMode, setViewMode, queryParams, setQueryParams,
-  styles, total, loading, columns, cardColumns, openCreate, fetchStyles,
+  styles, total, loading, columns, cardColumns, openCreate, fetchStyles, onNoDataOrder,
 }) => {
   return (
     <>
@@ -51,6 +52,9 @@ const OrderListContent: React.FC<Props> = ({
           )}
           right={(
             <Space size={12}>
+              {onNoDataOrder && (
+                <Button icon={<PlusOutlined />} onClick={onNoDataOrder}>无资料下单</Button>
+              )}
               <Button
                 icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                 onClick={() => {

@@ -18,7 +18,7 @@ import { readPageSize } from '@/utils/pageSizeStore';
 const { TextArea } = Input;
 
 const UserApproval: React.FC = () => {
-  const { isMobile } = useViewport();
+  const { isMobile: _isMobile } = useViewport();
   const { user, isTenantOwner } = useUser();
   const navigate = useNavigate();
   const canApproveFactory = isTenantOwner || isSupervisorOrAbove(user);

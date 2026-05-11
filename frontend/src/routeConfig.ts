@@ -24,7 +24,6 @@ import {
   FireOutlined,
   RadarChartOutlined,
   AuditOutlined,
-  BarChartOutlined,
 } from '@ant-design/icons';
 
 export const paths = {

@@ -46,7 +46,7 @@ export const useMaterialReconActions = (
     try {
       const settled = await Promise.allSettled(normalized.map((p) => materialReconciliationApi.updateMaterialReconciliationStatus(p.id, p.status)));
       const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
-      const failedIds = settled
+      const _failedIds = settled
         .map((r, i) => r.status === 'rejected' ? normalized[i].id : null)
         .filter((id): id is string => id != null);
       const failed = normalized.length - okCount;
@@ -75,7 +75,7 @@ export const useMaterialReconActions = (
 
   const openRejectModal = (ids: string[]) => setPendingRejectIds(ids);
 
-  const handleRejectConfirm = async (reason: string) => {
+  const handleRejectConfirm = async (_reason: string) => {
     if (!pendingRejectIds?.length) return;
     setRejectIdsLoading(true);
     try {

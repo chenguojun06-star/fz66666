@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { App, AutoComplete, Button, Input, InputNumber, Space, Spin } from 'antd';
+import { App, Button, InputNumber, Select, Space, Spin } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { productionOrderApi } from '@/services/production/productionApi';
 
 type WorkflowRow = {
@@ -10,12 +11,10 @@ type WorkflowRow = {
   name: string;
   progressStage: string;
   unitPrice: number;
+  machineType: string;
+  difficulty: string;
+  standardTime: number;
 };
-
-// 系统预设阶段作为输入建议（仅供参考，用户可自由输入任意父节点名称）
-const STAGE_SUGGESTIONS = [
-  '采购', '裁剪', '二次工艺', '车缝', '尾部', '入库',
-].map(v => ({ label: v, value: v }));
 
 let _editorKeyCounter = 0;
 const genKey = () => `wf_${Date.now()}_${_editorKeyCounter++}`;
@@ -77,6 +76,9 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
               name,
               progressStage,
               unitPrice: Number(n?.unitPrice) || 0,
+              machineType: String(n?.machineType || '').trim(),
+              difficulty: String(n?.difficulty || '').trim(),
+              standardTime: Number(n?.standardTime) || 0,
             };
           })
           .filter(r => r.name),
@@ -93,7 +95,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
   };
 
   const handleAddRow = () => {
-    setRows(prev => [...prev, { _key: genKey(), name: '', progressStage: '裁剪', unitPrice: 0 }]);
+    setRows(prev => [...prev, { _key: genKey(), name: '', progressStage: '裁剪', unitPrice: 0, machineType: '', difficulty: '', standardTime: 0 }]);
   };
 
   const handleSave = async () => {
@@ -107,15 +109,15 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       return;
     }
     const nodes = rows.map((r, idx) => {
-      // 直接使用用户填写的 progressStage，不再强制映射；为空时用工序名称兜底
       const progressStage = r.progressStage.trim() || r.name.trim();
       return {
         id: r.name.trim(),
         name: r.name.trim(),
         progressStage,
         unitPrice: Number(r.unitPrice) || 0,
-        machineType: '',
-        standardTime: 0,
+        machineType: r.machineType || '',
+        difficulty: r.difficulty || '',
+        standardTime: r.standardTime || 0,
         sortOrder: idx,
       };
     });
@@ -145,69 +147,83 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
 
   const columns = [
     {
-      title: '#',
-      width: 44,
-      render: (_: any, __: WorkflowRow, idx: number) => (
-        <span style={{ color: '#999', fontSize: 12 }}>{idx + 1}</span>
-      ),
+      title: '排序',
+      dataIndex: '_key',
+      key: 'sortOrder',
+      width: 60,
+      render: (_: any, __: WorkflowRow, idx: number) => idx + 1,
     },
     {
-      title: (
-        <span>
-          <span style={{ color: '#ff4d4f', marginRight: 2 }}>*</span>工序名称
-        </span>
-      ),
+      title: '工序编号',
+      dataIndex: '_key',
+      key: 'processCode',
+      width: 80,
+      render: (_: any, __: WorkflowRow, idx: number) => String(idx + 1).padStart(2, '0'),
+    },
+    {
+      title: '工序名称',
+      dataIndex: 'name',
       key: 'name',
-      render: (_: any, record: WorkflowRow) => (
-        <Input
-          value={record.name}
-          placeholder="输入工序名称"
-          status={!record.name.trim() ? 'error' : undefined}
-          onChange={e => update(record._key, 'name', e.target.value)}
-        />
+      width: 180,
+      render: (v: string, row: WorkflowRow) => (
+        <DictAutoComplete dictType="process_name" autoCollect value={v} placeholder="请选择或输入工序名称" style={{ width: '100%' }} onChange={(val) => update(row._key, 'name', val)} />
       ),
     },
     {
-      title: '所属阶段',
+      title: '进度节点',
+      dataIndex: 'progressStage',
       key: 'progressStage',
-      width: 140,
-      render: (_: any, record: WorkflowRow) => (
-        <AutoComplete
-          value={record.progressStage}
-          options={STAGE_SUGGESTIONS}
-          allowClear
-          placeholder="输入或选择阶段"
-          onChange={(v: string) => update(record._key, 'progressStage', v || '')}
-          style={{ width: '100%' }}
+      width: 120,
+      render: (v: string, row: WorkflowRow) => (
+        <Select size="small" value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'progressStage', val || '')}
+          options={['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'].map(s => ({ value: s, label: s }))}
         />
       ),
     },
     {
-      title: '单价（元）',
+      title: '机器类型',
+      dataIndex: 'machineType',
+      key: 'machineType',
+      width: 120,
+      render: (v: string, row: WorkflowRow) => (
+        <DictAutoComplete dictType="machine_type" autoCollect value={v || ''} placeholder="请选择或输入" style={{ width: '100%' }} onChange={(val) => update(row._key, 'machineType', val)} />
+      ),
+    },
+    {
+      title: '工序难度',
+      dataIndex: 'difficulty',
+      key: 'difficulty',
+      width: 90,
+      render: (v: string, row: WorkflowRow) => (
+        <Select size="small" value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'difficulty', val || '')}
+          options={[{ value: '易', label: '易' }, { value: '中', label: '中' }, { value: '难', label: '难' }]}
+        />
+      ),
+    },
+    {
+      title: '工时(秒)',
+      dataIndex: 'standardTime',
+      key: 'standardTime',
+      width: 90,
+      render: (v: number, row: WorkflowRow) => (
+        <InputNumber size="small" value={v || 0} style={{ width: '100%' }} min={0} onChange={(val) => update(row._key, 'standardTime', typeof val === 'number' ? val : 0)} />
+      ),
+    },
+    {
+      title: '工价(元)',
+      dataIndex: 'unitPrice',
       key: 'unitPrice',
-      width: 130,
-      render: (_: any, record: WorkflowRow) => (
-        <InputNumber
-          value={record.unitPrice}
-          min={0}
-          precision={2}
-          onChange={v => update(record._key, 'unitPrice', v ?? 0)}
-          style={{ width: '100%' }}
-        />
+      width: 100,
+      render: (v: number, row: WorkflowRow) => (
+        <InputNumber size="small" value={v} style={{ width: '100%' }} min={0} precision={2} step={0.01} prefix="¥" onChange={(val) => update(row._key, 'unitPrice', typeof val === 'number' ? val : 0)} />
       ),
     },
     {
-      title: '',
-      key: 'del',
-      width: 44,
-      render: (_: any, record: WorkflowRow) => (
-        <Button
-          type="text"
-          danger
-          size="small"
-          icon={<DeleteOutlined />}
-          onClick={() => setRows(prev => prev.filter(r => r._key !== record._key))}
-        />
+      title: '操作',
+      key: 'action',
+      width: 50,
+      render: (_: any, row: WorkflowRow) => (
+        <Button size="small" type="text" danger icon={<DeleteOutlined />} disabled={rows.length <= 1} onClick={() => setRows(prev => prev.filter(r => r._key !== row._key))} />
       ),
     },
   ];

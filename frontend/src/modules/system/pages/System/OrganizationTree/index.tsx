@@ -129,7 +129,7 @@ const OrganizationTreePage: React.FC = () => {
     batchAssignLoading,
     setOwnerLoading,
     profileUser, setProfileUser,
-    handleResetMemberPwd,
+    handleResetMemberPwd: _handleResetMemberPwd,
     handleOpenAssign,
     handleBatchAssign,
     handleRemoveMember,
@@ -447,7 +447,7 @@ const OrganizationTreePage: React.FC = () => {
                             okText: '确认',
                             cancelText: '取消',
                             onOk: async () => {
-                              const sel = document.querySelector('#managerSelect input') as HTMLInputElement;
+                              const _sel = document.querySelector('#managerSelect input') as HTMLInputElement;
                               const selectEl = document.querySelector('.ant-select-selection-item') as HTMLElement;
                               const selectedValue = selectEl?.getAttribute('title') || '';
                               const matchingOpt = managerSelectOptions.find(o => o.label === selectedValue);

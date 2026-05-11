@@ -543,4 +543,80 @@ public class StyleAttachmentOrchestrator {
     private boolean isAllowedExtension(String ext) {
         return UPLOAD_ALLOWED_EXTENSIONS.contains(ext);
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public StyleAttachment uploadSupplement(MultipartFile file, String styleId, String styleNo) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("文件为空");
+        }
+        String resolvedStyleId = resolveStyleId(styleId, styleNo);
+        TenantAssert.assertTenantContext();
+
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String safeOriginal = originalFilename == null ? "file" : originalFilename;
+            int dot = safeOriginal.lastIndexOf('.');
+            String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
+
+            String newFilename = UUID.randomUUID().toString() + extension;
+            String extForCheck = extension.length() > 1 ? extension.substring(1).toLowerCase() : "";
+            if (!extForCheck.isEmpty() && !isAllowedExtension(extForCheck)) {
+                throw new IllegalArgumentException("不支持的文件类型: " + extension);
+            }
+            if (cosService.isEnabled()) {
+                cosService.upload(com.fashion.supplychain.common.UserContext.tenantId(), newFilename, file);
+            } else {
+                File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
+                file.transferTo(dest);
+                cosService.safeRefreshTenantStorageUsage(com.fashion.supplychain.common.UserContext.tenantId());
+            }
+
+            StyleAttachment attachment = new StyleAttachment();
+            attachment.setStyleId(resolvedStyleId);
+            attachment.setFileName(safeOriginal);
+            attachment.setFileUrl(TenantFilePathResolver.buildDownloadUrl(newFilename));
+            attachment.setFileType(file.getContentType());
+            attachment.setBizType("pattern_supplement");
+            attachment.setFileSize(file.getSize());
+            attachment.setVersion(1);
+            attachment.setStatus("active");
+            UserContext ctx = UserContext.get();
+            attachment.setUploader(ctx != null ? ctx.getUsername() : null);
+            attachment.setCreateTime(LocalDateTime.now());
+
+            styleAttachmentService.save(attachment);
+            return attachment;
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Upload supplement pattern failed: styleId={}, styleNo={}", styleId, styleNo, e);
+            throw new IllegalStateException("补充纸样上传失败");
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public StyleAttachment claimSupplement(String id) {
+        StyleAttachment attachment = styleAttachmentService.getById(id);
+        if (attachment == null) {
+            throw new NoSuchElementException("附件不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(attachment.getTenantId(), "纸样附件");
+        UserContext ctx = UserContext.get();
+        attachment.setClaimTime(LocalDateTime.now());
+        attachment.setClaimUser(ctx != null ? ctx.getUsername() : null);
+        styleAttachmentService.updateById(attachment);
+        return attachment;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public StyleAttachment completeSupplement(String id) {
+        StyleAttachment attachment = styleAttachmentService.getById(id);
+        if (attachment == null) {
+            throw new NoSuchElementException("附件不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(attachment.getTenantId(), "纸样附件");
+        attachment.setCompleteTime(LocalDateTime.now());
+        styleAttachmentService.updateById(attachment);
+        return attachment;
+    }
 }

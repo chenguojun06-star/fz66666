@@ -72,6 +72,12 @@ public class StyleAttachment {
      */
     private String parentId;
 
+    private LocalDateTime claimTime;
+
+    private LocalDateTime completeTime;
+
+    private String claimUser;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Card, Form, Image, Input, InputNumber, Select, Space, Tabs } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -43,7 +43,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
   materialModalOpen,
   onSetEditing,
   onAddRow,
-  onRemoveRow,
+  onRemoveRow: _onRemoveRow,
   onUpdateRow,
   onSave,
   onDelete,

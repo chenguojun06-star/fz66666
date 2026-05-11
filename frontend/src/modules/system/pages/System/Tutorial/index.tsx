@@ -55,7 +55,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
   // YouTube
   const ytMatch = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)?([\w-]{11})/);
   if (u.includes('youtube.com') || u.includes('youtu.be')) {
-    const vid = ytMatch ? ytMatch[1] : '';
+    const _vid = ytMatch ? ytMatch[1] : '';
     return (
       <Alert
         type="warning"

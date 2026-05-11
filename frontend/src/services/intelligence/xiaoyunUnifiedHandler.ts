@@ -93,8 +93,8 @@ const MOOD_MESSAGES: Record<XiaoyunMood, string> = {
 // ===== 事件处理器工厂 =====
 
 export function createXiaoyunHandler(callbacks: XiaoyunCallbacks) {
-  const moodIcons = { ...MOOD_ICONS };
-  const moodMessages = { ...MOOD_MESSAGES };
+  const _moodIcons = { ...MOOD_ICONS };
+  const _moodMessages = { ...MOOD_MESSAGES };
 
   return function handleEvent(eventType: string, rawData: string): void {
     try {

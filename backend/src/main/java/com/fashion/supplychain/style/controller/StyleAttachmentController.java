@@ -94,4 +94,22 @@ public class StyleAttachmentController {
     public Result<Boolean> setCover(@PathVariable String id) {
         return Result.success(styleAttachmentOrchestrator.setCoverFromAttachment(id));
     }
+
+    @PostMapping("/pattern/supplement/upload")
+    public Result<StyleAttachment> uploadSupplement(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("styleId") String styleId,
+            @RequestParam(value = "styleNo", required = false) String styleNo) {
+        return Result.success(styleAttachmentOrchestrator.uploadSupplement(file, styleId, styleNo));
+    }
+
+    @PostMapping("/pattern/supplement/{id}/claim")
+    public Result<StyleAttachment> claimSupplement(@PathVariable String id) {
+        return Result.success(styleAttachmentOrchestrator.claimSupplement(id));
+    }
+
+    @PostMapping("/pattern/supplement/{id}/complete")
+    public Result<StyleAttachment> completeSupplement(@PathVariable String id) {
+        return Result.success(styleAttachmentOrchestrator.completeSupplement(id));
+    }
 }

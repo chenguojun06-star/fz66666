@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AutoComplete, Button, Card, Dropdown, Input, InputNumber, Select, Segmented, Space, Tag, Tooltip } from 'antd';
-import { PlusOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, ImportOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { UnifiedDatePicker, dayjs } from '@/components/common/UnifiedDatePicker';
@@ -55,7 +55,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   };
   // ─────────────────────────────────────────────────────────────────────
 
-  const stageSummary = useMemo(() => {
+  const _stageSummary = useMemo(() => {
     const stages: Record<string, { count: number; total: number }> = {};
     CUTTING_STAGE_ORDER.forEach((s) => { stages[s] = { count: 0, total: 0 }; });
     createTask.createProcessNodes.forEach((n) => {
@@ -83,14 +83,47 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
     gap: 8,
   };
 
+  const uniqueSizes = useMemo(() => {
+    const sizeSet = new Set<string>();
+    createTask.createOrderLines.forEach((l) => {
+      if (l.size) sizeSet.add(l.size);
+    });
+    return Array.from(sizeSet);
+  }, [createTask.createOrderLines]);
+
+  const handleUpdateSizePrice = (nodeIndex: number, size: string, value: number) => {
+    createTask.setCreateProcessNodes((prev) =>
+      prev.map((n, idx) => {
+        if (idx !== nodeIndex) return n;
+        return { ...n, sizePrices: { ...(n.sizePrices || {}), [size]: value } };
+      })
+    );
+  };
+
+  const colCount = 9 + uniqueSizes.length;
+
   const handleAddToStage = (stage: string) => {
     createTask.addProcessNodeToStage(stage);
+  };
+
+  const [templateStyleNo, setTemplateStyleNo] = useState<string>('');
+  const [templateLoading, setTemplateLoading] = useState(false);
+
+  const handleImportTemplate = async () => {
+    const sn = templateStyleNo.trim();
+    if (!sn) return;
+    setTemplateLoading(true);
+    try {
+      await createTask.importFromTemplate(sn);
+    } finally {
+      setTemplateLoading(false);
+    }
   };
 
   return (
     <ResizableModal
       open={createTask.createTaskOpen}
-      title="新建裁剪任务"
+      title="无资料下单"
       width="70vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
       centered
@@ -311,52 +344,81 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           </span>
         }
         extra={
-          <Dropdown
-            menu={{
-              items: CUTTING_STAGE_ORDER.map((s) => ({ key: s, label: s, icon: <PlusOutlined /> })),
-              onClick: ({ key }) => handleAddToStage(key),
-            }}
-          >
-            <Button size="small" type="dashed" icon={<PlusOutlined />}>
-              添加工序 <DownOutlined />
+          <Space size={8}>
+            <Select
+              showSearch
+              size="small"
+              style={{ width: 180 }}
+              placeholder="选择款号导入模板"
+              value={templateStyleNo || undefined}
+              onSearch={(v) => createTask.fetchStyleInfoOptions(v)}
+              onChange={(v) => setTemplateStyleNo(v)}
+              filterOption={false}
+              loading={createTask.createStyleLoading}
+              options={createTask.createStyleOptions.map((s) => ({ label: `${s.styleNo}${s.styleName ? ` - ${s.styleName}` : ''}`, value: s.styleNo }))}
+              allowClear
+            />
+            <Button
+              size="small"
+              type="primary"
+              ghost
+              icon={<ImportOutlined />}
+              loading={templateLoading}
+              disabled={!templateStyleNo.trim()}
+              onClick={handleImportTemplate}
+            >
+              模板导入
             </Button>
-          </Dropdown>
+            <Dropdown
+              menu={{
+                items: CUTTING_STAGE_ORDER.map((s) => ({ key: s, label: s, icon: <PlusOutlined /> })),
+                onClick: ({ key }) => handleAddToStage(key),
+              }}
+            >
+              <Button size="small" type="dashed" icon={<PlusOutlined />}>
+                添加工序 <DownOutlined />
+              </Button>
+            </Dropdown>
+          </Space>
         }
         style={{ marginBottom: 12 }}
       >
-        <div style={{ marginBottom: 12, display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 8 }}>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={cardStyle}>
             <span style={{ fontSize: 12, color: '#8c8c8c' }}>工序单价（总计）</span>
             <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>¥{totalCost.toFixed(2)}</span>
             <span style={{ fontSize: 12, color: '#bfbfbf', marginLeft: 'auto' }}>{createTask.createProcessNodes.length} 道工序</span>
           </div>
-          {CUTTING_STAGE_ORDER.map((stage) => (
-            <div key={stage} style={cardStyle}>
-              <span style={{ fontSize: 12, color: '#8c8c8c' }}>{stage}</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>¥{stageSummary[stage].total.toFixed(2)}</span>
-              <span style={{ fontSize: 12, color: '#bfbfbf', marginLeft: 'auto' }}>{stageSummary[stage].count} 道工序</span>
-            </div>
-          ))}
         </div>
 
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 + uniqueSizes.length * 90 }}>
             <colgroup>
               <col style={{ width: 50 }} />
               <col style={{ width: 80 }} />
-              <col />
-              <col style={{ width: 160 }} />
               <col style={{ width: 150 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 100 }} />
+              {uniqueSizes.map((s) => <col key={s} style={{ width: 90 }} />)}
               <col style={{ width: 50 }} />
             </colgroup>
             <thead>
               <tr style={{ background: '#fafafa' }}>
-                <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>排序</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序编码</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序名称</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>进度节点</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工价(元)</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>操作</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>排序</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序编号</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序名称</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>进度节点</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>机器类型</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序难度</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工时(秒)</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工价(元)</th>
+                {uniqueSizes.map((s) => (
+                  <th key={s} style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>{s}码</th>
+                ))}
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -364,81 +426,129 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 const spanInfo = spanMap.get(index);
                 const originalIndex = createTask.createProcessNodes.indexOf(node);
                 return (
-                  <React.Fragment key={`process-row-${originalIndex}`}>
-                    <tr>
-                      <td style={{ padding: '6px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
-                        {index + 1}
+                  <tr key={`process-row-${originalIndex}`}>
+                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                      {index + 1}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#8c8c8c' }}>
+                      {String(index + 1).padStart(2, '0')}
+                    </td>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                      <DictAutoComplete
+                        dictType="process_name"
+                        autoCollect
+                        value={node.name}
+                        placeholder="请选择或输入工序名称"
+                        style={{ width: '100%' }}
+                        onChange={(v) => createTask.updateProcessNode(originalIndex, 'name', v)}
+                      />
+                    </td>
+                    {spanInfo && spanInfo.rowSpan > 0 ? (
+                      <td
+                        rowSpan={spanInfo.rowSpan}
+                        style={{
+                          padding: '8px 8px',
+                          background: STAGE_ACCENT_LIGHT,
+                          borderLeft: `3px solid ${STAGE_ACCENT}`,
+                          verticalAlign: 'middle',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                          <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13 }}>
+                            {spanInfo.stage}
+                          </Tag>
+                          <span style={{ fontSize: 12, color: '#999' }}>{spanInfo.count} 个工序</span>
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<PlusOutlined />}
+                            onClick={() => handleAddToStage(spanInfo.stage)}
+                            style={{ fontSize: 12, padding: 0 }}
+                          >
+                            添加
+                          </Button>
+                        </div>
                       </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#8c8c8c' }}>
-                        {String(index + 1).padStart(2, '0')}
-                      </td>
-                      <td style={{ padding: '4px 8px', borderBottom: '1px solid #f0f0f0' }}>
-                        <DictAutoComplete
-                          dictType="process_name"
-                          autoCollect
-                          value={node.name}
-                          placeholder="请选择或输入工序名称"
-                          style={{ width: '100%' }}
-                          onChange={(v) => createTask.updateProcessNode(originalIndex, 'name', v)}
-                        />
-                      </td>
-                      {spanInfo && spanInfo.rowSpan > 0 ? (
-                        <td
-                          rowSpan={spanInfo.rowSpan}
-                          style={{
-                            padding: '8px 12px',
-                            background: STAGE_ACCENT_LIGHT,
-                            borderLeft: `3px solid ${STAGE_ACCENT}`,
-                            verticalAlign: 'middle',
-                            textAlign: 'center',
-                            borderBottom: '1px solid #f0f0f0',
-                          }}
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                            <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13 }}>
-                              {spanInfo.stage}
-                            </Tag>
-                            <span style={{ fontSize: 12, color: '#999' }}>{spanInfo.count} 个工序</span>
-                            <Button
-                              type="link"
-                              size="small"
-                              icon={<PlusOutlined />}
-                              onClick={() => handleAddToStage(spanInfo.stage)}
-                              style={{ fontSize: 12, padding: 0 }}
-                            >
-                              添加
-                            </Button>
-                          </div>
-                        </td>
-                      ) : null}
-                      <td style={{ padding: '4px 8px', borderBottom: '1px solid #f0f0f0' }}>
+                    ) : null}
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                      <DictAutoComplete
+                        dictType="machine_type"
+                        autoCollect
+                        value={node.machineType || ''}
+                        placeholder="请选择或输入"
+                        style={{ width: '100%' }}
+                        onChange={(v) => createTask.updateProcessNode(originalIndex, 'machineType', v)}
+                      />
+                    </td>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                      <Select
+                        size="small"
+                        value={node.difficulty || undefined}
+                        allowClear
+                        placeholder="选择"
+                        style={{ width: '100%' }}
+                        onChange={(v) => createTask.updateProcessNode(originalIndex, 'difficulty', v || '')}
+                        options={[
+                          { value: '易', label: '易' },
+                          { value: '中', label: '中' },
+                          { value: '难', label: '难' },
+                        ]}
+                      />
+                    </td>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                      <InputNumber
+                        size="small"
+                        value={node.standardTime || 0}
+                        style={{ width: '100%' }}
+                        min={0}
+                        onChange={(v) => createTask.updateProcessNode(originalIndex, 'standardTime', typeof v === 'number' ? v : 0)}
+                      />
+                    </td>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                      <InputNumber
+                        size="small"
+                        value={node.unitPrice}
+                        style={{ width: '100%' }}
+                        min={0}
+                        precision={2}
+                        step={0.01}
+                        prefix="¥"
+                        placeholder="0"
+                        onChange={(v) => createTask.updateProcessNode(originalIndex, 'unitPrice', typeof v === 'number' ? v : 0)}
+                      />
+                    </td>
+                    {uniqueSizes.map((s) => (
+                      <td key={s} style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
                         <InputNumber
-                          value={node.unitPrice}
+                          size="small"
+                          value={node.sizePrices?.[s] ?? node.unitPrice}
                           style={{ width: '100%' }}
                           min={0}
                           precision={2}
                           step={0.01}
-                          placeholder="0"
-                          onChange={(value) => createTask.updateProcessNode(originalIndex, 'unitPrice', typeof value === 'number' ? value : 0)}
+                          prefix="¥"
+                          onChange={(v) => handleUpdateSizePrice(originalIndex, s, typeof v === 'number' ? v : 0)}
                         />
                       </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
-                        <Button
-                          size="small"
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          disabled={createTask.createProcessNodes.length <= 1}
-                          onClick={() => createTask.removeProcessNode(originalIndex)}
-                        />
-                      </td>
-                    </tr>
-                  </React.Fragment>
+                    ))}
+                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                      <Button
+                        size="small"
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                        disabled={createTask.createProcessNodes.length <= 1}
+                        onClick={() => createTask.removeProcessNode(originalIndex)}
+                      />
+                    </td>
+                  </tr>
                 );
               })}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 16, textAlign: 'center', color: 'rgba(0,0,0,0.25)' }}>
+                  <td colSpan={colCount} style={{ padding: 16, textAlign: 'center', color: 'rgba(0,0,0,0.25)' }}>
                     暂无工序，点击"添加工序"开始
                   </td>
                 </tr>

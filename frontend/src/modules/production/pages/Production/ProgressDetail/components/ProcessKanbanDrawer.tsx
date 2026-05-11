@@ -225,7 +225,7 @@ function getDefectProblemsForProcess(processName?: string, progressStage?: strin
 }
 
 const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
-  visible, onClose, orderId, orderNo, styleNo,
+  visible, onClose, orderId, orderNo, styleNo: _styleNo,
 }) => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('qc');

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Card, Descriptions, Empty, Space, Tag } from 'antd';
+import { Card, Empty, Space, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
@@ -49,7 +49,6 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const StyleCuttingInfoTab: React.FC<CuttingInfoTabProps> = ({ styleNo }) => {
-  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<CuttingTaskInfo[]>([]);
   const [bomList, setBomList] = useState<CuttingBomInfo[]>([]);

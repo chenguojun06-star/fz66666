@@ -74,7 +74,7 @@ const FactoryTemplateTab: React.FC = () => {
     }
   }, [page, pageSize, templateType, keyword]);
 
-  useEffect(() => { fetchList(1); }, [templateType]);
+  useEffect(() => { fetchList(1); }, [templateType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreateBlank = (type: string) => {
     setCreateType(type);

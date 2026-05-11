@@ -41,8 +41,8 @@ export interface MessageBubbleProps {
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   msg, downloadingType,
-  onSend, onDownloadReport, onActualDownload, onShowAgentTrace, onShowRecentTraces,
-  onOpenTraceCenter, onFeedback, onJumpToIntelligence, onSafeNavigate,
+  onSend, onDownloadReport, onActualDownload, onShowAgentTrace: _onShowAgentTrace, onShowRecentTraces: _onShowRecentTraces,
+  onOpenTraceCenter: _onOpenTraceCenter, onFeedback, onJumpToIntelligence, onSafeNavigate,
   onSpeak, onPurchaseDocAction, onWizardSubmit,
 }) => (
   <div className={`${msgStyles.messageRow} ${msg.role === 'ai' ? msgStyles.rowAi : msgStyles.rowUser}`}>

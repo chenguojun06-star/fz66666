@@ -213,6 +213,9 @@ export interface StyleAttachment extends Record<string, unknown> {
   createTime: string;
   version?: number;
   status?: 'active' | 'archived';
+  claimTime?: string;
+  completeTime?: string;
+  claimUser?: string;
 }
 
 export interface StyleQueryParams {

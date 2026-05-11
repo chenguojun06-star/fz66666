@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, Form, Input, InputNumber, Modal, Select, Card, Typography, Alert, QRCode, Radio, Checkbox } from 'antd';
+import { Button, Tag, Space, Form, Input, InputNumber, Modal, Select, Card, Typography, Alert, QRCode, Radio } from 'antd';
 import { PlusOutlined, CopyOutlined, QrcodeOutlined, ExclamationCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -35,7 +35,6 @@ const TenantListTab: React.FC = () => {
   const [revokeAppCodes, setRevokeAppCodes] = useState<string[]>([]);
   const [grantDuration, setGrantDuration] = useState<number>(0);
   const [granting, setGranting] = useState(false);
-  const [revoking, setRevoking] = useState(false);
   const [tenantSubscriptions, setTenantSubscriptions] = useState<Array<{ app_code: string; status: string; end_time: string; subscription_type: string }>>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [approveEnabledModules, setApproveEnabledModules] = useState<string[] | null>(null);

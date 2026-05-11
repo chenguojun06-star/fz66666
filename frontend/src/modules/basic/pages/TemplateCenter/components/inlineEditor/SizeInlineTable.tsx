@@ -182,7 +182,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     }
 
     return [...baseColumns, ...sizeColumns];
-  }, [value, readOnly]);
+  }, [value, readOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>

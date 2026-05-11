@@ -15,7 +15,7 @@ import {
   useBomEditorHelpers,
 } from './bomCellEditors';
 import type { BomEditorContext } from './bomCellEditors';
-import { MaterialType, materialTypeOptions } from './bomConstants';
+
 
 interface UseBomColumnsProps {
   locked: boolean;

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { App } from 'antd';
 import api from '@/utils/api';
 import type { CuttingTask } from '@/types/production';
 

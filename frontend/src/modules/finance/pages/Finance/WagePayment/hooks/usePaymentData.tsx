@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Form, Modal } from 'antd';
+import { Modal } from 'antd';
 import type { FormInstance } from 'antd';
 import {
   wagePaymentApi,
