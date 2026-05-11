@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
@@ -44,6 +46,9 @@ public class SKUServiceImpl implements SKUService {
 
     @Autowired
     private SKUDataResolver skuDataResolver;
+
+    @Autowired(required = false)
+    private ProductionProcessTrackingService trackingService;
 
     /**
      * 扫码模式定义
@@ -498,6 +503,7 @@ public class SKUServiceImpl implements SKUService {
             ProductionOrder order = productionOrderService.getOne(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .eq(ProductionOrder::getOrderNo, orderNo)
+                            .eq(ProductionOrder::getDeleteFlag, 0)
                             .last("LIMIT 1"));
             if (order == null) {
                 log.warn("[SKUService] 订单不存在 - orderNo: {}", orderNo);
@@ -733,13 +739,44 @@ public class SKUServiceImpl implements SKUService {
                 return true;
             }
 
-            java.math.BigDecimal unitPrice = resolveProcessUnitPrice(orderNo, processName, scanRecord.getProgressStage());
+            java.math.BigDecimal unitPrice = resolveProcessUnitPriceWithTracking(scanRecord, orderNo, processName);
             applyPriceToScanRecord(scanRecord, unitPrice);
             return true;
         } catch (Exception e) {
             log.error("[SKUService] 附加工序单价失败", e);
             return false;
         }
+    }
+
+    private java.math.BigDecimal resolveProcessUnitPriceWithTracking(ScanRecord scanRecord, String orderNo, String processName) {
+        if (scanRecord != null && StringUtils.hasText(scanRecord.getCuttingBundleId()) && trackingService != null) {
+            java.math.BigDecimal trackingPrice = resolveUnitPriceFromTracking(
+                    scanRecord.getOrderId(), scanRecord.getCuttingBundleId(), processName);
+            if (trackingPrice != null && trackingPrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                log.info("[SKUService] 使用Tracking覆盖单价: bundleId={}, processName={}, price={}",
+                        scanRecord.getCuttingBundleId(), processName, trackingPrice);
+                return trackingPrice;
+            }
+        }
+        return resolveProcessUnitPrice(orderNo, processName, scanRecord != null ? scanRecord.getProgressStage() : null);
+    }
+
+    private java.math.BigDecimal resolveUnitPriceFromTracking(String orderId, String bundleId, String processName) {
+        try {
+            LambdaQueryWrapper<ProductionProcessTracking> query = new LambdaQueryWrapper<>();
+            query.eq(ProductionProcessTracking::getProductionOrderId, orderId)
+                 .eq(ProductionProcessTracking::getCuttingBundleId, bundleId)
+                 .eq(ProductionProcessTracking::getProcessName, processName)
+                 .last("LIMIT 1");
+            ProductionProcessTracking tracking = trackingService.getOne(query);
+            if (tracking != null && tracking.getUnitPrice() != null
+                    && tracking.getUnitPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                return tracking.getUnitPrice();
+            }
+        } catch (Exception e) {
+            log.warn("[SKUService] 查询Tracking单价失败: orderId={}, bundleId={}", orderId, bundleId, e);
+        }
+        return null;
     }
 
     private java.math.BigDecimal resolveProcessUnitPrice(String orderNo, String processName, String progressStage) {

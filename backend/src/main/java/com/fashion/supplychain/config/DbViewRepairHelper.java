@@ -86,7 +86,7 @@ final class DbViewRepairHelper {
                         + "   GROUP BY `order_no`"
                         + " ) `scan` ON `po`.`order_no`=`scan`.`order_no`"
                         + " WHERE `po`.`delete_flag`=0"
-                        + "   AND `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','scrapped','SCRAPPED','archived','ARCHIVED','closed','CLOSED','废弃','已取消','已报废','已归档','已关单')"
+                        + "   AND `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','scrapped','SCRAPPED','archived','ARCHIVED','废弃','已取消','已报废','已归档')"
                         + "   AND `po`.`order_no` NOT LIKE 'CUT%'"
                         + " ORDER BY `po`.`create_time` DESC";
                     stmt.executeUpdate(createView);
