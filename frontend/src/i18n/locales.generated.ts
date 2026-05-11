@@ -22,7 +22,7 @@ export const LOCALES = {
       "loading": "加载中..."
     },
     "login": {
-      "brand": "云裳智链",
+      "brand": "衣智链",
       "wechatChecking": "正在验证微信身份...",
       "company": "公司",
       "companySearchPlaceholder": "输入公司名称搜索",

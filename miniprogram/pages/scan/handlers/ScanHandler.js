@@ -237,7 +237,7 @@ class ScanHandler {
 
     const orderDetail = await this.dataProcessor.getOrderDetail(parsedData.orderNo, parsedData.orderId);
     if (!orderDetail) {
-      return { earlyReturn: this._errorResult('订单不存在或已删除') };
+      return { earlyReturn: this._errorResult('订单不存在或已删除[' + (parsedData.orderNo || 'orderNo为空') + ']') };
     }
 
     // 保证 parsedData/orderDetail 的订单号字段一致且不为空

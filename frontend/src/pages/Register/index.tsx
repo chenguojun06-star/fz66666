@@ -50,7 +50,7 @@ const Register: React.FC = () => {
       applyPassword: values.password,
     });
     if (res?.code === 200 || res?.data) {
-      message.success(`入驻申请已提交${values.tenantName ? `，欢迎「${values.tenantName}」加入云裳智链` : ''}，请等待平台审核，审核通过后可登录使用`);
+      message.success(`入驻申请已提交${values.tenantName ? `，欢迎「${values.tenantName}」加入衣智链` : ''}，请等待平台审核，审核通过后可登录使用`);
       setTimeout(() => navigate('/login'), 2500);
     } else {
       message.error(res?.message || '申请失败');
@@ -202,7 +202,7 @@ const Register: React.FC = () => {
             <div className="login-card-accent login-card-accent-bottom" aria-hidden="true" />
             <div className="login-header">
               <Title level={2} className="login-title">
-                云裳智链
+                衣智链
               </Title>
               <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
                 {isWorkerInvite
@@ -426,7 +426,7 @@ const Register: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
-            <div className="login-footer">© {year} 云裳智链</div>
+            <div className="login-footer">© {year} 衣智链</div>
             <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
               部署版本：{buildCommit} · 构建时间：{buildTimeText}
             </div>

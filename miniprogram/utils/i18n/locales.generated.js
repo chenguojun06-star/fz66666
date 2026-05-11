@@ -140,7 +140,7 @@ module.exports = {
       "loading": "Loading..."
     },
     "login": {
-      "brand": "Yunshang SCM",
+      "brand": "YiZhiLian",
       "wechatChecking": "Verifying WeChat identity...",
       "company": "Company",
       "companySearchPlaceholder": "Search company name",
@@ -258,7 +258,7 @@ module.exports = {
       "loading": "Đang tải..."
     },
     "login": {
-      "brand": "Chuỗi Cung Ứng Yunshang",
+      "brand": "YiZhiLian SCM",
       "wechatChecking": "Đang xác minh danh tính WeChat...",
       "company": "Công ty",
       "companySearchPlaceholder": "Nhập tên công ty để tìm kiếm",
@@ -376,7 +376,7 @@ module.exports = {
       "loading": "កំពុងផ្ទុក..."
     },
     "login": {
-      "brand": "Yunshang SCM",
+      "brand": "YiZhiLian",
       "wechatChecking": "កំពុងផ្ទៀងផ្ទាត់អត្តសញ្ញាណ WeChat...",
       "company": "ក្រុមហ៊ុន",
       "companySearchPlaceholder": "បញ្ចូលឈ្មោះក្រុមហ៊ុនសម្រាប់ស្វែងរក",

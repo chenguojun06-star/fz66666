@@ -35,7 +35,7 @@ export const FocusItem: React.FC<{ label: string; value: string }> = ({ label, v
 );
 
 export const XiaoyunMascotLink: React.FC<{ riskTone: { color: string; softColor: string } }> = ({ riskTone }) => (
-  <a href={PLATFORM_URL} target="_blank" rel="noreferrer" style={S.xiaoYunLinkStyle} title="打开云裳智链平台">
+  <a href={PLATFORM_URL} target="_blank" rel="noreferrer" style={S.xiaoYunLinkStyle} title="打开衣智链平台">
     <div style={{ ...S.xiaoYunBubbleStyle, boxShadow: `0 0 0 6px ${riskTone.softColor}` }}>
       <CuteCloudTrigger size={60} active mood="curious" />
     </div>

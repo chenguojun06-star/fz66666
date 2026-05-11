@@ -317,10 +317,12 @@ class ScanDataProcessor {
   async getOrderDetail(orderNo, orderId) {
     // 防护：两个标识都为空时直接返回 null，避免空参数调用列表 API
     if (!orderNo && !orderId) {
+      console.warn('[DEBUG] getOrderDetail: orderNo 和 orderId 都为空');
       return null;
     }
 
     try {
+      console.log('[DEBUG] getOrderDetail: orderNo=', orderNo, 'orderId=', orderId);
       let res;
       if (orderNo) {
         res = await this.api.production.orderDetailByOrderNo(orderNo);
@@ -328,6 +330,7 @@ class ScanDataProcessor {
         // 通过 orderId (UUID) 查询
         res = await this.api.production.orderDetail(orderId);
       }
+      console.log('[DEBUG] getOrderDetail: API返回=', JSON.stringify(res));
 
       // 解包分页响应：orderDetailByOrderNo 实际调用 /list，返回 Page 对象
       if (res && res.records && Array.isArray(res.records)) {

@@ -116,7 +116,7 @@ const ShareOrderPage: React.FC = () => {
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>{riskTone.label}</div>
                     <div style={{ fontSize: 13, color: '#64748b' }}>{deliveryDiffText}</div>
-                    <div style={S.aiSupportTextStyle}>数据由 云裳智链 · 实时智能化平台提供支持</div>
+                    <div style={S.aiSupportTextStyle}>数据由 衣智链 · 实时智能化平台提供支持</div>
                   </div>
                 </div>
                 <div style={S.confidenceStyle}>{aiPrediction?.confidence ?? 0}% 置信度</div>
@@ -183,7 +183,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
         </div>
         <div style={S.bottomBrandLineStyle}>
-          <span>2026云裳智链</span>
+          <span>2026衣智链</span>
           <span>仅展示客户可见的工序跟进信息</span>
           {expiresAtText !== '—' && <span>链接有效至 {expiresAtText}</span>}
         </div>

@@ -133,7 +133,7 @@ const ShareOutstockPage: React.FC = () => {
                 出货追踪
               </div>
               <div style={brandSubtitleStyle}>
-                {data.companyName || '云裳智链'} · 智能供应链平台
+                {data.companyName || '衣智链'} · 智能供应链平台
               </div>
             </div>
             <Tag color="blue" style={statusTagStyle}>
@@ -256,7 +256,7 @@ const ShareOutstockPage: React.FC = () => {
         {/* Footer */}
         <div style={bottomBrandLineStyle}>
           <a href={PLATFORM_URL} target="_blank" rel="noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>
-            2026 云裳智链
+            2026 衣智链
           </a>
           <span>仅展示客户可见的出货信息</span>
           {expiresAtText !== '—' && <span>链接有效至 {expiresAtText}</span>}

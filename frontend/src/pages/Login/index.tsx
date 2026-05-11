@@ -377,7 +377,7 @@ const Login: React.FC = () => {
           <div className="login-form-card">
             <div className="login-header">
               <Title level={2} className="login-title">
-                云裳智链
+                衣智链
               </Title>
               <div className="login-subtitle">
                 衣智链｜多端协同智能提醒平台

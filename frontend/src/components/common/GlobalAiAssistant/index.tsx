@@ -417,7 +417,7 @@ const GlobalAiAssistant: React.FC = () => {
             </div>
             <div className={styles.headerText}>
               <div className={styles.headerTitle}>小云 智能助理</div>
-              <div className={styles.headerSubtitle}>云裳智链 · 实时判断与执行协作</div>
+              <div className={styles.headerSubtitle}>衣智链 · 实时判断与执行协作</div>
             </div>
             <div className={styles.headerActions}>
               <UnorderedListOutlined
