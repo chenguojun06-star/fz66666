@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { App, Empty, Input, Skeleton, Tabs } from 'antd';
 import { SearchOutlined, PrinterOutlined } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -52,7 +53,13 @@ const MaintenanceCenter: React.FC = () => {
 
   /* ── search ── */
   const [keyword, setKeyword] = useState('');
-  const [pageTab, setPageTab] = useState<'maintenance' | 'knowledge' | 'template'>('maintenance');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const getInitialTab = (): 'maintenance' | 'knowledge' | 'template' => {
+    const t = searchParams.get('tab');
+    if (t === 'knowledge' || t === 'template') return t;
+    return 'maintenance';
+  };
+  const [pageTab, setPageTab] = useState<'maintenance' | 'knowledge' | 'template'>(getInitialTab);
   const [knowledgeKeyword, setKnowledgeKeyword] = useState('');
   const [knowledgePage, setKnowledgePage] = useState(1);
   const [knowledgePageSize, setKnowledgePageSize] = useState(10);
@@ -202,7 +209,9 @@ const MaintenanceCenter: React.FC = () => {
         <Tabs
           activeKey={pageTab}
           onChange={(key) => {
-            setPageTab(key as 'maintenance' | 'knowledge' | 'template');
+            const tab = key as 'maintenance' | 'knowledge' | 'template';
+            setPageTab(tab);
+            setSearchParams({ tab }, { replace: true });
             if (panelType) handlePanelClose();
           }}
           items={[
