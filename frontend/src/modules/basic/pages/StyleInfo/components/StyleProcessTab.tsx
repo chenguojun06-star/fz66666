@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Button, Input, Space, Select, App, Popover, Dropdown } from 'antd';
+import { Button, Input, Space, Select, App, Popover, Dropdown, Tag } from 'antd';
 import { modal } from '@/utils/antdStatic';
 import { LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { toNumberSafe } from '@/utils/api';
@@ -81,20 +81,42 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
               icon={aiLoading ? <LoadingOutlined /> : <span style={{ marginRight: 4 }}></span>}
               style={{ background: 'linear-gradient(135deg, #722ed1, #2f54eb)', borderColor: 'transparent', fontWeight: 500, boxShadow: '0 2px 6px rgba(114, 46, 209, 0.3)' }}>AI建议单价</Button>
           </Popover>
-          <Select mode="multiple" allowClear showSearch placeholder="添加码数" style={{ minWidth: 120 }} disabled={!editMode || Boolean(readOnly)}
-            options={sizeOptions.filter(opt => !sizes.includes(opt.value))} value={[]}
-            onChange={(values) => {
-              if (values.length === 0) return;
-              const newSizes = [...sizes, ...values];
-              const sortedSizes = newSizes.sort((a, b) => { const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL']; const ia = order.indexOf(a.toUpperCase()); const ib = order.indexOf(b.toUpperCase()); if (ia >= 0 && ib >= 0) return ia - ib; if (ia >= 0) return -1; if (ib >= 0) return 1; return a.localeCompare(b); });
-              setSizes(sortedSizes);
-              setData((prev) => prev.map((row) => { const nextSizePrices = { ...(row.sizePrices || {}) }; const nextTouched = { ...(row.sizePriceTouched || {}) }; values.forEach((s) => { nextSizePrices[s] = toNumberSafe(row.price); nextTouched[s] = false; }); return { ...row, sizePrices: nextSizePrices, sizePriceTouched: nextTouched }; }));
-            }}
-            filterOption={(input, option) => String(option?.value || '').toLowerCase().includes(String(input || '').toLowerCase())}
-            onSearch={(value) => { if (value && value.trim() && !sizeOptions.some(opt => opt.value === value.trim()) && !sizes.includes(value.trim())) setSizeOptions(prev => [...prev, { value: value.trim(), label: value.trim() }]); }}
-            popupRender={(menu) => (<>{menu}<div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}><Input placeholder="输入新码数后回车添加" size="small" onPressEnter={(e) => { const input = e.target as HTMLInputElement; const val = input.value.trim().toUpperCase(); if (val && !sizes.includes(val) && !sizeOptions.some(opt => opt.value === val)) { const sortedSizes = [...sizes, val].sort((a, b) => { const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL']; const ia = order.indexOf(a.toUpperCase()); const ib = order.indexOf(b.toUpperCase()); if (ia >= 0 && ib >= 0) return ia - ib; if (ia >= 0) return -1; if (ib >= 0) return 1; return a.localeCompare(b); }); setSizes(sortedSizes); setData((prev) => prev.map((row) => ({ ...row, sizePrices: { ...(row.sizePrices || {}), [val]: toNumberSafe(row.price) }, sizePriceTouched: { ...(row.sizePriceTouched || {}), [val]: false } }))); input.value = ''; } }} /></div></>)}
-            onOpenChange={(open) => { if (open) fetchSizeDictOptions(); }}
-          />
+          {editMode && !readOnly && sizes.length > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              {sizes.map((size) => (
+                <Tag key={size} closable onClose={() => handleRemoveSize(size)} style={{ margin: 0 }}>{size}</Tag>
+              ))}
+            </span>
+          )}
+          {editMode && !readOnly && (
+            <Input
+              size="small"
+              placeholder="输入码数回车添加"
+              style={{ width: 130 }}
+              onPressEnter={(e) => {
+                const input = e.target as HTMLInputElement;
+                const val = input.value.trim().toUpperCase();
+                if (!val) return;
+                if (sizes.includes(val)) { message.warning(`码数 ${val} 已存在`); return; }
+                const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+                const sortedSizes = [...sizes, val].sort((a, b) => {
+                  const ia = SIZE_ORDER.indexOf(a.toUpperCase());
+                  const ib = SIZE_ORDER.indexOf(b.toUpperCase());
+                  if (ia >= 0 && ib >= 0) return ia - ib;
+                  if (ia >= 0) return -1;
+                  if (ib >= 0) return 1;
+                  return a.localeCompare(b);
+                });
+                setSizes(sortedSizes);
+                setData((prev) => prev.map((row) => ({
+                  ...row,
+                  sizePrices: { ...(row.sizePrices || {}), [val]: toNumberSafe(row.price) },
+                  sizePriceTouched: { ...(row.sizePriceTouched || {}), [val]: false },
+                })));
+                input.value = '';
+              }}
+            />
+          )}
           {!editMode || readOnly ? (
             <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly) || !processStartTime}>编辑</Button>
           ) : (
