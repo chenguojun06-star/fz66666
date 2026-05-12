@@ -32,7 +32,7 @@ public class PromptContextProvider {
     @Value("${xiaoyun.agent.rag.recall-top-k:5}")
     private int ragRecallTopK;
 
-    @Value("${xiaoyun.agent.rag.similarity-threshold:0.45}")
+    @Value("${xiaoyun.agent.rag.similarity-threshold:0.35}")
     private float ragSimilarityThreshold;
 
     @Autowired private AiContextBuilderService aiContextBuilderService;

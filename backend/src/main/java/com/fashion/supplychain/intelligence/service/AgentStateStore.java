@@ -45,7 +45,7 @@ public class AgentStateStore {
             Long tid = UserContext.tenantId();
             AgentCheckpoint cp = new AgentCheckpoint();
             cp.setTenantId(tid != null ? tid : 0L);
-            cp.setThreadId(sessionId);
+            cp.setThreadId(sessionId != null ? sessionId : "");
             cp.setNodeId("iteration_" + iteration);
             cp.setNodeName("迭代 #" + iteration);
             cp.setStateJson(objectMapper.writeValueAsString(messages));

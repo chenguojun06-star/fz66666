@@ -56,9 +56,12 @@ public class AgentCheckpointService {
 
     private String truncate(String value, int maxLen) {
         if (value == null) {
-            return null;
+            return "";
         }
         String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
         if (trimmed.length() <= maxLen) {
             return trimmed;
         }

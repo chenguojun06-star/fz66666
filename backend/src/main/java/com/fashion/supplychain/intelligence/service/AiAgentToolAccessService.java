@@ -244,7 +244,7 @@ public class AiAgentToolAccessService {
         return tools.stream()
                 .filter(t -> {
                     ToolDomain d = getDomainForTool(t.getName());
-                    return domains.contains(d) || d == ToolDomain.SYSTEM || d == ToolDomain.GENERAL;
+                    return domains.contains(d) || d == ToolDomain.SYSTEM || d == ToolDomain.GENERAL || d == ToolDomain.ANALYSIS;
                 })
                 .collect(Collectors.toList());
     }
