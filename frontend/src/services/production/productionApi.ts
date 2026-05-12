@@ -78,7 +78,7 @@ export const productionCuttingApi = {
     downloadFile(`/api/production/order/export-excel?${queryString}`);
   },
   list: (params: unknown) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/cutting/list', { params }),
-  getByCode: (qrCode: string) => api.get<{ code: number; data: unknown }>(`/production/cutting/by-code/${encodeURIComponent(String(qrCode || '').trim())}`),
+  getByCode: (qrCode: string) => api.post<{ code: number; data: unknown }>('/production/cutting/by-code', { qrCode }),
   listBundles: (orderId: any) => api.get<any>(`/production/cutting/bundles/${encodeURIComponent(String(orderId || '').trim())}`),
 };
 

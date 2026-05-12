@@ -52,7 +52,7 @@ const materialRoll = {
     return ok('/api/production/material/roll/scan', 'POST', data || {});
   },
   listByInbound(params) {
-    return ok('/api/production/material/roll/list-by-inbound', 'GET', params || {});
+    return ok('/api/production/material/roll/list', 'POST', params || {});
   },
 };
 
