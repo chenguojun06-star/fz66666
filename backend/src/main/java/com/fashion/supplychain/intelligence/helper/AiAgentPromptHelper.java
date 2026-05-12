@@ -31,6 +31,8 @@ public class AiAgentPromptHelper {
     @Autowired private PromptTemplateLoader promptTemplateLoader;
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.XiaoyunCoreUpgrade coreUpgrade;
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService;
 
     private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
             4, 8, 60L, TimeUnit.SECONDS,
@@ -83,6 +85,7 @@ public class AiAgentPromptHelper {
                 : CompletableFuture.completedFuture("");
         CompletableFuture<String> contextFileBlock = supplyAsync(() -> contextProvider.buildContextFileBlock(tenantId));
         CompletableFuture<String> userProfileBlock = supplyAsync(() -> contextProvider.buildUserProfileBlock(tenantId, userId));
+        CompletableFuture<String> memoryBankBlock = supplyAsync(() -> buildMemoryBankContext(tenantId));
 
         String intelligenceContext = safeJoin(intelligenceCtx, "实时经营上下文");
         String workerProfileBlock = safeJoin(workerProfile, "工人画像");
@@ -95,6 +98,7 @@ public class AiAgentPromptHelper {
         String exceptionReportBlock = safeJoin(exceptionReport, "异常报告");
         String contextFileBlockStr = safeJoin(contextFileBlock, "上下文文件");
         String userProfileBlockStr = safeJoin(userProfileBlock, "用户画像");
+        String memoryBankBlockStr = safeJoin(memoryBankBlock, "MemoryBank");
 
         String masInsightBlock = buildMasInsightBlock();
         String digitalTwinBlock = buildDigitalTwinBlock();
@@ -108,7 +112,7 @@ public class AiAgentPromptHelper {
 
         String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, exceptionReportBlock, activePatrolBlock,
                 masInsightBlock, digitalTwinBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
-                userBehaviorBlock, contextFileBlockStr, userProfileBlockStr, toolGuide, domainHint);
+                userBehaviorBlock, contextFileBlockStr, userProfileBlockStr, memoryBankBlockStr, toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
             // 按优先级保住核心内容，先从低优先级块开始缩减
@@ -188,6 +192,19 @@ public class AiAgentPromptHelper {
                 return "\n【近期战略分析摘要（由多Agent分析系统生成）】\n" + cached + "\n";
             }
         } catch (Exception e) { log.debug("[AiAgent-MAS] 战略分析注入跳过: {}", e.getMessage()); }
+        return "";
+    }
+
+    private String buildMemoryBankContext(Long tenantId) {
+        if (memoryBankService == null || tenantId == null) return "";
+        try {
+            if (!memoryBankService.isInitialized(tenantId)) return "";
+            String bankContext = memoryBankService.compileContextForPrompt(tenantId);
+            if (bankContext != null && !bankContext.isBlank() && !bankContext.contains("尚未初始化")) {
+                log.info("[AiAgent-MemoryBank] 已注入租户{}的MemoryBank上下文 ({}字符)", tenantId, bankContext.length());
+                return "\n" + bankContext;
+            }
+        } catch (Exception e) { log.debug("[AiAgent-MemoryBank] 上下文注入跳过: {}", e.getMessage()); }
         return "";
     }
 
@@ -282,7 +299,7 @@ public class AiAgentPromptHelper {
             String masInsightBlock, String digitalTwinBlock, String intelligenceContext,
             String longTermMemBlock, String memoryContext, String ragContext,
             String userBehaviorBlock, String contextFileBlockStr, String userProfileBlockStr,
-            String toolGuide, String domainHint) {
+            String memoryBankBlockStr, String toolGuide, String domainHint) {
         String identity = promptTemplateLoader.getBaseIdentity();
         if (identity == null || identity.isBlank()) {
             identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
@@ -300,6 +317,7 @@ public class AiAgentPromptHelper {
                 userProfileBlockStr +
                 intelligenceContext + "\n" +
                 longTermMemBlock +
+                memoryBankBlockStr +
                 memoryContext +
                 ragContext +
                 userBehaviorBlock +

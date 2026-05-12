@@ -447,7 +447,7 @@ public class AiAgentOrchestrator {
         if (COMPLEX_TRIGGER.matcher(userMessage).matches()) return false;
         if (BUSINESS_KEYWORD.matcher(userMessage).matches()) return false;
         if (QUICK_GREETING.matcher(userMessage).matches()) return true;
-        if (userMessage.length() <= 15) return true;
+        if (userMessage.length() <= 8) return true;
         return false;
     }
 
@@ -484,6 +484,19 @@ public class AiAgentOrchestrator {
             }
             if (pageContext != null && !pageContext.isBlank()) {
                 sysPrompt.append("【当前页面上下文】\n").append(pageContext).append("\n\n");
+            }
+            if (memoryBankService != null) {
+                try {
+                    Long mbTenantId = UserContext.tenantId();
+                    if (mbTenantId != null && memoryBankService.isInitialized(mbTenantId)) {
+                        String mbCtx = memoryBankService.compileContextForPrompt(mbTenantId);
+                        if (mbCtx != null && !mbCtx.isBlank() && !mbCtx.contains("尚未初始化")) {
+                            sysPrompt.append(mbCtx).append("\n\n");
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("[QuickPath] MemoryBank注入跳过: {}", e.getMessage());
+                }
             }
 
             com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult result =

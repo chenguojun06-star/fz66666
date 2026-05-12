@@ -51,7 +51,7 @@ public class AiContextBuilderService {
     private final ProductSkuMapper productSkuMapper;
 
     /** 租户级上下文缓存，TTL 60 秒（避免同一租户连续对话反复查 4 个 Orchestrator） */
-    private static final long CONTEXT_CACHE_TTL_MS = 60_000;
+    private static final long CONTEXT_CACHE_TTL_MS = 30_000;
     private final ConcurrentHashMap<Long, CachedContext> contextCache = new ConcurrentHashMap<>();
 
     private record CachedContext(String prompt, long expiresAt) {

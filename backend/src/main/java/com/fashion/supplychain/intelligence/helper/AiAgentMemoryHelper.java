@@ -36,11 +36,11 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class AiAgentMemoryHelper {
 
-    private static final int MAX_MEMORY_TURNS = 6;
+    private static final int MAX_MEMORY_TURNS = 15;
     private static final int MAX_USERS_CACHED = 500;
-    private static final int COMPACT_THRESHOLD_TURNS = 12;
+    private static final int COMPACT_THRESHOLD_TURNS = 20;
     private static final String REDIS_MEMORY_PREFIX = "fashion:chat:memory:";
-    private static final long REDIS_MEMORY_TTL_HOURS = 24;
+    private static final long REDIS_MEMORY_TTL_HOURS = 72;
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule());
 
@@ -52,7 +52,7 @@ public class AiAgentMemoryHelper {
 
     private final Cache<String, List<AiMessage>> conversationMemory = Caffeine.newBuilder()
             .maximumSize(MAX_USERS_CACHED)
-            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .expireAfterAccess(2, TimeUnit.HOURS)
             .recordStats()
             .build();
 
