@@ -144,6 +144,13 @@ Page({
     if (!v) return '';
     try {
       if (typeof v === 'string') {
+        if (v.length > 10) {
+          var d = new Date(v.replace(/-/g, '/'));
+          if (!isNaN(d.getTime())) {
+            var pad = n => String(n).padStart(2, '0');
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+          }
+        }
         if (v.length >= 10) return v.substring(0, 10);
         return v;
       }
@@ -152,7 +159,9 @@ Page({
       var y = d.getFullYear();
       var m = String(d.getMonth() + 1).padStart(2, '0');
       var day = String(d.getDate()).padStart(2, '0');
-      return y + '-' + m + '-' + day;
+      var h = String(d.getHours()).padStart(2, '0');
+      var min = String(d.getMinutes()).padStart(2, '0');
+      return y + '-' + m + '-' + day + ' ' + h + ':' + min;
     } catch (e) {
       return '';
     }

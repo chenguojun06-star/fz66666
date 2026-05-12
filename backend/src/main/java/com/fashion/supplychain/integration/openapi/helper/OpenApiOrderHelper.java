@@ -226,8 +226,15 @@ public class OpenApiOrderHelper {
         if (request.get("factoryName") != null) order.setFactoryName((String) request.get("factoryName"));
         if (request.get("productCategory") != null) order.setProductCategory((String) request.get("productCategory"));
         if (request.get("expectedShipDate") != null) {
-            try { order.setExpectedShipDate(LocalDate.parse((String) request.get("expectedShipDate"))); }
-            catch (Exception e) { log.warn("日期解析失败: expectedShipDate={}", request.get("expectedShipDate")); }
+            try {
+                String dateStr = (String) request.get("expectedShipDate");
+                try {
+                    order.setExpectedShipDate(LocalDateTime.parse(dateStr,
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+                } catch (Exception ignored) {
+                    order.setExpectedShipDate(LocalDate.parse(dateStr).atTime(18, 0));
+                }
+            } catch (Exception e) { log.warn("日期解析失败: expectedShipDate={}", request.get("expectedShipDate")); }
         }
         if (request.get("plannedStartDate") != null) {
             try { order.setPlannedStartDate(LocalDate.parse((String) request.get("plannedStartDate")).atStartOfDay()); }

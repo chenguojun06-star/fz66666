@@ -67,7 +67,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         task.setSize(order.getSize());
         task.setOrderQuantity(order.getOrderQuantity());
         task.setFactoryType(order.getFactoryType());
-        task.setExpectedShipDate(order.getExpectedShipDate());
+        task.setExpectedShipDate(order.getExpectedShipDate() != null ? order.getExpectedShipDate().toLocalDate() : null);
         task.setStatus("pending");
         task.setCreateTime(now);
         task.setUpdateTime(now);

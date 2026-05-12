@@ -56,11 +56,11 @@ public class DigitalTwinBuilderOrchestrator {
 
         // 交期分布
         long overdue = orders.stream()
-                .filter(o -> o.getExpectedShipDate() != null && o.getExpectedShipDate().isBefore(LocalDate.now()))
+                .filter(o -> o.getExpectedShipDate() != null && o.getExpectedShipDate().toLocalDate().isBefore(LocalDate.now()))
                 .count();
         long urgent7d = orders.stream()
                 .filter(o -> o.getExpectedShipDate() != null)
-                .filter(o -> { long d = ChronoUnit.DAYS.between(LocalDate.now(), o.getExpectedShipDate()); return d >= 0 && d <= 7; })
+                .filter(o -> { long d = ChronoUnit.DAYS.between(LocalDate.now(), o.getExpectedShipDate().toLocalDate()); return d >= 0 && d <= 7; })
                 .count();
         snapshot.put("overdue", overdue);
         snapshot.put("urgent7d", urgent7d);

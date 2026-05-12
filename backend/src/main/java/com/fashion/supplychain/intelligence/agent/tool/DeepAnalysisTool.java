@@ -400,7 +400,7 @@ public class DeepAnalysisTool extends AbstractAgentTool {
         LocalDateTime now = LocalDateTime.now();
         return orders.stream().map(o -> {
             Map<String, Object> dto = orderBrief(o);
-            LocalDate deadline = o.getExpectedShipDate() != null ? o.getExpectedShipDate() : o.getPlannedEndDate().toLocalDate();
+            LocalDate deadline = o.getExpectedShipDate() != null ? o.getExpectedShipDate().toLocalDate() : o.getPlannedEndDate().toLocalDate();
             long daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), deadline);
             int prog = progress(o);
 
@@ -547,7 +547,8 @@ public class DeepAnalysisTool extends AbstractAgentTool {
         dto.put("orderQuantity", o.getOrderQuantity());
         dto.put("completedQuantity", o.getCompletedQuantity());
         dto.put("urgencyLevel", o.getUrgencyLevel());
-        dto.put("expectedShipDate", o.getExpectedShipDate() != null ? o.getExpectedShipDate().toString() : "-");
+        dto.put("expectedShipDate", o.getExpectedShipDate() != null
+                ? o.getExpectedShipDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "-");
         dto.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "-");
         return dto;
     }

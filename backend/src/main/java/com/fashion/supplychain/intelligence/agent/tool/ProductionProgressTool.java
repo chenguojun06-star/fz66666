@@ -143,8 +143,9 @@ public class ProductionProgressTool extends AbstractAgentTool {
         d.put("materialArrivalRate", order.getMaterialArrivalRate() != null ? order.getMaterialArrivalRate() + "%" : "-");
         d.put("merchandiser", order.getMerchandiser());
         d.put("plannedEndDate", order.getPlannedEndDate() != null ? order.getPlannedEndDate().format(DTF) : "-");
-        d.put("expectedShipDate", order.getExpectedShipDate() != null ? order.getExpectedShipDate().toString() : "-");
-        LocalDate shipDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate()
+        d.put("expectedShipDate", order.getExpectedShipDate() != null
+                ? order.getExpectedShipDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "-");
+        LocalDate shipDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate().toLocalDate()
                 : (order.getPlannedEndDate() != null ? order.getPlannedEndDate().toLocalDate() : null);
         if (shipDate != null) {
             long overdueDays = java.time.temporal.ChronoUnit.DAYS.between(shipDate, LocalDate.now());

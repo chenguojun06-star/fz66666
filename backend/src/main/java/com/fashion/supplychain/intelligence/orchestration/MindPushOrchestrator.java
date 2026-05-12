@@ -283,8 +283,7 @@ public class MindPushOrchestrator {
         int count = 0;
         for (ProductionOrder o : orders) {
             if (o.getExpectedShipDate() == null) continue;
-            // 使用 LocalDate.now() 与 LocalDate 类型的 expectedShipDate 比较，避免 DateTimeException
-            long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), o.getExpectedShipDate());
+            long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), o.getExpectedShipDate().toLocalDate());
             int progress = o.getProductionProgress() != null ? o.getProductionProgress() : 0;
             if (daysLeft <= thresholdDays && progress < thresholdProgress) {
                 String title = "⚠️ 交期风险：" + o.getOrderNo();

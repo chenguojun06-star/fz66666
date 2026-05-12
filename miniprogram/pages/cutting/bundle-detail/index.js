@@ -174,6 +174,7 @@ Page({
           // 交期兜底：PC 端下单用 plannedEndDate，统一归一到 deliveryDate 供模板显示
           deliveryDate: order.expectedShipDate || order.deliveryDate
             || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
+          expectedShipDate: order.expectedShipDate ? this._formatDeliveryDate(order.expectedShipDate) : '',
         }));
         this.setData({ orderList: list, orderListLoading: false });
       })
@@ -242,6 +243,9 @@ Page({
         order.deliveryDate = typeof order.plannedEndDate === 'string'
           ? order.plannedEndDate.slice(0, 10)
           : '';
+      }
+      if (order.expectedShipDate) {
+        order.expectedShipDate = this._formatDeliveryDate(order.expectedShipDate);
       }
 
       const coverImage = getAuthedImageUrl(order.styleImageUrl || order.coverImage || order.imgUrl || '');
@@ -626,6 +630,18 @@ Page({
       if (isNaN(d.getTime())) return str.substring(0, 16);
       const pad = n => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    } catch (e) {
+      return str.substring(0, 16);
+    }
+  },
+
+  _formatDeliveryDate(str) {
+    if (!str) return '';
+    try {
+      const d = new Date(str.replace(/-/g, '/'));
+      if (isNaN(d.getTime())) return str.substring(0, 16);
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch (e) {
       return str.substring(0, 16);
     }

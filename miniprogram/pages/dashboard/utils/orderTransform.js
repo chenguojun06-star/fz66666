@@ -159,7 +159,21 @@ function calcDeliveryInfo(source) {
   const status = String(source.status || '').toLowerCase();
   if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
     const raw = source.plannedEndDate || source.expectedShipDate || '';
-    const dateStr = raw ? String(raw).substring(0, 10) : '';
+    var dateStr = '';
+    if (raw) {
+      var s = String(raw);
+      if (s.length > 10) {
+        var d = new Date(s.replace(/-/g, '/'));
+        if (!isNaN(d.getTime())) {
+          var pad = n => String(n).padStart(2, '0');
+          dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        } else {
+          dateStr = s.substring(0, 16);
+        }
+      } else {
+        dateStr = s.substring(0, 10);
+      }
+    }
     return {
       deliveryDateStr: dateStr,
       remainDays: null,
@@ -171,15 +185,23 @@ function calcDeliveryInfo(source) {
   const raw = source.plannedEndDate || source.expectedShipDate || '';
   if (!raw) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
 
-  const dateStr = String(raw).substring(0, 10);
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
-
+  var dateStr = String(raw);
+  if (dateStr.length > 10) {
+    var d = new Date(dateStr.replace(/-/g, '/'));
+    if (!isNaN(d.getTime())) {
+      var pad = n => String(n).padStart(2, '0');
+      dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    } else {
+      dateStr = dateStr.substring(0, 16);
+    }
+  }
   const deliveryDateStr = dateStr;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  var rawDateOnly = String(raw).substring(0, 10);
+  var dateParts = rawDateOnly.split('-');
+  const target = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
   const diffMs = target.getTime() - today.getTime();
   const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 

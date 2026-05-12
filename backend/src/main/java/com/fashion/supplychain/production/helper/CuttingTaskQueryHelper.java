@@ -246,7 +246,7 @@ public class CuttingTaskQueryHelper {
                 t.setFactoryType(order.getFactoryType());
                 t.setStyleCover(order.getStyleCover());
                 if (t.getExpectedShipDate() == null && order.getExpectedShipDate() != null) {
-                    t.setExpectedShipDate(order.getExpectedShipDate());
+                    t.setExpectedShipDate(order.getExpectedShipDate().toLocalDate());
                 }
             }
         }

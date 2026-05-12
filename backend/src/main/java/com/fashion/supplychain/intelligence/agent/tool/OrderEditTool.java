@@ -57,7 +57,7 @@ public class OrderEditTool extends AbstractAgentTool {
 
         Map<String, Object> expectedShipDate = new LinkedHashMap<>();
         expectedShipDate.put("type", "string");
-        expectedShipDate.put("description", "预计出货日期，格式 yyyy-MM-dd");
+        expectedShipDate.put("description", "预计出货日期，格式 yyyy-MM-dd HH:mm");
         properties.put("expectedShipDate", expectedShipDate);
 
         Map<String, Object> plannedEndDate = new LinkedHashMap<>();
@@ -134,7 +134,12 @@ public class OrderEditTool extends AbstractAgentTool {
         if (args.containsKey("expectedShipDate")) {
             String dateStr = (String) args.get("expectedShipDate");
             if (StringUtils.hasText(dateStr)) {
-                order.setExpectedShipDate(LocalDate.parse(dateStr));
+                try {
+                    order.setExpectedShipDate(LocalDate.parse(dateStr).atTime(18, 0));
+                } catch (Exception e) {
+                    order.setExpectedShipDate(java.time.LocalDateTime.parse(dateStr,
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+                }
             } else {
                 order.setExpectedShipDate(null);
             }

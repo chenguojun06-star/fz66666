@@ -332,7 +332,16 @@ public class ProductionOrderController {
         if (payload.containsKey("expectedShipDate")) {
             String expectedShipDate = (String) payload.get("expectedShipDate");
             if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
-                order.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate));
+                try {
+                    order.setExpectedShipDate(java.time.LocalDateTime.parse(expectedShipDate,
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+                } catch (Exception e1) {
+                    try {
+                        order.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate).atTime(18, 0));
+                    } catch (Exception e2) {
+                        order.setExpectedShipDate(null);
+                    }
+                }
             } else {
                 order.setExpectedShipDate(null);
             }

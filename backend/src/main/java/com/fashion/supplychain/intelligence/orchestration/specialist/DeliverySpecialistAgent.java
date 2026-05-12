@@ -48,13 +48,13 @@ public class DeliverySpecialistAgent implements SpecialistAgent {
                 .average().orElse(0);
 
         long overdueCount = orders.stream()
-                .filter(o -> o.getExpectedShipDate() != null && o.getExpectedShipDate().isBefore(LocalDate.now()))
+                .filter(o -> o.getExpectedShipDate() != null && o.getExpectedShipDate().toLocalDate().isBefore(LocalDate.now()))
                 .count();
 
         long urgentCount = orders.stream()
                 .filter(o -> {
                     if (o.getExpectedShipDate() == null) return false;
-                    long days = ChronoUnit.DAYS.between(LocalDate.now(), o.getExpectedShipDate());
+                    long days = ChronoUnit.DAYS.between(LocalDate.now(), o.getExpectedShipDate().toLocalDate());
                     return days >= 0 && days <= 7;
                 }).count();
 

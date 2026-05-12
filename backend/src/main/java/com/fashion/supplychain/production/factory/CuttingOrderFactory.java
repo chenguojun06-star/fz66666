@@ -186,7 +186,7 @@ public class CuttingOrderFactory {
         order.setDeleteFlag(0);
         order.setPlannedEndDate(requestedDeliveryDate);
         if (requestedDeliveryDate != null) {
-            order.setExpectedShipDate(requestedDeliveryDate.toLocalDate());
+            order.setExpectedShipDate(requestedDeliveryDate);
         }
         order.setProgressWorkflowJson(progressWorkflowJson);
         order.setPricingMode("PROCESS");

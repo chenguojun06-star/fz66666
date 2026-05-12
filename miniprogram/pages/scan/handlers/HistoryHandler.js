@@ -22,8 +22,17 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
  */
 function calcDeliveryInfo(dateStr) {
   if (!dateStr) return {};
-  const d = String(dateStr).substring(0, 10);
-  const parts = d.split('-');
+  var s = String(dateStr);
+  var dateOnly = s.substring(0, 10);
+  var displayStr = dateOnly;
+  if (s.length > 10) {
+    var d = new Date(s.replace(/-/g, '/'));
+    if (!isNaN(d.getTime())) {
+      var pad = n => String(n).padStart(2, '0');
+      displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+  }
+  const parts = dateOnly.split('-');
   if (parts.length !== 3) return {};
 
   const today = new Date();
@@ -51,7 +60,7 @@ function calcDeliveryInfo(dateStr) {
     remainDaysClass = 'days-overdue';
   }
 
-  return { deliveryDateStr: d, remainDays, remainDaysText, remainDaysClass };
+  return { deliveryDateStr: displayStr, remainDays, remainDaysText, remainDaysClass };
 }
 
 // ==================== 分组辅助方法 ====================

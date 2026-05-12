@@ -89,6 +89,10 @@ public class ProductionOrderCreationHelper {
         helper.validateUnitPriceSources(productionOrder);
 
         if (isCreate) {
+            if (productionOrder.getExpectedShipDate() == null && productionOrder.getPlannedEndDate() != null) {
+                productionOrder.setExpectedShipDate(productionOrder.getPlannedEndDate());
+                log.info("[订单创建] 自动设置 expectedShipDate = plannedEndDate: {}", productionOrder.getPlannedEndDate());
+            }
             boolean hasWorkflow = StringUtils.hasText(productionOrder.getProgressWorkflowJson());
             if (!hasWorkflow && StringUtils.hasText(productionOrder.getStyleNo())) {
                 String autoWorkflow = cuttingWorkflowBuilderHelper.buildProgressWorkflowJson(productionOrder.getStyleNo().trim());
@@ -145,7 +149,10 @@ public class ProductionOrderCreationHelper {
                                         productionOrder.getId(),
                                         productionOrder.getOrderNo(),
                                         amount,
-                                        productionOrder.getExpectedShipDate(),
+                                        productionOrder.getExpectedShipDate() != null
+                                                ? productionOrder.getExpectedShipDate().toLocalDate()
+                                                : (productionOrder.getPlannedEndDate() != null
+                                                        ? productionOrder.getPlannedEndDate().toLocalDate() : null),
                                         "生产订单自动生成应收款"
                                 );
                                 log.info("CRM 闭环 - 主事务提交后异步/独立生成应收款，订单号: {}", productionOrder.getOrderNo());

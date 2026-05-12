@@ -49,6 +49,9 @@ public final class DbColumnDefinitions {
         add("t_user", "last_login_time", "DATETIME DEFAULT NULL COMMENT '最后登录时间'");
         add("t_user", "last_login_ip", "VARCHAR(50) DEFAULT NULL COMMENT '最后登录IP'");
         add("t_user", "openid", "VARCHAR(100) DEFAULT NULL COMMENT '微信openid'");
+        add("t_user", "gender", "VARCHAR(10) DEFAULT NULL COMMENT '性别'");
+        add("t_user", "hire_date", "DATE DEFAULT NULL COMMENT '入职日期'");
+        add("t_user", "employment_status", "VARCHAR(20) DEFAULT NULL COMMENT '在职状态'");
         add("t_mind_push_rule", "notify_time_start", "VARCHAR(5) NOT NULL DEFAULT '08:00' COMMENT '推送开始时间'");
         add("t_mind_push_rule", "notify_time_end", "VARCHAR(5) NOT NULL DEFAULT '22:00' COMMENT '推送结束时间'");
         add("t_order_remark", "id", "BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键'");
@@ -171,7 +174,7 @@ public final class DbColumnDefinitions {
         add("t_production_order", "product_category", "VARCHAR(50) DEFAULT NULL");
         add("t_production_order", "pattern_maker", "VARCHAR(50) DEFAULT NULL");
         add("t_production_order", "production_progress", "INT DEFAULT NULL");
-        add("t_production_order", "expected_ship_date", "DATE DEFAULT NULL");
+        add("t_production_order", "expected_ship_date", "DATETIME DEFAULT NULL");
         add("t_production_order", "node_operations", "LONGTEXT DEFAULT NULL");
         add("t_production_order", "created_by_id", "VARCHAR(64) DEFAULT NULL");
         add("t_production_order", "created_by_name", "VARCHAR(100) DEFAULT NULL");
@@ -917,6 +920,7 @@ public final class DbColumnDefinitions {
         add("t_login_log", "action", "VARCHAR(50) DEFAULT NULL COMMENT '操作'");
         add("t_login_log", "remark", "VARCHAR(500) DEFAULT NULL COMMENT '备注'");
         add("t_login_log", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_agent_checkpoint", "tenant_id", "BIGINT NOT NULL DEFAULT 0 COMMENT '租户ID'");
         add("t_agent_checkpoint", "thread_id", "VARCHAR(128) NOT NULL DEFAULT '' COMMENT '线程ID'");
         add("t_agent_checkpoint", "node_id", "VARCHAR(128) NOT NULL DEFAULT '' COMMENT '节点ID'");
         add("t_agent_checkpoint", "node_name", "VARCHAR(256) DEFAULT NULL COMMENT '节点名称'");
@@ -924,6 +928,7 @@ public final class DbColumnDefinitions {
         add("t_agent_checkpoint", "metadata_json", "TEXT DEFAULT NULL COMMENT '元数据JSON'");
         add("t_agent_checkpoint", "step_index", "INT NOT NULL DEFAULT 0 COMMENT '步骤索引'");
         add("t_agent_checkpoint", "status", "VARCHAR(32) DEFAULT 'ACTIVE' COMMENT '状态'");
+        add("t_agent_checkpoint", "created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
         add("t_agent_memory_archival", "agent_id", "VARCHAR(128) NOT NULL COMMENT 'Agent ID'");
         add("t_agent_memory_archival", "content_type", "VARCHAR(64) DEFAULT NULL COMMENT '内容类型'");
         add("t_agent_memory_archival", "access_count", "INT NOT NULL DEFAULT 0 COMMENT '访问次数'");

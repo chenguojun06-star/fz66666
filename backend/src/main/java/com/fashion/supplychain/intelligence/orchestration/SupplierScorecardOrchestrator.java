@@ -128,9 +128,9 @@ public class SupplierScorecardOrchestrator {
             // 准时判断：完成且 actualEndDate <= expectedShipDate
             if (isDone && o.getActualEndDate() != null && o.getExpectedShipDate() != null) {
                 LocalDate actualDate = o.getActualEndDate().toLocalDate();
-                if (actualDate.isAfter(o.getExpectedShipDate())) overdue++;
+                if (actualDate.isAfter(o.getExpectedShipDate().toLocalDate())) overdue++;
             } else if (!isDone && o.getExpectedShipDate() != null
-                    && LocalDate.now().isAfter(o.getExpectedShipDate())) {
+                    && LocalDate.now().isAfter(o.getExpectedShipDate().toLocalDate())) {
                 overdue++;
             }
 

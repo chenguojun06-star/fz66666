@@ -101,7 +101,7 @@ public class OrderDeliveryRiskOrchestrator {
         if (totalQty <= 0) return null;
 
         LocalDate plannedEnd = parseDate(order.getPlannedEndDate());
-        LocalDate shipDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate() : plannedEnd;
+        LocalDate shipDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate().toLocalDate() : plannedEnd;
         LocalDate today = LocalDate.now();
 
         // 计算各工序剩余分钟数汇总

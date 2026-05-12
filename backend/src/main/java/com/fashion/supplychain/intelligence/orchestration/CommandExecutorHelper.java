@@ -329,7 +329,13 @@ public class CommandExecutorHelper {
         if (params.containsKey("factoryName")) order.setFactoryName((String) params.get("factoryName"));
         if (params.containsKey("company")) order.setCompany((String) params.get("company"));
         if (params.containsKey("expectedShipDate")) {
-            order.setExpectedShipDate(LocalDate.parse((String) params.get("expectedShipDate")));
+            String dateStr = (String) params.get("expectedShipDate");
+            try {
+                order.setExpectedShipDate(java.time.LocalDateTime.parse(dateStr,
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            } catch (Exception e) {
+                order.setExpectedShipDate(LocalDate.parse(dateStr).atTime(18, 0));
+            }
         }
         productionOrderService.updateById(order);
         log.info("[OrderEdit] AI编辑订单字段: orderId={}, executor={}", command.getTargetId(), executorId);

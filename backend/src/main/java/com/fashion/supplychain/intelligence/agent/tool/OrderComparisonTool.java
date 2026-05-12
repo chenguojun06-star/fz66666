@@ -151,7 +151,7 @@ public class OrderComparisonTool extends AbstractAgentTool {
         // 周期天数：createTime 到 expectedShipDate（或 now）
         if (order.getCreateTime() != null) {
             LocalDateTime end = order.getExpectedShipDate() != null
-                    ? order.getExpectedShipDate().atStartOfDay() : LocalDateTime.now();
+                    ? order.getExpectedShipDate() : LocalDateTime.now();
             long days = ChronoUnit.DAYS.between(order.getCreateTime(), end);
             m.put("cycleDays", Math.max(0, days));
         } else {

@@ -554,9 +554,9 @@ public class ProductionOrder {
     private String nodeOperations;
 
     /**
-     * 预计出货日期
+     * 预计出货日期（客户交期，精确到小时分钟）
      */
-    private java.time.LocalDate expectedShipDate;
+    private LocalDateTime expectedShipDate;
 
     /**
      * SKU 明细列表（用于扫码场景）

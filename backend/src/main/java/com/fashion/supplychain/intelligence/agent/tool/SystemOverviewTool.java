@@ -163,7 +163,7 @@ public class SystemOverviewTool extends AbstractAgentTool {
         QueryWrapper<ProductionOrder> overdueQuery = new QueryWrapper<>();
         overdueQuery.eq("delete_flag", 0)
                 .notIn("status", TERMINAL_STATUSES_UPPER)
-                .and(wq -> wq.isNotNull("expected_ship_date").lt("expected_ship_date", java.time.LocalDate.now())
+                .and(wq -> wq.isNotNull("expected_ship_date").lt("expected_ship_date", LocalDateTime.now())
                         .or(sub -> sub.isNull("expected_ship_date").isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now())))
                 .orderByAsc("expected_ship_date", "planned_end_date");
         overdueQuery.eq("tenant_id", tenantId);
@@ -180,10 +180,11 @@ public class SystemOverviewTool extends AbstractAgentTool {
             dto.put("orderQuantity", o.getOrderQuantity());
             dto.put("completedQuantity", o.getCompletedQuantity());
             dto.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
-            LocalDate shipDate = o.getExpectedShipDate() != null ? o.getExpectedShipDate()
+            LocalDate shipDate = o.getExpectedShipDate() != null ? o.getExpectedShipDate().toLocalDate()
                     : (o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate() : null);
             dto.put("deadline", shipDate != null ? shipDate.toString() : "未设置");
-            dto.put("expectedShipDate", o.getExpectedShipDate() != null ? o.getExpectedShipDate().toString() : "-");
+            dto.put("expectedShipDate", o.getExpectedShipDate() != null
+                    ? o.getExpectedShipDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "-");
             if (shipDate != null) {
                 long overdueDays = java.time.temporal.ChronoUnit.DAYS.between(shipDate, java.time.LocalDate.now());
                 dto.put("overdueDays", overdueDays > 0 ? overdueDays : 0);

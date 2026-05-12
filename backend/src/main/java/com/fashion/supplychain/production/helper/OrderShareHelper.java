@@ -171,7 +171,7 @@ public class OrderShareHelper {
     private OrderShareResponse buildShareResponse(String token, JWT jwt, ProductionOrder order) {
         ScanSummary scanSummary = queryRecentScans(order.getId());
         LocalDate deliveryDate = order.getExpectedShipDate() != null
-                ? order.getExpectedShipDate()
+                ? order.getExpectedShipDate().toLocalDate()
                 : order.getPlannedEndDate() == null ? null : order.getPlannedEndDate().toLocalDate();
         String statusText = mapStatusText(order.getStatus());
         List<OrderShareResponse.StageProgress> stages = buildStageProgress(order, statusText);

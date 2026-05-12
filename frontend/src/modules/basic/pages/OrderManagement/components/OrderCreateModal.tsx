@@ -165,6 +165,13 @@ const OrderCreateModal: React.FC<Props> = (p) => {
                 </InlineField>
               </Col>
               <Col xs={24} sm={8}>
+                <InlineField label={<>客户交期 <span style={{ color: 'var(--color-danger)' }}>*</span></>}>
+                  <Form.Item name="expectedShipDate" rules={[{ required: true, message: '请选择客户交期' }]} style={{ marginBottom: 0 }}>
+                    <UnifiedDatePicker showTime style={{ width: '100%' }} />
+                  </Form.Item>
+                </InlineField>
+              </Col>
+              <Col xs={24} sm={8}>
                 <InlineField label="急单">
                   <Form.Item name="urgencyLevel" initialValue="normal" style={{ marginBottom: 0 }}>
                     <Select

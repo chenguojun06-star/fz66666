@@ -130,7 +130,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
     const customerName = String((record as Record<string, unknown>).company || '').trim();
     const remark = String((record as Record<string, unknown>).remarks || '').trim();
     const expectedShipDateRaw = (record as Record<string, unknown>).expectedShipDate;
-    const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD') : '-';
+    const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD HH:mm') : '-';
     const softTagBaseStyle: CSSProperties = {
       margin: 0,
       fontSize: 11,
@@ -690,13 +690,13 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
         })}
         </div>
         <div className="progress-row-actions">
-          <Button size="small" icon={<AppstoreOutlined />} onClick={() => ctx.openKanban(record)}>看板</Button>
-          <Button size="small" onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>编辑</Button>
-          <Button size="small" disabled={frozen} onClick={() => setPrintingRecord(record)}>打印</Button>
-          <Button size="small" disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>标签</Button>
-          {isFactoryAccount ? <Button size="small" type="primary" disabled={frozen} icon={<SendOutlined />} onClick={() => onFactoryShip?.(record)}>发货</Button> : null}
-          {canManageOrderLifecycle ? <Button size="small" danger disabled={frozen} onClick={() => handleCloseOrder(record)}>关单</Button> : null}
-          <Button size="small" icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>分享</Button>
+          <Button icon={<AppstoreOutlined />} onClick={() => ctx.openKanban(record)}>看板</Button>
+          <Button onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>编辑</Button>
+          <Button disabled={frozen} onClick={() => setPrintingRecord(record)}>打印</Button>
+          <Button disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>标签</Button>
+          {isFactoryAccount ? <Button type="primary" disabled={frozen} icon={<SendOutlined />} onClick={() => onFactoryShip?.(record)}>发货</Button> : null}
+          {canManageOrderLifecycle ? <Button danger disabled={frozen} onClick={() => handleCloseOrder(record)}>关单</Button> : null}
+          <Button icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>分享</Button>
         </div>
       </div>
     );

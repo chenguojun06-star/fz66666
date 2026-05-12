@@ -113,6 +113,7 @@ export const buildOrderSubmitPayload = ({
     pricingMode: values.pricingMode || 'PROCESS',
     plannedStartDate: values.plannedStartDate ? values.plannedStartDate.format('YYYY-MM-DDTHH:mm:ss') : null,
     plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+    expectedShipDate: values.expectedShipDate ? values.expectedShipDate.format('YYYY-MM-DDTHH:mm:ss') : null,
     progressWorkflowJson: buildProgressWorkflowJson(progressNodes),
   };
 

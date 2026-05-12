@@ -63,7 +63,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
         : newUserRemark;
       await onSave({
         remarks: combined,
-        expectedShipDate: values.expectedShipDate ? dayjs(values.expectedShipDate).format('YYYY-MM-DD') : null,
+        expectedShipDate: values.expectedShipDate ? dayjs(values.expectedShipDate).format('YYYY-MM-DD HH:mm') : null,
         urgencyLevel: values.urgencyLevel || 'normal',
       });
       form.resetFields();
@@ -96,8 +96,8 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
             placeholder="请选择紧急程度"
           />
         </Form.Item>
-        <Form.Item label="预计出货日期" name="expectedShipDate">
-          <UnifiedDatePicker style={{ width: '100%' }} />
+        <Form.Item label="预计出货日期" name="expectedShipDate" rules={[{ required: true, message: '请选择预计出货日期' }]}>
+          <UnifiedDatePicker showTime style={{ width: '100%' }} />
         </Form.Item>
         {aiRemarks.length > 0 && (
           <div style={{ marginBottom: 16 }}>
