@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -399,7 +400,8 @@ public class DeepAnalysisTool extends AbstractAgentTool {
         LocalDateTime now = LocalDateTime.now();
         return orders.stream().map(o -> {
             Map<String, Object> dto = orderBrief(o);
-            long daysRemaining = java.time.Duration.between(now, o.getPlannedEndDate()).toDays();
+            LocalDate deadline = o.getExpectedShipDate() != null ? o.getExpectedShipDate() : o.getPlannedEndDate().toLocalDate();
+            long daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), deadline);
             int prog = progress(o);
 
             dto.put("daysRemaining", daysRemaining);
@@ -545,6 +547,8 @@ public class DeepAnalysisTool extends AbstractAgentTool {
         dto.put("orderQuantity", o.getOrderQuantity());
         dto.put("completedQuantity", o.getCompletedQuantity());
         dto.put("urgencyLevel", o.getUrgencyLevel());
+        dto.put("expectedShipDate", o.getExpectedShipDate() != null ? o.getExpectedShipDate().toString() : "-");
+        dto.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "-");
         return dto;
     }
 }

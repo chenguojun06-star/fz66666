@@ -101,6 +101,7 @@ public class OrderDeliveryRiskOrchestrator {
         if (totalQty <= 0) return null;
 
         LocalDate plannedEnd = parseDate(order.getPlannedEndDate());
+        LocalDate shipDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate() : plannedEnd;
         LocalDate today = LocalDate.now();
 
         // 计算各工序剩余分钟数汇总
@@ -130,24 +131,22 @@ public class OrderDeliveryRiskOrchestrator {
                 ? Math.min(100, (int) Math.round(totalDone * 100.0 / totalQty)) : 0;
 
         // 计划剩余天数
-        int daysLeft = plannedEnd != null
-                ? (int) ChronoUnit.DAYS.between(today, plannedEnd) : 999;
+        int daysLeft = shipDate != null
+                ? (int) ChronoUnit.DAYS.between(today, shipDate) : 999;
 
-        // 需要的日均产量
         int requiredDaily = (daysLeft > 0 && totalQty > totalDone)
                 ? (int) Math.ceil((totalQty - totalDone) / (double) daysLeft) : 0;
 
-        // 风险判定
         String riskLevel;
         String riskDesc;
-        if (plannedEnd != null && today.isAfter(plannedEnd)) {
+        if (shipDate != null && today.isAfter(shipDate)) {
             riskLevel = "overdue";
-            riskDesc = String.format("已逾期 %d 天", ChronoUnit.DAYS.between(plannedEnd, today));
-        } else if (plannedEnd != null && predictedEnd.isAfter(plannedEnd)) {
-            long overDays = ChronoUnit.DAYS.between(plannedEnd, predictedEnd);
+            riskDesc = String.format("已逾期 %d 天", ChronoUnit.DAYS.between(shipDate, today));
+        } else if (shipDate != null && predictedEnd.isAfter(shipDate)) {
+            long overDays = ChronoUnit.DAYS.between(shipDate, predictedEnd);
             riskLevel = "danger";
-            riskDesc = String.format("预计延期 %d 天（预测 %s 完工 vs 计划 %s）",
-                    overDays, predictedEnd.format(DATE_FMT), plannedEnd.format(DATE_FMT));
+            riskDesc = String.format("预计延期 %d 天（预测 %s 完工 vs 交期 %s）",
+                    overDays, predictedEnd.format(DATE_FMT), shipDate.format(DATE_FMT));
         } else if (daysLeft <= 3 && daysLeft >= 0) {
             riskLevel = "warning";
             riskDesc = String.format("距交期仅剩 %d 天，进度 %d%%", daysLeft, currentProgress);
@@ -162,6 +161,7 @@ public class OrderDeliveryRiskOrchestrator {
         item.setStyleNo(order.getStyleNo());
         item.setFactoryName(order.getFactoryName());
         item.setPlannedEndDate(plannedEnd != null ? plannedEnd.format(DATE_FMT) : null);
+        item.setExpectedShipDate(shipDate != null ? shipDate.format(DATE_FMT) : null);
         item.setPredictedEndDate(predictedEnd.format(DATE_FMT));
         item.setRiskLevel(riskLevel);
         item.setDaysLeft(daysLeft);

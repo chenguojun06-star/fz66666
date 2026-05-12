@@ -159,19 +159,18 @@ public class SystemOverviewTool extends AbstractAgentTool {
     private Map<String, Object> buildRiskStats(Long tenantId, String factoryId) {
         Map<String, Object> risk = new LinkedHashMap<>();
 
-        // 逾期订单（planned_end_date < now 且未完成），按逾期天数降序
+        // 逾期订单（expected_ship_date优先，否则planned_end_date < now 且未完成）
         QueryWrapper<ProductionOrder> overdueQuery = new QueryWrapper<>();
         overdueQuery.eq("delete_flag", 0)
                 .notIn("status", TERMINAL_STATUSES_UPPER)
-                .isNotNull("planned_end_date")
-                .lt("planned_end_date", LocalDateTime.now())
-                .orderByAsc("planned_end_date");
+                .and(wq -> wq.isNotNull("expected_ship_date").lt("expected_ship_date", java.time.LocalDate.now())
+                        .or(sub -> sub.isNull("expected_ship_date").isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now())))
+                .orderByAsc("expected_ship_date", "planned_end_date");
         overdueQuery.eq("tenant_id", tenantId);
         overdueQuery.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);
         List<ProductionOrder> overdueOrders = productionOrderService.list(overdueQuery);
         risk.put("overdueCount", overdueOrders.size());
 
-        // 全部展示（AI提示最多返回，Dashboard前端自行截断）
         List<Map<String, Object>> overdueList = new ArrayList<>();
         for (ProductionOrder o : overdueOrders) {
             Map<String, Object> dto = new LinkedHashMap<>();
@@ -181,7 +180,14 @@ public class SystemOverviewTool extends AbstractAgentTool {
             dto.put("orderQuantity", o.getOrderQuantity());
             dto.put("completedQuantity", o.getCompletedQuantity());
             dto.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
-            dto.put("deadline", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "未设置");
+            LocalDate shipDate = o.getExpectedShipDate() != null ? o.getExpectedShipDate()
+                    : (o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate() : null);
+            dto.put("deadline", shipDate != null ? shipDate.toString() : "未设置");
+            dto.put("expectedShipDate", o.getExpectedShipDate() != null ? o.getExpectedShipDate().toString() : "-");
+            if (shipDate != null) {
+                long overdueDays = java.time.temporal.ChronoUnit.DAYS.between(shipDate, java.time.LocalDate.now());
+                dto.put("overdueDays", overdueDays > 0 ? overdueDays : 0);
+            }
             overdueList.add(dto);
         }
         risk.put("overdueOrders", overdueList);

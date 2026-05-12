@@ -143,6 +143,17 @@ public class ProductionProgressTool extends AbstractAgentTool {
         d.put("materialArrivalRate", order.getMaterialArrivalRate() != null ? order.getMaterialArrivalRate() + "%" : "-");
         d.put("merchandiser", order.getMerchandiser());
         d.put("plannedEndDate", order.getPlannedEndDate() != null ? order.getPlannedEndDate().format(DTF) : "-");
+        d.put("expectedShipDate", order.getExpectedShipDate() != null ? order.getExpectedShipDate().toString() : "-");
+        LocalDate shipDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate()
+                : (order.getPlannedEndDate() != null ? order.getPlannedEndDate().toLocalDate() : null);
+        if (shipDate != null) {
+            long overdueDays = java.time.temporal.ChronoUnit.DAYS.between(shipDate, LocalDate.now());
+            d.put("overdueDays", overdueDays > 0 ? overdueDays : 0);
+            d.put("overdueStatus", overdueDays > 0 ? "已逾期" + overdueDays + "天" : "未逾期");
+        } else {
+            d.put("overdueDays", "-");
+            d.put("overdueStatus", "无交期数据");
+        }
 
         // 单价与成本信息
         d.put("factoryUnitPrice", order.getFactoryUnitPrice());

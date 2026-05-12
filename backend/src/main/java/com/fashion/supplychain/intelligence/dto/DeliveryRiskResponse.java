@@ -19,6 +19,8 @@ public class DeliveryRiskResponse {
         private String factoryName;
         /** 计划交期 */
         private String plannedEndDate;
+        /** 预计出货日期（客户交期） */
+        private String expectedShipDate;
         /** 预计完工日期 */
         private String predictedEndDate;
         /** 风险等级：safe / warning / danger / overdue */
