@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Alert, App, Button, Card, Col, Form, Input, Row, Select, Space, Tag } from 'antd';
 
 import StandardModal from '@/components/common/StandardModal';
@@ -88,46 +88,41 @@ const DictManage: React.FC = () => {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const showDictAutocollect = useMemo(() => isSmartFeatureEnabled('smart.dict.autocollect.enabled'), []);
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
-  };
+  }, [showSmartErrorNotice]);
 
-  // ===== 使用 useModal 管理弹窗 =====
   const dictModal = useModal<DictItem>();
 
   const [selectedType, setSelectedType] = useState<string>('category');
   const [form] = Form.useForm();
 
-  // 获取字典列表
-  const fetchData = async (dictType: string = selectedType) => {
+  const fetchData = useCallback(async (dictType: string = selectedType) => {
     setLoading(true);
     try {
       const res = await api.get<{ code: number; data: DictItem[] | { records: DictItem[]; total: number } }>('/system/dict/list', {
         params: { dictType, page: 1, pageSize: 1000 }
       });
       if (res.code === 200) {
-        // 处理分页数据或数组数据
         const list = Array.isArray(res.data)
           ? res.data
           : (res.data?.records || []);
         setDataSource(dedupeDictItems(list));
         if (showSmartErrorNotice) setSmartError(null);
       } else {
-        // API 不存在时使用本地数据
         const localData = getLocalData(dictType);
         setDataSource(dedupeDictItems(localData));
         reportSmartError('字典数据加载失败', '服务返回异常，已回退本地预置数据', 'SYSTEM_DICT_LIST_FAILED');
       }
     } catch (error) {
-      // 使用本地硬编码数据作为后备
       const localData = getLocalData(dictType);
       setDataSource(dedupeDictItems(localData));
       reportSmartError('字典数据加载失败', '网络异常，已回退本地预置数据', 'SYSTEM_DICT_LIST_EXCEPTION');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedType, showSmartErrorNotice, reportSmartError]);
 
   // 获取本地硬编码数据
   const getLocalData = (dictType: string): DictItem[] => {
@@ -313,7 +308,7 @@ const DictManage: React.FC = () => {
 
   useEffect(() => {
     fetchData(selectedType);
-  }, [selectedType]);
+  }, [selectedType, fetchData]);
 
   useEffect(() => {
     if (!dictModal.visible) {

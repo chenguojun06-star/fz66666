@@ -35,7 +35,7 @@ export default function usePatternPanelActions(styleNo?: string) {
     if (noChanged || nameChanged) {
       setQueryParams(prev => ({ ...prev, styleNo: debouncedStyleNo, styleName: debouncedStyleName, page: 1 }));
     }
-  }, [debouncedStyleNo, debouncedStyleName]);
+  }, [debouncedStyleNo, debouncedStyleName, queryParams.styleNo, queryParams.styleName]);
 
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
@@ -244,12 +244,12 @@ export default function usePatternPanelActions(styleNo?: string) {
     finally { setReturnPatternSaving(false); }
   }, [styleNo, directRow, returnPatternRecord, returnPatternForm, fetchStyles, loadPatternMeta, message]);
 
-  useEffect(() => { fetchStyles(); }, [queryParams]);
+  useEffect(() => { fetchStyles(); }, [queryParams, fetchStyles]);
 
   useEffect(() => {
     if (!activePatternRecord?.id) { resetPatternMeta(); return; }
     void loadPatternMeta(activePatternRecord);
-  }, [activePatternRecord?.id, activePatternRecord?.styleNo]);
+  }, [activePatternRecord, loadPatternMeta, resetPatternMeta]);
 
   useEffect(() => {
     const editableRecord = styleNo

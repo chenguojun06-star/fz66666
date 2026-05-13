@@ -47,7 +47,7 @@ export function useDataCenterActions() {
     if (debouncedStyleNo !== (queryParams.styleNo || '')) {
       setQueryParams(prev => ({ ...prev, styleNo: debouncedStyleNo, page: 1 }));
     }
-  }, [debouncedStyleNo]);
+  }, [debouncedStyleNo, queryParams.styleNo]);
 
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
@@ -276,7 +276,7 @@ export function useDataCenterActions() {
   }, [patternRevisionRecord, patternRevisionForm, fetchStyles, message]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
-  useEffect(() => { fetchStyles(); }, [queryParams]);
+  useEffect(() => { fetchStyles(); }, [queryParams, fetchStyles]);
 
   return {
     stats, queryParams, setQueryParams, styleNoInput, setStyleNoInput,

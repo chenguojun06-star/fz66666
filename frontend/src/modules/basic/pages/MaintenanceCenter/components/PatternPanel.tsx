@@ -64,7 +64,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
         );
       },
     }
-  ], [canManage]);
+  ], [canManage, openPatternRevisionModal, setReturnPatternModalVisible, setReturnPatternRecord]);
 
   const summaryProps = {
     patternMetaLoading,

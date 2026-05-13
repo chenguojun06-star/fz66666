@@ -453,7 +453,7 @@ const AppWrapper: React.FC = () => {
 
   // useMemo 确保只有 currentTheme 真正变化时才重建主题对象，
   // 防止每次父组件渲染时 ConfigProvider 收到新引用而触发全量 CSS-in-JS 重算（全屏闪烁根因）
-  const themeConfig = useMemo(() => getThemeConfig(), [currentTheme]);
+  const themeConfig = useMemo(() => getThemeConfig(), [currentTheme, getThemeConfig]);
 
   const resolveAntdLocale = (lang: AppLanguage) => {
     if (lang === 'en-US') return enUS;

@@ -223,7 +223,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
       return { ...prev, styleNo: next, page: 1 };
     });
   }, [styleNo]);
-  useEffect(() => { fetchStyles(); }, [queryParams]);
+  useEffect(() => { fetchStyles(); }, [queryParams, fetchStyles]);
 
   useEffect(() => {
     if (styleNo && directRow && !directLocked) {
@@ -267,7 +267,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
         );
       },
     }
-  ], [canManage]);
+  ], [canManage, downloadProductionSheet, openEditModal]);
 
   /* ── direct mode render: skip table, show form inline ── */
   if (styleNo) {

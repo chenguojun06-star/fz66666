@@ -266,7 +266,7 @@ const FactoryTemplateTab: React.FC = () => {
         return <RowActions actions={actions} maxInline={2} />;
       },
     },
-  ], []);
+  ], [handleDelete, handleLock, handleRollback]);
 
   const createMenuItems = useMemo(() => FACTORY_TEMPLATE_TYPE_OPTIONS.map(opt => ({
     key: opt.value,
