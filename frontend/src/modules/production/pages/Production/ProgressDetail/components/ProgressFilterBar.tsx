@@ -43,7 +43,7 @@ export const FilterRightSection: React.FC<Pick<FilterBarBaseProps, 'viewMode' | 
 }) => (
   <Space>
     {onRefresh && <Button onClick={onRefresh}>刷新</Button>}
-    <Button icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />} onClick={toggleDateSort} title={dateSortAsc ? '按时间升序（最早在前）' : '按时间降序（最新在前）'} shape="circle" size="small" />
+    <Button icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />} onClick={toggleDateSort} title={dateSortAsc ? '按时间升序（最早在前）' : '按时间降序（最新在前）'} shape="circle" />
     <Button icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />} onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}>{viewMode === 'list' ? '卡片视图' : '列表视图'}</Button>
   </Space>
 );

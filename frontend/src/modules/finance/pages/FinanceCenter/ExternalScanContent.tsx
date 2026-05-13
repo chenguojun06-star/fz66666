@@ -259,7 +259,7 @@ const ExternalScanContent: React.FC = () => {
           },
         }}
         scroll={{ x: 1300 }}
-        size="small"
+       
       />
     </Card>
   );

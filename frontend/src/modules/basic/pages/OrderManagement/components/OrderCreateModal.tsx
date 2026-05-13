@@ -120,7 +120,7 @@ const OrderCreateModal: React.FC<Props> = (p) => {
                 <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
                 <Form.Item name="orderNo" rules={[{ required: true, message: '请输入订单号' }]} style={{ marginBottom: 0 }}>
                   <Space.Compact style={{ width: '100%' }}>
-                    <Input placeholder="例如:PO20260107001" />
+                    <Input placeholder="例如:PO20260513143025" />
                     <Button onClick={generateOrderNo}>自动生成</Button>
                   </Space.Compact>
                 </Form.Item>

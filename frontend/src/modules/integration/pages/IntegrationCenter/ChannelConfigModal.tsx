@@ -154,7 +154,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
         />
 
         {configData?.hasConfig && (
-          <Descriptions size="small" bordered column={1} style={{ marginBottom: 16 }}>
+          <Descriptions bordered column={1} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="当前状态">
               {configData.enabled ? ' 已启用' : ' 未启用'}
             </Descriptions.Item>

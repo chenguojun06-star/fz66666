@@ -4,7 +4,7 @@
  */
 const { validateProductionOrder, normalizeData } = require('./dataValidator');
 const { orderStatusText } = require('./orderStatusHelper');
-const { parseProductionOrderLines, SIZE_ORDER } = require('./orderParser');
+const { parseProductionOrderLines, sortSizeNames } = require('./orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { calcOrderProgress } = require('./progressNodes');
 
@@ -47,16 +47,8 @@ function mapFactoryTypeLabel(factoryType) {
 }
 
 function sortSizes(sizes) {
-  return [...sizes].sort((a, b) => {
-    const left = normalizeText(a).toUpperCase();
-    const right = normalizeText(b).toUpperCase();
-    const leftIndex = SIZE_ORDER.indexOf(left);
-    const rightIndex = SIZE_ORDER.indexOf(right);
-    if (leftIndex !== -1 && rightIndex !== -1) return leftIndex - rightIndex;
-    if (leftIndex !== -1) return -1;
-    if (rightIndex !== -1) return 1;
-    return left.localeCompare(right, 'zh-CN', { numeric: true });
-  });
+  return sortSizeNames(sizes);
+}
 }
 
 /**

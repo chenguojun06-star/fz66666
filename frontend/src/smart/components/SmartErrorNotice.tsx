@@ -13,7 +13,7 @@ const SmartErrorNotice: React.FC<SmartErrorNoticeProps> = ({ error, onFix }) => 
       {error.reason ? <span>原因：{error.reason}</span> : null}
       {error.code ? <span>错误码：{error.code}</span> : null}
       {error.actionText && onFix ? (
-        <Button size="small" type="primary" onClick={onFix}>
+        <Button type="primary" onClick={onFix}>
           {error.actionText}
         </Button>
       ) : null}

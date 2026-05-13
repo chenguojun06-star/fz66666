@@ -113,7 +113,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               key: 'inspection',
               label: '质检信息',
               children: (
-        <Card size="small" className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={entryLoading}>
+        <Card className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={entryLoading}>
           <div style={{ marginBottom: 12 }}>
             <ProductionOrderHeader
               order={orderDetail || entryWarehousing}
@@ -185,7 +185,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             <div style={{ flex: 1, minHeight: 0 }}>
               <ResizableTable<OrderLineWarehousingRow>
                 storageKey="independent-detail-main"
-                size="small"
+               
                 rowKey="key"
                 loading={orderDetailLoading}
                 pagination={false}
@@ -292,7 +292,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               key: 'production-sheet',
               label: '生产制单',
               children: (
-                <Card size="small" style={{ height: '100%' }}>
+                <Card style={{ height: '100%' }}>
                   {(() => {
                     if (!styleDescription) {
                       return (
@@ -335,7 +335,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                         <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
                         <ResizableTable
                           storageKey="independent-detail-requirements"
-                          size="small" rowKey="key" pagination={false}
+                          rowKey="key" pagination={false}
                           dataSource={fixedRows}
                           style={{ fontSize: 12 }}
                           columns={[
@@ -360,7 +360,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               key: 'size-chart',
               label: ' 尺寸表',
               children: (
-                <Card size="small" style={{ height: '100%' }}>
+                <Card style={{ height: '100%' }}>
                   {styleId ? (
                     <StyleSizeTab styleId={styleId} readOnly simpleView />
                   ) : (

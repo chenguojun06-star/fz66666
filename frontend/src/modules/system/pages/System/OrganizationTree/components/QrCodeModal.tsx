@@ -45,7 +45,7 @@ const QrCodeModal: React.FC<QrCodeModalProps> = ({ open, unit, tenantCode, onClo
           外发工厂工人扫码注册，自动归属到「{unit?.unitName}」
         </Typography.Text>
         <div style={{ marginTop: 12 }}>
-          <Button size="small" onClick={handleCopyLink}>
+          <Button onClick={handleCopyLink}>
             复制注册链接
           </Button>
         </div>

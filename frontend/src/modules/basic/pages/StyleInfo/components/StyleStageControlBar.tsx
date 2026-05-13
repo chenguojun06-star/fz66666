@@ -235,11 +235,11 @@ const StyleStageControlBar: React.FC<Props> = ({
           // 已完成状态：只显示退回按钮，仅主管可用
           <>
             {canRollback ? (
-              <Button size="small" danger loading={saving} onClick={handleRollback}>
+              <Button danger loading={saving} onClick={handleRollback}>
                 退回修改
               </Button>
             ) : (
-              <Button size="small" disabled>
+              <Button disabled>
                 已完成（主管可退回）
               </Button>
             )}
@@ -250,7 +250,7 @@ const StyleStageControlBar: React.FC<Props> = ({
             {!startTime && (
               <Button
                 type="primary"
-                size="small"
+               
                 loading={saving}
                 disabled={saving || readOnly}
                 onClick={handleStart}
@@ -261,7 +261,7 @@ const StyleStageControlBar: React.FC<Props> = ({
             {startTime && !completedTime && (
               <Button
                 type="primary"
-                size="small"
+               
                 loading={saving}
                 disabled={saving || readOnly}
                 onClick={handleComplete}

@@ -92,7 +92,7 @@ const StyleCuttingInfoTab: React.FC<CuttingInfoTabProps> = ({ styleNo }) => {
       key: 'status',
       width: 100,
       render: (v: string) => {
-        const info = STATUS_MAP[v] || { label: v || '-', color: 'default' };
+        const info = STATUS_MAP[v] || { label: '未知', color: 'default' };
         return <Tag color={info.color}>{info.label}</Tag>;
       },
     },
@@ -159,7 +159,7 @@ const StyleCuttingInfoTab: React.FC<CuttingInfoTabProps> = ({ styleNo }) => {
 
   return (
     <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-      <Card size="small" title={`裁剪任务（${tasks.length}）`}>
+      <Card title={`裁剪任务（${tasks.length}）`}>
         {tasks.length === 0 ? (
           <Empty description="该款号暂无裁剪任务" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
@@ -169,13 +169,13 @@ const StyleCuttingInfoTab: React.FC<CuttingInfoTabProps> = ({ styleNo }) => {
             dataSource={tasks}
             rowKey="id"
             pagination={false}
-            size="small"
+           
             scroll={{ x: 'max-content' }}
             loading={loading}
           />
         )}
       </Card>
-      <Card size="small" title={`裁剪面辅料（${bomList.length}）`}>
+      <Card title={`裁剪面辅料（${bomList.length}）`}>
         {bomList.length === 0 ? (
           <Empty description="该款号暂无裁剪面辅料信息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
@@ -185,7 +185,7 @@ const StyleCuttingInfoTab: React.FC<CuttingInfoTabProps> = ({ styleNo }) => {
             dataSource={bomList}
             rowKey="id"
             pagination={false}
-            size="small"
+           
             scroll={{ x: 'max-content' }}
             loading={loading}
           />

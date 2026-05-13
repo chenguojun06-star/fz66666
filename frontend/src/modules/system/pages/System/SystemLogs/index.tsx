@@ -268,7 +268,7 @@ const SystemLogs: React.FC = () => {
                 label: '登录日志',
                 children: (
                   <>
-                    <Card size="small" className="filter-card mb-sm">
+                    <Card className="filter-card mb-sm">
                       <Space wrap size={12}>
                         <Input
                           placeholder="用户名"
@@ -349,7 +349,7 @@ const SystemLogs: React.FC = () => {
               label: '操作日志',
               children: (
                 <>
-                  <Card size="small" className="filter-card mb-sm">
+                  <Card className="filter-card mb-sm">
                     <Space wrap size={12}>
                       <Select
                         placeholder="模块"

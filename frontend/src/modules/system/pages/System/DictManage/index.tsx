@@ -499,7 +499,7 @@ const DictManage: React.FC = () => {
         }
       >
       {showSmartErrorNotice && smartError ? (
-        <Card size="small" style={{ marginBottom: 12 }}>
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice error={smartError} onFix={() => { void fetchData(selectedType); }} />
         </Card>
       ) : null}
@@ -579,10 +579,10 @@ const DictManage: React.FC = () => {
                 label="字典编码"
                 rules={[
                   { required: true, message: '请输入字典编码' },
-                  { pattern: /^[A-Z0-9_]+$/, message: '编码只能包含大写字母、数字和下划线' }
+                  { pattern: /^[A-Za-z0-9_()\/\-]+$/, message: '编码只能包含字母、数字、下划线、括号、斜杠和连字符' }
                 ]}
               >
-                <Input id="dictCode" placeholder="大写字母、数字、下划线" disabled={Boolean(dictModal.data)} />
+                <Input id="dictCode" placeholder="如：XS(155/80A)、S、160/84A" disabled={Boolean(dictModal.data)} />
               </Form.Item>
             </Col>
             <Col span={12}>

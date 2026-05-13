@@ -94,7 +94,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
         confirmLoading={instructionSubmitting}
         okText="下发"
         centered
-        size="md"
+        size="lg"
       >
         <Form form={instructionForm} layout="vertical">
           {!instructionTarget && (
@@ -184,7 +184,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
       >
         {safetyStockTarget && (
           <div>
-            <Card size="small" style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
+            <Card style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
               <div><strong>{safetyStockTarget.materialCode}</strong> <Tag color={getMaterialTypeCategory(safetyStockTarget.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(safetyStockTarget.materialType) === 'lining' ? 'cyan' : 'green'}>{getBaseMaterialTypeLabel(safetyStockTarget.materialType)}</Tag></div>
               <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', marginTop: 4 }}>{safetyStockTarget.materialName}</div>
               <div style={{ fontSize: "var(--font-size-sm)", marginTop: 4 }}>
@@ -218,11 +218,11 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
             关闭
           </Button>,
         ]}
-        size="md"
+        size="lg"
       >
         {detailModal.data && (
           <div>
-            <Card size="small" style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
+            <Card style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
               <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                 <div>
                   <strong style={{ fontSize: "var(--font-size-lg)" }}>{detailModal.data.materialCode}</strong>
@@ -234,7 +234,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
 
             <ResizableTable
               storageKey="material-inventory-details"
-              size="small"
+             
               loading={txLoading}
               dataSource={txList}
               rowKey={(_, idx) => String(idx)}
@@ -297,7 +297,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
           inboundForm.resetFields();
         }}
         onOk={handleInboundConfirm}
-        size="md"
+        size="lg"
       >
         <Form form={inboundForm} layout="vertical" style={{ marginTop: 8 }}>
           <Form.Item

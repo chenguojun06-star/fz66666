@@ -9,7 +9,7 @@ const CopyBlock: React.FC<{ code: string; lang?: string }> = ({ code, lang = '' 
   };
   return (
     <div style={{ position: 'relative', background: 'var(--color-bg-base)', borderRadius: 8, padding: '16px 48px 16px 16px', margin: '12px 0', overflow: 'auto' }}>
-      <Button icon={<CopyOutlined />} size="small" type="text" style={{ position: 'absolute', top: 8, right: 8, color: '#aaa' }} onClick={handleCopy} />
+      <Button icon={<CopyOutlined />} type="text" style={{ position: 'absolute', top: 8, right: 8, color: '#aaa' }} onClick={handleCopy} />
       {lang && <Tag style={{ position: 'absolute', top: 8, left: 12, opacity: 0.7 }}>{lang}</Tag>}
       <pre style={{ color: 'var(--color-text-secondary)', margin: lang ? '24px 0 0 0' : 0, fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{code}</pre>
     </div>

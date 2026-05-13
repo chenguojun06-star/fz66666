@@ -215,7 +215,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           style={{ width: '100%', minWidth: 0 }}
         />
         <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
-        <Button size="small" type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
+        <Button type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
           保存
         </Button>
       </div>

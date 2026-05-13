@@ -246,7 +246,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit && isManual ? (
-          <Input value={getCellValue(record, 'skuCode')} onChange={e => handleFieldChange(key, 'skuCode', e.target.value)} size="small" placeholder="款号-颜色-尺码" />
+          <Input value={getCellValue(record, 'skuCode')} onChange={e => handleFieldChange(key, 'skuCode', e.target.value)} placeholder="款号-颜色-尺码" />
         ) : <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{record.skuCode}</span>;
       },
     },
@@ -255,7 +255,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit && isManual ? (
-          <Input value={getCellValue(record, 'color')} onChange={e => handleFieldChange(key, 'color', e.target.value)} size="small" placeholder="颜色" />
+          <Input value={getCellValue(record, 'color')} onChange={e => handleFieldChange(key, 'color', e.target.value)} placeholder="颜色" />
         ) : record.color;
       },
     },
@@ -264,7 +264,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit && isManual ? (
-          <Input value={getCellValue(record, 'size')} onChange={e => handleFieldChange(key, 'size', e.target.value)} size="small" placeholder="尺码" />
+          <Input value={getCellValue(record, 'size')} onChange={e => handleFieldChange(key, 'size', e.target.value)} placeholder="尺码" />
         ) : record.size;
       },
     },
@@ -273,7 +273,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit ? (
-          <Input value={getCellValue(record, 'barcode') || ''} onChange={e => handleFieldChange(key, 'barcode', e.target.value)} size="small" placeholder="商品条码" />
+          <Input value={getCellValue(record, 'barcode') || ''} onChange={e => handleFieldChange(key, 'barcode', e.target.value)} placeholder="商品条码" />
         ) : record.barcode || '-';
       },
     },
@@ -282,7 +282,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit ? (
-          <InputNumber value={getCellValue(record, 'costPrice')} onChange={v => handleFieldChange(key, 'costPrice', v)} size="small" min={0} precision={2} prefix="¥" style={{ width: '100%' }} />
+          <InputNumber value={getCellValue(record, 'costPrice')} onChange={v => handleFieldChange(key, 'costPrice', v)} min={0} precision={2} prefix="¥" style={{ width: '100%' }} />
         ) : record.costPrice != null ? `¥${record.costPrice.toFixed(2)}` : '-';
       },
     },
@@ -291,7 +291,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit ? (
-          <InputNumber value={getCellValue(record, 'salesPrice')} onChange={v => handleFieldChange(key, 'salesPrice', v)} size="small" min={0} precision={2} prefix="¥" style={{ width: '100%' }} />
+          <InputNumber value={getCellValue(record, 'salesPrice')} onChange={v => handleFieldChange(key, 'salesPrice', v)} min={0} precision={2} prefix="¥" style={{ width: '100%' }} />
         ) : record.salesPrice != null ? `¥${record.salesPrice.toFixed(2)}` : '-';
       },
     },
@@ -310,7 +310,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         const key = getRowKey(record);
         const val = getCellValue(record, 'remark');
         return canEdit ? (
-          <Input value={val || ''} onChange={e => handleFieldChange(key, 'remark', e.target.value)} size="small" placeholder="备注" />
+          <Input value={val || ''} onChange={e => handleFieldChange(key, 'remark', e.target.value)} placeholder="备注" />
         ) : (
           <Tooltip title={record.remark} placement="topLeft">
             <span style={{ color: record.remark ? 'var(--color-text-primary, #333)' : 'var(--color-text-quaternary, #bfbfbf)' }}>
@@ -326,7 +326,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         const key = getRowKey(record);
         return (
           <Popconfirm title="确定删除此SKU？" onConfirm={() => handleDeleteRow(key)}>
-            <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+            <Button type="text" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         );
       },
@@ -346,30 +346,30 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
 
         <Space>
           {!isEditing ? (
-            <Button type="primary" icon={<EditOutlined />} onClick={() => setIsEditing(true)} size="small">
+            <Button type="primary" icon={<EditOutlined />} onClick={() => setIsEditing(true)}>
               编辑
             </Button>
           ) : (
             <>
               {isManual && (
                 <Dropdown menu={{ items: addMenuItems }} trigger={['hover']}>
-                  <Button icon={<PlusOutlined />} size="small">新增SKU</Button>
+                  <Button icon={<PlusOutlined />}>新增SKU</Button>
                 </Dropdown>
               )}
-              <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving} size="small">
+              <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
                 保存
               </Button>
-              <Button icon={<RollbackOutlined />} onClick={handleCancelEdit} size="small">
+              <Button icon={<RollbackOutlined />} onClick={handleCancelEdit}>
                 退回
               </Button>
             </>
           )}
           <Tooltip title="将当前SKU信息同步到关联的大货订单">
-            <Button icon={<CloudUploadOutlined />} onClick={handleSyncToProduction} loading={syncing} size="small">
+            <Button icon={<CloudUploadOutlined />} onClick={handleSyncToProduction} loading={syncing}>
               同步到大货
             </Button>
           </Tooltip>
-          <Button icon={<SyncOutlined />} onClick={fetchSkus} loading={loading} size="small">
+          <Button icon={<SyncOutlined />} onClick={fetchSkus} loading={loading}>
             刷新
           </Button>
         </Space>
@@ -380,14 +380,14 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
           <span style={{ fontWeight: 500, fontSize: 14 }}>SKC编号：</span>
           {skcEditing ? (
             <>
-              <Input value={skcValue} onChange={e => setSkcValue(e.target.value)} size="small" style={{ width: 200 }} placeholder="默认跟随款号，可修改" onPressEnter={handleSaveSkc} />
-              <Button type="link" size="small" onClick={handleSaveSkc} loading={skcSaving}>保存</Button>
-              <Button type="link" size="small" onClick={() => { setSkcEditing(false); setSkcValue(initialSkc || ''); }}>取消</Button>
+              <Input value={skcValue} onChange={e => setSkcValue(e.target.value)} style={{ width: 200 }} placeholder="默认跟随款号，可修改" onPressEnter={handleSaveSkc} />
+              <Button type="link" onClick={handleSaveSkc} loading={skcSaving}>保存</Button>
+              <Button type="link" onClick={() => { setSkcEditing(false); setSkcValue(initialSkc || ''); }}>取消</Button>
             </>
           ) : (
             <>
               <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 500 }}>{skcValue || initialSkc || '-'}</span>
-              <Button type="link" size="small" onClick={() => setSkcEditing(true)}>修改SKC</Button>
+              <Button type="link" onClick={() => setSkcEditing(true)}>修改SKC</Button>
             </>
           )}
           <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
@@ -401,7 +401,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         columns={columns}
         rowKey={(record) => String(getRowKey(record))}
         loading={loading}
-        size="small"
+       
         pagination={false}
         scroll={{ y: 400 }}
         rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}

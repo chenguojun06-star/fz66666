@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message, Descriptions } from 'antd';
+import { Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message, Descriptions } from 'antd';
+import StandardModal from '@/components/common/StandardModal';
 import { ScanOutlined, InboxOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { materialWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
@@ -64,7 +65,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
   };
 
   return (
-    <Modal title={<Space><ScanOutlined />物料扫码出入库</Space>} open={open} onCancel={onClose} width={640}
+    <StandardModal title={<Space><ScanOutlined />物料扫码出入库</Space>} open={open} onCancel={onClose} size="lg"
       footer={[<Button key="cancel" onClick={onClose}>取消</Button>, <Button key="ok" type="primary" loading={loading} onClick={handleConfirm}>{operationType === 'inbound' ? '确认入库' : '确认出库'}</Button>]}>
       <Space orientation="vertical" style={{ width: '100%' }} size={16}>
         <Row gutter={12}>
@@ -84,8 +85,8 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
           </Space.Compact>
         </div>
         {scanResult?.found && (
-          <Card size="small" style={{ background: '#f6f8fa' }}>
-            <Descriptions size="small" column={3}>
+          <Card style={{ background: '#f6f8fa' }}>
+            <Descriptions column={3}>
               <Descriptions.Item label="物料名称">{scanResult.materialName}</Descriptions.Item>
               <Descriptions.Item label="类型">{scanResult.materialType}</Descriptions.Item>
               <Descriptions.Item label="仓位">{scanResult.location}</Descriptions.Item>
@@ -135,7 +136,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
           <Input.TextArea rows={2} value={remark} onChange={e => setRemark(e.target.value)} placeholder="选填" />
         </div>
       </Space>
-    </Modal>
+    </StandardModal>
   );
 };
 

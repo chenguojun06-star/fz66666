@@ -480,7 +480,7 @@ const SampleInventory: React.FC = () => {
           open={destroyModal.visible}
           title={`销毁样衣库存${destroyModal.data?.styleNo ? ` - ${destroyModal.data.styleNo}` : ''}`}
           onCancel={closeDestroyModal}
-          onOk={() => void handleDestroy()}
+          onOk={() => void handleDestroy()} maskClosable={false}
           okText="确认销毁"
           okButtonProps={{ danger: true }}
           confirmLoading={destroyLoading}

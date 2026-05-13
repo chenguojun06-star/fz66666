@@ -191,11 +191,11 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       </div>
 
       <Space size={8} style={{ marginBottom: 12 }}>
-        <Button size="small" onClick={() => syncSelection(availableColors, selectedSizes)}>全选颜色</Button>
-        <Button size="small" onClick={() => syncSelection(selectedColors, availableSizes)}>全选码数</Button>
-        <Button size="small" onClick={() => syncSelection([], [])}>清空</Button>
-        <InputNumber id="quickFillQty" min={1} size="small" value={quickFillQty} onChange={(value) => setQuickFillQty(Math.max(1, Number(value) || 1))} />
-        <Button size="small" type="primary" ghost onClick={() => applyQuickFill(quickFillQty)}>全部铺量</Button>
+        <Button onClick={() => syncSelection(availableColors, selectedSizes)}>全选颜色</Button>
+        <Button onClick={() => syncSelection(selectedColors, availableSizes)}>全选码数</Button>
+        <Button onClick={() => syncSelection([], [])}>清空</Button>
+        <InputNumber id="quickFillQty" min={1} value={quickFillQty} onChange={(value) => setQuickFillQty(Math.max(1, Number(value) || 1))} />
+        <Button type="primary" ghost onClick={() => applyQuickFill(quickFillQty)}>全部铺量</Button>
       </Space>
 
       {!selectedColors.length || !selectedSizes.length ? (
@@ -226,7 +226,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                           min={0}
                           value={matched?.quantity || 0}
                           style={{ width: '100%' }}
-                          size="small"
+                         
                           onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
                         />
                       </td>

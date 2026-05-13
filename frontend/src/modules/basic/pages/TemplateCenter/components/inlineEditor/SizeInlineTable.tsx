@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Button, Input, Space, Popconfirm, Table } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import { Button, Input, Select, Space, Popconfirm, Modal } from 'antd';
+import { DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
+import ResizableTable from '@/components/common/ResizableTable';
+import { sortSizeNames } from '@/utils/api';
 import type { SizeTableData, SizeTablePart } from '../../utils/templateUtils';
 
 interface SizeInlineTableProps {
@@ -13,10 +14,27 @@ interface SizeInlineTableProps {
 
 type SizeTablePartRow = SizeTablePart & { __rowKey: string };
 
+const BASE_SIZE_RAW = [
+  'XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL',
+  '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
+  '80', '90', '100', '110', '120', '130', '140', '150', '160', '170', '180', '190', '200',
+];
+
+const BASE_SIZE_OPTIONS = sortSizeNames(BASE_SIZE_RAW).map((s) => ({ value: s, label: s }));
+
 const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, readOnly = false, compact = false }) => {
   const [editingSizeHeader, setEditingSizeHeader] = useState<string | null>(null);
   const [sizeHeaderDraft, setSizeHeaderDraft] = useState('');
+  const [sizeOptions, setSizeOptions] = useState(BASE_SIZE_OPTIONS);
   const sizeHeaderInputRef = useRef<any>(null);
+  const sortedRef = useRef(false);
+
+  const sortedSizes = useMemo(() => sortSizeNames(value.sizes), [value.sizes]);
+
+  if (!sortedRef.current && sortedSizes.join(',') !== value.sizes.join(',')) {
+    sortedRef.current = true;
+    onChange({ ...value, sizes: sortedSizes });
+  }
 
   const tableData = useMemo<SizeTablePartRow[]>(
     () => value.parts.map((part, index) => ({ ...part, __rowKey: `size-part-${index}` })),
@@ -51,12 +69,13 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     onChange({ ...value, parts: value.parts.filter((_, i) => i !== index) });
   }, [value, onChange]);
 
-  const handleAddSize = useCallback(() => {
-    const nextSize = `新尺码`;
-    const nextSizes = [...value.sizes, nextSize];
+  const handleAddSizes = useCallback((newSizes: string[]) => {
+    const additions = newSizes.filter((s) => s && !value.sizes.includes(s));
+    if (!additions.length) return;
+    const nextSizes = sortSizeNames([...value.sizes, ...additions]);
     const nextParts = value.parts.map((part) => ({
       ...part,
-      values: { ...(part.values || {}), [nextSize]: '' },
+      values: { ...(part.values || {}), ...additions.reduce((acc, s) => ({ ...acc, [s]: '' }), {} as Record<string, string>) },
     }));
     onChange({ ...value, sizes: nextSizes, parts: nextParts });
   }, [value, onChange]);
@@ -74,7 +93,12 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
   const handleSizeHeaderConfirm = useCallback((oldSize: string) => {
     const newName = sizeHeaderDraft.trim() || oldSize;
     if (newName === oldSize) { setEditingSizeHeader(null); return; }
-    const nextSizes = value.sizes.map((s) => (s === oldSize ? newName : s));
+    if (value.sizes.includes(newName) && newName !== oldSize) {
+      Modal.warning({ title: `尺码"${newName}"已存在` });
+      setEditingSizeHeader(null);
+      return;
+    }
+    const nextSizes = sortSizeNames(value.sizes.map((s) => (s === oldSize ? newName : s)));
     const nextParts = value.parts.map((part) => {
       const val = part.values?.[oldSize] || '';
       const nextValues = { ...(part.values || {}) };
@@ -86,17 +110,23 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     setEditingSizeHeader(null);
   }, [value, onChange, sizeHeaderDraft]);
 
-  const columns = useMemo<ColumnsType<SizeTablePart>>(() => {
-    const cols: ColumnsType<SizeTablePart> = [
+  const ensureSizeOption = useCallback((name: string) => {
+    setSizeOptions((prev) => {
+      if (prev.some((opt) => opt.value === name)) return prev;
+      return [...prev, { value: name, label: name }];
+    });
+  }, []);
+
+  const columns = useMemo(() => {
+    const cols: any[] = [
       {
         title: '部位',
         dataIndex: 'partName',
         width: compact ? 120 : 140,
         render: (text: string, _: SizeTablePart, index?: number) => (
           <Input
-            size="small"
-            variant="borderless"
             value={text || ''}
+            placeholder="如：胸围"
             disabled={readOnly}
             onChange={(e) => updatePart(index ?? 0, { partName: e.target.value })}
           />
@@ -108,9 +138,8 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
         width: compact ? 100 : 120,
         render: (text: string, _: SizeTablePart, index?: number) => (
           <Input
-            size="small"
-            variant="borderless"
             value={text || ''}
+            placeholder="如：平量"
             disabled={readOnly}
             onChange={(e) => updatePart(index ?? 0, { measureMethod: e.target.value })}
           />
@@ -121,21 +150,28 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     value.sizes.forEach((size) => {
       cols.push({
         title: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
             {editingSizeHeader === size ? (
               <Input
                 ref={sizeHeaderInputRef}
-                size="small"
                 value={sizeHeaderDraft}
                 onChange={(e) => setSizeHeaderDraft(e.target.value)}
                 onPressEnter={() => handleSizeHeaderConfirm(size)}
                 onBlur={() => handleSizeHeaderConfirm(size)}
-                style={{ width: 70, textAlign: 'center' }}
+                style={{ width: 80, textAlign: 'center' }}
                 autoFocus
               />
             ) : (
               <span
-                style={{ cursor: readOnly ? 'default' : 'pointer', fontWeight: 500 }}
+                style={{
+                  cursor: readOnly ? 'default' : 'pointer',
+                  fontWeight: 500,
+                  borderBottom: readOnly ? 'none' : '1px dashed var(--color-border-antd)',
+                  paddingBottom: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
                 onClick={() => {
                   if (readOnly) return;
                   setEditingSizeHeader(size);
@@ -144,6 +180,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
                 }}
               >
                 {size}
+                {!readOnly && <EditOutlined style={{ fontSize: 11, opacity: 0.45 }} />}
               </span>
             )}
             {!readOnly && value.sizes.length > 1 && (
@@ -154,11 +191,9 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
           </div>
         ),
         dataIndex: ['values', size],
-        width: compact ? 80 : 90,
+        width: compact ? 80 : 100,
         render: (_: unknown, record: SizeTablePart, index?: number) => (
           <Input
-            size="small"
-            variant="borderless"
             value={record.values?.[size] || ''}
             disabled={readOnly}
             onChange={(e) => updateCell(index ?? 0, size, e.target.value)}
@@ -170,12 +205,11 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     cols.push({
       title: '公差',
       dataIndex: 'tolerance',
-      width: compact ? 70 : 80,
+      width: compact ? 70 : 90,
       render: (text: string, _: SizeTablePart, index?: number) => (
         <Input
-          size="small"
-          variant="borderless"
           value={String(text || '')}
+          placeholder="如：0.5"
           disabled={readOnly}
           onChange={(e) => updatePart(index ?? 0, { tolerance: e.target.value })}
         />
@@ -184,15 +218,14 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
 
     if (!readOnly) {
       cols.push({
-        title: '',
-        key: '__actions',
-        width: 48,
+        title: '操作',
+        key: 'actions',
+        width: 64,
+        resizable: false,
         render: (_: unknown, __: SizeTablePart, index?: number) => (
-          value.parts.length > 1 ? (
-            <Popconfirm title="删除此部位行？" onConfirm={() => handleRemovePart(index ?? 0)} okText="删除" cancelText="取消">
-              <Button type="text" danger size="small" icon={<DeleteOutlined />} />
-            </Popconfirm>
-          ) : null
+          <Popconfirm title="删除此部位行？" onConfirm={() => handleRemovePart(index ?? 0)} okText="删除" cancelText="取消">
+            <Button type="text" danger icon={<DeleteOutlined />} disabled={value.parts.length <= 1} />
+          </Popconfirm>
         ),
       });
     }
@@ -200,20 +233,46 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     return cols;
   }, [value, readOnly, editingSizeHeader, sizeHeaderDraft, compact, updatePart, updateCell, handleRemoveSize, handleRemovePart, handleSizeHeaderConfirm]);
 
+  const availableSizeOptions = useMemo(
+    () => sizeOptions.filter((opt) => !value.sizes.includes(opt.value)),
+    [sizeOptions, value.sizes]
+  );
+
   return (
     <div>
       {!readOnly && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-          <Space size={8}>
-            <Button size="small" icon={<PlusOutlined />} onClick={handleAddPart}>新增部位</Button>
-            <Button size="small" icon={<PlusOutlined />} onClick={handleAddSize}>新增尺码</Button>
-          </Space>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+            <Button icon={<PlusOutlined />} onClick={handleAddPart}>新增部位</Button>
+            <Select
+              mode="tags"
+              showSearch
+              placeholder="输入或选择尺码，回车添加"
+              style={{ minWidth: 220 }}
+              options={availableSizeOptions}
+              value={[]}
+              onChange={(values) => {
+                if (!values.length) return;
+                const newSizes = (values as string[]).filter((v) => !value.sizes.includes(v));
+                if (newSizes.length) handleAddSizes(newSizes);
+              }}
+              filterOption={(input, option) =>
+                String(option?.value || '').toLowerCase().includes(String(input || '').toLowerCase())
+              }
+              onSearch={(searchValue) => {
+                const trimmed = searchValue && searchValue.trim();
+                if (trimmed && !sizeOptions.some((opt) => opt.value === trimmed)) {
+                  ensureSizeOption(trimmed);
+                }
+              }}
+              tokenSeparators={[',', '，']}
+            />
         </div>
       )}
-      <Table
-        size="small"
+      <ResizableTable
         bordered
+        autoScrollY={false}
         pagination={false}
+        reorderableColumns={false}
         scroll={{ x: compact ? 336 + value.sizes.length * 80 : 'max-content' }}
         rowKey="__rowKey"
         columns={columns}

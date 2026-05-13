@@ -45,7 +45,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Progress
                         percent={v ?? 0}
-                        size="small"
+                       
                         strokeColor={v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff4d4f'}
                         format={() => <span style={{ fontSize: 11 }}>{v}</span>}
                         style={{ flex: 1, minWidth: 80 }}
@@ -78,7 +78,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
     return (
         <>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-                <Button size="small" onClick={onRefresh} loading={loading}>刷新</Button>
+                <Button onClick={onRefresh} loading={loading}>刷新</Button>
             </div>
             <ResizableTable
                 storageKey="finance-worker-efficiency"
@@ -88,7 +88,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
                 loading={loading}
                 pagination={{ showTotal: (t) => `共 ${t} 人`, defaultPageSize: readPageSize(50), showSizeChanger: true }}
                 scroll={{ x: 900 }}
-                size="small"
+               
             />
         </>
     );

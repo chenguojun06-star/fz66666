@@ -497,7 +497,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   return (
     <div>
       {showSmartErrorNotice && smartError ? (
-        <Card size="small" style={{ marginBottom: 12 }}>
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice
             error={smartError}
             onFix={() => {
@@ -509,31 +509,31 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
 
       {/* 汇总卡片 */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-        <Card size="small" style={{ flex: 1, textAlign: 'center' }}>
+        <Card style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#999' }}>工厂数</div>
           <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--primary-color)' }}>
             {filteredData.length}
           </div>
         </Card>
-        <Card size="small" style={{ flex: 1, textAlign: 'center' }}>
+        <Card style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#999' }}>订单总数</div>
           <div style={{ fontSize: 20, fontWeight: 600 }}>
             {summary.totalOrders}
           </div>
         </Card>
-        <Card size="small" style={{ flex: 1, textAlign: 'center' }}>
+        <Card style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#999' }}>入库总量</div>
           <div style={{ fontSize: 20, fontWeight: 600 }}>
             {summary.totalWarehoused.toLocaleString()}
           </div>
         </Card>
-        <Card size="small" style={{ flex: 1, textAlign: 'center' }}>
+        <Card style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#999' }}>总金额</div>
           <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--primary-color)' }}>
             ¥{toMoney(summary.totalAmount)}
           </div>
         </Card>
-        <Card size="small" style={{ flex: 1, textAlign: 'center' }}>
+        <Card style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#999' }}>总利润</div>
           <div style={{
             fontSize: 20,
@@ -548,14 +548,14 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       {/* 工厂绩效榜 */}
       {leaderboard.length > 0 && (
         <Card
-          size="small"
+         
           style={{ marginBottom: 12 }}
           loading={lbLoading}
           title={
             <span style={{ fontSize: 13, fontWeight: 600 }}> 工厂绩效榜</span>
           }
           extra={
-            <Button type="link" size="small" onClick={() => setLbCollapsed(!lbCollapsed)} style={{ padding: 0 }}>
+            <Button type="link" onClick={() => setLbCollapsed(!lbCollapsed)} style={{ padding: 0 }}>
               {lbCollapsed ? '展开' : '收起'}
             </Button>
           }
@@ -589,7 +589,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
 
       {/* 搜索 & 工具栏 */}
       <StickyFilterBar>
-      <Card size="small" style={{ marginBottom: 12 }}>
+      <Card style={{ marginBottom: 12 }}>
         {searchFields}
       </Card>
       <StandardToolbar

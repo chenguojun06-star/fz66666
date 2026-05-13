@@ -108,16 +108,16 @@ const PayableTab: React.FC = () => {
     },
     {
       title: '状态', dataIndex: 'status', width: 90,
-      render: (v: string) => { const s = PAYABLE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{v}</Tag>; },
+      render: (v: string) => { const s = PAYABLE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>未知</Tag>; },
     },
     {
       title: '操作', width: 140,
       render: (_: any, r: any) => r.status !== 'PAID' && (
         <Space>
           <Popconfirm title="全额付款？" onConfirm={() => handleMarkPaid(r.id)}>
-            <Button size="small" type="link" icon={<CheckCircleOutlined />}>全额</Button>
+            <Button type="link" icon={<CheckCircleOutlined />}>全额</Button>
           </Popconfirm>
-          <Button size="small" type="link" onClick={() => { setPayRecord(r); setPayAmount(null); }}>部分付</Button>
+          <Button type="link" onClick={() => { setPayRecord(r); setPayAmount(null); }}>部分付</Button>
         </Space>
       ),
     },
@@ -138,12 +138,12 @@ const PayableTab: React.FC = () => {
         .ap-row-warning td { background: #fffbe6 !important; }
       `}</style>
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={6}><Card size="small"><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: '#fa8c16' } }} /></Card></Col>
-        <Col xs={24} sm={6}><Card size="small"><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: '#f5222d' } }} suffix={stats.overdueCount ? <span style={{ fontSize: 12, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
-        <Col xs={24} sm={6}><Card size="small"><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
-        <Col xs={24} sm={6}><Card size="small"><Statistic title="本月新增(笔)" value={stats.newThisMonth || 0} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: '#fa8c16' } }} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: '#f5222d' } }} suffix={stats.overdueCount ? <span style={{ fontSize: 12, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="本月新增(笔)" value={stats.newThisMonth || 0} /></Card></Col>
       </Row>
-      <Card size="small" style={{ marginBottom: 12 }}>
+      <Card style={{ marginBottom: 12 }}>
         <Row gutter={[12, 12]} align="middle">
           <Col xs={24} md={8}>
             <Input allowClear prefix={<SearchOutlined />} placeholder="搜应付单号 / 供应商 / 来源单号"
@@ -170,7 +170,7 @@ const PayableTab: React.FC = () => {
         title="应付账款与业务系统深度联动"
         description="对账单审核通过、工资结算批准后，相关记录自动流入应付账款。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款。"
       />
-      <ResizableTable storageKey="finance-accounts-payable" rowKey="id" columns={columns} dataSource={list} loading={loading} size="small" scroll={{ x: 'max-content' }}
+      <ResizableTable storageKey="finance-accounts-payable" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} scroll={{ x: 'max-content' }}
         rowClassName={rowClassName}
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }}
       />

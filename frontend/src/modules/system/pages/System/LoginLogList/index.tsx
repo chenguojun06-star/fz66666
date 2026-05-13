@@ -97,7 +97,7 @@ const LoginLogList: React.FC = () => {
       <PageLayout
         title="登录日志"
         filterBar={
-          <Card size="small" className="filter-card mb-sm">
+          <Card className="filter-card mb-sm">
             <Space wrap>
               <Input
                 placeholder="用户名"

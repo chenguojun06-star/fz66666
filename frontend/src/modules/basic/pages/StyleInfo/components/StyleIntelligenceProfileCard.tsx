@@ -434,12 +434,12 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                       <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
                       {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
                     </div>
-                    <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 11, height: 20, padding: '0 5px' }}>图像分析</Button>
+                    <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 11, height: 20, padding: '0 5px' }}>图像分析</Button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
                       strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green' ? '#52c41a' : difficultyColor(activeDifficulty.difficultyLevel) === 'orange' ? '#fa8c16' : '#ff4d4f'}
-                      style={{ flex: 1, margin: 0 }} size="small" />
+                      style={{ flex: 1, margin: 0 }} />
                     <span style={{ fontSize: 11, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
                   </div>
                   <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
@@ -483,7 +483,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                   )}
                 </div>
               ) : (
-                <Button size="small" icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 11 }}>AI 难度分析</Button>
+                <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 11 }}>AI 难度分析</Button>
               )}
             </div>
 
@@ -491,7 +491,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
             <div style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 7, background: 'rgba(24,144,255,0.05)', border: '1px solid rgba(24,144,255,0.1)' }}>
               <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 5, color: '#1677ff' }}>AI全链路判断</div>
               {loading ? (
-                <Spin size="small" />
+                <Spin />
               ) : diagnosticCards.length ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {diagnosticCards.map((item) => {

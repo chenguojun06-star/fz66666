@@ -278,7 +278,7 @@ const BillingTab: React.FC = () => {
           <div style={{ minWidth: 100 }}>
             <Progress
               percent={percent}
-              size="small"
+             
               status={percent >= 90 ? 'exception' : 'normal'}
               format={() => `${formatStorageSize(used)}/${formatStorageSize(quota)}`}
               style={{ marginBottom: 0 }}
@@ -368,7 +368,7 @@ const BillingTab: React.FC = () => {
         dataSource={tenants}
         loading={loading}
         pagination={false}
-        size="small"
+       
       />
 
       <Divider />
@@ -403,7 +403,7 @@ const BillingTab: React.FC = () => {
           current: billParams.page, pageSize: billParams.pageSize, total: billsTotal,
           onChange: (p, ps) => setBillParams(prev => ({ ...prev, page: p, pageSize: ps })),
         }}
-        size="small"
+       
       />
 
       {/* 设置套餐弹窗 */}
@@ -479,7 +479,7 @@ const BillingTab: React.FC = () => {
           <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>加载中...</div>
         ) : overview ? (
           <div>
-            <Descriptions column={2} bordered size="small">
+            <Descriptions column={2} bordered>
               <Descriptions.Item label="套餐类型">
                 <Tag color={PLAN_LABELS[overview.planType]?.color || 'default'}>
                   {PLAN_LABELS[overview.planType]?.label || overview.planType}
@@ -497,7 +497,7 @@ const BillingTab: React.FC = () => {
               <Descriptions.Item label="已用存储">
                 <Progress
                   percent={overview.storageUsedPercent || 0}
-                  size="small"
+                 
                   status={(overview.storageUsedPercent || 0) >= 90 ? 'exception' : 'normal'}
                   style={{ width: 150, display: 'inline-flex' }}
                 />
@@ -533,7 +533,7 @@ const BillingTab: React.FC = () => {
                   ]}
                   dataSource={overview.recentBills}
                   pagination={false}
-                  size="small"
+                 
                 />
               </>
             )}

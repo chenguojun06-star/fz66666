@@ -262,7 +262,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       key: 'receiveStatus',
       width: 100,
       render: (val: string) => {
-        const info = STATUS_MAP[val] || { color: 'default', label: val };
+        const info = STATUS_MAP[val] || { color: 'default', label: '未知' };
         return <Tag color={info.color}>{info.label}</Tag>;
       },
     },
@@ -398,7 +398,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
           </Form.Item>
 
           {shippableInfo && (
-            <Descriptions size="small" column={3} bordered style={{ marginBottom: 16 }}>
+            <Descriptions column={3} bordered style={{ marginBottom: 16 }}>
               <Descriptions.Item label="裁剪总数">{shippableInfo.cuttingTotal}</Descriptions.Item>
               <Descriptions.Item label="已发货">{shippableInfo.shippedTotal}</Descriptions.Item>
               <Descriptions.Item label="可发货">
@@ -444,7 +444,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
                   }}
                 />
                 {shipDetails.length > 1 && (
-                  <Button danger size="small" icon={<DeleteOutlined />} onClick={() => setShipDetails(shipDetails.filter((_, i) => i !== idx))} />
+                  <Button danger icon={<DeleteOutlined />} onClick={() => setShipDetails(shipDetails.filter((_, i) => i !== idx))} />
                 )}
               </Space>
             ))}
@@ -490,7 +490,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       >
         {receiveRecord && (
           <div style={{ padding: '8px 0' }}>
-            <Descriptions size="small" column={1} bordered>
+            <Descriptions column={1} bordered>
               <Descriptions.Item label="发货单号">{receiveRecord.shipmentNo}</Descriptions.Item>
               <Descriptions.Item label="订单号">{receiveRecord.orderNo}</Descriptions.Item>
               <Descriptions.Item label="款号">{receiveRecord.styleNo}</Descriptions.Item>

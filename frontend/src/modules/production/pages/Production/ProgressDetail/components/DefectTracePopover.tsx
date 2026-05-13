@@ -72,7 +72,7 @@ const DefectTracePopover: React.FC<{
   const showDot = hasDefects || (data != null && data.totalDefects > 0);
 
   const content = loading ? (
-    <div style={{ width: 280, textAlign: 'center', padding: 16 }}><Spin size="small" /></div>
+    <div style={{ width: 280, textAlign: 'center', padding: 16 }}><Spin /></div>
   ) : !data || data.totalDefects === 0 ? (
     <div style={{ width: 260, fontSize: 13, color: '#8c8c8c', textAlign: 'center', padding: 12 }}>
        该订单暂无次品记录

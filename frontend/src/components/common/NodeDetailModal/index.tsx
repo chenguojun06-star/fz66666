@@ -321,7 +321,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         {(nodeTypeKey === 'cutting' || nodeTypeKey === 'procurement') && (
           <div style={{ marginBottom: 8 }}>
             <Button
-              size="small"
+             
               style={(nodeStats?.percent || 0) >= 100 ? { color: '#999', borderColor: '#d9d9d9' } : {}}
               onClick={() => navigate(
                 nodeTypeKey === 'cutting'
@@ -339,7 +339,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
-          size="small"
+         
           items={(() => {
             const isUnitPriceNode = typeof unitPrice === 'number';
             const showProductionTabs = !isPatternProduction && !isUnitPriceNode;
@@ -381,7 +381,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                   <div>
                     <div style={{ marginBottom: 8, textAlign: 'right' }}>
                       <Button
-                        size="small"
+                       
                         loading={repairLoading}
                         onClick={handleRepairTracking}
                         title="将已入库但跟踪记录为pending的历史数据补同步"

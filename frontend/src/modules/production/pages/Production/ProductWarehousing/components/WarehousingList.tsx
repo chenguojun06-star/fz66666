@@ -110,7 +110,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           </div>
 
           {showSmartErrorNotice && smartError ? (
-            <Card size="small" style={{ marginBottom: 12 }}>
+            <Card style={{ marginBottom: 12 }}>
               <SmartErrorNotice
                 error={smartError}
                 onFix={() => {
@@ -187,7 +187,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
                       : pendingBundles.length;
                   })()} 个菲号
                 </Tag>
-                <Button size="small" onClick={() => handleStatusFilterChange('all')}>
+                <Button onClick={() => handleStatusFilterChange('all')}>
                   返回全部
                 </Button>
               </div>
@@ -207,7 +207,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
                     : pendingBundles;
                 })()}
                 loading={pendingBundlesLoading}
-                size="small"
+               
                 pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条`, showSizeChanger: false }}
               />
             </>

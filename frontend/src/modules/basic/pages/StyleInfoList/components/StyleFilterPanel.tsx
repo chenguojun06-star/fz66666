@@ -32,7 +32,7 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
   ];
 
   return (
-    <Card size="small" className="filter-card mb-sm">
+    <Card className="filter-card mb-sm">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
         {/* 左侧：搜索条件 */}
         <Space className="style-filter-inline" size={12} wrap>

@@ -110,7 +110,7 @@ const StyleInfoDetailPage: React.FC = () => {
     <>
       <PageLayout>
         {showSmartErrorNotice && smartError ? (
-          <Card size="small" style={{ marginBottom: 12 }}>
+          <Card style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={() => { if (styleIdParam) void fetchDetail(styleIdParam); }} />
           </Card>
         ) : null}

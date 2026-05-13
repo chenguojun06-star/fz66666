@@ -86,7 +86,7 @@ const TenantListTab: React.FC = () => {
   };
 
   const handleDeleteTenant = (record: TenantInfo) => {
-    const statusLabel = record.status === 'pending_review' ? '待审核' : record.status === 'active' ? '正常' : record.status;
+    const statusLabel = { pending_review: '待审核', active: '正常', disabled: '已停用', rejected: '已拒绝', trial: '试用中', expired: '已过期' }[record.status as string] || record.status;
     Modal.confirm({ width: '30vw', title: `确认删除「${record.tenantName}」`, icon: <ExclamationCircleOutlined />, content: record.status === 'active' || record.status === 'disabled' ? `该租户状态为「${statusLabel}」，删除后将同时清除其所有用户、角色、账单数据，此操作不可恢复！` : `将删除该${statusLabel}的入驻申请。`, okText: '确认删除', okButtonProps: { danger: true, type: 'default' }, cancelText: '取消', onOk: async () => { try { await tenantService.deleteTenant(record.id); message.success('已删除'); fetchData(); } catch (e: unknown) { message.error(e instanceof Error ? e.message : '删除失败'); } } });
   };
 
@@ -175,7 +175,7 @@ const TenantListTab: React.FC = () => {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { modal.open(); }}>新建租户</Button>
         </div>
       </div>
-      <ResizableTable storageKey="customer-tenant-list" rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={{ current: queryParams.page, pageSize: queryParams.pageSize, total, onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, pageSize: ps })) }} size="small" />
+      <ResizableTable storageKey="customer-tenant-list" rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={{ current: queryParams.page, pageSize: queryParams.pageSize, total, onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, pageSize: ps })) }} />
 
       <SmallModal open={rejectModal.visible} title={`拒绝入驻申请 - ${rejectModal.data?.tenantName || ''}`} onCancel={() => { rejectModal.close(); rejectReasonForm.resetFields(); }} footer={<Space><Button onClick={() => { rejectModal.close(); rejectReasonForm.resetFields(); }}>取消</Button><Button danger type="default" loading={processingId === rejectModal.data?.id} onClick={handleRejectApplication}>确认拒绝</Button></Space>}>
         <Form form={rejectReasonForm} layout="vertical"><Alert title={`申请账号：${rejectModal.data?.applyUsername || '-'}`} type="warning" showIcon style={{ marginBottom: 16 }} /><Form.Item label="拒绝原因" name="reason" rules={[{ required: true, message: '请填写拒绝原因' }]}><Input.TextArea rows={3} placeholder="请填写拒绝原因（将记录在备注中）" /></Form.Item></Form>
@@ -193,7 +193,7 @@ const TenantListTab: React.FC = () => {
       </ResizableModal>
 
       <ResizableModal open={qrModal.visible} title={`注册二维码 - ${qrModal.data?.tenantName || ''}`} onCancel={qrModal.close} width="40vw" footer={<Button onClick={qrModal.close}>关闭</Button>}>
-        {qrModal.data && (<div style={{ textAlign: 'center', padding: '24px 0' }}><div style={{ marginBottom: 20 }}><QRCode value={getRegisterUrl(qrModal.data)} size={240} style={{ margin: '0 auto' }} /></div><div style={{ marginBottom: 16 }}><Text type="secondary">员工扫码或打开链接即可注册到该工厂</Text></div><Card size="small" style={{ textAlign: 'left', maxWidth: 400, margin: '0 auto', background: '#f8f9fa', borderRadius: 8 }}><div style={{ marginBottom: 12 }}><Text strong>工厂名称：</Text><Text>{qrModal.data.tenantName}</Text></div><div style={{ marginBottom: 12 }}><Text strong>工厂编码：</Text><Text code copyable={{ text: qrModal.data.tenantCode }}>{qrModal.data.tenantCode}</Text></div><div style={{ marginBottom: 12 }}><Text strong>注册链接：</Text><div style={{ wordBreak: 'break-all', marginTop: 4 }}><Text type="secondary" style={{ fontSize: 12 }}>{getRegisterUrl(qrModal.data)}</Text></div></div><Space><Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyLink(qrModal.data!)}>复制链接</Button><Button size="small" icon={<QrcodeOutlined />} onClick={() => handleCopyCode(qrModal.data!.tenantCode)}>复制编码</Button></Space></Card><div style={{ marginTop: 16 }}><Text type="secondary" style={{ fontSize: 12 }}>提示：员工注册后需要管理员在「注册审批」中审批通过后才能使用</Text></div></div>)}
+        {qrModal.data && (<div style={{ textAlign: 'center', padding: '24px 0' }}><div style={{ marginBottom: 20 }}><QRCode value={getRegisterUrl(qrModal.data)} size={240} style={{ margin: '0 auto' }} /></div><div style={{ marginBottom: 16 }}><Text type="secondary">员工扫码或打开链接即可注册到该工厂</Text></div><Card style={{ textAlign: 'left', maxWidth: 400, margin: '0 auto', background: '#f8f9fa', borderRadius: 8 }}><div style={{ marginBottom: 12 }}><Text strong>工厂名称：</Text><Text>{qrModal.data.tenantName}</Text></div><div style={{ marginBottom: 12 }}><Text strong>工厂编码：</Text><Text code copyable={{ text: qrModal.data.tenantCode }}>{qrModal.data.tenantCode}</Text></div><div style={{ marginBottom: 12 }}><Text strong>注册链接：</Text><div style={{ wordBreak: 'break-all', marginTop: 4 }}><Text type="secondary" style={{ fontSize: 12 }}>{getRegisterUrl(qrModal.data)}</Text></div></div><Space><Button icon={<CopyOutlined />} onClick={() => handleCopyLink(qrModal.data!)}>复制链接</Button><Button icon={<QrcodeOutlined />} onClick={() => handleCopyCode(qrModal.data!.tenantCode)}>复制编码</Button></Space></Card><div style={{ marginTop: 16 }}><Text type="secondary" style={{ fontSize: 12 }}>提示：员工注册后需要管理员在「注册审批」中审批通过后才能使用</Text></div></div>)}
       </ResizableModal>
 
       <SmallModal open={webhookModal.visible} title={`企业微信 Webhook - ${webhookModal.data?.tenantName || ''}`} onCancel={() => { webhookModal.close(); webhookForm.resetFields(); }} footer={<Space><Button onClick={() => { webhookModal.close(); webhookForm.resetFields(); }}>取消</Button><Button type="primary" loading={savingWebhook} onClick={async () => { const record = webhookModal.data; if (!record) return; try { setSavingWebhook(true); const values = webhookForm.getFieldsValue(); const res: any = await tenantService.updateTenant(record.id, { wechatWorkWebhookUrl: String(values.wechatWorkWebhookUrl || '').trim() }); if (res?.code === 200 || res?.data) { message.success('Webhook 已保存'); webhookModal.close(); webhookForm.resetFields(); } else { message.error(res?.message || '保存失败'); } } catch (e: unknown) { message.error(e instanceof Error ? e.message : '保存失败'); } finally { setSavingWebhook(false); } }}>保存</Button></Space>}>
@@ -231,10 +231,10 @@ const TenantListTab: React.FC = () => {
                             {sub?.end_time && isActive && <span style={{ fontSize: 11, color: '#999' }}>到期 {String(sub.end_time).substring(0, 10)}</span>}
                           </div>
                           <Space size={4}>
-                            {!isActive && !willGrant && <Button size="small" type="link" onClick={() => setGrantAppCodes([...grantAppCodes, opt.value])}>开通</Button>}
-                            {willGrant && <Button size="small" type="link" style={{ color: '#52c41a' }} onClick={() => setGrantAppCodes(grantAppCodes.filter(c => c !== opt.value))}>✓ 将开通</Button>}
-                            {isActive && !willRevoke && <Button size="small" type="link" danger onClick={() => setRevokeAppCodes([...revokeAppCodes, opt.value])}>撤销</Button>}
-                            {willRevoke && <Button size="small" type="link" style={{ color: '#ff4d4f' }} onClick={() => setRevokeAppCodes(revokeAppCodes.filter(c => c !== opt.value))}>✓ 将撤销</Button>}
+                            {!isActive && !willGrant && <Button type="link" onClick={() => setGrantAppCodes([...grantAppCodes, opt.value])}>开通</Button>}
+                            {willGrant && <Button type="link" style={{ color: '#52c41a' }} onClick={() => setGrantAppCodes(grantAppCodes.filter(c => c !== opt.value))}>✓ 将开通</Button>}
+                            {isActive && !willRevoke && <Button type="link" danger onClick={() => setRevokeAppCodes([...revokeAppCodes, opt.value])}>撤销</Button>}
+                            {willRevoke && <Button type="link" style={{ color: '#ff4d4f' }} onClick={() => setRevokeAppCodes(revokeAppCodes.filter(c => c !== opt.value))}>✓ 将撤销</Button>}
                           </Space>
                         </div>
                       );

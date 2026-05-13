@@ -149,7 +149,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       width: 140,
       render: (_: unknown, record: any) => (
         <Space>
-          <Button size="small" onClick={() => handleToggleStatus(record)}>
+          <Button onClick={() => handleToggleStatus(record)}>
             {record.status === 'active' ? '停用' : '启用'}
           </Button>
           <Popconfirm
@@ -159,7 +159,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
             okButtonProps={{ danger: true }}
             cancelText="取消"
           >
-            <Button size="small" danger>删除</Button>
+            <Button danger>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -293,7 +293,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                 <div style={{ padding: '4px 0' }}>
                   <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>点击展开各功能操作说明：</div>
                   <Collapse
-                    size="small"
+                   
                     ghost
                     items={tutorialItems}
                   />
@@ -306,7 +306,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                 <span>
                   成员管理
                   {members.length > 0 && (
-                    <Badge count={members.length} size="small" style={{ marginLeft: 4 }} />
+                    <Badge count={members.length} style={{ marginLeft: 4 }} />
                   )}
                 </span>
               ),
@@ -315,7 +315,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                   <div style={{ marginBottom: 12 }}>
                     <Button
                       type="primary"
-                      size="small"
+                     
                       icon={<PlusOutlined />}
                       onClick={() => setAddModalOpen(true)}
                     >
@@ -323,7 +323,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                     </Button>
                   </div>
                   <ResizableTable
-                    size="small"
+                   
                     dataSource={members}
                     columns={columns}
                     rowKey="id"

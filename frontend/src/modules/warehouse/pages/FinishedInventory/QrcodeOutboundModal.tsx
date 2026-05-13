@@ -224,7 +224,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       title="扫码出库"
       open={open}
       onCancel={handleClose}
-      width="40vw"
+      width="60vw" maskClosable={false}
       footer={
         <Space>
           <Typography.Text type="secondary">
@@ -283,7 +283,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       />
 
       <ResizableTable
-        size="small"
+       
         dataSource={items}
         columns={columns}
         pagination={false}

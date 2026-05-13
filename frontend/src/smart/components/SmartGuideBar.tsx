@@ -32,7 +32,7 @@ const SmartGuideBar: React.FC<SmartGuideBarProps> = ({
           <Tag color={colorByLevel(item.level)}>{item.level || 'low'}</Tag>
           <span>{item.title}</span>
           {item.actionText ? (
-            <Button size="small" type="link" onClick={() => onAction?.(item)}>
+            <Button type="link" onClick={() => onAction?.(item)}>
               {item.actionText}
             </Button>
           ) : null}

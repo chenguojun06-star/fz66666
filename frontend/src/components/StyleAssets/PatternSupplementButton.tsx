@@ -179,9 +179,9 @@ const PatternSupplementButton: React.FC<{
         if (!id) return null;
         if (record.completeTime) return null;
         if (record.claimTime) {
-          return <Button size="small" type="link" onClick={() => handleComplete(id)}>完成</Button>;
+          return <Button type="link" onClick={() => handleComplete(id)}>完成</Button>;
         }
-        return <Button size="small" type="link" onClick={() => handleClaim(id)}>领取</Button>;
+        return <Button type="link" onClick={() => handleClaim(id)}>领取</Button>;
       },
     },
   ];
@@ -190,7 +190,7 @@ const PatternSupplementButton: React.FC<{
 
   return (
     <>
-      <Button size="small" onClick={() => setOpen(true)}>补充</Button>
+      <Button onClick={() => setOpen(true)}>补充</Button>
       <ResizableModal
         open={open}
         title={`补充纸样（${styleNo || styleId || ''}）`}

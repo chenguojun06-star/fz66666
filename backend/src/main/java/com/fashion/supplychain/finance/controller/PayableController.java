@@ -11,6 +11,12 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.Map;
 
+/**
+ * 应付账款 Controller — 应付单的增删改查与状态管理。
+ *
+ * <p>注意：{@code POST /create} 为旧式端点，已标记为 @Deprecated，
+ * 计划于 2026-Q3 移除。请迁移到 {@code POST /api/finance/payable}（空路径）。</p>
+ */
 @RestController
 @RequestMapping("/api/finance/payable")
 @PreAuthorize("isAuthenticated()")
@@ -37,6 +43,10 @@ public class PayableController {
         return Result.success(payableOrchestrator.getStats());
     }
 
+    /**
+     * @deprecated 使用 {@code POST /} 替代（计划于 2026-Q3 移除）
+     */
+    @Deprecated
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/create")
     public Result<Payable> create(@RequestBody Payable payable) {

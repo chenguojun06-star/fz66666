@@ -148,7 +148,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                     <td style={{ padding: '6px 12px', color: '#999' }}>{idx + 1}</td>
                     <td style={{ padding: '6px 12px' }}>
                       <AutoComplete
-                        size="small"
+                       
                         value={row.color || undefined}
                         options={colorOptions}
                         disabled={disabled}
@@ -160,7 +160,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                     </td>
                     <td style={{ padding: '6px 12px' }}>
                       <AutoComplete
-                        size="small"
+                       
                         value={row.size || undefined}
                         options={sizeOptions}
                         disabled={disabled}
@@ -178,7 +178,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                     <td style={{ padding: '6px 12px' }}>
                       <Space size={4}>
                         <InputNumber
-                          size="small"
+                         
                           min={0}
                           max={9999}
                           precision={0}
@@ -197,7 +197,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                       <Button
                         type="text"
                         danger
-                        size="small"
+                       
                         icon={<DeleteOutlined />}
                         disabled={disabled}
                         onClick={() => deleteRow(row.key)}

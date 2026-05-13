@@ -43,7 +43,7 @@ const OrderFlow: React.FC = () => {
           }
         >
 
-          <Card size="small" className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
+          <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
             <Row gutter={0} align="top" wrap={false}>
               <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2 }}>
                 <StyleCoverThumb src={(order as any)?.styleCover} styleId={(order as any)?.styleId} size={80} borderRadius={8} />

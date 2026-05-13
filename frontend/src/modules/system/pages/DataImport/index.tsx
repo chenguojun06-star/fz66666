@@ -125,12 +125,12 @@ const ZipImportPanel: React.FC = () => {
   return (
     <div>
       {/* 说明 */}
-      <Card size="small" style={{ marginBottom: 16, background: '#f0f7ff', border: '1px solid #91caff' }}>
+      <Card style={{ marginBottom: 16, background: '#f0f7ff', border: '1px solid #91caff' }}>
         <Paragraph style={{ marginBottom: 8 }}>
           <Text strong><FileZipOutlined style={{ marginRight: 6 }} />ZIP 打包导入：一次性导入款式数据 + 封面图片</Text>
         </Paragraph>
         <Steps
-          size="small"
+         
           style={{ marginBottom: 12 }}
           items={[
             { title: '下载 Excel 模板', content: '填写款式数据' },
@@ -149,14 +149,14 @@ const ZipImportPanel: React.FC = () => {
 
       <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         {/* 下载模板 */}
-        <Card size="small" title="第一步：下载款式 Excel 模板">
+        <Card title="第一步：下载款式 Excel 模板">
           <Button icon={<DownloadOutlined />} onClick={() => { void dataImportService.downloadTemplate('style'); }}>
             下载款式模板
           </Button>
         </Card>
 
         {/* 上传 ZIP */}
-        <Card size="small" title={<span><PictureOutlined style={{ marginRight: 6 }} />第二步：上传 ZIP 包</span>}>
+        <Card title={<span><PictureOutlined style={{ marginRight: 6 }} />第二步：上传 ZIP 包</span>}>
           <Space orientation="vertical" style={{ width: '100%' }}>
             <Upload
               fileList={fileList}
@@ -188,7 +188,7 @@ const ZipImportPanel: React.FC = () => {
 
         {/* 结果 */}
         {result && (
-          <Card size="small" title="导入结果">
+          <Card title="导入结果">
             {result.failedCount === 0 ? (
               <AntResult
                 status="success"
@@ -226,7 +226,7 @@ const ZipImportPanel: React.FC = () => {
                   dataSource={result.failedRecords as Record<string, unknown>[]}
                   columns={failedColumns}
                   rowKey="row"
-                  size="small"
+                 
                   pagination={false}
                   scroll={{ y: 300 }}
                 />
@@ -307,7 +307,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
   return (
     <div>
       {/* 说明区域 */}
-      <Card size="small" style={{ marginBottom: 16, background: '#f8f9fa' }}>
+      <Card style={{ marginBottom: 16, background: '#f8f9fa' }}>
         <Paragraph style={{ marginBottom: 8 }}>
           <Text strong>{config.description}</Text>
         </Paragraph>
@@ -324,7 +324,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
       {/* 操作区域 */}
       <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         {/* 步骤1：下载模板 */}
-        <Card size="small" title="第一步：下载模板">
+        <Card title="第一步：下载模板">
           <Button
             icon={<DownloadOutlined />}
             onClick={handleDownloadTemplate}
@@ -338,7 +338,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
         </Card>
 
         {/* 步骤2：上传文件 */}
-        <Card size="small" title="第二步：上传数据">
+        <Card title="第二步：上传数据">
           <Space orientation="vertical" style={{ width: '100%' }}>
             <Upload
               fileList={fileList}
@@ -390,7 +390,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
 
         {/* 导入结果 */}
         {result && (
-          <Card size="small" title="导入结果">
+          <Card title="导入结果">
             {result.failedCount === 0 ? (
               <AntResult
                 status="success"
@@ -421,7 +421,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                   dataSource={result.failedRecords as Record<string, unknown>[]}
                   columns={failedColumns}
                   rowKey="row"
-                  size="small"
+                 
                   pagination={false}
                   scroll={{ y: 300 }}
                 />

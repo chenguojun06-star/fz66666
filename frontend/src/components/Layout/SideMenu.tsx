@@ -237,7 +237,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
               </div>
             )}
           >
-            <Button type="text" size="small" className="sidebar-icp-collapsed-btn">
+            <Button type="text" className="sidebar-icp-collapsed-btn">
               <img loading="lazy" src="/police.png" alt="公安备案图标" className="sidebar-icp-collapsed-icon" />
               <span>备案</span>
             </Button>

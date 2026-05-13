@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -211,6 +212,36 @@ public class PayrollSettlementController {
             return Result.fail("仅主管及以上可删除工资结算单");
         }
         payrollSettlementOrchestrator.delete(id);
+        return Result.success(null);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/{id}/payment")
+    public Result<Void> recordPayment(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可记录打款");
+        }
+        BigDecimal amount = body != null && body.get("amount") != null
+                ? new BigDecimal(String.valueOf(body.get("amount")))
+                : null;
+        payrollSettlementOrchestrator.recordPayment(id, amount);
+        return Result.success(null);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/deduction")
+    public Result<Void> applyDeduction(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可添加扣款");
+        }
+        BigDecimal amount = null;
+        if (body != null) {
+            Object raw = body.getOrDefault("deductionAmount", body.get("amount"));
+            amount = raw != null ? new BigDecimal(String.valueOf(raw)) : null;
+        }
+        String type = body != null ? (String) body.getOrDefault("deductionType", body.get("type")) : null;
+        String desc = body != null ? (String) body.get("description") : null;
+        payrollSettlementOrchestrator.applyDeduction(id, amount, type, desc);
         return Result.success(null);
     }
 }

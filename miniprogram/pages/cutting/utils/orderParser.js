@@ -101,22 +101,9 @@ function parseProductionOrderLines(order) {
   return extractFallbackLine(order);
 }
 
-const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL', '5XL'];
-
-function sortBySizeOrder(sizes) {
-  if (!Array.isArray(sizes) || sizes.length === 0) return sizes;
-  return sizes.slice().sort(function (a, b) {
-    var ia = SIZE_ORDER.indexOf(a);
-    var ib = SIZE_ORDER.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-}
+const { sortSizeNames } = require('../../../utils/sizeUtils');
 
 module.exports = {
   parseProductionOrderLines,
-  SIZE_ORDER,
-  sortBySizeOrder,
+  sortSizeNames,
 };

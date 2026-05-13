@@ -244,10 +244,10 @@ export default function AiExecutionPanel() {
       width: 120,
       fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space size="small">
+        <Space>
           <Button
             type="primary"
-            size="small"
+           
             onClick={() => handleViewDetail(record)}
           >
             查看
@@ -268,7 +268,7 @@ export default function AiExecutionPanel() {
         extra={
           <Button
             type="link"
-            size="small"
+           
             loading={loading}
             onClick={fetchPendingCommands}
           >

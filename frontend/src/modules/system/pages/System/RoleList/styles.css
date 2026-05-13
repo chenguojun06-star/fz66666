@@ -1,45 +1,172 @@
-/* 空状态样式 */
-.empty-state {
-  text-align: center;
-  padding: 40px 0;
-  color: #8c8c8c;
-  font-size: 14px;
+.role-split-layout {
+  display: flex;
+  border: 1px solid var(--color-border-light, #f0f0f0);
+  border-radius: 6px;
+  height: calc(100vh - 200px);
+  min-height: 480px;
 }
 
-.user-perm-panel {
+.role-list-panel {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border-light, #f0f0f0);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  overflow: hidden;
 }
 
-.user-perm-toolbar {
+.role-list-header {
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  color: var(--color-text-primary, #333);
+  flex-shrink: 0;
+}
+
+.role-list-items {
+  padding: 4px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.role-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 4px;
+  margin: 1px 4px;
+  transition: background 0.15s;
+  user-select: none;
+  cursor: pointer;
+}
+
+.role-list-item-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.role-list-item:hover {
+  background: var(--color-bg-highlight, #f5f5f5);
+}
+
+.role-list-item-active {
+  background: var(--color-bg-highlight, #e6f4ff);
+}
+
+.role-list-item-active .role-list-item-name {
+  color: var(--primary-color, #1677ff);
+  font-weight: 500;
+}
+
+.role-list-item-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-perm-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.role-perm-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  flex-shrink: 0;
 }
 
-.user-perm-role {
-  color: rgba(0, 0, 0, 0.65);
-}
-
-.user-perm-tree {
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  padding: 12px;
-  background: var(--neutral-white);
-}
-
-.user-perm-loading {
-  padding: 24px 0;
+.role-perm-toolbar {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  background: var(--color-bg-base, #fff);
 }
 
-.permission-tree {
-  border: 1px solid #f0f0f0;
-  padding: 12px;
-  background: var(--neutral-white);
-  max-height: 300px;
+.role-perm-cards {
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
+}
+
+.perm-module {
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+}
+
+.perm-module:last-child {
+  border-bottom: none;
+}
+
+.perm-module-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px;
+  background: var(--color-bg-highlight, #f8f9fa);
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.perm-module-header .ant-checkbox-wrapper {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.perm-module-count {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #999);
+  font-weight: 400;
+  margin-left: auto;
+}
+
+.perm-group-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  gap: 12px;
+}
+
+.perm-group-row:last-child {
+  border-bottom: none;
+}
+
+.perm-group-row .ant-checkbox-wrapper {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-text-secondary, #666);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 100px;
+  padding-top: 1px;
+}
+
+.perm-group-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  flex: 1;
+}
+
+.perm-group-btns .ant-checkbox-wrapper {
+  min-width: 90px;
+  margin: 0;
+  padding: 2px 6px 2px 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-primary, #333);
 }

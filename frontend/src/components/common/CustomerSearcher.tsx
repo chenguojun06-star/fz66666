@@ -87,7 +87,7 @@ const CustomerSearcher: React.FC<Props> = ({ form, disabled, id, value, onChange
         }
       }}
       placeholder="请选择客户/供应商或直接输入"
-      notFoundContent={loading ? <Spin size="small" /> : '无匹配项'}
+      notFoundContent={loading ? <Spin /> : '无匹配项'}
       allowClear
       style={{ width: '100%' }}
     />

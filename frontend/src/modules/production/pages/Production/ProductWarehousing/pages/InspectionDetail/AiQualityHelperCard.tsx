@@ -13,7 +13,7 @@ interface Props {
 const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualDefectSet }) => {
   return (
     <Card
-      size="small"
+     
       style={{ background: '#fff', border: '1px solid #d6e4ff' }}
       title={
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

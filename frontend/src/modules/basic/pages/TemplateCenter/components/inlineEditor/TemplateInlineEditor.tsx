@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { App, Button, Form, Input, Select, Tag, Upload } from 'antd';
 import api from '@/utils/api';
+import { sortSizeNames } from '@/utils/api';
 import type { TemplateLibrary } from '@/types/style';
 import {
   convertStyleSizeListToTable,
@@ -72,7 +73,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
   const [imageUploading, setImageUploading] = useState(false);
   const [editTableData, setEditTableData] = useState<unknown>(null);
   const [showSizePrices, setShowSizePrices] = useState(false);
-  const [templateSizes, setTemplateSizes] = useState<string[]>(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+  const [templateSizes, setTemplateSizes] = useState<string[]>(sortSizeNames(['XS', 'S', 'M', 'L', 'XL', 'XXL']));
   const [newSizeName, setNewSizeName] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
@@ -89,7 +90,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
     if (!parsedContent) {
       setEditTableData(null);
       setShowSizePrices(false);
-      setTemplateSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+      setTemplateSizes(sortSizeNames(['XS', 'S', 'M', 'L', 'XL', 'XXL']));
       setImageUrls([]);
       return;
     }
@@ -108,10 +109,10 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
     setEditTableData(nextContent);
 
     if (isProcessTableData(nextContent) && Array.isArray(nextContent.sizes)) {
-      setTemplateSizes(nextContent.sizes);
+      setTemplateSizes(sortSizeNames(nextContent.sizes));
       setShowSizePrices(nextContent.sizes.length > 0);
     } else {
-      setTemplateSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+      setTemplateSizes(sortSizeNames(['XS', 'S', 'M', 'L', 'XL', 'XXL']));
       setShowSizePrices(false);
     }
 
@@ -246,7 +247,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
   const addSize = () => {
     const nextSize = newSizeName.trim().toUpperCase();
     if (!nextSize || templateSizes.includes(nextSize) || !isProcessTableData(editTableData)) return;
-    const nextSizes = [...templateSizes, nextSize];
+    const nextSizes = sortSizeNames([...templateSizes, nextSize]);
     const nextSteps = editTableData.steps.map((step) => ({
       ...step,
       sizePrices: {
@@ -448,7 +449,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
               ? renderCompactField(
                 'templateName',
                 '模板名称',
-                <Input size="small" placeholder="请输入模板名称" disabled={readOnly} />,
+                <Input placeholder="请输入模板名称" disabled={readOnly} />,
                 [{ required: true, message: '请输入模板名称' }],
               )
               : (
@@ -458,14 +459,14 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
                   rules={[{ required: true, message: '请输入模板名称' }]}
                   style={{ marginBottom: 0 }}
                 >
-                  <Input size="small" placeholder="请输入模板名称" disabled={readOnly} />
+                  <Input placeholder="请输入模板名称" disabled={readOnly} />
                 </Form.Item>
               )}
             {compact
-              ? renderCompactField('templateKey', '模板标识', <Input size="small" placeholder="可选" disabled={readOnly} />)
+              ? renderCompactField('templateKey', '模板标识', <Input placeholder="可选" disabled={readOnly} />)
               : (
                 <Form.Item name="templateKey" label="模板标识" style={{ marginBottom: 0 }}>
-                  <Input size="small" placeholder="可选" disabled={readOnly} />
+                  <Input placeholder="可选" disabled={readOnly} />
                 </Form.Item>
               )}
             {allowSourceStyleSelection ? (compact
@@ -474,7 +475,6 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
                 '来源款号',
                 <Select
                   allowClear
-                  size="small"
                   showSearch
                   filterOption={false}
                   disabled={readOnly}
@@ -489,7 +489,6 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
                 <Form.Item name="sourceStyleNo" label="来源款号" style={{ marginBottom: 0 }}>
                   <Select
                     allowClear
-                    size="small"
                     showSearch
                     filterOption={false}
                     disabled={readOnly}
@@ -510,9 +509,9 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
       {!readOnly ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: compact ? 10 : 16 }}>
           {onCancel ? (
-            <Button size={compact ? 'small' : 'middle'} onClick={onCancel}>取消修改</Button>
+            <Button onClick={onCancel}>取消修改</Button>
           ) : null}
-          <Button type="primary" size={compact ? 'small' : 'middle'} loading={saving} onClick={handleSave}>
+          <Button type="primary" loading={saving} onClick={handleSave}>
             保存
           </Button>
         </div>

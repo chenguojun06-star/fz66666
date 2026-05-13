@@ -99,8 +99,8 @@ const MaterialReconciliation: React.FC = () => {
         headerContent={showSmartErrorNotice && smartError ? <div style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={fetchList} /></div> : null}
       >
         {showSmartErrorNotice && (
-          <Card size="small" style={{ marginBottom: 12, background: '#f0f5ff', border: '1px solid #adc6ff' }} styles={{ body: { padding: '8px 12px' } }}
-            extra={<Button size="small" type="link" loading={auditLoading} onClick={fetchFinanceAudit} style={{ padding: 0 }}>{financeAudit ? '重新分析' : ' AI分析'}</Button>}
+          <Card style={{ marginBottom: 12, background: '#f0f5ff', border: '1px solid #adc6ff' }} styles={{ body: { padding: '8px 12px' } }}
+            extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} style={{ padding: 0 }}>{financeAudit ? '重新分析' : ' AI分析'}</Button>}
             title={<span style={{ fontSize: 13, color: '#1677ff' }}> 智能财务审核助手</span>}
           >
             {!financeAudit ? (
@@ -124,7 +124,7 @@ const MaterialReconciliation: React.FC = () => {
           </Card>
         )}
 
-        <Card size="small" className="filter-card mb-sm">
+        <Card className="filter-card mb-sm">
           <StandardToolbar
             left={
               <>

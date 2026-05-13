@@ -70,7 +70,7 @@ const WageFeedbackTab: React.FC = () => {
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,
       render: (v: string) => {
-        const s = STATUS_MAP[v] || { text: v, color: 'default' };
+        const s = STATUS_MAP[v] || { text: '未知', color: 'default' };
         return <Tag color={s.color}>{s.text}</Tag>;
       },
     },
@@ -88,11 +88,11 @@ const WageFeedbackTab: React.FC = () => {
       title: '操作', key: 'action', width: 140,
       render: (_: any, r: any) => r.status === 'PENDING' ? (
         <Space size={4}>
-          <Button type="link" size="small" icon={<CheckCircleOutlined />}
+          <Button type="link" icon={<CheckCircleOutlined />}
             onClick={() => { setResolveModal({ id: r.id, action: 'RESOLVED' }); setResolveRemark(''); }}>
             解决
           </Button>
-          <Button type="link" size="small" danger icon={<CloseCircleOutlined />}
+          <Button type="link" danger icon={<CloseCircleOutlined />}
             onClick={() => { setResolveModal({ id: r.id, action: 'REJECTED' }); setResolveRemark(''); }}>
             驳回
           </Button>
@@ -105,16 +105,16 @@ const WageFeedbackTab: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card size="small"><Statistic title="总反馈" value={stats.totalCount ?? 0} prefix={<MessageOutlined />} /></Card>
+          <Card><Statistic title="总反馈" value={stats.totalCount ?? 0} prefix={<MessageOutlined />} /></Card>
         </Col>
         <Col span={6}>
-          <Card size="small"><Statistic title="待处理" value={stats.pendingCount ?? 0} styles={{ content: { color: '#faad14' } }} /></Card>
+          <Card><Statistic title="待处理" value={stats.pendingCount ?? 0} styles={{ content: { color: '#faad14' } }} /></Card>
         </Col>
         <Col span={6}>
-          <Card size="small"><Statistic title="已解决" value={stats.resolvedCount ?? 0} styles={{ content: { color: '#52c41a' } }} /></Card>
+          <Card><Statistic title="已解决" value={stats.resolvedCount ?? 0} styles={{ content: { color: '#52c41a' } }} /></Card>
         </Col>
         <Col span={6}>
-          <Card size="small"><Statistic title="已驳回" value={stats.rejectedCount ?? 0} styles={{ content: { color: '#ff4d4f' } }} /></Card>
+          <Card><Statistic title="已驳回" value={stats.rejectedCount ?? 0} styles={{ content: { color: '#ff4d4f' } }} /></Card>
         </Col>
       </Row>
 
@@ -123,7 +123,7 @@ const WageFeedbackTab: React.FC = () => {
         columns={columns}
         dataSource={list}
         rowKey="id"
-        size="small"
+       
         loading={loading}
         pagination={{ pageSize: 20 }}
         scroll={{ x: 900 }}

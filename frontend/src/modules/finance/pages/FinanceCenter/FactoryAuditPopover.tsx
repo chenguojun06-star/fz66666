@@ -106,7 +106,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
         </div>
         <Progress
           percent={analysis.auditRate}
-          size="small"
+         
           status={analysis.auditRate === 100 ? 'success' : 'active'}
         />
       </div>

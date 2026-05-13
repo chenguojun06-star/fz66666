@@ -22,6 +22,14 @@ export interface User extends Record<string, unknown> {
   isFactoryOwner?: boolean;
   /** 所属组织节点ID */
   orgUnitId?: string;
+  /** 所属组织节点名称 */
+  orgUnitName?: string;
+  /** 性别 */
+  gender?: string;
+  /** 入职日期 */
+  hireDate?: string;
+  /** 在职状态: normal=正式, probation=试用期, temporary=临时工 */
+  employmentStatus?: string;
 }
 
 export interface Role {
@@ -135,6 +143,9 @@ export interface UserQueryParams {
   name?: string;
   roleName?: string;
   status?: string;
+  orgUnitId?: string;
+  employmentStatus?: string;
+  roleId?: string;
   page: number;
   pageSize: number;
 }

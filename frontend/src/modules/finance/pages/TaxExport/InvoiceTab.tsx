@@ -124,17 +124,17 @@ const InvoiceTab: React.FC = () => {
     { title: '未税金额', dataIndex: 'amount', width: 110, render: (v: number) => formatCurrency(v) },
     { title: '税额', dataIndex: 'taxAmount', width: 100, render: (v: number) => formatCurrency(v) },
     { title: '价税合计', dataIndex: 'totalAmount', width: 110, render: (v: number) => formatCurrency(v) },
-    { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => { const s = INVOICE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{v}</Tag>; } },
+    { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => { const s = INVOICE_STATUS.find(t => t.value === v); return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>未知</Tag>; } },
     { title: '开票日期', dataIndex: 'issueDate', width: 100 },
     {
       title: '操作', width: 160,
       render: (_: any, r: any) => (
         <Space>
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => { setEditRecord(r); setFormOpen(true); }}>编辑</Button>
-          {r.status === 'DRAFT' && <Button size="small" type="link" onClick={() => handleIssue(r.id)}>开票</Button>}
+          <Button type="link" icon={<EditOutlined />} onClick={() => { setEditRecord(r); setFormOpen(true); }}>编辑</Button>
+          {r.status === 'DRAFT' && <Button type="link" onClick={() => handleIssue(r.id)}>开票</Button>}
           {r.status === 'ISSUED' && (
             <Popconfirm title="确认作废该发票？" onConfirm={() => handleCancel(r.id)}>
-              <Button size="small" type="link" danger>作废</Button>
+              <Button type="link" danger>作废</Button>
             </Popconfirm>
           )}
         </Space>
@@ -149,12 +149,12 @@ const InvoiceTab: React.FC = () => {
         description="当前为业务台账管理，不是税控盘/电子发票平台直连。适合先把开票信息、业务来源、税额和状态管起来；若要直连税盘或第三方开票平台，需要后续再接外部接口。"
       />
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={6}><Card size="small"><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
-        <Col xs={24} md={6}><Card size="small"><Statistic title="已开票" value={stats.issuedCount} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
-        <Col xs={24} md={6}><Card size="small"><Statistic title="本月开票额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
-        <Col xs={24} md={6}><Card size="small"><Statistic title="累计开票额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="已开票" value={stats.issuedCount} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="本月开票额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="累计开票额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
       </Row>
-      <Card size="small" style={{ marginBottom: 12 }}>
+      <Card style={{ marginBottom: 12 }}>
         <Row gutter={[12, 12]} align="middle">
           <Col xs={24} md={6}>
             <Input allowClear prefix={<SearchOutlined />} placeholder="搜发票号 / 购方 / 关联单号"
@@ -184,7 +184,7 @@ const InvoiceTab: React.FC = () => {
           </Col>
         </Row>
       </Card>
-      <ResizableTable storageKey="finance-invoice-ledger" rowKey="id" columns={columns} dataSource={list} loading={loading} size="small" scroll={{ x: 'max-content' }}
+      <ResizableTable storageKey="finance-invoice-ledger" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} scroll={{ x: 'max-content' }}
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }}
       />
       <ResizableModal

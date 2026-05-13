@@ -171,7 +171,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     >
                       <Button
                         type="text"
-                        size="small"
+                       
                         className="recent-tab-label"
                         title={p.path}
                         aria-current={isCurrent ? 'page' : undefined}
@@ -183,7 +183,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </Button>
                       <Button
                         type="text"
-                        size="small"
+                       
                         className="recent-tab-close"
                         icon={<CloseOutlined />}
                         aria-label={`${t('layout.close', language)} ${p.title}`}

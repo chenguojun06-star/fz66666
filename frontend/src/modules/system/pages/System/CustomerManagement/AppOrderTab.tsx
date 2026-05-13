@@ -264,7 +264,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         columns={columns}
         rowKey="id"
         loading={loading}
-        size="small"
+       
         pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
         scroll={{ x: 1200 }}
       />
@@ -292,7 +292,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
               showIcon
               style={{ marginBottom: 16 }}
             />
-            <Descriptions column={1} bordered size="small">
+            <Descriptions column={1} bordered>
               <Descriptions.Item label="订单号">{activateModal.data.orderNo}</Descriptions.Item>
               <Descriptions.Item label="客户">{activateModal.data.tenantName}</Descriptions.Item>
               <Descriptions.Item label="应用">{activateModal.data.appName}</Descriptions.Item>
@@ -340,7 +340,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         {resultModal.data && (
           <>
             <Alert title="订单已激活成功，客户可以开始使用应用了。" type="success" showIcon style={{ marginBottom: 16 }} />
-            <Descriptions column={1} bordered size="small">
+            <Descriptions column={1} bordered>
               <Descriptions.Item label="订单号">{resultModal.data.orderNo}</Descriptions.Item>
               <Descriptions.Item label="激活时间">{resultModal.data.activatedAt}</Descriptions.Item>
               <Descriptions.Item label="到期时间">{resultModal.data.expireAt}</Descriptions.Item>
@@ -348,7 +348,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
             {resultModal.data.apiCredentials && (
               <div style={{ marginTop: 16 }}>
                 <Text strong>API 凭证（请妥善保管）：</Text>
-                <Descriptions column={1} bordered size="small" style={{ marginTop: 8 }}>
+                <Descriptions column={1} bordered style={{ marginTop: 8 }}>
                   <Descriptions.Item label="App Key">
                     <Typography.Paragraph copyable style={{ marginBottom: 0 }}>{resultModal.data.apiCredentials.appKey}</Typography.Paragraph>
                   </Descriptions.Item>

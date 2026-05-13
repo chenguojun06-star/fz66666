@@ -79,7 +79,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
 
       {scanData.loading ? (
         <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4, borderTop: '1px solid #f0f0f0', marginBottom: 6 }}>
-          <Spin size="small" /><span style={{ color: '#bfbfbf', marginLeft: 6, fontSize: 11 }}>加载子工序…</span>
+          <Spin /><span style={{ color: '#bfbfbf', marginLeft: 6, fontSize: 11 }}>加载子工序…</span>
         </div>
       ) : scanData.subProcesses.length > 0 ? (
         <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 6, marginBottom: 6 }}>

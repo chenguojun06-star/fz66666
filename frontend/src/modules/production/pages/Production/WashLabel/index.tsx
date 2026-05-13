@@ -294,7 +294,7 @@ const WashLabelPage: React.FC = () => {
         }
         return (
           <Input
-            size="small"
+           
             value={record.id ? (uCodeOverrides[record.id] ?? getUCode(record)) : getUCode(record)}
             onChange={e => record.id && setUCodeOverrides(prev => ({ ...prev, [record.id!]: e.target.value }))}
             style={{ width: 185 }}
@@ -310,7 +310,7 @@ const WashLabelPage: React.FC = () => {
       width: 80,
       render: (_: unknown, record: ProductionOrder) => (
         <Button
-          size="small"
+         
           icon={<PrinterOutlined />}
           onClick={() => void openBatchPrint([record])}
         >
@@ -404,7 +404,7 @@ const WashLabelPage: React.FC = () => {
             showSizeChanger: false,
             showTotal: (t) => `共 ${t} 条`,
           }}
-          size="small"
+         
         />
       </div>
 

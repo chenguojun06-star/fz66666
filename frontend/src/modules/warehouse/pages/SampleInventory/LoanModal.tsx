@@ -70,7 +70,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
       onCancel={onCancel}
       onOk={handleOk}
       confirmLoading={loading}
-      width="40vw"
+      width="40vw" maskClosable={false}
     >
       {showSmartErrorNotice && smartError ? (
         <div style={{ marginBottom: 12 }}>

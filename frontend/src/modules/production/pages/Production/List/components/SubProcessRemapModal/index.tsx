@@ -199,23 +199,23 @@ export default function SubProcessRemapModal({
                 value={row.subprocess.name}
                 placeholder={`子工序名称 ${row.subIndex + 1}`}
                 onChange={e => updateSubProcessName(row.parentNode.stageKey, row.subprocess!.id, e.target.value)}
-                size="small"
+               
                 maxLength={30}
                 status={!row.subprocess.name.trim() ? 'error' : undefined}
                 style={{ flex: 1 }}
               />
-              <Button type="text" size="small" icon={<ArrowUpOutlined />}
+              <Button type="text" icon={<ArrowUpOutlined />}
                 disabled={row.subIndex === 0}
                 onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, -1)}
                 style={{ padding: '0 3px', color: '#6b7280' }}
               />
-              <Button type="text" size="small" icon={<ArrowDownOutlined />}
+              <Button type="text" icon={<ArrowDownOutlined />}
                 disabled={row.subIndex === row.totalInParent - 1}
                 onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, 1)}
                 style={{ padding: '0 3px', color: '#6b7280' }}
               />
               <Tooltip title={row.totalInParent <= 1 ? '父节点至少保留 1 个子工序' : '删除'}>
-                <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                <Button type="text" danger icon={<DeleteOutlined />}
                   disabled={row.totalInParent <= 1}
                   onClick={() => removeSubProcess(row.parentNode.stageKey, row.subprocess!.id)}
                   style={{ padding: '0 3px' }}
@@ -230,7 +230,7 @@ export default function SubProcessRemapModal({
                   max={99999}
                   precision={2}
                   prefix="¥"
-                  size="small"
+                 
                   placeholder="自定义单价"
                   style={{ width: 130 }}
                   onChange={v => updateSubProcessUnitPrice(row.parentNode.stageKey, row.subprocess!.id, v ?? undefined)}
@@ -271,13 +271,13 @@ export default function SubProcessRemapModal({
               {row.entry.enabled ? '已启用' : '已关闭'}
             </Text>
             <Switch
-              size="small"
+             
               checked={row.entry.enabled}
               onChange={c => toggleEnabled(row.parentNode.stageKey, c)}
             />
           </div>
           {row.entry.enabled && (
-            <Button type="link" size="small" icon={<PlusOutlined />}
+            <Button type="link" icon={<PlusOutlined />}
               onClick={() => addSubProcess(row.parentNode.stageKey)}
               style={{ fontSize: 12, padding: 0 }}
             >
@@ -321,8 +321,8 @@ export default function SubProcessRemapModal({
           开启右侧开关后可自定义子工序，仅影响本订单扫码节点
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="small" onClick={onClose}>取消</Button>
-          <Button size="small" type="primary" loading={saving} onClick={handleSave}>保存</Button>
+          <Button onClick={onClose}>取消</Button>
+          <Button type="primary" loading={saving} onClick={handleSave}>保存</Button>
         </div>
       </div>
 
@@ -334,7 +334,7 @@ export default function SubProcessRemapModal({
           dataSource={tableRows}
           columns={columns}
           pagination={false}
-          size="small"
+         
           bordered
           rowKey="key"
           scroll={{ x: 600 }}

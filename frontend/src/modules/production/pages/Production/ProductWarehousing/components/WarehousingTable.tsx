@@ -104,7 +104,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         const text = String(v || '').trim();
         if (!text) return '-';
         return (
-          <Button type="link" size="small" style={{ padding: 0, fontSize: 12 }} onClick={() => goToDetail(record, 'inspect')} title={text}>
+          <Button type="link" style={{ padding: 0, fontSize: 12 }} onClick={() => goToDetail(record, 'inspect')} title={text}>
             {text}
           </Button>
         );

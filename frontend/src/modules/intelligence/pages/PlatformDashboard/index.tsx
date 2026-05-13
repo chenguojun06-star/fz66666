@@ -171,7 +171,7 @@ export const PlatformDashboard: React.FC = () => {
             { title: '平均巡检 MTTR', value: summary.avgMttrHours != null ? `${safeNum(summary.avgMttrHours)} h` : '-', rawStr: true },
           ].map((item, i) => (
             <Col span={4} key={i}>
-              <Card size="small">
+              <Card>
                 {item.rawStr
                   ? <Statistic title={item.title} value={String(item.value ?? '-')} />
                   : <Statistic title={item.title} value={item.value as number ?? 0} suffix={item.suffix} />}
@@ -181,13 +181,13 @@ export const PlatformDashboard: React.FC = () => {
         </Row>
 
         {/* 工具表现 */}
-        <Card title="工具表现明细" style={{ marginBottom: 16 }} size="small">
+        <Card title="工具表现明细" style={{ marginBottom: 16 }}>
           <ResizableTable<ToolRow>
             storageKey="platform-tool-table"
             dataSource={tools}
             columns={toolColumns}
             rowKey={r => String(r.toolName ?? Math.random())}
-            size="small"
+           
             pagination={{ pageSize: 15 }}
             scroll={{ x: 600 }}
             locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
@@ -197,13 +197,13 @@ export const PlatformDashboard: React.FC = () => {
         {/* 决策采纳率 */}
         <Row gutter={16}>
           <Col span={12}>
-            <Card title="决策采纳率（场景维度）" size="small">
+            <Card title="决策采纳率（场景维度）">
               <ResizableTable<AdoptionRow>
                 storageKey="platform-adoption-table"
                 dataSource={adoptions}
                 columns={adoptionColumns}
                 rowKey={r => String(r.scene ?? Math.random())}
-                size="small"
+               
                 pagination={{ pageSize: 10 }}
                 scroll={{ x: 500 }}
                 locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
@@ -211,13 +211,13 @@ export const PlatformDashboard: React.FC = () => {
             </Card>
           </Col>
           <Col span={12}>
-            <Card title="巡检关闭循环 MTTR" size="small">
+            <Card title="巡检关闭循环 MTTR">
               <ResizableTable<MttrRow>
                 storageKey="platform-mttr-table"
                 dataSource={mttrs}
                 columns={mttrColumns}
                 rowKey={r => String(r.issueType ?? Math.random())}
-                size="small"
+               
                 pagination={{ pageSize: 10 }}
                 scroll={{ x: 600 }}
                 locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}

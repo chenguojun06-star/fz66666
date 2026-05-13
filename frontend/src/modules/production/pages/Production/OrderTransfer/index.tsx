@@ -177,7 +177,7 @@ const OrderTransferPage: React.FC = () => {
       accepted: { color: 'success', text: '已接受' },
       rejected: { color: 'error', text: '已拒绝' },
     };
-    const config = statusMap[status] || { color: 'default', text: status };
+    const config = statusMap[status] || { color: 'default', text: '未知' };
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 

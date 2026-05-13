@@ -25,7 +25,7 @@ import { EXPENSE_TYPES } from '@/services/finance/expenseReimbursementApi';
 
 const statusTag = (val: string) => {
   const s = EXPENSE_STATUS.find(t => t.value === val);
-  return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{val}</Tag>;
+  return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>未知</Tag>;
 };
 
 type ExpenseDetailModalProps = {

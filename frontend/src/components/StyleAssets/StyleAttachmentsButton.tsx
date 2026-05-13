@@ -158,7 +158,7 @@ const StyleAttachmentsButton: React.FC<{
 
   return (
     <>
-      <Button size="small" onClick={() => setOpen(true)}>{buttonText}</Button>
+      <Button onClick={() => setOpen(true)}>{buttonText}</Button>
       <ResizableModal
         open={open}
         title={modalTitle}

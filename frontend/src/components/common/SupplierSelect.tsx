@@ -134,7 +134,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
       placeholder={placeholder}
       disabled={disabled}
       style={style}
-      notFoundContent={loading ? <Spin size="small" /> : '未找到匹配的供应商（可直接输入新供应商名称）'}
+      notFoundContent={loading ? <Spin /> : '未找到匹配的供应商（可直接输入新供应商名称）'}
       filterOption={(inputValue, option) => {
         const searchText = inputValue.toLowerCase();
         const factoryName = (option?.factory?.factoryName || '').toLowerCase();

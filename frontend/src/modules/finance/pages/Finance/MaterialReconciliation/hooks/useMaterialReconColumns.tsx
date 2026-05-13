@@ -28,7 +28,7 @@ export const useMaterialReconColumns = ({
 }: UseMaterialReconColumnsParams) => {
   const columns = useMemo(() => [
     { title: '图片', key: 'cover', width: 72, render: (_: any, record: MaterialReconType) => <MaterialThumb imageUrl={record.materialImageUrl} /> },
-    { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 140, render: (_: any, record: MaterialReconType) => <Button type="link" size="small" onClick={() => openDialog(record)} style={{ padding: 0 }}>{String(record.reconciliationNo || '').trim() || '-'}</Button> },
+    { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 140, render: (_: any, record: MaterialReconType) => <Button type="link" onClick={() => openDialog(record)} style={{ padding: 0 }}>{String(record.reconciliationNo || '').trim() || '-'}</Button> },
     { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 120, render: (_: unknown, record: MaterialReconType) => <SupplierNameTooltip name={record.supplierName} contactPerson={(record as any).supplierContactPerson} contactPhone={(record as any).supplierContactPhone} /> },
     { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 100 },
     { title: '物料名称', dataIndex: 'materialName', key: 'materialName', ellipsis: true },

@@ -98,7 +98,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <Input
             value={String(v || '')}
-            size="small"
+           
             onChange={(e) => onUpdateRow(record.id!, 'materialCode', e.target.value)}
             onClick={() => onOpenMaterialModal(record.id!)}
             placeholder="点击选用"
@@ -119,7 +119,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <Input
             value={String(v || '')}
-            size="small"
+           
             onChange={(e) => onUpdateRow(record.id!, 'materialName', e.target.value)}
             placeholder="物料名称"
           />
@@ -137,7 +137,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <Input
             value={String(v || '')}
-            size="small"
+           
             onChange={(e) => onUpdateRow(record.id!, 'fabricComposition', e.target.value)}
             placeholder="成分"
           />
@@ -154,7 +154,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <Input
             value={String(v || '')}
-            size="small"
+           
             onChange={(e) => onUpdateRow(record.id!, 'fabricWeight', e.target.value)}
             placeholder="克重"
           />
@@ -171,7 +171,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <Input
             value={String(v || '')}
-            size="small"
+           
             onChange={(e) => onUpdateRow(record.id!, 'color', e.target.value)}
             placeholder="颜色"
           />
@@ -191,7 +191,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
             value={String(v || '')}
             onChange={(val: string) => onUpdateRow(record.id!, 'size', val)}
             placeholder="码数"
-            size="small"
+           
             style={{ width: '100%' }}
           />
         ) : (
@@ -207,7 +207,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <Input
             value={String(v || '')}
-            size="small"
+           
             onChange={(e) => onUpdateRow(record.id!, 'specification', e.target.value)}
             placeholder="规格"
           />
@@ -227,7 +227,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
             value={String(v || '')}
             onChange={(val: string) => onUpdateRow(record.id!, 'unit', val)}
             placeholder="单位"
-            size="small"
+           
             style={{ width: '100%' }}
           />
         ) : (
@@ -244,7 +244,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <InputNumber
             value={Number(v || 0)}
-            size="small"
+           
             min={0}
             precision={2}
             style={{ width: '100%' }}
@@ -264,7 +264,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <InputNumber
             value={Number(v || 0)}
-            size="small"
+           
             min={0}
             max={100}
             precision={1}
@@ -285,7 +285,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <InputNumber
             value={Number(v || 0)}
-            size="small"
+           
             min={0}
             precision={2}
             style={{ width: '100%' }}
@@ -307,7 +307,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
           <SupplierSelect
             value={String(v || '')}
             placeholder="供应商"
-            size="small"
+           
             style={{ width: '100%' }}
             onChange={(_val: string, option: any) => {
               onUpdateRow(record.id!, 'supplierName', _val);
@@ -371,7 +371,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
 
   return (
     <Card
-      size="small"
+     
       title="面辅料信息"
       className="cutting-entry-purchase-card"
       style={{ marginTop: 12 }}
@@ -381,18 +381,18 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
           <Space>
             {bomEditing ? (
               <>
-                <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={onAddRow}>
+                <Button type="dashed" icon={<PlusOutlined />} onClick={onAddRow}>
                   添加物料
                 </Button>
-                <Button size="small" type="primary" loading={bomSaving} onClick={onSave}>
+                <Button type="primary" loading={bomSaving} onClick={onSave}>
                   保存
                 </Button>
-                <Button size="small" onClick={() => onSetEditing(false)}>
+                <Button onClick={() => onSetEditing(false)}>
                   取消
                 </Button>
               </>
             ) : (
-              <Button size="small" type="primary" onClick={() => onSetEditing(true)}>
+              <Button type="primary" onClick={() => onSetEditing(true)}>
                 编辑
               </Button>
             )}
@@ -406,7 +406,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-text-quaternary)' }}>
           暂无面辅料信息
           {canEdit && (
-            <Button type="link" size="small" onClick={() => { onAddRow(); onSetEditing(true); }}>
+            <Button type="link" onClick={() => { onAddRow(); onSetEditing(true); }}>
               添加面辅料
             </Button>
           )}
@@ -418,7 +418,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
           dataSource={bomList}
           rowKey={(r: CuttingBomRow) => r.id || `${r.materialCode}-${r.materialName}`}
           pagination={false}
-          size="small"
+         
           scroll={{ x: 'max-content' }}
         />
       )}
@@ -518,7 +518,7 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
               </div>
               <ResizableTable
                 storageKey="cutting-bom-material-select"
-                size="small"
+               
                 loading={materialLoading}
                 dataSource={materialList}
                 rowKey={(record: Record<string, unknown>) => String(record.id || record.materialCode || '')}

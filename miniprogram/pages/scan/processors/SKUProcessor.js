@@ -8,8 +8,9 @@
  * 4. SKU和菲号的关联
  *
  * @module SKUProcessor
- * @date 2026-01-23
  */
+
+const { sortSizeNames } = require('../../../utils/sizeUtils');
 
 /**
  * SKU标准格式
@@ -309,7 +310,8 @@ const SKUProcessor = {
         return copy.sort((a, b) => a.color.localeCompare(b.color, 'zh'));
 
       case 'size':
-        return copy.sort((a, b) => a.size.localeCompare(b.size, 'en'));
+        const sortedSizes = sortSizeNames(copy.map(s => s.size));
+        return copy.sort((a, b) => sortedSizes.indexOf(a.size) - sortedSizes.indexOf(b.size));
 
       case 'progress':
         return copy.sort((a, b) => {

@@ -1,0 +1,14 @@
+SET @s = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_deduction_item' AND COLUMN_NAME='id' AND DATA_TYPE='bigint'),
+  'ALTER TABLE t_deduction_item MODIFY COLUMN id VARCHAR(64) NOT NULL',
+  'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @s = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_deduction_item' AND COLUMN_NAME='reconciliation_id' AND IS_NULLABLE='NO'),
+  'ALTER TABLE t_deduction_item MODIFY COLUMN reconciliation_id VARCHAR(64) DEFAULT NULL',
+  'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @s = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_deduction_item' AND COLUMN_NAME='reconciliation_id' AND DATA_TYPE='bigint'),
+  'ALTER TABLE t_deduction_item MODIFY COLUMN reconciliation_id VARCHAR(64) DEFAULT NULL',
+  'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

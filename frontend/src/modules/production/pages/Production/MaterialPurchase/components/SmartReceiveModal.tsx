@@ -73,7 +73,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       {materials.length > 0 ? (
         <ResizableTable
           storageKey="smart-receive-materials" dataSource={materials} columns={materialColumns}
-          rowKey="purchaseId" size="small" pagination={false} loading={loading}
+          rowKey="purchaseId" pagination={false} loading={loading}
           scroll={{ x: 900 }} style={{ marginBottom: 20 }}
           rowClassName={(record: any) => { if (record.purchaseStatus !== 'pending') return 'row-done'; if (record.availableStock <= 0) return 'row-no-stock'; if (record.availableStock < record.requiredQty) return 'row-partial'; return ''; }}
         />
@@ -90,7 +90,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           </div>
           <ResizableTable
             storageKey="smart-receive-picking" dataSource={pickingRecords} columns={pickingColumns}
-            rowKey="pickingId" size="small" pagination={false} scroll={{ x: 600 }}
+            rowKey="pickingId" pagination={false} scroll={{ x: 600 }}
             rowClassName={(record: any) => (record.status === 'cancelled' ? 'row-cancelled' : '')}
           />
         </>

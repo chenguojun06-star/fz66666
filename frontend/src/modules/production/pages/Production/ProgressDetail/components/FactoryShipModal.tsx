@@ -215,7 +215,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       <Divider style={{ margin: '8px 0 12px' }} />
 
       {/* ── Part 4: 发货表单 ── */}
-      <Form form={form} layout="vertical" size="small">
+      <Form form={form} layout="vertical">
         <Form.Item label="发货方式" name="shipMethod" initialValue="SELF_DELIVERY" style={{ marginBottom: 10 }}>
           <Radio.Group>
             <Radio value="SELF_DELIVERY" style={{ marginRight: 24 }}>自发货</Radio>
@@ -303,7 +303,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
                             <Button
                               type="text"
                               icon={<DeleteOutlined />}
-                              size="small"
+                             
                               danger
                               onClick={() => {
                                 const indices = shipDetails
@@ -342,7 +342,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
                     onChange={v => updateRow(idx, 'quantity', v ?? 0)}
                     style={{ width: 100 }}
                   />
-                  <Button type="text" icon={<DeleteOutlined />} size="small" danger onClick={() => removeRow(idx)} />
+                  <Button type="text" icon={<DeleteOutlined />} danger onClick={() => removeRow(idx)} />
                 </div>
               ))}
             </div>
@@ -350,7 +350,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
           <Button
             type="dashed"
             icon={<PlusOutlined />}
-            size="small"
+           
             style={{ marginTop: 8 }}
             onClick={() => {
               if (hasShipSizes) {

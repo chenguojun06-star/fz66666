@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
-import { App, Button, Card, Input, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { App, Button, Card, Form, Input, InputNumber, Modal, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
+import ResizableModal from '@/components/common/ResizableModal';
 import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { getSummaryColumns, getDetailColumns } from './payrollOperatorColumns';
@@ -16,6 +17,7 @@ import WorkerEfficiencyTab from './WorkerEfficiencyTab';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { SCAN_TYPE_OPTIONS } from '@/components/common/ScanTypeBadge';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
+import api from '@/utils/api';
 
 const PayrollOperatorSummary: React.FC = () => {
     const {
@@ -37,6 +39,63 @@ const PayrollOperatorSummary: React.FC = () => {
     } = usePayrollData();
 
     const { message } = App.useApp();
+
+    const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+    const [deductionModalVisible, setDeductionModalVisible] = useState(false);
+    const [activeRecord, setActiveRecord] = useState<Record<string, unknown> | null>(null);
+    const [paymentForm] = Form.useForm();
+    const [deductionForm] = Form.useForm();
+    const [paymentLoading, setPaymentLoading] = useState(false);
+    const [deductionLoading, setDeductionLoading] = useState(false);
+
+    const handleRecordPayment = (record: Record<string, unknown>) => {
+        setActiveRecord(record);
+        paymentForm.resetFields();
+        paymentForm.setFieldsValue({ amount: toNumberOrZero(record.remainingAmount) });
+        setPaymentModalVisible(true);
+    };
+
+    const handleAddDeduction = (record: Record<string, unknown>) => {
+        setActiveRecord(record);
+        deductionForm.resetFields();
+        setDeductionModalVisible(true);
+    };
+
+    const submitPayment = async () => {
+        try {
+            const values = await paymentForm.validateFields();
+            if (!activeRecord?.id) { message.error('缺少结算记录ID'); return; }
+            setPaymentLoading(true);
+            await api.post(`/finance/payroll-settlement/${String(activeRecord.id)}/payment`, { amount: values.amount });
+            message.success('打款记录已保存');
+            setPaymentModalVisible(false);
+            void fetchData();
+        } catch (err: unknown) {
+            if (err instanceof Error) message.error(err.message);
+        } finally {
+            setPaymentLoading(false);
+        }
+    };
+
+    const submitDeduction = async () => {
+        try {
+            const values = await deductionForm.validateFields();
+            if (!activeRecord?.id) { message.error('缺少结算记录ID'); return; }
+            setDeductionLoading(true);
+            await api.post(`/finance/payroll-settlement/${String(activeRecord.id)}/deduction`, {
+                amount: values.amount,
+                type: values.type,
+                description: values.description,
+            });
+            message.success('扣款记录已保存');
+            setDeductionModalVisible(false);
+            void fetchData();
+        } catch (err: unknown) {
+            if (err instanceof Error) message.error(err.message);
+        } finally {
+            setDeductionLoading(false);
+        }
+    };
 
     const { sortField: summarySortField, sortOrder: summarySortOrder, handleSort: handleSummarySort } = usePersistentSort<string, 'asc' | 'desc'>({
         storageKey: 'payroll-operator-summary',
@@ -83,7 +142,7 @@ const PayrollOperatorSummary: React.FC = () => {
             key: 'status',
             width: 100,
             render: (status: string) => {
-                const info = statusMap[status] || { text: status || '-', color: 'var(--neutral-text-secondary)' };
+                const info = statusMap[status] || { text: '未知', color: 'var(--neutral-text-secondary)' };
                 return (
                     <span style={{ padding: '2px 8px', fontSize: 12, backgroundColor: `${info.color}15`, color: info.color, fontWeight: 500 }}>
                         {info.text}
@@ -223,7 +282,8 @@ const PayrollOperatorSummary: React.FC = () => {
     const summaryColumns = useMemo(() => getSummaryColumns({
         sortField: summarySortField, sortOrder: summarySortOrder, handleSort: handleSummarySort,
         toNumberOrZero, toMoneyText, summaryRows, totalAmount, handleRejectOperator, handleFinalPush,
-    }), [summarySortField, summarySortOrder, handleSummarySort, toMoneyText, summaryRows, totalAmount, handleRejectOperator, handleFinalPush]);
+        handleRecordPayment, handleAddDeduction,
+    }), [summarySortField, summarySortOrder, handleSummarySort, toMoneyText, summaryRows, totalAmount, handleRejectOperator, handleFinalPush, handleRecordPayment, handleAddDeduction]);
 
     const columns = useMemo(() => getDetailColumns({
         detailSortField, detailSortOrder, handleDetailSort,
@@ -238,13 +298,13 @@ const PayrollOperatorSummary: React.FC = () => {
                 title="工资结算"
                 headerContent={
                     showSmartErrorNotice && smartError ? (
-                        <Card size="small" className="mb-sm">
+                        <Card className="mb-sm">
                             <SmartErrorNotice error={smartError} onFix={() => { void doFetchData(); }} />
                         </Card>
                     ) : null
                 }
             >
-                <Card size="small" className="filter-card mb-sm">
+                <Card className="filter-card mb-sm">
                     <Space wrap>
                         <Input placeholder="搜索订单号 / 款号 / 人员 / 工序" style={{ width: 280 }} allowClear value={keyword}
                             onChange={(e) => setKeyword(e.target.value)} prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />} />
@@ -270,7 +330,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         key: 'detail', label: '工序明细',
                         children: (
                             <>
-                                <Card size="small" className="mb-sm">
+                                <Card className="mb-sm">
                                     <Space wrap>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>行数 {filteredRows.length}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>数量合计 {totalQuantity}</span>
@@ -315,7 +375,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         key: 'summary', label: '工资汇总',
                         children: (
                             <>
-                                <Card size="small" className="mb-sm">
+                                <Card className="mb-sm">
                                     <Space wrap>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>人员数 {summaryRows.length}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>总数量 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalQuantity), 0)}</span>
@@ -346,16 +406,16 @@ const PayrollOperatorSummary: React.FC = () => {
                         key: 'internalOrders', label: '订单汇总',
                         children: (
                             <>
-                                <Card size="small" className="mb-sm">
+                                <Card className="mb-sm">
                                     <Space wrap>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>内部工厂订单 {internalOrders.length}</span>
-                                        <Button size="small" onClick={fetchInternalOrders} loading={internalOrdersLoading}>刷新</Button>
+                                        <Button onClick={fetchInternalOrders} loading={internalOrdersLoading}>刷新</Button>
                                     </Space>
                                 </Card>
                                 <ResizableTable
                                     storageKey="finance-payroll-internal-orders"
                                     rowKey={(r: any) => String(r.orderNo || r.orderId || '')}
-                                    dataSource={internalOrders} columns={internalOrderColumns} loading={internalOrdersLoading} size="small"
+                                    dataSource={internalOrders} columns={internalOrderColumns} loading={internalOrdersLoading}
                                     pagination={{ defaultPageSize: readPageSize(50), showSizeChanger: true, showTotal: (t: number) => `共 ${t} 条` }}
                                     sticky scroll={{ x: 1700 }} />
                             </>
@@ -377,6 +437,65 @@ const PayrollOperatorSummary: React.FC = () => {
                 onClose={() => setPrintModalVisible(false)}
                 workerData={getPrintData()}
                 dateRange={dateRange?.[0] && dateRange?.[1] ? [dayjs(dateRange[0]).format('YYYY-MM-DD'), dayjs(dateRange[1]).format('YYYY-MM-DD')] : ['-', '-']} />
+
+            <ResizableModal
+                title={`记录打款 — ${activeRecord?.operatorName || ''}`}
+                open={paymentModalVisible}
+                onCancel={() => setPaymentModalVisible(false)}
+                onOk={submitPayment}
+                confirmLoading={paymentLoading}
+                width="30vw"
+            >
+                <Form form={paymentForm} layout="vertical">
+                    <Form.Item label="剩余未付金额" style={{ color: 'var(--neutral-text-secondary)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-danger)', fontSize: 16 }}>
+                            ¥{toNumberOrZero(activeRecord?.remainingAmount).toFixed(2)}
+                        </span>
+                    </Form.Item>
+                    <Form.Item name="amount" label="打款金额" rules={[{ required: true, message: '请输入打款金额' }]}>
+                        <InputNumber
+                            style={{ width: '100%' }}
+                            min={0.01}
+                            max={toNumberOrZero(activeRecord?.remainingAmount)}
+                            precision={2}
+                            prefix="¥"
+                            placeholder="请输入打款金额"
+                        />
+                    </Form.Item>
+                </Form>
+            </ResizableModal>
+
+            <ResizableModal
+                title={`添加扣款 — ${activeRecord?.operatorName || ''}`}
+                open={deductionModalVisible}
+                onCancel={() => setDeductionModalVisible(false)}
+                onOk={submitDeduction}
+                confirmLoading={deductionLoading}
+                width="40vw"
+            >
+                <Form form={deductionForm} layout="vertical">
+                    <Form.Item name="type" label="扣款类型" rules={[{ required: true, message: '请选择扣款类型' }]}>
+                        <Select placeholder="请选择扣款类型" options={[
+                            { value: 'ADVANCE_DEDUCTION', label: '借支抵扣' },
+                            { value: 'QUALITY_PENALTY', label: '质量罚款' },
+                            { value: 'ATTENDANCE_DEDUCTION', label: '考勤扣款' },
+                            { value: 'OTHER', label: '其他' },
+                        ]} />
+                    </Form.Item>
+                    <Form.Item name="amount" label="扣款金额" rules={[{ required: true, message: '请输入扣款金额' }]}>
+                        <InputNumber
+                            style={{ width: '100%' }}
+                            min={0.01}
+                            precision={2}
+                            prefix="¥"
+                            placeholder="请输入扣款金额"
+                        />
+                    </Form.Item>
+                    <Form.Item name="description" label="扣款说明">
+                        <Input.TextArea rows={3} placeholder="请输入扣款说明" maxLength={200} showCount />
+                    </Form.Item>
+                </Form>
+            </ResizableModal>
         </>
     );
 };

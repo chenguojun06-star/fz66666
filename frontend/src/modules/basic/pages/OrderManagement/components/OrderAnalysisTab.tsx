@@ -171,7 +171,7 @@ const OrderAnalysisTab: React.FC = () => {
       {/* 汇总统计 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="本页下单总次数"
               value={totalOrderCount}
@@ -181,7 +181,7 @@ const OrderAnalysisTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="本页下单总件数"
               value={totalOrderQty}
@@ -191,7 +191,7 @@ const OrderAnalysisTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="本页下单总金额"
               value={totalOrderAmount}
@@ -202,7 +202,7 @@ const OrderAnalysisTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="本页已下单款式数"
               value={orderedStyleCount}
@@ -214,7 +214,7 @@ const OrderAnalysisTab: React.FC = () => {
       </Row>
 
       {/* 搜索 + 表格 */}
-      <Card size="small" className="filter-card mb-sm">
+      <Card className="filter-card mb-sm">
         <StandardToolbar
           left={
             <StandardSearchBar

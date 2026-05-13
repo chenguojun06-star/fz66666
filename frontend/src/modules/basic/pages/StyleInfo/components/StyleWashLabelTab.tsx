@@ -269,13 +269,13 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
               {isEditing ? '编辑中' : '已锁定'}
             </span>
           </div>
-          <Space size="small">
+          <Space>
             {!isEditing && (
               <Button
                 type="primary"
                 icon={<EditOutlined />}
                 onClick={handleStartEdit}
-                size="small"
+               
               >
                 开始编辑
               </Button>
@@ -285,7 +285,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
                 <Button
                   icon={<RollbackOutlined />}
                   onClick={handleRollback}
-                  size="small"
+                 
                   danger
                 >
                   退回
@@ -295,7 +295,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
                   icon={<SaveOutlined />}
                   onClick={() => void handleSave()}
                   loading={saving}
-                  size="small"
+                 
                 >
                   保存并锁定
                 </Button>
@@ -304,7 +304,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
             <Button
               icon={<PrinterOutlined />}
               onClick={handlePrint}
-              size="small"
+             
             >
               打印
             </Button>
@@ -376,13 +376,13 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
             <InputNumber
               min={20} max={200} value={previewW}
               onChange={v => setPreviewW(v ?? 30)}
-              suffix="mm" style={{ width: 110 }} size="small"
+              suffix="mm" style={{ width: 110 }}
             />
             <span style={{ color: '#555', fontSize: 13 }}>高</span>
             <InputNumber
               min={30} max={400} value={previewH}
               onChange={v => setPreviewH(v ?? 80)}
-              suffix="mm" style={{ width: 110 }} size="small"
+              suffix="mm" style={{ width: 110 }}
             />
           </Space>
         </div>

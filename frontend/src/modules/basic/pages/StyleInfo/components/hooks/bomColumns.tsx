@@ -455,7 +455,7 @@ export function useBomColumns({
         if (tableEditable) {
           return (
             <Button
-              size="small"
+             
               danger
               onClick={() => {
                 if (isTempId(record.id)) {

@@ -68,7 +68,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <XiaoyunCloudAvatar size={16} active />
         <Text strong style={{ fontSize: 13, color: '#1677ff' }}>AI质检助手</Text>
-        {loading && <Spin size="small" style={{ marginLeft: 4 }} />}
+        {loading && <Spin style={{ marginLeft: 4 }} />}
         {data && data.historicalVerdict && (
           <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 11 }}>
             {verdictLabel[data.historicalVerdict]}
@@ -133,7 +133,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
               <Text style={{ fontSize: 12, flex: 1 }}>{suggestion}</Text>
               <Button
                 type="primary"
-                size="small"
+               
                 style={{ flexShrink: 0, marginLeft: 8 }}
                 onClick={() => onAdopt(suggestion)}
               >

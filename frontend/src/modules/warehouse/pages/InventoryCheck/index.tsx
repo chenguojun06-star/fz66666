@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Table, Tag, Space, Modal, Form, InputNumber, Select, Input, message, Statistic, Row, Col, Descriptions, Popconfirm, Tooltip } from 'antd';
+import StandardModal from '@/components/common/StandardModal';
 import { PlusOutlined, AuditOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import { inventoryCheckApi } from '../../../../services/warehouse/inventoryCheckApi';
 import ResizableTable from '../../../../components/common/ResizableTable';
@@ -154,7 +155,7 @@ const InventoryCheck: React.FC = () => {
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,
       render: (v: string) => {
-        const m = STATUS_MAP[v] || { label: v, color: 'default' };
+        const m = STATUS_MAP[v] || { label: '未知', color: 'default' };
         return <Tag color={m.color}>{m.label}</Tag>;
       },
     },
@@ -173,15 +174,15 @@ const InventoryCheck: React.FC = () => {
       title: '操作', key: 'action', width: 240, fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space size={4}>
-          <Tooltip title="查看详情"><Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} /></Tooltip>
+          <Tooltip title="查看详情"><Button type="link" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} /></Tooltip>
           {record.status === 'draft' && (
             <>
-              <Button type="link" size="small" onClick={() => handleOpenFill(record)}>填写实盘</Button>
+              <Button type="link" onClick={() => handleOpenFill(record)}>填写实盘</Button>
               <Popconfirm title="确认盘点？确认后将自动调整库存" onConfirm={() => handleConfirm(record.id)}>
-                <Button type="link" size="small" icon={<CheckCircleOutlined />} style={{ color: '#52c41a' }}>确认</Button>
+                <Button type="link" icon={<CheckCircleOutlined />} style={{ color: '#52c41a' }}>确认</Button>
               </Popconfirm>
               <Popconfirm title="确定取消此盘点单？" onConfirm={() => handleCancel(record.id)}>
-                <Button type="link" size="small" danger icon={<CloseCircleOutlined />}>取消</Button>
+                <Button type="link" danger icon={<CloseCircleOutlined />}>取消</Button>
               </Popconfirm>
             </>
           )}
@@ -200,7 +201,7 @@ const InventoryCheck: React.FC = () => {
       title: '实盘数量', dataIndex: 'actualQuantity', key: 'actualQuantity', width: 110,
       render: (v: number, r: any, idx: number) => (
         <InputNumber
-          size="small" min={0} value={v}
+          min={0} value={v}
           onChange={val => {
             const newItems = [...currentItems];
             newItems[idx] = { ...newItems[idx], actualQuantity: val ?? 0 };
@@ -240,10 +241,10 @@ const InventoryCheck: React.FC = () => {
   return (
     <div style={{ padding: 16 }}>
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}><Card size="small"><Statistic title="物料库存品种" value={summary.materialVarietyCount ?? '-'} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="成品库存SKU" value={summary.finishedSkuCount ?? '-'} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="待处理盘点" value={summary.pendingCheckCount ?? 0} valueStyle={{ color: summary.pendingCheckCount > 0 ? '#faad14' : undefined }} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="差异总金额" value={summary.totalDiffAmount ?? 0} prefix="¥" precision={2} valueStyle={{ color: (summary.totalDiffAmount ?? 0) > 0 ? '#cf1322' : undefined }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="物料库存品种" value={summary.materialVarietyCount ?? '-'} /></Card></Col>
+        <Col span={6}><Card><Statistic title="成品库存SKU" value={summary.finishedSkuCount ?? '-'} /></Card></Col>
+        <Col span={6}><Card><Statistic title="待处理盘点" value={summary.pendingCheckCount ?? 0} valueStyle={{ color: summary.pendingCheckCount > 0 ? '#faad14' : undefined }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="差异总金额" value={summary.totalDiffAmount ?? 0} prefix="¥" precision={2} valueStyle={{ color: (summary.totalDiffAmount ?? 0) > 0 ? '#cf1322' : undefined }} /></Card></Col>
       </Row>
 
       <Card
@@ -265,17 +266,18 @@ const InventoryCheck: React.FC = () => {
         }
       >
         <ResizableTable
+          size="small"
           rowKey="id"
           columns={columns}
           dataSource={list}
           loading={loading}
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
           scroll={{ x: 1500 }}
-          size="small"
+         
         />
       </Card>
 
-      <Modal title="新建盘点单" open={createModalVisible} onOk={handleCreate} onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }} width={480}>
+      <Modal title="新建盘点单" open={createModalVisible} onOk={handleCreate} onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }} width={480} maskClosable={false}>
         <Form form={createForm} layout="vertical">
           <Form.Item name="checkType" label="盘点类型" rules={[{ required: true, message: '请选择盘点类型' }]}>
             <Select placeholder="选择盘点类型">
@@ -292,10 +294,10 @@ const InventoryCheck: React.FC = () => {
         </Form>
       </Modal>
 
-      <Modal title={`盘点详情 - ${currentCheck?.checkNo || ''}`} open={detailModalVisible} onCancel={() => setDetailModalVisible(false)} width={900} footer={null}>
+      <StandardModal title={`盘点详情 - ${currentCheck?.checkNo || ''}`} open={detailModalVisible} onCancel={() => setDetailModalVisible(false)} size="lg" footer={null}>
         {currentCheck && (
           <>
-            <Descriptions size="small" bordered column={3} style={{ marginBottom: 12 }}>
+            <Descriptions bordered column={3} style={{ marginBottom: 12 }}>
               <Descriptions.Item label="盘点单号">{currentCheck.checkNo}</Descriptions.Item>
               <Descriptions.Item label="类型"><Tag color={CHECK_TYPE_MAP[currentCheck.checkType]?.color}>{CHECK_TYPE_MAP[currentCheck.checkType]?.label}</Tag></Descriptions.Item>
               <Descriptions.Item label="状态"><Tag color={STATUS_MAP[currentCheck.status]?.color}>{STATUS_MAP[currentCheck.status]?.label}</Tag></Descriptions.Item>
@@ -306,14 +308,14 @@ const InventoryCheck: React.FC = () => {
               <Descriptions.Item label="确认人">{currentCheck.confirmedName || '-'}</Descriptions.Item>
               <Descriptions.Item label="确认时间">{currentCheck.confirmedTime || '-'}</Descriptions.Item>
             </Descriptions>
-            <Table rowKey="id" columns={detailItemColumns} dataSource={currentItems} size="small" pagination={false} scroll={{ y: 400 }} />
+            <Table rowKey="id" columns={detailItemColumns} dataSource={currentItems} pagination={false} scroll={{ y: 400 }} />
           </>
         )}
-      </Modal>
+      </StandardModal>
 
-      <Modal title={`填写实盘数量 - ${currentCheck?.checkNo || ''}`} open={fillModalVisible} onOk={handleFillActual} onCancel={() => setFillModalVisible(false)} width={900}>
-        <Table rowKey="id" columns={itemColumns} dataSource={currentItems} size="small" pagination={false} scroll={{ y: 400 }} />
-      </Modal>
+      <StandardModal title={`填写实盘数量 - ${currentCheck?.checkNo || ''}`} open={fillModalVisible} onOk={handleFillActual} onCancel={() => setFillModalVisible(false)} size="lg">
+        <Table rowKey="id" size="small" columns={itemColumns} dataSource={currentItems} pagination={false} scroll={{ y: 400 }} />
+      </StandardModal>
     </div>
   );
 };

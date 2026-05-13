@@ -204,7 +204,7 @@ const OrphanDataPage: React.FC = () => {
               dataSource={items}
               rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
               pagination={{ pageSize: 20, showSizeChanger: false, showTotal: t => `共 ${t} 条` }}
-              size="small"
+             
               scroll={{ x: 900 }}
             />
           </Spin>

@@ -144,7 +144,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
               <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
                 <Input
                   placeholder="输入新码数后回车添加"
-                  size="small"
+                 
                   onPressEnter={(e) => {
                     const input = e.target as HTMLInputElement;
                     const val = input.value.trim();

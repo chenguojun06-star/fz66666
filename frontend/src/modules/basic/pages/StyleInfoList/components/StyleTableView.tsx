@@ -255,7 +255,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   <Progress
                     percent={overallProgress}
                     showInfo={false}
-                    size="small"
+                   
                     strokeColor={isScrappedRow(record) ? '#9ca3af' : overallProgress >= 100 ? '#52c41a' : '#2d7ff9'}
                     className="style-smart-row__progress-bar"
                   />
@@ -370,7 +370,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                 {actionButtons.map((action) => (
                   <Button
                     key={action.key}
-                    size="small"
+                   
                     type={action.type}
                     danger={action.danger}
                     disabled={action.disabled}
@@ -429,7 +429,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   <Progress
                     percent={selectedStage.stage.progress}
                     showInfo={false}
-                    size="small"
+                   
                     strokeColor="#2d7ff9"
                   />
                 </div>

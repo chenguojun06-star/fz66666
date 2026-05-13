@@ -302,7 +302,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
           value={record.perLabelQty}
           onChange={v => handlePerLabelChange(record.key, v)}
           style={{ width: 90 }}
-          size="small"
+         
         />
       ),
     },
@@ -347,7 +347,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
           columns={columns}
           pagination={false}
           rowKey="key"
-          size="small"
+         
           bordered
         />
       </Spin>

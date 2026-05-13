@@ -77,9 +77,9 @@ const TaxConfigTab: React.FC = () => {
       title: '操作', width: 120,
       render: (_: any, r: any) => (
         <Space>
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => { setEditRecord(r); setFormOpen(true); }}>编辑</Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => { setEditRecord(r); setFormOpen(true); }}>编辑</Button>
           <Popconfirm title="确认删除？" onConfirm={() => handleDelete(r.id)}>
-            <Button size="small" type="link" danger icon={<DeleteOutlined />}>删除</Button>
+            <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -95,7 +95,7 @@ const TaxConfigTab: React.FC = () => {
       <div style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); setFormOpen(true); }}>新增税率</Button>
       </div>
-      <ResizableTable storageKey="finance-tax-config" rowKey="id" columns={columns} dataSource={list} loading={loading} size="small" scroll={{ x: 'max-content' }} pagination={false} />
+      <ResizableTable storageKey="finance-tax-config" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} scroll={{ x: 'max-content' }} pagination={false} />
       <ResizableModal
         title={editRecord ? '编辑税率' : '新增税率'}
         open={formOpen}

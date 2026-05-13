@@ -59,7 +59,7 @@ const QuotationSecondarySection: React.FC<Props> = ({
         </span>
       }
 
-      size="small"
+     
       style={{ marginBottom: 12 }}
       styles={{ body: { padding: '8px' } }}
     >

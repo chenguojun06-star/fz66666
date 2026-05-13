@@ -236,7 +236,7 @@ const OrderManagement: React.FC = () => {
       <PageLayout
         title="下单管理"
         headerContent={showSmartErrorNotice && smartError ? (
-          <Card size="small" style={{ marginBottom: 12 }}>
+          <Card style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={fetchStyles} />
           </Card>
         ) : null}

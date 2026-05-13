@@ -134,6 +134,10 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
         const response = await tenantService.listSubAccounts({
           page: queryParams.page, pageSize: queryParams.pageSize,
           name: queryParams.name, roleName: queryParams.roleName,
+          orgUnitId: queryParams.orgUnitId || undefined,
+          employmentStatus: queryParams.employmentStatus || undefined,
+          roleId: queryParams.roleId || undefined,
+          excludeFactoryUsers: true,
         });
         const result = response as any;
         if (result.code === 200) {
@@ -150,6 +154,9 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
             page: queryParams.page, pageSize: queryParams.pageSize,
             username: queryParams.username, name: queryParams.name,
             roleName: queryParams.roleName, status: queryParams.status,
+            employmentStatus: queryParams.employmentStatus || undefined,
+            orgUnitId: queryParams.orgUnitId || undefined,
+            excludeFactoryUsers: true,
           },
         });
         const result = response as any;
@@ -193,13 +200,26 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
           const response = await tenantService.listSubAccounts({
             page: queryParams.page, pageSize: queryParams.pageSize,
             name: queryParams.name, roleName: queryParams.roleName,
+            orgUnitId: queryParams.orgUnitId || undefined,
+            employmentStatus: queryParams.employmentStatus || undefined,
+            roleId: queryParams.roleId || undefined,
+            excludeFactoryUsers: true,
           });
           if (response.code === 200) {
             return { records: response.data?.records || [], total: response.data?.total || 0 };
           }
           return null;
         }
-        const response = await api.get<{ code: number; data: { records: any[]; total: number } }>('/system/user/list', { params: queryParams });
+        const response = await api.get<{ code: number; data: { records: any[]; total: number } }>('/system/user/list', {
+          params: {
+            page: queryParams.page, pageSize: queryParams.pageSize,
+            username: queryParams.username, name: queryParams.name,
+            roleName: queryParams.roleName, status: queryParams.status,
+            employmentStatus: queryParams.employmentStatus || undefined,
+            orgUnitId: queryParams.orgUnitId || undefined,
+            excludeFactoryUsers: true,
+          },
+        });
         if (response.code === 200) {
           return { records: response.data.records || [], total: response.data.total || 0 };
         }
@@ -300,8 +320,11 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     try {
       const resp = await api.post('/wechat/mini-program/invite/generate', {});
       const result = resp?.data;
-      if (result?.code === 200 && result?.data) {
+      if (result?.code === 200 && result?.data?.qrCodeBase64) {
         setInviteQr({ open: true, loading: false, qrBase64: result.data.qrCodeBase64, expiresAt: result.data.expiresAt });
+      } else if (result?.code === 200 && result?.data) {
+        message.error('生成邀请码失败：微信服务配置异常，无法获取小程序码');
+        setInviteQr({ open: false, loading: false });
       } else {
         message.error('生成邀请码失败：' + (result?.message || '未知错误'));
         setInviteQr({ open: false, loading: false });

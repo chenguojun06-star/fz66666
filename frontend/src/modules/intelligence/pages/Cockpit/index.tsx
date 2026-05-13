@@ -359,7 +359,7 @@ const CockpitPage: React.FC = () => {
                     onTouchStart={(e) => handleTouchStart('overview', e, 'move')}
                   >
                     <span className="cockpit-widget-title">业务概览</span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('overview')}>×</Button>
+                    <Button className="cockpit-widget-close" onClick={() => handleRemove('overview')}>×</Button>
                   </div>
                   <div className="cockpit-widget-body">
                     <OverviewChart
@@ -393,7 +393,7 @@ const CockpitPage: React.FC = () => {
                     onTouchStart={(e) => handleTouchStart('order', e, 'move')}
                   >
                     <span className="cockpit-widget-title">下单管理</span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('order')}>×</Button>
+                    <Button className="cockpit-widget-close" onClick={() => handleRemove('order')}>×</Button>
                   </div>
                   <div className="cockpit-widget-body">
                     <OrderPieChart
@@ -427,7 +427,7 @@ const CockpitPage: React.FC = () => {
                     onTouchStart={(e) => handleTouchStart('sample', e, 'move')}
                   >
                     <span className="cockpit-widget-title">样衣开发</span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('sample')}>×</Button>
+                    <Button className="cockpit-widget-close" onClick={() => handleRemove('sample')}>×</Button>
                   </div>
                   <div className="cockpit-widget-body">
                     <SamplePieChart
@@ -461,7 +461,7 @@ const CockpitPage: React.FC = () => {
                     onTouchStart={(e) => handleTouchStart('production', e, 'move')}
                   >
                     <span className="cockpit-widget-title">大货生产</span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('production')}>×</Button>
+                    <Button className="cockpit-widget-close" onClick={() => handleRemove('production')}>×</Button>
                   </div>
                   <div className="cockpit-widget-body">
                     <ProductionPieChart
@@ -495,7 +495,7 @@ const CockpitPage: React.FC = () => {
                     onTouchStart={(e) => handleTouchStart('procurement', e, 'move')}
                   >
                     <span className="cockpit-widget-title">物料采购</span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('procurement')}>×</Button>
+                    <Button className="cockpit-widget-close" onClick={() => handleRemove('procurement')}>×</Button>
                   </div>
                   <div className="cockpit-widget-body">
                     <ProcurementPieChart
@@ -529,7 +529,7 @@ const CockpitPage: React.FC = () => {
                     onTouchStart={(e) => handleTouchStart('warehouse', e, 'move')}
                   >
                     <span className="cockpit-widget-title">成品仓库</span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('warehouse')}>×</Button>
+                    <Button className="cockpit-widget-close" onClick={() => handleRemove('warehouse')}>×</Button>
                   </div>
                   <div className="cockpit-widget-body">
                     <WarehousePieChart

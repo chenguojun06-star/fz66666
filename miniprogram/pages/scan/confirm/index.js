@@ -5,7 +5,7 @@ const SKUProcessor = require('../processors/SKUProcessor');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
-const { sortBySizeOrder } = require('./orderParser');
+const { sortSizeNames } = require('./orderParser');
 
 Page({
   data: {
@@ -184,7 +184,7 @@ Page({
       colorMap[color][size] = qty;
     });
     // 按标准尺码顺序排列列头（XS→S→M→L→XL→2XL→XXL→...）
-    sizeSet = sortBySizeOrder(sizeSet);
+    sizeSet = sortSizeNames(sizeSet);
     var rows = Object.keys(colorMap).map(function (color) {
       return {
         color: color,

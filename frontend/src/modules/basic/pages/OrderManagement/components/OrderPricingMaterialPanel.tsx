@@ -113,7 +113,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
       <Collapse
         defaultActiveKey={[]}
         ghost
-        size="small"
+       
         items={[{
           key: 'analysis',
           label: <span style={{ fontSize: 12, color: '#8c8c8c' }}>明细分析</span>,

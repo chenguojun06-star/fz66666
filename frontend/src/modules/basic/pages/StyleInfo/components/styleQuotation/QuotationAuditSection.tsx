@@ -39,7 +39,7 @@ const QuotationAuditSection: React.FC<Props> = ({
     <Card
       title={<span style={{ fontSize: '15px', fontWeight: 600 }}>报价审核</span>}
       extra={statusTag()}
-      size="small"
+     
       style={{ marginTop: 4 }}
       styles={{ body: { padding: '16px' } }}
     >
@@ -78,7 +78,7 @@ const QuotationAuditSection: React.FC<Props> = ({
           </Space>
         </Space>
       ) : (
-        <Descriptions bordered column={2} size="small">
+        <Descriptions bordered column={2}>
           <Descriptions.Item label="审核结论">{statusTag()}</Descriptions.Item>
           <Descriptions.Item label="审核人">{quotation?.auditorName || '-'}</Descriptions.Item>
           <Descriptions.Item label="审核时间">{quotation?.auditTime || '-'}</Descriptions.Item>

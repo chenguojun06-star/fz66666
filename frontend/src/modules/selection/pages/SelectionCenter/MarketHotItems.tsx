@@ -323,15 +323,15 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
               </Tag>
             ))}
             {!dailyHot ? (
-              <Button size="small" icon={<FireOutlined />} loading={dailyHotLoading} onClick={loadDailyHot} type="text">加载热榜</Button>
+              <Button icon={<FireOutlined />} loading={dailyHotLoading} onClick={loadDailyHot} type="text">加载热榜</Button>
             ) : (
-              <Button size="small" icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefreshDailyHot} type="text">刷新</Button>
+              <Button icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefreshDailyHot} type="text">刷新</Button>
             )}
           </Space>
         </div>
-        <Spin spinning={dailyHotLoading || refreshing} size="small">
+        <Spin spinning={dailyHotLoading || refreshing}>
           {dailyHot && dailyHot.cached && dailyHot.groups.length > 0 ? (
-            <Tabs size="small" type="card"
+            <Tabs type="card"
               items={dailyHot.groups.map(g => ({
                 key: g.keyword,
                 label: <span>{g.keyword}{g.heatScore > 0 && <Tag color={g.heatScore >= 70 ? 'red' : 'orange'} style={{ fontSize: 9, marginLeft: 3, padding: '0 4px' }}>{g.heatScore}</Tag>}{g.sourceCount ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 3, padding: '0 4px' }}>{g.sourceCount}源</Tag> : null}</span>,
@@ -355,8 +355,8 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                             </div>
                             {item.rankScore != null && <Text type="secondary" style={{ fontSize: 10 }}>权重 {item.rankScore}</Text>}
                             <Space size={4}>
-                              <Button size="small" icon={<PlusOutlined />} onClick={() => handleAdd(item, i + 1000)} loading={addLoading[i + 1000]} style={{ fontSize: 11 }}>加入选品</Button>
-                              <Button size="small" type="primary" icon={<SendOutlined />} onClick={() => handleDeploy(item, i + 2000)} loading={deployLoading[i + 2000]} style={{ fontSize: 11 }}>下版</Button>
+                              <Button icon={<PlusOutlined />} onClick={() => handleAdd(item, i + 1000)} loading={addLoading[i + 1000]} style={{ fontSize: 11 }}>加入选品</Button>
+                              <Button type="primary" icon={<SendOutlined />} onClick={() => handleDeploy(item, i + 2000)} loading={deployLoading[i + 2000]} style={{ fontSize: 11 }}>下版</Button>
                             </Space>
                           </div>
                         </div>
@@ -469,8 +469,8 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                       )}
                       {item.delivery && <Text type="secondary" style={{ fontSize: 10 }}>{item.delivery}</Text>}
                       <Space style={{ marginTop: 'auto', paddingTop: 6 }} size={6}>
-                        <Button size="small" icon={<PlusOutlined />} loading={addLoading[sectionIndex * 10000 + idx]} onClick={() => handleAdd(item, sectionIndex * 10000 + idx)} style={{ fontSize: 11 }}>加入选品</Button>
-                        <Button size="small" type="primary" icon={<SendOutlined />} loading={deployLoading[sectionIndex * 10000 + idx]} onClick={() => handleDeploy(item, sectionIndex * 10000 + idx)} style={{ fontSize: 11 }}>一键下版</Button>
+                        <Button icon={<PlusOutlined />} loading={addLoading[sectionIndex * 10000 + idx]} onClick={() => handleAdd(item, sectionIndex * 10000 + idx)} style={{ fontSize: 11 }}>加入选品</Button>
+                        <Button type="primary" icon={<SendOutlined />} loading={deployLoading[sectionIndex * 10000 + idx]} onClick={() => handleDeploy(item, sectionIndex * 10000 + idx)} style={{ fontSize: 11 }}>一键下版</Button>
                       </Space>
                     </div>
                   </div>

@@ -34,6 +34,11 @@ export const organizationApi = {
     const list = Array.isArray(res) ? res : (res?.data || []);
     return Array.isArray(list) ? list.map(transform) : [];
   },
+  externalTree: async () => {
+    const res = await api.get<any>('/system/organization/external-tree');
+    const list = Array.isArray(res) ? res : (res?.data || []);
+    return Array.isArray(list) ? list.map(transform) : [];
+  },
   members: async () => {
     const res = await api.get<any>('/system/organization/members');
     return (res?.data || res) as Record<string, User[]>;

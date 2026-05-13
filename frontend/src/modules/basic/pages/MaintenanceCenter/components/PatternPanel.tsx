@@ -104,7 +104,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
                 </Form.Item>
               </Form>
               <div style={actionBarStyle}>
-                <Button danger type="default" size="small" loading={returnPatternSaving} onClick={handleReturnPatternSave} style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
+                <Button danger type="default" loading={returnPatternSaving} onClick={handleReturnPatternSave} style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
               </div>
             </div>
             <div style={directCardStyle}><PatternSummary record={directRow} readOnly {...summaryProps} /></div>
@@ -124,7 +124,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
         <div style={directCardStyle}>
           <PatternEditorForm form={patternRevisionForm} />
           <div style={{ ...actionBarStyle, marginTop: 12, gap: 8 }}>
-            <Button size="small" loading={cancelLocking} onClick={async () => {
+            <Button loading={cancelLocking} onClick={async () => {
               if (!directRow?.id) return;
               setCancelLocking(true);
               try {
@@ -136,7 +136,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
                 setCancelLocking(false);
               }
             }}>取消修改</Button>
-            <Button type="primary" size="small" loading={patternRevisionSaving} onClick={handlePatternRevisionSave}>保存本次修改</Button>
+            <Button type="primary" loading={patternRevisionSaving} onClick={handlePatternRevisionSave}>保存本次修改</Button>
           </div>
         </div>
       </div>
@@ -145,7 +145,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
 
   return (
     <>
-      <Card size="small" className="filter-card" style={{ marginBottom: 16 }}>
+      <Card className="filter-card" style={{ marginBottom: 16 }}>
         <StandardToolbar
           left={<Space wrap>
             <Input placeholder="款号" style={{ width: 180 }} value={styleNoInput} onChange={(e) => setStyleNoInput(e.target.value)} />

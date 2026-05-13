@@ -253,7 +253,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
 
   return (
     <>
-      <Card size="small" className="filter-card mb-sm">
+      <Card className="filter-card mb-sm">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
           <Space wrap size={12}>
             <Input

@@ -249,7 +249,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         key={action.key}
                         type="link"
                         danger={action.danger}
-                        size="small"
+                       
                         disabled={action.disabled}
                         title={action.title}
                         onClick={(e) => {

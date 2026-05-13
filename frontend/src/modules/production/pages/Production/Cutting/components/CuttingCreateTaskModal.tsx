@@ -132,7 +132,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       confirmLoading={createTask.createTaskSubmitting}
       onOk={createTask.handleSubmitCreateTask}
     >
-      <Card size="small" style={{ marginBottom: 12 }}>
+      <Card style={{ marginBottom: 12 }}>
         <Space wrap>
           <span>款号</span>
           <AutoComplete
@@ -239,7 +239,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ color: 'rgba(0,0,0,0.85)', fontWeight: 500 }}>下单明细</span>
-              <Button size="small" type="dashed" onClick={createTask.addCreateOrderLine}>新增一行</Button>
+              <Button type="dashed" onClick={createTask.addCreateOrderLine}>新增一行</Button>
             </div>
 
             {/* ── 快速批量录入：颜色+码数 → 生成明细行 ───────────────── */}
@@ -255,7 +255,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 >{c}</Tag>
               ))}
               <Input
-                size="small"
+               
                 style={{ width: 88 }}
                 placeholder="输入颜色"
                 value={colorInput}
@@ -274,7 +274,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 >{s}</Tag>
               ))}
               <Input
-                size="small"
+               
                 style={{ width: 88 }}
                 placeholder="输入码数"
                 value={sizeInput}
@@ -283,7 +283,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 suffix={<PlusOutlined style={{ cursor: 'pointer', color: '#1677ff' }} onClick={addMatrixSize} />}
               />
               {matrixColors.length > 0 && matrixSizes.length > 0 && (
-                <Button size="small" type="primary" onClick={handleMatrixImport} style={{ marginLeft: 4 }}>
+                <Button type="primary" onClick={handleMatrixImport} style={{ marginLeft: 4 }}>
                   生成明细（{matrixColors.length}色×{matrixSizes.length}码={matrixColors.length * matrixSizes.length}行）
                 </Button>
               )}
@@ -316,7 +316,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     onChange={(value) => createTask.updateCreateOrderLine(index, 'quantity', typeof value === 'number' ? value : null)}
                   />
                   <Button
-                    size="small"
+                   
                     danger
                     disabled={createTask.createOrderLines.length <= 1}
                     onClick={() => createTask.removeCreateOrderLine(index)}
@@ -334,7 +334,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       </Card>
 
       <Card
-        size="small"
+       
         title={
           <span>
             工序流程
@@ -347,7 +347,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <Space size={8}>
             <Select
               showSearch
-              size="small"
+             
               style={{ width: 180 }}
               placeholder="选择款号导入模板"
               value={templateStyleNo || undefined}
@@ -359,7 +359,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               allowClear
             />
             <Button
-              size="small"
+             
               type="primary"
               ghost
               icon={<ImportOutlined />}
@@ -375,7 +375,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 onClick: ({ key }) => handleAddToStage(key),
               }}
             >
-              <Button size="small" type="dashed" icon={<PlusOutlined />}>
+              <Button type="dashed" icon={<PlusOutlined />}>
                 添加工序 <DownOutlined />
               </Button>
             </Dropdown>
@@ -462,7 +462,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                           <span style={{ fontSize: 12, color: '#999' }}>{spanInfo.count} 个工序</span>
                           <Button
                             type="link"
-                            size="small"
+                           
                             icon={<PlusOutlined />}
                             onClick={() => handleAddToStage(spanInfo.stage)}
                             style={{ fontSize: 12, padding: 0 }}
@@ -484,7 +484,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     </td>
                     <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
                       <Select
-                        size="small"
+                       
                         value={node.difficulty || undefined}
                         allowClear
                         placeholder="选择"
@@ -499,7 +499,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     </td>
                     <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
                       <InputNumber
-                        size="small"
+                       
                         value={node.standardTime || 0}
                         style={{ width: '100%' }}
                         min={0}
@@ -508,7 +508,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     </td>
                     <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
                       <InputNumber
-                        size="small"
+                       
                         value={node.unitPrice}
                         style={{ width: '100%' }}
                         min={0}
@@ -522,7 +522,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     {uniqueSizes.map((s) => (
                       <td key={s} style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
                         <InputNumber
-                          size="small"
+                         
                           value={node.sizePrices?.[s] ?? node.unitPrice}
                           style={{ width: '100%' }}
                           min={0}
@@ -535,7 +535,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     ))}
                     <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
                       <Button
-                        size="small"
+                       
                         type="text"
                         danger
                         icon={<DeleteOutlined />}
@@ -558,7 +558,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
         </div>
       </Card>
 
-      <Card size="small">
+      <Card>
         <div style={{ color: 'rgba(0,0,0,0.65)', lineHeight: 1.8 }}>
           创建完成后，领取、生成菲号、打印裁剪单，继续回到裁剪页按正常订单逻辑处理。
           工序单价直接影响工资结算，请根据实际工价填写。

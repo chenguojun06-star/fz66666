@@ -226,10 +226,10 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
         if (ctx.isEditing(record)) {
           return (
             <Space>
-              <Button type="link" size="small" onClick={ctx.handleSave} style={{ padding: '0 4px' }}>
+              <Button type="link" onClick={ctx.handleSave} style={{ padding: '0 4px' }}>
                 保存
               </Button>
-              <Button type="link" size="small" onClick={ctx.handleCancel} style={{ padding: '0 4px' }}>
+              <Button type="link" onClick={ctx.handleCancel} style={{ padding: '0 4px' }}>
                 取消
               </Button>
             </Space>

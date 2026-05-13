@@ -50,7 +50,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
         <Empty description="暂无用户（该租户下尚无活跃账号）" style={{ padding: '32px 0' }} />
       ) : (
         <ResizableTable<User>
-          size="small"
+         
           rowKey={(r) => String(r.id)}
           dataSource={filteredAssignableUsers}
           pagination={false}

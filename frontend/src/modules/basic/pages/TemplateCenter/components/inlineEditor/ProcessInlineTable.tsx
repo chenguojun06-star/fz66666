@@ -23,8 +23,6 @@ import { STAGE_ORDER } from '@/utils/productionStage';
 import type { ProcessStepRow, ProcessTableData } from '../../utils/templateUtils';
 import { normalizeProcessSteps } from '../../utils/templateUtils';
 
-const EDITOR_FONT_SIZE = 12;
-
 interface ProcessInlineTableProps {
   value: ProcessTableData;
   onChange: (next: ProcessTableData) => void;
@@ -126,9 +124,9 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
   const columns = [
     {
       title: '排序',
-      width: compact ? 40 : 44,
+      width: compact ? 40 : 50,
       render: (_: unknown, __: ProcessStepRow, index: number) => (
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: EDITOR_FONT_SIZE }}>
+        <span style={{ color: 'var(--neutral-text-disabled)' }}>
           {index + 1}
         </span>
       ),
@@ -136,37 +134,35 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
     {
       title: '工序编号',
       dataIndex: 'processCode',
-      width: compact ? 60 : 72,
+      width: compact ? 60 : 80,
       render: (text: string, _: ProcessStepRow, index: number) => (
         <Input
-          size="small"
           value={text || ''}
           disabled={readOnly}
           onChange={(event) => updateStep(index, { processCode: event.target.value })}
-          style={{ border: 'none', fontSize: EDITOR_FONT_SIZE, padding: 0 }}
+          style={{ border: 'none' }}
         />
       ),
     },
     {
       title: '工序名称',
       dataIndex: 'processName',
-      width: compact ? 108 : 120,
+      width: compact ? 108 : 130,
       render: (text: string, _: ProcessStepRow, index: number) => (
         <DictAutoComplete
           dictType="process_name"
           autoCollect
-          size="small"
           value={text || ''}
           disabled={readOnly}
           onChange={(nextValue) => updateStep(index, { processName: nextValue as string })}
-          style={{ border: 'none', fontSize: EDITOR_FONT_SIZE }}
+          style={{ border: 'none' }}
         />
       ),
     },
     {
       title: '进度节点',
       dataIndex: 'progressStage',
-      width: compact ? 112 : 130,
+      width: compact ? 112 : 140,
       onCell: (_: ProcessStepRow, index?: number) => {
         const info = stageSpanMap.get(index ?? -1);
         return {
@@ -192,7 +188,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
             </Tag>
             <span style={{ fontSize: compact ? 11 : 12, color: '#999' }}>{info.count} 个工序</span>
             {readOnly ? null : (
-              <Button type="link" size="small" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} style={{ padding: 0 }}>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} style={{ padding: 0 }}>
                 添加
               </Button>
             )}
@@ -203,40 +199,37 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
     {
       title: '机器类型',
       dataIndex: 'machineType',
-      width: compact ? 108 : 120,
+      width: compact ? 108 : 130,
       render: (text: string, _: ProcessStepRow, index: number) => (
         <DictAutoComplete
           dictType="machine_type"
           autoCollect
-          size="small"
           value={text || ''}
           disabled={readOnly}
           onChange={(nextValue) => updateStep(index, { machineType: nextValue as string })}
-          style={{ border: 'none', fontSize: EDITOR_FONT_SIZE }}
+          style={{ border: 'none' }}
         />
       ),
     },
     {
       title: '工序难度',
       dataIndex: 'difficulty',
-      width: compact ? 84 : 96,
+      width: compact ? 84 : 100,
       render: (value: string, _: ProcessStepRow, index: number) => (
         <Input
-          size="small"
           value={value || ''}
           disabled={readOnly}
           onChange={(event) => updateStep(index, { difficulty: event.target.value })}
-          style={{ border: 'none', fontSize: EDITOR_FONT_SIZE }}
+          style={{ border: 'none' }}
         />
       ),
     },
     {
       title: '工时(秒)',
       dataIndex: 'standardTime',
-      width: compact ? 84 : 96,
+      width: compact ? 84 : 100,
       render: (value: number, _: ProcessStepRow, index: number) => (
         <InputNumber
-          size="small"
           min={0}
           disabled={readOnly}
           value={value || 0}
@@ -248,10 +241,9 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
     {
       title: '工价(元)',
       dataIndex: 'unitPrice',
-      width: compact ? 84 : 96,
+      width: compact ? 84 : 100,
       render: (_: unknown, record: ProcessStepRow, index: number) => (
         <InputNumber
-          size="small"
           min={0}
           precision={2}
           disabled={readOnly}
@@ -265,10 +257,9 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
       showSizePrices
         ? templateSizes.map((size) => ({
             title: `${size}码`,
-            width: compact ? 80 : 88,
+            width: compact ? 80 : 95,
             render: (_: unknown, record: ProcessStepRow, index: number) => (
               <InputNumber
-                size="small"
                 min={0}
                 precision={2}
                 disabled={readOnly}
@@ -294,10 +285,10 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
     {
       title: '操作',
       key: 'action',
-      width: compact ? 60 : 72,
+      width: compact ? 60 : 80,
       render: (_: unknown, __: ProcessStepRow, index: number) => (
         readOnly ? null : (
-          <Button danger type="link" size="small" onClick={() => deleteStep(index)}>
+          <Button danger type="link" onClick={() => deleteStep(index)}>
             删除
           </Button>
         )
@@ -325,7 +316,6 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
                   {readOnly ? null : (
                     <Button
                       type="text"
-                      size="small"
                       danger
                       icon={<DeleteOutlined />}
                       onClick={() => onRemoveImage(url)}
@@ -347,7 +337,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
               ))}
               {imageUrls.length < 4 ? (
                 <Upload accept="image/*" showUploadList={false} beforeUpload={(file) => onUploadImage(file as File)}>
-                  <Button size="small" icon={<UploadOutlined />} loading={imageUploading} disabled={readOnly}>
+                  <Button icon={<UploadOutlined />} loading={imageUploading} disabled={readOnly}>
                     上传图片
                   </Button>
                 </Upload>
@@ -380,14 +370,13 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
             {readOnly ? null : (
               <>
                 <Input
-                  size="small"
                   placeholder="添加尺码"
                   value={newSizeName}
                   onChange={(event) => onNewSizeNameChange(event.target.value)}
                   onPressEnter={onAddSize}
-                  style={{ width: compact ? 96 : 110 }}
+                  style={{ width: compact ? 96 : 120 }}
                 />
-                <Button size="small" type="primary" onClick={onAddSize}>添加</Button>
+                <Button type="primary" onClick={onAddSize}>添加</Button>
               </>
             )}
           </div>
@@ -396,11 +385,11 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
 
       <ResizableTable
         storageKey="maintenance-inline-process-editor"
-        size="small"
         bordered
         autoScrollY={false}
         pagination={false}
-        scroll={{ x: compact ? (showSizePrices ? 760 + templateSizes.length * 80 : 760) : (showSizePrices ? 960 + templateSizes.length * 88 : 960) }}
+        reorderableColumns={false}
+        scroll={{ x: compact ? (showSizePrices ? 760 + templateSizes.length * 80 : 760) : (showSizePrices ? 960 + templateSizes.length * 95 : 960) }}
         rowKey={(record: ProcessStepRow & { _origIdx?: number }) => String(record.processCode || record._origIdx || 0)}
         columns={columns}
         dataSource={sortedSteps}
@@ -411,7 +400,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
               onClick: ({ key }) => addStepToStage(String(key)),
             }}
           >
-            <Button type="dashed" size="small" style={{ width: '100%' }}>
+            <Button type="dashed" style={{ width: '100%' }}>
               新增工序 <DownOutlined />
             </Button>
           </Dropdown>

@@ -18,7 +18,7 @@ import IntegrationQuickStart from './components/IntegrationQuickStart';
 const { Title, Text, Paragraph } = Typography;
 
 const FlowCard: React.FC<{ icon: React.ReactNode; title: string; desc: string; color: string }> = ({ icon, title, desc, color }) => (
-  <Card size="small" style={{ borderLeft: `4px solid ${color}`, height: '100%' }} styles={{ body: { padding: '12px 16px' } }}>
+  <Card style={{ borderLeft: `4px solid ${color}`, height: '100%' }} styles={{ body: { padding: '12px 16px' } }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
       <span style={{ color, fontSize: 20 }}>{icon}</span>
       <Text strong>{title}</Text>

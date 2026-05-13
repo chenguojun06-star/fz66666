@@ -223,7 +223,6 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
     if (key === 'materialType') {
       return (
         <Select
-          size="small"
           value={normalizeText(currentValue) || undefined}
           options={buildMaterialTypeOptions(currentValue)}
           onChange={(nextValue) => updateRow(index, { [key]: nextValue, ...(extraUpdates ? extraUpdates(String(nextValue || '')) : {}) })}
@@ -233,7 +232,6 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
     }
     return (
       <Input
-        size="small"
         value={normalizeText(currentValue)}
         onChange={(event) => {
           const nextValue = event.target.value;
@@ -256,7 +254,6 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
     }
     return (
       <InputNumber
-        size="small"
         min={0}
         precision={precision}
         value={currentValue}
@@ -298,7 +295,6 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
           <div key={sizeKey} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>{sizeKey}</span>
             <InputNumber
-              size="small"
               min={0}
               step={0.01}
               value={usageMap[sizeKey] ?? 0}
@@ -327,7 +323,6 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
     return (
       <div style={{ display: 'grid', gap: 6 }}>
         <Input
-          size="small"
           value={normalizeText(record.specification)}
           placeholder="规格"
           onChange={(event) => {
@@ -337,7 +332,6 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
           style={{ border: 'none', fontSize: compact ? 12 : undefined }}
         />
         <Input
-          size="small"
           value={normalizeText(record.fabricWidth)}
           placeholder="门幅"
           onChange={(event) => updateRow(index, { fabricWidth: event.target.value })}
@@ -484,7 +478,7 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
       width: compact ? 60 : 72,
       render: (_: unknown, __: BomEditableRow, index?: number) => (
         readOnly ? null : (
-          <Button danger type="link" size="small" onClick={() => deleteRow(index ?? 0)}>
+          <Button danger type="link" onClick={() => deleteRow(index ?? 0)}>
             删除
           </Button>
         )
@@ -495,14 +489,14 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: compact ? 8 : 12 }}>
-        {readOnly ? null : <Button size="small" onClick={addRow}>新增物料</Button>}
+        {readOnly ? null : <Button onClick={addRow}>新增物料</Button>}
       </div>
       <ResizableTable
         storageKey="maintenance-inline-bom-editor"
-        size="small"
         bordered
         autoScrollY={false}
         pagination={false}
+        reorderableColumns={false}
         scroll={{ x: 'max-content' }}
         rowKey="__rowKey"
         columns={columns}

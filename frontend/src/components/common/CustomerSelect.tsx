@@ -100,7 +100,7 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
       placeholder={placeholder}
       disabled={disabled}
       style={style}
-      notFoundContent={loading ? <Spin size="small" /> : '未找到匹配的客户（可直接输入客户名称）'}
+      notFoundContent={loading ? <Spin /> : '未找到匹配的客户（可直接输入客户名称）'}
       filterOption={(inputValue, option) => {
         const searchText = inputValue.toLowerCase();
         const companyName = (option?.customer?.companyName || '').toLowerCase();

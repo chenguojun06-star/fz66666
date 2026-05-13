@@ -102,6 +102,26 @@ export const materialInventoryApi = {
   }): Promise<ApiResponse<PaginatedData<any>>> => {
     return await api.get('/production/material/list', { params });
   },
+
+  freeInbound: async (data: Record<string, unknown>): Promise<ApiResponse<any>> => {
+    return await api.post('/production/material/stock/free-inbound', data);
+  },
+
+  batchInbound: async (data: Record<string, unknown>): Promise<ApiResponse<any>> => {
+    return await api.post('/production/material/stock/batch-inbound', data);
+  },
+
+  reverseInbound: async (inboundId: string, reason: string): Promise<ApiResponse<any>> => {
+    return await api.post('/production/material/stock/reverse', { inboundId, reason });
+  },
+
+  editInbound: async (inboundId: string, changes: Record<string, unknown>): Promise<ApiResponse<any>> => {
+    return await api.post('/production/material/stock/edit', { inboundId, changes });
+  },
+
+  scanQueryMaterial: async (materialCode: string): Promise<ApiResponse<any>> => {
+    return await api.get('/production/material/stock/scan-query', { params: { materialCode } });
+  },
 };
 
 export default materialInventoryApi;

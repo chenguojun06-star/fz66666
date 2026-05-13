@@ -108,7 +108,7 @@ const TaxExport: React.FC = () => {
         <Alert type="info" showIcon icon={<UnlockOutlined />} style={{ marginBottom: 16 }}
           title="通用标准格式永久免费"
           description={<span>适合手工导入任意财务软件。如需金蝶/用友专用格式，可开通
-            <Button type="link" size="small" style={{ padding: '0 4px' }} onClick={() => navigate(paths.appStore)}>财税对接模块（¥499/月）</Button>
+            <Button type="link" style={{ padding: '0 4px' }} onClick={() => navigate(paths.appStore)}>财税对接模块（¥499/月）</Button>
           </span>} />
       )}
       {subscribed && (
@@ -169,7 +169,7 @@ const TaxExport: React.FC = () => {
         <Row gutter={[16, 16]}>
           {EXPORT_TYPES.map(type => (
             <Col xs={24} md={12} key={type.key}>
-              <Card size="small" style={{ border: `1px solid ${type.color}30`, background: `${type.color}06` }}>
+              <Card style={{ border: `1px solid ${type.color}30`, background: `${type.color}06` }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ fontSize: 32, lineHeight: 1 }}>{type.icon}</div>
                   <div style={{ flex: 1 }}>

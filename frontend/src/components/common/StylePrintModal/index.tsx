@@ -273,13 +273,13 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           <div style={{ marginBottom: 16, padding: '12px 16px', background: '#fff7e6', borderRadius: 12, border: '1px solid #ffd591' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <span style={{ fontWeight: 600, color: '#d46b08', whiteSpace: 'nowrap' }}>标签打印：</span>
-              <Radio.Group value={labelSize} onChange={e => setLabelSize(e.target.value)} size="small">
+              <Radio.Group value={labelSize} onChange={e => setLabelSize(e.target.value)}>
                 <Radio.Button value="40x70">4 × 7 cm</Radio.Button>
                 <Radio.Button value="50x100">5 × 10 cm</Radio.Button>
               </Radio.Group>
               <span style={{ whiteSpace: 'nowrap' }}>每组份数：</span>
-              <InputNumber min={1} max={200} value={labelCount} onChange={v => setLabelCount(v ?? 1)} size="small" style={{ width: 80 }} />
-              <Button type="primary" size="small" icon={<PrinterOutlined />} loading={labelPrinting} onClick={handleLabelPrint}>
+              <InputNumber min={1} max={200} value={labelCount} onChange={v => setLabelCount(v ?? 1)} style={{ width: 80 }} />
+              <Button type="primary" icon={<PrinterOutlined />} loading={labelPrinting} onClick={handleLabelPrint}>
                 打印标签{labelItems.length > 0 ? ` (${labelItems.length * labelCount}张)` : ''}
               </Button>
             </div>
@@ -583,7 +583,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                 className="print-table"
                 dataSource={data.bom}
                 rowKey="id"
-                size="small"
+               
                 pagination={false}
                 bordered
                 columns={[
@@ -624,7 +624,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                 className="print-table"
                 dataSource={data.process}
                 rowKey="id"
-                size="small"
+               
                 pagination={false}
                 bordered
                 columns={[

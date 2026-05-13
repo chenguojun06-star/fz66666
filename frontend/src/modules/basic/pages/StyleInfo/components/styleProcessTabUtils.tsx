@@ -158,7 +158,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13 }}>{stage}</Tag>
             <span style={{ fontSize: 12, color: '#999' }}>{info.count} 个工序</span>
             {editableMode && (
-              <Button type="link" size="small" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 12, padding: 0 }}>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 12, padding: 0 }}>
                 添加
               </Button>
             )}
@@ -331,7 +331,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             min={0}
             step={0.01}
             prefix="¥"
-            size="small"
+           
             style={{ width: '100%' }}
             onChange={(v) => updateSizePrice(record.id!, size, toNumberSafe(v))}
           />

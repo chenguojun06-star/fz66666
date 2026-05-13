@@ -162,7 +162,7 @@ const MarkReceivedModal: React.FC<{
     >
       {record && (
         <div style={{ marginTop: 16 }}>
-          <Descriptions size="small" column={1} bordered style={{ marginBottom: 16 }}>
+          <Descriptions column={1} bordered style={{ marginBottom: 16 }}>
             <Descriptions.Item label="客户">{record.customerName}</Descriptions.Item>
             <Descriptions.Item label="应收金额">¥ {fmt(record.amount)}</Descriptions.Item>
             <Descriptions.Item label="已收金额">¥ {fmt(record.receivedAmount)}</Descriptions.Item>
@@ -227,7 +227,7 @@ const ReceivableDetailModal: React.FC<{
       destroyOnHidden
     >
       <div style={{ marginTop: 16 }}>
-        <Descriptions size="small" column={2} bordered>
+        <Descriptions column={2} bordered>
           <Descriptions.Item label="客户名称">{detail?.customerName || '-'}</Descriptions.Item>
           <Descriptions.Item label="关联订单">{detail?.orderNo || '-'}</Descriptions.Item>
           <Descriptions.Item label="来源业务">
@@ -245,10 +245,10 @@ const ReceivableDetailModal: React.FC<{
           <Descriptions.Item label="到期日">{detail?.dueDate || '-'}</Descriptions.Item>
           <Descriptions.Item label="备注">{detail?.description || '-'}</Descriptions.Item>
         </Descriptions>
-        <Card size="small" title="回款流水" style={{ marginTop: 16 }}>
+        <Card title="回款流水" style={{ marginTop: 16 }}>
           <ResizableTable
             rowKey="id"
-            size="small"
+           
             pagination={false}
             loading={loading}
             dataSource={logs}
@@ -393,7 +393,7 @@ const ReceivableList: React.FC = () => {
       dataIndex: 'receivableNo',
       width: 160,
       render: (v, record) => (
-        <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openReceivableDetail(record)}>
+        <Button type="link" style={{ padding: 0 }} onClick={() => openReceivableDetail(record)}>
           <Text code style={{ fontSize: 12 }}>{v}</Text>
         </Button>
       ),
@@ -412,7 +412,7 @@ const ReceivableList: React.FC = () => {
       width: 160,
       render: (v, record) => (
         record.sourceBizType === 'MATERIAL_PICKUP' && v ? (
-          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => goToMaterialPickup(record, 'pickup')}>
+          <Button type="link" style={{ padding: 0 }} onClick={() => goToMaterialPickup(record, 'pickup')}>
             {v}
           </Button>
         ) : (v || '-')
@@ -493,7 +493,7 @@ const ReceivableList: React.FC = () => {
         {/* 统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 20 }}>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="待收款合计"
                 value={Number(stats.totalPending)}
@@ -505,7 +505,7 @@ const ReceivableList: React.FC = () => {
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="逾期未收合计"
                 value={Number(stats.totalOverdue)}
@@ -517,7 +517,7 @@ const ReceivableList: React.FC = () => {
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="逾期笔数"
                 value={stats.overdueCount}
@@ -528,7 +528,7 @@ const ReceivableList: React.FC = () => {
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="本月新增应收"
                 value={stats.newThisMonth}
@@ -553,7 +553,7 @@ const ReceivableList: React.FC = () => {
         )}
 
         {/* 过滤栏 */}
-        <Card size="small" style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
+        <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
           <Row gutter={12} align="middle">
             <Col flex="auto">
               <Space>
@@ -636,7 +636,7 @@ const ReceivableList: React.FC = () => {
               setPagination({ current: page, pageSize: (p as any).pageSize ?? 20 });
               fetchList(page, statusFilter, keyword, sourceBizType, sourceBizNo);
             }}
-            size="small"
+           
           />
         </Card>
 

@@ -86,7 +86,7 @@ const StyleQuotePopover: React.FC<{
   } : null;
 
   const content = loading ? (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><Spin size="small" /></div>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><Spin /></div>
   ) : !data ? (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, color: '#8c8c8c', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
       暂无历史数据

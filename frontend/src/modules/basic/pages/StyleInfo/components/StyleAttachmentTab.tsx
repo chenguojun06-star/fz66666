@@ -387,7 +387,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
         rowKey="id"
         loading={loading}
         pagination={false}
-        size="small"
+       
         scroll={{ x: 'max-content' }}
       />
     </div>

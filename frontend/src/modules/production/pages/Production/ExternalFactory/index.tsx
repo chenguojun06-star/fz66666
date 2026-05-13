@@ -213,7 +213,7 @@ const ExternalFactory: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
                   <StickyFilterBar>
                   <Card
-                    size="small"
+                   
                     styles={{ body: { padding: '12px 16px' } }}
                     title={
                       <Space>

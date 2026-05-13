@@ -67,7 +67,7 @@ const AppManagementTab: React.FC = () => {
         if (editingUrlId === record.id && editingUrlField === 'callbackUrl') {
           return (
             <Space size={4}>
-              <Input size="small" value={editingUrlValue} onChange={e => setEditingUrlValue(e.target.value)}
+              <Input value={editingUrlValue} onChange={e => setEditingUrlValue(e.target.value)}
                 placeholder="https://..." style={{ width: 150, fontSize: 11 }} />
               <SaveOutlined style={{ cursor: 'pointer', color: 'var(--color-success)' }} onClick={handleSaveUrl} />
               <CloseOutlined style={{ cursor: 'pointer', color: 'var(--color-danger)' }} onClick={cancelEditUrl} />
@@ -143,10 +143,10 @@ const AppManagementTab: React.FC = () => {
   return (
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}><Card size="small"><Statistic title="应用总数" value={stats.total} prefix={<ApiOutlined />} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="运行中" value={stats.active} styles={{ content: { color: 'var(--color-success)' } }} prefix={<PlayCircleOutlined />} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="已停用" value={stats.disabled} styles={{ content: { color: 'var(--color-danger)' } }} prefix={<StopOutlined />} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="总调用次数" value={stats.totalCalls} prefix={<CodeOutlined />} /></Card></Col>
+        <Col span={6}><Card><Statistic title="应用总数" value={stats.total} prefix={<ApiOutlined />} /></Card></Col>
+        <Col span={6}><Card><Statistic title="运行中" value={stats.active} styles={{ content: { color: 'var(--color-success)' } }} prefix={<PlayCircleOutlined />} /></Card></Col>
+        <Col span={6}><Card><Statistic title="已停用" value={stats.disabled} styles={{ content: { color: 'var(--color-danger)' } }} prefix={<StopOutlined />} /></Card></Col>
+        <Col span={6}><Card><Statistic title="总调用次数" value={stats.totalCalls} prefix={<CodeOutlined />} /></Card></Col>
       </Row>
 
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
@@ -182,7 +182,7 @@ const AppManagementTab: React.FC = () => {
           onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, size: ps })),
           showTotal: (t) => `共 ${t} 个应用`,
         }}
-        size="small"
+       
       />
       <ResizableModal
         open={detailModal.visible}
@@ -216,7 +216,7 @@ const AppManagementTab: React.FC = () => {
                 )}
               </div>
             )}
-            <Descriptions bordered size="small" column={2}>
+            <Descriptions bordered column={2}>
               <Descriptions.Item label="应用名称">{selectedApp.appName}</Descriptions.Item>
               <Descriptions.Item label="应用类型">
                 <Tag color={APP_TYPE_CONFIG[selectedApp.appType]?.color}>
@@ -286,7 +286,7 @@ const AppManagementTab: React.FC = () => {
           dataSource={logs}
           loading={logsLoading}
           pagination={{ total: logsTotal, pageSize: 50, showTotal: (t) => `共 ${t} 条` }}
-          size="small"
+         
         />
       </ResizableModal>
     </div>

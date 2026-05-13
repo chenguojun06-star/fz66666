@@ -125,7 +125,7 @@ const BillSummaryTab: React.FC = () => {
       title: '类型', dataIndex: 'billType', key: 'billType', width: 80,
       render: (v: string) => {
         const m = BILL_TYPE_MAP[v];
-        return m ? <Tag color={m.color}>{m.text}</Tag> : v;
+        return m ? <Tag color={m.color}>{m.text}</Tag> : '未知';
       },
     },
     {
@@ -156,7 +156,7 @@ const BillSummaryTab: React.FC = () => {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,
       render: (v: string) => {
         const m = BILL_STATUS_MAP[v];
-        return m ? <Tag color={m.color}>{m.text}</Tag> : v;
+        return m ? <Tag color={m.color}>{m.text}</Tag> : '未知';
       },
     },
     {
@@ -175,8 +175,8 @@ const BillSummaryTab: React.FC = () => {
         if (record.status === 'PENDING') {
           return (
             <Space size={4}>
-              <Button type="link" size="small" icon={<CheckCircleOutlined />} onClick={() => handleConfirm(record.id)}>确认</Button>
-              <Button type="link" size="small" danger icon={<CloseCircleOutlined />} onClick={() => handleCancel(record)}>取消</Button>
+              <Button type="link" icon={<CheckCircleOutlined />} onClick={() => handleConfirm(record.id)}>确认</Button>
+              <Button type="link" danger icon={<CloseCircleOutlined />} onClick={() => handleCancel(record)}>取消</Button>
             </Space>
           );
         }
@@ -189,15 +189,15 @@ const BillSummaryTab: React.FC = () => {
     <div>
       {/* 统计卡片 */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-        <Card size="small" style={{ flex: 1 }}>
+        <Card style={{ flex: 1 }}>
           <Statistic title="待确认" value={stats.pendingAmount ?? 0} prefix="¥" precision={2}
             suffix={<span style={{ fontSize: 12, color: '#999' }}>{stats.pendingCount ?? 0}笔</span>} />
         </Card>
-        <Card size="small" style={{ flex: 1 }}>
+        <Card style={{ flex: 1 }}>
           <Statistic title="已确认" value={stats.confirmedAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: '#1677ff' } }}
             suffix={<span style={{ fontSize: 12, color: '#999' }}>{stats.confirmedCount ?? 0}笔</span>} />
         </Card>
-        <Card size="small" style={{ flex: 1 }}>
+        <Card style={{ flex: 1 }}>
           <Statistic title="已结清" value={stats.settledAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: '#52c41a' } }}
             suffix={<span style={{ fontSize: 12, color: '#999' }}>{stats.settledCount ?? 0}笔</span>} />
         </Card>
@@ -245,7 +245,7 @@ const BillSummaryTab: React.FC = () => {
         rowKey="id"
         loading={loading}
         scroll={{ x: 1600 }}
-        size="small"
+       
         rowSelection={{
           selectedRowKeys: selectedKeys,
           onChange: setSelectedKeys,

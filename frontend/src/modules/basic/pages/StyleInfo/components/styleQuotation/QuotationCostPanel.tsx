@@ -46,10 +46,10 @@ const QuotationCostPanel: React.FC<Props> = ({
   const [cardsExpanded, setCardsExpanded] = useState(false);
 
   return (
-    <Form form={form} layout="vertical" onValuesChange={onValuesChange} size="small">
+    <Form form={form} layout="vertical" onValuesChange={onValuesChange}>
         <Card
           title={<span style={{ fontSize: '15px', fontWeight: 600 }}>成本核算汇总</span>}
-          size="small"
+         
           style={{ marginBottom: 12 }}
           styles={{ body: { padding: '12px' } }}
         >

@@ -71,10 +71,19 @@ export interface SummaryColumnDeps {
     totalAmount: number;
     handleFinalPush: (operatorName: string) => void;
     handleRejectOperator: (operatorName: string) => void;
+    handleRecordPayment: (record: Record<string, unknown>) => void;
+    handleAddDeduction: (record: Record<string, unknown>) => void;
 }
 
 export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
-    const { sortField, sortOrder, handleSort, toNumberOrZero, toMoneyText, summaryRows, totalAmount, handleFinalPush, handleRejectOperator } = deps;
+    const { sortField, sortOrder, handleSort, toNumberOrZero, toMoneyText, summaryRows, totalAmount, handleFinalPush, handleRejectOperator, handleRecordPayment, handleAddDeduction } = deps;
+
+    const paymentStatusMap: Record<string, { text: string; color: string }> = {
+        unpaid: { text: '未付', color: 'red' },
+        partially_paid: { text: '部分已付', color: 'orange' },
+        fully_paid: { text: '已付清', color: 'green' },
+    };
+
     return [
         {
             title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 140, ellipsis: true,
@@ -126,6 +135,66 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
         createSortableNumberColumn('扫码次数', 'recordCount', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
         createSortableNumberColumn('订单数', 'orderCount', sortField, sortOrder, handleSort, 100, (v) => toNumberOrZero(v) || 0),
         {
+            title: <SortableColumnTitle title="已付金额" fieldName="paidAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
+            dataIndex: 'paidAmount',
+            key: 'paidAmount',
+            width: 130,
+            align: 'right' as const,
+            render: (v: unknown) => (
+                <span style={{ color: '#389e0d' }}>¥{toNumberOrZero(v).toFixed(2)}</span>
+            ),
+        },
+        {
+            title: <SortableColumnTitle title="扣款金额" fieldName="deductionAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
+            dataIndex: 'deductionAmount',
+            key: 'deductionAmount',
+            width: 130,
+            align: 'right' as const,
+            render: (v: unknown) => {
+                const val = toNumberOrZero(v);
+                return (
+                    <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
+                        ¥{val.toFixed(2)}
+                    </span>
+                );
+            },
+        },
+        {
+            title: <SortableColumnTitle title="借支抵扣" fieldName="advanceAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
+            dataIndex: 'advanceAmount',
+            key: 'advanceAmount',
+            width: 130,
+            align: 'right' as const,
+            render: (v: unknown) => `¥${toNumberOrZero(v).toFixed(2)}`,
+        },
+        {
+            title: <SortableColumnTitle title="剩余未付" fieldName="remainingAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
+            dataIndex: 'remainingAmount',
+            key: 'remainingAmount',
+            width: 130,
+            align: 'right' as const,
+            render: (v: unknown) => {
+                const val = toNumberOrZero(v);
+                return (
+                    <span style={{ fontWeight: val > 0 ? 700 : 400, color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
+                        ¥{val.toFixed(2)}
+                    </span>
+                );
+            },
+        },
+        {
+            title: '付款状态',
+            dataIndex: 'paymentStatus',
+            key: 'paymentStatus',
+            width: 110,
+            align: 'center' as const,
+            render: (v: unknown) => {
+                const status = String(v || '');
+                const info = paymentStatusMap[status];
+                return info ? <Tag color={info.color}>{info.text}</Tag> : <Tag>未知</Tag>;
+            },
+        },
+        {
             title: '备注',
             dataIndex: 'remark',
             key: 'remark',
@@ -138,10 +207,11 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
         {
             title: '操作',
             key: 'action',
-            width: 150,
+            width: 220,
             fixed: 'right' as const,
             render: (_: unknown, record: Record<string, unknown>) => {
                 const approved = Boolean(record.approvalTime);
+                const fullyPaid = String(record.paymentStatus || '') === 'fully_paid';
                 const actions: RowAction[] = [
                     {
                         key: 'approve',
@@ -149,6 +219,18 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
                         disabled: approved,
                         primary: !approved,
                         onClick: () => handleFinalPush(String(record.operatorName))
+                    },
+                    {
+                        key: 'payment',
+                        label: '记录打款',
+                        disabled: !approved || fullyPaid,
+                        onClick: () => handleRecordPayment(record),
+                    },
+                    {
+                        key: 'deduction',
+                        label: '添加扣款',
+                        disabled: !approved || fullyPaid,
+                        onClick: () => handleAddDeduction(record),
                     },
                     {
                         key: 'reject',
@@ -345,7 +427,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
                 if (status === 'closed') return <Tag color="blue">已关单·可审核</Tag>;
                 if (!status) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
                 const label = ORDER_STATUS_LABEL[status];
-                return <Tag color={ORDER_STATUS_COLOR[status] ?? 'default'}>{label ?? status}</Tag>;
+                return <Tag color={ORDER_STATUS_COLOR[status] ?? 'default'}>{label ?? '未知'}</Tag>;
             },
         },
         {
@@ -360,7 +442,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
                 if (!canAudit) return <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>未关单</span>;
                 return (
                     <Button
-                        size="small"
+                       
                         type="primary"
                         onClick={() => handleAuditDetail(record)}
                     >

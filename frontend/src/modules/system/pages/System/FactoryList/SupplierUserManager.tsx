@@ -151,12 +151,12 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
       width: 220,
       render: (_: any, record: SupplierUserItem) => (
         <Space size={4}>
-          <Button size="small" onClick={() => handleResetPassword(record)}>重置密码</Button>
-          <Button size="small" onClick={() => handleToggleStatus(record)}>
+          <Button onClick={() => handleResetPassword(record)}>重置密码</Button>
+          <Button onClick={() => handleToggleStatus(record)}>
             {record.status === 'ACTIVE' ? '禁用' : '启用'}
           </Button>
           <Popconfirm title={`确定删除用户 ${record.username}？`} onConfirm={() => handleDelete(record)}>
-            <Button size="small" danger>删除</Button>
+            <Button danger>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -184,7 +184,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
           dataSource={users}
           loading={loading}
           pagination={false}
-          size="small"
+         
           scroll={{ x: 900 }}
         />
       </Modal>

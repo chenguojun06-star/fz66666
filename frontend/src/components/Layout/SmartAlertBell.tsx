@@ -286,7 +286,7 @@ const SmartAlertBell: React.FC = () => {
         {alertCount > 0 && (
           <Badge
             count={alertCount}
-            size="small"
+           
             style={{ marginLeft: 4, background: dotColor, boxShadow: 'none' }}
           />
         )}

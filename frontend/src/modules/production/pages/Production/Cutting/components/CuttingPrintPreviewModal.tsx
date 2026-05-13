@@ -56,7 +56,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
       >
         <span style={{ fontWeight: 600, fontSize: '13px' }}>纸张设置：</span>
         <Segmented
-          size="small"
+         
           value={print.printConfig.orientation}
           onChange={(v) => print.setOrientation(v as 'horizontal' | 'vertical')}
           options={[
@@ -67,7 +67,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         <span style={{ fontSize: '13px' }}>
           宽&nbsp;
           <InputNumber
-            size="small"
+           
             min={2}
             max={30}
             step={0.5}
@@ -80,7 +80,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         <span style={{ fontSize: '13px' }}>
           高&nbsp;
           <InputNumber
-            size="small"
+           
             min={2}
             max={30}
             step={0.5}
@@ -93,7 +93,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         <span style={{ fontSize: '13px' }}>
           QR大小&nbsp;
           <InputNumber
-            size="small"
+           
             min={40}
             max={200}
             step={4}

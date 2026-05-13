@@ -41,9 +41,9 @@ const WarehousingActionPanel: React.FC<Props> = ({
       <Alert type="info" showIcon style={{ marginBottom: 16 }}
         title={`共 ${pendingRecords.length} 条合格记录待入库，合格数量合计 ${pendingQty} 件`} />
 
-      <Card size="small" title="待入库记录" style={{ marginBottom: 16 }}>
+      <Card title="待入库记录" style={{ marginBottom: 16 }}>
         <ResizableTable<WarehousingDetailRecord>
-          size="small" rowKey="id" pagination={false}
+          rowKey="id" pagination={false}
           dataSource={pendingRecords}
           resizableColumns={false}
           scroll={undefined}
@@ -61,7 +61,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
         />
       </Card>
 
-      <Card size="small" title="选择仓库并确认入库">
+      <Card title="选择仓库并确认入库">
         <Space orientation="vertical" style={{ width: '100%' }} size="middle">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <Text strong>仓库类型：</Text>

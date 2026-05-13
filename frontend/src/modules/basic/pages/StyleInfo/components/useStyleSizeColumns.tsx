@@ -106,7 +106,7 @@ export function useStyleSizeColumns({
                     return false;
                   }}
                 >
-                  <Button size="small" icon={<PlusOutlined />} style={{ width: '100%', height: imgs.length > 0 ? 84 : 220, borderRadius: 8, borderStyle: 'dashed' }} />
+                  <Button icon={<PlusOutlined />} style={{ width: '100%', height: imgs.length > 0 ? 84 : 220, borderRadius: 8, borderStyle: 'dashed' }} />
                 </Upload>
               )}
             </div>
@@ -156,7 +156,7 @@ export function useStyleSizeColumns({
               ) : null}
               {editableMode && (
                 <Button
-                  size="small"
+                 
                   icon={<PlusOutlined />}
                   type="dashed"
                   style={{ width: '100%', marginTop: 8 }}
@@ -232,7 +232,7 @@ export function useStyleSizeColumns({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontSize: 11, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
               {editableMode ? (
-                <Button size="small" onClick={() => openGradingConfig(record)}>
+                <Button onClick={() => openGradingConfig(record)}>
                   配置跳码区
                 </Button>
               ) : null}
@@ -248,7 +248,7 @@ export function useStyleSizeColumns({
           <span>{sn}</span>
           {editableMode ? (
             <Button
-              size="small"
+             
               type="text"
               danger
               icon={<DeleteOutlined />}

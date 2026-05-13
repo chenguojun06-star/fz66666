@@ -222,7 +222,7 @@ const CuttingManagement: React.FC = () => {
         >
 
           {isEntryPage ? null : (
-            <Card size="small" className="mb-sm">
+            <Card className="mb-sm">
               <PageStatCards
                 activeKey={tasks.activeStatFilter}
                 cards={[
@@ -698,7 +698,7 @@ const CuttingManagement: React.FC = () => {
                 columns={columns as any}
                 dataSource={bundles.dataSource}
                 rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
-                size="small"
+               
                 rowSelection={{
                   selectedRowKeys: bundles.selectedBundleRowKeys,
                   onChange: (keys, rows) => {

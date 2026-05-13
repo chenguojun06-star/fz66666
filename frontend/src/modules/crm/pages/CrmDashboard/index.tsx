@@ -79,7 +79,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
     <Row gutter={[16, 16]}>
       {FEATURES.map(f => (
         <Col span={8} key={f.title}>
-          <Card size="small" style={{ height: '100%', opacity: 0.85 }} hoverable={false}>
+          <Card style={{ height: '100%', opacity: 0.85 }} hoverable={false}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <span style={{ fontSize: 28, lineHeight: 1 }}>{f.icon}</span>
               <div>
@@ -351,7 +351,7 @@ const CustomerManagement: React.FC = () => {
           { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: '#722ed1' },
         ].map(s => (
           <Col span={6} key={s.label}>
-            <Card size="small" styles={{ body: { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' } }}>
+            <Card styles={{ body: { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' } }}>
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
@@ -363,7 +363,7 @@ const CustomerManagement: React.FC = () => {
       </Row>
 
       {/* 搜索栏 */}
-      <Card size="small" style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Row gutter={12} align="middle">
           <Col flex="auto">
             <Space>
@@ -414,7 +414,7 @@ const CustomerManagement: React.FC = () => {
             showTotal: t => `共 ${t} 条`,
           }}
           onChange={handleTableChange}
-          size="small"
+         
         />
       </Card>
 
@@ -443,7 +443,7 @@ const CustomerManagement: React.FC = () => {
                 key: 'info',
                 label: '基本信息',
                 children: (
-                  <Descriptions column={2} size="small" bordered>
+                  <Descriptions column={2} bordered>
                     <Descriptions.Item label="客户编号">{drawerData.customerNo}</Descriptions.Item>
                     <Descriptions.Item label="等级">
                       {drawerData.customerLevel === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>}
@@ -470,7 +470,7 @@ const CustomerManagement: React.FC = () => {
                     rowKey="id"
                     loading={drawerLoading}
                     dataSource={drawerOrders}
-                    size="small"
+                   
                     pagination={{ pageSize: 8, showTotal: t => `共 ${t} 条` }}
                     columns={[
                       { title: '订单号', dataIndex: 'orderNo', width: 160 },
@@ -481,7 +481,7 @@ const CustomerManagement: React.FC = () => {
                         render: v => (
                           <Progress
                             percent={Number(v) || 0}
-                            size="small"
+                           
                             strokeColor={Number(v) >= 100 ? '#52c41a' : undefined}
                           />
                         ),
@@ -491,7 +491,7 @@ const CustomerManagement: React.FC = () => {
                         render: (v: string) => {
                           const s = String(v || '').toLowerCase();
                           const label = ORDER_STATUS_LABEL[s];
-                          return <Tag color={ORDER_STATUS_COLOR[s] ?? 'default'}>{label ?? v}</Tag>;
+                          return <Tag color={ORDER_STATUS_COLOR[s] ?? 'default'}>{label ?? '未知'}</Tag>;
                         },
                       },
                       { title: '创建时间', dataIndex: 'createTime', width: 110, render: v => v?.substring(0, 10) ?? '-' },
@@ -499,7 +499,7 @@ const CustomerManagement: React.FC = () => {
                         title: '操作', width: 120,
                         render: (_, order: any) => (
                           <Button
-                            size="small"
+                           
                             icon={<LinkOutlined />}
                             onClick={() => {
                               void handleShareOrder({
@@ -530,7 +530,7 @@ const CustomerManagement: React.FC = () => {
                     rowKey="id"
                     loading={drawerReceivableLoading}
                     dataSource={drawerReceivables}
-                    size="small"
+                   
                     pagination={{ pageSize: 8, showTotal: (t: number) => `共 ${t} 条` }}
                     columns={[
                       { title: '单号', dataIndex: 'receivableNo', width: 150 },

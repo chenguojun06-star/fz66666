@@ -185,7 +185,7 @@ export default function SystemIssueBoard() {
       {error && <Alert title="检查失败" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={8}>
-          <Card size="small" style={{ borderColor: errCount > 0 ? '#ff4d4f' : '#d9d9d9' }}>
+          <Card style={{ borderColor: errCount > 0 ? '#ff4d4f' : '#d9d9d9' }}>
             <Space>
               <BugOutlined style={{ fontSize: 22, color: errCount > 0 ? '#ff4d4f' : '#aaa' }} />
               <div>
@@ -196,7 +196,7 @@ export default function SystemIssueBoard() {
           </Card>
         </Col>
         <Col span={8}>
-          <Card size="small" style={{ borderColor: warnCount > 0 ? '#faad14' : '#d9d9d9' }}>
+          <Card style={{ borderColor: warnCount > 0 ? '#faad14' : '#d9d9d9' }}>
             <Space>
               <WarningOutlined style={{ fontSize: 22, color: warnCount > 0 ? '#faad14' : '#aaa' }} />
               <div>
@@ -207,7 +207,7 @@ export default function SystemIssueBoard() {
           </Card>
         </Col>
         <Col span={8}>
-          <Card size="small">
+          <Card>
             <Space>
               <CheckCircleOutlined style={{ fontSize: 22, color: infoCount > 0 ? '#1677ff' : '#aaa' }} />
               <div>
@@ -218,7 +218,7 @@ export default function SystemIssueBoard() {
           </Card>
         </Col>
       </Row>
-      <Card size="small" title="问题明细">
+      <Card title="问题明细">
         <Spin spinning={loading}>
           {summary && (summary.issues ?? []).length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary"> 当前无已知问题，系统运行正常</Text>} />
@@ -228,7 +228,7 @@ export default function SystemIssueBoard() {
               columns={columns}
               rowKey={(r) => `${r.category}-${r.title}`}
               pagination={false}
-              size="small"
+             
               rowClassName={(record) =>
                 record.level === 'ERROR' ? 'issue-row-error' :
                 record.level === 'WARN'  ? 'issue-row-warn'  : ''
@@ -243,7 +243,7 @@ export default function SystemIssueBoard() {
   const feTab = (
     <>
       {feError && <Alert title="获取失败" description={feError} type="error" showIcon style={{ marginBottom: 16 }} />}
-      <Card size="small" title={`前端 JS 异常（最近 100 条，内存队列 · 重启后清空）`}>
+      <Card title={`前端 JS 异常（最近 100 条，内存队列 · 重启后清空）`}>
         <Spin spinning={feLoading}>
           {feErrors.length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary"> 暂无前端异常记录</Text>} />
@@ -253,7 +253,7 @@ export default function SystemIssueBoard() {
               columns={feColumns}
               rowKey={(r, i) => `${r.occurredAt}-${i}`}
               pagination={{ pageSize: 20, showSizeChanger: false }}
-              size="small"
+             
             />
           )}
         </Spin>

@@ -189,7 +189,7 @@ const WarehouseSizeTable: React.FC<{
         },
       ]}
       pagination={false}
-      size="small"
+     
       locale={{ emptyText: '暂无码数明细' }}
       summary={(pageData) => {
         if (pageData.length === 0) return null;

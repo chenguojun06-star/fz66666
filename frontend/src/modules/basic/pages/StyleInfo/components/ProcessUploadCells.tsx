@@ -111,7 +111,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
         <Upload showUploadList={false}
           beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
           disabled={uploading}>
-          <Button size="small" icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
+          <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
             上传附件
           </Button>
         </Upload>
@@ -218,7 +218,7 @@ export const NewRowAttachmentUpload: React.FC<{
       <Upload showUploadList={false}
         beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
         disabled={uploading}>
-        <Button size="small" icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
+        <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
           上传附件
         </Button>
       </Upload>

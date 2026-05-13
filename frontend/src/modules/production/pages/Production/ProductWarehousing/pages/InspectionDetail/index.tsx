@@ -358,7 +358,7 @@ const InspectionDetail: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, minHeight: 'calc(100vh - 200px)' }}>
         {/* 左侧 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Card size="small" title="款式信息">
+          <Card title="款式信息">
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
               {(style?.cover || order?.styleCover) ? (
                 <Image src={getFullAuthedFileUrl(style?.cover || order?.styleCover)} alt={order.styleName}
@@ -368,7 +368,7 @@ const InspectionDetail: React.FC = () => {
                 <div style={{ width: 200, height: 240, background: '#f5f5f5', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', margin: '0 auto' }}>无图片</div>
               )}
             </div>
-            <Descriptions column={1} size="small">
+            <Descriptions column={1}>
               <Descriptions.Item label="款号">{order.styleNo}</Descriptions.Item>
               <Descriptions.Item label="款名">{order.styleName}</Descriptions.Item>
               <Descriptions.Item label="订单数量">{order.orderQuantity}</Descriptions.Item>
@@ -386,10 +386,10 @@ const InspectionDetail: React.FC = () => {
 
         {/* 右侧 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', maxWidth: '100%' }}>
-          <Card size="small" style={{ overflow: 'hidden' }}>
+          <Card style={{ overflow: 'hidden' }}>
             <Tabs
               activeKey={activeTab} onChange={setActiveTab}
-              size="small"
+             
               style={{ width: '100%' }}
               items={[
                 {
@@ -415,7 +415,7 @@ const InspectionDetail: React.FC = () => {
                   children: (
                     <ResizableTable
                       storageKey="inspection-bom-table"
-                      rowKey="id" size="small" pagination={false}
+                      rowKey="id" pagination={false}
                       scroll={{ x: 650 }} dataSource={bom}
                       columns={BOM_COLUMNS}
                     />
@@ -453,7 +453,7 @@ const InspectionDetail: React.FC = () => {
             />
           </Card>
 
-          <Card size="small" title={<><CheckCircleOutlined style={{ marginRight: 6 }} />质检操作</>}>
+          <Card title={<><CheckCircleOutlined style={{ marginRight: 6 }} />质检操作</>}>
             {formHook.batchSelectRows.length > 0 && formHook.batchSelectableQrs.length === 0 && qcStats.pendingWarehouse === 0 && qcStats.count > 0 ? (
               <Alert type="success" showIcon
                 title="该订单所有菲号已完成质检入库，无需再操作"

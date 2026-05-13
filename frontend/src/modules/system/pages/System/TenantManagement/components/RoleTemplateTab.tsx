@@ -51,7 +51,7 @@ const RoleTemplateTab: React.FC = () => {
         dataSource={templates}
         loading={loading}
         pagination={false}
-        size="small"
+       
       />
     </div>
   );

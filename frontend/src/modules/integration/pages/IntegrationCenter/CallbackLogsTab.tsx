@@ -109,7 +109,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
 
   return (
     <div style={{ paddingTop: 16 }}>
-      <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
+      <Card style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
         <Space wrap>
           <Select id="callbackTypeFilter" placeholder="类型" allowClear style={{ width: 100 }}
             value={filters.type} onChange={v => setFilters(f => ({ ...f, type: v }))}>

@@ -102,7 +102,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
       </div>
       <Tabs
         tabBarExtraContent={
-          <Button size="small" onClick={handleRefresh}>
+          <Button onClick={handleRefresh}>
             更新
           </Button>
         }
@@ -111,7 +111,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'pattern',
             label: ` 大货纸样 (${allPatternFiles.length})`,
             children: (
-              <Card size="small" style={{ marginBottom: 16 }}>
+              <Card style={{ marginBottom: 16 }}>
                 {allPatternFiles.length > 0 ? (
                   <div>
                     {allPatternFiles.map((item, idx) => (
@@ -136,7 +136,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                             {`上传者: ${item.uploader || '-'} | 上传时间: ${item.createTime || '-'}`}
                           </div>
                         </div>
-                        <Button type="link" size="small" onClick={() => handleDownload(item)}>下载</Button>
+                        <Button type="link" onClick={() => handleDownload(item)}>下载</Button>
                       </div>
                     ))}
                   </div>
@@ -152,7 +152,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'size',
             label: ' 尺寸表',
             children: (
-              <Card size="small" style={{ marginBottom: 16 }}>
+              <Card style={{ marginBottom: 16 }}>
                 <StyleSizeTab styleId={styleId} readOnly={true} simpleView={true} />
               </Card>
             ),
@@ -161,7 +161,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'production',
             label: ' 生产制单',
             children: (
-              <Card size="small" style={{ marginBottom: 16 }}>
+              <Card style={{ marginBottom: 16 }}>
                 <Spin spinning={loading}>
                   {productionReq ? (
                     (() => {
@@ -174,7 +174,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                       return (
                         <ResizableTable
                           storageKey="style-pattern-requirements"
-                          size="small"
+                         
                           pagination={false}
                           resizableColumns={false}
                           dataSource={lines.map((line, idx) => ({
@@ -210,7 +210,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'secondary',
             label: ' 二次工艺',
             children: (
-              <Card size="small" style={{ marginBottom: 16 }}>
+              <Card style={{ marginBottom: 16 }}>
                 <StyleSecondaryProcessTab styleId={styleId} styleNo={styleNo} readOnly simpleView />
               </Card>
             ),

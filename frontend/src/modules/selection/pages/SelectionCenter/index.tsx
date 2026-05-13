@@ -116,15 +116,15 @@ export default function SelectionCenter() {
                           </div>
                           <Space size={6} style={{ width: '100%' }}>
                             {(item.status === 'PENDING' || item.status === 'HOLD') && (
-                              <Tooltip title="填写审核结果：通过或不通过"><Button size="small" onClick={() => openReviewModal(item)} style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 11 }}>审核</Button></Tooltip>
+                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 11 }}>审核</Button></Tooltip>
                             )}
                             {item.status === 'APPROVED' && !item.createdStyleId && (
-                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button size="small" type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 11 }}>下版到样衣</Button></Tooltip>
+                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 11 }}>下版到样衣</Button></Tooltip>
                             )}
                             {item.createdStyleId && <Tag color="green" style={{ fontSize: 11, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
                             {canDeleteCandidate(item) && (
                               <Tooltip title={item.status === 'APPROVED' ? '审核通过满 10 天后可手动删除候选款' : '审核不通过可直接删除'}>
-                                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 11 }}>删除</Button>
+                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 11 }}>删除</Button>
                               </Tooltip>
                             )}
                           </Space>

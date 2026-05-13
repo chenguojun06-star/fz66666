@@ -131,7 +131,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
             <Input placeholder="输入编码或点击选择→" />
           </Form.Item>
           <Button
-            size="small"
+           
             onClick={() => {
               ctx.setMaterialTargetRowId(String(record.id));
               ctx.setMaterialTab('select');

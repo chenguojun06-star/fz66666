@@ -38,47 +38,104 @@ export const compareSizeAsc = (a: unknown, b: unknown) => {
   return String(pa.raw).localeCompare(String(pb.raw), 'zh-Hans-CN', { numeric: true });
 };
 
+const SIZE_LETTER_RANK: Record<string, number> = {
+  XXXS: 10, XXS: 20, XS: 30, S: 40, M: 50, L: 60, XL: 70, XXL: 80, XXXL: 90, XXXXL: 100, XXXXXL: 110,
+};
+
+const resolveLetterRank = (upper: string): number | null => {
+  if (SIZE_LETTER_RANK[upper] != null) return SIZE_LETTER_RANK[upper];
+  const mXS = upper.match(/^(X{0,4})S$/);
+  if (mXS) return 40 - (mXS[1]?.length || 0) * 10;
+  const mXL = upper.match(/^(X{1,4})L$/);
+  if (mXL) return 60 + (mXL[1]?.length || 0) * 10;
+  if (upper === 'S') return 40;
+  if (upper === 'M') return 50;
+  if (upper === 'L') return 60;
+  if (upper === 'XL') return 70;
+  if (upper === 'XXL') return 80;
+  if (upper === 'XXXL') return 90;
+  return null;
+};
+
 export const sortSizeNames = (sizes: string[]) => {
   const getKey = (name: string): { group: number; a: number; b: string | number; unit: string } => {
     const t = String(name || '').trim();
-    const order = ['XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
     const upper = t.toUpperCase();
 
-    // 标准尺码
-    const idx = order.indexOf(upper);
-    if (idx >= 0) {
-      return { group: 1, a: idx, b: 0, unit: '' };
+    const stdIdx = ['XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'].indexOf(upper);
+    if (stdIdx >= 0) {
+      return { group: 1, a: stdIdx, b: 0, unit: '' };
     }
 
-    // 数字尺码（如 36, 37, 38）
     if (/^\d+(\.\d+)?$/.test(t)) {
       return { group: 2, a: Number(t), b: 0, unit: '' };
     }
 
-    // 数字+单位（如 160/84A, 165/88A）
+    const letterSlashMatch = upper.match(/^(XS|S|M|L|XL|XXL|XXXL|XXXXL|X+S|X+L)(\d+)\/(\d+)([A-Z])?$/);
+    if (letterSlashMatch) {
+      const letterRank = resolveLetterRank(letterSlashMatch[1]);
+      return {
+        group: 3,
+        a: letterRank ?? 5000,
+        b: Number(letterSlashMatch[2]),
+        unit: `${letterSlashMatch[3] || ''}${letterSlashMatch[4] || ''}`,
+      };
+    }
+
+    const letterParenMatch = upper.match(/^(XS|S|M|L|XL|XXL|XXXL|XXXXL|X+S|X+L)\((\d+)\/(\d+)([A-Z])?\)$/);
+    if (letterParenMatch) {
+      const letterRank = resolveLetterRank(letterParenMatch[1]);
+      return {
+        group: 3,
+        a: letterRank ?? 5000,
+        b: Number(letterParenMatch[2]),
+        unit: `${letterParenMatch[3] || ''}${letterParenMatch[4] || ''}`,
+      };
+    }
+
+    const letterParenSimpleMatch = upper.match(/^(XS|S|M|L|XL|XXL|XXXL|XXXXL|X+S|X+L)\((.+)\)$/);
+    if (letterParenSimpleMatch) {
+      const letterRank = resolveLetterRank(letterParenSimpleMatch[1]);
+      return {
+        group: 3,
+        a: letterRank ?? 5000,
+        b: letterParenSimpleMatch[2],
+        unit: '',
+      };
+    }
+
     const slashMatch = t.match(/^(\d+)\/(\d+)([A-Z])?$/i);
     if (slashMatch) {
       return {
-        group: 3,
+        group: 4,
         a: Number(slashMatch[1]),
         b: Number(slashMatch[2]),
         unit: (slashMatch[3] || '').toUpperCase()
       };
     }
 
-    // 数字+单位（如 160CM, 65KG）
     const unitMatch = t.match(/^(\d+(?:\.\d+)?)\s*([A-Za-z]+)$/);
     if (unitMatch) {
       return {
-        group: 4,
+        group: 5,
         a: Number(unitMatch[1]),
         b: 0,
         unit: unitMatch[2].toUpperCase()
       };
     }
 
-    // 其他
-    return { group: 5, a: 0, b: t, unit: '' };
+    const letterNumMatch = upper.match(/^(XS|S|M|L|XL|XXL|XXXL|XXXXL|X+S|X+L)(\d+(?:\.\d+)?)$/);
+    if (letterNumMatch) {
+      const letterRank = resolveLetterRank(letterNumMatch[1]);
+      return {
+        group: 6,
+        a: letterRank ?? 5000,
+        b: Number(letterNumMatch[2]),
+        unit: '',
+      };
+    }
+
+    return { group: 7, a: 0, b: t, unit: '' };
   };
 
   return [...sizes].sort((a, b) => {
@@ -86,7 +143,7 @@ export const sortSizeNames = (sizes: string[]) => {
     const kb = getKey(b);
 
     if (ka.group !== kb.group) return ka.group - kb.group;
-    if (ka.group === 5) return String(ka.b).localeCompare(String(kb.b), 'zh-Hans-CN');
+    if (ka.group === 7) return String(ka.b).localeCompare(String(kb.b), 'zh-Hans-CN', { numeric: true });
     if (ka.a !== kb.a) return ka.a - kb.a;
     if (ka.b !== kb.b) {
       if (typeof ka.b === 'number' && typeof kb.b === 'number') {

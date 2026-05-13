@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, InputNumber, Select, Descriptions, App, Divider, Tag } from 'antd';
+import { Form, Input, InputNumber, Select, Descriptions, App, Divider, Tag } from 'antd';
+import StandardModal from '@/components/common/StandardModal';
 import api from '@/utils/api';
 import type { MaterialInventory } from '../types';
 
@@ -74,16 +75,16 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
   const availableQty = (record.quantity || 0) - (record.lockedQty || 0);
 
   return (
-    <Modal
+    <StandardModal
       title="库存领取"
       open={open}
       onOk={handlePick}
       onCancel={onClose}
       okText="确认领取"
       confirmLoading={loading}
-      width={560}
+      size="lg"
     >
-      <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
+      <Descriptions column={2} bordered style={{ marginBottom: 16 }}>
         <Descriptions.Item label="物料名称">{record.materialName}</Descriptions.Item>
         <Descriptions.Item label="物料编号">{record.materialCode}</Descriptions.Item>
         <Descriptions.Item label="颜色">{record.color || '-'}</Descriptions.Item>
@@ -150,7 +151,7 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
           <Input.TextArea rows={2} placeholder="选填" />
         </Form.Item>
       </Form>
-    </Modal>
+    </StandardModal>
   );
 };
 

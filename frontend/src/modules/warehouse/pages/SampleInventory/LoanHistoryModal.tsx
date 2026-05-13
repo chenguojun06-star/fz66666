@@ -122,7 +122,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
           overdue: { label: '逾期', color: 'warning' },
           damaged: { label: '损坏', color: 'error' },
         };
-        const info = statusMap[status] || { label: status || '-', color: 'default' };
+        const info = statusMap[status] || { label: '未知', color: 'default' };
         return <Tag color={info.color}>{info.label}</Tag>;
       },
     },
@@ -178,7 +178,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
           rowKey="id"
           loading={loading}
           pagination={false}
-          size="small"
+         
         />
       </ResizableModal>
 
@@ -187,7 +187,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         open={returnModalVisible}
         onCancel={() => setReturnModalVisible(false)}
         onOk={handleReturnConfirm}
-        width="30vw"
+        width="30vw" maskClosable={false}
       >
         <p>确认归还样衣吗？</p>
         <Input.TextArea

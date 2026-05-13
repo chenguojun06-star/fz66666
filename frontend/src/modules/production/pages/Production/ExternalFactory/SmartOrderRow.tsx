@@ -236,7 +236,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
         })()}
         <div className="style-smart-row__overview">
           <span className="style-smart-row__overview-value">{overallProgress}%</span>
-          <Progress percent={overallProgress} showInfo={false} size="small" strokeColor={isScrapped ? '#9ca3af' : '#2d7ff9'} />
+          <Progress percent={overallProgress} showInfo={false} strokeColor={isScrapped ? '#9ca3af' : '#2d7ff9'} />
         </div>
       </div>
     </div>

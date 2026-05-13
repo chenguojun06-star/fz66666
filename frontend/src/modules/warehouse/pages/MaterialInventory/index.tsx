@@ -167,7 +167,7 @@ const _MaterialInventory: React.FC = () => {
         if (record.auditStatus !== 'APPROVED') return '-';
         if (status === 'SETTLED') return <Tag color="green">已平账</Tag>;
         if (status === 'PENDING') return <Tag color="orange">待结算</Tag>;
-        return <Tag color="default">{status || '-'}</Tag>;
+        return <Tag color="default">未知</Tag>;
       },
     },
     {
@@ -177,7 +177,7 @@ const _MaterialInventory: React.FC = () => {
       render: (_: unknown, record: PickingRow) => {
         const actions: React.ReactNode[] = [];
         actions.push(
-          <Button key="print" size="small" onClick={() => pickupData.handlePrint(record)}>
+          <Button key="print" onClick={() => pickupData.handlePrint(record)}>
             打印
           </Button>
         );
@@ -191,7 +191,7 @@ const _MaterialInventory: React.FC = () => {
               okText="出库"
               cancelText="取消"
             >
-              <Button type="primary" size="small" loading={pickupData.confirmingId === record.id}>
+              <Button type="primary" loading={pickupData.confirmingId === record.id}>
                 出库
               </Button>
             </Popconfirm>
@@ -206,7 +206,7 @@ const _MaterialInventory: React.FC = () => {
               cancelText="再想想"
               okButtonProps={{ danger: true }}
             >
-              <Button danger size="small" loading={pickupData.cancellingId === record.id}>
+              <Button danger loading={pickupData.cancellingId === record.id}>
                 取消
               </Button>
             </Popconfirm>
@@ -225,7 +225,7 @@ const _MaterialInventory: React.FC = () => {
               okText="审核通过"
               cancelText="取消"
             >
-              <Button type="primary" size="small" loading={pickupData.auditingId === record.id}>
+              <Button type="primary" loading={pickupData.auditingId === record.id}>
                 审核
               </Button>
             </Popconfirm>
@@ -259,7 +259,7 @@ const _MaterialInventory: React.FC = () => {
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card size="small" style={{ marginBottom: 12 }}>
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice
             error={smartError}
             onFix={() => { void fetchData(); }}
@@ -314,7 +314,7 @@ const _MaterialInventory: React.FC = () => {
                 <Space size={4}>
                   库存总览
                   {Number(stats.lowStockCount || 0) > 0 && (
-                    <Badge count={Number(stats.lowStockCount || 0)} size="small" />
+                    <Badge count={Number(stats.lowStockCount || 0)} />
                   )}
                 </Space>
                 <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>物料进销存与预警</div>
@@ -391,7 +391,7 @@ const _MaterialInventory: React.FC = () => {
               <div>
                 <Space size={4}>
                   领取记录
-                  <Badge count={pickupData.pagination.pagination.total || 0} size="small" />
+                  <Badge count={pickupData.pagination.pagination.total || 0} />
                 </Space>
                 <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
               </div>
@@ -475,7 +475,7 @@ const _MaterialInventory: React.FC = () => {
                         rowKey="id"
                         dataSource={record.items || []}
                         pagination={false}
-                        size="small"
+                       
                         columns={itemColumns}
                       />
                     ),

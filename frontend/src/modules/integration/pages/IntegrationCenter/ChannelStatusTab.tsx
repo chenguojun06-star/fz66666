@@ -82,17 +82,17 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
       {stats && (
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={8}>
-            <Card size="small" variant="borderless" style={{ background: '#f6ffed', borderRadius: 8 }}>
+            <Card variant="borderless" style={{ background: '#f6ffed', borderRadius: 8 }}>
               <Statistic title="迗7天支付流水" value={stats.paymentCount7d} suffix="笔" styles={{ content: { color: '#52c41a' } }} />
             </Card>
           </Col>
           <Col span={8}>
-            <Card size="small" variant="borderless" style={{ background: '#e6f4ff', borderRadius: 8 }}>
+            <Card variant="borderless" style={{ background: '#e6f4ff', borderRadius: 8 }}>
               <Statistic title="迗7天物流运单" value={stats.logisticsCount7d} suffix="件" styles={{ content: { color: '#1677ff' } }} />
             </Card>
           </Col>
           <Col span={8}>
-            <Card size="small" variant="borderless" style={{ background: stats.unprocessedCallbacks > 0 ? '#fff7e6' : '#f9f9f9', borderRadius: 8 }}>
+            <Card variant="borderless" style={{ background: stats.unprocessedCallbacks > 0 ? '#fff7e6' : '#f9f9f9', borderRadius: 8 }}>
               <Statistic title="待处理回调" value={stats.unprocessedCallbacks} suffix="条"
                 styles={{ content: { color: stats.unprocessedCallbacks > 0 ? '#fa8c16' : '#999' } }} />
             </Card>
@@ -142,7 +142,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                           ...{ch.webhookPath}
                         </span>
                       </Tooltip>
-                      <Button type="link" size="small" icon={<CopyOutlined />}
+                      <Button type="link" icon={<CopyOutlined />}
                         onClick={() => copyText(webhookUrl)} style={{ padding: 0 }}>
                         复制
                       </Button>
@@ -152,10 +152,10 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                       <div style={{ marginTop: 8 }}>
                         <strong>填写到 application.yml：</strong>
                         <Tooltip title={<pre style={{ fontSize: 11 }}>{hint}</pre>} placement="bottom">
-                          <Button type="link" size="small" icon={<QuestionCircleOutlined />}
+                          <Button type="link" icon={<QuestionCircleOutlined />}
                             style={{ padding: '0 4px' }}>查看配置项</Button>
                         </Tooltip>
-                        <Button type="link" size="small" icon={<CopyOutlined />}
+                        <Button type="link" icon={<CopyOutlined />}
                           onClick={() => copyText(hint)} style={{ padding: 0 }}>
                           复制配置
                         </Button>

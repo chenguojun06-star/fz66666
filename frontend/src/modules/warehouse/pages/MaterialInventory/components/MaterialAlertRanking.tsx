@@ -90,7 +90,7 @@ const MaterialAlertRanking: React.FC<MaterialAlertRankingProps> = ({ loading, al
   };
 
   return (
-    <Card className="order-ranking-grid" size="small" loading={loading}>
+    <Card className="order-ranking-grid" loading={loading}>
       <div className="ranking-grid-header">
         <AlertOutlined className="ranking-icon" />
         <span className="ranking-title">面辅料预警 TOP{alerts.length}</span>

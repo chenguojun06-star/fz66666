@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { App, Upload } from 'antd';
-import api, { toNumberSafe, isApiSuccess, getApiMessage } from '@/utils/api';
+import api, { toNumberSafe, isApiSuccess, getApiMessage, sortSizeNames } from '@/utils/api';
 
 const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL'];
 const norm = (v: unknown) => String(v || '').trim();
 
 interface StyleProcessRow {
@@ -27,14 +26,7 @@ const buildRowsFromContent = (content: any, fallbackSizes: string[] = DEFAULT_SI
   const rawSizes = Array.isArray(content?.sizes)
     ? content.sizes.map((item: unknown) => String(item || '').trim().toUpperCase()).filter(Boolean)
     : [];
-  const sizes = (rawSizes.length ? rawSizes : fallbackSizes).slice().sort((a, b) => {
-    const ia = SIZE_ORDER.indexOf(a);
-    const ib = SIZE_ORDER.indexOf(b);
-    if (ia >= 0 && ib >= 0) return ia - ib;
-    if (ia >= 0) return -1;
-    if (ib >= 0) return 1;
-    return a.localeCompare(b);
-  });
+  const sizes = sortSizeNames(rawSizes.length ? rawSizes : fallbackSizes);
 
   const rows: StyleProcessRow[] = rawSteps.map((item: any, index: number) => {
     const sizePrices: Record<string, number> = {};
@@ -294,7 +286,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
       message.warning('该尺码已存在');
       return;
     }
-    setSizes((prev) => [...prev, trimmed]);
+    setSizes((prev) => sortSizeNames([...prev, trimmed]));
     setData((prev) => prev.map((row) => ({
       ...row,
       sizePrices: { ...(row.sizePrices || {}), [trimmed]: toNumberSafe(row.price) },

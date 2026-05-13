@@ -59,7 +59,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         filterCard={false}
         headerContent={
           showSmartErrorNotice && smartError ? (
-            <Card size="small" style={{ marginBottom: 12 }}>
+            <Card style={{ marginBottom: 12 }}>
               <SmartErrorNotice error={smartError} onFix={() => {}} />
             </Card>
           ) : null

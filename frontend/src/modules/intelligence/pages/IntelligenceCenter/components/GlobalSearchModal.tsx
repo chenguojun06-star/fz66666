@@ -154,7 +154,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         {/* 搜索输入框 */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid rgba(0,229,255,0.12)' }}>
           {loading
-            ? <Spin size="small" style={{ marginRight: 12 }} />
+            ? <Spin style={{ marginRight: 12 }} />
             : <SearchOutlined style={{ color: '#00e5ff', fontSize: 18, marginRight: 12 }} />
           }
           <Input

@@ -123,13 +123,13 @@ const ExpenseReimbursementPage: React.FC = () => {
   return (
     <>
       <div style={{ padding: '0 0 24px' }}>
-        {showSmartErrorNotice && smartError ? (<Card size="small" style={{ marginBottom: 16 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
+        {showSmartErrorNotice && smartError ? (<Card style={{ marginBottom: 16 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={8}><Card size="small"><Statistic title="待审批" value={stats.pending} suffix="件" styles={{ content: { color: 'var(--color-warning)' } }} /></Card></Col>
-          <Col span={8}><Card size="small"><Statistic title="本页总金额" value={stats.totalAmount} prefix="¥" precision={2} /></Card></Col>
-          <Col span={8}><Card size="small"><Statistic title="已付款金额" value={stats.paidAmount} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
+          <Col span={8}><Card><Statistic title="待审批" value={stats.pending} suffix="件" styles={{ content: { color: 'var(--color-warning)' } }} /></Card></Col>
+          <Col span={8}><Card><Statistic title="本页总金额" value={stats.totalAmount} prefix="¥" precision={2} /></Card></Col>
+          <Col span={8}><Card><Statistic title="已付款金额" value={stats.paidAmount} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
         </Row>
-        <Card size="small" style={{ marginBottom: 16 }}>
+        <Card style={{ marginBottom: 16 }}>
           <Row gutter={[12, 12]} align="middle">
             <Col><Select value={viewMode} onChange={(v) => { setViewMode(v); setPage(1); }} style={{ width: 130 }} options={[{ value: 'my', label: '我的报销' }, { value: 'all', label: '全部报销（审批）' }]} /></Col>
             <Col><Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} allowClear placeholder="状态筛选" style={{ width: 120 }} options={EXPENSE_STATUS} /></Col>
@@ -153,7 +153,7 @@ const ExpenseReimbursementPage: React.FC = () => {
             >
               <Space orientation="vertical" style={{ width: '100%' }} size={8}>
                 <Upload accept="image/*" multiple showUploadList={false} beforeUpload={(file) => { void handleDocUpload(file); return false; }}>
-                  <Button icon={uploadedDocs.some(d => d.recognizing) ? <Spin size="small" /> : <UploadOutlined />} disabled={uploadedDocs.some(d => d.recognizing)}>
+                  <Button icon={uploadedDocs.some(d => d.recognizing) ? <Spin /> : <UploadOutlined />} disabled={uploadedDocs.some(d => d.recognizing)}>
                     {uploadedDocs.some(d => d.recognizing) ? 'AI识别中...' : '上传凭证图片（可多张）'}
                   </Button>
                 </Upload>
@@ -162,9 +162,9 @@ const ExpenseReimbursementPage: React.FC = () => {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {uploadedDocs.map((doc, idx) => (
                         <div key={doc.tempId} style={{ position: 'relative', flexShrink: 0 }}>
-                          {doc.recognizing ? (<div style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9', borderRadius: 6, background: '#fafafa' }}><Spin size="small" /></div>)
+                          {doc.recognizing ? (<div style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9', borderRadius: 6, background: '#fafafa' }}><Spin /></div>)
                             : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} style={{ objectFit: 'cover', borderRadius: 6 }} />) : null}
-                          <Button size="small" type="text" danger icon={<CloseCircleOutlined />}
+                          <Button type="text" danger icon={<CloseCircleOutlined />}
                             style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: '#fff', borderRadius: '50%', border: '1px solid #ff4d4f' }}
                             onClick={() => setUploadedDocs(prev => prev.filter((_, i) => i !== idx))}
                           />

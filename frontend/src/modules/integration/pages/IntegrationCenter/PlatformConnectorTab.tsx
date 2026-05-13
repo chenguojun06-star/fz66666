@@ -251,20 +251,20 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
 
             <Divider style={{ margin: '8px 0' }} />
             <Space orientation="vertical" style={{ width: '100%' }} size={6}>
-              <Button type={isConfigured ? 'default' : 'primary'} icon={<SettingOutlined />} block size="small" onClick={() => handleConfig(p)}>
+              <Button type={isConfigured ? 'default' : 'primary'} icon={<SettingOutlined />} block onClick={() => handleConfig(p)}>
                 {isConfigured ? '修改凭证' : '配置连接'}
               </Button>
               {isConfigured && (
-                <Button icon={<ThunderboltOutlined />} block size="small" loading={testing} onClick={() => { setActivePlatform(p); setTestResult(null); handleTest(); }}>连接测试</Button>
+                <Button icon={<ThunderboltOutlined />} block loading={testing} onClick={() => { setActivePlatform(p); setTestResult(null); handleTest(); }}>连接测试</Button>
               )}
               {isConfigured && (
-                <Button icon={<NumberOutlined />} block size="small" onClick={() => handleViewStats(p)}>店铺数据</Button>
+                <Button icon={<NumberOutlined />} block onClick={() => handleViewStats(p)}>店铺数据</Button>
               )}
               {isConfigured && p.syncMode === 'pull' && (
-                <Button icon={<SyncOutlined />} block size="small" loading={syncing && activePlatform?.code === p.code} onClick={() => handleSync(p)}>同步订单</Button>
+                <Button icon={<SyncOutlined />} block loading={syncing && activePlatform?.code === p.code} onClick={() => handleSync(p)}>同步订单</Button>
               )}
               {p.docUrl && (
-                <Button type="link" size="small" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} style={{ padding: 0 }}>开放平台文档</Button>
+                <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} style={{ padding: 0 }}>开放平台文档</Button>
               )}
             </Space>
           </Card>
@@ -279,22 +279,22 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         {/* ====== 数据总览 ====== */}
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={6}>
-            <Card size="small" variant="borderless" style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%)', borderRadius: 12 }}>
               <Statistic title="已对接平台" value={stats.connected} suffix={`/ ${stats.total}`} prefix={<ApiOutlined style={{ color: '#1677ff' }} />} styles={{ content: { color: '#1677ff' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small" variant="borderless" style={{ background: 'linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%)', borderRadius: 12 }}>
               <Statistic title="今日总订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: '#52c41a' }} />} styles={{ content: { color: '#52c41a' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small" variant="borderless" style={{ background: 'linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)', borderRadius: 12 }}>
               <Statistic title="今日销售额" value={stats.todaySales.toFixed(2)} prefix={<DollarOutlined style={{ color: '#fa8c16' }} />} suffix="元" styles={{ content: { color: '#fa8c16' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small" variant="borderless" style={{ background: 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
               <Statistic title="平台总数" value={PLATFORM_LIST.length} suffix="个" prefix={<CloudUploadOutlined style={{ color: '#722ed1' }} />} styles={{ content: { color: '#722ed1' } }} />
             </Card>
           </Col>
@@ -323,16 +323,16 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               message={
                 <span>
                   不知道怎么获取 {activePlatform?.name} 的 AppKey 和 AppSecret？
-                  <Button type="link" size="small" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>
+                  <Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>
                     点击查看获取教程 →
                   </Button>
                 </span>
               }
             />
           ) : (
-            <Card size="small" title={<span><QuestionCircleOutlined /> {guide.title}</span>} style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffe58f' }}
-              extra={<Button type="link" size="small" onClick={() => setShowGuide(false)}>收起</Button>}>
-              <Steps direction="vertical" size="small" current={-1}
+            <Card title={<span><QuestionCircleOutlined /> {guide.title}</span>} style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffe58f' }}
+              extra={<Button type="link" onClick={() => setShowGuide(false)}>收起</Button>}>
+              <Steps direction="vertical" current={-1}
                 items={guide.steps.map(s => ({
                   title: s.title,
                   description: <Text type="secondary">{s.description}</Text>,
@@ -341,7 +341,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               />
               {guide.docUrl && (
                 <div style={{ marginTop: 12, textAlign: 'center' }}>
-                  <Button size="small" icon={<LinkOutlined />} onClick={() => window.open(guide.docUrl, '_blank')}>
+                  <Button icon={<LinkOutlined />} onClick={() => window.open(guide.docUrl, '_blank')}>
                     打开 {activePlatform?.name} 开放平台 →
                   </Button>
                 </div>
@@ -349,7 +349,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
             </Card>
           )}
 
-          <Descriptions size="small" bordered column={1} style={{ marginBottom: 16 }}>
+          <Descriptions bordered column={1} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="平台">{activePlatform?.name}</Descriptions.Item>
             <Descriptions.Item label="同步方式">{activePlatform ? modeLabel(activePlatform.syncMode) : null}</Descriptions.Item>
             <Descriptions.Item label="功能">{activePlatform?.features.join('、')}</Descriptions.Item>
@@ -381,7 +381,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
             <div>
               <Alert type={testResult.success ? 'success' : 'error'} showIcon message={testResult.success ? '连接成功' : '连接失败'} description={testResult.message} style={{ marginBottom: 16 }} />
               {testResult.success && testResult.supportedActions && (
-                <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+                <Descriptions bordered column={2} style={{ marginBottom: 16 }}>
                   <Descriptions.Item label="同步能力" span={2}>
                     {testResult.supportedActions.map(a => (<Tag key={a} color="blue" style={{ marginBottom: 4 }}>{a}</Tag>))}
                   </Descriptions.Item>
@@ -390,9 +390,9 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               {testResult.success && testResult.shops && testResult.shops.length > 0 && (
                 <div>
                   <Text strong style={{ display: 'block', marginBottom: 8 }}><ShopOutlined /> 发现的店铺 ({testResult.shops.length})</Text>
-                  <List size="small" bordered dataSource={testResult.shops}
+                  <List bordered dataSource={testResult.shops}
                     renderItem={(shop: ShopInfo) => (
-                      <List.Item><Space><Tag color="green">{shop.platform || '-'}</Tag>{shop.shopName}<Tag>{shop.status}</Tag></Space></List.Item>
+                      <List.Item><Space><Tag color="green">{shop.platform || '-'}</Tag>{shop.shopName}<Tag color={shop.status === 'ACTIVE' || shop.status === 'CONNECTED' ? 'success' : 'default'}>{{ ACTIVE: '已激活', CONNECTED: '已连接', DISCONNECTED: '已断开', INACTIVE: '未激活', PENDING: '待激活' }[shop.status] || shop.status}</Tag></Space></List.Item>
                     )}
                   />
                 </div>
@@ -410,22 +410,22 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               {/* 总览 */}
               <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                 <Col span={6}>
-                  <Card size="small" style={{ background: '#e6f7ff', borderRadius: 8, border: 'none' }}>
+                  <Card style={{ background: '#e6f7ff', borderRadius: 8, border: 'none' }}>
                     <Statistic title="今日订单" value={activeStats.todayOrders} suffix="单" valueStyle={{ color: '#1677ff' }} prefix={<ShoppingCartOutlined />} />
                   </Card>
                 </Col>
                 <Col span={6}>
-                  <Card size="small" style={{ background: '#f6ffed', borderRadius: 8, border: 'none' }}>
+                  <Card style={{ background: '#f6ffed', borderRadius: 8, border: 'none' }}>
                     <Statistic title="今日销售额" value={parseFloat(activeStats.todaySales).toFixed(2)} prefix="¥" valueStyle={{ color: '#52c41a' }} />
                   </Card>
                 </Col>
                 <Col span={6}>
-                  <Card size="small" style={{ background: '#fff7e6', borderRadius: 8, border: 'none' }}>
+                  <Card style={{ background: '#fff7e6', borderRadius: 8, border: 'none' }}>
                     <Statistic title="累计订单" value={activeStats.totalOrders} suffix="单" valueStyle={{ color: '#fa8c16' }} />
                   </Card>
                 </Col>
                 <Col span={6}>
-                  <Card size="small" style={{ background: '#f9f0ff', borderRadius: 8, border: 'none' }}>
+                  <Card style={{ background: '#f9f0ff', borderRadius: 8, border: 'none' }}>
                     <Statistic title="关联店铺" value={activeStats.shopCount} suffix="个" valueStyle={{ color: '#722ed1' }} />
                   </Card>
                 </Col>
@@ -437,7 +437,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                 description={
                   <Row gutter={24}>
                     <Col span={12}>
-                      <Card size="small" style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
+                      <Card style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#1677ff' }}>
                           📦 链路一：成品仓（有生产单）
                         </div>
@@ -451,7 +451,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                       </Card>
                     </Col>
                     <Col span={12}>
-                      <Card size="small" style={{ borderRadius: 6, border: '1px solid #b7eb8f', background: '#f6ffed' }}>
+                      <Card style={{ borderRadius: 6, border: '1px solid #b7eb8f', background: '#f6ffed' }}>
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#52c41a' }}>
                           🛒 链路二：电商仓（现货发货）
                         </div>
@@ -473,21 +473,21 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               <Text strong style={{ display: 'block', marginBottom: 8 }}>📊 今日订单状态</Text>
               <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                 <Col span={8}>
-                  <Card size="small" style={{ background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591' }}>
+                  <Card style={{ background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591' }}>
                     <Statistic title="待拣货" value={activeStats.pendingPick} suffix="单"
                       valueStyle={{ color: '#fa8c16', fontSize: 20 }}
                       prefix={<ShoppingCartOutlined />} />
                   </Card>
                 </Col>
                 <Col span={8}>
-                  <Card size="small" style={{ background: '#e6f7ff', borderRadius: 8, border: '1px solid #91caff' }}>
+                  <Card style={{ background: '#e6f7ff', borderRadius: 8, border: '1px solid #91caff' }}>
                     <Statistic title="备货中" value={activeStats.preparing} suffix="单"
                       valueStyle={{ color: '#1677ff', fontSize: 20 }}
                       prefix={<SyncOutlined />} />
                   </Card>
                 </Col>
                 <Col span={8}>
-                  <Card size="small" style={{ background: '#f6ffed', borderRadius: 8, border: '1px solid #95de64' }}>
+                  <Card style={{ background: '#f6ffed', borderRadius: 8, border: '1px solid #95de64' }}>
                     <Statistic title="已出库" value={activeStats.shippedToday} suffix="单"
                       valueStyle={{ color: '#52c41a', fontSize: 20 }}
                       prefix={<CheckCircleOutlined />} />
@@ -496,7 +496,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               </Row>
 
               {/* 汇总 */}
-              <Descriptions bordered size="small" column={2} style={{ marginBottom: 12 }}>
+              <Descriptions bordered column={2} style={{ marginBottom: 12 }}>
                 <Descriptions.Item label="累计订单">{activeStats.totalOrders} 单</Descriptions.Item>
                 <Descriptions.Item label="累计销售额">¥{parseFloat(activeStats.totalSales).toFixed(2)}</Descriptions.Item>
                 <Descriptions.Item label="客单价">¥{parseFloat(activeStats.avgOrderValue).toFixed(2)}</Descriptions.Item>
@@ -515,7 +515,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         {syncResult && activePlatform && (
           <Modal open={!!syncResult} title={`${activePlatform.name} 同步结果`}
             onCancel={() => setSyncResult(null)} footer={<Button onClick={() => setSyncResult(null)}>确定</Button>} width={400}>
-            <Descriptions bordered size="small" column={2}>
+            <Descriptions bordered column={2}>
               <Descriptions.Item label="新增订单"><Text style={{ color: '#52c41a', fontWeight: 'bold', fontSize: 18 }}>{syncResult.synced ?? '-'}</Text></Descriptions.Item>
               <Descriptions.Item label="已跳过"><Text style={{ color: '#fa8c16' }}>{syncResult.skipped ?? '-'}</Text></Descriptions.Item>
             </Descriptions>

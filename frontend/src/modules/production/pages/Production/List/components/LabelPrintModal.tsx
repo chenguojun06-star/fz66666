@@ -291,7 +291,7 @@ function SkuTable({ open, order, styleInfo, printColLabel, onPrint, onClose }: S
       title: printColLabel, key: 'printCount', width: 140,
       render: (_: unknown, r: SkuRow) => (
         <InputNumber
-          min={0} max={99999} value={r.printCount} size="small" style={{ width: 110 }}
+          min={0} max={99999} value={r.printCount} style={{ width: 110 }}
           onChange={v => updatePrintCount(r.key, v)}
         />
       ),
@@ -306,7 +306,7 @@ function SkuTable({ open, order, styleInfo, printColLabel, onPrint, onClose }: S
           columns={columns}
           pagination={false}
           rowKey="key"
-          size="small"
+         
           bordered
         />
       </Spin>
@@ -566,13 +566,13 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
                     <InputNumber
                       min={20} max={200} value={washW}
                       onChange={v => setWashW(v ?? 30)}
-                      suffix="mm" style={{ width: 110 }} size="small"
+                      suffix="mm" style={{ width: 110 }}
                     />
                     <span style={{ color: '#555', fontSize: 13 }}>高</span>
                     <InputNumber
                       min={30} max={400} value={washH}
                       onChange={v => setWashH(v ?? 80)}
-                      suffix="mm" style={{ width: 110 }} size="small"
+                      suffix="mm" style={{ width: 110 }}
                     />
                     {isSuit && (
                       <>
@@ -580,7 +580,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
                         <Radio.Group
                           value={suitPart}
                           onChange={e => setSuitPart(e.target.value as string)}
-                          size="small"
+                         
                         >
                           <Radio.Button value="all">全部</Radio.Button>
                           {_suitSections.map(s => (

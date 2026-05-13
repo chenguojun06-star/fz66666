@@ -74,7 +74,7 @@ const MyModulesTab: React.FC = () => {
       {overview && (
         <Row gutter={16} style={{ marginBottom: 20 }}>
           <Col xs={24} md={8}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="当前套餐"
                 value={PLAN_LABELS[overview.planType] || overview.planType || '未设置'}
@@ -86,7 +86,7 @@ const MyModulesTab: React.FC = () => {
             </Card>
           </Col>
           <Col xs={24} md={8}>
-            <Card size="small">
+            <Card>
               <Statistic title="套餐存储配额" value={formatStorageQuota(overview.storageQuotaMb)} styles={{ content: { fontSize: 20 } }} />
               <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
                 已用 {formatStorageQuota(overview.storageUsedMb)}
@@ -94,7 +94,7 @@ const MyModulesTab: React.FC = () => {
             </Card>
           </Col>
           <Col xs={24} md={8}>
-            <Card size="small">
+            <Card>
               <Statistic title="套餐用户数" value={overview.maxUsers || 0} suffix="人" styles={{ content: { fontSize: 20 } }} />
               <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
                 当前已使用 {overview.currentUsers || 0} 人
@@ -108,7 +108,7 @@ const MyModulesTab: React.FC = () => {
       <Row gutter={[16, 16]}>
         {CORE_MODULES.map(m => (
           <Col xs={24} sm={12} lg={8} key={m.code}>
-            <Card size="small" hoverable style={{ borderLeft: '3px solid var(--ant-color-success)' }}>
+            <Card hoverable style={{ borderLeft: '3px solid var(--ant-color-success)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <span style={{ fontSize: 28, lineHeight: 1 }}>{m.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -129,9 +129,9 @@ const MyModulesTab: React.FC = () => {
         ))}
       </Row>
 
-      {loading && <div style={{ textAlign: 'center', padding: 24 }}><Spin size="small" /></div>}
+      {loading && <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>}
       {!loading && addons.length === 0 && (
-        <Card size="small" style={{ marginTop: 20 }}>
+        <Card style={{ marginTop: 20 }}>
           <Empty description="当前未开通增值模块" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         </Card>
       )}
@@ -150,7 +150,7 @@ const MyModulesTab: React.FC = () => {
               const daysLeft = app.endTime ? dayjs(app.endTime).diff(dayjs(), 'day') : null;
               return (
                 <Col xs={24} sm={12} lg={8} key={app.subscriptionId || app.appCode}>
-                  <Card size="small" hoverable
+                  <Card hoverable
                     style={{ borderLeft: `3px solid var(--ant-color-${sc.color === 'success' ? 'success' : sc.color === 'error' ? 'error' : 'primary'})` }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                       <span style={{ fontSize: 28, lineHeight: 1 }}>🔌</span>

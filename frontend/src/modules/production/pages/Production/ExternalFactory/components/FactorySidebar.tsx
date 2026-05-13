@@ -46,7 +46,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
       }}
     >
       <Card
-        size="small"
+       
         title={
           <span style={{ fontSize: 14 }}>
             <ShopOutlined style={{ marginRight: 6 }} />

@@ -74,13 +74,13 @@ const MaterialDatabasePage: React.FC = () => {
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card size="small" style={{ marginBottom: 12 }}>
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} />
         </Card>
       ) : null}
       <Card>
         <div style={{ marginBottom: 16 }}><h2 style={{ margin: 0 }}> 物料资料库</h2></div>
-        <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
+        <Card style={{ marginBottom: 16, background: '#fafafa' }}>
           <StandardToolbar
             left={(
               <StandardSearchBar

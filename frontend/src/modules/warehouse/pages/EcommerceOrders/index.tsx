@@ -227,11 +227,11 @@ const OrdersTab: React.FC = () => {
     },
     {
       title: '订单状态', dataIndex: 'status', width: 82,
-      render: v => <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label ?? v}</Tag>,
+      render: v => <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label ?? '未知'}</Tag>,
     },
     {
       title: '仓库状态', dataIndex: 'warehouseStatus', width: 82,
-      render: v => <Tag color={WH_MAP[v]?.color}>{WH_MAP[v]?.label ?? v}</Tag>,
+      render: v => <Tag color={WH_MAP[v]?.color}>{WH_MAP[v]?.label ?? '未知'}</Tag>,
     },
     {
       title: '关联生产单', dataIndex: 'productionOrderNo', width: 140,
@@ -257,16 +257,16 @@ const OrdersTab: React.FC = () => {
       render: (_: unknown, r: EcOrder) => (
         <Space size={4}>
           <Tooltip title="查看详情">
-            <Button size="small" type="text" icon={<EyeOutlined />} onClick={() => setDetail(r)} />
+            <Button type="text" icon={<EyeOutlined />} onClick={() => setDetail(r)} />
           </Tooltip>
           <Tooltip title={r.productionOrderNo ? '已关联' : '关联排产'}>
-            <Button size="small" type="text" icon={<LinkOutlined />}
+            <Button type="text" icon={<LinkOutlined />}
               disabled={!!r.productionOrderNo}
               onClick={() => { setLinkTarget(r); }} />
           </Tooltip>
           {(r.warehouseStatus ?? 0) < 2 && (
             <Tooltip title="现货直接出库">
-              <Button size="small" type="text" icon={<CarOutlined />}
+              <Button type="text" icon={<CarOutlined />}
                 onClick={() => { setOutboundTarget(r); }} />
             </Tooltip>
           )}
@@ -285,7 +285,7 @@ const OrdersTab: React.FC = () => {
           { title: '已关联排产', value: linked,    suffix: '单', color: '#1677ff' },
         ].map((s, i) => (
           <Col span={6} key={i}>
-            <Card size="small" styles={{ body: { padding: '8px 12px' } }}>
+            <Card styles={{ body: { padding: '8px 12px' } }}>
               <Statistic title={<span style={{ fontSize: 11 }}>{s.title}</span>}
                 value={s.value} suffix={s.suffix}
                 styles={{ content: { fontSize: 22, color: s.color } }} />
@@ -293,13 +293,13 @@ const OrdersTab: React.FC = () => {
           </Col>
         ))}
       </Row>
-      <Card size="small" style={{ marginBottom: 8, background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
+      <Card style={{ marginBottom: 8, background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
         styles={{ body: { padding: '8px 14px' } }}>
         <span style={{ fontSize: 12, color: '#888' }}>本页实付合计：</span>
         <span style={{ fontSize: 20, fontWeight: 700, color: '#eb2f96' }}>¥{totalRevenue.toFixed(2)}</span>
       </Card>
 
-      <Card size="small" style={{ marginBottom: 10 }}>
+      <Card style={{ marginBottom: 10 }}>
         <Space wrap>
           <Select id="ecomPlatformFilter" placeholder="全部平台" allowClear value={filterPlatform || undefined}
             onChange={v => { setFilterPlatform(v ?? ''); setPage(1); }} style={{ width: 120 }}>
@@ -327,7 +327,7 @@ const OrdersTab: React.FC = () => {
         loading={loading}
         stickyHeader
         scroll={{ x: 1350 }}
-        size="small"
+       
         pagination={{ current: page, pageSize, total, showSizeChanger: true,
           showTotal: t => `共 ${t} 条`,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
@@ -336,7 +336,7 @@ const OrdersTab: React.FC = () => {
       <Drawer open={!!detail} onClose={() => setDetail(null)} title="订单详情" styles={{ wrapper: { width: 480 } }}>
         {detail && (
           <>
-            <Descriptions size="small" column={2} bordered>
+            <Descriptions column={2} bordered>
               <Descriptions.Item label="平台">
                 {PLATFORM_MAP[detail.sourcePlatformCode]?.emoji}{' '}
                 {PLATFORM_MAP[detail.sourcePlatformCode]?.name || detail.platform}
@@ -351,7 +351,7 @@ const OrdersTab: React.FC = () => {
               </Descriptions.Item>
             </Descriptions>
             <Divider style={{ margin: '12px 0' }}>商品 &amp; 金额</Divider>
-            <Descriptions size="small" column={2} bordered>
+            <Descriptions column={2} bordered>
               <Descriptions.Item label="商品名" span={2}>{detail.productName || '-'}</Descriptions.Item>
               <Descriptions.Item label="SKU">{detail.skuCode || '-'}</Descriptions.Item>
               <Descriptions.Item label="数量">{detail.quantity} 件</Descriptions.Item>
@@ -365,13 +365,13 @@ const OrdersTab: React.FC = () => {
               <Descriptions.Item label="支付方式">{detail.payType || '-'}</Descriptions.Item>
             </Descriptions>
             <Divider style={{ margin: '12px 0' }}>收件人</Divider>
-            <Descriptions size="small" column={1} bordered>
+            <Descriptions column={1} bordered>
               <Descriptions.Item label="姓名">{detail.receiverName}</Descriptions.Item>
               <Descriptions.Item label="电话">{detail.receiverPhone}</Descriptions.Item>
               <Descriptions.Item label="地址">{detail.receiverAddress}</Descriptions.Item>
             </Descriptions>
             <Divider style={{ margin: '12px 0' }}>物流 &amp; 关联</Divider>
-            <Descriptions size="small" column={2} bordered>
+            <Descriptions column={2} bordered>
               <Descriptions.Item label="快递公司">{detail.expressCompany || '-'}</Descriptions.Item>
               <Descriptions.Item label="快递单号">{detail.trackingNo || '-'}</Descriptions.Item>
               <Descriptions.Item label="关联生产单" span={2}>
@@ -383,14 +383,14 @@ const OrdersTab: React.FC = () => {
             {(detail.buyerRemark || detail.sellerRemark) && (
               <>
                 <Divider style={{ margin: '12px 0' }}>备注</Divider>
-                <Descriptions size="small" column={1} bordered>
+                <Descriptions column={1} bordered>
                   {detail.buyerRemark && <Descriptions.Item label="买家备注">{detail.buyerRemark}</Descriptions.Item>}
                   {detail.sellerRemark && <Descriptions.Item label="卖家备注">{detail.sellerRemark}</Descriptions.Item>}
                 </Descriptions>
               </>
             )}
             <Divider style={{ margin: '12px 0' }}>时间节点</Divider>
-            <Descriptions size="small" column={1} bordered>
+            <Descriptions column={1} bordered>
               <Descriptions.Item label="下单时间">{detail.createTime?.slice(0, 16)}</Descriptions.Item>
               <Descriptions.Item label="付款时间">{detail.payTime?.slice(0, 16) || '-'}</Descriptions.Item>
               <Descriptions.Item label="发货时间">{detail.shipTime?.slice(0, 16) || '-'}</Descriptions.Item>
@@ -402,7 +402,7 @@ const OrdersTab: React.FC = () => {
 
       <ResizableModal title={<><LinkOutlined /> 关联生产订单</>}
         open={!!linkTarget} onCancel={() => setLinkTarget(null)}
-        onOk={handleLink} confirmLoading={linking} okText="确认关联" width="40vw">
+        onOk={handleLink} confirmLoading={linking} okText="确认关联" width="60vw" maskClosable={false}>
         {linkTarget && (
           <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
             <div>平台订单: <b>{linkTarget.platformOrderNo}</b></div>
@@ -412,7 +412,7 @@ const OrdersTab: React.FC = () => {
         )}
         <Alert style={{ marginBottom: 12, fontSize: 12 }} type="info" showIcon
           title="关联后，该生产订单从仓库出库时将自动更新此电商订单为【已出库】并写入快递单号" />
-        <Form form={linkForm} layout="vertical" size="small">
+        <Form form={linkForm} layout="vertical">
           <Form.Item name="productionOrderNo" label="生产订单号"
             rules={[{ required: true, message: '请输入生产订单号' }]}>
             <Input placeholder="如 PO20260301001，可在工序跟进页查看" prefix={<SearchOutlined />} />
@@ -422,7 +422,7 @@ const OrdersTab: React.FC = () => {
 
       <ResizableModal title={<><CarOutlined /> 现货直接出库</>}
         open={!!outboundTarget} onCancel={() => setOutboundTarget(null)}
-        onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width="40vw">
+        onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width="60vw" maskClosable={false}>
         {outboundTarget && (
           <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
             <div>平台订单: <b>{outboundTarget.platformOrderNo || outboundTarget.orderNo}</b></div>
@@ -432,7 +432,7 @@ const OrdersTab: React.FC = () => {
         )}
         <Alert style={{ marginBottom: 12, fontSize: 12 }} type="success" showIcon
           title="现货直接出库——出库后订单状态自动更新为【已出库】，并自动生成销售收入流水" />
-        <Form form={outboundForm} layout="vertical" size="small">
+        <Form form={outboundForm} layout="vertical">
           <Form.Item name="expressCompany" label="快递公司"
             rules={[{ required: true, message: '请输入快递公司' }]}>
             <Select placeholder="请选择快递公司" showSearch allowClear>
@@ -506,7 +506,7 @@ const PricingTab: React.FC = () => {
     {
       title: '成本价 (¥)', dataIndex: 'costPrice', width: 140,
       render: (v, r) => editRow?.id === r.id
-        ? <InputNumber size="small" value={editRow.costPrice ?? undefined} min={0} precision={2}
+        ? <InputNumber value={editRow.costPrice ?? undefined} min={0} precision={2}
             style={{ width: 110 }}
             onChange={val => setEditRow(prev => prev ? { ...prev, costPrice: val } : null)} />
         : <Text style={{ color: '#888' }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
@@ -514,7 +514,7 @@ const PricingTab: React.FC = () => {
     {
       title: '单价 (¥)', dataIndex: 'salesPrice', width: 140,
       render: (v, r) => editRow?.id === r.id
-        ? <InputNumber size="small" value={editRow.salesPrice ?? undefined} min={0} precision={2}
+        ? <InputNumber value={editRow.salesPrice ?? undefined} min={0} precision={2}
             style={{ width: 110 }}
             onChange={val => setEditRow(prev => prev ? { ...prev, salesPrice: val } : null)} />
         : <Text style={{ color: '#fa8c16', fontWeight: 600 }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
@@ -532,13 +532,13 @@ const PricingTab: React.FC = () => {
       render: (_: unknown, r: Sku) => editRow?.id === r.id
         ? (
           <Space size={4}>
-            <Button size="small" type="primary" icon={<SaveOutlined />} loading={saving}
+            <Button type="primary" icon={<SaveOutlined />} loading={saving}
               onClick={() => handleSave(r)}>保存</Button>
-            <Button size="small" onClick={() => setEditRow(null)}>取消</Button>
+            <Button onClick={() => setEditRow(null)}>取消</Button>
           </Space>
         )
         : (
-          <Button size="small" icon={<EditOutlined />}
+          <Button icon={<EditOutlined />}
             onClick={() => setEditRow({ id: r.id, costPrice: r.costPrice, salesPrice: r.salesPrice })}>
             定价
           </Button>
@@ -550,7 +550,7 @@ const PricingTab: React.FC = () => {
     <div>
       <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
         title="此处的【单价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
-      <Card size="small" style={{ marginBottom: 10 }}>
+      <Card style={{ marginBottom: 10 }}>
         <Space>
           <Input placeholder="按款式号筛选" allowClear style={{ width: 180 }}
             onChange={e => { if (!e.target.value) { setStyleNo(''); setPage(1); } }}
@@ -565,7 +565,7 @@ const PricingTab: React.FC = () => {
         columns={pricingColumns}
         loading={loading}
         stickyHeader
-        size="small"
+       
         scroll={{ x: 900 }}
         pagination={{ current: page, pageSize: 20, total,
           showTotal: t => `共 ${t} 个 SKU`,
@@ -582,7 +582,7 @@ const EcommerceOrders: React.FC = () => (
     <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
       title="电商对接全流程"
       description={
-        <Steps size="small" style={{ marginTop: 8 }}
+        <Steps style={{ marginTop: 8 }}
           items={[
             { title: '配置平台',  content: '应用商店填写密钥',          icon: <ShopOutlined style={{ color: '#1677ff' }} /> },
             { title: '平台推单',  content: '各平台 Webhook 推入本系统',  icon: <ApiOutlined style={{ color: '#fa8c16' }} /> },

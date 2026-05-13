@@ -89,37 +89,37 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
       <Space>
         {editMode ? (
           <>
-            <Button size="small" icon={<PlusOutlined />} onClick={handleAdd}>添加工序</Button>
+            <Button icon={<PlusOutlined />} onClick={handleAdd}>添加工序</Button>
             <Popover
               open={addSizePopoverOpen}
               onOpenChange={setAddSizePopoverOpen}
               content={
                 <div style={{ display: 'flex', gap: 4 }}>
                   <Input
-                    size="small"
+                   
                     placeholder="尺码名"
                     value={newSizeName}
                     onChange={(e) => setNewSizeName(e.target.value)}
                     onPressEnter={handleAddSize}
                     style={{ width: 80 }}
                   />
-                  <Button size="small" type="primary" onClick={handleAddSize}>添加</Button>
+                  <Button type="primary" onClick={handleAddSize}>添加</Button>
                 </div>
               }
               trigger="click"
             >
-              <Button size="small" icon={<PlusOutlined />}>添加尺码</Button>
+              <Button icon={<PlusOutlined />}>添加尺码</Button>
             </Popover>
           </>
         ) : (
-          <Button size="small" icon={<EditOutlined />} onClick={enterEdit}>编辑</Button>
+          <Button icon={<EditOutlined />} onClick={enterEdit}>编辑</Button>
         )}
       </Space>
       <Space>
         {editMode && (
           <>
-            <Button size="small" icon={<UndoOutlined />} onClick={exitEdit}>取消编辑</Button>
-            <Button size="small" type="primary" icon={<SaveOutlined />} loading={saving} onClick={saveAll}>
+            <Button icon={<UndoOutlined />} onClick={exitEdit}>取消编辑</Button>
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={saveAll}>
               保存
             </Button>
           </>
@@ -127,12 +127,12 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         {readyForScope && !editMode && (
           <>
             <Tooltip title="保存并同步到订单">
-              <Button size="small" type="primary" icon={<CloudSyncOutlined />} loading={syncing} onClick={handleSaveAndSync}>
+              <Button type="primary" icon={<CloudSyncOutlined />} loading={syncing} onClick={handleSaveAndSync}>
                 保存并同步
               </Button>
             </Tooltip>
             <Tooltip title="仅同步到订单（不保存当前编辑）">
-              <Button size="small" icon={<CloudSyncOutlined />} loading={syncing} onClick={handleSyncOnly}>
+              <Button icon={<CloudSyncOutlined />} loading={syncing} onClick={handleSyncOnly}>
                 仅同步
               </Button>
             </Tooltip>
@@ -150,7 +150,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         beforeUpload={handleUploadImage}
         disabled={!readyForScope || imageUploading}
       >
-        <Button size="small" icon={imageUploading ? <Spin size="small" /> : <CameraOutlined />} disabled={!readyForScope}>
+        <Button icon={imageUploading ? <Spin /> : <CameraOutlined />} disabled={!readyForScope}>
           上传工艺图
         </Button>
       </Upload>
@@ -193,7 +193,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         columns={columns}
         dataSource={data}
         rowKey="id"
-        size="small"
+       
         bordered
         loading={loadingTemplate}
         scroll={{ x: 'max-content', y: 'calc(100vh - 380px)' }}

@@ -28,7 +28,7 @@ const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = 
   ];
   return (
     <ResizableTable
-      size="small"
+     
       columns={cols}
       dataSource={records}
       rowKey={(r) => r.styleNo + r.createTime}
@@ -272,7 +272,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
   return (
     <div style={{ padding: '12px 0' }}>
       {/* 顶部统计条 */}
-      <Card size="small" style={{ marginBottom: 12, background: 'var(--card-bg, #f8f9fa)' }}>
+      <Card style={{ marginBottom: 12, background: 'var(--card-bg, #f8f9fa)' }}>
         <Row gutter={32}>
           <Col>
             <Statistic title="工序种类" value={stats.totalProcessTypes} suffix="种" />

@@ -136,7 +136,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
       onSelect={handleSelect}
       placeholder={restProps.placeholder || `请选择或输入...`}
       filterOption={false}
-      notFoundContent={loading ? <Spin size="small" /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
+      notFoundContent={loading ? <Spin /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
       {...restProps}
     />
   );

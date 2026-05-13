@@ -84,7 +84,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
       render: (v: number | null) => v != null ? `¥${(v / 100).toFixed(2)}` : '-' },
     { title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => {
-        const s = STATUS_MAP[v] || { color: 'default', text: v };
+        const s = STATUS_MAP[v] || { color: 'default', text: '未知' };
         return <Tag color={s.color}>{s.text}</Tag>;
       } },
     { title: '第三方流水号', dataIndex: 'thirdPartyOrderId', width: 200,
@@ -101,7 +101,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
 
   return (
     <div style={{ paddingTop: 16 }}>
-      <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
+      <Card style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
         <Space wrap>
           <Select id="paymentChannelFilter" placeholder="渠道" allowClear style={{ width: 120 }}
             value={filters.channel} onChange={v => setFilters(f => ({ ...f, channel: v }))}>

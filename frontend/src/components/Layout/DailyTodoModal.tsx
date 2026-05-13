@@ -374,7 +374,7 @@ const DailyTodoModal: React.FC = () => {
               </div>
               <Suspense fallback={
                 <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Spin size="small" />
+                  <Spin />
                 </div>
               }>
                 <ReactECharts

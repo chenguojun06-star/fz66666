@@ -53,10 +53,10 @@ const SystemStatusTab: React.FC = () => {
           {overview && <Text type="secondary" style={{ fontSize: 12 }}>运行时长：{overview.uptime}</Text>}
         </Space>
         <Space>
-          <Button size="small" onClick={() => setAutoRefresh(!autoRefresh)} type={autoRefresh ? 'primary' : 'default'}>
+          <Button onClick={() => setAutoRefresh(!autoRefresh)} type={autoRefresh ? 'primary' : 'default'}>
             {autoRefresh ? '自动刷新中(15s)' : '开启自动刷新'}
           </Button>
-          <Button size="small" onClick={fetchOverview} loading={loading}>刷新</Button>
+          <Button onClick={fetchOverview} loading={loading}>刷新</Button>
         </Space>
       </div>
 
@@ -65,22 +65,22 @@ const SystemStatusTab: React.FC = () => {
           {/* 核心指标 */}
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={6}>
-              <Card size="small">
+              <Card>
                 <Statistic title="JVM 堆内存" value={overview.heapUsedMb} suffix={`/ ${overview.heapMaxMb > 0 ? overview.heapMaxMb : '∞'} MB`}
                   styles={{ content: { color: heapColor, fontSize: 20 } }}
                 />
-                <Progress percent={heapPercent} size="small" strokeColor={heapColor} showInfo={false} style={{ marginTop: 8 }} />
+                <Progress percent={heapPercent} strokeColor={heapColor} showInfo={false} style={{ marginTop: 8 }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card size="small">
+              <Card>
                 <Statistic title="线程数" value={overview.threadCount} suffix={`/ 峰值 ${overview.peakThreadCount}`}
                   styles={{ content: { fontSize: 20 } }}
                 />
               </Card>
             </Col>
             <Col span={6}>
-              <Card size="small">
+              <Card>
                 <Statistic title="CPU 负载" value={overview.systemLoadAverage} precision={2}
                   suffix={`/ ${overview.availableProcessors} 核`}
                   styles={{ content: { fontSize: 20, color: overview.systemLoadAverage > overview.availableProcessors ? '#ff4d4f' : undefined } }}
@@ -88,7 +88,7 @@ const SystemStatusTab: React.FC = () => {
               </Card>
             </Col>
             <Col span={6}>
-              <Card size="small">
+              <Card>
                 <Statistic title="数据库"
                   value={dbUp ? '正常' : '异常'}
                   styles={{ content: { color: dbUp ? '#52c41a' : '#ff4d4f', fontSize: 20 } }}
@@ -99,8 +99,8 @@ const SystemStatusTab: React.FC = () => {
           </Row>
 
           {/* 详细信息 */}
-          <Card size="small" title="系统详情">
-            <Descriptions column={2} size="small" bordered>
+          <Card title="系统详情">
+            <Descriptions column={2} bordered>
               <Descriptions.Item label="应用名称">{overview.applicationName}</Descriptions.Item>
               <Descriptions.Item label="Java 版本">{overview.javaVersion}</Descriptions.Item>
               <Descriptions.Item label="操作系统">{overview.osName} ({overview.osArch})</Descriptions.Item>
@@ -123,16 +123,16 @@ const SystemStatusTab: React.FC = () => {
       )}
 
       {/* 租户人员统计 */}
-      <Card size="small"
+      <Card
         title={<span>租户人员统计{tenantStats ? <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>共 {tenantStats.totalTenants} 个租户，{tenantStats.totalUsers} 名用户</Text> : null}</span>}
         style={{ marginTop: 16 }}
-        extra={<Button size="small" onClick={fetchTenantStats} loading={loadingTenantStats}>刷新</Button>}
+        extra={<Button onClick={fetchTenantStats} loading={loadingTenantStats}>刷新</Button>}
       >
         {tenantStats?.tenants?.length > 0 ? (
           <ResizableTable
             dataSource={tenantStats.tenants}
             rowKey="tenantId"
-            size="small"
+           
             pagination={false}
             columns={[
               { title: '租户ID', dataIndex: 'tenantId', width: 80 },
@@ -173,7 +173,7 @@ const SystemStatusTab: React.FC = () => {
                     <Space size={6}>
                       <Progress
                         percent={pct}
-                        size="small"
+                       
                         status={pct >= 100 ? 'exception' : pct >= 80 ? 'active' : undefined}
                         style={{ width: 80 }}
                       />

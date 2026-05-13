@@ -88,7 +88,7 @@ const LogisticsRecordsTab: React.FC<Props> = ({ active }) => {
         : <span style={{ color: '#999' }}>-</span> },
     { title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => {
-        const s = STATUS_MAP[v] || { color: 'default', text: v };
+        const s = STATUS_MAP[v] || { color: 'default', text: '未知' };
         return <Tag color={s.color}>{s.text}</Tag>;
       } },
     { title: '寄件人', dataIndex: 'senderName', width: 100,
@@ -107,7 +107,7 @@ const LogisticsRecordsTab: React.FC<Props> = ({ active }) => {
 
   return (
     <div style={{ paddingTop: 16 }}>
-      <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
+      <Card style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
         <Space wrap>
           <Select id="logisticsCompanyFilter" placeholder="物流公司" allowClear style={{ width: 120 }}
             value={filters.companyCode} onChange={v => setFilters(f => ({ ...f, companyCode: v }))}>

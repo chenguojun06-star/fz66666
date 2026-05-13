@@ -197,7 +197,7 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
       content={
         profile === 'loading' ? (
           <div style={{ padding: '8px 12px' }}>
-            <Spin size="small" />
+            <Spin />
           </div>
         ) : profile === null ? (
           <div style={{ padding: '8px 12px', color: '#999', fontSize: 12 }}>

@@ -15,12 +15,12 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, WagePayment, EcSalesRevenue, TaxExport } from './modules/finance';
+import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, WagePayment, EcSalesRevenue, TaxExport } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage } from './modules/system';
+import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
@@ -234,6 +234,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.payrollOperatorSummary} element={<RouteErrorBoundary pageName="工资汇总"><Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeCenter} element={<RouteErrorBoundary pageName="财务中心"><Suspense fallback={routeFallback}><FinanceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.expenseReimbursement} element={<RouteErrorBoundary pageName="报销管理"><Suspense fallback={routeFallback}><ExpenseReimbursement /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.employeeAdvance} element={<RouteErrorBoundary pageName="员工借支"><Suspense fallback={routeFallback}><EmployeeAdvance /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.wagePayment} element={<RouteErrorBoundary pageName="收付款中心"><Suspense fallback={routeFallback}><WagePayment /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecSalesRevenue} element={<RouteErrorBoundary pageName="电商销售"><Suspense fallback={routeFallback}><EcSalesRevenue /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeTaxExport} element={<RouteErrorBoundary pageName="税务导出"><Suspense fallback={routeFallback}><TaxExport /></Suspense></RouteErrorBoundary>} />
@@ -254,6 +255,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.userApproval} element={<RouteErrorBoundary pageName="用户审批"><Suspense fallback={routeFallback}><UserApproval /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.role} element={<RouteErrorBoundary pageName="角色管理"><Suspense fallback={routeFallback}><RoleList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.organization} element={<RouteErrorBoundary pageName="组织架构"><Suspense fallback={routeFallback}><OrganizationTree /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.partnerManagement} element={<RouteErrorBoundary pageName="合作企业管理"><Suspense fallback={routeFallback}><PartnerManagement /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.productionPartners} element={<RouteErrorBoundary pageName="生产伙伴"><Suspense fallback={routeFallback}><FactoryList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.factory} element={<RouteErrorBoundary pageName="工厂管理"><Suspense fallback={routeFallback}><FactoryList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.factoryWorkers} element={<RouteErrorBoundary pageName="工厂员工"><Suspense fallback={routeFallback}><FactoryWorkerList /></Suspense></RouteErrorBoundary>} />

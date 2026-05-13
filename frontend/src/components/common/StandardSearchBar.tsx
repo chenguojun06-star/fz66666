@@ -97,7 +97,7 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
                 onChange={handlePresetChange} 
                 optionType="button"
                 buttonStyle="solid"
-                size="small"
+               
               >
                 <Radio.Button value="today">日</Radio.Button>
                 <Radio.Button value="week">周</Radio.Button>

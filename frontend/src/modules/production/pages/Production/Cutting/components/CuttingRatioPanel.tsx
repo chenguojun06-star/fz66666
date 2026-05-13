@@ -215,7 +215,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
               min={1}
               max={9999}
               precision={0}
-              size="small"
+             
               value={lastQty}
               disabled={disabled}
               onChange={(v) => handleLastBundleChange(record.key, v)}
@@ -272,7 +272,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         dataSource={tableRows}
         columns={columns}
         pagination={false}
-        size="small"
+       
         bordered
         scroll={{ x: 'max-content' }}
         style={{ marginBottom: 12 }}

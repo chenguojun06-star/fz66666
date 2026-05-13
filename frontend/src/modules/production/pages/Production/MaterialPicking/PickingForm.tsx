@@ -217,7 +217,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
             columns={columns}
             rowKey="key"
             pagination={false}
-            size="small"
+           
         />
       </Form>
     </ResizableModal>

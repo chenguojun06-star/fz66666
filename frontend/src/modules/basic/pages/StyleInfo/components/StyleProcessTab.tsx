@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Button, Input, Space, Select, App, Popover, Dropdown, Tag } from 'antd';
 import { modal } from '@/utils/antdStatic';
 import { LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
-import { toNumberSafe } from '@/utils/api';
+import { toNumberSafe, sortSizeNames } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import StyleStageControlBar from './StyleStageControlBar';
 import StyleQuoteSuggestionInlineCard from './StyleQuoteSuggestionInlineCard';
@@ -90,7 +90,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
           )}
           {editMode && !readOnly && (
             <Input
-              size="small"
+             
               placeholder="输入码数回车添加"
               style={{ width: 130 }}
               onPressEnter={(e) => {
@@ -98,15 +98,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
                 const val = input.value.trim().toUpperCase();
                 if (!val) return;
                 if (sizes.includes(val)) { message.warning(`码数 ${val} 已存在`); return; }
-                const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
-                const sortedSizes = [...sizes, val].sort((a, b) => {
-                  const ia = SIZE_ORDER.indexOf(a.toUpperCase());
-                  const ib = SIZE_ORDER.indexOf(b.toUpperCase());
-                  if (ia >= 0 && ib >= 0) return ia - ib;
-                  if (ia >= 0) return -1;
-                  if (ib >= 0) return 1;
-                  return a.localeCompare(b);
-                });
+                const sortedSizes = sortSizeNames([...sizes, val]);
                 setSizes(sortedSizes);
                 setData((prev) => prev.map((row) => ({
                   ...row,

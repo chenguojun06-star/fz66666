@@ -91,7 +91,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
         disabled={unlockDisabled || saveDisabled}
         onClick={handleSaveOrUnlock}
         style={unlockDisabled || saveDisabled ? disabledButtonStyle : primaryButtonStyle}
-        size="small"
+       
         title={saveButtonTitle}
       >
         {saveButtonText}
@@ -105,7 +105,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           disabled={sampleCompleted}
           style={sampleButtonStyle}
           onClick={onCompleteSample}
-          size="small"
+         
           title={sampleButtonTitle}
         >
           {sampleCompleted ? '开发已完成' : '标记开发完成'}
@@ -120,7 +120,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           disabled={pushDisabled}
           onClick={onPushToOrder}
           style={pushDisabled ? disabledButtonStyle : primaryButtonStyle}
-          size="small"
+         
           title={pushToOrderTitle}
         >
           {pushedToOrder ? '已推送' : '推送到下单管理'}

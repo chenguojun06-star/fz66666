@@ -89,7 +89,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
   const hasRows = activeParts.length > 0;
 
   return (
-    <Spin spinning={dictLoading} size="small">
+    <Spin spinning={dictLoading}>
       <div>
         {hasRows && (
           <>
@@ -126,7 +126,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                   {(partsMap[partLabel] || []).map((mat, idx) => (
                     <Space key={idx} style={{ display: 'flex', marginBottom: 4 }} align="center">
                       <Input
-                        size="small"
+                       
                         value={mat}
                         placeholder="如：70%棉 30%聚酯"
                         disabled={disabled}
@@ -135,7 +135,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                       />
                       {!disabled && (
                         <Button
-                          type="text" danger size="small" icon={<DeleteOutlined />}
+                          type="text" danger icon={<DeleteOutlined />}
                           onClick={() => removeMaterial(partLabel, idx)}
                         />
                       )}
@@ -146,7 +146,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                   )}
                   {!disabled && (
                     <Button
-                      type="link" size="small" icon={<PlusOutlined />}
+                      type="link" icon={<PlusOutlined />}
                       onClick={() => addMaterial(partLabel)}
                       style={{ padding: 0, height: 22 }}
                     >
@@ -160,7 +160,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                   <Input.TextArea
                     id={`washNote-${partLabel}`}
                     rows={2}
-                    size="small"
+                   
                     value={washNoteMap[partLabel] || ''}
                     placeholder="如：30°C水洗，不可漂白"
                     disabled={disabled}
@@ -173,7 +173,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 <div style={{ width: 28, flexShrink: 0, paddingTop: 3 }}>
                   {!disabled && (
                     <Button
-                      type="text" danger size="small" icon={<DeleteOutlined />}
+                      type="text" danger icon={<DeleteOutlined />}
                       onClick={() => removeSection(partLabel)}
                     />
                   )}
@@ -187,7 +187,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
         {!disabled && (
           <div style={{ marginTop: hasRows ? 8 : 0 }}>
             <Select
-              size="small"
+             
               showSearch
               placeholder="添加品类…（可直接输入新品类）"
               style={{ width: 200 }}

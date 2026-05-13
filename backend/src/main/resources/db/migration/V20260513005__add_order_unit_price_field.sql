@@ -1,0 +1,2 @@
+ALTER TABLE t_production_order ADD COLUMN order_unit_price DECIMAL(10,4) DEFAULT NULL COMMENT '下单单价（元/件）';
+ALTER TABLE t_production_order ADD COLUMN order_unit_price_type VARCHAR(50) DEFAULT NULL COMMENT '下单单价类型：PROCESS=工序单价，SIZE=尺码单价，MANUAL=手动单价';

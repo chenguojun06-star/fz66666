@@ -48,7 +48,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
         </span>
         <Button
           type="primary"
-          size="small"
+         
           icon={<PlusOutlined />}
           onClick={() => {
             setEditingAccount(null);
@@ -64,12 +64,12 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
       {accounts.map(acc => (
         <Card
           key={acc.id}
-          size="small"
+         
           style={{ marginBottom: 8, border: acc.isDefault === 1 ? '2px solid var(--primary-color, #1677ff)' : undefined }}
           extra={
             <Space>
-              <Button type="link" size="small" onClick={() => onEditAccount(acc)}>编辑</Button>
-              <Button type="link" size="small" danger onClick={() => acc.id != null && onDeleteAccount(String(acc.id))}>
+              <Button type="link" onClick={() => onEditAccount(acc)}>编辑</Button>
+              <Button type="link" danger onClick={() => acc.id != null && onDeleteAccount(String(acc.id))}>
                 <DeleteOutlined />
               </Button>
             </Space>
@@ -95,7 +95,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
         <div style={{ textAlign: 'center', color: '#999', padding: 32 }}>暂无收款账户，请点击"添加账户"</div>
       )}
 
-      <Card title={editingAccount ? '编辑账户' : '添加账户'} size="small" style={{ marginTop: 16, display: accountDetailOpen ? undefined : 'none' }}>
+      <Card title={editingAccount ? '编辑账户' : '添加账户'} style={{ marginTop: 16, display: accountDetailOpen ? undefined : 'none' }}>
         <Form form={accountForm} layout="vertical" requiredMark="optional" onFinish={onSaveAccount}>
             <Form.Item label="账户类型" name="accountType" rules={[{ required: true, message: '请选择' }]}>
               <Select options={ACCOUNT_TYPE_OPTIONS} placeholder="选择账户类型" />

@@ -92,14 +92,14 @@ const PredictionFeedbackBar: React.FC<Props> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <span style={{ color: '#333', fontSize: 13, fontWeight: 500 }}>这条预测是否可执行？</span>
         <Button
-          size="small"
+         
           type={mode === 'accept' ? 'primary' : 'default'}
           onClick={() => chooseMode('accept')}
         >
           ✓ 可执行
         </Button>
         <Button
-          size="small"
+         
           type={mode === 'reject' ? 'primary' : 'default'}
           danger={mode === 'reject'}
           onClick={() => chooseMode('reject')}

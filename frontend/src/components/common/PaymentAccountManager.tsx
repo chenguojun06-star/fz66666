@@ -195,7 +195,7 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
           <span style={{ color: 'var(--neutral-text-secondary, #999)' }}>
             {ownerLabel}：{ownerName}
           </span>
-          <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAdd}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             添加账户
           </Button>
         </div>
@@ -213,19 +213,19 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
           accounts.map((acc) => (
             <Card
               key={acc.id}
-              size="small"
+             
               style={{
                 marginBottom: 8,
                 border: acc.isDefault === 1 ? '2px solid var(--primary-color, #1677ff)' : undefined,
               }}
               extra={
                 <Space>
-                  <Button type="link" size="small" onClick={() => handleEdit(acc)}>
+                  <Button type="link" onClick={() => handleEdit(acc)}>
                     编辑
                   </Button>
                   <Button
                     type="link"
-                    size="small"
+                   
                     danger
                     onClick={() => acc.id && handleDelete(acc.id)}
                   >

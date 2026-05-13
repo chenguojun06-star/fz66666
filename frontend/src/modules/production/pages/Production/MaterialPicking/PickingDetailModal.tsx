@@ -52,7 +52,7 @@ const PickingDetailModal: React.FC<PickingDetailModalProps> = ({ visible, pickin
         columns={columns}
         rowKey="id"
         pagination={false}
-        size="small"
+       
       />
     </ResizableModal>
   );

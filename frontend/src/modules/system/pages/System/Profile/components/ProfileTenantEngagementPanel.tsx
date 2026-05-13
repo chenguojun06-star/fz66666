@@ -45,7 +45,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
         <TeamOutlined style={{ color: 'var(--primary-color)' }} />
         <span style={{ fontWeight: 600, fontSize: 15 }}>员工招募</span>
       </div>
-      <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+      <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
             <QRCode value={registerUrl} size={160} />
@@ -58,8 +58,8 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
               </Typography.Text>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <Button size="small" icon={<LinkOutlined />} onClick={() => onCopyRegisterUrl(registerUrl)}>复制注册链接</Button>
-              <Button size="small" icon={<QrcodeOutlined />} onClick={() => onCopyTenantCode(tenantInfo.tenantCode || '')}>复制工厂码</Button>
+              <Button icon={<LinkOutlined />} onClick={() => onCopyRegisterUrl(registerUrl)}>复制注册链接</Button>
+              <Button icon={<QrcodeOutlined />} onClick={() => onCopyTenantCode(tenantInfo.tenantCode || '')}>复制工厂码</Button>
             </div>
             <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
               员工扫码二维码或输入工厂码即可申请加入
@@ -73,7 +73,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
           <MessageOutlined style={{ color: 'var(--primary-color)' }} />
           <span style={{ fontWeight: 600, fontSize: 15 }}>问题反馈</span>
         </div>
-        <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+        <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
           <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
             遇到问题或有改进建议？提交反馈帮助我们优化系统
           </Typography.Text>

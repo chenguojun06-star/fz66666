@@ -40,6 +40,21 @@ export const finishedWarehouseApi = {
 
   scanQuery: (scanCode: string) =>
     api.get('/warehouse/finished-inventory/scan-query', { params: { scanCode } }),
+
+  batchInbound: (params: Record<string, unknown>) =>
+    api.post('/warehouse/finished-inventory/batch-inbound', params),
+
+  reverse: (warehousingId: string, reason: string) =>
+    api.post('/warehouse/finished-inventory/reverse', { warehousingId, reason }),
+
+  edit: (warehousingId: string, changes: Record<string, unknown>) =>
+    api.post('/warehouse/finished-inventory/edit', { warehousingId, changes }),
+
+  getEditHistory: (warehousingId: string) =>
+    api.get('/warehouse/finished-inventory/edit-history', { params: { warehousingId } }),
+
+  getAmountTrace: (traceId: string) =>
+    api.get('/warehouse/finished-inventory/amount-trace', { params: { traceId } }),
 };
 
 export const materialWarehouseApi = {
@@ -57,4 +72,16 @@ export const materialWarehouseApi = {
 
   scanQuery: (materialCode: string) =>
     api.get('/production/material/stock/scan-query', { params: { materialCode } }),
+
+  batchInbound: (params: Record<string, unknown>) =>
+    api.post('/production/material/stock/batch-inbound', params),
+
+  reverse: (inboundId: string, reason: string) =>
+    api.post('/production/material/stock/reverse', { inboundId, reason }),
+
+  edit: (inboundId: string, changes: Record<string, unknown>) =>
+    api.post('/production/material/stock/edit', { inboundId, changes }),
+
+  getAmountTrace: (traceId: string) =>
+    api.get('/production/material/stock/amount-trace', { params: { traceId } }),
 };

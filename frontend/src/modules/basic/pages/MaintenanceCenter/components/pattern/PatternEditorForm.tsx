@@ -29,13 +29,13 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
 
       <div style={editorGridStyle}>
         <Form.Item name="revisionType" label="修改类型" rules={[{ required: true, message: '请选择修改类型' }]} style={{ marginBottom: 0 }}>
-          <Select size="small"><Select.Option value="MINOR">小改</Select.Option><Select.Option value="MAJOR">大改</Select.Option><Select.Option value="URGENT">紧急修改</Select.Option></Select>
+          <Select><Select.Option value="MINOR">小改</Select.Option><Select.Option value="MAJOR">大改</Select.Option><Select.Option value="URGENT">紧急修改</Select.Option></Select>
         </Form.Item>
         <Form.Item name="actualCompleteDate" label="完成时间" style={{ marginBottom: 0 }}>
-          <DatePicker size="small" style={{ width: '100%' }} />
+          <DatePicker style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="remark" label="本次备注" style={{ marginBottom: 0 }}>
-          <Input size="small" placeholder="其他说明" />
+          <Input placeholder="其他说明" />
         </Form.Item>
       </div>
 
@@ -49,7 +49,7 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
         <div style={directFieldLabelStyle}>上传新纸样文件</div>
         <Form.Item name="patternFile" valuePropName="fileList" getValueFromEvent={normalizeUploadFileList} style={{ marginBottom: 0 }}>
           <Upload beforeUpload={() => false} maxCount={1} accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.prj,.jpg,.jpeg,.png,.bmp,.gif,.svg">
-            <Button size="small">选择纸样文件</Button>
+            <Button>选择纸样文件</Button>
           </Upload>
         </Form.Item>
       </div>

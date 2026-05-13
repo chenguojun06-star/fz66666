@@ -8,13 +8,21 @@ import { useUser } from '@/utils/AuthContext';
 function filterTreeByFactory(nodes: OrganizationUnit[], factoryId: string): OrganizationUnit[] {
   return nodes.flatMap(node => {
     if (node.factoryId && String(node.factoryId) === factoryId) {
-      return [node]; // 完整保留该节点及其所有子节点
+      return [node];
     }
     const filteredChildren = filterTreeByFactory(node.children ?? [], factoryId);
     if (filteredChildren.length > 0) {
       return [{ ...node, children: filteredChildren }];
     }
     return [];
+  });
+}
+
+function filterExternalNodes(nodes: OrganizationUnit[]): OrganizationUnit[] {
+  return nodes.flatMap(node => {
+    if (node.ownerType === 'EXTERNAL') return [];
+    const filteredChildren = filterExternalNodes(node.children ?? []);
+    return [{ ...node, children: filteredChildren }];
   });
 }
 
@@ -71,8 +79,9 @@ export function useOrganizationTreeData() {
 
   /** 工厂账号只能看到自己工厂相关的组织节点 */
   const visibleTreeData = useMemo(() => {
-    if (!isFactoryAccount || !currentUserFactoryId) return treeData;
-    return filterTreeByFactory(treeData, currentUserFactoryId);
+    const withoutExternal = filterExternalNodes(treeData);
+    if (!isFactoryAccount || !currentUserFactoryId) return withoutExternal;
+    return filterTreeByFactory(withoutExternal, currentUserFactoryId);
   }, [isFactoryAccount, currentUserFactoryId, treeData]);
 
   // 部门 ID → 名称 快查表

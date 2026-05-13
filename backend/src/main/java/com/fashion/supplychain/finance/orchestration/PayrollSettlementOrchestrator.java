@@ -7,6 +7,8 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.entity.PayrollSettlementItem;
+import com.fashion.supplychain.finance.entity.DeductionItem;
+import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
 import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest;
@@ -49,8 +51,11 @@ public class PayrollSettlementOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired(required = false)
+    @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired
+    private DeductionItemMapper deductionItemMapper;
 
     private static final class PayrollQuery {
         private String orderId;
@@ -212,6 +217,11 @@ public class PayrollSettlementOrchestrator {
         settlement.setTotalQuantity(items.stream().mapToInt(i -> Math.max(0, i.getQuantity() == null ? 0 : i.getQuantity())).sum());
         settlement.setTotalAmount(items.stream().map(PayrollSettlementItem::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP));
+        settlement.setPaidAmount(BigDecimal.ZERO);
+        settlement.setRemainingAmount(settlement.getTotalAmount());
+        settlement.setDeductionAmount(BigDecimal.ZERO);
+        settlement.setAdvanceAmount(BigDecimal.ZERO);
+        settlement.setPaymentStatus("unpaid");
 
         payrollSettlementService.save(settlement);
         for (PayrollSettlementItem item : items) {
@@ -711,5 +721,98 @@ public class PayrollSettlementOrchestrator {
         // 先删明细，再删主记录
         payrollSettlementItemService.deleteBySettlementId(settlementId.trim());
         payrollSettlementService.removeById(settlementId.trim());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void recordPayment(String settlementId, BigDecimal paymentAmount) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(settlementId)) {
+            throw new IllegalArgumentException("结算单ID不能为空");
+        }
+        if (paymentAmount == null || paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("打款金额必须大于0");
+        }
+        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        if (settlement == null) {
+            throw new NoSuchElementException("结算单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "工资结算单");
+        if (!"approved".equalsIgnoreCase(settlement.getStatus())) {
+            throw new IllegalStateException("只有已审核(approved)的结算单可打款");
+        }
+
+        BigDecimal currentPaid = settlement.getPaidAmount() != null ? settlement.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal currentRemaining = settlement.getRemainingAmount() != null ? settlement.getRemainingAmount() : settlement.getTotalAmount();
+        if (paymentAmount.compareTo(currentRemaining) > 0) {
+            throw new IllegalArgumentException("打款金额不能超过剩余未付金额: " + currentRemaining);
+        }
+
+        BigDecimal newPaid = currentPaid.add(paymentAmount);
+        BigDecimal newRemaining = settlement.getTotalAmount().subtract(newPaid);
+        String newPaymentStatus;
+        if (newRemaining.compareTo(BigDecimal.ZERO) == 0) {
+            newPaymentStatus = "fully_paid";
+        } else {
+            newPaymentStatus = "partially_paid";
+        }
+
+        LambdaUpdateWrapper<PayrollSettlement> uw = new LambdaUpdateWrapper<PayrollSettlement>()
+                .set(PayrollSettlement::getPaidAmount, newPaid)
+                .set(PayrollSettlement::getRemainingAmount, newRemaining)
+                .set(PayrollSettlement::getPaymentStatus, newPaymentStatus)
+                .set(PayrollSettlement::getUpdateTime, LocalDateTime.now())
+                .eq(PayrollSettlement::getId, settlementId.trim());
+        payrollSettlementService.update(uw);
+
+        log.info("[PayrollPayment] 工资打款记录: settlementId={}, paymentAmount={}, totalPaid={}, remaining={}",
+                settlementId, paymentAmount, newPaid, newRemaining);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void applyDeduction(String settlementId, BigDecimal deductionAmount, String deductionType, String description) {
+        TenantAssert.assertTenantContext();
+        if (!StringUtils.hasText(settlementId)) {
+            throw new IllegalArgumentException("结算单ID不能为空");
+        }
+        if (deductionAmount == null || deductionAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("扣款金额必须大于0");
+        }
+        PayrollSettlement settlement = payrollSettlementService.getById(settlementId.trim());
+        if (settlement == null) {
+            throw new NoSuchElementException("结算单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "工资结算单");
+
+        BigDecimal currentDeduction = settlement.getDeductionAmount() != null ? settlement.getDeductionAmount() : BigDecimal.ZERO;
+        BigDecimal newDeduction = currentDeduction.add(deductionAmount);
+        BigDecimal newRemaining = settlement.getTotalAmount().subtract(newDeduction)
+                .subtract(settlement.getPaidAmount() != null ? settlement.getPaidAmount() : BigDecimal.ZERO)
+                .subtract(settlement.getAdvanceAmount() != null ? settlement.getAdvanceAmount() : BigDecimal.ZERO);
+        if (newRemaining.compareTo(BigDecimal.ZERO) < 0) {
+            newRemaining = BigDecimal.ZERO;
+        }
+
+        DeductionItem deduction = new DeductionItem();
+        deduction.setSettlementId(settlementId.trim());
+        deduction.setDeductionType(deductionType);
+        deduction.setDeductionAmount(deductionAmount);
+        deduction.setDescription(description);
+        deduction.setSourceType("PAYROLL_SETTLEMENT");
+        deduction.setSourceId(settlementId.trim());
+        com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
+        if (ctx != null) {
+            deduction.setTenantId(ctx.tenantId());
+        }
+        deductionItemMapper.insert(deduction);
+
+        LambdaUpdateWrapper<PayrollSettlement> uw = new LambdaUpdateWrapper<PayrollSettlement>()
+                .set(PayrollSettlement::getDeductionAmount, newDeduction)
+                .set(PayrollSettlement::getRemainingAmount, newRemaining)
+                .set(PayrollSettlement::getUpdateTime, LocalDateTime.now())
+                .eq(PayrollSettlement::getId, settlementId.trim());
+        payrollSettlementService.update(uw);
+
+        log.info("[PayrollDeduction] 工资扣款: settlementId={}, type={}, amount={}, totalDeduction={}",
+                settlementId, deductionType, deductionAmount, newDeduction);
     }
 }

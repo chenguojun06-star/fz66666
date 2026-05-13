@@ -342,7 +342,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
       onCancel={onCancel}
       onOk={handleOk}
       confirmLoading={loading}
-      width="60vw"
+      width="60vw" maskClosable={false}
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       {showSmartErrorNotice && smartError ? (
@@ -466,7 +466,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
           ) : styleSnapshot?.planRows?.length ? (
             <ResizableTable<InboundPlanRow>
               rowKey="key"
-              size="small"
+             
               pagination={false}
               dataSource={styleSnapshot.planRows}
               columns={[

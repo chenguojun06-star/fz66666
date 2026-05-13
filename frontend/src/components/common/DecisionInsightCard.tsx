@@ -111,7 +111,7 @@ const DecisionInsightCard: React.FC<{
       {insight.actionLabel ? (
         <div style={{ marginTop: 6, paddingLeft: 13 }}>
           {insight.onAction ? (
-            <Button type="link" size="small" onClick={insight.onAction}
+            <Button type="link" onClick={insight.onAction}
               style={{ padding: 0, height: 'auto', fontSize: 12, justifyContent: 'flex-start' }}>
               {insight.actionLabel}
             </Button>

@@ -133,15 +133,15 @@ const FeedbackTab: React.FC = () => {
       {/* 统计卡片 */}
       {stats && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}><Card size="small"><Statistic title="总反馈" value={stats.total} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="待处理" value={stats.pending} styles={{ content: { color: stats.pending > 0 ? '#ff4d4f' : undefined } }} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="处理中" value={stats.processing} styles={{ content: { color: '#1890ff' } }} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="已解决" value={stats.resolved} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
+          <Col span={6}><Card><Statistic title="总反馈" value={stats.total} /></Card></Col>
+          <Col span={6}><Card><Statistic title="待处理" value={stats.pending} styles={{ content: { color: stats.pending > 0 ? '#ff4d4f' : undefined } }} /></Card></Col>
+          <Col span={6}><Card><Statistic title="处理中" value={stats.processing} styles={{ content: { color: '#1890ff' } }} /></Card></Col>
+          <Col span={6}><Card><Statistic title="已解决" value={stats.resolved} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
         </Row>
       )}
 
       {/* 筛选 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: 16 }}>
         <Space wrap>
           <Select id="feedbackStatusFilter" style={{ width: 120 }} placeholder="状态" allowClear value={queryParams.status || undefined}
             onChange={v => setQueryParams(p => ({ ...p, page: 1, status: v || '' }))}
@@ -181,7 +181,7 @@ const FeedbackTab: React.FC = () => {
           showSizeChanger: true,
           onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, pageSize: ps })),
         }}
-        size="small"
+       
       />
 
       {/* 详情弹窗 */}
@@ -189,7 +189,7 @@ const FeedbackTab: React.FC = () => {
         footer={<Button onClick={detailModal.close}>关闭</Button>}
       >
         {detailModal.data && (
-          <Descriptions column={2} bordered size="small">
+          <Descriptions column={2} bordered>
             <Descriptions.Item label="ID">{detailModal.data.id}</Descriptions.Item>
             <Descriptions.Item label="来源">
               <Tag color={detailModal.data.source === 'MINIPROGRAM' ? 'green' : 'blue'}>

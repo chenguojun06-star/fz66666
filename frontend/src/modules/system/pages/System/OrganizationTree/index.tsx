@@ -9,17 +9,24 @@ import type { ApiResult } from '@/utils/api';
 import type { OrganizationUnit, User } from '@/types/system';
 import { useUser } from '@/utils/AuthContext';
 import {
-  App, Avatar, Button, Checkbox, Col, Empty, Form, Input,
+  App, Avatar, Button, Checkbox, Col, DatePicker, Empty, Form, Input,
   InputNumber, Row, Select, Space, Spin, Switch, Tag,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
+import SmallModal from '@/components/common/SmallModal';
+import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import {
   ApartmentOutlined, BankOutlined, CrownFilled,
   PlusOutlined, QrcodeOutlined, SafetyCertificateOutlined,
   SnippetsOutlined, UserAddOutlined, UserOutlined,
+  LinkOutlined,
 } from '@ant-design/icons';
+import api from '@/utils/api';
+import { getEmploymentStatusConfig, getGenderText } from '../UserList/hooks/useUserListColumns';
+import { formatDate } from '@/utils/datetime';
 import './styles.css';
 import TemplateInitModal from './TemplateInitModal';
 import AssignMemberModal from './AssignMemberModal';
@@ -29,6 +36,8 @@ import { useOrganizationTreeData } from './hooks/useOrganizationTreeData';
 import { useOrganizationModals } from './hooks/useOrganizationModals';
 import { useMemberActions } from './hooks/useMemberActions';
 import { TreeItem } from './components/TreeItem';
+
+const { Option } = Select;
 
 const ownerTypeOptions = [
   { value: 'NONE', label: '通用部门' },
@@ -69,7 +78,8 @@ function getDescendantIds(node: OrganizationUnit): string[] {
 
 const OrganizationTreePage: React.FC = () => {
   const { message, modal } = App.useApp();
-  const { user } = useUser();
+  const { user, isSuperAdmin, isTenantOwner } = useUser();
+  const canManageUsers = isSuperAdmin || isTenantOwner;
 
   const {
     loading,
@@ -87,20 +97,21 @@ const OrganizationTreePage: React.FC = () => {
   } = useOrganizationTreeData();
 
   const {
-    form,
+    form: deptForm,
     dialogOpen,
     dialogMode,
     currentRecord,
-    submitLoading,
+    submitLoading: deptSubmitLoading,
     openCreate,
     openEdit,
     closeDialog,
-    handleSubmit,
+    handleSubmit: handleDeptSubmit,
   } = useOrganizationModals(loadData);
 
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState('');
   const [includeSubUnits, setIncludeSubUnits] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   const [qrModal, setQrModal] = useState<{ open: boolean; unit: OrganizationUnit | null; tenantCode: string }>(
     { open: false, unit: null, tenantCode: '' },
@@ -114,6 +125,18 @@ const OrganizationTreePage: React.FC = () => {
 
   const [managerLoading, setManagerLoading] = useState(false);
 
+  const [userForm] = Form.useForm();
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userSubmitLoading, setUserSubmitLoading] = useState(false);
+  const [roleOptions, setRoleOptions] = useState<any[]>([]);
+  const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
+
+  const [inviteQr, setInviteQr] = useState<{ open: boolean; loading: boolean; qrBase64?: string; expiresAt?: string }>({ open: false, loading: false });
+
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountUser, setAccountUser] = useState<{ id: string; name: string }>({ id: '', name: '' });
+
   useEffect(() => {
     if (tplModal.open) {
       factoryApi.list({ pageSize: 500, status: 'active' }).then((res: ApiResult<{ records: Factory[] }>) => {
@@ -122,6 +145,24 @@ const OrganizationTreePage: React.FC = () => {
     }
   }, [tplModal.open]);
 
+  useEffect(() => {
+    const loadRoles = async () => {
+      setRoleOptionsLoading(true);
+      try {
+        const tenantId = (user as any)?.tenantId ? Number((user as any).tenantId) : null;
+        if (tenantId) {
+          const res: any = await api.get('/system/role/list', { params: { page: 1, pageSize: 500 } });
+          if (res?.code === 200) {
+            setRoleOptions(Array.isArray(res.data?.records) ? res.data.records : []);
+          }
+        }
+      } catch { /* ignore */ } finally {
+        setRoleOptionsLoading(false);
+      }
+    };
+    void loadRoles();
+  }, [user?.tenantId]);
+
   const {
     assignModal, setAssignModal,
     assignSearch, setAssignSearch,
@@ -129,7 +170,6 @@ const OrganizationTreePage: React.FC = () => {
     batchAssignLoading,
     setOwnerLoading,
     profileUser, setProfileUser,
-    handleResetMemberPwd: _handleResetMemberPwd,
     handleOpenAssign,
     handleBatchAssign,
     handleRemoveMember,
@@ -236,6 +276,113 @@ const OrganizationTreePage: React.FC = () => {
     setQrModal({ open: true, unit: node, tenantCode });
   }, []);
 
+  const handleGenerateInvite = useCallback(async () => {
+    setInviteQr({ open: true, loading: true });
+    try {
+      const res: any = await api.post('/system/user/invite-qr');
+      if (res?.code === 200 && res?.data) {
+        setInviteQr({ open: true, loading: false, qrBase64: res.data.qrCodeBase64 || res.data.qrBase64, expiresAt: res.data.expiresAt });
+      } else {
+        message.error(res?.message || '生成邀请二维码失败');
+        setInviteQr({ open: false, loading: false });
+      }
+    } catch {
+      message.error('生成邀请二维码失败');
+      setInviteQr({ open: false, loading: false });
+    }
+  }, [message]);
+
+  const openUserDialog = useCallback((u?: User) => {
+    setEditingUser(u ?? null);
+    if (u) {
+      userForm.setFieldsValue({
+        username: u.username,
+        name: u.name,
+        phone: u.phone,
+        email: (u as any).email,
+        gender: (u as any).gender,
+        status: u.status,
+        roleId: String((u as any).roleId || ''),
+        employmentStatus: (u as any).employmentStatus,
+        hireDate: (u as any).hireDate,
+        permissionRange: (u as any).permissionRange,
+      });
+    } else {
+      userForm.resetFields();
+      if (selectedUnitId) {
+        userForm.setFieldsValue({ orgUnitId: selectedUnitId });
+      }
+    }
+    setUserModalOpen(true);
+  }, [userForm, selectedUnitId]);
+
+  const closeUserDialog = useCallback(() => {
+    setUserModalOpen(false);
+    setEditingUser(null);
+    userForm.resetFields();
+  }, [userForm]);
+
+  const handleUserSubmit = useCallback(async () => {
+    try {
+      const values = await userForm.validateFields();
+      setUserSubmitLoading(true);
+      const payload = { ...values, id: editingUser?.id };
+      const res: any = editingUser
+        ? await api.put('/system/user', payload)
+        : await api.post('/system/user', payload);
+      if (res?.code === 200) {
+        message.success(editingUser ? '保存成功' : '新增成功');
+        closeUserDialog();
+        await loadData();
+      } else {
+        message.error(res?.message || '保存失败');
+      }
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setUserSubmitLoading(false);
+    }
+  }, [editingUser, userForm, closeUserDialog, loadData, message]);
+
+  const handleToggleUserStatus = useCallback(async (userId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'inactive' ? '停用' : '启用';
+    try {
+      const res: any = await api.put('/system/user', { id: userId, status: newStatus });
+      if (res?.code === 200) {
+        message.success(`已${action}`);
+        await loadData();
+      } else {
+        message.error(res?.message || `${action}失败`);
+      }
+    } catch {
+      message.error(`${action}失败`);
+    }
+  }, [loadData, message]);
+
+  const handleResetPassword = useCallback(async (record: User) => {
+    modal.confirm({
+      width: '30vw',
+      title: `重置「${record.name || record.username}」的密码`,
+      content: <div>确认重置该用户密码为默认密码？</div>,
+      okText: '确认重置',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const res: any = await api.post(`/system/user/${record.id}/reset-password`);
+          if (res?.code === 200) {
+            message.success('密码已重置');
+          } else {
+            message.error(res?.message || '重置失败');
+          }
+        } catch {
+          message.error('重置失败');
+        }
+      },
+    });
+  }, [modal, message]);
+
   const selectedUnit = useMemo(() => findUnit(treeData, selectedUnitId), [treeData, selectedUnitId]);
   const isExternalSelected = selectedUnit?.ownerType === 'EXTERNAL';
 
@@ -251,7 +398,7 @@ const OrganizationTreePage: React.FC = () => {
     );
   }, [selectedUnitId, selectedUnit, includeSubUnits, membersMap, memberSearch]);
 
-  const readOnlyMemberColumns: TableColumnsType<User> = [
+  const externalMemberColumns: TableColumnsType<User> = [
     {
       title: '姓名',
       dataIndex: 'name',
@@ -273,55 +420,140 @@ const OrganizationTreePage: React.FC = () => {
     { title: '手机号码', dataIndex: 'phone', render: (v: string) => v || '—' },
     { title: '所属部门', dataIndex: 'orgUnitId', render: (v: string) => v ? (unitNameMap[v] || '未知部门') : '—' },
     {
+      title: '在职状态',
+      dataIndex: 'employmentStatus',
+      width: 90,
+      render: (v: string) => {
+        const cfg = getEmploymentStatusConfig(v);
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
       title: '操作',
-      width: 100,
+      width: 140,
       render: (_: unknown, r: User) => r.isFactoryOwner ? (
         <Tag color="gold"><CrownFilled /> 主账号</Tag>
       ) : (
-        <Button
-          size="small"
-          icon={<CrownFilled />}
-          loading={setOwnerLoading === String(r.id)}
-          onClick={() => handleSetFactoryOwner(r)}
-        >
-          设为老板
-        </Button>
+        <Space size={4}>
+          <Button
+            icon={<CrownFilled />}
+            loading={setOwnerLoading === String(r.id)}
+            onClick={() => handleSetFactoryOwner(r)}
+            size="small"
+          >
+            设为老板
+          </Button>
+          <Button
+            danger
+            size="small"
+            onClick={() => handleRemoveMember(String(r.id), r.name || r.username || '')}
+          >
+            移出
+          </Button>
+        </Space>
       ),
     },
   ];
 
-  const memberColumns: TableColumnsType<User> = [
+  const internalMemberColumns: TableColumnsType<User> = [
     {
       title: '姓名',
       dataIndex: 'name',
+      width: 120,
       render: (v: string, r: User) => (
         <Space size={6}>
           <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, #1677ff)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
+          {selectedUnit?.managerUserId && String(r.id) === String(selectedUnit.managerUserId) && (
+            <Tag color="blue" style={{ fontSize: 10 }}>负责人</Tag>
+          )}
         </Space>
       ),
     },
     {
-      title: '手机号码',
-      dataIndex: 'phone',
-      render: (v: string) => v || '—',
-    },
-    {
-      title: '所属部门',
+      title: '部门',
       dataIndex: 'orgUnitId',
+      width: 120,
       render: (v: string) => v ? (unitNameMap[v] || '未知部门') : '—',
     },
     {
+      title: '职位权限',
+      dataIndex: 'roleName',
+      width: 120,
+      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '—',
+    },
+    {
+      title: '性别',
+      dataIndex: 'gender',
+      width: 70,
+      render: (v: string) => getGenderText(v),
+    },
+    {
+      title: '手机号码',
+      dataIndex: 'phone',
+      width: 130,
+      render: (v: string) => v || '—',
+    },
+    {
+      title: '入职日期',
+      dataIndex: 'hireDate',
+      width: 110,
+      render: (v: string) => v ? formatDate(v) : '—',
+    },
+    {
+      title: '在职状态',
+      dataIndex: 'employmentStatus',
+      width: 90,
+      render: (v: string) => {
+        const cfg = getEmploymentStatusConfig(v);
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
+      title: '部门负责人',
+      width: 90,
+      render: (_: unknown, r: User) => {
+        if (!selectedUnit?.managerUserId) return '—';
+        return String(r.id) === String(selectedUnit.managerUserId) ? <Tag color="blue">是</Tag> : '—';
+      },
+    },
+    {
       title: '操作',
-      width: 80,
+      key: 'action',
+      width: 180,
       render: (_: unknown, r: User) => (
-        <Button
-          size="small"
-          danger
-          onClick={() => handleRemoveMember(String(r.id), r.name || r.username || '')}
-        >
-          移出
-        </Button>
+        <RowActions
+          maxInline={2}
+          actions={[
+            {
+              key: 'edit',
+              label: '修改',
+              title: '修改',
+              onClick: () => openUserDialog(r),
+              primary: true,
+            },
+            {
+              key: 'resetPwd',
+              label: '改密',
+              title: '改密',
+              onClick: () => handleResetPassword(r),
+            },
+            {
+              key: 'toggleStatus',
+              label: r.status === 'active' ? '停用' : '启用',
+              title: r.status === 'active' ? '停用' : '启用',
+              danger: r.status === 'active',
+              onClick: () => handleToggleUserStatus(String(r.id), r.status),
+            },
+            {
+              key: 'remove',
+              label: '移出',
+              title: '移出部门',
+              danger: true,
+              onClick: () => handleRemoveMember(String(r.id), r.name || r.username || ''),
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -341,7 +573,7 @@ const OrganizationTreePage: React.FC = () => {
               </>
             ) : null}
             <ApartmentOutlined style={{ marginRight: 8 }} />
-            组织架构
+            部门和成员
           </span>
         }
         titleExtra={
@@ -362,7 +594,7 @@ const OrganizationTreePage: React.FC = () => {
         headerContent={
           !isFactoryAccount ? (
             <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
-              管理公司组织结构，包含部门、工厂及人员分配。
+              管理公司组织结构与人员，包含部门、成员分配、职位权限。
               <span style={{ marginLeft: 12 }}>
                 共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
               </span>
@@ -380,8 +612,8 @@ const OrganizationTreePage: React.FC = () => {
             )}
           </Empty>
         ) : (
-          <div className="org-split-layout">
-            <div className="org-tree-panel">
+          <div className="org-split-layout" style={{ height: 'calc(100vh - 180px)' }}>
+            <div className="org-tree-panel" style={{ width: 240 }}>
               {visibleTreeData.map((node) => (
                 <TreeItem
                   key={node.id ?? node.unitName}
@@ -411,6 +643,9 @@ const OrganizationTreePage: React.FC = () => {
                   <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>
                       {selectedUnit?.unitName} · 成员列表
+                      <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
+                        共 {displayedMembers.length} 人
+                      </span>
                       {selectedUnit?.managerUserName && (
                         <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ marginLeft: 8, fontSize: 11 }}>
                           审批人: {selectedUnit.managerUserName}
@@ -419,7 +654,6 @@ const OrganizationTreePage: React.FC = () => {
                     </div>
                     {!isFactoryAccount && (
                       <Button
-                        size="small"
                         icon={<SafetyCertificateOutlined />}
                         loading={managerLoading}
                         onClick={async () => {
@@ -447,7 +681,6 @@ const OrganizationTreePage: React.FC = () => {
                             okText: '确认',
                             cancelText: '取消',
                             onOk: async () => {
-                              const _sel = document.querySelector('#managerSelect input') as HTMLInputElement;
                               const selectEl = document.querySelector('.ant-select-selection-item') as HTMLElement;
                               const selectedValue = selectEl?.getAttribute('title') || '';
                               const matchingOpt = managerSelectOptions.find(o => o.label === selectedValue);
@@ -477,7 +710,7 @@ const OrganizationTreePage: React.FC = () => {
                     >
                       包括下级成员
                     </Checkbox>
-                    {!isFactoryAccount && (isExternalSelected ? (
+                    {!isFactoryAccount && (
                       <>
                         <Button
                           type="primary"
@@ -486,34 +719,44 @@ const OrganizationTreePage: React.FC = () => {
                         >
                           添加成员
                         </Button>
-                        <Button
-                          icon={<QrcodeOutlined />}
-                          onClick={() => selectedUnit && handleShowQRCode(selectedUnit)}
-                        >
-                          注册二维码
-                        </Button>
+                        {canManageUsers && (
+                          <Button
+                            icon={<PlusOutlined />}
+                            onClick={() => openUserDialog()}
+                          >
+                            新增人员
+                          </Button>
+                        )}
+                        {canManageUsers && (
+                          <Button icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
+                            邀请员工
+                          </Button>
+                        )}
+                        {isExternalSelected && (
+                          <Button
+                            icon={<QrcodeOutlined />}
+                            onClick={() => selectedUnit && handleShowQRCode(selectedUnit)}
+                          >
+                            注册二维码
+                          </Button>
+                        )}
                       </>
-                    ) : (
-                      <Button
-                        type="primary"
-                        icon={<UserAddOutlined />}
-                        onClick={() => selectedUnit && handleOpenAssign(selectedUnit)}
-                      >
-                        添加成员
-                      </Button>
-                    ))}
+                    )}
                   </div>
                   <ResizableTable<User>
                     storageKey={isExternalSelected ? 'organization-tree-external-members' : 'organization-tree-members'}
-                    size="small"
                     rowKey={r => String(r.id ?? r.username)}
-                    columns={isExternalSelected ? readOnlyMemberColumns : memberColumns}
+                    columns={isExternalSelected ? externalMemberColumns : internalMemberColumns}
                     dataSource={displayedMembers}
+                    rowSelection={canManageUsers && !isExternalSelected ? {
+                      selectedRowKeys,
+                      onChange: (keys) => setSelectedRowKeys(keys as string[]),
+                    } : undefined}
                     pagination={displayedMembers.length > DEFAULT_PAGE_SIZE ? {
                       showSizeChanger: true,
                       pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                     } : false}
-                    locale={{ emptyText: isExternalSelected ? '暂无成员，可点击「添加成员」或通过扫码二维码注册' : '暂无成员，点击「添加成员」分配' }}
+                    locale={{ emptyText: isExternalSelected ? '暂无成员，可点击「添加成员」或通过扫码二维码注册' : '暂无成员，点击「添加成员」或「新增人员」' }}
                   />
                 </>
               )}
@@ -527,14 +770,14 @@ const OrganizationTreePage: React.FC = () => {
         open={dialogOpen}
         title={dialogMode === 'edit' ? '编辑部门' : '新增部门'}
         onCancel={closeDialog}
-        onOk={handleSubmit}
-        confirmLoading={submitLoading}
+        onOk={handleDeptSubmit}
+        confirmLoading={deptSubmitLoading}
         okText="保存"
         cancelText="取消"
         width="30vw"
         initialHeight={320}
       >
-        <Form form={form} layout="vertical" style={{ padding: '4px 0' }}>
+        <Form form={deptForm} layout="vertical" style={{ padding: '4px 0' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
           <Row gutter={12}>
             <Col span={12}>
@@ -596,6 +839,118 @@ const OrganizationTreePage: React.FC = () => {
         </Form>
       </ResizableModal>
 
+      <ResizableModal
+        title={editingUser ? '编辑人员' : '新增人员'}
+        open={userModalOpen}
+        onCancel={closeUserDialog}
+        onOk={handleUserSubmit}
+        okText="保存"
+        cancelText="取消"
+        width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.7)}
+        confirmLoading={userSubmitLoading}
+      >
+        <Form form={userForm} layout="vertical" autoComplete="off">
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
+                <Input placeholder="请输入用户名" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="name" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
+                <Input placeholder="请输入姓名" />
+              </Form.Item>
+            </Col>
+            {!editingUser && (
+              <Col span={8}>
+                <Form.Item name="password" label="密码" rules={[{ required: true, min: 6, message: '密码不能少于6位' }]}>
+                  <Input.Password placeholder="请输入密码" autoComplete="new-password" />
+                </Form.Item>
+              </Col>
+            )}
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="roleId" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
+                <Select placeholder="请选择角色" loading={roleOptionsLoading}>
+                  {roleOptions.map((r: any) => (
+                    <Option key={String(r.id)} value={String(r.id)}>
+                      {r.roleName || '系统角色'}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="gender" label="性别">
+                <Select placeholder="请选择性别" allowClear>
+                  <Option value="male">男</Option>
+                  <Option value="female">女</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+                <Select placeholder="请选择状态">
+                  <Option value="active">启用</Option>
+                  <Option value="inactive">停用</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="phone" label="手机号" rules={[{ pattern: /^1\d{10}$/, message: '手机号格式不正确' }]}>
+                <Input placeholder="请输入手机号" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="hireDate" label="入职日期">
+                <DatePicker style={{ width: '100%' }} placeholder="请选择入职日期" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="employmentStatus" label="在职状态">
+                <Select placeholder="请选择在职状态" allowClear>
+                  <Option value="normal">正式</Option>
+                  <Option value="probation">试用期</Option>
+                  <Option value="temporary">临时工</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="orgUnitId" label="所属部门">
+                <Select
+                  showSearch
+                  allowClear
+                  optionFilterProp="label"
+                  placeholder="选择部门"
+                  options={departmentOptions}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="permissionRange" label="数据权限">
+                <Select placeholder="请选择数据权限范围">
+                  <Option value="all"><Tag color="blue" style={{ marginRight: 4 }}>全部</Tag>查看全厂数据</Option>
+                  <Option value="team"><Tag color="green" style={{ marginRight: 4 }}>团队</Tag>查看团队数据</Option>
+                  <Option value="own"><Tag color="orange" style={{ marginRight: 4 }}>个人</Tag>仅查看自己数据</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="email" label="邮箱">
+                <Input placeholder="请输入邮箱" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </ResizableModal>
+
       <AssignMemberModal
         assignModal={assignModal}
         setAssignModal={setAssignModal}
@@ -633,6 +988,60 @@ const OrganizationTreePage: React.FC = () => {
         onResetPwd={async (userId, newPwd) => {
           await organizationApi.adminResetMemberPwd(userId, newPwd);
         }}
+      />
+
+      <SmallModal
+        title="邀请员工扫码绑定微信"
+        open={inviteQr.open}
+        onCancel={() => setInviteQr({ open: false, loading: false })}
+        footer={null}
+      >
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          {inviteQr.loading ? (
+            <div style={{ padding: '48px 0' }}><Spin tip="正在生成二维码..." /></div>
+          ) : inviteQr.qrBase64 ? (
+            <>
+              <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px' }} />
+              <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 13 }}>
+                员工用微信扫码后，输入系统账号密码即可完成绑定
+              </div>
+              {inviteQr.expiresAt && (
+                <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 12, marginTop: 8 }}>
+                  有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
+                </div>
+              )}
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', gap: 8 }}>
+                <Button
+                  icon={<LinkOutlined />}
+                  onClick={async () => {
+                    try {
+                      const res: any = await tenantService.myTenant();
+                      const tc = res?.data?.tenantCode || res?.tenantCode || '';
+                      const tn = res?.data?.tenantName || res?.tenantName || (user as any)?.tenantName || '';
+                      if (!tc) { message.warning('未获取到工厂码，请稍后重试'); return; }
+                      const origin = window.location.origin;
+                      const url = `${origin}/register?tenantCode=${encodeURIComponent(tc)}&tenantName=${encodeURIComponent(tn)}`;
+                      await navigator.clipboard.writeText(url);
+                      message.success('注册链接已复制');
+                    } catch { message.error('复制失败，请稍后重试'); }
+                  }}
+                >
+                  复制注册链接
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: 'var(--color-text-tertiary, #999)', padding: '24px 0' }}>二维码生成失败，请重试</div>
+          )}
+        </div>
+      </SmallModal>
+
+      <PaymentAccountManager
+        open={accountModalOpen}
+        ownerType="WORKER"
+        ownerId={accountUser.id}
+        ownerName={accountUser.name}
+        onClose={() => setAccountModalOpen(false)}
       />
     </>
   );

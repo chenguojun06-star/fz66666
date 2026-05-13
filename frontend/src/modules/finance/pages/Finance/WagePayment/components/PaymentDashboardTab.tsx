@@ -131,7 +131,7 @@ const PaymentDashboard: React.FC = () => {
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="已付总额"
               value={totalPaid}
@@ -142,7 +142,7 @@ const PaymentDashboard: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="待付总额"
               value={totalPending}
@@ -153,7 +153,7 @@ const PaymentDashboard: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="已收总额"
               value={totalReceived}
@@ -164,7 +164,7 @@ const PaymentDashboard: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small">
+          <Card>
             <Statistic
               title="逾期笔数"
               value={overdueCount}
@@ -178,14 +178,14 @@ const PaymentDashboard: React.FC = () => {
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={14}>
-          <Card size="small" title="收付款趋势">
+          <Card title="收付款趋势">
             <Suspense fallback={<div style={{ height: 300, textAlign: 'center', lineHeight: '300px' }}>加载中...</div>}>
               <ReactECharts option={trendOption} style={{ height: 300 }} />
             </Suspense>
           </Card>
         </Col>
         <Col span={10}>
-          <Card size="small" title="应付账龄分析">
+          <Card title="应付账龄分析">
             <Suspense fallback={<div style={{ height: 300, textAlign: 'center', lineHeight: '300px' }}>加载中...</div>}>
               <ReactECharts option={agingOption} style={{ height: 300 }} />
             </Suspense>
@@ -193,13 +193,13 @@ const PaymentDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      <Card size="small" title="账龄明细">
+      <Card title="账龄明细">
         <ResizableTable
           storageKey="payment-aging-table"
           columns={agingColumns}
           dataSource={agingData}
           rowKey="range"
-          size="small"
+         
           pagination={false}
           scroll={{ x: 600 }}
         />

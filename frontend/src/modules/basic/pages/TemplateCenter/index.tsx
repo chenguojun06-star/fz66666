@@ -170,12 +170,12 @@ const TemplateCenter: React.FC = () => {
           />
         }
       >
-        {showSmartErrorNotice && smartError ? (<Card size="small" style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList({ page: 1 }); }} /></Card>) : null}
+        {showSmartErrorNotice && smartError ? (<Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList({ page: 1 }); }} /></Card>) : null}
         {cardTab === 'knowledge' ? (
           <StyleProcessKnowledgeTab keyword={knowledgeKeyword} onKeywordChange={setKnowledgeKeyword} currentPage={knowledgePage} pageSize={knowledgePageSize} onPageChange={(page, size) => { setKnowledgePage(page); setKnowledgePageSize(size); }} selectedKeys={knowledgeSelectedKeys} onSelectionChange={setKnowledgeSelectedKeys} />
         ) : (
           <>
-            <Card size="small" className="filter-card mb-sm">
+            <Card className="filter-card mb-sm">
               <Form form={queryForm}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
                   <Space wrap size={12}>

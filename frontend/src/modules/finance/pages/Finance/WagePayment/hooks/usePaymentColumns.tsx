@@ -128,6 +128,22 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         render: (v: number) => <span style={{ color: '#389e0d' }}>¥{Number(v || 0).toFixed(2)}</span>,
       },
       {
+        title: '付款状态',
+        dataIndex: 'paymentStatus',
+        key: 'paymentStatus',
+        width: 110,
+        align: 'center',
+        render: (v: string) => {
+          const map: Record<string, { text: string; color: string }> = {
+            unpaid: { text: '未付', color: 'red' },
+            partially_paid: { text: '部分已付', color: 'orange' },
+            fully_paid: { text: '已付清', color: 'green' },
+          };
+          const info = map[v];
+          return info ? <Tag color={info.color}>{info.text}</Tag> : <Tag>{v || '-'}</Tag>;
+        },
+      },
+      {
         title: '描述',
         dataIndex: 'description',
         key: 'description',
@@ -237,7 +253,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         width: 100,
         render: (v: string) => {
           const s = PAYMENT_STATUS_MAP[v];
-          return s ? <Tag color={s.color}>{s.text}</Tag> : v;
+          return s ? <Tag color={s.color}>{s.text}</Tag> : '未知';
         },
       },
       {

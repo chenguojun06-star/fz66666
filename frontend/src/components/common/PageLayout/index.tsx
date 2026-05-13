@@ -81,7 +81,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   } else if (hasStandardFilter) {
     const toolbar = <StandardToolbar left={filterLeft} right={filterRight} />;
     filterContent = filterCard ? (
-      <Card size="small" className="filter-card mb-sm">
+      <Card className="filter-card mb-sm">
         {toolbar}
       </Card>
     ) : (

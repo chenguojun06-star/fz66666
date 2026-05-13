@@ -225,13 +225,13 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
       />
 
       <Card
-        size="small"
+       
         title="需要采购的面辅料（只读）"
         loading={detailLoading}
         extra={
           <Space>
             <Button
-              size="small"
+             
               type="primary"
               disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
               onClick={onReceiveAll}
@@ -239,7 +239,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
               采购全部
             </Button>
             <Button
-              size="small"
+             
               disabled={detailFrozen || !detailPurchases.some((p) => {
                 const status = normalizeStatus(p.status);
                 return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
@@ -418,7 +418,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                           ) : (
                             <Button
                               type="link"
-                              size="small"
+                             
                               disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING}
                               onClick={() => {
                                 if (hasStock && onWarehousePick) {
@@ -434,7 +434,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                           )}
                           <Button
                             type="link"
-                            size="small"
+                           
                             disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
                             onClick={() => onQualityIssue(record)}
                           >
@@ -442,7 +442,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                           </Button>
                           <Button
                             type="link"
-                            size="small"
+                           
                             disabled={
                               frozen
                               || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
@@ -454,7 +454,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                           {(Number(record?.returnConfirmed || 0) === 1 || status === MATERIAL_PURCHASE_STATUS.COMPLETED) && (
                             <Button
                               type="link"
-                              size="small"
+                             
                               disabled={!isSupervisorOrAbove}
                               onClick={() => onReturnReset(record)}
                             >
@@ -474,7 +474,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
 
           return (
             <Collapse
-              size="small"
+             
               collapsible="icon"
               defaultActiveKey={sections.map(s => s.key)}
               items={items}
@@ -485,7 +485,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
 
       {(docList.length > 0 || docsLoading) && (
         <Card
-          size="small"
+         
           style={{ marginTop: 12 }}
           title={
             <Space>
@@ -537,7 +537,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
 
       {/* ── 发票/单据上传（财务留底） ── */}
       <Card
-        size="small"
+       
         style={{ marginTop: 12 }}
         title={
           <Space>
@@ -554,7 +554,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             customRequest={handleInvoiceUpload}
             disabled={!currentPurchase?.id}
           >
-            <Button size="small" icon={invoiceUploading ? <LoadingOutlined /> : <PlusOutlined />} disabled={invoiceUploading || !currentPurchase?.id}>
+            <Button icon={invoiceUploading ? <LoadingOutlined /> : <PlusOutlined />} disabled={invoiceUploading || !currentPurchase?.id}>
               上传图片
             </Button>
           </Upload>
@@ -582,7 +582,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   <Button
                     type="text"
                     danger
-                    size="small"
+                   
                     icon={<DeleteOutlined />}
                     style={{
                       position: 'absolute',

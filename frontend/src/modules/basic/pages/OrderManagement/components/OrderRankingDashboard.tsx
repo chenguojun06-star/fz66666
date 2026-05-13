@@ -151,7 +151,7 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
   const topCount = stats?.topStyles?.length || 0;
 
   return (
-    <Card className="order-ranking-grid" size="small" loading={loading}>
+    <Card className="order-ranking-grid" loading={loading}>
       <div className="ranking-grid-header">
         <TrophyOutlined className="ranking-icon" />
         <span className="ranking-title">下单排行 TOP{topCount}</span>

@@ -114,7 +114,7 @@ const MaterialPurchase: React.FC = () => {
           title="面料采购"
           headerContent={
             showSmartErrorNotice && smartError ? (
-              <Card size="small" style={{ marginBottom: 12 }}>
+              <Card style={{ marginBottom: 12 }}>
                 <SmartErrorNotice error={smartError} onFix={fetchMaterialPurchaseList} />
               </Card>
             ) : null
@@ -438,7 +438,7 @@ const MaterialPurchase: React.FC = () => {
                     },
                   ]}
                   pagination={false}
-                  size="small"
+                 
                   bordered
                 />
               </Form>

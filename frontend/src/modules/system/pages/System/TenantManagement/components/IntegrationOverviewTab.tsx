@@ -35,22 +35,22 @@ const IntegrationOverviewTab: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
-          <Card size="small" style={{ borderLeft: '3px solid var(--color-primary)' }}>
+          <Card style={{ borderLeft: '3px solid var(--color-primary)' }}>
             <Statistic title="已配置应用" value={overview?.totalApps || 0} suffix="个" prefix={<ApiOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small" style={{ borderLeft: '3px solid var(--color-success)' }}>
+          <Card style={{ borderLeft: '3px solid var(--color-success)' }}>
             <Statistic title="运行中" value={overview?.activeApps || 0} suffix="个" styles={{ content: { color: 'var(--color-success)' } }} prefix={<CheckCircleOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small" style={{ borderLeft: '3px solid var(--color-info)' }}>
+          <Card style={{ borderLeft: '3px solid var(--color-info)' }}>
             <Statistic title="总API调用" value={overview?.totalCalls || 0} suffix="次" prefix={<SwapOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small" style={{ borderLeft: '3px solid var(--color-warning)' }}>
+          <Card style={{ borderLeft: '3px solid var(--color-warning)' }}>
             <Statistic
               title="已对接模块"
               value={overview?.modules?.filter(m => m.connected).length || 0}
@@ -67,7 +67,7 @@ const IntegrationOverviewTab: React.FC = () => {
           return (
             <Col span={6} key={mod.appType}>
               <Card
-                size="small"
+               
                 hoverable
                 style={{
                   borderTop: `3px solid ${cfg.color}`,
@@ -92,7 +92,7 @@ const IntegrationOverviewTab: React.FC = () => {
                 </div>
                 <Button
                   type="link"
-                  size="small"
+                 
                   icon={<EyeOutlined />}
                   onClick={() => navigate(mod.viewPath)}
                   style={{ padding: 0, fontSize: 12 }}
@@ -106,7 +106,7 @@ const IntegrationOverviewTab: React.FC = () => {
       </Row>
       <Row gutter={16}>
         <Col span={12}>
-          <Card size="small" title=" API 端点速查" style={{ minHeight: 360 }}>
+          <Card title=" API 端点速查" style={{ minHeight: 360 }}>
             {(overview?.modules || []).map((mod: IntegrationModuleInfo) => {
               const cfg = MODULE_ICONS[mod.appType] || { icon: '', color: 'var(--color-text-tertiary)', bgColor: 'var(--color-bg-subtle)' };
               const endpoints = getApiEndpoints(mod.appType);
@@ -133,7 +133,7 @@ const IntegrationOverviewTab: React.FC = () => {
         </Col>
         <Col span={12}>
           <Card
-            size="small"
+           
             title=" 最近 API 调用"
             style={{ minHeight: 360 }}
             extra={<Text type="secondary" style={{ fontSize: 12 }}>最新10条</Text>}

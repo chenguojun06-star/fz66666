@@ -35,10 +35,10 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
   const typeTagColor = typeCategory === 'fabric' ? 'blue' : typeCategory === 'lining' ? 'cyan' : 'green';
 
   return (
-    <Card size="small" style={{ background: 'var(--color-bg-subtle)' }}>
+    <Card style={{ background: 'var(--color-bg-subtle)' }}>
       <Descriptions
         column={3}
-        size="small"
+       
         colon={false}
         labelStyle={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', paddingBottom: 2 }}
         contentStyle={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', paddingBottom: 8 }}
@@ -84,7 +84,7 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
           </div>
           <Descriptions
             column={3}
-            size="small"
+           
             colon={false}
             labelStyle={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', paddingBottom: 2 }}
             contentStyle={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--primary-color)', paddingBottom: 4 }}

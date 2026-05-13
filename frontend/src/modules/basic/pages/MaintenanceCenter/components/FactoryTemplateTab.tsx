@@ -6,6 +6,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
+import { sortSizeNames } from '@/utils/api';
 import type { TemplateLibrary } from '@/types/style';
 import { typeLabel, typeColor } from '../../TemplateCenter/utils/templateUtils';
 import TemplateInlineEditor from '../../TemplateCenter/components/inlineEditor/TemplateInlineEditor';
@@ -409,7 +410,7 @@ function getDefaultContent(type: string): string {
       });
     case 'size':
       return JSON.stringify({
-        sizes: ['S', 'M', 'L', 'XL'],
+        sizes: sortSizeNames(['S', 'M', 'L', 'XL']),
         parts: [{ partName: '', measureMethod: '', tolerance: 0.5, values: {} }],
       });
     case 'bom':

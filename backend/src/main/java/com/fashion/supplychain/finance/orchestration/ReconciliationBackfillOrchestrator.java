@@ -3,6 +3,13 @@ package com.fashion.supplychain.finance.orchestration;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import org.springframework.stereotype.Service;
 
+/**
+ * 对账回填编排器 — 批量回填财务记录和物料对账记录。
+ *
+ * @deprecated 当前零消费者，为历史遗留的死代码。
+ * 计划于 2026-Q3 删除。如需回填功能，请使用对应模块的独立回填方法。
+ */
+@Deprecated
 @Service
 public class ReconciliationBackfillOrchestrator {
 

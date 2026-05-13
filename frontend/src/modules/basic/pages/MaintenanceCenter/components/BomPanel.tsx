@@ -154,7 +154,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
   };
 
   return (
-    <Card size="small" styles={{ body: { padding: '8px 12px' } }}>
+    <Card styles={{ body: { padding: '8px 12px' } }}>
       <div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>
@@ -178,7 +178,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
                 <Button
                   type="default"
                   danger
-                  size="small"
+                 
                   loading={rollbackLoading}
                   onClick={handleDirectRollback}
                   style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}

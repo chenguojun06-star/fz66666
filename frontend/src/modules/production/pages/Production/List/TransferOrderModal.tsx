@@ -157,7 +157,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           </div>
           <ResizableTable
             storageKey="production-list-transfer"
-            size="small" loading={transferBundlesLoading} dataSource={transferBundles}
+            loading={transferBundlesLoading} dataSource={transferBundles}
             rowKey="id" pagination={false}
             rowClassName={(record: any) => {
               const s = record?.status;
@@ -184,7 +184,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
                     'repaired': '已返修', 'repaired_waiting_qc': '返修待质检',
                     'completed': '已完成', 'in_progress': '生产中',
                   };
-                  return statusMap[v] || v || '-';
+                  return statusMap[v] || '未知';
                 }
               },
             ]}
@@ -261,7 +261,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
                         </td>
                         <td style={{ padding: '6px 12px', textAlign: 'right' }}>
                           <InputNumber
-                            size="small"
+                           
                             min={0}
                             precision={2}
                             placeholder={originalPrice > 0 ? `默认 ¥${originalPrice.toFixed(2)}` : '输入单价'}

@@ -166,7 +166,7 @@ const OverdueOrderTable: React.FC = () => {
         const urging = urgingId === record.id;
         return (
           <Button
-            size="small"
+           
             type="default"
             danger={!urged}
             disabled={urged || urging}

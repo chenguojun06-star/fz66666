@@ -1,5 +1,7 @@
 // TemplateCenter 公共类型和工具函数
 
+import { sortSizeNames } from '@/utils/api';
+
 export type TemplateLibraryRecord = import('@/types/style').TemplateLibrary & Record<string, unknown>;
 
 export type SizeTablePart = {
@@ -126,7 +128,7 @@ export const convertStyleSizeListToTable = (rows: Record<string, unknown>[]): Si
     const v = value == null ? '' : String(value);
     part.values = { ...(part.values || {}), [sizeName]: v };
   });
-  return { sizes: sizeSet, parts: Array.from(partMap.values()) };
+  return { sizes: sortSizeNames(sizeSet), parts: Array.from(partMap.values()) };
 };
 
 export const normalizeProcessSteps = (steps: ProcessStepRow[]) => {

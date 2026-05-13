@@ -33,7 +33,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
   };
 
   return (
-    <Card size="small" className="filter-card mb-sm">
+    <Card className="filter-card mb-sm">
       <StandardToolbar
         left={(
           <>

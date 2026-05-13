@@ -264,7 +264,7 @@ const FinanceDashboard: React.FC = () => {
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card size="small" style={{ marginBottom: 12 }}>
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice
             error={smartError}
             onFix={() => {

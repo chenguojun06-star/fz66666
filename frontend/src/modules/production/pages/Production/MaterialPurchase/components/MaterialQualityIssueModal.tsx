@@ -161,7 +161,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
         destroyOnHidden
       >
         <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
-          <Descriptions size="small" bordered column={3}>
+          <Descriptions bordered column={3}>
             <Descriptions.Item label="采购单号">{purchase?.purchaseNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="供应商">{purchase?.supplierName || '-'}</Descriptions.Item>
             <Descriptions.Item label="订单号">{purchase?.orderNo || '-'}</Descriptions.Item>
@@ -169,7 +169,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
             <Descriptions.Item label="物料名称">{purchase?.materialName || '-'}</Descriptions.Item>
             <Descriptions.Item label="到货数量">{purchase?.arrivedQuantity ?? purchase?.purchaseQuantity ?? '-'}</Descriptions.Item>
           </Descriptions>
-          <Card size="small" title="登记异常">
+          <Card title="登记异常">
             <Form form={createForm} layout="vertical">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
                 <Form.Item name="issueType" label="异常类型" rules={[{ required: true, message: '请选择异常类型' }]}>
@@ -206,10 +206,10 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
               </Space>
             </Form>
           </Card>
-          <Card size="small" title={`异常记录（${issues.length}）`}>
+          <Card title={`异常记录（${issues.length}）`}>
             <ResizableTable<MaterialQualityIssue>
               rowKey="id"
-              size="small"
+             
               pagination={false}
               loading={loading}
               dataSource={issues}
@@ -261,7 +261,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                   render: (_, record) => record.status === 'RESOLVED' ? (
                     <Tag color="success">已完成</Tag>
                   ) : (
-                    <Button type="link" size="small" onClick={() => openResolve(record)}>
+                    <Button type="link" onClick={() => openResolve(record)}>
                       处理完成
                     </Button>
                   ),

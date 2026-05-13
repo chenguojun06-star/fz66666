@@ -467,7 +467,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
               <Button
                 type="default"
                 danger
-                size="small"
+               
                 loading={rollbackLoading}
                 onClick={handleDirectRollback}
                 style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}
@@ -517,7 +517,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
   /* ─── render ─── */
   return (
     <Card
-      size="small"
+     
       styles={{ body: { padding: '8px 12px' } }}
     >
       <Form form={queryForm} component={false} />
@@ -569,7 +569,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
               onChange: (p, ps) => fetchList({ page: p, pageSize: ps }),
             }}
             scroll={{ x: 'max-content' }}
-            size="small"
+           
           />
         </>
       )}

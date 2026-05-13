@@ -183,7 +183,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
   if (loading) {
     return (
       <div style={{ padding: '12px 0', textAlign: 'center' }}>
-        <Spin size="small" />
+        <Spin />
         <span style={{ marginLeft: 8, fontSize: 12, color: '#8c8c8c' }}>
           正在分析历史数据…
         </span>
@@ -199,7 +199,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       }}>
         <span></span>
         <span>该款暂无历史订单数据</span>
-        <Button type="link" size="small" icon={<ReloadOutlined />} onClick={calcInsight}>
+        <Button type="link" icon={<ReloadOutlined />} onClick={calcInsight}>
           重新加载
         </Button>
       </div>
@@ -221,7 +221,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Button
-            type="link" size="small"
+            type="link"
             icon={<ReloadOutlined style={{ fontSize: 11 }} />}
             onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
             style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 11 }}
@@ -271,7 +271,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
       {!aiAdviceVisible && (
         <Button
-          size="small"
+         
           icon={<XiaoyunCloudAvatar size={18} active />}
           onClick={() => setAiAdviceVisible(true)}
           type="primary"
@@ -292,7 +292,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
             </span>
             <Space size={8}>
               <Button
-                type="link" size="small"
+                type="link"
                 onClick={() => setAiAdviceVisible(false)}
                 style={{ padding: 0, height: 'auto', fontSize: 11 }}
               >

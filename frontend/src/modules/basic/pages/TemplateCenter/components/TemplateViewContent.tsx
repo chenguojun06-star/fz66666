@@ -157,7 +157,7 @@ const BomView: React.FC<{ obj: unknown }> = ({ obj }) => {
   return (
     <ResizableTable
       storageKey="template-bom-preview"
-      size="small"
+     
       rowKey={(r: Record<string, unknown>) => String(r?.materialCode || r?.materialName || '')}
       pagination={false}
       scroll={{ x: 'max-content' }}
@@ -224,7 +224,7 @@ const SizeView: React.FC<{ obj: unknown }> = ({ obj }) => {
   return (
     <ResizableTable
       storageKey="template-size-preview"
-      size="small"
+     
       rowKey={(r: Record<string, unknown>) => String(r?.partName || '')}
       pagination={false}
       scroll={{ x: 'max-content' }}

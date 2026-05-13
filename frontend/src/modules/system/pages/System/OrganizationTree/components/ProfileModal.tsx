@@ -68,7 +68,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
             </div>
             <div style={{ color: 'var(--neutral-text-tertiary, #999)', fontSize: 13, marginTop: 4 }}>@{user.username}</div>
           </div>
-          <Descriptions column={1} size="small">
+          <Descriptions column={1}>
             <Descriptions.Item label="手机">{user.phone || '—'}</Descriptions.Item>
             <Descriptions.Item label="角色">{user.roleName || '—'}</Descriptions.Item>
             <Descriptions.Item label="所属部门">
@@ -96,8 +96,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
                     style={{ marginBottom: 8 }}
                   />
                   <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                    <Button size="small" onClick={() => { setResetPwdVisible(false); setResetPwdValue(''); }}>取消</Button>
-                    <Button size="small" type="primary" loading={resetPwdLoading} onClick={handleResetPwd}>确认重置</Button>
+                    <Button onClick={() => { setResetPwdVisible(false); setResetPwdValue(''); }}>取消</Button>
+                    <Button type="primary" loading={resetPwdLoading} onClick={handleResetPwd}>确认重置</Button>
                   </Space>
                 </div>
               )}

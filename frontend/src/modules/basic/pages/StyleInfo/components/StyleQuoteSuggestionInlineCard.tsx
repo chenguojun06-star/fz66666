@@ -95,7 +95,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
         <div style={{ padding: '12px 14px', background: '#fff' }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
             <Button
-              size="small"
+             
               icon={<ReloadOutlined />}
               onClick={() => { void loadSuggestion(); }}
               loading={loading}
@@ -108,7 +108,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           {!effectiveStyleNo ? (
             <div style={{ fontSize: 12, color: '#8c8c8c' }}>当前款号为空，暂无法生成报价建议</div>
           ) : loading ? (
-            <div style={{ padding: '12px 0', textAlign: 'center' }}><Spin size="small" /></div>
+            <div style={{ padding: '12px 0', textAlign: 'center' }}><Spin /></div>
           ) : error ? (
             <div style={{ fontSize: 12, color: '#cf1322' }}>{error}</div>
           ) : data ? (
@@ -142,7 +142,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
 
               {Array.isArray(data.recentOrders) && data.recentOrders.length > 0 ? (
                 <ResizableTable
-                  size="small"
+                 
                   rowKey="orderNo"
                   pagination={false}
                   dataSource={data.recentOrders.slice(0, 5)}

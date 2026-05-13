@@ -162,7 +162,7 @@ const EcSalesRevenue: React.FC = () => {
       dataIndex: 'status',
       width: 90,
       render: (v: string) => {
-        const info = STATUS_MAP[v] ?? { label: v, color: 'default' };
+        const info = STATUS_MAP[v] ?? { label: '未知', color: 'default' };
         return <Tag color={info.color}>{info.label}</Tag>;
       },
     },
@@ -180,7 +180,7 @@ const EcSalesRevenue: React.FC = () => {
               onConfirm={() => handleAction(r.id, 'confirm')}
             >
               <Button
-                size="small"
+               
                 type="primary"
                 ghost
                 loading={actionLoading === r.id}
@@ -198,7 +198,7 @@ const EcSalesRevenue: React.FC = () => {
               onConfirm={() => handleAction(r.id, 'reconcile')}
             >
               <Button
-                size="small"
+               
                 type="primary"
                 loading={actionLoading === r.id}
               >
@@ -220,7 +220,7 @@ const EcSalesRevenue: React.FC = () => {
         {/* 汇总卡片 */}
         <Row gutter={16}>
           <Col span={8}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title={<><ClockCircleOutlined style={{ color: 'orange', marginRight: 4 }} />待核账</>}
                 value={fmtAmt(summary?.pendingAmount)}
@@ -230,7 +230,7 @@ const EcSalesRevenue: React.FC = () => {
             </Card>
           </Col>
           <Col span={8}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title={<><CheckCircleOutlined style={{ color: '#1677ff', marginRight: 4 }} />已核账</>}
                 value={fmtAmt(summary?.confirmedAmount)}
@@ -240,7 +240,7 @@ const EcSalesRevenue: React.FC = () => {
             </Card>
           </Col>
           <Col span={8}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title={<><DollarOutlined style={{ color: '#52c41a', marginRight: 4 }} />已入账净收入</>}
                 value={fmtAmt(summary?.netIncome)}
@@ -252,7 +252,7 @@ const EcSalesRevenue: React.FC = () => {
         </Row>
 
         {/* 筛选栏 */}
-        <Card size="small">
+        <Card>
           <Space wrap>
             <Select
               placeholder="全部平台"
@@ -293,14 +293,14 @@ const EcSalesRevenue: React.FC = () => {
         </Card>
 
         {/* 数据表格 */}
-        <Card size="small" style={{ overflow: 'hidden' }}>
+        <Card style={{ overflow: 'hidden' }}>
           <ResizableTable<EcRevenueRecord>
             rowKey="id"
             loading={loading}
             dataSource={records}
             columns={columns}
             scroll={{ x: 1100 }}
-            size="small"
+           
             pagination={{
               current: filters.page,
               pageSize: filters.pageSize,

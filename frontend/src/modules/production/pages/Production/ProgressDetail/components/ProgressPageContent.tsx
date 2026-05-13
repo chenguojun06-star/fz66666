@@ -193,7 +193,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   if (embedded) {
     return (
       <>
-        <Card size="small" className="filter-card mb-sm">
+        <Card className="filter-card mb-sm">
           <EmbeddedFilterBar {...filterBarProps} onReset={() => { setQueryParams({ page: 1, pageSize: queryParams.pageSize, keyword: '', includeScrapped: undefined, excludeTerminal: true }); setDateRange(null); }} />
         </Card>
         {alerts}

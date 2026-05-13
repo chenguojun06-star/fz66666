@@ -112,7 +112,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
             >
               <Button
                 type="primary"
-                size="small"
+               
                 loading={batchCompleting}
                 disabled={selectedCompletableCount === 0}
               >
@@ -143,7 +143,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
         dataSource={flatData}
         loading={loading}
         rowKey="key"
-        size="small"
+       
         scroll={{ x: 900 }}
         rowSelection={rowSelection}
         pagination={{

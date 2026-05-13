@@ -278,7 +278,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
                     </div>
                   )}
                   {item.actionLabel && (
-                    <Button size="small" type="link" className="insight-card-action">
+                    <Button type="link" className="insight-card-action">
                       {item.actionLabel} →
                     </Button>
                   )}

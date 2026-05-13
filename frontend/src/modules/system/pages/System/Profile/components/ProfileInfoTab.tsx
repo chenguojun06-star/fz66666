@@ -454,7 +454,7 @@ const ProfileInfoTab: React.FC = () => {
             </div>
 
             {/* 头像 + 主题选择 */}
-            <Card size="small" className="filter-card mb-sm">
+            <Card className="filter-card mb-sm">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <ImageUploadBox

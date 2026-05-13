@@ -175,7 +175,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'progressStage',
       width: 120,
       render: (v: string, row: WorkflowRow) => (
-        <Select size="small" value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'progressStage', val || '')}
+        <Select value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'progressStage', val || '')}
           options={['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'].map(s => ({ value: s, label: s }))}
         />
       ),
@@ -195,7 +195,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'difficulty',
       width: 90,
       render: (v: string, row: WorkflowRow) => (
-        <Select size="small" value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'difficulty', val || '')}
+        <Select value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'difficulty', val || '')}
           options={[{ value: '易', label: '易' }, { value: '中', label: '中' }, { value: '难', label: '难' }]}
         />
       ),
@@ -206,7 +206,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'standardTime',
       width: 90,
       render: (v: number, row: WorkflowRow) => (
-        <InputNumber size="small" value={v || 0} style={{ width: '100%' }} min={0} onChange={(val) => update(row._key, 'standardTime', typeof val === 'number' ? val : 0)} />
+        <InputNumber value={v || 0} style={{ width: '100%' }} min={0} onChange={(val) => update(row._key, 'standardTime', typeof val === 'number' ? val : 0)} />
       ),
     },
     {
@@ -215,7 +215,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'unitPrice',
       width: 100,
       render: (v: number, row: WorkflowRow) => (
-        <InputNumber size="small" value={v} style={{ width: '100%' }} min={0} precision={2} step={0.01} prefix="¥" onChange={(val) => update(row._key, 'unitPrice', typeof val === 'number' ? val : 0)} />
+        <InputNumber value={v} style={{ width: '100%' }} min={0} precision={2} step={0.01} prefix="¥" onChange={(val) => update(row._key, 'unitPrice', typeof val === 'number' ? val : 0)} />
       ),
     },
     {
@@ -223,7 +223,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'action',
       width: 50,
       render: (_: any, row: WorkflowRow) => (
-        <Button size="small" type="text" danger icon={<DeleteOutlined />} disabled={rows.length <= 1} onClick={() => setRows(prev => prev.filter(r => r._key !== row._key))} />
+        <Button type="text" danger icon={<DeleteOutlined />} disabled={rows.length <= 1} onClick={() => setRows(prev => prev.filter(r => r._key !== row._key))} />
       ),
     },
   ];
@@ -251,7 +251,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
         </div>
         <ResizableTable<WorkflowRow>
           storageKey="cutting-workflow-table"
-          size="small"
+         
           columns={columns}
           dataSource={rows}
           rowKey="_key"

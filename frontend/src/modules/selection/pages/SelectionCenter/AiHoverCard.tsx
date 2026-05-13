@@ -58,7 +58,7 @@ const AiHoverCard: React.FC<{
           <Progress
             percent={record.trendScore}
             strokeColor={record.trendScore! >= 75 ? '#52c41a' : record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f'}
-            size="small"
+           
             style={{ marginBottom: 8 }}
           />
           {record.trendScoreReason && (

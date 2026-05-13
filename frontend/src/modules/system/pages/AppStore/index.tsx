@@ -55,14 +55,14 @@ const AppStore: React.FC = () => {
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontWeight: 600, fontSize: 15 }}><ApiOutlined style={{ marginRight: 6 }} />我的已开通应用{needSetup.length > 0 && <Tag color="orange" style={{ marginLeft: 8, fontSize: 11 }}>{needSetup.length} 个待配置</Tag>}</div>
-          <Button size="small" type="link" onClick={() => navigate('/system/tenant?tab=apps')}>管理全部 →</Button>
+          <Button type="link" onClick={() => navigate('/system/tenant?tab=apps')}>管理全部 →</Button>
         </div>
         <Row gutter={[16, 16]}>
           {myApps.map(app => {
             const cfg = MODULE_CONFIG[app.appCode] || { icon: '', color: 'var(--color-text-tertiary)', urlHint: '' };
             return (
               <Col xs={24} sm={12} md={6} key={app.appCode}>
-                <Card size="small" hoverable style={{ borderTop: `3px solid ${cfg.color}`, background: app.isExpired ? '#fafafa' : '#fff' }} onClick={() => navigate('/system/tenant?tab=apps')}>
+                <Card hoverable style={{ borderTop: `3px solid ${cfg.color}`, background: app.isExpired ? '#fafafa' : '#fff' }} onClick={() => navigate('/system/tenant?tab=apps')}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 24 }}>{cfg.icon}</span>
                     <div><div style={{ fontWeight: 600, fontSize: 14 }}>{app.appName}</div><Tag color={app.isExpired ? 'default' : app.configured ? 'success' : 'warning'} style={{ fontSize: 11 }}>{app.isExpired ? '已过期' : app.configured ? ' 运行中' : ' 待配置'}</Tag></div>
@@ -92,9 +92,9 @@ const AppStore: React.FC = () => {
       <ResizableModal title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 20 }}>{selectedApp?.appIcon}</span><span style={{ fontSize: 15 }}>{selectedApp?.appName}</span>{isAppActivated(selectedApp?.appCode || '') && <Tag color="green">已开通</Tag>}</div>}
         open={detailVisible} onCancel={() => setDetailVisible(false)} width="40vw"
         footer={isAppActivated(selectedApp?.appCode || '') ? [<Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate(isEcApp(selectedApp?.appCode || '') ? '/integration/center' : '/system/tenant?tab=apps'); }}>管理配置</Button>] : [
-          <Button key="cancel" size="small" onClick={() => setDetailVisible(false)}>取消</Button>,
-          selectedApp?.trialDays ? <Button key="trial" size="small" icon={<GiftOutlined />} loading={trialLoading} onClick={handleTrialClick} style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>一键开通试用 {selectedApp.trialDays} 天</Button> : null,
-          <Button key="buy" size="small" type="primary" icon={<ShoppingCartOutlined />} onClick={handleBuyClick}>立即购买</Button>,
+          <Button key="cancel" onClick={() => setDetailVisible(false)}>取消</Button>,
+          selectedApp?.trialDays ? <Button key="trial" icon={<GiftOutlined />} loading={trialLoading} onClick={handleTrialClick} style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>一键开通试用 {selectedApp.trialDays} 天</Button> : null,
+          <Button key="buy" type="primary" icon={<ShoppingCartOutlined />} onClick={handleBuyClick}>立即购买</Button>,
         ]}>
         <div style={{ padding: '8px 0' }}>
           <Alert type="success" showIcon icon={<RocketOutlined />} style={{ marginBottom: 12, fontSize: 12 }} title={<span style={{ fontSize: 12 }}><strong>智能对接：</strong>开通后系统自动生成API凭证，您只需填写您的接口地址即可使用</span>} />
@@ -127,7 +127,7 @@ const AppStore: React.FC = () => {
       {/* 一键开通设置向导 */}
       <ResizableModal title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><RocketOutlined style={{ color: 'var(--color-success)' }} /><span>{wizardData.appName} - 智能配置向导</span></div>}
         open={wizardVisible} onCancel={handleSetupSkip} width="40vw" footer={null} maskClosable={false}>
-        <Steps current={wizardStep} size="small" style={{ marginBottom: 20, padding: '0 20px' }} items={[{ title: 'API凭证' }, { title: '配置地址' }, { title: '完成' }]} />
+        <Steps current={wizardStep} style={{ marginBottom: 20, padding: '0 20px' }} items={[{ title: 'API凭证' }, { title: '配置地址' }, { title: '完成' }]} />
         {wizardStep === 0 && (<div>
           {wizardData.appKey && wizardData.appSecret ? (<>
             <Alert type="success" showIcon icon={<CheckCircleOutlined />} title="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。" style={{ marginBottom: 16 }} />
@@ -142,7 +142,7 @@ const AppStore: React.FC = () => {
         {wizardStep === 1 && (<div>
           {isEcApp(wizardData.appCode || '') ? (<>
             <Alert type="info" showIcon title={`配置${EC_PLATFORM_MAP[wizardData.appCode || '']?.label || '电商平台'}对接凭证`} description="填写平台颁发的AppKey和AppSecret，系统将自动接收平台推单并回传物流信息。" style={{ marginBottom: 16 }} />
-            <Form form={setupForm} layout="vertical" size="small">
+            <Form form={setupForm} layout="vertical">
               <Form.Item label="店铺名称" name="shopName"><Input placeholder="请输入店铺名称" /></Form.Item>
               <Form.Item label="AppKey / Client ID" name="ecAppKey" rules={[{ required: true, message: '请输入AppKey' }]}><Input placeholder="平台颁发的AppKey或Client ID" /></Form.Item>
               <Form.Item label="AppSecret / Client Secret" name="ecAppSecret" rules={[{ required: true, message: '请输入AppSecret' }]}><Input.Password placeholder="平台颁发的AppSecret或Client Secret" autoComplete="off" /></Form.Item>
@@ -151,7 +151,7 @@ const AppStore: React.FC = () => {
             </Form></>
           ) : (<>
             <Alert type="info" showIcon title="只需填写您的接口地址，内部API已全部自动配置好" description="我们会将数据推送到您填写的回调地址。如果您需要主动调用我们的API，使用上一步的凭证即可。" style={{ marginBottom: 16 }} />
-            <Form form={setupForm} layout="vertical" size="small">
+            <Form form={setupForm} layout="vertical">
               <Form.Item label={<span>回调地址（Webhook）<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>我们会向此地址推送数据</Text></span>} name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder={MODULE_CONFIG[wizardData.appCode || '']?.urlHint || 'https://your-system.com/webhook/callback'} prefix={<LinkOutlined />} /></Form.Item>
               <Form.Item label={<span>您的API地址<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>用于我们主动调用您的系统</Text></span>} name="externalApiUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder="https://your-system.com/api" prefix={<ApiOutlined />} /></Form.Item>
             </Form>
@@ -165,8 +165,8 @@ const AppStore: React.FC = () => {
           <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}> 对接配置完成！</div>
           <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 24 }}>{wizardData.appName} 已开通{wizardData.trialDays ? ` ${wizardData.trialDays} 天试用` : ''}，API端点已就绪。</div>
           <Row gutter={16} style={{ textAlign: 'left', marginBottom: 24 }}>
-            <Col span={12}><Card size="small" style={{ borderLeft: '3px solid var(--color-success)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 已完成</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>API凭证自动生成</li><li>内部端点自动匹配</li><li>接口地址已配置</li></ul></Card></Col>
-            <Col span={12}><Card size="small" style={{ borderLeft: '3px solid var(--color-primary)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 下一步</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>查看对接教程了解详情</li><li>在您的系统中集成API</li><li>发送第一个请求测试</li></ul></Card></Col>
+            <Col span={12}><Card style={{ borderLeft: '3px solid var(--color-success)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 已完成</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>API凭证自动生成</li><li>内部端点自动匹配</li><li>接口地址已配置</li></ul></Card></Col>
+            <Col span={12}><Card style={{ borderLeft: '3px solid var(--color-primary)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 下一步</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>查看对接教程了解详情</li><li>在您的系统中集成API</li><li>发送第一个请求测试</li></ul></Card></Col>
           </Row>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
             <Button onClick={() => setWizardVisible(false)}>关闭</Button>
@@ -188,7 +188,7 @@ const AppStore: React.FC = () => {
         open={orderVisible} onCancel={() => setOrderVisible(false)} onOk={handleOrderSubmit} width="40vw" okText="提交意向" cancelText="取消" confirmLoading={orderSubmitting}>
         <div style={{ padding: '8px 0' }}>
           <Alert type="info" showIcon style={{ marginBottom: 12, fontSize: 12 }} title="提交后，商务团队将在1-3个工作日内联系您确认并完成开通。" />
-          <Form form={form} layout="vertical" size="small" initialValues={{ subscriptionType: 'MONTHLY', userCount: 1, invoiceRequired: false }}>
+          <Form form={form} layout="vertical" initialValues={{ subscriptionType: 'MONTHLY', userCount: 1, invoiceRequired: false }}>
             <Form.Item name="subscriptionType" label="订阅类型"><Select>{selectedApp?.trialDays ? <Select.Option value="TRIAL">免费试用 {selectedApp.trialDays} 天</Select.Option> : null}<Select.Option value="MONTHLY">月付 - ¥{selectedApp?.priceMonthly}/月</Select.Option><Select.Option value="YEARLY">年付 - ¥{selectedApp?.priceYearly}/年</Select.Option><Select.Option value="PERPETUAL">买断 - ¥{selectedApp?.priceOnce}</Select.Option></Select></Form.Item>
             <Form.Item name="userCount" label="用户数量" rules={[{ required: true }]}><InputNumber min={1} max={999} style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="contactName" label="联系人" rules={[{ required: true, message: '请输入联系人' }]}><Input placeholder="请输入联系人姓名" /></Form.Item>

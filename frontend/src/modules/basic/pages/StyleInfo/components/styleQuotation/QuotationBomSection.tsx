@@ -100,7 +100,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         </span>
       }
 
-      size="small"
+     
       style={{ marginBottom: 12 }}
       styles={{ body: { padding: '8px' } }}
     >

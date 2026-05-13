@@ -26,7 +26,7 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
 }) => (
   <>
     {showSmartErrorNotice && smartError ? (
-      <Card size="small" className="mb-sm">
+      <Card className="mb-sm">
         <SmartErrorNotice error={smartError} onFix={onFixError} />
       </Card>
     ) : null}
@@ -40,7 +40,7 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
           type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
           showIcon
           action={(
-            <Button size="small" type="text" onClick={() => setBottleneckBannerVisible(false)}>
+            <Button type="text" onClick={() => setBottleneckBannerVisible(false)}>
               关闭
             </Button>
           )}

@@ -303,7 +303,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
               </Form.Item>
             </Form>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button danger type="default" size="small" loading={returnDescSaving} onClick={handleReturnDescSave} style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
+              <Button danger type="default" loading={returnDescSaving} onClick={handleReturnDescSave} style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
             </div>
           </div>
           <div style={directCardStyle}>
@@ -330,7 +330,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
           </Form.Item>
         </Form>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>
-          <Button size="small" loading={cancelLocking} onClick={async () => {
+          <Button loading={cancelLocking} onClick={async () => {
             if (!directRow?.id) return;
             setCancelLocking(true);
             try {
@@ -342,7 +342,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
               setCancelLocking(false);
             }
           }}>取消修改</Button>
-          <Button type="primary" size="small" loading={editSaving} onClick={handleEditSave}>保存</Button>
+          <Button type="primary" loading={editSaving} onClick={handleEditSave}>保存</Button>
         </div>
       </div>
     );
@@ -356,7 +356,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
         { key: 'production', items: { label: '生产单量', value: stats.productionCount } },
       ]} />
 
-      <Card size="small" className="filter-card" style={{ marginBottom: 16 }}>
+      <Card className="filter-card" style={{ marginBottom: 16 }}>
         <StandardToolbar
           left={<Space wrap>
             <Input placeholder="款号" style={{ width: 180 }} onChange={(e) => setQueryParams(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))} />

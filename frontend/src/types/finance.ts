@@ -216,3 +216,21 @@ export interface PayrollOperatorProcessSummaryRow {
   delegateTargetName?: string;  // 被指派人/工厂名称
   actualOperatorName?: string;  // 实际操作员（谁扫的码）
 }
+
+export interface PayrollSettlement extends Record<string, unknown> {
+  id?: string;
+  operatorId?: string;
+  operatorName?: string;
+  totalAmount?: number;
+  paidAmount?: number;
+  remainingAmount?: number;
+  deductionAmount?: number;
+  advanceAmount?: number;
+  paymentStatus?: 'unpaid' | 'partially_paid' | 'fully_paid';
+  totalQuantity?: number;
+  recordCount?: number;
+  orderCount?: number;
+  remark?: string;
+  approvalTime?: string;
+  paymentTime?: string;
+}

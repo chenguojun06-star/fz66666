@@ -21,7 +21,7 @@ const reviewStatusTag = (status?: string | null) => {
   if (status === 'PASS')   return <Tag color="success">通过</Tag>;
   if (status === 'REWORK') return <Tag color="warning">需修改</Tag>;
   if (status === 'REJECT') return <Tag color="error">不通过</Tag>;
-  return <Tag>{status}</Tag>;
+  return <Tag>未知</Tag>;
 };
 
 interface Props {
@@ -283,13 +283,13 @@ const StyleProductionTab: React.FC<Props> = ({
           </div>
           <Space size={8}>
             {(sampleCompleted || !!productionCompletedTime) && (
-              <Button size="small" onClick={openReviewModal}>
+              <Button onClick={openReviewModal}>
                 {sampleReviewStatus ? '修改审核结论' : '记录审核结论'}
               </Button>
             )}
             {sampleReviewStatus === 'PASS' && !completedTime && (
               <Button
-                size="small"
+               
                 type="primary"
                 onClick={() => navigate(withQuery('/warehouse/sample', {
                   styleId: String(styleId),
@@ -333,7 +333,7 @@ const StyleProductionTab: React.FC<Props> = ({
         <Space size={8} wrap>
           {!productionReqLocked && (
             <Button
-              size="small"
+             
               type="primary"
               loading={productionReqSaving}
               onClick={onProductionReqSave}
@@ -341,14 +341,14 @@ const StyleProductionTab: React.FC<Props> = ({
               保存生产要求
             </Button>
           )}
-          <Button size="small" onClick={downloadWorkorder}>
+          <Button onClick={downloadWorkorder}>
             下载制单
           </Button>
-          <Button size="small" onClick={printWorkorder}>
+          <Button onClick={printWorkorder}>
             打印制单
           </Button>
           {!productionReqLocked && (
-            <Button size="small" onClick={handleOcrOpen}>
+            <Button onClick={handleOcrOpen}>
               AI识别工艺单
             </Button>
           )}

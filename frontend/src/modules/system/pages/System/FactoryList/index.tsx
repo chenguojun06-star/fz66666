@@ -342,7 +342,7 @@ const FactoryList: React.FC = () => {
       <PageLayout
         title={managementTab === 'customer' ? '客户管理' : '供应商管理'}
         headerContent={showSmartErrorNotice && smartError ? (
-          <Card size="small" style={{ marginBottom: 12 }}>
+          <Card style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={() => { void fetchFactories(); }} />
           </Card>
         ) : null}

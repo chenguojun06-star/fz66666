@@ -224,7 +224,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       dataIndex: 'auditStatus',
       width: 100,
       render: (v: string) => {
-        const cfg = AUDIT_STATUS_MAP[v] ?? { color: 'default', text: v };
+        const cfg = AUDIT_STATUS_MAP[v] ?? { color: 'default', text: '未知' };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
       },
     },
@@ -233,7 +233,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       dataIndex: 'financeStatus',
       width: 100,
       render: (v: string) => {
-        const cfg = FINANCE_STATUS_MAP[v] ?? { color: 'default', text: v };
+        const cfg = FINANCE_STATUS_MAP[v] ?? { color: 'default', text: '未知' };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
       },
     },
@@ -244,7 +244,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       ellipsis: true,
       render: (v: string | undefined, record: LegacyPickupRecord) => (
         v ? (
-          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => actions.onOpenReceivable(record)}>
+          <Button type="link" style={{ padding: 0 }} onClick={() => actions.onOpenReceivable(record)}>
             {v}
           </Button>
         ) : '-'
@@ -255,7 +255,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       dataIndex: 'receivableStatus',
       width: 110,
       render: (v?: string) => {
-        const cfg = RECEIVABLE_STATUS_MAP[v || ''] ?? { color: 'default', text: v || '-' };
+        const cfg = RECEIVABLE_STATUS_MAP[v || ''] ?? { color: 'default', text: '未知' };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
       },
     },
@@ -280,7 +280,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
         <Space size={4}>
           {record.receivableId && (
             <Button
-              size="small"
+             
               onClick={() => actions.onOpenReceivable(record)}
             >
               应收详情
@@ -288,7 +288,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
           )}
           {record.auditStatus === 'PENDING' && (
             <Button
-              size="small"
+             
               type="primary"
               onClick={() => actions.onAudit(record)}
             >
@@ -297,7 +297,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
           )}
           {record.movementType !== 'INBOUND' && record.auditStatus === 'APPROVED' && record.receivableNo == null && (
             <Button
-              size="small"
+             
               onClick={() => actions.onFinance(record)}
             >
               补录账单
@@ -312,7 +312,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
               cancelText="取消"
               okButtonProps={{ danger: true }}
             >
-              <Button size="small" danger>作废</Button>
+              <Button danger>作废</Button>
             </Popconfirm>
           )}
         </Space>

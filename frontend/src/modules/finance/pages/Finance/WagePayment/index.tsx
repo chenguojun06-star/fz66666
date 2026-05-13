@@ -107,7 +107,7 @@ const PaymentCenterPage: React.FC = () => {
   return (
     <>
         {data.showSmartErrorNotice && data.smartError ? (
-          <Card size="small" style={{ marginBottom: 12 }}>
+          <Card style={{ marginBottom: 12 }}>
             <SmartErrorNotice
               error={data.smartError}
               onFix={() => {
@@ -200,7 +200,7 @@ const PaymentCenterPage: React.FC = () => {
                           <Button
                             key={opt.value}
                             type={data.payableBizType === opt.value ? 'primary' : 'default'}
-                            size="small"
+                           
                             onClick={() => { data.setPayableBizType(opt.value); data.setSelectedPayableKeys([]); }}
                           >
                             {opt.label}
@@ -208,7 +208,7 @@ const PaymentCenterPage: React.FC = () => {
                         ))}
                         <span style={{ color: 'var(--color-text-secondary)', marginLeft: 8 }}>时间：</span>
                         <RangePicker
-                          size="small"
+                         
                           allowClear
                           value={data.payableDateRange[0] && data.payableDateRange[1] ? [dayjs(data.payableDateRange[0], 'YYYY-MM-DD'), dayjs(data.payableDateRange[1], 'YYYY-MM-DD')] : null}
                           onChange={(dates) => {
@@ -221,7 +221,7 @@ const PaymentCenterPage: React.FC = () => {
                           }}
                         />
                         <Button
-                          size="small"
+                         
                           icon={<DownloadOutlined />}
                           style={{ marginLeft: 8 }}
                           onClick={() => {
@@ -250,13 +250,13 @@ const PaymentCenterPage: React.FC = () => {
                             </span>
                             <Button
                               type="primary"
-                              size="small"
+                             
                               loading={data.batchPaySubmitting}
                               onClick={data.handleBatchPay}
                             >
                               批量付款
                             </Button>
-                            <Button size="small" onClick={() => data.setSelectedPayableKeys([])}>
+                            <Button onClick={() => data.setSelectedPayableKeys([])}>
                               清空选择
                             </Button>
                           </>
@@ -439,8 +439,8 @@ const PaymentCenterPage: React.FC = () => {
           <div style={{ padding: '0 8px' }}>
             {/* 业务信息提示 */}
             {pay.currentPayable && (
-              <Card size="small" style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
-                <Descriptions size="small" column={2}>
+              <Card style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+                <Descriptions column={2}>
                   <Descriptions.Item label="业务类型">
                     <Tag color={BIZ_TYPE_MAP[pay.currentPayable.bizType]?.color}>
                       {BIZ_TYPE_MAP[pay.currentPayable.bizType]?.text}
@@ -528,7 +528,7 @@ const PaymentCenterPage: React.FC = () => {
                     收款账户
                     <Button
                       type="link"
-                      size="small"
+                     
                       onClick={() => {
                         const pt = pay.payForm.getFieldValue('payeeType');
                         const pi = pay.payForm.getFieldValue('payeeId');
@@ -625,12 +625,12 @@ const PaymentCenterPage: React.FC = () => {
         >
           {detailRecord && (
             <div style={{ padding: '0 8px' }}>
-              <Descriptions bordered column={2} size="small">
+              <Descriptions bordered column={2}>
                 <Descriptions.Item label="支付单号">{detailRecord.paymentNo}</Descriptions.Item>
                 <Descriptions.Item label="状态">
                   {(() => {
                     const s = PAYMENT_STATUS_MAP[detailRecord.status];
-                    return s ? <Tag color={s.color}>{s.text}</Tag> : detailRecord.status;
+                    return s ? <Tag color={s.color}>{s.text}</Tag> : '未知';
                   })()}
                 </Descriptions.Item>
                 <Descriptions.Item label="业务类型">
@@ -728,7 +728,7 @@ const PaymentCenterPage: React.FC = () => {
         width={600}
       >
         {amountDetailTarget && (
-          <Descriptions column={2} bordered size="small">
+          <Descriptions column={2} bordered>
             <Descriptions.Item label="业务类型">
               {BIZ_TYPE_MAP[amountDetailTarget.bizType]?.text || amountDetailTarget.bizType}
             </Descriptions.Item>

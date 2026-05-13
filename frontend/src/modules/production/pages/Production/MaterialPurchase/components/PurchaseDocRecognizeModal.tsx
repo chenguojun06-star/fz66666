@@ -144,7 +144,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
       render: (_: number, r: RecognizedItem) =>
         r.matched && r.purchaseId ? (
           <InputNumber
-            size="small"
+           
             min={0}
             style={{ width: 90 }}
             value={editedQtys[r.purchaseId] ?? r.quantity}
@@ -220,7 +220,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
                 已匹配采购记录 <strong>{matchedCount}</strong> 项（可编辑数量后点击应用）
               </div>
               <ResizableTable
-                size="small"
+               
                 rowKey={(r: RecognizedItem) =>
                   r.purchaseId || r.materialCode || r.materialName
                 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Tooltip } from 'antd';
+import { Button, Tag, Tooltip } from 'antd';
 import {
   DownOutlined,
   RightOutlined,
@@ -23,7 +23,6 @@ interface TreeItemProps {
   onDelete: (record: OrganizationUnit) => void;
   onAddMember: (node: OrganizationUnit) => void;
   onShowQRCode: (node: OrganizationUnit) => void;
-  /** 工厂账号只读模式：隐藏新增/编辑/删除等操作按钮 */
   readOnly?: boolean;
 }
 
@@ -51,35 +50,40 @@ export const TreeItem: React.FC<TreeItemProps> = ({
         </span>
         <span className="tree-node-label" onClick={() => onSelect(String(node.id))}>
           {isFactory
-            ? <BankOutlined style={{ color: '#1677ff', marginRight: 4 }} />
-            : <ApartmentOutlined style={{ color: '#722ed1', marginRight: 4 }} />
+            ? <BankOutlined style={{ color: 'var(--primary-color, #1677ff)', marginRight: 4 }} />
+            : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, #722ed1)', marginRight: 4 }} />
           }
           <span className="tree-node-name">{node.unitName}</span>
+          {node.managerUserName && (
+            <Tag color="blue" style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>
+              负责人: {node.managerUserName}
+            </Tag>
+          )}
         </span>
         <div className="tree-item-actions">
           {!readOnly && (isExternal ? (
             <Tooltip title="注册二维码">
-              <Button type="text" size="small" icon={<QrcodeOutlined />}
+              <Button type="text" icon={<QrcodeOutlined />}
                 onClick={e => { e.stopPropagation(); onShowQRCode(node); }} />
             </Tooltip>
           ) : (
             <Tooltip title="添加成员">
-              <Button type="text" size="small" icon={<UserAddOutlined />}
+              <Button type="text" icon={<UserAddOutlined />}
                 onClick={e => { e.stopPropagation(); onAddMember(node); }} />
             </Tooltip>
           ))}
           {!readOnly && (!isFactory || isExternal) && (
             <>
               <Tooltip title="新增下级">
-                <Button type="text" size="small" icon={<PlusOutlined />}
+                <Button type="text" icon={<PlusOutlined />}
                   onClick={e => { e.stopPropagation(); onAdd(node); }} />
               </Tooltip>
               <Tooltip title="编辑">
-                <Button type="text" size="small" icon={<EditOutlined />}
+                <Button type="text" icon={<EditOutlined />}
                   onClick={e => { e.stopPropagation(); onEdit(node); }} />
               </Tooltip>
               <Tooltip title="删除">
-                <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                <Button type="text" danger icon={<DeleteOutlined />}
                   onClick={e => { e.stopPropagation(); onDelete(node); }} />
               </Tooltip>
             </>

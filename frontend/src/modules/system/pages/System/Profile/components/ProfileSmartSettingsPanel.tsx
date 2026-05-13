@@ -144,15 +144,15 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
         </Typography.Text>
         <DownOutlined style={{ marginLeft: 'auto', fontSize: 11, transition: 'transform 0.2s', transform: smartFlagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
       </div>
-      {!smartFlagsCollapsed && <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+      {!smartFlagsCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
         <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
             开关已升级为按租户持久化保存，同租户成员读取同一套配置。
           </Typography.Text>
           <Space>
-            <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={onEnableAll}>全部开启</Button>
-            <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={onDisableAll}>全部关闭</Button>
-            <Button size="small" disabled={!canManageSmartFlags || savingSmartFlags} onClick={onResetFlags}>恢复默认</Button>
+            <Button disabled={!canManageSmartFlags || savingSmartFlags} onClick={onEnableAll}>全部开启</Button>
+            <Button disabled={!canManageSmartFlags || savingSmartFlags} onClick={onDisableAll}>全部关闭</Button>
+            <Button disabled={!canManageSmartFlags || savingSmartFlags} onClick={onResetFlags}>恢复默认</Button>
           </Space>
         </Space>
 
@@ -199,16 +199,16 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             （决定 AI 更偏交期、利润还是回款）
           </Typography.Text>
         </div>
-        <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+        <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
           <Spin spinning={loadingSmartProfile || savingSmartProfile}>
             <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
               <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 未手工配置时，系统会根据订单延期、异常扫码和结算节奏自动学习一套偏好。
               </Typography.Text>
               <Space>
-                <Button size="small" disabled={!canManageSmartFlags || savingSmartProfile} onClick={onRefreshProfile}>刷新建议</Button>
-                <Button size="small" disabled={!canManageSmartFlags || savingSmartProfile} onClick={onResetProfile}>恢复学习建议</Button>
-                <Button type="primary" size="small" disabled={!canManageSmartFlags || savingSmartProfile} onClick={onSaveProfile}>保存偏好</Button>
+                <Button disabled={!canManageSmartFlags || savingSmartProfile} onClick={onRefreshProfile}>刷新建议</Button>
+                <Button disabled={!canManageSmartFlags || savingSmartProfile} onClick={onResetProfile}>恢复学习建议</Button>
+                <Button type="primary" disabled={!canManageSmartFlags || savingSmartProfile} onClick={onSaveProfile}>保存偏好</Button>
               </Space>
             </Space>
 
@@ -282,15 +282,15 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
           </Typography.Text>
           <DownOutlined style={{ marginLeft: 'auto', fontSize: 11, transition: 'transform 0.2s', transform: miniprogramMenuCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
         </div>
-        {!miniprogramMenuCollapsed && <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+        {!miniprogramMenuCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
           <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
             <Typography.Text type="secondary" style={{ fontSize: 13 }}>
               控制小程序「我的」页面各菜单入口的显示与隐藏，关闭后该租户下所有用户均不可见。
             </Typography.Text>
             <Space>
-              <Button size="small" disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onEnableAllMiniprogramMenus}>全部显示</Button>
-              <Button size="small" disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onDisableAllMiniprogramMenus}>全部隐藏</Button>
-              <Button size="small" disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onResetMiniprogramMenus}>恢复默认</Button>
+              <Button disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onEnableAllMiniprogramMenus}>全部显示</Button>
+              <Button disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onDisableAllMiniprogramMenus}>全部隐藏</Button>
+              <Button disabled={!canManageSmartFlags || savingMiniprogramMenuFlags} onClick={onResetMiniprogramMenus}>恢复默认</Button>
             </Space>
           </Space>
 

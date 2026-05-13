@@ -44,7 +44,7 @@ const getStatusConfig = (status?: string) => {
     case MATERIAL_PURCHASE_STATUS.CANCELLED:
       return { color: 'error', text: '已取消' };
     default:
-      return { color: 'default', text: status || '-' };
+      return { color: 'default', text: '未知' };
   }
 };
 
@@ -340,7 +340,7 @@ const MaterialPurchaseDetail: React.FC = () => {
     <>
       <div style={{ padding: isMobile ? 12 : 24 }}>
         {showSmartErrorNotice && smartError ? (
-          <Card size="small" style={{ marginBottom: 12 }}>
+          <Card style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} />
           </Card>
         ) : null}
@@ -388,7 +388,7 @@ const MaterialPurchaseDetail: React.FC = () => {
             <Spin size="large" />
           </div>
         ) : !order ? (
-          <Card size="small" style={{ marginBottom: 16 }}>
+          <Card style={{ marginBottom: 16 }}>
             <Alert
               title={purchaseList.length > 0 && (purchaseList[0] as any)?.purchaseNo?.startsWith('MP') ? '样衣开发款采购' : '订单不存在或已删除'}
               description={
@@ -414,7 +414,7 @@ const MaterialPurchaseDetail: React.FC = () => {
             )}
           </Card>
         ) : headerOrder ? (
-          <Card size="small" style={{ marginBottom: 16 }}>
+          <Card style={{ marginBottom: 16 }}>
             <ProductionOrderHeader
               order={order}
               orderNo={headerOrderNo}
@@ -480,7 +480,7 @@ const MaterialPurchaseDetail: React.FC = () => {
         ) : null}
 
         {/* 采购单列表 */}
-        <Card size="small" title={`采购单明细（共 ${purchaseList.length} 项）`}>
+        <Card title={`采购单明细（共 ${purchaseList.length} 项）`}>
           <ResizableTable
             columns={columns}
             dataSource={purchaseList}

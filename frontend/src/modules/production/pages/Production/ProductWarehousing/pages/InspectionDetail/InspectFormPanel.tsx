@@ -54,9 +54,9 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
             )}
           </Space>
           <Space>
-            <Button size="small" onClick={handleBatchSelectAll} disabled={!batchSelectableQrs.length}>全选</Button>
-            <Button size="small" onClick={handleBatchSelectInvert} disabled={!batchSelectableQrs.length}>反选</Button>
-            <Button size="small" onClick={handleBatchSelectClear} disabled={!batchSelectedBundleQrs.length}>清空</Button>
+            <Button onClick={handleBatchSelectAll} disabled={!batchSelectableQrs.length}>全选</Button>
+            <Button onClick={handleBatchSelectInvert} disabled={!batchSelectableQrs.length}>反选</Button>
+            <Button onClick={handleBatchSelectClear} disabled={!batchSelectedBundleQrs.length}>清空</Button>
           </Space>
         </div>
 
@@ -67,7 +67,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
         ) : (
           <ResizableTable<BatchSelectBundleRow>
             storageKey="inspect-bundle-table"
-            size="small" rowKey="qr" pagination={false}
+            rowKey="qr" pagination={false}
             dataSource={batchSelectRows}
             scroll={{ x: 680 }}
             rowSelection={{
@@ -118,7 +118,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                       cancelText="取消"
                     >
                       <Button
-                        size="small"
+                       
                         type="primary"
                         ghost
                         icon={<ToolOutlined />}
@@ -135,7 +135,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
         )}
       </div>
       {showQcForm && (
-        <Card size="small"
+        <Card
           title={isMultiSelected ? `批量质检（${batchSelectedBundleQrs.length} 个菲号）` : '质检操作'}
           style={{ marginTop: 8 }}>
           <Form form={qcForm} layout="vertical">

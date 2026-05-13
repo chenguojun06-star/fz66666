@@ -53,7 +53,7 @@ const DataCenter: React.FC = () => {
       />
 
       <StickyFilterBar>
-        <Card size="small" className="filter-card" style={{ marginBottom: 16 }}>
+        <Card className="filter-card" style={{ marginBottom: 16 }}>
           <StandardToolbar
             left={(
               <Space wrap>

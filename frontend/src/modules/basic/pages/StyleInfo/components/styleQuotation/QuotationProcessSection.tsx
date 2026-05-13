@@ -52,7 +52,7 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
           min={0.01}
           max={99}
           step={0.1}
-          size="small"
+         
           style={{ width: 75 }}
           disabled={isLocked}
           onChange={(v) => handleRowRateChange(String((record as any).id), v ?? 1)}
@@ -80,7 +80,7 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
         </span>
       }
 
-      size="small"
+     
       style={{ marginBottom: 12 }}
       styles={{ body: { padding: '8px' } }}
     >

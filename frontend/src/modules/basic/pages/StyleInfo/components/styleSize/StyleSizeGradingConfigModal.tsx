@@ -146,14 +146,14 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                 <span style={{ fontWeight: 600 }}>跳码区</span>
                 <Input
                   value={zone.label}
-                  size="small"
+                 
                   placeholder={`${zoneIndex + 1}`}
                   style={{ width: 60 }}
                   onChange={(e) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, label: e.target.value } : item)))}
                 />
                 <Select
                   mode="multiple"
-                  size="small"
+                 
                   value={zone.partKeys || []}
                   onChange={(values) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, partKeys: values } : item)))}
                   options={rows.map((row) => ({ value: row.key, label: row.partName || '未命名' }))}
@@ -163,7 +163,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                 />
                 <Tooltip title="添加码数跳码列">
                   <Button
-                    size="small"
+                   
                     type="dashed"
                     icon={<PlusOutlined />}
                     onClick={() => addSizeStepColumn(zone.key)}
@@ -195,7 +195,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: 0, background: '#fff', alignItems: 'center', minWidth: 'fit-content' }}>
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center' }}>
                     <Button
-                      size="small"
+                     
                       danger
                       type="text"
                       icon={<DeleteOutlined />}
@@ -206,7 +206,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
                     <Select
                       mode="multiple"
-                      size="small"
+                     
                       value={zone.partKeys || []}
                       onChange={(values) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, partKeys: values } : item)))}
                       options={rows.map((row) => ({ value: row.key, label: row.partName || '未命名' }))}
@@ -239,7 +239,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                   </div>
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
                     <InputNumber
-                      size="small"
+                     
                       value={zone.frontStep}
                       min={0}
                       step={0.1}
@@ -271,7 +271,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                   </div>
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
                     <InputNumber
-                      size="small"
+                     
                       value={zone.backStep}
                       min={0}
                       step={0.1}
@@ -299,7 +299,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                       </div>
                       <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <InputNumber
-                          size="small"
+                         
                           value={col.step}
                           min={0}
                           step={0.1}
@@ -308,7 +308,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                           onChange={(value) => updateSizeStepColumn(zone.key, col.key, { step: Number(value || 0) })}
                         />
                         <Button
-                          size="small"
+                         
                           danger
                           type="text"
                           icon={<DeleteOutlined />}

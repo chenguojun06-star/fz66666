@@ -198,7 +198,7 @@ const AiAgentTraceCenter: React.FC = () => {
               label: <span><UnorderedListOutlined /> 执行记录</span>,
               children: (
                 <>
-                  <Card size="small" style={{ marginBottom: 12 }}>
+                  <Card style={{ marginBottom: 12 }}>
                     <Space wrap>
                   <Input
                     allowClear
@@ -312,7 +312,7 @@ const AiAgentTraceCenter: React.FC = () => {
         }}
       >
         <Space size={16} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Descriptions column={1} bordered size="small">
+          <Descriptions column={1} bordered>
             <Descriptions.Item label="commandId">{detail?.commandId || '-'}</Descriptions.Item>
             <Descriptions.Item label="轨迹条数">{detail?.count ?? detail?.logs?.length ?? 0}</Descriptions.Item>
             <Descriptions.Item label="相关订单">
@@ -333,7 +333,7 @@ const AiAgentTraceCenter: React.FC = () => {
             />
           )}
 
-          <Card size="small" title="执行时间线" loading={detailLoading}>
+          <Card title="执行时间线" loading={detailLoading}>
             <Timeline
               items={(detail?.logs || []).map((item) => ({
                 color: item.status === 'FAILED' ? 'red' : item.status === 'SUCCESS' ? 'green' : 'blue',
@@ -341,7 +341,7 @@ const AiAgentTraceCenter: React.FC = () => {
                   <div>
                     <Space wrap>
                       <Typography.Text strong>{item.action || '未知动作'}</Typography.Text>
-                      <Tag color={statusColor(item.status)}>{item.status || 'UNKNOWN'}</Tag>
+                      <Tag color={statusColor(item.status)}>{{ SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行', UNKNOWN: '未知' }[(item.status || 'UNKNOWN') as 'SUCCESS' | 'FAILED' | 'EXECUTING' | 'TIMEOUT' | 'PENDING' | 'UNKNOWN'] || '未知'}</Tag>
                       <span>{item.createdAt || '--'}</span>
                       {typeof item.durationMs === 'number' ? <span>{item.durationMs}ms</span> : null}
                     </Space>

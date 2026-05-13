@@ -29,7 +29,7 @@ const FlowStepRenderer: React.FC<Props> = ({
   cuttingSizeItems, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
 }) => {
   return (
-    <Card size="small" className="order-flow-tabs-card" style={{ marginTop: 8 }} loading={loading}>
+    <Card className="order-flow-tabs-card" style={{ marginTop: 8 }} loading={loading}>
       <Tabs
         items={[
           {
@@ -44,7 +44,7 @@ const FlowStepRenderer: React.FC<Props> = ({
             key: 'order',
             label: `下单明细${orderLines.length ? ` (${orderLines.length})` : ''}`,
             children: (
-              <ResizableTable storageKey="order-flow-order-lines" size="small"
+              <ResizableTable storageKey="order-flow-order-lines"
                 columns={isFactoryUser ? orderLineColumns.filter((c: any) => c.key !== 'totalPrice') : orderLineColumns}
                 dataSource={orderLines} rowKey={(r: any) => String((r as any)?.skuNo || `${r.color}-${r.size}`)}
                 pagination={false} scroll={{ x: 1060 }} />
@@ -166,7 +166,7 @@ const FlowStepRenderer: React.FC<Props> = ({
               children: (
                 <>
                   {data?.materialPurchases && data.materialPurchases.length > 0 ? (
-                    <ResizableTable storageKey="order-flow-materials" dataSource={data.materialPurchases}
+                    <ResizableTable storageKey="order-flow-materials" size="small" dataSource={data.materialPurchases}
                       rowKey={(record: any) => record.id || record.processCode || `row-${Math.random()}`}
                       columns={[
                         { title: '序号', key: 'index', width: 70, align: 'center' as const, render: (_: any, __: any, index: number) => index + 1 },

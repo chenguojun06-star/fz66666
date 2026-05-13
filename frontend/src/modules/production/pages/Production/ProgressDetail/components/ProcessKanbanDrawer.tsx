@@ -478,17 +478,17 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
           marginBottom: 12, padding: '12px 16px', background: '#f8f9fa', borderRadius: 8,
         }}>
           <Space size={12}>
-            <Badge count={pendingQc.length} overflowCount={999} size="small">
+            <Badge count={pendingQc.length} overflowCount={999}>
               <Button type={qcFilter === 'pending' ? 'primary' : 'default'} onClick={() => { setQcFilter('pending'); setSelectedIds(new Set()); }}>
                 待质检
               </Button>
             </Badge>
-            <Badge count={unqualified.length} overflowCount={999} size="small">
+            <Badge count={unqualified.length} overflowCount={999}>
               <Button danger={qcFilter === 'unqualified'} type={qcFilter === 'unqualified' ? 'primary' : 'default'} onClick={() => { setQcFilter('unqualified'); setSelectedIds(new Set()); }}>
                 不合格
               </Button>
             </Badge>
-            <Badge count={repairDone.length} overflowCount={999} size="small">
+            <Badge count={repairDone.length} overflowCount={999}>
               <Button type={qcFilter === 'repair_done' ? 'primary' : 'default'} onClick={() => { setQcFilter('repair_done'); setSelectedIds(new Set()); }}>
                 待复检
               </Button>
@@ -501,7 +501,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             <Input
               placeholder="搜索菲号/工序/颜色/尺码"
               prefix={<SearchOutlined />}
-              size="small"
+             
               style={{ width: 200 }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -655,9 +655,9 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                               {isUnqualified && (r.repairStatus === 'pending' || !r.repairStatus) && (
                                 <Button icon={<ToolOutlined />} onClick={() => handleRepairComplete(r)}>返修完成</Button>
                               )}
-                              {isRepairDone && isLocked && (
+                              {isRepairDone && (
                                 <Button type="primary" icon={<UnlockOutlined />} onClick={() => handleUnlock(r)}>
-                                  解锁验收
+                                  {isLocked ? '解锁验收' : '验收通过'}
                                 </Button>
                               )}
                               {isLocked && !isRepairDone && (
@@ -696,9 +696,9 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                 </Tag>
               </Space>
             }
-            style={{ minWidth: 220, flex: '0 0 auto' }} size="small"
+            style={{ minWidth: 220, flex: '0 0 auto' }}
           >
-            <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || '#1890ff'} size="small" style={{ marginBottom: 8 }} />
+            <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || '#1890ff'} style={{ marginBottom: 8 }} />
             <div style={{ fontSize: 12, color: '#666' }}>
               <div>总记录: {stage.totalRecords}</div>
               <div style={{ color: '#52c41a' }}>已完成: {stage.scannedRecords}</div>
@@ -729,14 +729,14 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
       placement="right" width={960} open={visible} onClose={onClose}
       styles={{ body: { padding: '16px 20px' } }}
       extra={
-        <Button size="small" icon={<ReloadOutlined />} onClick={loadData} loading={loading}>刷新</Button>
+        <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>刷新</Button>
       }
     >
       <Spin spinning={loading}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
           {
             key: 'qc',
-            label: <Space><SafetyCertificateOutlined />菲号质检{pendingQc.length > 0 && <Badge count={pendingQc.length} size="small" />}</Space>,
+            label: <Space><SafetyCertificateOutlined />菲号质检{pendingQc.length > 0 && <Badge count={pendingQc.length} />}</Space>,
             children: renderQcTab(),
           },
           {
@@ -772,7 +772,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                 {qcRecord.progressStage && <Tag color={STAGE_COLORS[qcRecord.progressStage]}>{qcRecord.progressStage}</Tag>}
               </div>
               {orderNo && (
-                <Button size="small" type="link" icon={<FileTextOutlined />} onClick={() => setRemarkModalOpen(true)}>
+                <Button type="link" icon={<FileTextOutlined />} onClick={() => setRemarkModalOpen(true)}>
                   查看订单备注
                 </Button>
               )}
@@ -837,7 +837,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
               <div style={{ padding: '8px 12px', border: '1px solid #ffccc7', borderRadius: 6, marginBottom: 12 }}>
                 <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
                   <Space>
-                    <Switch size="small" checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
+                    <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
                     <span style={{ color: '#cf1322', fontWeight: 500 }}>锁定菲号，阻止下游扫码</span>
                   </Space>
                 </Form.Item>

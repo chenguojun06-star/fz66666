@@ -73,7 +73,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
                 position: 'relative',
               }}>
                 {label}
-                {active && <Spin size="small" style={{ marginLeft: 6 }} />}
+                {active && <Spin style={{ marginLeft: 6 }} />}
                 {done && <span style={{ marginLeft: 4 }}></span>}
               </div>
             </Tooltip>
@@ -149,7 +149,7 @@ const HistoryTable: React.FC = () => {
       columns={columns}
       loading={historyLoading}
       rowKey="id"
-      size="small"
+     
       pagination={false}
       style={{ marginTop: 8 }}
     />
@@ -173,7 +173,7 @@ const AgentGraphPanel: React.FC = () => {
       {/* Tab 切换 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <Segmented
-          size="small"
+         
           value={activeTab}
           onChange={(v) => setActiveTab(v as 'run' | 'history')}
           options={[
@@ -194,24 +194,24 @@ const AgentGraphPanel: React.FC = () => {
             gap: 8,
             marginBottom: 12,
           }}>
-            <Select id="agentScene" value={scene} onChange={setScene} options={SCENES} size="small" style={{ width: '100%' }} />
+            <Select id="agentScene" value={scene} onChange={setScene} options={SCENES} style={{ width: '100%' }} />
             <Input
               id="agentOrderIds"
               placeholder="订单ID（逗号分隔，留空=全部）"
               value={orderIds}
               onChange={e => setOrderIds(e.target.value)}
-              size="small"
+             
             />
             <Input
               id="agentQuestion"
               placeholder="自然语言问题（可选）"
               value={question}
               onChange={e => setQuestion(e.target.value)}
-              size="small"
+             
             />
             <Button
               type="primary"
-              size="small"
+             
               icon={<ThunderboltOutlined />}
               loading={loading}
               onClick={runGraphStream}
@@ -229,7 +229,7 @@ const AgentGraphPanel: React.FC = () => {
           {/* ── 执行中 ────────────────────────────────────── */}
           {streaming && nodeEvents.length === 0 && (
             <div style={{ textAlign: 'center', padding: '20px 0', color: '#a78bfa' }}>
-              <Spin size="small" />
+              <Spin />
               <span style={{ marginLeft: 8, fontSize: 12 }}>
                 AI 多代理图推理中… DigitalTwin → Supervisor → Specialist → Reflect
               </span>
@@ -242,7 +242,7 @@ const AgentGraphPanel: React.FC = () => {
               type="error"
               title={error}
               style={{ marginBottom: 8 }}
-              action={<Button size="small" onClick={reset}>清除</Button>}
+              action={<Button onClick={reset}>清除</Button>}
             />
           )}
 
@@ -263,7 +263,7 @@ const AgentGraphPanel: React.FC = () => {
                   <Progress
                     percent={result.confidenceScore}
                     strokeColor={confColor(result.confidenceScore)}
-                    size="small"
+                   
                     style={{ marginBottom: 0 }}
                     format={v => <span style={{ fontSize: 11, color: confColor(v!) }}>{v} 分</span>}
                   />

@@ -27,7 +27,7 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Button size="small" onClick={() => setVisible((prev) => !prev)}>
+        <Button onClick={() => setVisible((prev) => !prev)}>
           {visible ? '收起建议' : '排产建议'}
         </Button>
         <span style={{ fontSize: 12, color: '#8c8c8c' }}>
@@ -97,7 +97,7 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
                 ) : null}
                 <div style={{ marginTop: 8 }}>
                   <Button
-                    size="small"
+                   
                     type={item.selected ? 'primary' : 'default'}
                     onClick={() => {
                       if (item.factoryId) {

@@ -35,6 +35,16 @@ public class PayrollSettlement {
 
     private BigDecimal totalAmount;
 
+    private BigDecimal paidAmount;
+
+    private BigDecimal remainingAmount;
+
+    private BigDecimal deductionAmount;
+
+    private BigDecimal advanceAmount;
+
+    private String paymentStatus;
+
     private String status;
 
     private String remark;

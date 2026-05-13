@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { parseProductionOrderLines, SIZE_ORDER } = require('../utils/orderParser');
+const { parseProductionOrderLines, sortSizeNames } = require('../utils/orderParser');
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
@@ -593,7 +593,7 @@ Page({
       if (!matrix[c]) matrix[c] = {};
       matrix[c][s] = (matrix[c][s] || 0) + (quantity || 0);
     });
-    const sizes = Array.from(sizeSet).sort((a, b) => this._sizeOrder(a) - this._sizeOrder(b));
+    const sizes = sortSizeNames(Array.from(sizeSet));
     return { sizes, matrix };
   },
 
@@ -612,14 +612,6 @@ Page({
       const total = Object.values(matrix[color]).reduce((s, q) => s + q, 0);
       return { color, total };
     });
-  },
-
-  /** 尺码排序权重（S/M/L/XL/XXL... 或数字尺码 110/120/122...） */
-  _sizeOrder(size) {
-    const textOrder = { XS: 1, S: 2, M: 3, L: 4, XL: 5, XXL: 6, XXXL: 7, '2XL': 6, '3XL': 7, '4XL': 8, '5XL': 9 };
-    if (textOrder[size] !== undefined) return textOrder[size];
-    const n = parseInt(size, 10);
-    return isNaN(n) ? 99 : n;
   },
 
   /** 格式化日期时间 */
@@ -1069,9 +1061,7 @@ Page({
 
     lines.sort(function (a, b) {
       if (a.color !== b.color) return (a.color || '').localeCompare(b.color || '');
-      var ai = SIZE_ORDER.indexOf(a.size);
-      var bi = SIZE_ORDER.indexOf(b.size);
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      return sortSizeNames([a.size, b.size]).indexOf(a.size) === 0 ? -1 : 1;
     });
 
     var cuttingOrderLines = lines.map(function (line, idx) {

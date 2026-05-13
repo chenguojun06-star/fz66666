@@ -48,10 +48,10 @@ const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, h
       );
     })()}
 
-    <Card size="small" title="质检记录明细" loading={recordsLoading}>
+    <Card title="质检记录明细" loading={recordsLoading}>
       <ResizableTable<WarehousingDetailRecord>
         storageKey="qc-records-panel-table"
-        size="small" rowKey="id" pagination={false}
+        rowKey="id" pagination={false}
         dataSource={qcRecords}
         resizableColumns={false}
         scroll={{ x: 1100 }}

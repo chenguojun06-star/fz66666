@@ -56,7 +56,7 @@ export default function useProcessPriceColumns(
               <DictAutoComplete
                 dictType="process_name"
                 autoCollect
-                size="small"
+               
                 value={value}
                 onChange={(nextValue) => updateField(record.id, 'processName', nextValue as string)}
               />
@@ -70,7 +70,7 @@ export default function useProcessPriceColumns(
         render: (value: string, record: StyleProcessRow) => editable
           ? (
               <Select
-                size="small"
+               
                 value={value || '车缝'}
                 style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'progressStage', nextValue)}
@@ -89,7 +89,7 @@ export default function useProcessPriceColumns(
               <DictAutoComplete
                 dictType="machine_type"
                 autoCollect
-                size="small"
+               
                 value={value}
                 placeholder="请选择或输入机器类型"
                 onChange={(nextValue) => updateField(record.id, 'machineType', nextValue as string)}
@@ -104,7 +104,7 @@ export default function useProcessPriceColumns(
         render: (value: string, record: StyleProcessRow) => editable
           ? (
               <Select
-                size="small"
+               
                 value={value || undefined}
                 allowClear
                 placeholder="选择"
@@ -126,7 +126,7 @@ export default function useProcessPriceColumns(
         render: (value: number, record: StyleProcessRow) => editable
           ? (
               <InputNumber
-                size="small"
+               
                 value={value}
                 min={0}
                 style={{ width: '100%' }}
@@ -142,7 +142,7 @@ export default function useProcessPriceColumns(
         render: (value: number, record: StyleProcessRow) => editable
           ? (
               <InputNumber
-                size="small"
+               
                 value={value}
                 min={0}
                 step={0.01}
@@ -182,7 +182,7 @@ export default function useProcessPriceColumns(
         return editable
           ? (
               <InputNumber
-                size="small"
+               
                 value={price}
                 min={0}
                 step={0.01}

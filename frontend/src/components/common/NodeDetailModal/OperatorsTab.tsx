@@ -38,7 +38,7 @@ const OperatorsTab: React.FC<OperatorsTabProps> = ({ operatorSummary }) => (
     </div>
     <ResizableTable
       storageKey="node-detail-operators"
-      size="small"
+     
       rowKey="operatorId"
       dataSource={operatorSummary}
       columns={operatorColumns}

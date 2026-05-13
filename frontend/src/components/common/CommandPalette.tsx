@@ -177,7 +177,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             autoComplete="off"
             spellCheck={false}
           />
-          {loading && <Spin size="small" style={{ marginRight: 8 }} />}
+          {loading && <Spin style={{ marginRight: 8 }} />}
           {!loading && query && (
             <button className="cp-clear" onClick={() => { setQuery(''); setItems([]); inputRef.current?.focus(); }}>
               <CloseOutlined style={{ fontSize: 11 }} />

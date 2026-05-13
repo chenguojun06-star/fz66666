@@ -86,7 +86,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
     {
       title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => {
-        const info = statusMap[v] || { text: v || '-', color: 'default' };
+        const info = statusMap[v] || { text: '未知', color: 'default' };
         return <Tag color={info.color}>{info.text}</Tag>;
       },
     },
@@ -116,7 +116,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
       footer={null}
       destroyOnHidden
     >
-      <Descriptions column={6} size="small" bordered style={{ marginBottom: 16 }}>
+      <Descriptions column={6} bordered style={{ marginBottom: 16 }}>
         <Descriptions.Item label="工厂类型">
           <Tag color={factoryType === 'EXTERNAL' ? 'purple' : 'orange'}>
             {factoryType === 'EXTERNAL' ? '外发工厂' : '内部工厂'}
@@ -145,7 +145,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
           dataSource={orders}
           rowKey="orderId"
           loading={loading}
-          size="small"
+         
           pagination={false}
           scroll={{ x: 1300 }}
           summary={() => {

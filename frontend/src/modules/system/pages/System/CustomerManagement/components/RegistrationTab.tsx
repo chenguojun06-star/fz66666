@@ -156,10 +156,10 @@ const RegistrationTab: React.FC = () => {
             dataSource={tenantApps}
             loading={tenantAppsLoading}
             pagination={false}
-            size="small"
+           
           />
         ) : (
-          <Card size="small" style={{ textAlign: 'center', color: '#999' }}>
+          <Card style={{ textAlign: 'center', color: '#999' }}>
             {tenantAppsLoading ? '加载中...' : '暂无待审核的工厂入驻申请'}
           </Card>
         )}

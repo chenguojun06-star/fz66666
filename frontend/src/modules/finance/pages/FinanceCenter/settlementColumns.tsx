@@ -54,7 +54,7 @@ export function getSettlementColumns(
       key: 'status',
       width: 100,
       render: (status) => {
-        const statusInfo = statusMap[status] || { text: status, color: 'var(--neutral-text-secondary)' };
+        const statusInfo = statusMap[status] || { text: '未知', color: 'var(--neutral-text-secondary)' };
         return (
           <span style={{ padding: '2px 8px', fontSize: '12px', backgroundColor: `${statusInfo.color}15`, color: statusInfo.color, fontWeight: 500 }}>
             {statusInfo.text}

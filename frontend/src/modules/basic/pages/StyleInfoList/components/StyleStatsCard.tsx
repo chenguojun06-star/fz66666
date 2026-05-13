@@ -58,7 +58,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
   /* 展开状态：完整费用看板 */
   return (
     <Card {...cardBase}>
-      <Spin spinning={loading} size="small">
+      <Spin spinning={loading}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'nowrap' }}>
           {/* 标题（点击折叠） */}
           <span
@@ -108,7 +108,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
               { label: '本月', value: 'month' },
               { label: '本年', value: 'year' },
             ]}
-            size="small"
+           
             style={{ flexShrink: 0, marginLeft: 16 }}
           />
         </div>

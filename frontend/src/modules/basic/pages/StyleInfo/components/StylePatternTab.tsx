@@ -346,7 +346,7 @@ const StylePatternTab: React.FC<Props> = ({
           const val = lossEdits[record.bomId] ?? Number(record.bom.lossRate ?? 0);
           return (
             <InputNumber
-              size="small"
+             
               min={0}
               max={100}
               step={1}
@@ -368,7 +368,7 @@ const StylePatternTab: React.FC<Props> = ({
             <span style={{ fontWeight: 600, color: 'var(--primary-color, #1677ff)' }}>{size}</span>
             {!childReadOnly && extraSizes.includes(size) && (
               <Button
-                size="small"
+               
                 type="text"
                 danger
                 icon={<DeleteOutlined />}
@@ -402,7 +402,7 @@ const StylePatternTab: React.FC<Props> = ({
           const val = (usageEdits[record.bomId] ?? {})[size] ?? null;
           return (
             <InputNumber
-              size="small"
+             
               min={0}
               max={99}
               step={0.05}
@@ -496,7 +496,7 @@ const StylePatternTab: React.FC<Props> = ({
 
       {/* 各码用量配比 */}
       <Card
-        size="small"
+       
         style={{ marginTop: 16 }}
         title={
           <Space>
@@ -533,7 +533,7 @@ const StylePatternTab: React.FC<Props> = ({
                     <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
                       <Input
                         placeholder="输入新码数后回车添加"
-                        size="small"
+                       
                         onPressEnter={(e) => {
                           const input = e.target as HTMLInputElement;
                           const val = input.value.trim();
@@ -549,7 +549,7 @@ const StylePatternTab: React.FC<Props> = ({
               />
               <Button
                 type="primary"
-                size="small"
+               
                 loading={savingUsage}
                 onClick={handleSaveUsage}
               >
@@ -568,7 +568,7 @@ const StylePatternTab: React.FC<Props> = ({
             ) : (
               <ResizableTable<PatternMaterialRow>
                 storageKey="style-pattern-usage-table"
-                size="small"
+               
                 rowKey={(r) => r.id}
                 dataSource={patternRows}
                 columns={usageColumns}

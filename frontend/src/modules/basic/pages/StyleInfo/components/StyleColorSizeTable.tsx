@@ -261,10 +261,10 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               </Tag>
             ))}
             {!editLocked ? (
-              <Space.Compact size="small">
+              <Space.Compact>
                 <DictAutoComplete
                   dictType="color"
-                  size="small"
+                 
                   value={quickColorDraft}
                   onChange={(value) => setQuickColorDraft(String(value || ''))}
                   onSelect={(value) => setQuickColorDraft(String(value || ''))}
@@ -277,21 +277,21 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   style={{ width: 96 }}
                   placeholder="新增颜色"
                 />
-                <Button size="small" onClick={() => addColor(quickColorDraft)}>
+                <Button onClick={() => addColor(quickColorDraft)}>
                   确定
                 </Button>
               </Space.Compact>
             ) : null}
             {!editLocked && (
               !showColorInput ? (
-                <Button size="small" type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowColorInput(true)}>
+                <Button type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowColorInput(true)}>
                   新增颜色
                 </Button>
               ) : (
-                <Space.Compact size="small">
-                  <Input size="small" placeholder="新颜色" value={newColor} onChange={(e) => setNewColor(e.target.value)} onPressEnter={handleAddNewColor} style={{ width: 88 }} />
-                  <Button size="small" type="primary" onClick={handleAddNewColor}></Button>
-                  <Button size="small" onClick={() => { setNewColor(''); setShowColorInput(false); }}></Button>
+                <Space.Compact>
+                  <Input placeholder="新颜色" value={newColor} onChange={(e) => setNewColor(e.target.value)} onPressEnter={handleAddNewColor} style={{ width: 88 }} />
+                  <Button type="primary" onClick={handleAddNewColor}></Button>
+                  <Button onClick={() => { setNewColor(''); setShowColorInput(false); }}></Button>
                 </Space.Compact>
               )
             )}
@@ -315,10 +315,10 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               </Tag>
             ))}
             {!editLocked ? (
-              <Space.Compact size="small">
+              <Space.Compact>
                 <DictAutoComplete
                   dictType="size"
-                  size="small"
+                 
                   value={quickSizeDraft}
                   onChange={(value) => setQuickSizeDraft(String(value || ''))}
                   onSelect={(value) => setQuickSizeDraft(String(value || ''))}
@@ -331,21 +331,21 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                   style={{ width: 96 }}
                   placeholder="新增码数"
                 />
-                <Button size="small" onClick={() => addSize(quickSizeDraft)}>
+                <Button onClick={() => addSize(quickSizeDraft)}>
                   确定
                 </Button>
               </Space.Compact>
             ) : null}
             {!editLocked && (
               !showSizeInput ? (
-                <Button size="small" type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowSizeInput(true)}>
+                <Button type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowSizeInput(true)}>
                   新增码数
                 </Button>
               ) : (
-                <Space.Compact size="small">
-                  <Input size="small" placeholder="新码数" value={newSize} onChange={(e) => setNewSize(e.target.value)} onPressEnter={handleAddNewSize} style={{ width: 88 }} />
-                  <Button size="small" type="primary" onClick={handleAddNewSize}></Button>
-                  <Button size="small" onClick={() => { setNewSize(''); setShowSizeInput(false); }}></Button>
+                <Space.Compact>
+                  <Input placeholder="新码数" value={newSize} onChange={(e) => setNewSize(e.target.value)} onPressEnter={handleAddNewSize} style={{ width: 88 }} />
+                  <Button type="primary" onClick={handleAddNewSize}></Button>
+                  <Button onClick={() => { setNewSize(''); setShowSizeInput(false); }}></Button>
                 </Space.Compact>
               )
             )}
@@ -403,7 +403,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                       <td key={`${row.color}-${columnIndex}`} style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border)' }}>
                         <InputNumber
                           className="style-color-size-table__input"
-                          size="small"
+                         
                           min={0}
                           controls={false}
                           value={Number(row.quantities[columnIndex] || 0)}

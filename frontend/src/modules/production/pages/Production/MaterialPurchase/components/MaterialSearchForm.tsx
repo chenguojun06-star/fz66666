@@ -38,7 +38,7 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   };
 
   return (
-    <Card size="small" className="filter-card mb-sm">
+    <Card className="filter-card mb-sm">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
           <StandardSearchBar

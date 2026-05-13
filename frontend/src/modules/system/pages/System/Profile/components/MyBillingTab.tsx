@@ -208,14 +208,14 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
         return (
           <Space size={0}>
             {canPay && (
-              <Button type="link" size="small" icon={<CreditCardOutlined />}
+              <Button type="link" icon={<CreditCardOutlined />}
                 style={{ color: 'var(--color-primary)' }}
                 onClick={() => handlePay(record)}>
                 立即付款
               </Button>
             )}
             {canRequest && (
-              <Button type="link" size="small" icon={<FileTextOutlined />}
+              <Button type="link" icon={<FileTextOutlined />}
                 onClick={() => handleRequestInvoice(record)}>
                 申请开票
               </Button>
@@ -312,7 +312,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
       {!embedded && overview && (
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="当前套餐"
                 value={PLAN_LABELS[overview.planType] || overview.planType}
@@ -325,7 +325,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="存储使用"
                 value={`${overview.storageUsedMb || 0}MB`}
@@ -333,13 +333,13 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
               />
               <Progress
                 percent={overview.storageUsedPercent || 0}
-                size="small"
+               
                 status={overview.storageUsedPercent > 80 ? 'exception' : 'normal'}
               />
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic
                 title="用户数"
                 value={overview.currentUsers || 0}
@@ -348,10 +348,10 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
             </Card>
           </Col>
           <Col span={6}>
-            <Card size="small">
+            <Card>
               <Statistic title="租户编码" value={overview.tenantCode || '—'} styles={{ content: { fontSize: 18 } }} />
               <div style={{ marginTop: 8 }}>
-                <Button type="link" size="small" onClick={handleOpenInvoiceInfo}>
+                <Button type="link" onClick={handleOpenInvoiceInfo}>
                   维护开票信息
                 </Button>
               </div>
@@ -364,12 +364,12 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
       {!embedded && myApps.length > 0 && (
         <Card
           title={<Space><AppstoreOutlined />我的应用订阅</Space>}
-          size="small"
+         
           style={{ marginBottom: 24 }}
           extra={
             <Button
               type="link"
-              size="small"
+             
               icon={<SyncOutlined />}
               onClick={fetchData}
               loading={loading}
@@ -385,7 +385,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
             columns={appColumns}
             loading={loading}
             pagination={myApps.length > DEFAULT_PAGE_SIZE ? { size: 'small' } : false}
-            size="small"
+           
             locale={{ emptyText: <Empty description="暂无已开通应用" /> }}
           />
         </Card>
@@ -394,7 +394,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
       {/* ===== 账单记录（平台订阅月账单） ===== */}
       <Card
         title={<Space><AppstoreOutlined />账单记录</Space>}
-        size="small"
+       
         extra={<Button type="link" onClick={handleOpenInvoiceInfo}>开票信息设置</Button>}
       >
         <ResizableTable
@@ -404,7 +404,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
           columns={billColumns}
           loading={loading}
           pagination={false}
-          size="small"
+         
           scroll={{ x: 'max-content' }}
           locale={{ emptyText: <Empty description="暂无账单记录" /> }}
         />
@@ -422,11 +422,11 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
       >
         {payingBill && (
           <div>
-            <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
+            <Descriptions column={2} bordered style={{ marginBottom: 16 }}>
               <Descriptions.Item label="账单编号" span={2}>
                 <Space>
                   <Text code>{payingBill.billingNo}</Text>
-                  <Button type="text" size="small" icon={<CopyOutlined />}
+                  <Button type="text" icon={<CopyOutlined />}
                     onClick={() => copyText(payingBill.billingNo, '账单编号')} />
                 </Space>
               </Descriptions.Item>
@@ -437,7 +437,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
                   <Text strong style={{ color: '#f5222d', fontSize: 22 }}>
                     ¥{payingBill.totalAmount?.toFixed(2)}
                   </Text>
-                  <Button type="text" size="small" icon={<CopyOutlined />}
+                  <Button type="text" icon={<CopyOutlined />}
                     onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
                 </Space>
               </Descriptions.Item>
@@ -451,19 +451,19 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
               description="请通过银行转账或扫码向管理员付款。付款时请在备注中注明账单编号，付款完成后联系管理员确认，确认后账单状态将更新为「已支付」。"
             />
 
-            <Card size="small" title="付款信息" style={{ marginBottom: 12 }}>
-              <Descriptions column={1} size="small">
+            <Card title="付款信息" style={{ marginBottom: 12 }}>
+              <Descriptions column={1}>
                 <Descriptions.Item label="付款备注（必填）">
                   <Space>
                     <Text code>{payingBill.billingNo}</Text>
-                    <Button type="text" size="small" icon={<CopyOutlined />}
+                    <Button type="text" icon={<CopyOutlined />}
                       onClick={() => copyText(payingBill.billingNo, '付款备注')} />
                   </Space>
                 </Descriptions.Item>
                 <Descriptions.Item label="付款金额">
                   <Space>
                     <Text strong style={{ color: '#f5222d' }}>¥{payingBill.totalAmount?.toFixed(2)}</Text>
-                    <Button type="text" size="small" icon={<CopyOutlined />}
+                    <Button type="text" icon={<CopyOutlined />}
                       onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
                   </Space>
                 </Descriptions.Item>
@@ -486,7 +486,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
         width="40vw"
       >
         {currentBill && (
-          <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
+          <Descriptions column={2} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="账单编号">{currentBill.billingNo}</Descriptions.Item>
             <Descriptions.Item label="金额">¥{currentBill.totalAmount?.toFixed(2)}</Descriptions.Item>
           </Descriptions>
