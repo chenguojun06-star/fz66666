@@ -320,6 +320,12 @@ public class ProductionOrder {
     @TableField("factory_unit_price")
     private BigDecimal factoryUnitPrice;
 
+    @TableField("order_unit_price")
+    private BigDecimal orderUnitPrice;
+
+    @TableField("order_unit_price_type")
+    private String orderUnitPriceType;
+
     @TableField(exist = false)
     private BigDecimal quotationUnitPrice;
 
