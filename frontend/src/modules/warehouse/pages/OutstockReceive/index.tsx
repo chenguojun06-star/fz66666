@@ -19,12 +19,14 @@ const OutstockReceive: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [keyword, setKeyword] = useState('');
   const { pagination, onChange, setTotal: setPagTotal } = useTablePagination(20);
+  const currentPage = pagination.current;
+  const currentPageSize = pagination.pageSize;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/production/outstock/list', {
-        params: { page: pagination.current, pageSize: pagination.pageSize, keyword: keyword || undefined },
+        params: { page: currentPage, pageSize: currentPageSize, keyword: keyword || undefined },
       });
       const data = res.data || res;
       setDataSource(Array.isArray(data.records) ? data.records : (Array.isArray(data) ? data : []));
@@ -35,7 +37,7 @@ const OutstockReceive: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, keyword, message]);
+  }, [currentPage, currentPageSize, keyword, message, setPagTotal]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

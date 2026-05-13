@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Input, Select, Form, Row, Col, InputNumber, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import StandardModal from '@/components/common/StandardModal';
@@ -33,13 +33,15 @@ const MaterialDatabasePage: React.FC = () => {
   const [statusValue, setStatusValue] = useState('');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const { pagination, onChange } = useTablePagination(20);
+  const currentPage = pagination.current;
+  const currentPageSize = pagination.pageSize;
 
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = {
-        page: pagination.current,
-        pageSize: pagination.pageSize,
+        page: currentPage,
+        pageSize: currentPageSize,
         keyword: searchKeyword,
         status: statusValue,
         startDate: dateRange?.[0],
@@ -55,9 +57,9 @@ const MaterialDatabasePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, currentPageSize, searchKeyword, statusValue, dateRange]);
 
-  useEffect(() => { fetchList(); }, [pagination.current, pagination.pageSize, searchKeyword, statusValue]);
+  useEffect(() => { fetchList(); }, [fetchList]);
 
   const {
     form, visible, currentMaterial, imageFiles, setImageFiles,

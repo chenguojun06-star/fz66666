@@ -27,7 +27,7 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
       form.setFieldsValue({ quantity: 1 });
       fetchOrders();
     }
-  }, [open, record]);
+  }, [open, record, form]);
 
   const fetchOrders = async () => {
     setOrderLoading(true);

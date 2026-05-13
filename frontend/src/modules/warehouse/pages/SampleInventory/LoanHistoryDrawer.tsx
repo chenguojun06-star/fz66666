@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Tag, Input, Modal, App } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -27,12 +27,12 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
   const [returnRemark, setReturnRemark] = useState('');
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code, actionText: '刷新重试' });
-  };
+  }, [showSmartErrorNotice]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!stock) return;
     setLoading(true);
     try {
@@ -47,13 +47,13 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
     } finally {
       setLoading(false);
     }
-  };
+  }, [stock, showSmartErrorNotice, reportSmartError]);
 
   useEffect(() => {
     if (visible && stock) {
       loadData();
     }
-  }, [visible, stock]);
+  }, [visible, stock, loadData]);
 
   const handleReturnClick = (record: SampleLoan) => {
     setCurrentLoan(record);

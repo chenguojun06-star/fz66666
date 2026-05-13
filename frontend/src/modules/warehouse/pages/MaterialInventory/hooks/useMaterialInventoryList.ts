@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Dayjs } from 'dayjs';
 import { useTablePagination } from '@/hooks';
 import { useUser } from '@/utils/AuthContext';
@@ -23,17 +23,20 @@ export function useMaterialInventoryList() {
     totalValue: 0, totalQty: 0, lowStockCount: 0, materialTypes: 0, todayInCount: 0, todayOutCount: 0,
   });
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code, actionText: '刷新重试' });
-  };
+  }, [showSmartErrorNotice]);
 
-  const fetchData = async () => {
+  const currentPage = pagination.pagination.current;
+  const currentPageSize = pagination.pagination.pageSize;
+  const setPaginationTotal = pagination.setTotal;
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const { current, pageSize } = pagination.pagination;
       const res = await materialInventoryApi.list({
-        page: current, pageSize,
+        page: currentPage, pageSize: currentPageSize,
         materialCode: searchText,
         materialType: selectedType || undefined,
         startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
@@ -60,7 +63,7 @@ export function useMaterialInventoryList() {
           supplierName: item.supplierName || '-',
         }));
         setDataSource(list);
-        pagination.setTotal(res.data.total);
+        setPaginationTotal(res.data.total);
         setStats({
           totalValue: list.reduce((sum: number, i) => sum + (i.totalValue || 0), 0),
           totalQty: list.reduce((sum: number, i) => sum + (i.quantity || 0), 0),
@@ -77,15 +80,13 @@ export function useMaterialInventoryList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, currentPageSize, searchText, selectedType, dateRange, reportSmartError, showSmartErrorNotice, setPaginationTotal]);
 
   useEffect(() => {
     if (pagination.pagination.pageSize < 20) pagination.setPageSize(20);
   }, [pagination, pagination.pagination.pageSize]);
 
-  useEffect(() => { void fetchData(); }, [
-    pagination.pagination.current, pagination.pagination.pageSize, searchText, selectedType, dateRange,
-  ]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   return {
     loading, dataSource, smartError, showSmartErrorNotice, showMaterialAI,

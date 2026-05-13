@@ -309,6 +309,8 @@ export const useProductionOrderFrozenCache = (
     return rule === 'statusOrStock' ? isOrderFrozenByStatusOrStock(source) : isOrderFrozenByStatus(source);
   }, [id, ensureCache, rule]);
 
+  const allIdsKey = allIds.join(',');
+
   useEffect(() => {
     if (!enabled || allIds.length === 0) return;
 
@@ -324,7 +326,7 @@ export const useProductionOrderFrozenCache = (
     };
 
     run();
-  }, [allIds.join(','), rule, ttlMs, enabled]);
+  }, [allIds, allIdsKey, rule, ttlMs, enabled]);
 
   // 包装 ensureUnlocked，支持回调函数作为错误处理
   const ensureUnlocked = useCallback(async (

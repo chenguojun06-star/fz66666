@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   App,
   Button,
@@ -67,7 +67,7 @@ const SampleInventory: React.FC = () => {
   const destroyModal = useModal<SampleStock>();
   const [destroyForm] = Form.useForm<{ remark: string }>();
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({
       title,
@@ -75,9 +75,11 @@ const SampleInventory: React.FC = () => {
       code,
       actionText: '刷新重试',
     });
-  };
+  }, [showSmartErrorNotice]);
 
   const inboundModal = useModal<void>();
+  const inboundOpenRef = useRef(inboundModal.open);
+  inboundOpenRef.current = inboundModal.open;
   const loanModal = useModal<SampleStock>();
   const historyDrawer = useModal<SampleStock>();
 
@@ -102,13 +104,17 @@ const SampleInventory: React.FC = () => {
     destroyForm.resetFields();
   }, [destroyForm, destroyModal]);
 
-  const loadData = async () => {
+  const currentPage = pagination.pagination.current;
+  const currentPageSize = pagination.pagination.pageSize;
+  const setPaginationTotal = pagination.setTotal;
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/stock/sample/list', {
         params: {
-          page: pagination.pagination.current,
-          pageSize: pagination.pagination.pageSize,
+          page: currentPage,
+          pageSize: currentPageSize,
           styleNo: searchText,
           sampleType,
           recordStatus,
@@ -116,7 +122,7 @@ const SampleInventory: React.FC = () => {
       });
       if (res.code === 200) {
         setDataSource(res.data.records || []);
-        pagination.setTotal(res.data.total || 0);
+        setPaginationTotal(res.data.total || 0);
         if (showSmartErrorNotice) setSmartError(null);
       }
     } catch (error) {
@@ -125,12 +131,14 @@ const SampleInventory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, currentPageSize, searchText, sampleType, recordStatus, showSmartErrorNotice, reportSmartError, setPaginationTotal]);
 
   useEffect(() => {
     loadData();
 
-  }, [pagination.pagination.current, pagination.pagination.pageSize, recordStatus, searchText, sampleType]);
+  }, [loadData]);
+
+  const searchParamsStr = searchParams.toString();
 
   useEffect(() => {
     const action = searchParams.get('action');
@@ -154,10 +162,10 @@ const SampleInventory: React.FC = () => {
         quantity: quantity ? Number(quantity) : undefined,
         sampleType: sampleTypeParam || 'development',
       });
-      inboundModal.open();
+      inboundOpenRef.current();
       clearAutoInboundParams();
     }
-  }, [clearAutoInboundParams, searchParams, searchParams.toString()]);
+  }, [clearAutoInboundParams, searchParams, searchParamsStr]);
 
   useEffect(() => {
     if (destroyModal.visible) {
