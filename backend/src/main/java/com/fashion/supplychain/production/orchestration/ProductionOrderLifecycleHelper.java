@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOr
 import com.fashion.supplychain.intelligence.service.ClosedOrderAiDataCleanupService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -75,6 +76,9 @@ public class ProductionOrderLifecycleHelper {
 
     @Autowired
     private ProductionProcessTrackingService processTrackingService;
+
+    @Autowired
+    private OrderRemarkHelper orderRemarkHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(String id) {
@@ -185,6 +189,7 @@ public class ProductionOrderLifecycleHelper {
         }
 
         existed.setStatus("scrapped");
+        existed.setActualEndDate(LocalDateTime.now());
         existed.setOperationRemark(r);
         existed.setUpdateTime(LocalDateTime.now());
         boolean ok = productionOrderService.updateById(existed);
@@ -192,6 +197,8 @@ public class ProductionOrderLifecycleHelper {
 
         try { scanRecordDomainService.insertOrderOperationRecord(existed, "报废", r, LocalDateTime.now()); }
         catch (Exception e) { log.warn("Failed to log order scrap: orderId={}", oid, e); }
+
+        orderRemarkHelper.append(existed, "报废订单", r);
 
         try {
             if (closedOrderAiDataCleanupService != null) {
@@ -206,6 +213,11 @@ public class ProductionOrderLifecycleHelper {
     public ProductionOrder closeOrder(String id, String remark) {
         TenantAssert.assertTenantContext();
         ProductionOrder result = financeOrchestrationService.closeOrder(id);
+        if (result != null) {
+            result.setActualEndDate(LocalDateTime.now());
+            productionOrderService.updateById(result);
+            orderRemarkHelper.append(result, "关闭订单", remark);
+        }
         try {
             if (operationLogService != null && result != null) {
                 OperationLog opLog = new OperationLog();

@@ -445,4 +445,55 @@ public class ProductionOrderController {
         }
         return Result.success(factoryCapacityOrchestrator.getFactoryCapacity());
     }
+
+    @GetMapping("/{id}/timeline")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> timeline(@PathVariable String id) {
+        TenantAssert.assertTenantContext();
+        ProductionOrder order = productionOrderService.getById(id);
+        if (order == null) {
+            return Result.fail("订单不存在");
+        }
+        String remarks = order.getRemarks();
+        java.util.List<java.util.Map<String, String>> entries = new java.util.ArrayList<>();
+        if (StringUtils.hasText(remarks)) {
+            String[] lines = remarks.split("\n");
+            for (String line : lines) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    continue;
+                }
+                java.util.Map<String, String> entry = new java.util.LinkedHashMap<>();
+                if (line.startsWith("[")) {
+                    int endBracket = line.indexOf("]");
+                    if (endBracket > 0) {
+                        entry.put("time", line.substring(1, endBracket));
+                        String rest = line.substring(endBracket + 1).trim();
+                        String[] parts = rest.split("-");
+                        if (parts.length >= 1) entry.put("operator", parts[0].trim());
+                        if (parts.length >= 2) entry.put("action", parts[1].trim());
+                        if (parts.length >= 3) {
+                            StringBuilder detail = new StringBuilder();
+                            for (int i = 2; i < parts.length; i++) {
+                                if (detail.length() > 0) detail.append("-");
+                                detail.append(parts[i].trim());
+                            }
+                            entry.put("detail", detail.toString());
+                        }
+                    }
+                } else {
+                    entry.put("raw", line);
+                }
+                entries.add(entry);
+            }
+        }
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("orderId", order.getId());
+        result.put("orderNo", order.getOrderNo());
+        result.put("status", order.getStatus());
+        result.put("actualStartDate", order.getActualStartDate());
+        result.put("actualEndDate", order.getActualEndDate());
+        result.put("timeline", entries);
+        return Result.success(result);
+    }
 }

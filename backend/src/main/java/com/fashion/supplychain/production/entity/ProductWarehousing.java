@@ -190,6 +190,38 @@ public class ProductWarehousing {
 
     private String inspectorCertNo;
 
+    // ==================== 冲销字段 ====================
+
+    private String reversalId;
+
+    private String reversedById;
+
+    private String reversalStatus;
+
+    private String reversalReason;
+
+    // ==================== 金额字段 ====================
+
+    private BigDecimal unitPrice;
+
+    private BigDecimal totalAmount;
+
+    private String paymentStatus;
+
+    private BigDecimal paidAmount;
+
+    // ==================== 批次+追踪+二维码 ====================
+
+    private String batchNo;
+
+    private String traceId;
+
+    private String qrcode;
+
+    private String editHistory;
+
+    private String supplierId;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

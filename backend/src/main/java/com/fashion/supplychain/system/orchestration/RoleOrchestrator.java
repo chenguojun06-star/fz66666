@@ -37,6 +37,19 @@ public class RoleOrchestrator {
         return roleService.getRolePage(page, pageSize, roleName, roleCode, status);
     }
 
+    public List<Role> listAll() {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Role> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Role>()
+                        .eq(Role::getStatus, "active")
+                        .orderByAsc(Role::getSortOrder)
+                        .orderByAsc(Role::getCreateTime);
+        Long tenantId = UserContext.tenantId();
+        if (tenantId != null) {
+            wrapper.eq(Role::getTenantId, tenantId);
+        }
+        return roleService.list(wrapper);
+    }
+
     public Role getById(Long id) {
         Role role = roleService.getById(id);
         if (role == null) {

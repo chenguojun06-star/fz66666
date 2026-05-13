@@ -264,7 +264,7 @@ public class TenantOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public User addSubAccount(User userData) { return subAccountHelper.addSubAccount(userData); }
-    public Page<User> listSubAccounts(Long page, Long pageSize, String name, String roleName) { return subAccountHelper.listSubAccounts(page, pageSize, name, roleName); }
+    public Page<User> listSubAccounts(Long page, Long pageSize, String name, String roleName, String orgUnitId, String employmentStatus, String roleId, Boolean excludeFactoryUsers) { return subAccountHelper.listSubAccounts(page, pageSize, name, roleName, orgUnitId, employmentStatus, roleId, excludeFactoryUsers); }
     public boolean updateSubAccount(User userData) { return subAccountHelper.updateSubAccount(userData); }
     public boolean deleteSubAccount(Long userId) { return subAccountHelper.deleteSubAccount(userId); }
 

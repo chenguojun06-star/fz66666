@@ -70,6 +70,7 @@ public class UserOrchestrator {
         currentSubject.setRoleName(user.getRoleName());
         currentSubject.setPermissionRange(user.getPermissionRange());
         currentSubject.setFactoryId(user.getFactoryId());
+        currentSubject.setOrgUnitId(user.getOrgUnitId());
         currentSubject.setTenantId(user.getTenantId());
         currentSubject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
         currentSubject.setSuperAdmin(Boolean.TRUE.equals(user.getIsSuperAdmin()));
@@ -98,6 +99,10 @@ public class UserOrchestrator {
     }
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId) {
+        return list(page, pageSize, username, name, roleName, status, factoryId, null, null, false);
+    }
+
+    public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status, String factoryId, String employmentStatus, String orgUnitId, Boolean excludeFactoryUsers) {
         Long tenantId = UserContext.tenantId();
         String currentUserFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(currentUserFactoryId)) {
@@ -112,7 +117,11 @@ public class UserOrchestrator {
             if (StringUtils.hasText(roleName)) query.like("role_name", roleName);
             if (StringUtils.hasText(status)) query.eq("status", status);
             if (StringUtils.hasText(factoryId)) query.eq("factory_id", factoryId);
-            else query.isNull("factory_id");
+            if (StringUtils.hasText(employmentStatus)) query.eq("employment_status", employmentStatus);
+            if (StringUtils.hasText(orgUnitId)) query.eq("org_unit_id", orgUnitId);
+            if (Boolean.TRUE.equals(excludeFactoryUsers) && !StringUtils.hasText(factoryId)) {
+                query.and(w -> w.isNull("factory_id").or().eq("factory_id", ""));
+            }
             userPage = userService.page(new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 10), query);
         } else {
             userPage = userService.getUserPage(page, pageSize, username, name, roleName, status);
@@ -256,7 +265,14 @@ public class UserOrchestrator {
             Role role = roleService.getById(user.getRoleId());
             if (role != null) {
                 user.setRoleName(role.getRoleName());
-                user.setPermissionRange("all".equals(role.getDataScope()) ? "all" : "self");
+                String scope = role.getDataScope();
+                if ("all".equals(scope)) {
+                    user.setPermissionRange("all");
+                } else if ("team".equals(scope)) {
+                    user.setPermissionRange("team");
+                } else {
+                    user.setPermissionRange("own");
+                }
             }
         }
     }

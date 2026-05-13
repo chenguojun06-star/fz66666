@@ -10,11 +10,12 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingPostActionHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingQueryHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingPendingHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
-import com.fashion.supplychain.production.helper.ProductWarehousingPostActionHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -63,6 +64,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private ProductWarehousingPostActionHelper postActionHelper;
+
+    @Autowired
+    private OrderRemarkHelper orderRemarkHelper;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         return queryHelper.list(params);
@@ -147,6 +151,24 @@ public class ProductWarehousingOrchestrator {
 
         String orderId = StringUtils.hasText(productWarehousing.getOrderId())
                 ? productWarehousing.getOrderId().trim() : null;
+
+        ProductionOrder order = StringUtils.hasText(orderId) ? productionOrderService.getById(orderId) : null;
+        if (order != null) {
+            StringBuilder detail = new StringBuilder();
+            if (productWarehousing.getQualifiedQuantity() != null) {
+                detail.append("合格").append(productWarehousing.getQualifiedQuantity()).append("件");
+            }
+            if (productWarehousing.getUnqualifiedQuantity() != null && productWarehousing.getUnqualifiedQuantity() > 0) {
+                if (detail.length() > 0) detail.append("，");
+                detail.append("次品").append(productWarehousing.getUnqualifiedQuantity()).append("件");
+            }
+            if (StringUtils.hasText(productWarehousing.getCuttingBundleQrCode())) {
+                if (detail.length() > 0) detail.append("，");
+                detail.append("菲号:").append(productWarehousing.getCuttingBundleQrCode());
+            }
+            orderRemarkHelper.append(order, "入库", detail.length() > 0 ? detail.toString() : null);
+        }
+
         postActionHelper.triggerPostSaveActions(orderId, productWarehousing);
 
         return true;

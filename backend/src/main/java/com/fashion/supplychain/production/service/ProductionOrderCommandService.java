@@ -15,6 +15,7 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,6 +38,7 @@ public class ProductionOrderCommandService {
     private final FactoryService factoryService;
     private final OrganizationUnitBindingHelper organizationUnitBindingHelper;
     private final CustomerService customerService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired
     public ProductionOrderCommandService(
@@ -44,12 +46,14 @@ public class ProductionOrderCommandService {
             StyleInfoService styleInfoService,
             FactoryService factoryService,
             OrganizationUnitBindingHelper organizationUnitBindingHelper,
-            CustomerService customerService) {
+            CustomerService customerService,
+            JdbcTemplate jdbcTemplate) {
         this.productionOrderService = productionOrderService;
         this.styleInfoService = styleInfoService;
         this.factoryService = factoryService;
         this.organizationUnitBindingHelper = organizationUnitBindingHelper;
         this.customerService = customerService;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     /**
@@ -200,9 +204,39 @@ public class ProductionOrderCommandService {
 
     /**
      * 生成订单号：PO + 年月日时分秒（PO20260503143025）
+     * 同秒内冲突时追加2位序号（PO2026050314302501）
      */
     private String generateOrderNo() {
-        return "PO" + java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
+        String ts = java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
+        String prefix = "PO" + ts;
+        Long tenantId = UserContext.tenantId();
+
+        if (countOrderNoIncludingDeleted(prefix, tenantId) == 0) {
+            return prefix;
+        }
+
+        for (int seq = 1; seq <= 99; seq++) {
+            String candidate = prefix + String.format("%02d", seq);
+            if (countOrderNoIncludingDeleted(candidate, tenantId) == 0) {
+                return candidate;
+            }
+        }
+
+        return prefix + System.nanoTime() % 1000000;
+    }
+
+    private int countOrderNoIncludingDeleted(String orderNo, Long tenantId) {
+        String sql;
+        Object[] params;
+        if (tenantId != null) {
+            sql = "SELECT COUNT(*) FROM t_production_order WHERE tenant_id = ? AND order_no = ?";
+            params = new Object[]{tenantId, orderNo};
+        } else {
+            sql = "SELECT COUNT(*) FROM t_production_order WHERE order_no = ?";
+            params = new Object[]{orderNo};
+        }
+        Integer cnt = jdbcTemplate.queryForObject(sql, Integer.class, params);
+        return cnt != null ? cnt : 0;
     }
 
     private void applyFactorySnapshot(ProductionOrder productionOrder) {

@@ -51,16 +51,18 @@ public class UserController {
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String roleName,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String factoryId) {
-        // 工厂账号只能查看关联到自己工厂的用户
+            @RequestParam(required = false) String factoryId,
+            @RequestParam(required = false) String employmentStatus,
+            @RequestParam(required = false) String orgUnitId,
+            @RequestParam(required = false, defaultValue = "false") Boolean excludeFactoryUsers) {
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
             if (ctxFactoryId == null) {
                 return Result.success(new Page<>());
             }
-            factoryId = ctxFactoryId; // 强制限定只查自己工厂的用户
+            factoryId = ctxFactoryId;
         }
-        Page<User> userPage = userOrchestrator.list(page, pageSize, username, name, roleName, status, factoryId);
+        Page<User> userPage = userOrchestrator.list(page, pageSize, username, name, roleName, status, factoryId, employmentStatus, orgUnitId, excludeFactoryUsers);
         return Result.success(userPage);
     }
 
@@ -432,5 +434,18 @@ public class UserController {
         }
         userOrchestrator.ownerResetMemberPasswordToDefault(userId);
         return Result.successMessage("密码已重置为 123456");
+    }
+
+    @Autowired
+    private com.fashion.supplychain.wechat.orchestration.WeChatMiniProgramAuthOrchestrator weChatMiniProgramAuthOrchestrator;
+
+    @PostMapping("/invite-qr")
+    public Result<?> generateInviteQr() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.fail("未获取到租户信息");
+        }
+        java.util.Map<String, Object> data = weChatMiniProgramAuthOrchestrator.generateInviteQrCode(tenantId, null);
+        return Result.success(data);
     }
 }

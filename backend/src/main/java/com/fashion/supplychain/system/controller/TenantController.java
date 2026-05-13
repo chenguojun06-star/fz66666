@@ -136,7 +136,11 @@ public class TenantController {
         Long pageSize = params != null && params.get("pageSize") != null ? Long.valueOf(params.get("pageSize").toString()) : 20L;
         String name = params != null ? (String) params.get("name") : null;
         String roleName = params != null ? (String) params.get("roleName") : null;
-        return Result.success(tenantOrchestrator.listSubAccounts(page, pageSize, name, roleName));
+        String orgUnitId = params != null ? (String) params.get("orgUnitId") : null;
+        String employmentStatus = params != null ? (String) params.get("employmentStatus") : null;
+        String roleId = params != null && params.get("roleId") != null ? String.valueOf(params.get("roleId")) : null;
+        Boolean excludeFactoryUsers = params != null && params.get("excludeFactoryUsers") != null ? Boolean.valueOf(params.get("excludeFactoryUsers").toString()) : false;
+        return Result.success(tenantOrchestrator.listSubAccounts(page, pageSize, name, roleName, orgUnitId, employmentStatus, roleId, excludeFactoryUsers));
     }
 
     /**

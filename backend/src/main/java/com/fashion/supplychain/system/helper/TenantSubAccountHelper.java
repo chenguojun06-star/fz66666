@@ -72,7 +72,7 @@ public class TenantSubAccountHelper {
         return sanitizeUser(userData);
     }
 
-    public Page<User> listSubAccounts(Long page, Long pageSize, String name, String roleName) {
+    public Page<User> listSubAccounts(Long page, Long pageSize, String name, String roleName, String orgUnitId, String employmentStatus, String roleId, Boolean excludeFactoryUsers) {
         assertTenantOwnerOrAdmin();
 
         Long tenantId = UserContext.tenantId();
@@ -87,6 +87,18 @@ public class TenantSubAccountHelper {
         }
         if (StringUtils.hasText(roleName)) {
             query.like("role_name", roleName);
+        }
+        if (StringUtils.hasText(orgUnitId)) {
+            query.eq("org_unit_id", orgUnitId);
+        }
+        if (StringUtils.hasText(employmentStatus)) {
+            query.eq("employment_status", employmentStatus);
+        }
+        if (StringUtils.hasText(roleId)) {
+            query.eq("role_id", roleId);
+        }
+        if (Boolean.TRUE.equals(excludeFactoryUsers)) {
+            query.and(w -> w.isNull("factory_id").or().eq("factory_id", ""));
         }
         query.orderByDesc("create_time");
         Page<User> result = userService.page(new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);

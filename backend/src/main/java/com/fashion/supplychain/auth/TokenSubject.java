@@ -25,6 +25,9 @@ public class TokenSubject {
     /** 外发工厂ID，NULL=普通租户账号，非NULL=外发工厂账号 */
     private String factoryId;
 
+    /** 所属组织单元ID（用于team数据权限过滤） */
+    private String orgUnitId;
+
     public String getUserId() {
         return userId;
     }
@@ -111,5 +114,13 @@ public class TokenSubject {
 
     public void setFactoryId(String factoryId) {
         this.factoryId = factoryId;
+    }
+
+    public String getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(String orgUnitId) {
+        this.orgUnitId = orgUnitId;
     }
 }

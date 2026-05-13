@@ -173,4 +173,39 @@ public class FinishedInventoryController {
         Map<String, Object> result = finishedWarehouseOperationOrchestrator.scanQuery(scanCode);
         return Result.success(result);
     }
+
+    @PostMapping("/batch-inbound")
+    public Result<List<ProductWarehousing>> batchInbound(@RequestBody Map<String, Object> body) {
+        List<ProductWarehousing> results = finishedWarehouseOperationOrchestrator.batchInbound(body);
+        return Result.success(results);
+    }
+
+    @PostMapping("/reverse")
+    public Result<ProductWarehousing> reverse(@RequestBody Map<String, String> params) {
+        String warehousingId = params.get("warehousingId");
+        String reason = params.get("reason");
+        ProductWarehousing reversal = finishedWarehouseOperationOrchestrator.reverse(warehousingId, reason);
+        return Result.success(reversal);
+    }
+
+    @PostMapping("/edit")
+    public Result<ProductWarehousing> edit(@RequestBody Map<String, Object> params) {
+        String warehousingId = (String) params.get("warehousingId");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> changes = (Map<String, Object>) params.get("changes");
+        ProductWarehousing updated = finishedWarehouseOperationOrchestrator.edit(warehousingId, changes);
+        return Result.success(updated);
+    }
+
+    @GetMapping("/edit-history")
+    public Result<List<Map<String, Object>>> getEditHistory(@RequestParam String warehousingId) {
+        List<Map<String, Object>> history = finishedWarehouseOperationOrchestrator.getEditHistory(warehousingId);
+        return Result.success(history);
+    }
+
+    @GetMapping("/amount-trace")
+    public Result<Map<String, Object>> getAmountTrace(@RequestParam String traceId) {
+        Map<String, Object> trace = finishedWarehouseOperationOrchestrator.getAmountTrace(traceId);
+        return Result.success(trace);
+    }
 }

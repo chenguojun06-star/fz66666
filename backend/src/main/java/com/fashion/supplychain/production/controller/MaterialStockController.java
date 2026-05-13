@@ -383,8 +383,8 @@ public class MaterialStockController {
     }
 
     @PostMapping("/free-inbound")
-    public Result<MaterialStock> freeInbound(@RequestBody Map<String, Object> params) {
-        MaterialStock result = materialWarehouseOperationOrchestrator.freeInbound(params);
+    public Result<MaterialInbound> freeInbound(@RequestBody Map<String, Object> params) {
+        MaterialInbound result = materialWarehouseOperationOrchestrator.freeInbound(params);
         return Result.success(result);
     }
 
@@ -419,5 +419,34 @@ public class MaterialStockController {
     public Result<Map<String, Object>> scanQuery(@RequestParam String materialCode) {
         Map<String, Object> result = materialWarehouseOperationOrchestrator.scanQuery(materialCode);
         return Result.success(result);
+    }
+
+    @PostMapping("/batch-inbound")
+    public Result<List<MaterialInbound>> batchInbound(@RequestBody Map<String, Object> body) {
+        List<MaterialInbound> results = materialWarehouseOperationOrchestrator.batchInbound(body);
+        return Result.success(results);
+    }
+
+    @PostMapping("/reverse")
+    public Result<MaterialInbound> reverse(@RequestBody Map<String, String> params) {
+        String inboundId = params.get("inboundId");
+        String reason = params.get("reason");
+        MaterialInbound reversal = materialWarehouseOperationOrchestrator.reverse(inboundId, reason);
+        return Result.success(reversal);
+    }
+
+    @PostMapping("/edit")
+    public Result<MaterialInbound> edit(@RequestBody Map<String, Object> params) {
+        String inboundId = (String) params.get("inboundId");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> changes = (Map<String, Object>) params.get("changes");
+        MaterialInbound updated = materialWarehouseOperationOrchestrator.edit(inboundId, changes);
+        return Result.success(updated);
+    }
+
+    @GetMapping("/amount-trace")
+    public Result<Map<String, Object>> getAmountTrace(@RequestParam String traceId) {
+        Map<String, Object> trace = materialWarehouseOperationOrchestrator.getAmountTrace(traceId);
+        return Result.success(trace);
     }
 }

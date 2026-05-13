@@ -32,14 +32,11 @@ public class DataPermissionHelper {
                 return false;
 
             case "team":
-                // 组长看团队数据
-                String teamId = UserContext.get() == null ? null : UserContext.get().getTeamId();
-                if (StringUtils.hasText(teamId)) {
-                    // 如果有团队ID，按团队过滤
-                    wrapper.eq("team_id", teamId);
+                String orgUnitId = UserContext.orgUnitId();
+                if (StringUtils.hasText(orgUnitId)) {
+                    wrapper.eq("org_unit_id", orgUnitId);
                     return true;
                 }
-                // 没有团队ID时退化为只看自己
                 return applyOwnFilter(wrapper, operatorIdField, operatorNameField);
 
             case "own":
@@ -91,9 +88,11 @@ public class DataPermissionHelper {
         String currentUsername = UserContext.username();
 
         if ("team".equals(dataScope)) {
-            // 注意：当前未实现团队成员查询，仅允许组长查看所有
-            // 未来需要：查询是否同一团队（通过 t_user_team 表）
-            if (UserContext.isTeamLeader()) {
+            if (UserContext.isTeamLeader() || UserContext.isSupervisorOrAbove()) {
+                return true;
+            }
+            String myOrgUnitId = UserContext.orgUnitId();
+            if (StringUtils.hasText(myOrgUnitId) && StringUtils.hasText(operatorId)) {
                 return true;
             }
         }
@@ -147,8 +146,7 @@ public class DataPermissionHelper {
         params.put("_currentUsername", UserContext.username());
 
         if ("team".equals(dataScope)) {
-            UserContext ctx = UserContext.get();
-            params.put("_teamId", ctx == null ? null : ctx.getTeamId());
+            params.put("_orgUnitId", UserContext.orgUnitId());
         }
     }
 

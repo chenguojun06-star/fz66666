@@ -86,7 +86,14 @@ public class FactoryAccountHelper {
         if (factoryRole != null) {
             user.setRoleId(factoryRole.getId());
             user.setRoleName(factoryRole.getRoleName());
-            user.setPermissionRange("all".equals(factoryRole.getDataScope()) ? "all" : "own");
+            String scope = factoryRole.getDataScope();
+            if ("all".equals(scope)) {
+                user.setPermissionRange("all");
+            } else if ("team".equals(scope)) {
+                user.setPermissionRange("team");
+            } else {
+                user.setPermissionRange("own");
+            }
         } else {
             user.setPermissionRange("own");
         }

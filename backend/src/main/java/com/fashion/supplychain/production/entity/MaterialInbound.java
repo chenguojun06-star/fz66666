@@ -10,6 +10,7 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -116,6 +117,32 @@ public class MaterialInbound implements Serializable {
      * 备注说明
      */
     private String remark;
+
+    private String sourceType;
+
+    private Integer quantity;
+
+    private BigDecimal unitPrice;
+
+    private BigDecimal totalAmount;
+
+    private String paymentStatus;
+
+    private BigDecimal paidAmount;
+
+    private String purchaseOrderId;
+
+    private String batchNo;
+
+    private String traceId;
+
+    private String reversalId;
+
+    private String reversedById;
+
+    private String reversalStatus;
+
+    private String reversalReason;
 
     /**
      * 创建时间

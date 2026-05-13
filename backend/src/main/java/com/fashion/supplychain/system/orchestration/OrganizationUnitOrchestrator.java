@@ -59,21 +59,34 @@ public class OrganizationUnitOrchestrator {
     private ProductionOrderService productionOrderService;
 
     public List<OrganizationUnit> tree() {
-        // 对于超级管理员（平台方），如果不传递特定租户，应该允许他查看“当前自己”能看到的数据（系统层级），或者直接绕过租户限制查看全部数据。
-        // 但前端组织架构树一般是基于单个租户构建的，混合展示会导致父子节点关系错乱。
         Long tenantId = UserContext.tenantId();
-        
         List<OrganizationUnit> nodes;
         if (tenantId == null && UserContext.isSuperAdmin()) {
-            // [修复 BUG] 超管 (admin) 本身没有 tenant_id。如果在页面上点击"初始化模板"，
-            // 插入的数据 tenant_id=null。
-            // 但如果这里返回 new ArrayList<>()，前端就永远看不到自己刚刚创建的节点了。
-            // 因此，对于超管（且未指定租户），我们只查询 tenant_id IS NULL 的全局组织节点。
             nodes = bindingHelper.listTenantNodes(null);
         } else {
             nodes = bindingHelper.listTenantNodes(tenantId);
         }
+        nodes = nodes.stream()
+                .filter(n -> !"EXTERNAL".equals(n.getOwnerType()))
+                .collect(Collectors.toList());
+        return buildTree(nodes);
+    }
 
+    public List<OrganizationUnit> externalTree() {
+        Long tenantId = UserContext.tenantId();
+        List<OrganizationUnit> nodes;
+        if (tenantId == null && UserContext.isSuperAdmin()) {
+            nodes = bindingHelper.listTenantNodes(null);
+        } else {
+            nodes = bindingHelper.listTenantNodes(tenantId);
+        }
+        nodes = nodes.stream()
+                .filter(n -> "EXTERNAL".equals(n.getOwnerType()))
+                .collect(Collectors.toList());
+        return buildTree(nodes);
+    }
+
+    private List<OrganizationUnit> buildTree(List<OrganizationUnit> nodes) {
         Map<String, OrganizationUnit> byId = nodes.stream()
                 .filter(item -> StringUtils.hasText(item.getId()))
                 .collect(Collectors.toMap(OrganizationUnit::getId, Function.identity(), (a, b) -> a));
@@ -93,10 +106,11 @@ public class OrganizationUnitOrchestrator {
         return roots;
     }
 
+
     public List<OrganizationUnit> departmentOptions() {
         LambdaQueryWrapper<OrganizationUnit> wrapper = new LambdaQueryWrapper<OrganizationUnit>()
                 .eq(OrganizationUnit::getDeleteFlag, 0)
-                .in(OrganizationUnit::getNodeType, "DEPARTMENT", "FACTORY")
+                .eq(OrganizationUnit::getNodeType, "DEPARTMENT")
                 .orderByAsc(OrganizationUnit::getSortOrder)
                 .orderByAsc(OrganizationUnit::getCreateTime);
         Long tenantId = UserContext.tenantId();
@@ -108,9 +122,16 @@ public class OrganizationUnitOrchestrator {
 
     private boolean isProductionRelated(OrganizationUnit unit) {
         if ("FACTORY".equals(unit.getNodeType())) return true;
+        if ("INTERNAL".equals(unit.getOwnerType())) return true;
         if (StringUtils.hasText(unit.getCategory())) {
             String cat = unit.getCategory().trim().toUpperCase();
-            if (cat.contains("生产") || cat.contains("PRODUCTION")) return true;
+            if (cat.contains("生产") || cat.contains("PRODUCTION")
+                    || cat.contains("车间") || cat.contains("WORKSHOP")
+                    || cat.contains("裁剪") || cat.contains("车缝") || cat.contains("缝制")
+                    || cat.contains("后整") || cat.contains("整烫") || cat.contains("包装")
+                    || cat.contains("质检") || cat.contains("工艺") || cat.contains("班组")
+                    || cat.contains("产线") || cat.contains("绣花") || cat.contains("印花")
+                    || cat.contains("洗水")) return true;
         }
         return false;
     }

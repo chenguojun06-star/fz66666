@@ -364,9 +364,10 @@ public class AiAgentToolAccessService {
 
         int index = 1;
         for (AgentTool tool : visibleTools) {
+            String label = com.fashion.supplychain.intelligence.helper.PromptToolLabelMapper.toolNameToLabel(tool.getName());
             builder.append(index++)
                     .append(". ")
-                    .append(tool.getName())
+                    .append(label)
                     .append(" — ")
                     .append(resolveGuide(tool))
                     .append("\n");

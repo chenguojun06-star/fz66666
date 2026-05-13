@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.style.dto.SkuBatchUpdateDTO;
 import com.fashion.supplychain.style.dto.StockUpdateDTO;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
@@ -127,12 +128,10 @@ public class ProductSkuController {
     }
 
     @PutMapping("/batch/{styleId}")
-    public Result<Void> batchUpdate(@PathVariable Long styleId, @RequestBody Map<String, Object> body) {
+    public Result<Void> batchUpdate(@PathVariable Long styleId, @RequestBody SkuBatchUpdateDTO dto) {
         TenantAssert.assertTenantContext();
-        @SuppressWarnings("unchecked")
-        List<ProductSku> skuList = (List<ProductSku>) body.get("skuList");
-        @SuppressWarnings("unchecked")
-        List<Long> deletedIds = (List<Long>) body.get("deletedIds");
+        List<ProductSku> skuList = dto.getSkuList();
+        List<Long> deletedIds = dto.getDeletedIds();
 
         if ((skuList == null || skuList.isEmpty()) && (deletedIds == null || deletedIds.isEmpty())) {
             return Result.success();

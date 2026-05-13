@@ -2,14 +2,19 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fashion.supplychain.finance.mapper.DeductionItemMapper">
     
-    <!-- 根据对账ID查询扣款项列表 -->
     <select id="selectByReconciliationId" resultType="com.fashion.supplychain.finance.entity.DeductionItem">
         SELECT 
             id,
             reconciliation_id AS reconciliationId,
+            settlement_id AS settlementId,
             deduction_type AS deductionType,
             deduction_amount AS deductionAmount,
-            description
+            description,
+            source_type AS sourceType,
+            source_id AS sourceId,
+            tenant_id AS tenantId,
+            create_time AS createTime,
+            update_time AS updateTime
         FROM t_deduction_item
         WHERE reconciliation_id = #{reconciliationId}
           AND tenant_id = #{tenantId}

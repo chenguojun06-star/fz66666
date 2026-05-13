@@ -1,8 +1,11 @@
 package com.fashion.supplychain.intelligence.helper;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
+import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
+import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
 import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
@@ -50,6 +53,8 @@ public class PromptContextProvider {
     private com.fashion.supplychain.intelligence.service.AgentContextFileLoaderService contextFileLoaderService;
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator;
+    @Autowired(required = false)
+    private IntelligenceFeedbackRecordMapper feedbackRecordMapper;
 
     /**
      * 系统操作指南类查询关键词 — 命中时注入知识库内容到系统提示词，
@@ -365,6 +370,39 @@ public class PromptContextProvider {
             return userProfileEvolutionOrchestrator.buildUserProfileContext(tenantId, userId);
         } catch (Exception e) {
             log.debug("[AiAgent-Profile] 用户画像加载跳过: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    public String buildSelfCritiqueContext(Long tenantId) {
+        if (feedbackRecordMapper == null || tenantId == null) return "";
+        try {
+            QueryWrapper<IntelligenceFeedbackRecord> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId)
+              .eq("feedback_result", "rejected")
+              .in("suggestion_type", "quick_path_quality", "agent_loop_quality")
+              .orderByDesc("create_time")
+              .last("LIMIT 5");
+            List<IntelligenceFeedbackRecord> records = feedbackRecordMapper.selectList(qw);
+            if (records == null || records.isEmpty()) return "";
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("【近期自我评分反馈 — 请参考改进】\n");
+            for (int i = 0; i < records.size(); i++) {
+                IntelligenceFeedbackRecord r = records.get(i);
+                String reason = r.getFeedbackReason();
+                if (reason != null && reason.length() > 200) {
+                    reason = reason.substring(0, 200) + "…";
+                }
+                sb.append(String.format("  %d. [偏差%d分] %s\n", i + 1,
+                        r.getDeviationMinutes() != null ? r.getDeviationMinutes().intValue() : 0,
+                        reason != null ? reason : "无详情"));
+            }
+            sb.append("（以上为系统自动评分的近期低分记录，请优先改进对应维度的回答质量。若评分已改善则无需特别关注。）\n\n");
+            log.debug("[AiAgent-SelfCritique] 注入 {} 条近期评分反馈", records.size());
+            return sb.toString();
+        } catch (Exception e) {
+            log.debug("[AiAgent-SelfCritique] 评分上下文加载跳过: {}", e.getMessage());
             return "";
         }
     }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -18,6 +19,7 @@ import java.util.List;
 public class SerialOrchestrator {
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -69,41 +71,24 @@ public class SerialOrchestrator {
     }
 
     private String nextOrderNo() {
-        String day = LocalDate.now().format(DAY_FMT);
-        String prefix = "PO" + day;
+        String ts = LocalDateTime.now().format(DATETIME_FMT);
+        String prefix = "PO" + ts;
         Long tenantId = UserContext.tenantId();
 
-        // 使用 JdbcTemplate 绕过 MyBatis-Plus 全局逻辑删除过滤
-        // 确保已软删除的订单号也被纳入查重，避免命中 uk_tenant_order_no 唯一约束导致 409
-        String latestOrderNo = findLatestOrderNo(prefix, tenantId);
-        int seq = resolveNextSeq(prefix, latestOrderNo);
+        if (countOrderNoIncludingDeleted(prefix, tenantId) == 0) {
+            return prefix;
+        }
 
-        for (int i = 0; i < 200; i++) {
-            String candidate = prefix + "%03d".formatted(seq);
+        for (int seq = 1; seq <= 99; seq++) {
+            String candidate = prefix + "%02d".formatted(seq);
             if (countOrderNoIncludingDeleted(candidate, tenantId) == 0) {
                 return candidate;
             }
-            seq += 1;
         }
 
         String fallback = String.valueOf(System.nanoTime());
         String suffix = fallback.length() > 6 ? fallback.substring(fallback.length() - 6) : fallback;
         return prefix + suffix;
-    }
-
-    /** 查询最新订单号（包含已软删除的记录），绕过 logic-delete 过滤 */
-    private String findLatestOrderNo(String prefix, Long tenantId) {
-        String sql;
-        Object[] params;
-        if (tenantId != null) {
-            sql = "SELECT order_no FROM t_production_order WHERE tenant_id = ? AND order_no LIKE ? ORDER BY order_no DESC LIMIT 1";
-            params = new Object[]{tenantId, prefix + "%"};
-        } else {
-            sql = "SELECT order_no FROM t_production_order WHERE order_no LIKE ? ORDER BY order_no DESC LIMIT 1";
-            params = new Object[]{prefix + "%"};
-        }
-        List<String> results = jdbcTemplate.queryForList(sql, String.class, params);
-        return results.isEmpty() ? null : results.get(0);
     }
 
     /** 检查订单号是否已存在（包含已软删除的记录），绕过 logic-delete 过滤 */

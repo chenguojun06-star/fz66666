@@ -9,6 +9,7 @@ import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOr
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -54,6 +55,9 @@ public class ProductionOrderCreationHelper {
     @Autowired
     private CuttingWorkflowBuilderHelper cuttingWorkflowBuilderHelper;
 
+    @Autowired
+    private OrderRemarkHelper orderRemarkHelper;
+
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
         if (productionOrder == null) {
@@ -89,6 +93,9 @@ public class ProductionOrderCreationHelper {
         helper.validateUnitPriceSources(productionOrder);
 
         if (isCreate) {
+            if (productionOrder.getActualStartDate() == null) {
+                productionOrder.setActualStartDate(LocalDateTime.now());
+            }
             if (productionOrder.getExpectedShipDate() == null && productionOrder.getPlannedEndDate() != null) {
                 productionOrder.setExpectedShipDate(productionOrder.getPlannedEndDate());
                 log.info("[订单创建] 自动设置 expectedShipDate = plannedEndDate: {}", productionOrder.getPlannedEndDate());
@@ -119,6 +126,9 @@ public class ProductionOrderCreationHelper {
         }
 
         if (isCreate && productionOrder != null && StringUtils.hasText(productionOrder.getId())) {
+            orderRemarkHelper.append(productionOrder, "下单",
+                    "款号" + (productionOrder.getStyleNo() != null ? productionOrder.getStyleNo() : "") + "，工厂" + (productionOrder.getFactoryName() != null ? productionOrder.getFactoryName() : "")
+                    + "，数量" + (productionOrder.getOrderQuantity() != null ? productionOrder.getOrderQuantity() : "未知"));
             try {
                 materialPurchaseService.generateDemandByOrderId(productionOrder.getId().trim(), false);
             } catch (Exception e) {
@@ -271,7 +281,10 @@ public class ProductionOrderCreationHelper {
         }
 
         String newOrderId = newOrder.getId();
-        String orderNo = newOrder.getOrderNo(); // 数据库自动生成
+        String orderNo = newOrder.getOrderNo();
+
+        orderRemarkHelper.append(newOrder, "样衣推单",
+                "款号" + (style.getStyleNo() != null ? style.getStyleNo() : "") + "，创建订单" + orderNo);
 
         log.info("Created order from style: styleId={}, styleNo={}, orderId={}, orderNo={}",
                 styleId, style.getStyleNo(), newOrderId, orderNo);

@@ -7,13 +7,19 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.warehouse.entity.StockChangeLog;
+import com.fashion.supplychain.warehouse.service.StockChangeLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.NoSuchElementException;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
 import static com.fashion.supplychain.production.service.impl.ProductWarehousingHelper.*;
@@ -27,6 +33,7 @@ public class WarehousingWriteHelper {
     private final CuttingBundleService cuttingBundleService;
     private final ProductWarehousingHelper helper;
     private final com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+    private final StockChangeLogService stockChangeLogService;
 
     public ProductionOrder validateOrderForSave(ProductWarehousing pw) {
         if (!StringUtils.hasText(pw.getOrderId())) {
@@ -243,7 +250,34 @@ public class WarehousingWriteHelper {
             } catch (Exception e) {
                 log.warn("更新SKU库存失败（不阻断入库）: orderId={}", pw.getOrderId(), e);
             }
+            try {
+                StockChangeLog scl = new StockChangeLog();
+                scl.setId(UUID.randomUUID().toString().replace("-", ""));
+                scl.setChangeNo(buildChangeNo("SC"));
+                scl.setChangeType("INBOUND");
+                scl.setStockType("FINISHED");
+                scl.setStyleNo(pw.getStyleNo());
+                scl.setColor(pw.getColor());
+                scl.setSize(pw.getSize());
+                scl.setChangeQuantity(BigDecimal.valueOf(pw.getQualifiedQuantity()));
+                scl.setBizType("production_order");
+                scl.setBizNo(pw.getWarehousingNo());
+                scl.setTraceId(pw.getTraceId());
+                scl.setOperatorId(UserContext.userId());
+                scl.setOperatorName(UserContext.username());
+                scl.setTenantId(UserContext.tenantId());
+                scl.setCreateTime(LocalDateTime.now());
+                stockChangeLogService.save(scl);
+            } catch (Exception e) {
+                log.warn("记录库存变动日志失败（不阻断入库）: orderId={}", pw.getOrderId(), e);
+            }
         }
+    }
+
+    private String buildChangeNo(String prefix) {
+        return prefix + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000))
+                .toUpperCase();
     }
 
     public void broadcastWarehousingNotification(ProductWarehousing pw, ProductionOrder order) {

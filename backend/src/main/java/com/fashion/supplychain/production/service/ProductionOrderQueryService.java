@@ -187,7 +187,44 @@ public class ProductionOrderQueryService {
             }
         }
 
+        applyDataPermissionFilter(wrapper);
+
         return wrapper;
+    }
+
+    private void applyDataPermissionFilter(QueryWrapper<ProductionOrder> wrapper) {
+        if (com.fashion.supplychain.common.UserContext.isTenantOwner()
+                || com.fashion.supplychain.common.UserContext.isSuperAdmin()) {
+            return;
+        }
+
+        String dataScope = com.fashion.supplychain.common.UserContext.getDataScope();
+
+        if ("all".equals(dataScope)) {
+            return;
+        }
+
+        String currentUserId = com.fashion.supplychain.common.UserContext.userId();
+        if (!org.springframework.util.StringUtils.hasText(currentUserId)) {
+            return;
+        }
+
+        if ("team".equals(dataScope)) {
+            String orgUnitId = com.fashion.supplychain.common.UserContext.orgUnitId();
+            if (org.springframework.util.StringUtils.hasText(orgUnitId)) {
+                wrapper.and(w -> w
+                    .apply("EXISTS (SELECT 1 FROM t_scan_record sr JOIN t_user u ON u.id = sr.operator_id WHERE sr.order_id = id AND sr.scan_result = 'success' AND u.org_unit_id = {0})", orgUnitId)
+                    .or()
+                    .apply("EXISTS (SELECT 1 FROM t_scan_record sr WHERE sr.order_id = id AND sr.operator_id = {0} AND sr.scan_result = 'success')", currentUserId)
+                );
+                return;
+            }
+        }
+
+        wrapper.apply(
+            "EXISTS (SELECT 1 FROM t_scan_record sr WHERE sr.order_id = id AND sr.operator_id = {0} AND sr.scan_result = 'success')",
+            currentUserId
+        );
     }
 
     private void enrichOrderList(IPage<ProductionOrder> resultPage) {

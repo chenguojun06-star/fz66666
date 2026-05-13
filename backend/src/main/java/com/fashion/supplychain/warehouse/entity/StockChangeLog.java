@@ -54,6 +54,12 @@ public class StockChangeLog {
 
     private String remark;
 
+    private BigDecimal unitPrice;
+
+    private BigDecimal totalAmount;
+
+    private String traceId;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 

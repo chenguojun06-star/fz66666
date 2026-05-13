@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -108,6 +109,12 @@ public class User {
 
     /** 所属组织路径 */
     private String orgPath;
+
+    private String gender;
+
+    private LocalDate hireDate;
+
+    private String employmentStatus;
 
     public interface Create {}
     public interface Register {}

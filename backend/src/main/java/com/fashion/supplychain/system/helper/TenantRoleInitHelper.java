@@ -492,7 +492,7 @@ public class TenantRoleInitHelper {
             user.setRoleId(workerRole.getId());
             user.setRoleName(workerRole.getRoleName());
         }
-        user.setPermissionRange("self");
+        user.setPermissionRange("own");
         if (org.springframework.util.StringUtils.hasText(factoryId)) {
             user.setFactoryId(factoryId);
         }

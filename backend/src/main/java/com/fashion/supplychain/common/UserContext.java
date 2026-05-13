@@ -24,6 +24,9 @@ public class UserContext {
     /** 外发工厂ID，NULL=普通租户账号，非NULL=该用户是外发工厂账号 */
     private String factoryId;
 
+    /** 所属组织单元ID（用于team数据权限过滤） */
+    private String orgUnitId;
+
     public static void set(UserContext ctx) {
         HOLDER.set(ctx);
     }
@@ -206,6 +209,7 @@ public class UserContext {
         copy.setTenantOwner(this.tenantOwner);
         copy.setSuperAdmin(this.superAdmin);
         copy.setFactoryId(this.factoryId);
+        copy.setOrgUnitId(this.orgUnitId);
         return copy;
     }
 
@@ -346,5 +350,18 @@ public class UserContext {
 
     public void setFactoryId(String factoryId) {
         this.factoryId = factoryId;
+    }
+
+    public static String orgUnitId() {
+        UserContext ctx = get();
+        return ctx == null ? null : ctx.getOrgUnitId();
+    }
+
+    public String getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(String orgUnitId) {
+        this.orgUnitId = orgUnitId;
     }
 }

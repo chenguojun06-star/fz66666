@@ -36,6 +36,11 @@ public class RoleController {
         return Result.success(rolePage);
     }
 
+    @GetMapping("/all")
+    public Result<?> getAllRoles() {
+        return Result.success(roleOrchestrator.listAll());
+    }
+
     @GetMapping("/{id}")
     public Result<?> getRoleById(@PathVariable Long id) {
         return Result.success(roleOrchestrator.getById(id));

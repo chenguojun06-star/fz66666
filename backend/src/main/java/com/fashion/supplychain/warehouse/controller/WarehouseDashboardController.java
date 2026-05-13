@@ -12,8 +12,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 仓库数据看板控制器
+ * 仓库数据看板控制器 — 仓库统计数据、库存预警、出入库记录、趋势分析。
+ *
+ * @deprecated 当前无前端 API 消费者（前端页面存在但未调用这些端点）。
+ * 计划于 2026-Q3 评估是否删除或迁移到统一数据看板。
  */
+@Deprecated
 @Slf4j
 @RestController
 @RequestMapping("/api/warehouse/dashboard")

@@ -31,6 +31,11 @@ public class OrganizationUnitController {
         return Result.success(organizationUnitOrchestrator.tree());
     }
 
+    @GetMapping("/external-tree")
+    public Result<List<OrganizationUnit>> externalTree() {
+        return Result.success(organizationUnitOrchestrator.externalTree());
+    }
+
     @GetMapping("/departments")
     public Result<List<OrganizationUnit>> departments() {
         return Result.success(organizationUnitOrchestrator.departmentOptions());

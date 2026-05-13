@@ -83,6 +83,10 @@ public class PromptTemplateLoader {
         return getSection("xiaoyun-base-prompt", "manager_mode_text");
     }
 
+    public String getSelfCritiqueFeedback() {
+        return getSection("xiaoyun-base-prompt", "self_critique_feedback_text");
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> loadTemplate(String name) {
         try {

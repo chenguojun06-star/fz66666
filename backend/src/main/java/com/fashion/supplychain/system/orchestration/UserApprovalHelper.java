@@ -82,7 +82,14 @@ public class UserApprovalHelper {
             }
             user.setRoleId(roleId);
             user.setRoleName(role.getRoleName());
-            user.setPermissionRange("all".equals(role.getDataScope()) ? "all" : "self");
+            String scope = role.getDataScope();
+            if ("all".equals(scope)) {
+                user.setPermissionRange("all");
+            } else if ("team".equals(scope)) {
+                user.setPermissionRange("team");
+            } else {
+                user.setPermissionRange("own");
+            }
         }
         user.setApprovalStatus("approved");
         user.setApprovalTime(LocalDateTime.now());

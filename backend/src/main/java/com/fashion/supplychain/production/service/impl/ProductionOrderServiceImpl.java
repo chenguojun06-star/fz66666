@@ -196,21 +196,24 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     }
 
     private String nextOrderNo() {
-        LocalDateTime now = LocalDateTime.now();
-        String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String prefix = "PO" + ts;
         Long tenantId = UserContext.tenantId();
-        for (int i = 0; i < 6; i++) {
-            int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
-            String candidate = "ORD" + ts + rand;
-            // 使用 JdbcTemplate 绕过 MyBatis-Plus 全局逻辑删除过滤
-            // 确保已软删除的订单号也被纳入查重，避免 DuplicateKeyException (409)
+
+        if (countOrderNoIncludingDeleted(prefix, tenantId) == 0) {
+            return prefix;
+        }
+
+        for (int seq = 1; seq <= 99; seq++) {
+            String candidate = prefix + String.format("%02d", seq);
             if (countOrderNoIncludingDeleted(candidate, tenantId) == 0) {
                 return candidate;
             }
         }
+
         String nano = String.valueOf(System.nanoTime());
         String suffix = nano.length() > 6 ? nano.substring(nano.length() - 6) : nano;
-        return "ORD" + ts + suffix;
+        return prefix + suffix;
     }
 
     /** 检查订单号是否已存在（包含已软删除的记录），绕过 logic-delete 过滤 */

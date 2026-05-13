@@ -69,6 +69,47 @@ public final class StatusTranslator {
         STATUS_MAP.put("sewing_completed",   "车缝完成");
         STATUS_MAP.put("review_pending",     "待审核");
         STATUS_MAP.put("review_passed",      "审核通过");
+        // 生产订单补充
+        STATUS_MAP.put("not_started",        "未开始");
+        STATUS_MAP.put("received",           "已领取");
+        STATUS_MAP.put("partial",            "部分到货");
+        STATUS_MAP.put("partial_arrival",    "部分到货");
+        STATUS_MAP.put("awaiting_confirm",   "待确认");
+        STATUS_MAP.put("warehouse_pending",  "待入库");
+        STATUS_MAP.put("pending_audit",      "待初审");
+        STATUS_MAP.put("passed",             "初审通过");
+        STATUS_MAP.put("bundled",            "已成菲");
+        STATUS_MAP.put("created",            "已创建");
+        STATUS_MAP.put("OPEN",               "待处理");
+        STATUS_MAP.put("RESOLVED",           "已解决");
+        STATUS_MAP.put("REWORK",             "返工中");
+        STATUS_MAP.put("WAREHOUSE_OUT",      "已出仓");
+        STATUS_MAP.put("PRODUCTION_COMPLETED","生产完成");
+        STATUS_MAP.put("IN_STOCK",           "在库");
+        STATUS_MAP.put("ISSUED",             "已发料");
+        STATUS_MAP.put("RETURNED",           "已退回");
+        STATUS_MAP.put("ENABLED",            "已启用");
+        STATUS_MAP.put("active",             "正常");
+        STATUS_MAP.put("inactive",           "已停用");
+        STATUS_MAP.put("PARTIAL",            "部分付款");
+        STATUS_MAP.put("OVERDUE",            "已逾期");
+        STATUS_MAP.put("SETTLING",           "结算中");
+        STATUS_MAP.put("SETTLED",            "已结算");
+        STATUS_MAP.put("ISSUED_INVOICE",     "已开具");
+        STATUS_MAP.put("processing",         "处理中");
+        STATUS_MAP.put("refunded",           "已退款");
+        STATUS_MAP.put("borrowed",           "借出中");
+        STATUS_MAP.put("lost",               "已丢失");
+        STATUS_MAP.put("accepted",           "已接受");
+        STATUS_MAP.put("verified",           "已验证");
+        STATUS_MAP.put("repaired_waiting_qc","返修待质检");
+        STATUS_MAP.put("CREATED",            "已创建");
+        STATUS_MAP.put("DISCONNECTED",       "未连接");
+        STATUS_MAP.put("unpaid",             "未付款");
+        STATUS_MAP.put("partially_paid",     "部分已付");
+        STATUS_MAP.put("fully_paid",         "已付清");
+        STATUS_MAP.put("unrepaid",           "未还款");
+        STATUS_MAP.put("repaid",             "已还清");
     }
 
     // ── 常见 JSON 字段名翻译 ──

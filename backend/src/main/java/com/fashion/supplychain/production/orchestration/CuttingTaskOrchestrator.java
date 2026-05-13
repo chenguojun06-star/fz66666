@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.factory.CuttingOrderFactory;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -46,6 +47,9 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
+
+    @Autowired
+    private OrderRemarkHelper orderRemarkHelper;
 
     private boolean isDirectCuttingOrder(ProductionOrder order, CuttingTask task) {
         String orderNo = order != null && StringUtils.hasText(order.getOrderNo())
@@ -300,6 +304,12 @@ public class CuttingTaskOrchestrator {
                 sysRemark.setCreateTime(LocalDateTime.now());
                 sysRemark.setDeleteFlag(0);
                 orderRemarkService.save(sysRemark);
+
+                ProductionOrder order = productionOrderService.getByOrderNo(updated.getProductionOrderNo());
+                if (order != null) {
+                    orderRemarkHelper.append(order, "裁剪领取",
+                            (StringUtils.hasText(updatedReceiverName) ? "领取人:" + updatedReceiverName : ""));
+                }
             }
         } catch (Exception e) {
             log.warn("自动写入裁剪领取备注失败，不影响主流程", e);

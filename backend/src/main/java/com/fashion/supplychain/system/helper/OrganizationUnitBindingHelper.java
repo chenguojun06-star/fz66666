@@ -30,6 +30,9 @@ public class OrganizationUnitBindingHelper {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private com.fashion.supplychain.system.mapper.OrganizationUnitMapper organizationUnitMapper;
+
     public void validateDepartmentParent(String parentId) {
         if (!StringUtils.hasText(parentId)) {
             return;
@@ -63,12 +66,26 @@ public class OrganizationUnitBindingHelper {
 
         LocalDateTime now = LocalDateTime.now();
         if (node == null) {
-            node = new OrganizationUnit();
-            node.setFactoryId(factory.getId());
-            node.setCreateTime(now);
-            node.setDeleteFlag(0);
-            node.setSortOrder(0);
-            node.setTenantId(factory.getTenantId() != null ? factory.getTenantId() : UserContext.tenantId());
+            node = organizationUnitMapper.selectOneByFactoryIdIgnoreDelete(factory.getId());
+            if (node != null && node.getDeleteFlag() != null && node.getDeleteFlag() != 0) {
+                node.setDeleteFlag(0);
+                List<com.fashion.supplychain.system.entity.OrganizationUnit> duplicates =
+                        organizationUnitMapper.selectDeletedByFactoryId(factory.getId());
+                if (duplicates != null) {
+                    for (com.fashion.supplychain.system.entity.OrganizationUnit dup : duplicates) {
+                        if (!dup.getId().equals(node.getId())) {
+                            organizationUnitService.removeById(dup.getId());
+                        }
+                    }
+                }
+            } else {
+                node = new OrganizationUnit();
+                node.setFactoryId(factory.getId());
+                node.setCreateTime(now);
+                node.setDeleteFlag(0);
+                node.setSortOrder(0);
+                node.setTenantId(factory.getTenantId() != null ? factory.getTenantId() : UserContext.tenantId());
+            }
         }
         node.setParentId(trim(factory.getParentOrgUnitId()));
         node.setNodeName(trim(factory.getFactoryName()));

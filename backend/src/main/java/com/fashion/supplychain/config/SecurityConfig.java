@@ -34,7 +34,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -94,129 +93,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .permissionsPolicy(permissions -> permissions
                                 .policy("camera=(), microphone=(), geolocation=()"))  // 禁止不需要的浏览器API
                 )
-                .authorizeHttpRequests(authz -> authz
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/ws/**").permitAll()  // WebSocket握手是HTTP升级请求，自行鉴权(userId query param)
-                        .requestMatchers("/error").permitAll()  // Spring Boot 错误转发端点，需放行否则自身产生 403 噪音日志
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").authenticated()
-                        .requestMatchers("/api/system/tenant/apply").permitAll()
-                        .requestMatchers("/api/system/tenant/public-list").permitAll()
-                        .requestMatchers("/api/system/user/login").permitAll()
-                        .requestMatchers("/api/system/user/refresh-token").permitAll()
-                        .requestMatchers("/api/auth/register").permitAll()
-                        // 文件下载：旧公共下载保持 permitAll（无租户信息），租户隔离文件要求认证
-                        // 前端通过 getAuthedFileUrl() 在 URL 追加 ?token=xxx，TokenAuthFilter 会解析
-                        .requestMatchers("/api/common/download/**").authenticated()
-                        .requestMatchers("/api/file/tenant-download/**").authenticated()
-                        .requestMatchers("/openapi/**").permitAll()  // 客户开放API（使用appKey+签名鉴权）
-                        .requestMatchers("/v1/**").permitAll()  // OpenAI兼容API（自建Bearer Token鉴权）
-                        .requestMatchers("/api/intelligence/mcp/token").permitAll()  // MCP Token 换取（使用appKey+HMAC签名鉴权，不需要JWT）
-                        .requestMatchers("/api/intelligence/a2a/token").permitAll()  // A2A Token 换取（使用appKey+HMAC签名鉴权，不需要JWT）
-                        .requestMatchers("/api/intelligence/wechat-ai/callback").permitAll()  // 微信公众号AI回调（微信服务器推送，使用signature鉴权）
-                        .requestMatchers("/api/intelligence/im-ai/feishu/callback").permitAll()  // 飞书AI回调（飞书服务器推送，使用签名鉴权）
-                        .requestMatchers("/api/intelligence/im-ai/dingtalk/callback").permitAll()  // 钉钉AI回调（钉钉服务器推送，使用签名鉴权）
-                        .requestMatchers("/api/intelligence/ai-advisor/chat/stream").permitAll()  // AI SSE 流式问答（自建鉴权，绕过虚拟线程权限上下文丢失）
-                        .requestMatchers("/api/webhook/**").permitAll()  // 第三方回调（支付宝/微信支付/顺丰/申通），通过签名验证防伪造，不需要JWT
-                        .requestMatchers("/api/ecommerce/webhook/**").permitAll()  // 电商平台推单回调（淘宝/京东/抖音等），Controller内做签名验证
-                        .requestMatchers("/api/public/**").permitAll()   // 客户分享页等无需登录的公开查询接口
-                        .requestMatchers("/api/crm-client/login").permitAll()  // B2B客户门户登录
-                        .requestMatchers("/api/supplier-portal/login").permitAll()  // 供应商门户登录
-                        .requestMatchers(HttpMethod.GET, "/api/production/warehousing/list").authenticated()
-                        .requestMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
-                        .requestMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
-                        .requestMatchers("/api/system/user/online-count").authenticated()
-                        .requestMatchers("/api/system/user/pending").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
-                        .requestMatchers("/api/system/user/*/approve").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
-                        .requestMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
-                        .requestMatchers("/api/wechat/mini-program/login").permitAll()
-                        .requestMatchers("/api/wechat/h5/jssdk-config").permitAll()
-                        .requestMatchers("/api/wechat/h5/oauth-login").permitAll()
-                        .requestMatchers("/api/wechat/h5/bind-login").permitAll()
-                        .requestMatchers("/api/production/order/by-order-no/**").authenticated()
-                        .requestMatchers("/api/production/order/detail/**").authenticated()
-                        .requestMatchers("/api/production/cutting-bundle/by-no").authenticated()
-                        .requestMatchers("/api/production/cutting/summary").authenticated()
-                        .requestMatchers("/api/production/purchase/receive").authenticated()
-                        .requestMatchers("/api/production/material/receive").authenticated()
-                        .requestMatchers("/api/production/order/node-operations/**").authenticated()
-                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**")
-                        .permitAll()
-                        .requestMatchers("/api/warehouse/dashboard/**").authenticated()
-                        .requestMatchers("/actuator/**").hasAnyAuthority(
-                                "ROLE_ADMIN",
-                                "ROLE_admin",
-                                "ROLE_1",
-                                "ROLE_主管",
-                                "ROLE_管理员")
-                        .requestMatchers("/api/system/diag/**").hasAnyAuthority(
-                                "ROLE_ADMIN",
-                                "ROLE_admin",
-                                "ROLE_1",
-                                "ROLE_主管",
-                                "ROLE_管理员")
-                        .requestMatchers("/api/system/serial/**").authenticated()
-                        .requestMatchers("/api/system/tenant/my").authenticated()
-                        .requestMatchers("/api/system/tenant/sub/**").authenticated()
-                        .requestMatchers("/api/system/tenant/role-templates").authenticated()
-                        .requestMatchers("/api/system/tenant/roles/**").authenticated()
-                        .requestMatchers("/api/system/tenant/registration/**").permitAll()
-                        .requestMatchers("/api/system/tenant/registrations/**").authenticated()
-
-                        // ── 系统模块只读端点：所有登录用户可访问（必须放在 /api/system/** 兜底之前）──
-                        // 用户列表：工厂账号可查自己工厂成员（Orchestrator 层自动按 factoryId 过滤，防越权）
-                        .requestMatchers(HttpMethod.GET, "/api/system/user/list").authenticated()
-                        // 成员状态切换：工厂账号可启停自己工厂成员（Orchestrator 层校验 factoryId 归属，防越权）
-                        .requestMatchers(HttpMethod.PUT, "/api/system/user/status").authenticated()
-                        // 组织架构：查看部门树/成员（创建/修改/删除由兜底规则限定为管理员）
-                        .requestMatchers(HttpMethod.GET, "/api/system/organization/tree").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/organization/departments").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/organization/members").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/organization/assignable-users").authenticated()
-                        // 工厂：查看列表/详情（创建/修改/删除由兜底规则限定为管理员）
-                        .requestMatchers(HttpMethod.GET, "/api/system/factory/list").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/factory/*").authenticated()
-                        // 应用商店：浏览、我的应用、试用（admin 端点有 method 级 @PreAuthorize 二次拦截）
-                        .requestMatchers("/api/system/app-store/list").authenticated()
-                        .requestMatchers("/api/system/app-store/my-apps").authenticated()
-                        .requestMatchers("/api/system/app-store/my-subscriptions").authenticated()
-                        .requestMatchers("/api/system/app-store/start-trial").authenticated()
-                        .requestMatchers("/api/system/app-store/create-order").authenticated()
-                        .requestMatchers("/api/system/app-store/quick-setup").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/app-store/trial-status/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/app-store/*").authenticated()
-                        // 租户智能配置/功能开关（查看当前租户配置；save/reset 由兜底规则限为管理员）
-                        .requestMatchers(HttpMethod.GET, "/api/system/tenant-intelligence-profile/current").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/tenant-smart-feature/list").authenticated()
-                        // 小程序菜单配置：所有登录用户可查看，保存由 Orchestrator 层限为管理员
-                        .requestMatchers("/api/system/tenant-miniprogram-menu/**").authenticated()
-                        // 字典查询：工序名/机器类型等词典数据，前端下拉/自动完成组件需要，所有登录用户可读
-                        // （写操作 POST/PUT/DELETE 由兜底规则限为管理员）
-                        .requestMatchers(HttpMethod.GET, "/api/system/dict/list").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/system/dict/by-type").authenticated()
-
-                        // 订单备注：所有登录用户可读写自己租户的订单备注（Orchestrator 层按 tenantId 隔离）
-                        .requestMatchers("/api/system/order-remark/**").authenticated()
-
-                        // 供应商用户管理：仅管理员可操作（创建/重置密码/禁用/删除）
-                        .requestMatchers("/api/supplier-user/**").hasAnyAuthority(
-                                "ROLE_admin",
-                                "ROLE_ADMIN",
-                                "ROLE_1",
-                                "ROLE_tenant_owner")
-
-                        // ── 管理员兜底：/api/system/tenant/** 和 /api/system/** 其余端点仅管理员可访问 ──
-                        .requestMatchers("/api/system/tenant/**").hasAnyAuthority(
-                                "ROLE_admin",
-                                "ROLE_ADMIN",
-                                "ROLE_1",
-                                "ROLE_tenant_owner")
-                        .requestMatchers("/api/system/**").hasAnyAuthority(
-                                "ROLE_admin",
-                                "ROLE_ADMIN",
-                                "ROLE_1",
-                                "ROLE_tenant_owner")
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().denyAll());
+                .authorizeHttpRequests(authz -> SecurityConfigHelper.configure(authz));
 
         // 未认证请求（token 缺失 / 过期）统一返回 401 JSON，前端拦截器据此跳转登录页
         // 有 token 但权限不足（403 Forbidden / AccessDeniedException）不在此处处理，保持默认 403
@@ -391,6 +268,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                 ctx.setSuperAdmin(subject.isSuperAdmin());
                 if (subject.getFactoryId() != null) {
                     ctx.setFactoryId(subject.getFactoryId());
+                }
+                if (subject.getOrgUnitId() != null) {
+                    ctx.setOrgUnitId(subject.getOrgUnitId());
                 }
 
             } else {
