@@ -57,6 +57,7 @@ public final class DbColumnDefinitions {
         add("t_mind_push_rule", "notify_time_start", "VARCHAR(5) NOT NULL DEFAULT '08:00' COMMENT '推送开始时间'");
         add("t_mind_push_rule", "notify_time_end", "VARCHAR(5) NOT NULL DEFAULT '22:00' COMMENT '推送结束时间'");
         add("t_order_remark", "id", "BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键'");
+        add("t_order_remark", "image_urls", "TEXT DEFAULT NULL COMMENT '图片URLs'");
         add("t_ec_platform_config", "callback_url", "VARCHAR(500) DEFAULT NULL COMMENT '回调地址'");
         add("t_ec_platform_config", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
     }
