@@ -15,8 +15,14 @@ export type MiniprogramMenuKey =
   | 'miniprogram.menu.smartOps'
   | 'miniprogram.menu.dashboard'
   | 'miniprogram.menu.orderCreate'
+  | 'miniprogram.menu.production'
+  | 'miniprogram.menu.quality'
   | 'miniprogram.menu.bundleSplit'
-  | 'miniprogram.menu.cuttingDetail';
+  | 'miniprogram.menu.cuttingDetail'
+  | 'miniprogram.menu.history'
+  | 'miniprogram.menu.factoryShipment'
+  | 'miniprogram.menu.advance'
+  | 'miniprogram.menu.wagePayment';
 
 export type SmartFeatureFlags = Record<SmartFeatureKey, boolean>;
 export type MiniprogramMenuFlags = Record<MiniprogramMenuKey, boolean>;
@@ -25,8 +31,14 @@ export const MINIPROGRAM_MENU_KEYS: MiniprogramMenuKey[] = [
   'miniprogram.menu.smartOps',
   'miniprogram.menu.dashboard',
   'miniprogram.menu.orderCreate',
+  'miniprogram.menu.production',
+  'miniprogram.menu.quality',
   'miniprogram.menu.bundleSplit',
   'miniprogram.menu.cuttingDetail',
+  'miniprogram.menu.history',
+  'miniprogram.menu.factoryShipment',
+  'miniprogram.menu.advance',
+  'miniprogram.menu.wagePayment',
 ];
 
 const defaultFlags: SmartFeatureFlags = {
@@ -118,8 +130,14 @@ const miniprogramMenuDefaultFlags: MiniprogramMenuFlags = {
   'miniprogram.menu.smartOps': true,
   'miniprogram.menu.dashboard': true,
   'miniprogram.menu.orderCreate': true,
+  'miniprogram.menu.production': true,
+  'miniprogram.menu.quality': true,
   'miniprogram.menu.bundleSplit': true,
   'miniprogram.menu.cuttingDetail': true,
+  'miniprogram.menu.history': true,
+  'miniprogram.menu.factoryShipment': true,
+  'miniprogram.menu.advance': true,
+  'miniprogram.menu.wagePayment': true,
 };
 
 const miniprogramMenuStorageKey = 'miniprogram-menu-flags';

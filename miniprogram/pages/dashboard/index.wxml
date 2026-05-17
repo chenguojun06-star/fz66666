@@ -157,6 +157,7 @@
           <view class="act-btn act-btn--primary" catchtap="onViewCuttingBundles" data-order-no="{{item.orderNo}}">裁剪</view>
           <view class="act-btn act-btn--primary" catchtap="onEditProcess" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}" data-status="{{item.status}}" wx:if="{{item.status === 'production'}}">工序</view>
           <view class="act-btn act-btn--warn" catchtap="onTransferOrder" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}">转单</view>
+          <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
           <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
         </view>
       </view>

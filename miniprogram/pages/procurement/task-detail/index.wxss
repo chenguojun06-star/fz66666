@@ -220,9 +220,10 @@
 }
 .input-field {
   width: 100%;
-  height: 64rpx;
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-sm);
+  height: 72rpx;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
   padding: 0 20rpx;
   font-size: var(--font-size-base);
   color: var(--color-text-primary);

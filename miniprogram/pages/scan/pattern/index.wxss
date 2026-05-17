@@ -292,12 +292,12 @@
 .input-field {
   flex: 1;
   height: 72rpx;
-  border: 1rpx solid var(--color-border-light);
+  border: 1rpx solid var(--input-border);
   border-radius: 12rpx;
   padding: 0 20rpx;
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
-  background: rgba(var(--color-primary-rgb, 37,99,235), 0.02);
+  background: var(--input-bg);
 }
 .input-suffix {
   font-size: var(--font-size-sm);

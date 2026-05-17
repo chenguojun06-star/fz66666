@@ -201,17 +201,19 @@
 .pef-label {
   width: 80px;
   font-size: 13px;
-  color: #666;
+  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 .pef-input {
   flex: 1;
-  height: 32px;
-  border: 1px solid #d9d9d9;
+  height: 36px;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   padding: 0 10px;
   font-size: 14px;
-  color: #333;
+  color: var(--color-text-primary);
+  background: var(--input-bg);
+  box-sizing: border-box;
 }
 .pef-difficulty {
   display: flex;
@@ -220,9 +222,10 @@
 .diff-opt {
   font-size: 13px;
   padding: 3px 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
-  color: #666;
+  color: var(--color-text-secondary);
+  background: var(--input-bg);
 }
 .diff-opt--active {
   color: #1677ff;

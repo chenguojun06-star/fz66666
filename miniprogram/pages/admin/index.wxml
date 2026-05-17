@@ -39,40 +39,39 @@
 </view>
 
 <!-- 菜单管理弹窗 -->
-<view wx:if="{{menuManageVisible}}" class="mm-overlay" bindtap="closeMenuManage">
-  <view class="mm-panel" catchtap="">
-    <view class="mm-header">
-      <text class="mm-title">菜单管理</text>
-      <view class="mm-close" hover-class="mm-close-hover" bindtap="closeMenuManage">
-        <text class="mm-close-text">✕</text>
-      </view>
+<view wx:if="{{menuManageVisible}}" class="mm-overlay" bindtap="closeMenuManage"></view>
+<view wx:if="{{menuManageVisible}}" class="mm-panel">
+  <view class="mm-header">
+    <text class="mm-title">菜单管理</text>
+    <view class="mm-close" hover-class="mm-close-hover" bindtap="closeMenuManage">
+      <text class="mm-close-text">✕</text>
     </view>
-    <view class="mm-desc">按角色控制首页各功能入口的显示与隐藏，关闭后该角色用户首页不可见。</view>
-    <scroll-view scroll-y class="mm-scroll">
-      <view class="mm-role-group" wx:for="{{menuManageGroups}}" wx:key="role" wx:for-item="group" wx:for-index="roleIdx">
-        <view class="mm-role-header">
-          <text class="mm-role-label">{{group.roleLabel}}</text>
-        </view>
-        <view class="mm-list">
-          <view class="mm-item" wx:for="{{group.menus}}" wx:key="shortKey" wx:for-item="menu" wx:for-index="menuIdx">
-            <text class="mm-item-label">{{menu.label}}</text>
-            <view class="mm-switch {{menu.enabled ? 'mm-switch-on' : 'mm-switch-off'}}" data-role-idx="{{roleIdx}}" data-menu-idx="{{menuIdx}}" bindtap="onMenuSwitch">
-              <view class="mm-switch-dot"></view>
-            </view>
+  </view>
+  <view class="mm-desc">按角色控制首页各功能入口的显示与隐藏，关闭后该角色用户首页不可见。</view>
+  <scroll-view scroll-y class="mm-scroll">
+    <view class="mm-role-group" wx:for="{{menuManageGroups}}" wx:key="role" wx:for-item="group" wx:for-index="roleIdx">
+      <view class="mm-role-header">
+        <text class="mm-role-label">{{group.roleLabel}}</text>
+      </view>
+      <view class="mm-list">
+        <view class="mm-item" wx:for="{{group.menus}}" wx:key="shortKey" wx:for-item="menu" wx:for-index="menuIdx">
+          <text class="mm-item-label">{{menu.label}}</text>
+          <view class="mm-switch {{menu.enabled ? 'mm-switch-on' : 'mm-switch-off'}}" data-role-idx="{{roleIdx}}" data-menu-idx="{{menuIdx}}" bindtap="onMenuSwitch">
+            <view class="mm-switch-dot"></view>
           </view>
         </view>
       </view>
-    </scroll-view>
-    <view class="mm-footer">
-      <view class="mm-btn mm-btn-cancel" hover-class="mm-btn-hover" bindtap="closeMenuManage">
-        <text>取消</text>
-      </view>
-      <view class="mm-btn mm-btn-save {{savingMenuConfig ? 'mm-btn-disabled' : ''}}" bindtap="saveMenuConfig">
-        <text>{{savingMenuConfig ? '保存中...' : '保存'}}</text>
-      </view>
+    </view>
+  </scroll-view>
+  <view class="mm-footer">
+    <view class="mm-btn mm-btn-cancel" hover-class="mm-btn-hover" bindtap="closeMenuManage">
+      <text>取消</text>
+    </view>
+    <view class="mm-btn mm-btn-save {{savingMenuConfig ? 'mm-btn-disabled' : ''}}" bindtap="saveMenuConfig">
+      <text>{{savingMenuConfig ? '保存中...' : '保存'}}</text>
     </view>
   </view>
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->
-<ai-assistant />
+<ai-assistant visible="{{!menuManageVisible}}" />

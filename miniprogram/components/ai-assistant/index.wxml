@@ -285,6 +285,7 @@
           <view class="section-count-badge quality-badge">{{qualityTasks.length}}</view>
         </view>
         <view class="task-card task-type-quality" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{qualityTasks}}" wx:key="orderId" catchtap="handleQualityTask" data-item="{{item}}">
+          <view class="task-dismiss" catchtap="dismissTask" data-type="quality" data-id="{{item.orderId}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -314,6 +315,7 @@
           <view class="section-count-badge cutting-badge">{{cuttingTasks.length}}</view>
         </view>
         <view class="task-card task-type-cutting" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
+          <view class="task-dismiss" catchtap="dismissTask" data-type="cutting" data-id="{{item.orderId}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -341,6 +343,7 @@
           <view class="section-count-badge purchase-badge">{{purchaseTasks.length}}</view>
         </view>
         <view class="task-card task-type-purchase" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
+          <view class="task-dismiss" catchtap="dismissTask" data-type="purchase" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -370,6 +373,7 @@
           <view class="section-count-badge repair-badge">{{repairTasks.length}}</view>
         </view>
         <view class="task-card task-type-repair" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{repairTasks}}" wx:key="id" catchtap="handleRepairTask" data-item="{{item}}">
+          <view class="task-dismiss" catchtap="dismissTask" data-type="repair" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -398,6 +402,7 @@
           <view class="section-count-badge overdue-badge">{{overdueOrders.length}}</view>
         </view>
         <view class="task-card task-type-overdue" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{overdueOrders}}" wx:key="id" catchtap="handleOverdueOrder" data-item="{{item}}">
+          <view class="task-dismiss" catchtap="dismissTask" data-type="overdue" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -478,6 +483,7 @@
           <text class="section-badge">({{timeoutReminders.length}})</text>
         </view>
         <view class="task-card task-type-timeout" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{timeoutReminders}}" wx:key="id" catchtap="handleReminderTask" data-item="{{item}}">
+          <view class="task-dismiss" catchtap="dismissTask" data-type="timeout" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">

@@ -162,20 +162,21 @@ page {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  z-index: var(--z-notification);
 }
 
 .mm-panel {
-  width: 100%;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--color-bg-card);
   border-radius: 16px 16px 0 0;
   padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  z-index: var(--z-notification);
 }
 
 .mm-header {

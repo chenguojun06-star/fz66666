@@ -143,6 +143,19 @@ Page({
     }
   },
 
+  onNavBack() {
+    // interceptBack 为 true 时（明细视图）才被调用，只需回到订单列表
+    this.setData({ showOrderList: true, orderNo: '', orderId: '', orderInfo: null });
+  },
+
+  onBackPress() {
+    if (!this.data.showOrderList && this.data.orderNo) {
+      this.setData({ showOrderList: true, orderNo: '', orderId: '', orderInfo: null });
+      return true;
+    }
+    return false;
+  },
+
   onPullDownRefresh() {
     const { orderNo, showOrderList } = this.data;
     if (showOrderList) {

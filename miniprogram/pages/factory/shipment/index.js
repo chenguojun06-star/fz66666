@@ -148,6 +148,13 @@ Page({
     wx.previewImage({ current: url, urls: [url] });
   },
 
+  onOpenRemark: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var order = this.data.orders[idx];
+    if (!order) return;
+    wx.navigateTo({ url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo || '') });
+  },
+
   onCopyOrderNo: function (e) {
     var orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;

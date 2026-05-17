@@ -3,53 +3,38 @@ var { safeNavigate } = require('../../utils/uiHelper');
 var { isTokenExpired } = require('../../utils/storage');
 var { eventBus, Events } = require('../../utils/eventBus');
 
-var MONTH_FLOWERS = [
-  { icon: '🎍', name: '梅花' },
-  { icon: '🌺', name: '杏花' },
-  { icon: '🌸', name: '桃花' },
-  { icon: '🏵️', name: '牡丹' },
-  { icon: '🌷', name: '石榴花' },
-  { icon: '🪷', name: '荷花' },
-  { icon: '🌻', name: '蜀葵' },
-  { icon: '🌕', name: '桂花' },
-  { icon: '💮', name: '菊花' },
-  { icon: '🌺', name: '芙蓉' },
-  { icon: '🌼', name: '山茶花' },
-  { icon: '🧊', name: '水仙' },
-];
-
-var DAILY_SAYINGS = [
-  '凌寒独自开，暗香浮动',
-  '满园春色关不住',
-  '人面桃花相映红',
-  '花开时节动京城',
-  '蕊珠如火一时开',
-  '出淤泥而不染，濯清涟而不妖',
-  '向阳而生，永远热忱',
-  '低调芬芳，不言自明',
-  '宁可枝头抱香死',
-  '一日三变，愈晚愈红',
-  '唯有山茶偏耐久',
-  '凌波仙子，自有光芒',
-  '采菊东篱下，悠然见南山',
-  '疏影横斜水清浅',
-  '接天莲叶无穷碧',
-  '映日荷花别样红',
-  '人闲桂花落，夜静春山空',
-  '不是花中偏爱菊',
-  '此花开尽更无花',
-  '桃之夭夭，灼灼其华',
-  '唯有牡丹真国色',
-  '小荷才露尖尖角',
-  '稻花香里说丰年',
-  '待到山花烂漫时',
-  '她在丛中笑',
-  '落红不是无情物',
-  '化作春泥更护花',
-  '乱花渐欲迷人眼',
-  '浅草才能没马蹄',
-  '黄四娘家花满蹊',
-  '千朵万朵压枝低',
+var DAILY_FLOWERS = [
+  '🌸 樱花 — 生命之美，转瞬即永恒',
+  '🌹 玫瑰 — 热情与勇气',
+  '🌻 向日葵 — 追随阳光，永远热忱',
+  '🌷 郁金香 — 优雅与自信',
+  '🌺 木槿 — 坚韧温柔，细水长流',
+  '💐 康乃馨 — 感恩与温暖',
+  '🪻 薰衣草 — 等待一份美好',
+  '🌼 雏菊 — 纯真与希望',
+  '🏵️ 牡丹 — 雍容大气，不负韶华',
+  '🌿 绿萝 — 生生不息，自在生长',
+  '🪷 莲花 — 出淤泥而不染',
+  '🌾 稻穗 — 越充实，越谦逊',
+  '🍀 四叶草 — 幸运藏在坚持里',
+  '💮 茉莉 — 清新淡雅，沁人心脾',
+  '🪹 蒲公英 — 自由飞翔，落地生根',
+  '🌲 松柏 — 四季常青，志存高远',
+  '🌵 仙人掌 — 坚强不需要掌声',
+  '🎋 竹子 — 虚心有节，宁折不弯',
+  '🎍 梅花 — 凌寒独自开',
+  '🌱 新芽 — 一切美好，正在生长',
+  '🌳 橡树 — 根深才能叶茂',
+  '🪴 多肉 — 小而美，也是一种力量',
+  '🍃 银杏 — 时光沉淀出金色',
+  '🌕 桂花 — 低调芬芳，不言自明',
+  '🏔️ 雪莲 — 高处不胜寒，依然盛放',
+  '🎐 风铃草 — 感谢每一次相遇',
+  '🧊 水仙 — 内心丰盈，自有光芒',
+  '🫧 满天星 — 甘做配角，也照亮全场',
+  '🌴 椰树 — 面朝大海，从容不迫',
+  '🍁 枫叶 — 每一次变化都是成长',
+  '🎄 冬青 — 寒冬也有绿意',
 ];
 
 var MENU_KEY_MAP = {
@@ -78,31 +63,31 @@ function buildMenuItems(menuVisibility) {
   var items = [];
 
   if (visibility.smartOps !== false) {
-    items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/smart-ops/index', badge: 'AI' });
+    items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index', badge: 'AI' });
   }
   if (visibility.orderCreate !== false) {
-    items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' });
+    items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' });
   }
   if (visibility.dashboard !== false) {
-    items.push({ id: 'dashboard', name: '生产管理', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' });
+    items.push({ id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--teal', route: '/pages/dashboard/index' });
   }
   if (visibility.production !== false) {
-    items.push({ id: 'production', name: '质检通知', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/defect/index' });
+    items.push({ id: 'production', name: '质检通知', iconClass: 'icon-menu-quality-notice', circleClass: 'menu-icon-circle--amber', route: '/pages/defect/index' });
   }
   if (visibility.quality !== false) {
-    items.push({ id: 'quality', name: '生产扫码', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' });
+    items.push({ id: 'quality', name: '生产扫码', iconClass: 'icon-menu-scan', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' });
   }
   if (visibility.bundleSplit !== false) {
-    items.push({ id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' });
+    items.push({ id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-menu-price', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' });
   }
   if (visibility.cuttingDetail !== false) {
-    items.push({ id: 'cuttingDetail', name: '裁剪明细', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--blue', route: '/pages/cutting/bundle-detail/index' });
+    items.push({ id: 'cuttingDetail', name: '裁剪明细', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/bundle-detail/index' });
   }
   if (visibility.history !== false) {
-    items.push({ id: 'history', name: '扫码历史', iconClass: 'icon-history', circleClass: 'menu-icon-circle--purple', route: '/pages/scan/history/index' });
+    items.push({ id: 'history', name: '扫码历史', iconClass: 'icon-menu-history', circleClass: 'menu-icon-circle--indigo', route: '/pages/scan/history/index' });
   }
   if (visibility.factoryShipment !== false) {
-    items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--blue', route: '/pages/factory/shipment/index' });
+    items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
   }
 
   return items;
@@ -110,21 +95,18 @@ function buildMenuItems(menuVisibility) {
 
 Page({
   data: {
-    statusBarHeight: 0,
     greeting: '',
     userName: '',
     orgName: '',
     menuItems: [],
     unreadNoticeCount: 0,
-    dateInfo: { icon: '', date: '', day: '', season: '', dailyTip: '' },
+    dateInfo: { date: '', day: '', season: '', dailyTip: '' },
   },
 
   _menuVisibility: null,
 
   onLoad: function () {
-    var sysInfo = wx.getWindowInfo();
     this.setData({
-      statusBarHeight: sysInfo.statusBarHeight || 44,
       greeting: getGreeting(),
       menuItems: buildMenuItems(null),
     });
@@ -253,14 +235,14 @@ Page({
     var d = now.getDate();
     var weekDay = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
 
-    var flower = MONTH_FLOWERS[m - 1];
     var season = this._computeSeasonBySolarTerms(now);
-    var saying = DAILY_SAYINGS[(d - 1) % DAILY_SAYINGS.length];
+    var dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+    var dailyTip = DAILY_FLOWERS[dayOfYear % DAILY_FLOWERS.length];
 
     this.setData({
       dateInfo: {
-        icon: flower.icon, date: m + '月' + d + '日', day: '星期' + weekDay,
-        season: season, flowerName: flower.name, dailyTip: flower.icon + ' ' + flower.name + ' — ' + saying,
+        date: m + '月' + d + '日', day: '星期' + weekDay,
+        season: season, dailyTip: dailyTip,
       },
     });
   },

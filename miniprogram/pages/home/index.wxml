@@ -1,11 +1,11 @@
-<view class="page" style="padding-top: {{statusBarHeight + 12}}px;">
-  <!-- 顶部问候 -->
-    <view class="header">
-      <view class="greeting-name">{{userName}}，{{greeting}}</view>
-      <view class="greeting-sub">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
-    </view>
+<view class="page">
+  <custom-nav title="衣智链" />
 
-  <!-- 日期卡片 -->
+  <view class="header">
+    <view class="greeting-name">{{userName}}，{{greeting}}</view>
+    <view class="greeting-sub">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
+  </view>
+
   <view class="weather-card">
     <view class="weather-top">
       <view class="weather-left">
@@ -25,7 +25,7 @@
       <text class="section-title">全部菜单</text>
     </view>
     <view class="menu-grid">
-      <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}">
+      <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}" hover-class="menu-item-hover" hover-stay-time="100">
         <view class="menu-icon-circle {{item.circleClass}}">
           <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
         </view>

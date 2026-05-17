@@ -33,6 +33,8 @@ public class OrderRemark {
 
     private String content;
 
+    private String imageUrls;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 

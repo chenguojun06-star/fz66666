@@ -65,7 +65,7 @@ Page({
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
   },
 
-  onLoad: function () {
+  onLoad: function (options) {
     var app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
@@ -73,6 +73,7 @@ Page({
       wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/home/index' }); } });
       return;
     }
+    this._pendingOrderId = (options && options.orderId) ? decodeURIComponent(options.orderId) : '';
     this.setData({ todayStr: this._formatToday() });
     this.refreshCards();
     this.loadOrders(true);
@@ -202,6 +203,19 @@ Page({
         that.setData({ 'orders.list': filtered });
       }
       if (reset) that._refreshStatCounts();
+      if (that._pendingOrderId) {
+        var pid = that._pendingOrderId;
+        that._pendingOrderId = '';
+        var list = that.data.orders.list || [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].id === pid) {
+            if (!list[i].expanded) {
+              that.setData({ ['orders.list[' + i + '].expanded']: true });
+            }
+            break;
+          }
+        }
+      }
     }).catch(function (e) { console.warn('[dashboard] loadOrders失败:', e.message || e); });
   },
 
@@ -250,6 +264,13 @@ Page({
   },
 
   /* ======== 复制订单号 ======== */
+  onOpenRemark: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var order = this.data.orders.list[idx];
+    if (!order) return;
+    wx.navigateTo({ url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo || '') });
+  },
+
   onCopyOrderNo: function (e) {
     var orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;

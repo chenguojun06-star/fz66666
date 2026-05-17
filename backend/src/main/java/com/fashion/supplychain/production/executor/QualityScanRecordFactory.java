@@ -94,7 +94,8 @@ public class QualityScanRecordFactory {
     }
 
     public void createQualityScanRecord(ProductionOrder order, CuttingBundle bundle,
-                                         int defectQty, String operatorId, String operatorName) {
+                                         int defectQty, String operatorId, String operatorName,
+                                         Map<String, Object> params) {
         try {
             long existingCount = productWarehousingService.count(
                     new LambdaQueryWrapper<ProductWarehousing>()
@@ -133,13 +134,31 @@ public class QualityScanRecordFactory {
             if (hasText(operatorName)) {
                 w.setQualityOperatorName(operatorName);
             }
+            if (params != null) {
+                String defectCategory = TextUtils.safeText(params.get("defectCategory"));
+                if (hasText(defectCategory)) {
+                    w.setDefectCategory(defectCategory);
+                }
+                String defectRemark = TextUtils.safeText(params.get("defectRemark"));
+                if (hasText(defectRemark)) {
+                    w.setDefectRemark(defectRemark);
+                }
+                String imageUrls = TextUtils.safeText(params.get("unqualifiedImageUrls"));
+                if (hasText(imageUrls)) {
+                    w.setUnqualifiedImageUrls(imageUrls);
+                }
+                String remark = TextUtils.safeText(params.get("remark"));
+                if (hasText(remark)) {
+                    w.setRepairRemark(remark);
+                }
+            }
             w.setCreateTime(now);
             w.setUpdateTime(now);
             w.setDeleteFlag(0);
 
             productWarehousingService.save(w);
-            log.info("[QualityScan] 已创建 quality_scan 次品池记录: orderId={}, bundleId={}, defectQty={}, warehousingNo={}",
-                    order.getId(), bundle.getId(), defectQty, w.getWarehousingNo());
+            log.info("[QualityScan] 已创建 quality_scan 次品池记录: orderId={}, bundleId={}, defectQty={}, warehousingNo={}, defectCategory={}",
+                    order.getId(), bundle.getId(), defectQty, w.getWarehousingNo(), w.getDefectCategory());
 
             syncBundleStatusAfterQualityScan(order.getId(), bundle);
 

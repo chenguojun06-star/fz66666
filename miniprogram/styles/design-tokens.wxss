@@ -108,6 +108,16 @@ page {
   --line-height-medium: 1.5;
   --line-height-relaxed: 1.6;
 
+  /* ========== 输入框系统 ========== */
+  --input-height: 44px;
+  --input-height-sm: 36px;
+  --input-height-xs: 28px;
+  --input-bg: var(--color-bg-card);
+  --input-border: var(--color-border);
+  --input-focus-border: var(--color-primary);
+  --input-placeholder: var(--color-text-placeholder);
+  --input-radius: var(--radius-sm);
+
   /* ========== 按钮系统 ========== */
   --btn-height-lg: 48px;
   --btn-height-md: 44px;

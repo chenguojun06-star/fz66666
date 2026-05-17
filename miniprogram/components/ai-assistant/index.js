@@ -388,7 +388,6 @@ Component({
     },
 
     async loadTasks() {
-      // 未登录或 token 不存在时跳过，避免在登录前触发 8 个并发 401 请求
       if (!(wx.getStorageSync('auth_token') || '')) return;
       if (this.data.taskLoading) return;
       this.setData({ taskLoading: true });
@@ -397,19 +396,27 @@ Component({
           data: { loading: false },
           setData: (newData) => {
             if (newData.totalCount !== undefined) {
+              var dismissed = this._getDismissedKeys();
+              var q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
+              var c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
+              var p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
+              var r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
+              var o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
+              var tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
+              var total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
               this.setData({
-                qualityTasks: newData.qualityTasks || [],
-                cuttingTasks: newData.cuttingTasks || [],
-                purchaseTasks: newData.procurementTasks || [],
-                repairTasks: newData.repairTasks || [],
-                overdueOrders: newData.overdueOrders || [],
+                qualityTasks: q,
+                cuttingTasks: c,
+                purchaseTasks: p,
+                repairTasks: r,
+                overdueOrders: o,
                 overdueSummary: newData.overdueSummary || null,
                 pendingUsers: newData.pendingUsers || [],
                 pendingRegistrations: newData.pendingRegistrations || [],
-                timeoutReminders: newData.timeoutReminders || [],
+                timeoutReminders: tm,
                 isAdmin: newData.isAdmin || false,
                 isTenantOwner: newData.isTenantOwner || false,
-                totalTasks: newData.totalCount || 0,
+                totalTasks: total,
               });
             }
           },
@@ -417,6 +424,32 @@ Component({
         await bellTaskLoader.loadAllTasks(mockCtx);
       } catch (err) { console.error('[AiAssistant] loadTasks error', err); }
       finally { this.setData({ taskLoading: false }); }
+    },
+
+    _getDismissedKeys() {
+      try {
+        var raw = wx.getStorageSync('task_dismissed_items') || '{}';
+        var obj = JSON.parse(raw);
+        var today = new Date().toISOString().slice(0, 10);
+        if (obj.date !== today) { wx.setStorageSync('task_dismissed_items', '{}'); return []; }
+        return obj.keys || [];
+      } catch (_e) { return []; }
+    },
+
+    dismissTask(e) {
+      var type = e.currentTarget.dataset.type;
+      var id = e.currentTarget.dataset.id;
+      if (!type || !id) return;
+      try {
+        var raw = wx.getStorageSync('task_dismissed_items') || '{}';
+        var obj = JSON.parse(raw);
+        var today = new Date().toISOString().slice(0, 10);
+        if (obj.date !== today) { obj = { date: today, keys: [] }; }
+        var key = type + ':' + id;
+        if (obj.keys.indexOf(key) === -1) { obj.keys.push(key); }
+        wx.setStorageSync('task_dismissed_items', JSON.stringify(obj));
+      } catch (_e) {}
+      this.loadTasks();
     },
 
     handleQualityTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleQualityTask(t); },

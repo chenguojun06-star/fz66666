@@ -88,9 +88,10 @@
 }
 .form-label { font-size: var(--font-size-sm); color: var(--color-text-primary); flex-shrink: 0; }
 .form-input {
-  width: 260rpx; height: 64rpx; text-align: right;
-  border: 2rpx solid var(--color-border); border-radius: 10rpx;
+  width: 260rpx; height: 72rpx; text-align: right;
+  border: 2rpx solid var(--input-border); border-radius: 10rpx;
   padding: 0 16rpx; font-size: var(--font-size-md);
+  background: var(--input-bg);
 }
 .form-picker {
   display: flex; align-items: center; gap: 8rpx;

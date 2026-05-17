@@ -43,6 +43,9 @@ public class OrderRemarkController {
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
+    @Autowired
+    private com.fashion.supplychain.websocket.RealTimeWebSocketHandler webSocketHandler;
+
     private static final Pattern REMARK_LINE_PATTERN = Pattern.compile(
             "^\\[(?:(AI巡检)\\s*)?(\\d{2}-\\d{2}\\s+\\d{2}:\\d{2})\\]\\s*(.+)$"
     );
@@ -280,6 +283,22 @@ public class OrderRemarkController {
         remark.setDeleteFlag(0);
 
         orderRemarkService.save(remark);
+        try {
+            com.fashion.supplychain.websocket.dto.WebSocketMessage<java.util.Map<String, Object>> wsMsg =
+                com.fashion.supplychain.websocket.dto.WebSocketMessage.create(
+                    com.fashion.supplychain.websocket.enums.WebSocketMessageType.DATA_CHANGED,
+                    java.util.Map.of(
+                        "entityType", "orderRemark",
+                        "targetType", remark.getTargetType(),
+                        "targetNo", remark.getTargetNo(),
+                        "action", "add",
+                        "timestamp", System.currentTimeMillis()
+                    )
+                );
+            webSocketHandler.broadcastToTenant(remark.getTenantId(), wsMsg);
+        } catch (Exception e) {
+            log.debug("[OrderRemark] WebSocket通知失败: {}", e.getMessage());
+        }
         return Result.success(remark);
     }
 

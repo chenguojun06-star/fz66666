@@ -329,10 +329,13 @@
 .form-input {
   flex: 1;
   height: 80rpx;
-  background: transparent;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
   font-size: var(--font-size-md-lg);
   color: var(--color-text-primary);
-  padding: 0 8rpx;
+  padding: 0 16rpx;
+  box-sizing: border-box;
 }
 
 .picker-box {

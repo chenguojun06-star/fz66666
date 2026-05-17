@@ -251,17 +251,19 @@ function handleUrgentEvent(_task) { // eslint-disable-line no-unused-vars
  */
 function handleOverdueOrder(task) {
   const orderNo = task.orderNo || '';
+  const orderId = task.id || '';
   try {
-    // 存储订单提示
     wx.setStorageSync('pending_order_hint', orderNo);
-    // 存储延期订单信息，用于高亮显示
     wx.setStorageSync('highlight_order_no', orderNo);
   } catch (e) {
     console.error('存储失败', e);
   }
 
-  // 跳转到工作页面
-  safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
+  if (orderId) {
+    safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(orderId) }, 'navigateTo').catch(() => {});
+  } else {
+    safeNavigate({ url: '/pages/smart-ops/index' }, 'navigateTo').catch(() => {});
+  }
 }
 
 /**

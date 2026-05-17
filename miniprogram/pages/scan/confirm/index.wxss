@@ -402,13 +402,13 @@
 }
 .sku-qty-input {
   width: 100rpx;
-  height: 56rpx;
+  height: 64rpx;
   text-align: center;
-  border: 1rpx solid var(--color-border);
+  border: 1rpx solid var(--input-border);
   border-radius: var(--radius-xs);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  background: var(--color-bg-card);
+  background: var(--input-bg);
 }
 .sku-qty-readonly {
   background: var(--color-bg-page, #f5f5f5);

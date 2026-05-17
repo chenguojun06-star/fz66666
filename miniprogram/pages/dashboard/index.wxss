@@ -97,7 +97,8 @@
   flex: 1;
   font-size: 14px;
   color: var(--color-text-primary);
-  height: 24px;
+  height: 28px;
+  padding: 0 4px;
 }
 .search-clear {
   font-size: 15px;
@@ -536,3 +537,5 @@
   font-size: 14px;
   color: var(--color-text-tertiary);
 }
+
+.act-btn--remark { color: #1677ff; border-color: #1677ff; }

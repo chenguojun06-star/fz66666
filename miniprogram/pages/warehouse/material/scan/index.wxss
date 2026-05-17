@@ -84,8 +84,13 @@
 .input-row { margin-bottom: 8px; }
 .input-label { font-size: var(--font-size-sm); color: var(--color-text-secondary, var(--color-text-secondary)); display: block; margin-bottom: 4px; }
 .input-field {
-  background: var(--color-bg-card, var(--color-bg-card)); border: 1px solid var(--color-border, var(--color-bg-gray)); border-radius: var(--radius-xs);
-  padding: 8px 10px; font-size: var(--font-size-md); width: 100%; box-sizing: border-box;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+  font-size: var(--font-size-md);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* 发料按钮 */
@@ -103,7 +108,7 @@
 
 /* 扫下一个 */
 .btn-next {
-  background: var(--color-bg-card, var(--color-bg-card)); border: 1px solid var(--color-border, var(--color-bg-gray)); border-radius: var(--radius-md);
+  background: var(--color-bg-card, var(--color-bg-card)); border: 1px solid var(--input-border); border-radius: var(--radius-md);
   padding: 12px; text-align: center; font-size: var(--font-size-md); color: var(--color-text-secondary, var(--color-text-secondary));
   margin-top: 6px;
 }

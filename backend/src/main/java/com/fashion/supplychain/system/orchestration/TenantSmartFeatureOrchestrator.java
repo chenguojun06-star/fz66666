@@ -240,10 +240,16 @@ public class TenantSmartFeatureOrchestrator {
         LocalDateTime now = LocalDateTime.now();
         for (String role : MINIPROGRAM_MENU_ROLES) {
             Map<String, Boolean> menuFlags = (roleMenus != null && roleMenus.containsKey(role))
-                    ? roleMenus.get(role) : defaultMiniprogramMenuFlags();
+                    ? roleMenus.get(role) : null;
             for (String menuKey : MINIPROGRAM_MENU_KEYS) {
                 String roleKey = buildRoleSpecificKey(menuKey, role);
-                boolean enabled = menuFlags.containsKey(menuKey) ? Boolean.TRUE.equals(menuFlags.get(menuKey)) : true;
+                boolean enabled;
+                if (menuFlags != null && menuFlags.containsKey(menuKey)) {
+                    enabled = Boolean.TRUE.equals(menuFlags.get(menuKey));
+                } else {
+                    TenantSmartFeature existingRow = existingMap.get(roleKey);
+                    enabled = existingRow != null ? Boolean.TRUE.equals(existingRow.getEnabled()) : true;
+                }
                 TenantSmartFeature row = existingMap.get(roleKey);
                 if (row == null) {
                     row = new TenantSmartFeature();

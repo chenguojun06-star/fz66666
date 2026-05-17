@@ -1,5 +1,5 @@
 <view class="container">
-  <custom-nav title="裁剪" show-back="{{true}}" />
+  <custom-nav title="裁剪" show-back="{{true}}" intercept-back="{{!showOrderList && !!orderNo}}" bind:back="onNavBack" />
 
   <!-- 订单选择列表（从首页直接进来时显示） -->
   <block wx:if="{{showOrderList}}">

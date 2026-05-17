@@ -446,18 +446,19 @@
 .st-col { flex: 1; text-align: center; }
 .st-input {
   width: 80rpx;
-  height: 48rpx;
-  border: 1rpx solid var(--color-border, #d9d9d9);
+  height: 60rpx;
+  border: 1rpx solid var(--input-border);
   border-radius: 8rpx;
   text-align: center;
   font-size: 24rpx;
-  background: var(--color-bg-base, #fff);
+  background: var(--input-bg);
+  box-sizing: border-box;
 }
 .ship-form { margin-top: 24rpx; padding-top: 16rpx; border-top: 1rpx solid rgba(0, 0, 0, 0.04); }
 .sf-row { display: flex; align-items: center; padding: 12rpx 0; }
 .sf-label { font-size: 26rpx; color: var(--color-text-secondary); width: 140rpx; }
-.sf-input { flex: 1; font-size: 26rpx; padding: 8rpx 16rpx; border: 1rpx solid var(--color-border, #d9d9d9); border-radius: 8rpx; }
-.sf-textarea { flex: 1; font-size: 26rpx; padding: 8rpx 16rpx; border: 1rpx solid var(--color-border, #d9d9d9); border-radius: 8rpx; height: 120rpx; }
+.sf-input { flex: 1; font-size: 26rpx; padding: 12rpx 16rpx; border: 1rpx solid var(--input-border); border-radius: 8rpx; background: var(--input-bg); box-sizing: border-box; }
+.sf-textarea { flex: 1; font-size: 26rpx; padding: 12rpx 16rpx; border: 1rpx solid var(--input-border); border-radius: 8rpx; height: 120rpx; background: var(--input-bg); box-sizing: border-box; }
 .radio-label { margin-right: 32rpx; font-size: 26rpx; }
 .detail-info { margin-bottom: 16rpx; }
 .di-row { display: flex; justify-content: space-between; padding: 12rpx 0; border-bottom: 1rpx solid rgba(0, 0, 0, 0.04); }
@@ -488,3 +489,5 @@
 .load-tip--end {
   font-size: 11px;
 }
+
+.act-btn--remark { color: #1677ff; border-color: #1677ff; }

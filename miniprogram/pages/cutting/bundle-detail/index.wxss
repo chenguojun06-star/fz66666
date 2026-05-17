@@ -621,14 +621,15 @@
 
 .bpo-wifi-input {
   flex: 1;
-  height: 52rpx;
-  border: 1rpx solid var(--color-border);
+  height: 72rpx;
+  border: 1rpx solid var(--input-border);
   border-radius: 8rpx;
   padding: 0 12rpx;
   font-size: 24rpx;
   color: var(--color-text-primary);
-  background: var(--color-bg-card);
+  background: var(--input-bg);
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .bpo-wifi-port {
@@ -1049,12 +1050,14 @@
 
 .tf-price-input {
   width: 160rpx;
-  height: 60rpx;
-  border: 1rpx solid var(--color-border);
+  height: 72rpx;
+  border: 1rpx solid var(--input-border);
   border-radius: 8rpx;
   text-align: center;
   font-size: 26rpx;
   color: var(--color-text-primary);
+  background: var(--input-bg);
+  box-sizing: border-box;
 }
 
 .tf-price-unit {
@@ -1178,7 +1181,7 @@
   display: flex;
   align-items: center;
   padding: 16rpx 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .half-input .input-label {
@@ -1191,7 +1194,7 @@
   display: flex;
   align-items: center;
   padding: 16rpx 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .input-label {
@@ -1204,7 +1207,12 @@
   flex: 1;
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
-  padding: 8rpx 0;
+  padding: 12rpx 16rpx;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  min-height: var(--input-height-sm);
+  box-sizing: border-box;
 }
 
 .input-suffix {
@@ -1270,12 +1278,14 @@
 .td-last-input {
   width: 100rpx;
   text-align: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
   padding: 8rpx 4rpx;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  background: var(--color-bg-page);
+  background: var(--input-bg);
+  min-height: 36px;
+  box-sizing: border-box;
 }
 
 .bundle-desc-area {

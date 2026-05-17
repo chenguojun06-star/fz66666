@@ -8,6 +8,7 @@ export interface OrderRemark {
   authorName: string;
   authorRole: string;
   content: string;
+  imageUrls?: string;
   tenantId: number;
   createTime: string;
 }
@@ -22,6 +23,7 @@ export interface RemarkAddParams {
   targetNo: string;
   authorRole?: string;
   content: string;
+  imageUrls?: string;
 }
 
 export const remarkApi = {
@@ -31,8 +33,53 @@ export const remarkApi = {
   add(params: RemarkAddParams) {
     return api.post<OrderRemark>('/system/order-remark/add', params);
   },
-  /** 批量查各记录最新备注，返回 targetNo → content 映射（用于列表导出） */
   batchLatest(targetType: string, targetNos: string[]) {
     return api.post<Record<string, string>>('/system/order-remark/batch-latest', { targetType, targetNos });
+  },
+};
+
+export interface OrderImage {
+  id: number;
+  orderId: string;
+  orderNo: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  sortOrder: number;
+  version: number;
+  operatorId?: string;
+  operatorName?: string;
+  tenantId: number;
+  createTime: string;
+  updateTime: string;
+  deleteFlag: number;
+}
+
+export interface OrderImageSnapshot {
+  id: number;
+  orderNo: string;
+  snapshotType: string;
+  beforeUrls?: string;
+  afterUrls?: string;
+  operatorId?: string;
+  operatorName?: string;
+  tenantId: number;
+  createTime: string;
+}
+
+export const orderImageApi = {
+  list(orderNo: string) {
+    return api.post<OrderImage[]>('/production/order-image/list', { orderNo });
+  },
+  add(orderNo: string, imageUrl: string, thumbnailUrl?: string) {
+    return api.post<OrderImage>('/production/order-image', { orderNo, imageUrl, thumbnailUrl });
+  },
+  delete(id: number) {
+    return api.delete(`/production/order-image/${id}`);
+  },
+  reorder(orderNo: string, imageIds: number[]) {
+    return api.post('/production/order-image/reorder', { orderNo, imageIds });
+  },
+  snapshots(orderNo: string) {
+    return api.post<OrderImageSnapshot[]>('/production/order-image/snapshots', { orderNo });
   },
 };

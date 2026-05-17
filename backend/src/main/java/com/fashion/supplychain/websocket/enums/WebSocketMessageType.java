@@ -55,6 +55,8 @@ public enum WebSocketMessageType {
     // 智能预警
     ORDER_OVERDUE("order:overdue", "订单逾期预警"),
     QUALITY_ANOMALY("quality:anomaly", "质检异常AI预警"),
+    ORDER_IMAGE_UPDATED("order:image:updated", "订单图片更新"),
+    REMARK_ADDED("remark:added", "备注新增"),
     SCAN_REALTIME("scan:realtime", "实时扫码播报"),
     TRACEABLE_ADVICE("ai:traceable_advice", "AI小云智能决策卡片推送"),
 

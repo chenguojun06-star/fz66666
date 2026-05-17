@@ -317,13 +317,13 @@ async function loadAllTasks(ctx) {
 
     const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders] = await Promise.all([
       loadCuttingTasks(),
-      loadProcurementTasks(),
+      isAdmin ? loadProcurementTasks() : Promise.resolve([]),
       loadQualityTasks(),
       loadRepairTasks(),
-      loadTimeoutReminders(),
+      isAdmin ? loadTimeoutReminders() : Promise.resolve([]),
       isSuperAdmin ? loadPendingUsers() : Promise.resolve([]),
       canManageRegistrations ? loadTenantPendingRegistrations() : Promise.resolve([]),
-      loadOverdueOrders(),
+      isAdmin ? loadOverdueOrders() : Promise.resolve([]),
     ]);
 
     const urgentEvents = [];

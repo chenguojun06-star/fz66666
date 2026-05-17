@@ -66,8 +66,9 @@ public class ProductionOrderStatsDTO {
      */
     private long todayOrders;
 
-    /**
-     * 当天下单数量（当天订单的orderQuantity之和）
-     */
     private long todayQuantity;
+
+    private long riskOrders;
+
+    private long riskQuantity;
 }

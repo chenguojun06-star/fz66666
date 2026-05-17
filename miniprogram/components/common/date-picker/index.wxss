@@ -14,7 +14,7 @@
   height: 40px;
   background: var(--color-bg-light);
   border-radius: var(--radius-md);
-  border: 1.5px solid var(--color-bg-gray);
+  border: 1.5px solid var(--input-border);
   box-sizing: border-box;
 }
 
@@ -31,7 +31,7 @@
 
 .dp-placeholder {
   font-size: var(--font-size-md);
-  color: var(--color-text-disabled);
+  color: var(--color-text-placeholder);
   flex: 1;
 }
 

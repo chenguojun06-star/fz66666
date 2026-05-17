@@ -69,6 +69,14 @@ const MINIPROGRAM_MENU_LABELS: Record<MiniprogramMenuKey, { title: string; desc:
     title: '下单管理',
     desc: '小程序首页显示下单管理入口（仍需管理员/工厂主角色才可见）。',
   },
+  'miniprogram.menu.production': {
+    title: '质检通知',
+    desc: '小程序首页显示质检通知入口。',
+  },
+  'miniprogram.menu.quality': {
+    title: '生产扫码',
+    desc: '小程序首页显示生产扫码入口。',
+  },
   'miniprogram.menu.bundleSplit': {
     title: '菲号单价',
     desc: '小程序首页显示菲号单价入口。',
@@ -76,6 +84,22 @@ const MINIPROGRAM_MENU_LABELS: Record<MiniprogramMenuKey, { title: string; desc:
   'miniprogram.menu.cuttingDetail': {
     title: '裁剪明细',
     desc: '小程序首页显示裁剪明细入口。',
+  },
+  'miniprogram.menu.history': {
+    title: '扫码历史',
+    desc: '小程序首页显示扫码历史入口。',
+  },
+  'miniprogram.menu.factoryShipment': {
+    title: '外发工厂',
+    desc: '小程序首页显示外发工厂入口。',
+  },
+  'miniprogram.menu.advance': {
+    title: '员工借支',
+    desc: '小程序首页显示员工借支入口。',
+  },
+  'miniprogram.menu.wagePayment': {
+    title: '收付款中心',
+    desc: '小程序首页显示收付款中心入口。',
   },
 };
 

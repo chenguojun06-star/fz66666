@@ -256,6 +256,35 @@ const production = {
   batchSaveSizePrices(payload) {
     return ok('/api/style/size-price/batch-save', 'POST', payload || {});
   },
+
+  listOrderRemarks(targetType, targetNo) {
+    return ok('/api/system/order-remark/list', 'POST', { targetType: targetType, targetNo: targetNo });
+  },
+
+  addOrderRemark(targetType, targetNo, content, authorRole, imageUrls) {
+    var payload = { targetType: targetType, targetNo: targetNo, content: content };
+    if (authorRole) payload.authorRole = authorRole;
+    if (imageUrls) payload.imageUrls = imageUrls;
+    return ok('/api/system/order-remark/add', 'POST', payload);
+  },
+
+  listOrderImages(orderNo) {
+    return ok('/api/production/order-image/list', 'POST', { orderNo: orderNo });
+  },
+
+  addOrderImage(orderNo, imageUrl, thumbnailUrl) {
+    var payload = { orderNo: orderNo, imageUrl: imageUrl };
+    if (thumbnailUrl) payload.thumbnailUrl = thumbnailUrl;
+    return ok('/api/production/order-image', 'POST', payload);
+  },
+
+  deleteOrderImage(imageId) {
+    return ok('/api/production/order-image/' + imageId, 'DELETE', {});
+  },
+
+  listOrderImageSnapshots(orderNo) {
+    return ok('/api/production/order-image/snapshots', 'POST', { orderNo: orderNo });
+  },
 };
 
 module.exports = production;

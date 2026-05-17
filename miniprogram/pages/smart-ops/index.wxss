@@ -31,8 +31,11 @@
 .card-close { font-size: 14px; color: var(--color-text-secondary); padding: 0 4px; }
 .card-body { padding: 8px 12px; }
 
-.order-row { padding: 8px 0; border-bottom: 1px solid var(--color-border-light); }
+.order-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--color-border-light); }
 .order-row:last-child { border-bottom: none; }
+.order-cover { width: 40px; height: 40px; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+.order-cover-img { width: 40px; height: 40px; border-radius: 6px; }
+.order-content { flex: 1; min-width: 0; }
 .order-top { display: flex; justify-content: space-between; align-items: center; }
 .order-no { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
 .order-progress { font-size: 14px; font-weight: 700; color: var(--color-primary); }

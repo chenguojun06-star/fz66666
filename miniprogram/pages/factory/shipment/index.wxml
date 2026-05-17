@@ -85,6 +85,7 @@
             <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
             <view class="act-btn act-btn--ship" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory}}">发货</view>
+            <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
             <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
           </view>
         </view>

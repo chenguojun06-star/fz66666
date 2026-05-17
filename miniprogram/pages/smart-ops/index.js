@@ -74,12 +74,18 @@ function toOrderRow(o) {
   };
 }
 
+var TERMINAL_STATUSES = ['COMPLETED', 'CLOSED', 'CANCELLED', 'SCRAPPED', 'ARCHIVED'];
+
+function isTerminalStatus(s) {
+  return TERMINAL_STATUSES.indexOf(String(s || '').toUpperCase()) !== -1;
+}
+
 function isDelayed(o) {
   var end = o.plannedEndDate || o.expectedShipDate;
   if (!end) return false;
   var d = safeDate(end);
   if (!d) return false;
-  return d < new Date() && String(o.status || '').toUpperCase() !== 'COMPLETED';
+  return d < new Date() && !isTerminalStatus(o.status);
 }
 
 function isHighRisk(o) {
@@ -129,7 +135,7 @@ Page({
     if (this.data.activeMenu === key) { this.setData({ activeMenu: '', activeOrders: [] }); return; }
     var orders = this._allOrders || [];
     var filtered = [];
-    if (key === 'inProduction') filtered = orders.filter(function(o) { var s = String(o.status || '').toUpperCase(); return s !== 'COMPLETED' && s !== 'CLOSED' && s !== 'CANCELLED' && s !== 'SCRAPPED'; });
+    if (key === 'inProduction') filtered = orders.filter(function(o) { return !isTerminalStatus(o.status); });
     else if (key === 'todayOrders') filtered = orders.filter(function(o) { return o._isTodayOrder; });
     else if (key === 'todayInbound') filtered = orders.filter(function(o) { return o._isTodayInbound; });
     else if (key === 'todayOutbound') filtered = orders.filter(function(o) { return o._isTodayOutbound; });
@@ -227,7 +233,7 @@ Page({
         o._isTodayOutbound = outboundDate === today;
       });
 
-      var inProd = orders.filter(function(o) { var s = String(o.status || '').toUpperCase(); return s !== 'COMPLETED' && s !== 'CLOSED' && s !== 'CANCELLED' && s !== 'SCRAPPED'; });
+      var inProd = orders.filter(function(o) { return !isTerminalStatus(o.status); });
       var delayed = orders.filter(isDelayed);
       var risk = orders.filter(isRisk);
 
@@ -248,7 +254,7 @@ Page({
         todayInbound: todayInboundCount,
         todayOutbound: todayOutboundCount,
         delayedOrders: toNum(statsData && statsData.delayedOrders) || delayed.length,
-        riskOrders: risk.length,
+        riskOrders: toNum(statsData && statsData.riskOrders) || risk.length,
       };
       var menuExtra = {
         inProductionQty: toNum(statsData && statsData.activeQuantity) || inProdQty,
@@ -256,7 +262,7 @@ Page({
         todayInboundQty: todayInboundQty,
         todayOutboundQty: todayOutboundQty,
         delayedOrdersQty: toNum(statsData && statsData.delayedQuantity) || delayedQty,
-        riskOrdersQty: riskQty,
+        riskOrdersQty: toNum(statsData && statsData.riskQuantity) || riskQty,
       };
       var totalWarn = menuData.delayedOrders + menuData.riskOrders;
 

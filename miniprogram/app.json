@@ -98,7 +98,7 @@
     {
       "root": "pages/order",
       "name": "pkg-order",
-      "pages": ["create/index", "create/form/index"]
+      "pages": ["create/index", "create/form/index", "remark/index"]
     },
     {
       "root": "pages/advance",
@@ -155,9 +155,9 @@
     ]
   },
   "window": {
-    "navigationBarTitleText": "生产管理",
-    "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "衣智链",
+    "navigationBarBackgroundColor": "#2563EB",
+    "navigationBarTextStyle": "white",
     "backgroundTextStyle": "light"
   },
   "lazyCodeLoading": "requiredComponents",

@@ -275,7 +275,7 @@ public class QualityScanExecutor {
             if (isScrap) {
                 recordFactory.createScrapRecord(order, bundle, defectQty, operatorId, operatorName);
             } else {
-                recordFactory.createQualityScanRecord(order, bundle, defectQty, operatorId, operatorName);
+                recordFactory.createQualityScanRecord(order, bundle, defectQty, operatorId, operatorName, params);
                 notifyDefectiveQuality(order, bundle, defectQty, operatorName,
                         TextUtils.safeText(params.get("defectCategory")));
             }

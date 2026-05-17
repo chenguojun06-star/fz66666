@@ -8,16 +8,16 @@ var STATUS_MAP = {
   rejected: { text: '已驳回', cls: 'tag-red' },
 };
 
-var REPAY_MAP = {
-  unrepaid: { text: '未还', cls: 'tag-red' },
-  partial: { text: '部分还款', cls: 'tag-orange' },
-  repaid: { text: '已还清', cls: 'tag-green' },
+var DEDUCT_MAP = {
+  unrepaid: { text: '未扣款', cls: 'tag-red' },
+  partial:  { text: '部分扣款', cls: 'tag-orange' },
+  repaid:   { text: '已扣完', cls: 'tag-green' },
 };
 
 function statusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
 function statusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-gray'; }
-function repayText(s) { return (REPAY_MAP[s] || {}).text || s || ''; }
-function repayCls(s) { return (REPAY_MAP[s] || {}).cls || 'tag-gray'; }
+function deductText(s) { return (DEDUCT_MAP[s] || {}).text || s || ''; }
+function deductCls(s) { return (DEDUCT_MAP[s] || {}).cls || 'tag-gray'; }
 
 Page({
   data: {
@@ -30,14 +30,12 @@ Page({
     repayFilter: '',
     keyword: '',
     showCreateModal: false,
-    showRepayModal: false,
     showActionSheet: false,
     currentAdvance: null,
     createForm: { employeeName: '', amount: '', reason: '', orderNo: '' },
-    repayForm: { amount: '' },
     canApprove: false,
     STATUS_MAP: STATUS_MAP,
-    REPAY_MAP: REPAY_MAP,
+    DEDUCT_MAP: DEDUCT_MAP,
   },
 
   _STATUS_OPTIONS: [
@@ -47,10 +45,10 @@ Page({
     { value: 'rejected', label: '已驳回' },
   ],
   _REPAY_OPTIONS: [
-    { value: '', label: '全部还款' },
-    { value: 'unrepaid', label: '未还' },
-    { value: 'partial', label: '部分还款' },
-    { value: 'repaid', label: '已还清' },
+    { value: '', label: '全部扣款' },
+    { value: 'unrepaid', label: '未扣款' },
+    { value: 'partial', label: '部分扣款' },
+    { value: 'repaid', label: '已扣完' },
   ],
 
   onLoad: function () {
@@ -95,8 +93,8 @@ Page({
       var enriched = records.map(function (r) {
         r.statusText = statusText(r.status);
         r.statusCls = statusCls(r.status);
-        r.repayText = repayText(r.repaymentStatus);
-        r.repayCls = repayCls(r.repaymentStatus);
+        r.repayText = deductText(r.repaymentStatus);
+        r.repayCls = deductCls(r.repaymentStatus);
         r.amountStr = r.amount != null ? Number(r.amount).toFixed(2) : '0.00';
         r.remainingStr = r.remainingAmount != null ? Number(r.remainingAmount).toFixed(2) : '0.00';
         r.repaymentStr = r.repaymentAmount != null ? Number(r.repaymentAmount).toFixed(2) : '0.00';
@@ -131,6 +129,11 @@ Page({
   },
 
   onKeywordSearch: function () {
+    this._resetAndLoad();
+  },
+
+  onClearSearch: function () {
+    this.setData({ keyword: '' });
     this._resetAndLoad();
   },
 
@@ -200,36 +203,6 @@ Page({
         that._resetAndLoad();
       }).catch(function (e) { toast('驳回失败: ' + (e.message || e)); });
     }});
-  },
-
-  onActionRepay: function () {
-    var item = this.data.currentAdvance;
-    if (!item || item.status !== 'approved') return;
-    this.setData({ showActionSheet: false, showRepayModal: true, repayForm: { amount: '' } });
-  },
-
-  onRepayAmountInput: function (e) {
-    this.setData({ 'repayForm.amount': e.detail.value });
-  },
-
-  onSubmitRepay: function () {
-    var item = this.data.currentAdvance;
-    var amount = Number(this.data.repayForm.amount);
-    if (!amount || amount <= 0) { toast('请输入有效还款金额'); return; }
-    if (item && item.remainingAmount != null && amount > Number(item.remainingAmount)) {
-      toast('还款金额不能超过剩余金额 ' + Number(item.remainingAmount).toFixed(2));
-      return;
-    }
-    var that = this;
-    api.employeeAdvance.repay(item.id, amount).then(function () {
-      toast('还款成功');
-      that.setData({ showRepayModal: false, currentAdvance: null });
-      that._resetAndLoad();
-    }).catch(function (e) { toast('还款失败: ' + (e.message || e)); });
-  },
-
-  onCancelRepay: function () {
-    this.setData({ showRepayModal: false });
   },
 
   onCloseActionSheet: function () {

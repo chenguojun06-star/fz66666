@@ -70,14 +70,20 @@ public class CommonController {
             }
             String newFilename = UUID.randomUUID().toString() + extension;
 
-            // ✅ 文件存储到 tenants/{tenantId}/ 子目录
-            // ✅ 存储文件：COS 优先，本地降级
+            byte[] fileBytes = file.getBytes();
+            if (isImageExtension(extension)) {
+                byte[] compressed = compressImage(fileBytes, extension);
+                if (compressed.length < fileBytes.length) {
+                    fileBytes = compressed;
+                }
+            }
+
             if (cosService.isEnabled()) {
                 Long tenantId = UserContext.tenantId();
-                cosService.upload(tenantId, newFilename, file);
+                cosService.upload(tenantId, newFilename, fileBytes, file.getContentType());
             } else {
                 File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
-                file.transferTo(dest);
+                java.nio.file.Files.write(dest.toPath(), fileBytes);
                 cosService.safeRefreshTenantStorageUsage(UserContext.tenantId());
             }
 
@@ -187,5 +193,69 @@ public class CommonController {
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, (inline ? "inline" : "attachment") + "; filename=\"" + resource.getFilename() + "\"")
                 .body(resource);
+    }
+
+    private byte[] compressImage(byte[] originalBytes, String extension) {
+        try {
+            javax.imageio.ImageIO.setUseCache(false);
+            java.awt.image.BufferedImage originalImage = javax.imageio.ImageIO.read(
+                new java.io.ByteArrayInputStream(originalBytes));
+            if (originalImage == null) {
+                return originalBytes;
+            }
+            int width = originalImage.getWidth();
+            int height = originalImage.getHeight();
+            int maxDimension = 1920;
+            if (width <= maxDimension && height <= maxDimension) {
+                return originalBytes;
+            }
+            double scale = Math.min((double) maxDimension / width, (double) maxDimension / height);
+            int newWidth = (int) (width * scale);
+            int newHeight = (int) (height * scale);
+            boolean hasAlpha = originalImage.getColorModel() != null && originalImage.getColorModel().hasAlpha();
+            int imageType = hasAlpha ? java.awt.image.BufferedImage.TYPE_INT_ARGB : java.awt.image.BufferedImage.TYPE_INT_RGB;
+            java.awt.image.BufferedImage resized = new java.awt.image.BufferedImage(
+                newWidth, newHeight, imageType);
+            java.awt.Graphics2D g = resized.createGraphics();
+            if (!hasAlpha) {
+                g.setColor(java.awt.Color.WHITE);
+                g.fillRect(0, 0, newWidth, newHeight);
+            }
+            g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
+            g.dispose();
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            String format = extension.replace(".", "");
+            if ("jpg".equals(format)) format = "jpeg";
+            java.util.Iterator<javax.imageio.ImageWriter> writers = javax.imageio.ImageIO.getImageWritersByFormatName(format);
+            if (!writers.hasNext()) {
+                log.warn("[图片压缩] 无可用ImageWriter for format={}, 使用原图", format);
+                return originalBytes;
+            }
+            javax.imageio.ImageWriter writer = writers.next();
+            javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+            if (param.canWriteCompressed()) {
+                param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(0.8f);
+            }
+            try (javax.imageio.stream.ImageOutputStream ios = javax.imageio.ImageIO.createImageOutputStream(baos)) {
+                writer.setOutput(ios);
+                writer.write(null, new javax.imageio.IIOImage(resized, null, null), param);
+            }
+            writer.dispose();
+            byte[] result = baos.toByteArray();
+            log.info("[图片压缩] {}x{} → {}x{}, {}KB → {}KB",
+                width, height, newWidth, newHeight,
+                originalBytes.length / 1024, result.length / 1024);
+            return result;
+        } catch (Exception e) {
+            log.warn("[图片压缩] 压缩失败，使用原图: {}", e.getMessage());
+            return originalBytes;
+        }
+    }
+
+    private boolean isImageExtension(String extension) {
+        return Set.of(".jpg", ".jpeg", ".png", ".bmp").contains(extension);
     }
 }
