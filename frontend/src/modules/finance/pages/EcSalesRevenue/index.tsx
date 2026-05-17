@@ -122,7 +122,7 @@ const EcSalesRevenue: React.FC = () => {
       render: (_: unknown, r: EcRevenueRecord) => (
         <Space orientation="vertical" size={0}>
           <Text ellipsis style={{ fontSize: 13 }}>{r.productName}</Text>
-          <Text type="secondary" style={{ fontSize: 11 }}>{r.skuCode}</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>{r.skuCode}</Text>
         </Space>
       ),
     },
@@ -148,7 +148,7 @@ const EcSalesRevenue: React.FC = () => {
       dataIndex: 'productionOrderNo',
       width: 140,
       render: (v: string) =>
-        v ? <Text code style={{ fontSize: 11 }}>{v}</Text> : <Text type="secondary">-</Text>,
+        v ? <Text code style={{ fontSize: 13 }}>{v}</Text> : <Text type="secondary">-</Text>,
     },
     {
       title: '发货时间',

@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Card, Input, Form, InputNumber, Tooltip, Upload, Button, message, Modal } from 'antd';
+import React, { useState, useCallback, useRef } from 'react';
+import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal } from 'antd';
 import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageLayout from '@/components/common/PageLayout';
@@ -59,6 +59,7 @@ const MaterialPurchase: React.FC = () => {
 
   // 本弹窗用于 AI 识别时传递给 recognizeReturnEvidence 的文件引用
   const [returnRecognizeFile, setReturnRecognizeFile] = useState<File | null>(null);
+  const evidenceFileInputRef = useRef<HTMLInputElement | null>(null);
   const [qualityIssueOpen, setQualityIssueOpen] = useState(false);
   const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
   const [remarkOpen, setRemarkOpen] = useState(false);
@@ -299,29 +300,110 @@ const MaterialPurchase: React.FC = () => {
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
             {/* 左侧：凭证上传 + AI识别 */}
             {!isMobile && (
-              <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div
+                  style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, outline: 'none' }}
+                  tabIndex={0}
+                  onPaste={(e) => {
+                    const files = e.clipboardData.files;
+                    if (files && files.length > 0) {
+                      e.preventDefault();
+                      const file = files[0];
+                      if (file.type.startsWith('image/')) {
+                        setReturnRecognizeFile(file);
+                        const uploadFile = { uid: `-${Date.now()}`, name: file.name, status: 'done' as const, originFileObj: file };
+                        setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
+                      }
+                      return;
+                    }
+                    const items = e.clipboardData.items;
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].type.startsWith('image/')) {
+                        e.preventDefault();
+                        const f = items[i].getAsFile();
+                        if (f) {
+                          setReturnRecognizeFile(f);
+                          const uploadFile = { uid: `-${Date.now()}`, name: 'pasted-image.png', status: 'done' as const, originFileObj: f };
+                          setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
+                        }
+                        break;
+                      }
+                    }
+                  }}
+                >
                 <div style={{ color: 'var(--neutral-text)', fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
                   确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
                 </div>
-                <Upload.Dragger
+                <input
+                  ref={evidenceFileInputRef}
+                  type="file"
                   accept="image/*"
                   multiple
-                  maxCount={5}
-                  fileList={returnEvidenceFiles}
-                  onChange={({ fileList }) => setReturnEvidenceFiles(fileList)}
-                  beforeUpload={(f) => {
-                    setReturnRecognizeFile(f);
-                    return false;
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (!files?.length) return;
+                    const currentLen = returnEvidenceFiles.length;
+                    const remaining = Math.max(0, 5 - currentLen);
+                    Array.from(files).slice(0, remaining).forEach((f) => {
+                      setReturnRecognizeFile(f);
+                      const uploadFile = { uid: `-${Date.now()}`, name: f.name, status: 'done' as const, originFileObj: f };
+                      setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
+                    });
+                    if (evidenceFileInputRef.current) evidenceFileInputRef.current.value = '';
                   }}
-                  listType="picture"
-                  style={{ padding: '8px 4px' }}
+                />
+                <div
+                  onDragOver={(e) => { e.preventDefault(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const files = Array.from(e.dataTransfer.files || []);
+                    const currentLen = returnEvidenceFiles.length;
+                    const remaining = Math.max(0, 5 - currentLen);
+                    files.slice(0, remaining).forEach((f) => {
+                      if (f.type.startsWith('image/')) {
+                        setReturnRecognizeFile(f);
+                        const uploadFile = { uid: `-${Date.now()}`, name: f.name, status: 'done' as const, originFileObj: f };
+                        setReturnEvidenceFiles((prev: any[]) => [...prev, uploadFile].slice(0, 5));
+                      }
+                    });
+                  }}
+                  onClick={() => evidenceFileInputRef.current?.click()}
+                  style={{
+                    border: '1px dashed #d9d9d9', borderRadius: 8, padding: '16px 4px',
+                    textAlign: 'center', cursor: 'pointer', background: '#fafafa', transition: 'border-color 0.3s',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--primary-color)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#d9d9d9'; }}
                 >
                   <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
                     <InboxOutlined style={{ fontSize: 24, color: 'var(--primary-color)' }} />
                   </p>
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text)', margin: 0 }}>上传回料凭据图片</p>
                   <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', margin: '2px 0 0' }}>支持多张，最多5张</p>
-                </Upload.Dragger>
+                </div>
+                {returnEvidenceFiles.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {returnEvidenceFiles.map((f: any) => (
+                      <div key={f.uid} style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                        <img
+                          src={f.url || (f.originFileObj ? URL.createObjectURL(f.originFileObj) : '')}
+                          alt={f.name || ''}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <span
+                          style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReturnEvidenceFiles((prev: any[]) => prev.filter((x: any) => x.uid !== f.uid));
+                            if (returnRecognizeFile === f.originFileObj) setReturnRecognizeFile(null);
+                          }}
+                        >
+                          ×
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <Button
                   type="dashed"
                   icon={<FileSearchOutlined />}

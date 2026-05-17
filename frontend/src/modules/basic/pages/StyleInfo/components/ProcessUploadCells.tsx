@@ -1,5 +1,5 @@
 import React from 'react';
-import { App, Button, Image, Popover, Tooltip, Upload } from 'antd';
+import { App, Button, Image, Popover, Tooltip } from 'antd';
 import { CameraOutlined, PaperClipOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { downloadFile, getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -8,6 +8,7 @@ export interface AttachmentFile { name: string; url: string; }
 
 export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = ({ record, readOnly }) => {
   const { message: msg } = App.useApp();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [imgs, setImgs] = React.useState<string[]>(() => {
     try { return JSON.parse(record.images || '[]') || []; } catch { return []; }
   });
@@ -17,8 +18,8 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
     try { setImgs(JSON.parse(record.images || '[]') || []); } catch { setImgs([]); }
   }, [record.images]);
 
-  const handleUpload = async (file: File) => {
-    if (!record.id) { msg.warning('请先保存记录再上传图片'); return false; }
+  const doUpload = React.useCallback(async (file: File) => {
+    if (!record.id) { msg.warning('请先保存记录再上传图片'); return; }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -33,13 +34,23 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
         msg.error(res.message || '上传失败');
       }
     } catch { msg.error('上传失败，请重试'); }
-    finally { setUploading(false); }
-    return false;
-  };
+    finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+  }, [record.id, imgs, msg]);
+
+  const handleFileSelect = React.useCallback((files: FileList | File[]) => {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    void doUpload(arr[0]);
+  }, [doUpload]);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24 }}
-      onClick={(e) => e.stopPropagation()}>
+      onClick={(e) => e.stopPropagation()}
+      onDragOver={(e) => { e.preventDefault(); }}
+      onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
+      onPaste={(e) => { const f = e.clipboardData.files; if (f?.length) { e.preventDefault(); handleFileSelect(f); } }}>
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
       {imgs.length > 0 && (
         <Image.PreviewGroup>
           {imgs.slice(0, 2).map((url, i) => (
@@ -50,15 +61,12 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
           ))}
         </Image.PreviewGroup>
       )}
-      {imgs.length > 2 && <span style={{ fontSize: 10, color: '#999' }}>+{imgs.length - 2}</span>}
+      {imgs.length > 2 && <span style={{ fontSize: 12, color: '#999' }}>+{imgs.length - 2}</span>}
       {!readOnly && record.id && (
-        <Upload showUploadList={false} accept="image/*"
-          beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
-          disabled={uploading}>
-          <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
-            <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }} />
-          </Tooltip>
-        </Upload>
+        <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
+          <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
+            onClick={() => fileInputRef.current?.click()} />
+        </Tooltip>
       )}
     </div>
   );
@@ -66,6 +74,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
 
 export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }> = ({ record, readOnly }) => {
   const { message: msg } = App.useApp();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [files, setFiles] = React.useState<AttachmentFile[]>(() => {
     try { return JSON.parse(record.attachments || '[]') || []; } catch { return []; }
   });
@@ -75,8 +84,8 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
     try { setFiles(JSON.parse(record.attachments || '[]') || []); } catch { setFiles([]); }
   }, [record.attachments]);
 
-  const handleUpload = async (file: File) => {
-    if (!record.id) { msg.warning('请先保存记录再上传附件'); return false; }
+  const doUpload = React.useCallback(async (file: File) => {
+    if (!record.id) { msg.warning('请先保存记录再上传附件'); return; }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -91,9 +100,14 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
         msg.error(res.message || '上传失败');
       }
     } catch { msg.error('上传失败，请重试'); }
-    finally { setUploading(false); }
-    return false;
-  };
+    finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+  }, [record.id, files, msg]);
+
+  const handleFileSelect = React.useCallback((filesList: FileList | File[]) => {
+    const arr = Array.from(filesList);
+    if (arr.length === 0) return;
+    void doUpload(arr[0]);
+  }, [doUpload]);
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
@@ -108,13 +122,14 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
         </div>
       ))}
       {!readOnly && record.id && (
-        <Upload showUploadList={false}
-          beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
-          disabled={uploading}>
-          <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
+        <>
+          <input ref={fileInputRef} type="file" style={{ display: 'none' }}
+            onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
+          <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
+            onClick={() => fileInputRef.current?.click()}>
             上传附件
           </Button>
-        </Upload>
+        </>
       )}
     </div>
   );
@@ -135,9 +150,10 @@ export const NewRowImageUpload: React.FC<{
   onChange: (urls: string[]) => void;
 }> = ({ value, onChange }) => {
   const { message: msg } = App.useApp();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = React.useState(false);
 
-  const handleUpload = async (file: File) => {
+  const doUpload = React.useCallback(async (file: File) => {
     setUploading(true);
     try {
       const formData = new FormData();
@@ -150,13 +166,23 @@ export const NewRowImageUpload: React.FC<{
         msg.error(res.message || '上传失败');
       }
     } catch { msg.error('上传失败，请重试'); }
-    finally { setUploading(false); }
-    return false;
-  };
+    finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+  }, [value, onChange, msg]);
+
+  const handleFileSelect = React.useCallback((files: FileList | File[]) => {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    void doUpload(arr[0]);
+  }, [doUpload]);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24 }}
-      onClick={(e) => e.stopPropagation()}>
+      onClick={(e) => e.stopPropagation()}
+      onDragOver={(e) => { e.preventDefault(); }}
+      onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
+      onPaste={(e) => { const f = e.clipboardData.files; if (f?.length) { e.preventDefault(); handleFileSelect(f); } }}>
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
       {value.length > 0 && (
         <Image.PreviewGroup>
           {value.slice(0, 2).map((url, i) => (
@@ -167,14 +193,11 @@ export const NewRowImageUpload: React.FC<{
           ))}
         </Image.PreviewGroup>
       )}
-      {value.length > 2 && <span style={{ fontSize: 10, color: '#999' }}>+{value.length - 2}</span>}
-      <Upload showUploadList={false} accept="image/*"
-        beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
-        disabled={uploading}>
-        <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
-          <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }} />
-        </Tooltip>
-      </Upload>
+      {value.length > 2 && <span style={{ fontSize: 12, color: '#999' }}>+{value.length - 2}</span>}
+      <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
+        <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
+          onClick={() => fileInputRef.current?.click()} />
+      </Tooltip>
     </div>
   );
 };
@@ -184,9 +207,10 @@ export const NewRowAttachmentUpload: React.FC<{
   onChange: (files: AttachmentFile[]) => void;
 }> = ({ value, onChange }) => {
   const { message: msg } = App.useApp();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = React.useState(false);
 
-  const handleUpload = async (file: File) => {
+  const doUpload = React.useCallback(async (file: File) => {
     setUploading(true);
     try {
       const formData = new FormData();
@@ -199,9 +223,14 @@ export const NewRowAttachmentUpload: React.FC<{
         msg.error(res.message || '上传失败');
       }
     } catch { msg.error('上传失败，请重试'); }
-    finally { setUploading(false); }
-    return false;
-  };
+    finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+  }, [value, onChange, msg]);
+
+  const handleFileSelect = React.useCallback((filesList: FileList | File[]) => {
+    const arr = Array.from(filesList);
+    if (arr.length === 0) return;
+    void doUpload(arr[0]);
+  }, [doUpload]);
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
@@ -215,13 +244,14 @@ export const NewRowAttachmentUpload: React.FC<{
           </a>
         </div>
       ))}
-      <Upload showUploadList={false}
-        beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
-        disabled={uploading}>
-        <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
+      <>
+        <input ref={fileInputRef} type="file" style={{ display: 'none' }}
+          onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
+        <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
+          onClick={() => fileInputRef.current?.click()}>
           上传附件
         </Button>
-      </Upload>
+      </>
     </div>
   );
 

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ModelRoutingConfig;
+import com.fashion.supplychain.intelligence.service.SpecialistPersonaService;
 import com.fashion.supplychain.production.entity.MaterialQualityIssue;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -26,6 +27,7 @@ public class ComplianceSpecialistAgent implements SpecialistAgent {
     private final ScanRecordMapper scanRecordMapper;
     private final ProductWarehousingMapper productWarehousingMapper;
     private final MaterialQualityIssueMapper materialQualityIssueMapper;
+    private final SpecialistPersonaService personaService;
 
     @Override
     public String getRoute() { return "compliance"; }
@@ -34,8 +36,12 @@ public class ComplianceSpecialistAgent implements SpecialistAgent {
     public AgentState analyze(AgentState state) {
         String dataContext = buildDataContext(state);
         String prompt = buildPrompt(state, dataContext);
-        var profile = routingConfig.getProfile("compliance");
-        var result = inference.chat("compliance_specialist", profile.getSystemPromptPrefix() + "\n" + buildSystemPrompt(), prompt);
+        String systemPrompt = personaService.buildFullPrompt("compliance");
+        if (systemPrompt == null || systemPrompt.isBlank()) {
+            var profile = routingConfig.getProfile("compliance");
+            systemPrompt = profile.getSystemPromptPrefix() + "\n你是服装质检合规专家。基于提供的真实质检数据、入库记录和物料质量问题进行分析。输出风险点+改进建议。";
+        }
+        var result = inference.chat("compliance_specialist", systemPrompt, prompt);
         if (result.isSuccess()) {
             String analysis = result.getContent();
             state.getSpecialistResults().put("compliance", analysis);
@@ -98,10 +104,6 @@ public class ComplianceSpecialistAgent implements SpecialistAgent {
             sb.append("数据查询异常，仅基于LLM推理\n");
         }
         return sb.toString();
-    }
-
-    private String buildSystemPrompt() {
-        return "你是服装质检合规专家。基于提供的真实质检数据、入库记录和物料质量问题进行分析。输出风险点+改进建议。";
     }
 
     private String buildPrompt(AgentState state, String dataContext) {

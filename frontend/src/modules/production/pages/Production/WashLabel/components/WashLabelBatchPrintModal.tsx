@@ -12,7 +12,7 @@ import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
-import { parseCareIconCodes, getCareIconSvgs } from '@/utils/careIcons';
+import { parseCareIconCodes, getCareIconSvgs, CARE_ICONS } from '@/utils/careIcons';
 
 export interface WashLabelItem {
   orderNo: string;
@@ -87,22 +87,36 @@ const CARE_SVGS: Record<string, string> = {
 };
 function buildCareIconsHtml(item: WashLabelItem): string {
   const explicitCodes = parseCareIconCodes(item.careIconCodes);
-  if (explicitCodes.length > 0) {
-    const icons = getCareIconSvgs(explicitCodes);
-    if (icons.length > 0) {
-      return `<div class="icons">${icons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
-    }
+  let codes: string[] = explicitCodes.length > 0 ? explicitCodes : [];
+  if (!codes.length) {
+    const legacy = getDisplayWashCareCodes(item, item.washInstructions);
+    codes = [
+      legacy.washTempCode ? `wash_${legacy.washTempCode}` : '',
+      legacy.bleachCode ? `bleach_${legacy.bleachCode}` : '',
+      legacy.tumbleDryCode ? `dry_${legacy.tumbleDryCode}` : '',
+      legacy.ironCode ? `iron_${legacy.ironCode}` : '',
+      legacy.dryCleanCode ? `dryclean_${legacy.dryCleanCode}` : '',
+    ].filter(Boolean);
   }
-  const codes = getDisplayWashCareCodes(item, item.washInstructions);
-  const icons = [
-    codes.washTempCode ? (CARE_SVGS[`wash_${codes.washTempCode}`] ?? '') : '',
-    codes.bleachCode ? (CARE_SVGS[`bleach_${codes.bleachCode}`] ?? '') : '',
-    codes.tumbleDryCode ? (CARE_SVGS[`dry_${codes.tumbleDryCode}`] ?? '') : '',
-    codes.ironCode ? (CARE_SVGS[`iron_${codes.ironCode}`] ?? '') : '',
-    codes.dryCleanCode ? (CARE_SVGS[`dryclean_${codes.dryCleanCode}`] ?? '') : '',
-  ].filter(Boolean);
-  if (!icons.length) return '';
-  return `<div class="icons">${icons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
+  if (!codes.length) return '';
+
+  // 按类别分组：水洗 → 漂白 → 烘干 → 熨烫 → 干洗 → 自然晾干 → 特殊处理
+  const categoryOrder = ['wash', 'bleach', 'dry', 'iron', 'dryclean', 'naturaldry', 'special'];
+  const groups: Record<string, string[]> = {};
+  codes.forEach(code => {
+    const def = CARE_ICONS[code];
+    if (!def) return;
+    const cat = def.category;
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(def.svg);
+  });
+
+  const rows = categoryOrder
+    .filter(cat => groups[cat]?.length)
+    .map(cat => `<div class="icon-row">${groups[cat].map(svg => `<span class="icon-cell">${svg}</span>`).join('')}</div>`)
+    .join('');
+
+  return rows ? `<div class="icons">${rows}</div>` : '';
 }
 function buildUCodeHtml(item: WashLabelItem, w: number, qrDataUrl: string): string {
   const qrSize = Math.min(w - 8, 32);
@@ -124,41 +138,38 @@ function buildUCodeHtml(item: WashLabelItem, w: number, qrDataUrl: string): stri
 }
 
 function buildWashHtml(item: WashLabelItem): string {
-  // 多部位成分（套装上下装分段显示）
   const sections = buildWashLabelSections(item.fabricCompositionParts, item.fabricComposition);
   const showPartTitle = sections.length > 1;
   let compositionHtml = sections
     .map(section =>
-      `<div class="comp-block">${showPartTitle && section.key !== 'other' ? `<span class="comp-name">${section.label}:</span>` : ''}` +
+      `<div class="comp-block">${showPartTitle && section.key !== 'other' ? `<div class="comp-name">${section.label}</div>` : ''}` +
       `<div class="comp-mats">${section.items.join('<br/>')}</div></div>`
     ).join('');
-  if (!compositionHtml) compositionHtml = '<div class="comp-mats">（成分未填写）</div>';
-  // 洗护文字说明（从款式档案原文透传）
+  if (!compositionHtml) compositionHtml = '<div class="comp-mats" style="color:#aaa">（成分未填写）</div>';
   const perPartNotes = parseWashNotePerPart(item.fabricCompositionParts);
   const sectionKeys = sections.map(s => s.key);
   const firstPartNote = sectionKeys.length > 0 ? perPartNotes[sectionKeys[0]] : undefined;
   const washRaw = (firstPartNote !== undefined && firstPartNote.trim()) ? firstPartNote : (item.washInstructions || '');
   const washText = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
   const washInstHtml = washText
-    ? `<div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>`
+    ? `<div class="section-sep"></div><div class="wash-label">洗涤说明</div><div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>`
     : '';
-  // ISO 护理英文文字行
-  // ISO 图标行
   const careIconRow = buildCareIconsHtml(item);
+  const careSectionHtml = careIconRow ? `<div class="section-sep"></div>${careIconRow}` : '';
   const now = new Date();
   const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   return `<div class="label-page">
     <div class="dash-sep"></div>
     <div class="top-block">
-      <div class="style-no">款号：${item.styleNo || '-'}</div>
-      <div class="style-name">款名：${item.styleName || '-'}</div>
+      <div class="style-no">${item.styleNo || '-'}</div>
+      ${item.styleName ? `<div class="style-name">${item.styleName}</div>` : ''}
     </div>
     <div class="content-block">
       ${compositionHtml}
-      ${washInstHtml ? `<div class="wash-title">洗涤说明</div>${washInstHtml}` : ''}
+      ${washInstHtml}
     </div>
     <div class="bottom-block">
-      ${careIconRow || ''}
+      ${careSectionHtml}
       <div class="footer">MADE IN CHINA</div>
       <div class="date">${dateStr}</div>
     </div>
@@ -184,42 +195,46 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
     const sharedCss = `
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #000; background: #fff; }
-/* ── 标签外框 ── */
+html, body { width: ${w}mm; min-height: ${h}mm; }
+body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
 .label-page {
   position: relative;
   width: ${w}mm; height: ${h}mm;
-  padding: 0 2.2mm;
+  padding: 2mm 2.2mm;
   page-break-after: always;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center;
 }
-/* ── 上下虚线分割 ── */
 .dash-sep {
   border: none;
   border-top: 0.8pt dashed #555;
   width: calc(100% + 6mm);
   margin-left: -3mm;
+  flex: 0 0 auto;
 }
-.top-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 15mm; text-align: center; }
-.style-no { font-size: ${w <= 30 ? fs - 0.1 : fs + 0.2}pt; font-weight: bold; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.style-name { font-size: ${w <= 30 ? fs - 0.6 : fs - 0.2}pt; line-height: 1.35; margin-top: 0.8mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.content-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 24mm; bottom: 24mm; overflow: hidden; }
-.comp-block { margin: 0.3mm 0 1.1mm; }
-.comp-name  { font-size: ${w <= 30 ? fs + 0.2 : fs}pt; font-weight: bold; display: block; margin-bottom: 0.6mm; }
-.comp-mats  { font-size: ${w <= 30 ? fs + 1.7 : fs}pt; line-height: 1.55; white-space: pre-wrap; font-weight: bold; }
-/* 洗涤说明原文 */
-.wash-title { font-size: ${w <= 30 ? fs - 0.1 : fs}pt; color: #444; line-height: 1.5; margin-bottom: 0.6mm; }
-.care-wash  { font-size: ${fs}pt; color: #444; line-height: 1.6; margin-top: 1.6mm; }
-/* ISO 图标行 */
-.bottom-block { position: absolute; left: 2.2mm; right: 2.2mm; bottom: 6.5mm; display: flex; flex-direction: column; align-items: center; }
-.icons     { display: flex; gap: 0.45mm; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%; margin: 1.8mm auto 0; min-height: 6mm; }
-.icon-cell { width: 4.8mm; height: 4.8mm; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.top-block { text-align: center; flex: 0 0 auto; width: 100%; padding-bottom: 1mm; margin-bottom: 1mm; }
+.style-no { font-size: ${w <= 30 ? fs + 0.3 : fs + 0.8}pt; font-weight: 800; letter-spacing: 0.5mm; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.style-name { font-size: ${w <= 30 ? fs - 0.3 : fs}pt; font-weight: 500; color: #555; line-height: 1.35; margin-top: 0.5mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.content-block { flex: 1 1 0; overflow: hidden; min-height: 0; width: 100%; text-align: center; }
+.comp-block { margin: 0.5mm 0 1.2mm; }
+.comp-name  { font-size: ${w <= 30 ? fs + 0.2 : fs}pt; font-weight: 700; display: block; margin-bottom: 0.5mm; text-align: center; letter-spacing: 0.3mm; }
+.comp-mats  { font-size: ${w <= 30 ? fs + 1.5 : fs + 0.5}pt; line-height: 1.6; font-weight: 600; text-align: center; }
+.section-sep { width: 40%; height: 0; border-top: 0.3pt solid #bbb; margin: 1.5mm auto; }
+.wash-label { font-size: ${w <= 30 ? fs - 0.1 : fs}pt; font-weight: 600; color: #333; line-height: 1.5; margin-bottom: 0.5mm; text-align: center; letter-spacing: 0.3mm; }
+.care-wash  { font-size: ${fs}pt; color: #444; line-height: 1.6; margin-top: 0.8mm; text-align: center; }
+.bottom-block { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; width: 100%; }
+.icons     { display: flex; flex-direction: column; gap: 1mm; align-items: center; width: 100%; margin: 0.5mm auto 0; }
+.icon-row  { display: flex; gap: 1mm; align-items: center; justify-content: center; flex-wrap: wrap; }
+.icon-cell { width: 6mm; height: 6mm; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 .icons svg { width: 100%; height: 100%; }
-.footer    { margin-top: 2.1mm; font-size: ${w <= 30 ? fs - 0.2 : fs}pt; font-weight: bold; letter-spacing: 0.6mm; line-height: 1.3; text-align: center; white-space: nowrap; }
-.date      { margin-top: 2.2mm; font-size: ${fs - 0.5}pt; color: #777; text-align: center; }
-/* U码专属 */
-.ucode-val { font-size: ${w >= 45 ? 9 : 7.5}pt; font-weight: bold; text-align: center;
+.footer    { margin-top: 1.5mm; font-size: ${w <= 30 ? fs - 0.2 : fs}pt; font-weight: 700; letter-spacing: 0.8mm; line-height: 1.3; text-align: center; white-space: nowrap; }
+.date      { margin-top: 1mm; font-size: ${fs - 0.5}pt; color: #777; text-align: center; letter-spacing: 0.2mm; }
+.ucode-val { font-size: ${w >= 45 ? 9 : 7.5}pt; font-weight: 700; text-align: center;
              letter-spacing: 0.5mm; margin: 1.5mm 0; word-break: break-all; }
 .qr        { text-align: center; margin: 1mm 0; }
+.hr        { border: none; border-top: 0.3pt solid #bbb; margin: 1.2mm 0; }
+.sub       { font-size: ${fs}pt; color: #555; text-align: center; }
+.small     { font-size: ${fs - 0.5}pt; color: #888; text-align: center; }
 `;
 
     let allPages: string[];
@@ -272,7 +287,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
         {/* 打印类型 */}
         <div>
           <div style={{ marginBottom: 8, fontWeight: 500 }}>打印类型</div>
-          <Radio.Group value={labelType} onChange={e => setLabelType(e.target.value as LabelType)}>
+          <Radio.Group value={labelType} onChange={e => setLabelType(e.target.value as LabelType)} size="small">
             <Radio.Button value="wash">洗水唛</Radio.Button>
             <Radio.Button value="ucode">U码标签</Radio.Button>
           </Radio.Group>
@@ -320,7 +335,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
         {labelType === 'ucode' && (
           <div>
             <div style={{ marginBottom: 8, fontWeight: 500 }}>U码规格</div>
-            <Radio.Group value={uCodeSize} onChange={e => setUCodeSize(e.target.value as UCodeSize)}>
+            <Radio.Group value={uCodeSize} onChange={e => setUCodeSize(e.target.value as UCodeSize)} size="small">
               {(Object.entries(UCODE_SIZES) as [UCodeSize, { label: string }][]).map(([k, v]) => (
                 <Radio.Button key={k} value={k}>{v.label}</Radio.Button>
               ))}
@@ -346,7 +361,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
                   {it.styleNo}{it.color ? ' / ' + it.color : ''}{it.size ? ' / ' + it.size : ''}
                 </span>
                 {labelType === 'ucode' && it.uCode && (
-                  <Tag style={{ fontSize: 11, color: '#888' }}>U: {it.uCode}</Tag>
+                  <Tag style={{ fontSize: 13, color: '#888' }}>U: {it.uCode}</Tag>
                 )}
               </div>
             ))}

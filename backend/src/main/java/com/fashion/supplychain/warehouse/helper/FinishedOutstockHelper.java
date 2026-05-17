@@ -15,6 +15,8 @@ import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.warehouse.entity.WarehouseArea;
+import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -32,9 +34,13 @@ import java.util.concurrent.ThreadLocalRandom;
 @Slf4j
 public class FinishedOutstockHelper {
 
+    private static final Set<String> VALID_OUTSTOCK_TYPES = Set.of(
+            "shipment", "free_outbound", "sample_out", "damage_out", "transfer_out", "other_out", "scan_outbound");
+
     private final ProductSkuService productSkuService;
     private final ProductOutstockService productOutstockService;
     private final StyleInfoService styleInfoService;
+    private final WarehouseAreaService warehouseAreaService;
 
     @Lazy
     @Autowired
@@ -48,10 +54,12 @@ public class FinishedOutstockHelper {
 
     public FinishedOutstockHelper(ProductSkuService productSkuService,
                                   ProductOutstockService productOutstockService,
-                                  StyleInfoService styleInfoService) {
+                                  StyleInfoService styleInfoService,
+                                  WarehouseAreaService warehouseAreaService) {
         this.productSkuService = productSkuService;
         this.productOutstockService = productOutstockService;
         this.styleInfoService = styleInfoService;
+        this.warehouseAreaService = warehouseAreaService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -72,6 +80,13 @@ public class FinishedOutstockHelper {
         }
         String customerPhone = trimToNull(params.get("customerPhone"));
         String shippingAddress = trimToNull(params.get("shippingAddress"));
+        String outstockType = trimToNull(params.get("outstockType"));
+        String finalOutstockType = StringUtils.hasText(outstockType) ? outstockType : "shipment";
+        if (!VALID_OUTSTOCK_TYPES.contains(finalOutstockType)) {
+            throw new IllegalArgumentException("无效的出库类型: " + finalOutstockType);
+        }
+        String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
+        String warehouseAreaName = resolveWarehouseAreaName(warehouseAreaId);
 
         for (Map<String, Object> item : items) {
             String skuCode = (String) item.get("sku");
@@ -97,7 +112,8 @@ public class FinishedOutstockHelper {
 
                 recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
                     "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
-                    customerName, customerPhone, shippingAddress);
+                    customerName, customerPhone, shippingAddress, finalOutstockType,
+                    warehouseAreaId, warehouseAreaName);
         }
         String productionOrderNo = (String) params.get("productionOrderNo");
         if (StringUtils.hasText(productionOrderNo)) {
@@ -155,7 +171,10 @@ public class FinishedOutstockHelper {
                                        String expressCompany,
                                        String customerName,
                                        String customerPhone,
-                                       String shippingAddress) {
+                                       String shippingAddress,
+                                       String outstockType,
+                                       String warehouseAreaId,
+                                       String warehouseAreaName) {
         ProductOutstock outstock = new ProductOutstock();
         LocalDateTime now = LocalDateTime.now();
         StyleInfo styleInfo = sku.getStyleId() == null ? null : styleInfoService.getById(sku.getStyleId());
@@ -170,8 +189,10 @@ public class FinishedOutstockHelper {
                 : styleInfo != null ? styleInfo.getStyleNo() : null);
         outstock.setStyleName(styleInfo != null ? styleInfo.getStyleName() : null);
         outstock.setOutstockQuantity(quantity);
-        outstock.setOutstockType("shipment");
+        outstock.setOutstockType(outstockType);
         outstock.setWarehouse(warehouse);
+        outstock.setWarehouseAreaId(warehouseAreaId);
+        outstock.setWarehouseAreaName(warehouseAreaName);
         outstock.setRemark(remark);
         outstock.setSkuCode(sku.getSkuCode());
         outstock.setColor(sku.getColor());
@@ -261,20 +282,9 @@ public class FinishedOutstockHelper {
             throw new SecurityException("无权操作该出库记录");
         }
 
-        BigDecimal currentPaid = outstock.getPaidAmount() != null ? outstock.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal newPaid = currentPaid.add(paidAmount);
-        outstock.setPaidAmount(newPaid);
-
-        BigDecimal total = outstock.getTotalAmount();
-        if (total != null && newPaid.compareTo(total) >= 0) {
-            outstock.setPaymentStatus("paid");
-            outstock.setSettlementTime(LocalDateTime.now());
-        } else {
-            outstock.setPaymentStatus("partial");
-        }
-        outstock.setUpdateTime(LocalDateTime.now());
-        productOutstockService.updateById(outstock);
-        syncOutstockBillAfterPayment(outstock);
+        productOutstockService.atomicAddPaidAmount(outstock.getId(), paidAmount);
+        ProductOutstock refreshed = productOutstockService.getById(outstock.getId());
+        syncOutstockBillAfterPayment(refreshed);
     }
 
     private void syncOutstockBillAfterPayment(ProductOutstock outstock) {
@@ -386,6 +396,16 @@ public class FinishedOutstockHelper {
         }
         String text = String.valueOf(value).trim();
         return StringUtils.hasText(text) ? text : null;
+    }
+
+    private String resolveWarehouseAreaName(String areaId) {
+        if (!StringUtils.hasText(areaId)) return null;
+        try {
+            WarehouseArea area = warehouseAreaService.getById(areaId);
+            return area != null ? area.getAreaName() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String buildOutstockNo(LocalDateTime now) {

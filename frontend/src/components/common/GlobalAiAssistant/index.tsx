@@ -487,7 +487,7 @@ const GlobalAiAssistant: React.FC = () => {
                           : `${item.orderNo}${item.styleNo ? `（${item.styleNo}）` : ''} — ${status}，进度${item.progress}%`
                         }
                       </span>
-                      <span style={{color:'#1890ff',fontSize:11}}>查看 →</span>
+                      <span style={{color:'#1890ff',fontSize:13}}>查看 →</span>
                       <button
                         className={msgStyles.pendingDismissBtn}
                         onClick={(e) => dismissPendingItem(item.id || item.orderNo, e)}
@@ -570,11 +570,12 @@ const GlobalAiAssistant: React.FC = () => {
             {attachedFile && (
               <div className={styles.attachChip}>
                 <span>📎 {attachedFile.name}</span>
-                <button className={styles.attachChipRemove} onClick={() => setAttachedFile(null)}>×</button>
+                <button type="button" className={styles.attachChipRemove} onClick={() => setAttachedFile(null)}>×</button>
               </div>
             )}
             <div className={styles.inputRow}>
               <button
+                type="button"
                 className={styles.uploadBtn}
                 title="上传文件（Excel/CSV/图片/PDF）"
                 onClick={() => fileInputRef.current?.click()}
@@ -583,6 +584,7 @@ const GlobalAiAssistant: React.FC = () => {
                 <PaperClipOutlined />
               </button>
               <button
+                type="button"
                 className={`${styles.uploadBtn} ${styles.traceBtn}`}
                 title="查看AI记录"
                 onClick={() => openTraceCenter()}
@@ -592,6 +594,7 @@ const GlobalAiAssistant: React.FC = () => {
               </button>
               <div className={emojiStyles.emojiWrapper} ref={emojiPanelRef}>
                 <button
+                  type="button"
                   className={`${styles.uploadBtn} ${showEmojiPicker ? emojiStyles.emojiActive : ''}`}
                   title="表情"
                   onClick={() => setShowEmojiPicker(v => !v)}
@@ -603,6 +606,7 @@ const GlobalAiAssistant: React.FC = () => {
                     <div className={emojiStyles.emojiTabs}>
                       {EMOJI_GROUPS.map((g, i) => (
                         <button
+                          type="button"
                           key={g.label}
                           className={`${emojiStyles.emojiTabBtn} ${emojiTab === i ? emojiStyles.emojiTabActive : ''}`}
                           onClick={() => setEmojiTab(i)}
@@ -614,6 +618,7 @@ const GlobalAiAssistant: React.FC = () => {
                     <div className={emojiStyles.emojiGrid}>
                       {EMOJI_GROUPS[emojiTab].emojis.map((em, i) => (
                         <button
+                          type="button"
                           key={`${em}-${i}`}
                           className={emojiStyles.emojiItem}
                           onClick={() => handleEmojiSelect(em)}
@@ -636,6 +641,7 @@ const GlobalAiAssistant: React.FC = () => {
                 disabled={isTyping || uploadingFile}
               />
               <button
+                type="button"
                 className={styles.voiceBtn}
                 title="语音输入（点击后说话）"
                 onClick={handleVoiceInput}
@@ -646,6 +652,7 @@ const GlobalAiAssistant: React.FC = () => {
                 <span>语音</span>
               </button>
               <button
+                type="button"
                 className={styles.sendBtn}
                 onClick={() => attachedFile ? void handleSendWithAttachment() : void handleSend()}
                 disabled={(!inputValue.trim() && !attachedFile) || isTyping || uploadingFile}

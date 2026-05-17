@@ -168,7 +168,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
               fontSize: 16, padding: 0,
             }}
           />
-          <span style={{ fontSize: 11, color: '#3a5a7a', letterSpacing: 0.5, flexShrink: 0 }}>ESC 关闭</span>
+          <span style={{ fontSize: 13, color: '#3a5a7a', letterSpacing: 0.5, flexShrink: 0 }}>ESC 关闭</span>
         </div>
 
         {/* 空状态 */}
@@ -215,7 +215,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             {/* 订单 */}
             {(result?.orders.length ?? 0) > 0 && (
               <section>
-                <div style={{ padding: '6px 18px 4px', fontSize: 11, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
+                <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
                   <FileTextOutlined style={{ marginRight: 5 }} />生产订单
                 </div>
                 {result!.orders.map(o => {
@@ -235,16 +235,16 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       <span style={{ flex: 1, fontSize: 12, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {o.styleName || o.styleNo}
                       </span>
-                      <span style={{ fontSize: 11, color: '#5a7a9a', flexShrink: 0 }}>{o.factoryName}</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, flexShrink: 0,
+                      <span style={{ fontSize: 13, color: '#5a7a9a', flexShrink: 0 }}>{o.factoryName}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 6px', borderRadius: 4, flexShrink: 0,
                         color: STATUS_COLOR[o.status] ?? '#7aaec8',
                         border: `1px solid ${(STATUS_COLOR[o.status] ?? '#7aaec8')}44`,
                         background: `${(STATUS_COLOR[o.status] ?? '#7aaec8')}11`
                       }}>{o.statusLabel}</span>
                       {o.progress != null && (
-                        <span style={{ fontSize: 10, color: '#3a6080', flexShrink: 0 }}>{o.progress}%</span>
+                        <span style={{ fontSize: 12, color: '#3a6080', flexShrink: 0 }}>{o.progress}%</span>
                       )}
-                      <RightOutlined style={{ color: '#2a4060', fontSize: 10, flexShrink: 0 }} />
+                      <RightOutlined style={{ color: '#2a4060', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
                 })}
@@ -254,7 +254,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             {/* 款式 */}
             {(result?.styles.length ?? 0) > 0 && (
               <section style={{ marginTop: 4 }}>
-                <div style={{ padding: '6px 18px 4px', fontSize: 11, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
+                <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
                   <AppstoreOutlined style={{ marginRight: 5 }} />款式
                 </div>
                 {result!.styles.map(s => {
@@ -272,8 +272,8 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       onMouseEnter={() => setActiveIdx(idx)}>
                       <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: 13, minWidth: 100 }}>{s.styleNo}</span>
                       <span style={{ flex: 1, fontSize: 12, color: '#b0c4de' }}>{s.styleName}</span>
-                      {s.category && <span style={{ fontSize: 10, color: '#5a7a9a', flexShrink: 0 }}>{s.category}</span>}
-                      <RightOutlined style={{ color: '#2a4060', fontSize: 10, flexShrink: 0 }} />
+                      {s.category && <span style={{ fontSize: 12, color: '#5a7a9a', flexShrink: 0 }}>{s.category}</span>}
+                      <RightOutlined style={{ color: '#2a4060', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
                 })}
@@ -283,7 +283,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             {/* 工人 */}
             {(result?.workers.length ?? 0) > 0 && (
               <section style={{ marginTop: 4 }}>
-                <div style={{ padding: '6px 18px 4px', fontSize: 11, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
+                <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
                   <UserOutlined style={{ marginRight: 5 }} />工人 / 员工
                 </div>
                 {result!.workers.map(w => {
@@ -301,9 +301,9 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       onMouseEnter={() => setActiveIdx(idx)}>
                       <UserOutlined style={{ color: '#39ff14', fontSize: 14 }} />
                       <span style={{ color: '#e8f4ff', fontWeight: 600, fontSize: 13, minWidth: 72 }}>{w.name}</span>
-                      <span style={{ fontSize: 11, color: '#5a7a9a', flex: 1 }}>{w.factoryName}</span>
-                      {w.role && <span style={{ fontSize: 10, color: '#3a6080' }}>{w.role}</span>}
-                      <RightOutlined style={{ color: '#2a4060', fontSize: 10, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: '#5a7a9a', flex: 1 }}>{w.factoryName}</span>
+                      {w.role && <span style={{ fontSize: 12, color: '#3a6080' }}>{w.role}</span>}
+                      <RightOutlined style={{ color: '#2a4060', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
                 })}
@@ -313,7 +313,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         )}
 
         {/* 底部提示 */}
-        <div style={{ padding: '8px 18px', borderTop: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 16, fontSize: 10, color: '#2a4060' }}>
+        <div style={{ padding: '8px 18px', borderTop: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 16, fontSize: 12, color: '#2a4060' }}>
           <span>↑↓ 导航</span>
           <span>↵ 跳转</span>
           <span>Esc 关闭</span>

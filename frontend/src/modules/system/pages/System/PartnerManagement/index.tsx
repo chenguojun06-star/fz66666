@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import PageLayout from '@/components/common/PageLayout';
-import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { organizationApi } from '@/services/system/organizationApi';
@@ -90,7 +89,7 @@ const ExternalTreeItem: React.FC<{
 
 const PartnerManagement: React.FC = () => {
   const { message } = App.useApp();
-  const { user } = useUser();
+  const { user: _user } = useUser();
 
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<OrganizationUnit[]>([]);

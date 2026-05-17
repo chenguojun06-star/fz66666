@@ -64,6 +64,31 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/cockpit/agent-traces') return 'AI执行记录中心';
   if (base === '/intelligence/center') return '智能运营中心';
   if (base === '/intelligence/agent-traces') return 'AI执行记录中心';
+  if (base === '/ecommerce/center') return '平台总览';
+  if (base === '/ecommerce/platform') return '平台详情';
+  if (base === '/warehouse/ecommerce') return '电商订单';
+  if (base === '/finance/ec-revenue') return 'EC销售收入';
+  if (base === '/crm') return '客户档案';
+  if (base === '/crm/receivables') return '应收账款';
+  if (base === '/finance/employee-advance') return '员工借支';
+  if (base === '/finance/tax-export') return '财税导出';
+  if (base === '/warehouse/product-info') return '成品资料';
+  if (base === '/warehouse/label-print') return '标签打印';
+  if (base === '/warehouse/inventory-check') return '库存盘点';
+  if (base === '/production/picking') return '物料领料';
+  if (base === '/production/transfer') return '订单转移';
+  if (base === '/production/order-flow') return '订单流程';
+  if (base === '/basic/maintenance-center') return '资料单价';
+  if (base === '/order-management') return '下单管理';
+  if (base === '/system/organization') return '组织架构';
+  if (base === '/system/partner-management') return '合作企业管理';
+  if (base === '/system/orphan-data') return '孤立数据';
+  if (base === '/system/app-store') return '应用商店';
+  if (base === '/system/customer') return '客户管理';
+  if (base === '/system/tenant') return 'API对接管理';
+  if (base === '/basic/template-center') return '模板中心';
+  if (base === '/basic/pattern-revision') return '纸样修改';
+  if (base === '/data-center') return '数据中心';
 
   for (const section of localizedMenuConfig) {
     if (section.path && normalizePath(section.path) === base) return section.title;
@@ -98,6 +123,16 @@ export function useActivePath(effectivePathname: string) {
         if (!best || p.length > best.length) best = p;
       }
     }
+
+    if (!best) {
+      const prefix = '/' + current.split('/').slice(1, 3).join('/');
+      for (const p of allPaths) {
+        if (p.startsWith(prefix) && p.length > prefix.length) {
+          if (!best || p.length > (best?.length ?? 0)) best = p;
+        }
+      }
+    }
+
     return best;
   }, [effectivePathname]);
 }
@@ -189,11 +224,13 @@ export function useRecentPages(
   const closeRecent = (path: string) => {
     setRecentPages((prev) => {
       const idx = prev.findIndex((p) => p.path === path);
+      const target = prev[idx];
       const next = prev.filter((p) => p.path !== path);
       writeRecentPages(next);
-      if (path === effectiveFullPath) {
-        const fallback = next[idx] || next[idx - 1] || { path: '/dashboard' };
-        if (fallback.path && fallback.path !== effectiveFullPath) navigate(fallback.path);
+      const currentBase = getActivePath || normalizePath(effectivePathname);
+      if (target && target.basePath === currentBase) {
+        const fallback = next[idx] || next[idx - 1] || { basePath: '/dashboard', path: '/dashboard' };
+        if (fallback.basePath && fallback.basePath !== currentBase) navigate(fallback.basePath);
       }
       return next;
     });

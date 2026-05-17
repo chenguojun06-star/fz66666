@@ -48,7 +48,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
             display: 'inline-flex', alignItems: 'center', gap: 4,
           }}
         >
-          <RightOutlined style={{ fontSize: 10 }} />
+          <RightOutlined style={{ fontSize: 12 }} />
           开发费用统计
         </span>
       </Card>
@@ -70,30 +70,30 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
               userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: 4,
             }}
           >
-            <DownOutlined style={{ fontSize: 10 }} />
+            <DownOutlined style={{ fontSize: 12 }} />
             开发费用统计
           </span>
 
           {/* 数据条目 */}
           <div style={{ display: 'flex', flex: 1, gap: 8, alignItems: 'center', justifyContent: 'space-evenly' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 面辅料</span>
+              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 面辅料</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.materialCost ?? 0)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 工序单价</span>
+              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 工序单价</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.processCost ?? 0)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 二次工艺</span>
+              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 二次工艺</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.secondaryProcessCost ?? 0)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 总开发费</span>
+              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 总开发费</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary-color)', lineHeight: 1.4 }}>¥{fmt(stats?.totalCost ?? 0)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 样衣数量</span>
+              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 样衣数量</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{stats?.patternCount ?? 0} 件</span>
             </div>
           </div>

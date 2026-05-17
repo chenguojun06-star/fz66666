@@ -66,6 +66,7 @@ public class AgentLoopContextBuilder {
 
         Map<String, AgentTool> visibleToolMap = toolExecHelper.toToolLookup(visibleTools);
         List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
+        visibleApiTools.sort(java.util.Comparator.comparing(t -> t.getFunction().getName()));
 
         List<AiMessage> messages = new ArrayList<>();
         messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));

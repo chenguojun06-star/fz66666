@@ -129,7 +129,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
         }
       })
       .finally(() => setLoading(false));
-  }, [open, order?.id]);
+  }, [open, order]);
 
   /* ── 调整每标签件数 ── */
   const handlePerLabelChange = (key: string, val: number | null) => {
@@ -200,6 +200,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
             <div class="qr">
               <img src="${qrMap[lb.qrCode] || ''}" width="84" height="84" />
             </div>
+            <div class="divider"></div>
             <div class="text">
               <div class="top-code">${lb.qrCode}</div>
               <div>款号：${order.styleNo || '-'}</div>
@@ -221,7 +222,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
   <style>
     @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #000; background: #fff; }
+    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
     .print-page {
       width: ${labelW}mm; height: ${labelH}mm; padding: 2mm;
       page-break-after: always;
@@ -230,12 +231,13 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
     .print-page:last-child { page-break-after: auto; }
     .label {
       width: ${labelW - 4}mm; height: ${labelH - 4}mm;
-      border: 1px solid #000;
+      border: 0.8pt solid #333;
       display: flex; flex-direction: row;
-      padding: 1.2mm 1.6mm; gap: 1.8mm; background: #fff;
+      padding: 2mm 3mm; gap: 0; background: #fff;
     }
     .qr { flex: 0 0 ${printQrSize + 2.5}mm; display: flex; align-items: center; justify-content: center; }
     .qr img { width: ${printQrSize}mm; height: ${printQrSize}mm; }
+    .divider { width: 0; border-right: 0.4pt solid #bbb; margin: 2mm 2mm; flex-shrink: 0; }
     .text {
       flex: 1; display: flex; flex-direction: column;
       justify-content: flex-start;
@@ -244,9 +246,10 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
     .text > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .top-code {
       font-size: 7.2pt; font-weight: 700;
-      border-bottom: 0.8pt dashed #9a9a9a;
+      border-bottom: 0.5pt solid #bbb;
       padding-bottom: 0.8mm;
-      margin-bottom: 0.9mm;
+      margin-bottom: 1mm;
+      letter-spacing: 0.2mm;
     }
   </style>
 </head>

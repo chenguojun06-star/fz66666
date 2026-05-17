@@ -427,7 +427,7 @@ const Register: React.FC = () => {
           </Form.Item>
         </Form>
             <div className="login-footer">© {year} 衣智链</div>
-            <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
+            <div className="login-footer" style={{ marginTop: 2, fontSize: 13 }}>
               部署版本：{buildCommit} · 构建时间：{buildTimeText}
             </div>
             <div className="login-footer" style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>

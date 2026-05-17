@@ -163,14 +163,14 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
             {itemList.map((item, idx) => (
               <React.Fragment key={idx}>
                 {idx > 0 && (
-                  <span style={{ color: LABEL_COLOR, fontSize: 11, margin: '0 1px' }}>·</span>
+                  <span style={{ color: LABEL_COLOR, fontSize: 13, margin: '0 1px' }}>·</span>
                 )}
-                <span style={{ color: LABEL_COLOR, fontSize: 11 }}>{item.label}</span>
+                <span style={{ color: LABEL_COLOR, fontSize: 13 }}>{item.label}</span>
                 <span style={{ fontWeight: VALUE_FONT_WEIGHT, color: item.color || 'var(--text-primary)' }}>
                   {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
                 </span>
                 {item.unit && (
-                  <span style={{ color: LABEL_COLOR, fontSize: 11 }}>{item.unit}</span>
+                  <span style={{ color: LABEL_COLOR, fontSize: 13 }}>{item.unit}</span>
                 )}
               </React.Fragment>
             ))}

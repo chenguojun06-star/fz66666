@@ -18,10 +18,10 @@ import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, 
 import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, WagePayment, EcSalesRevenue, TaxExport } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
-import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck } from './modules/warehouse';
+import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage } from './modules/system';
-import { IntegrationCenter } from './modules/integration';
+import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
 
@@ -248,6 +248,9 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.sampleInventory} element={<RouteErrorBoundary pageName="样衣库存"><Suspense fallback={routeFallback}><SampleInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecommerceOrders} element={<RouteErrorBoundary pageName="电商订单"><Suspense fallback={routeFallback}><EcommerceOrders /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.inventoryCheck} element={<RouteErrorBoundary pageName="库存盘点"><Suspense fallback={routeFallback}><InventoryCheck /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.labelPrint} element={<RouteErrorBoundary pageName="标签打印"><Suspense fallback={routeFallback}><LabelPrint /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.productInfo} element={<RouteErrorBoundary pageName="成品资料"><Suspense fallback={routeFallback}><ProductInfo /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.warehouseLocationMap} element={<RouteErrorBoundary pageName="库位地图"><Suspense fallback={routeFallback}><WarehouseLocationMap /></Suspense></RouteErrorBoundary>} />
 
           <Route path={paths.user} element={<RouteErrorBoundary pageName="用户管理"><Suspense fallback={routeFallback}><UserList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dict} element={<RouteErrorBoundary pageName="字典管理"><Suspense fallback={routeFallback}><DictManage /></Suspense></RouteErrorBoundary>} />
@@ -268,7 +271,8 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.orphanData} element={<RouteErrorBoundary pageName="孤儿数据"><Suspense fallback={routeFallback}><OrphanDataPage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.appStore} element={<RouteErrorBoundary pageName="应用商店"><Suspense fallback={routeFallback}><AppStore /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dataImport} element={<RouteErrorBoundary pageName="数据导入"><Suspense fallback={routeFallback}><DataImport /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.integrationCenter} element={<RouteErrorBoundary pageName="集成中心"><Suspense fallback={routeFallback}><IntegrationCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.ecommerceCenter} element={<RouteErrorBoundary pageName="电商运营"><Suspense fallback={routeFallback}><EcommerceCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={`${paths.ecommercePlatform}/:platformCode`} element={<RouteErrorBoundary pageName="平台详情"><Suspense fallback={routeFallback}><PlatformDetail /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cockpit} element={<RouteErrorBoundary pageName="智能驾驶舱"><Suspense fallback={routeFallback}><CockpitPage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.cockpitTrace} element={<RouteErrorBoundary pageName="执行轨迹"><Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.intelligenceCenter} element={<RouteErrorBoundary pageName="智能中心"><Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense></RouteErrorBoundary>} />

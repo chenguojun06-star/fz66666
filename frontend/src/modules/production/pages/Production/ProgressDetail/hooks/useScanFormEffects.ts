@@ -34,7 +34,7 @@ export const useScanFormEffects = ({
     if (scanBundlesFetchOnceRef.current === activeOrder.id) return;
     scanBundlesFetchOnceRef.current = activeOrder.id;
     void fetchCuttingBundles(activeOrder);
-  }, [scanOpen, activeOrder?.id, cuttingBundles.length, cuttingBundlesLoading, fetchCuttingBundles]);
+  }, [scanOpen, activeOrder, cuttingBundles.length, cuttingBundlesLoading, fetchCuttingBundles]);
 
   useEffect(() => {
     if (!scanOpen) return;
@@ -48,5 +48,5 @@ export const useScanFormEffects = ({
       processCode: code || '',
       unitPrice: Number.isFinite(p) && p >= 0 ? p : undefined,
     });
-  }, [scanOpen, activeOrder?.id, activeOrder?.productionProgress, nodes, scanForm, progressNodesByStyleNo]);
+  }, [scanOpen, activeOrder, nodes, scanForm, progressNodesByStyleNo]);
 };

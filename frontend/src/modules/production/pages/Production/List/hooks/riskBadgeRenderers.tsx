@@ -121,7 +121,7 @@ export function renderSlaStatus(record: ProductionOrder) {
   const sla = slaMap[record.deliverySlaStatus || ''] || null;
   if (!sla) return null;
   return (
-    <span style={{ fontSize: 10, fontWeight: 600, color: sla.color }}>
+    <span style={{ fontSize: 12, fontWeight: 600, color: sla.color }}>
       SLA: {sla.text}{record.actualDeliveryDays != null ? ` ${record.actualDeliveryDays}天` : ''}
     </span>
   );
@@ -140,7 +140,7 @@ export function renderMerchandiserCell(v: any, record: ProductionOrder, onOpenRe
       onClick={() => onOpenRemark?.(record, '跟单员 — ' + name)}
     >
       {remarkTime && (
-        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
           {remarkTime}
         </div>
       )}
@@ -157,7 +157,7 @@ export function renderMerchandiserCell(v: any, record: ProductionOrder, onOpenRe
       {remarkBody && (
         <Tooltip title={remarkBody} placement="bottom">
           <div style={{
-            fontSize: 10, color: 'var(--color-text-secondary)', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
+            fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
             maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {remarkBody.length > 6 ? remarkBody.substring(0, 6) + '...' : remarkBody}

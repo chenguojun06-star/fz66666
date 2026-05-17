@@ -139,8 +139,8 @@ const TaxExport: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <Text strong style={{ color: locked ? '#bbb' : undefined }}>{opt.label}</Text>
                     {opt.free
-                      ? <Tag color="green" style={{ fontSize: 11 }}>免费</Tag>
-                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 11 }}>
+                      ? <Tag color="green" style={{ fontSize: 13 }}>免费</Tag>
+                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 13 }}>
                           {subscribed ? '已解锁' : '付费'}
                         </Tag>}
                   </div>

@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -747,25 +748,13 @@ public class PayrollSettlementOrchestrator {
             throw new IllegalArgumentException("打款金额不能超过剩余未付金额: " + currentRemaining);
         }
 
-        BigDecimal newPaid = currentPaid.add(paymentAmount);
-        BigDecimal newRemaining = settlement.getTotalAmount().subtract(newPaid);
-        String newPaymentStatus;
-        if (newRemaining.compareTo(BigDecimal.ZERO) == 0) {
-            newPaymentStatus = "fully_paid";
-        } else {
-            newPaymentStatus = "partially_paid";
+        int rows = payrollSettlementService.atomicAddPaidAmount(settlementId.trim(), paymentAmount, currentPaid);
+        if (rows == 0) {
+            throw new OptimisticLockingFailureException("工资打款并发冲突，请重试: settlementId=" + settlementId);
         }
 
-        LambdaUpdateWrapper<PayrollSettlement> uw = new LambdaUpdateWrapper<PayrollSettlement>()
-                .set(PayrollSettlement::getPaidAmount, newPaid)
-                .set(PayrollSettlement::getRemainingAmount, newRemaining)
-                .set(PayrollSettlement::getPaymentStatus, newPaymentStatus)
-                .set(PayrollSettlement::getUpdateTime, LocalDateTime.now())
-                .eq(PayrollSettlement::getId, settlementId.trim());
-        payrollSettlementService.update(uw);
-
-        log.info("[PayrollPayment] 工资打款记录: settlementId={}, paymentAmount={}, totalPaid={}, remaining={}",
-                settlementId, paymentAmount, newPaid, newRemaining);
+        log.info("[PayrollPayment] 工资打款记录: settlementId={}, paymentAmount={}, previousPaid={}",
+                settlementId, paymentAmount, currentPaid);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -784,13 +773,6 @@ public class PayrollSettlementOrchestrator {
         TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "工资结算单");
 
         BigDecimal currentDeduction = settlement.getDeductionAmount() != null ? settlement.getDeductionAmount() : BigDecimal.ZERO;
-        BigDecimal newDeduction = currentDeduction.add(deductionAmount);
-        BigDecimal newRemaining = settlement.getTotalAmount().subtract(newDeduction)
-                .subtract(settlement.getPaidAmount() != null ? settlement.getPaidAmount() : BigDecimal.ZERO)
-                .subtract(settlement.getAdvanceAmount() != null ? settlement.getAdvanceAmount() : BigDecimal.ZERO);
-        if (newRemaining.compareTo(BigDecimal.ZERO) < 0) {
-            newRemaining = BigDecimal.ZERO;
-        }
 
         DeductionItem deduction = new DeductionItem();
         deduction.setSettlementId(settlementId.trim());
@@ -805,14 +787,12 @@ public class PayrollSettlementOrchestrator {
         }
         deductionItemMapper.insert(deduction);
 
-        LambdaUpdateWrapper<PayrollSettlement> uw = new LambdaUpdateWrapper<PayrollSettlement>()
-                .set(PayrollSettlement::getDeductionAmount, newDeduction)
-                .set(PayrollSettlement::getRemainingAmount, newRemaining)
-                .set(PayrollSettlement::getUpdateTime, LocalDateTime.now())
-                .eq(PayrollSettlement::getId, settlementId.trim());
-        payrollSettlementService.update(uw);
+        int rows = payrollSettlementService.atomicAddDeductionAmount(settlementId.trim(), deductionAmount, currentDeduction);
+        if (rows == 0) {
+            throw new OptimisticLockingFailureException("工资扣款并发冲突，请重试: settlementId=" + settlementId);
+        }
 
-        log.info("[PayrollDeduction] 工资扣款: settlementId={}, type={}, amount={}, totalDeduction={}",
-                settlementId, deductionType, deductionAmount, newDeduction);
+        log.info("[PayrollDeduction] 工资扣款: settlementId={}, type={}, amount={}, previousDeduction={}",
+                settlementId, deductionType, deductionAmount, currentDeduction);
     }
 }

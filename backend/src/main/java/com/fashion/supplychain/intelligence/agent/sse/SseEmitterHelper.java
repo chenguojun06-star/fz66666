@@ -68,8 +68,8 @@ public class SseEmitterHelper {
         }
     }
 
-    public static void startHeartbeat(SseEmitter emitter, long intervalSeconds) {
-        HEARTBEAT_SCHEDULER.scheduleAtFixedRate(() -> {
+    public static java.util.concurrent.ScheduledFuture<?> startHeartbeat(SseEmitter emitter, long intervalSeconds) {
+        return HEARTBEAT_SCHEDULER.scheduleAtFixedRate(() -> {
             try {
                 sendComment(emitter, "heartbeat " + System.currentTimeMillis());
             } catch (Exception e) {

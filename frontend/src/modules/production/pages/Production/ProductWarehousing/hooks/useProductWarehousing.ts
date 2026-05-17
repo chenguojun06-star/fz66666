@@ -168,25 +168,7 @@ export const useProductWarehousing = () => {
     }
   }, []);
 
-  // 切换状态筛选
-  const handleStatusFilterChange = useCallback((newFilter: StatusFilter) => {
-    setStatusFilter(newFilter);
-    if (newFilter === 'all' || newFilter === 'completed') {
-      setPendingBundles([]);
-      fetchWarehousingList();
-    } else {
-      fetchPendingBundles(newFilter);
-    }
-  }, []);
-
-  // 跳转到质检详情页
-  const navigateToInspect = useCallback((orderId: string, bundleId?: string) => {
-    const params = new URLSearchParams();
-    if (bundleId) params.set('bundleId', bundleId);
-    navigate(`/production/warehousing/inspect/${orderId}?${params.toString()}`);
-  }, [navigate]);
-
-  const fetchWarehousingList = async () => {
+  const fetchWarehousingList = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', { params: queryParams });
@@ -205,7 +187,24 @@ export const useProductWarehousing = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryParams, showSmartErrorNotice, reportSmartError]);
+
+  // 切换状态筛选
+  const handleStatusFilterChange = useCallback((newFilter: StatusFilter) => {
+    setStatusFilter(newFilter);
+    if (newFilter === 'all' || newFilter === 'completed') {
+      setPendingBundles([]);
+      fetchWarehousingList();
+    } else {
+      fetchPendingBundles(newFilter);
+    }
+  }, [fetchPendingBundles, fetchWarehousingList]);
+
+  const navigateToInspect = useCallback((orderId: string, bundleId?: string) => {
+    const params = new URLSearchParams();
+    if (bundleId) params.set('bundleId', bundleId);
+    navigate(`/production/warehousing/inspect/${orderId}?${params.toString()}`);
+  }, [navigate]);
 
   const fetchBundlesByOrderNo = async (orderNo: string) => {
     const on = String(orderNo || '').trim();
@@ -424,7 +423,7 @@ export const useProductWarehousing = () => {
   useEffect(() => {
     fetchWarehousingList();
     fetchWarehousingStats();
-  }, [queryParams]);
+  }, [queryParams, fetchWarehousingList, fetchWarehousingStats]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

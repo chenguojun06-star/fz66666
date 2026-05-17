@@ -54,7 +54,7 @@ const AppManagementTab: React.FC = () => {
         const hasUrl = !!(record.callbackUrl || record.externalApiUrl);
         return (
           <Tooltip title={hasUrl ? '已配置接口地址' : '未配置接口地址，点击操作列编辑'}>
-            <Tag color={hasUrl ? 'success' : 'warning'} style={{ fontSize: 11 }}>
+            <Tag color={hasUrl ? 'success' : 'warning'} style={{ fontSize: 13 }}>
               {hasUrl ? ' 已配置' : ' 待配置'}
             </Tag>
           </Tooltip>
@@ -68,7 +68,7 @@ const AppManagementTab: React.FC = () => {
           return (
             <Space size={4}>
               <Input value={editingUrlValue} onChange={e => setEditingUrlValue(e.target.value)}
-                placeholder="https://..." style={{ width: 150, fontSize: 11 }} />
+                placeholder="https://..." style={{ width: 150, fontSize: 13 }} />
               <SaveOutlined style={{ cursor: 'pointer', color: 'var(--color-success)' }} onClick={handleSaveUrl} />
               <CloseOutlined style={{ cursor: 'pointer', color: 'var(--color-danger)' }} onClick={cancelEditUrl} />
             </Space>
@@ -77,11 +77,11 @@ const AppManagementTab: React.FC = () => {
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {record.callbackUrl ? (
-              <Text style={{ fontSize: 11 }} ellipsis={{ tooltip: record.callbackUrl }}>{record.callbackUrl}</Text>
+              <Text style={{ fontSize: 13 }} ellipsis={{ tooltip: record.callbackUrl }}>{record.callbackUrl}</Text>
             ) : (
-              <Text type="secondary" style={{ fontSize: 11 }}>未配置</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>未配置</Text>
             )}
-            <EditOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: 11, flexShrink: 0 }}
+            <EditOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: 13, flexShrink: 0 }}
               onClick={() => startEditUrl(record, 'callbackUrl')} />
           </div>
         );

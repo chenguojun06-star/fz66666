@@ -118,12 +118,12 @@ const IntegrationOverviewTab: React.FC = () => {
                   {endpoints.map((ep, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: 8, padding: '2px 0', fontSize: 12 }}>
                       {ep.method !== '-' ? (
-                        <Tag color="blue" style={{ fontSize: 11, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag>
+                        <Tag color="blue" style={{ fontSize: 13, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag>
                       ) : (
-                        <Tag color="green" style={{ fontSize: 11, minWidth: 44, textAlign: 'center' }}>PUSH</Tag>
+                        <Tag color="green" style={{ fontSize: 13, minWidth: 44, textAlign: 'center' }}>PUSH</Tag>
                       )}
-                      <Text code style={{ fontSize: 11 }}>{ep.path}</Text>
-                      <Text type="secondary" style={{ fontSize: 11 }}>{ep.desc}</Text>
+                      <Text code style={{ fontSize: 13 }}>{ep.path}</Text>
+                      <Text type="secondary" style={{ fontSize: 13 }}>{ep.desc}</Text>
                     </div>
                   ))}
                 </div>
@@ -148,16 +148,16 @@ const IntegrationOverviewTab: React.FC = () => {
                   children: (
                     <div style={{ fontSize: 12 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <Tag color={log.direction === 'INBOUND' ? 'blue' : 'green'} style={{ fontSize: 10 }}>
+                        <Tag color={log.direction === 'INBOUND' ? 'blue' : 'green'} style={{ fontSize: 12 }}>
                           {log.direction === 'INBOUND' ? '入站' : '出站'}
                         </Tag>
-                        <Tag style={{ fontSize: 10 }}>{log.httpMethod}</Tag>
-                        <Text code style={{ fontSize: 10 }}>{log.requestPath}</Text>
-                        <Tag color={log.result === 'SUCCESS' ? 'green' : 'red'} style={{ fontSize: 10 }}>
+                        <Tag style={{ fontSize: 12 }}>{log.httpMethod}</Tag>
+                        <Text code style={{ fontSize: 12 }}>{log.requestPath}</Text>
+                        <Tag color={log.result === 'SUCCESS' ? 'green' : 'red'} style={{ fontSize: 12 }}>
                           {log.responseCode} {log.costMs}ms
                         </Tag>
                       </div>
-                      <Text type="secondary" style={{ fontSize: 11 }}>{log.createTime}</Text>
+                      <Text type="secondary" style={{ fontSize: 13 }}>{log.createTime}</Text>
                     </div>
                   ),
                 }))}

@@ -23,6 +23,8 @@ public final class DbColumnDefinitions {
         addSmartFeatureColumns();
         addWarehouseAreaColumns();
         addSkuAndTrackingColumns();
+        addBargainPriceColumns();
+        addEmployeeAdvanceColumns();
     }
 
     private DbColumnDefinitions() {}
@@ -1039,5 +1041,50 @@ public final class DbColumnDefinitions {
         add("t_production_process_tracking", "quality_time", "DATETIME DEFAULT NULL");
         add("t_production_process_tracking", "repair_status", "VARCHAR(20) DEFAULT NULL");
         add("t_production_process_tracking", "repair_completed_time", "DATETIME DEFAULT NULL");
+    }
+
+    private static void addBargainPriceColumns() {
+        add("t_bargain_price", "id", "BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键'");
+        add("t_bargain_price", "target_type", "VARCHAR(32) DEFAULT NULL COMMENT '还价目标类型'");
+        add("t_bargain_price", "target_id", "VARCHAR(64) DEFAULT NULL COMMENT '还价目标ID'");
+        add("t_bargain_price", "target_no", "VARCHAR(100) DEFAULT NULL COMMENT '还价目标编号'");
+        add("t_bargain_price", "original_price", "DECIMAL(12,2) DEFAULT NULL COMMENT '原始单价'");
+        add("t_bargain_price", "bargained_price", "DECIMAL(12,2) DEFAULT NULL COMMENT '还价单价'");
+        add("t_bargain_price", "reason", "VARCHAR(500) DEFAULT NULL COMMENT '还价原因'");
+        add("t_bargain_price", "bargained_by", "VARCHAR(64) DEFAULT NULL COMMENT '还价人ID'");
+        add("t_bargain_price", "bargained_by_name", "VARCHAR(100) DEFAULT NULL COMMENT '还价人姓名'");
+        add("t_bargain_price", "approved_by", "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
+        add("t_bargain_price", "approved_by_name", "VARCHAR(100) DEFAULT NULL COMMENT '审批人姓名'");
+        add("t_bargain_price", "status", "VARCHAR(20) DEFAULT NULL COMMENT '状态'");
+        add("t_bargain_price", "create_time", "DATETIME DEFAULT NULL COMMENT '创建时间'");
+        add("t_bargain_price", "update_time", "DATETIME DEFAULT NULL COMMENT '更新时间'");
+        add("t_bargain_price", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_bargain_price", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+    }
+
+    private static void addEmployeeAdvanceColumns() {
+        add("t_employee_advance", "id", "VARCHAR(64) NOT NULL COMMENT '主键'");
+        add("t_employee_advance", "advance_no", "VARCHAR(64) DEFAULT NULL COMMENT '预支单号'");
+        add("t_employee_advance", "employee_id", "VARCHAR(64) DEFAULT NULL COMMENT '员工ID'");
+        add("t_employee_advance", "employee_name", "VARCHAR(100) DEFAULT NULL COMMENT '员工姓名'");
+        add("t_employee_advance", "factory_id", "VARCHAR(64) DEFAULT NULL COMMENT '工厂ID'");
+        add("t_employee_advance", "factory_name", "VARCHAR(100) DEFAULT NULL COMMENT '工厂名称'");
+        add("t_employee_advance", "amount", "DECIMAL(12,2) DEFAULT NULL COMMENT '预支金额'");
+        add("t_employee_advance", "reason", "VARCHAR(500) DEFAULT NULL COMMENT '预支原因'");
+        add("t_employee_advance", "status", "VARCHAR(20) DEFAULT NULL COMMENT '状态'");
+        add("t_employee_advance", "order_no", "VARCHAR(64) DEFAULT NULL COMMENT '关联订单号'");
+        add("t_employee_advance", "approver_id", "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
+        add("t_employee_advance", "approver_name", "VARCHAR(100) DEFAULT NULL COMMENT '审批人姓名'");
+        add("t_employee_advance", "approval_time", "DATETIME DEFAULT NULL COMMENT '审批时间'");
+        add("t_employee_advance", "approval_remark", "VARCHAR(500) DEFAULT NULL COMMENT '审批备注'");
+        add("t_employee_advance", "repayment_amount", "DECIMAL(12,2) DEFAULT NULL COMMENT '已还金额'");
+        add("t_employee_advance", "remaining_amount", "DECIMAL(12,2) DEFAULT NULL COMMENT '剩余金额'");
+        add("t_employee_advance", "repayment_status", "VARCHAR(20) DEFAULT NULL COMMENT '还款状态'");
+        add("t_employee_advance", "create_time", "DATETIME DEFAULT NULL COMMENT '创建时间'");
+        add("t_employee_advance", "update_time", "DATETIME DEFAULT NULL COMMENT '更新时间'");
+        add("t_employee_advance", "create_by", "VARCHAR(64) DEFAULT NULL COMMENT '创建人'");
+        add("t_employee_advance", "update_by", "VARCHAR(64) DEFAULT NULL COMMENT '更新人'");
+        add("t_employee_advance", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+        add("t_employee_advance", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
     }
 }

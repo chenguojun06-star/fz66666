@@ -1,8 +1,9 @@
 import React from 'react';
-import { Button, Card, Form, Input, Select, Space, Tag, Upload } from 'antd';
+import { Button, Card, Form, Input, Select, Space, Tag } from 'antd';
 import type { FormInstance, UploadFile } from 'antd';
-import { PlusOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { ACCOUNT_TYPE_OPTIONS, type PaymentAccount } from '@/services/finance/wagePaymentApi';
 import { accountTypeIconMap } from '../hooks/usePaymentColumns';
 
@@ -24,7 +25,7 @@ interface AccountManagementModalProps {
   onEditAccount: (account: PaymentAccount) => void;
   onDeleteAccount: (id: string) => void;
   onSaveAccount: () => void;
-  onUploadQrImage: (file: File) => void;
+  onUploadQrImage: (file: File) => Promise<string>;
 }
 
 const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
@@ -122,18 +123,19 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
                     <Form.Item label="收款二维码" name="qrCodeUrl" rules={[{ required: true, message: '请上传二维码' }]}>
                       <Input placeholder="自动填充" disabled />
                     </Form.Item>
-                    <Upload
-                      accept="image/*"
-                      listType="picture-card"
-                      maxCount={1}
-                      fileList={qrFileList}
-                      onRemove={() => { accountForm.setFieldsValue({ qrCodeUrl: undefined }); setQrFileList([]); return true; }}
-                      beforeUpload={(file) => { void onUploadQrImage(file as File); return Upload.LIST_IGNORE; }}
-                    >
-                      {qrFileList.length === 0 && (
-                        <div><UploadOutlined /><div style={{ marginTop: 8 }}>上传二维码</div></div>
-                      )}
-                    </Upload>
+                    <ImageUploadBox
+                      value={qrFileList.length > 0 ? (qrFileList[0] as any)?.url || null : null}
+                      onChange={(url) => {
+                        if (!url) {
+                          accountForm.setFieldsValue({ qrCodeUrl: undefined });
+                          setQrFileList([]);
+                        }
+                      }}
+                      enableDrop
+                      size={104}
+                      label="二维码"
+                      uploadFn={onUploadQrImage}
+                    />
                   </div>
                 ) : null
               }

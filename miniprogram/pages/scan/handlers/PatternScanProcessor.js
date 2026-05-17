@@ -267,80 +267,6 @@ function determinePatternOperation(patternDetail, manualScanType) {
 }
 
 /**
- * 提交样板生产扫码
- * @param {Object} handler - ScanHandler 实例
- * @param {Object} data - 扫码数据
- * @returns {Promise<Object>} 提交结果
- */
-async function submitPatternScan(handler, data) {
-  try {
-    const operationType = String(data.operationType || '').toUpperCase();
-
-    if (operationType === 'REVIEW') {
-      const reviewRemark = String(data.remark || '').trim();
-      // BUG5 修复：支持从调用方传入审核结果，不再硬编码 APPROVED（允许 REJECTED 驳回）
-      const reviewResult = data.reviewResult || 'PENDING';
-      const res = await handler.api.production.reviewPattern(data.patternId, reviewResult, reviewRemark);
-      if (res) {
-        return {
-          success: true,
-          message: getPatternSuccessMessage('REVIEW'),
-          data: res,
-        };
-      }
-      return handler._errorResult('审核提交失败');
-    }
-
-    if (operationType === 'WAREHOUSE_IN') {
-      const latestDetail = await getPatternDetail(handler, data.patternId);
-      const latestReviewStatus = String(latestDetail?.reviewStatus || '').toUpperCase();
-      const latestReviewResult = String(latestDetail?.reviewResult || '').toUpperCase();
-      const reviewApproved = latestReviewStatus === 'APPROVED' || latestReviewResult === 'APPROVED';
-
-      if (!reviewApproved) {
-        return handler._errorResult('样衣审核未通过，无法入库。请先完成样衣审核后再入库。');
-      }
-      const wiRes = await handler.api.production.warehouseIn(
-        data.patternId, data.warehouseCode || '', String(data.remark || '').trim()
-      );
-      if (wiRes) {
-        return { success: true, message: getPatternSuccessMessage('WAREHOUSE_IN'), data: wiRes };
-      }
-      return handler._errorResult('入库失败');
-    }
-
-    if (operationType === 'RECEIVE') {
-      const receiveRemark = String(data.remark || '').trim();
-      const rcvRes = await handler.api.production.receivePattern(data.patternId, receiveRemark);
-      if (rcvRes) {
-        return { success: true, message: getPatternSuccessMessage('RECEIVE'), data: rcvRes };
-      }
-      return handler._errorResult('领取样板失败');
-    }
-
-    const res = await handler.api.production.submitPatternScan({
-      patternId: data.patternId,
-      operationType,
-      quantity: data.quantity,
-      warehouseCode: data.warehouseCode,
-      remark: data.remark,
-    });
-
-    if (res) {
-      return {
-        success: true,
-        message: getPatternSuccessMessage(operationType),
-        data: res,
-      };
-    }
-    return handler._errorResult('提交失败');
-  } catch (e) {
-    console.error('[PatternScanProcessor] 提交样板扫码失败:', e);
-    return handler._errorResult(e.errMsg || e.message || '提交失败');
-  }
-}
-
-/**
  * 获取样板操作成功消息
  * @param {string} operationType - 操作类型
  * @returns {string} 成功消息
@@ -370,6 +296,5 @@ module.exports = {
   getPatternProcessConfig,
   getPatternScanRecords,
   determinePatternOperation,
-  submitPatternScan,
   getPatternSuccessMessage,
 };

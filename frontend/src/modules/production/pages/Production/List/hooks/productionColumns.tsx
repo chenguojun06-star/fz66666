@@ -122,18 +122,18 @@ export function useProductionColumns({
             </a>
             </Popover>
             {(record as any).urgencyLevel === 'urgent' && (
-              <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
+              <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'FIRST' && (
-              <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
+              <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
-              <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
+              <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
             )}
             {(record as any).orderBizType && (() => {
               const bizType = String((record as any).orderBizType);
               const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
-              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>;
+              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>;
             })()}
           </div>
         );
@@ -206,7 +206,7 @@ export function useProductionColumns({
               onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
             />
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
             )}
           </Space>
         );
@@ -466,12 +466,12 @@ export function useProductionColumns({
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
-            {record.isQuickResponse && <Tag color="volcano" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>快反</Tag>}
+            <span style={{ fontSize: 13, fontWeight: 600, color }}>{text}</span>
+            {record.isQuickResponse && <Tag color="volcano" style={{ fontSize: 12, lineHeight: '16px', padding: '0 4px', margin: 0 }}>快反</Tag>}
             {renderSlaStatus(record)}
             {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
               <span style={{
-                fontSize: 10, fontWeight: 500,
+                fontSize: 12, fontWeight: 500,
                 color: 'var(--color-text-secondary)',
               }}>
                 AI {dayjs(aiRisk.predictedEndDate).format('M/D')}

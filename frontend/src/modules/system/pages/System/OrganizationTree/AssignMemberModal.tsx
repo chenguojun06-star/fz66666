@@ -74,7 +74,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
                       <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
                         {r.username}
                         {!alreadyIn && r.orgUnitId && (
-                          <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>
+                          <Tag color="orange" style={{ marginLeft: 6, fontSize: 13 }}>
                             已在: {unitNameMap[String(r.orgUnitId)] || '其他组织'}
                           </Tag>
                         )}
@@ -88,7 +88,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
             {
               title: '状态', width: 72,
               render: (_: unknown, r: User) => currentNodeMemberIds.has(String(r.id))
-                ? <Tag color="success" style={{ fontSize: 11 }}>已添加</Tag>
+                ? <Tag color="success" style={{ fontSize: 13 }}>已添加</Tag>
                 : null,
             },
           ]}

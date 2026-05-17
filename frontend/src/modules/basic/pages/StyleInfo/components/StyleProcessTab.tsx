@@ -23,7 +23,9 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
 
-  const { data, setData, loading, sizes, setSizes, sizeOptions, setSizeOptions, fetchSizeDictOptions, fetchProcess, processTemplates, templateLoading } = useStyleProcessData({ styleId, onDataLoaded });
+  const { data, setData, loading, sizes, setSizes, sizeOptions: _sizeOptions, setSizeOptions: _setSizeOptions, fetchSizeDictOptions: _fetchSizeDictOptions, fetchProcess, processTemplates, templateLoading } = useStyleProcessData({ styleId, onDataLoaded });
+
+  const fetchPriceHintRef = useRef<(id: string | number, processName: string, standardTime?: number) => void>(() => {});
 
   const enterEdit = useCallback(async () => {
     if (readOnly) return;
@@ -31,12 +33,14 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     if (!processStartTime) { message.warning('请先点击上方「开始工序单价」按钮再进行编辑'); return; }
     snapshotRef.current = JSON.parse(JSON.stringify(data)) as StyleProcessWithSizePrice[];
     setEditMode(true);
-    data.forEach((row, idx) => { if (row.processName && row.id) setTimeout(() => fetchPriceHint(row.id!, row.processName, row.standardTime ?? undefined), idx * 150); });
+    data.forEach((row, idx) => { if (row.processName && row.id) setTimeout(() => fetchPriceHintRef.current(row.id!, row.processName, row.standardTime ?? undefined), idx * 150); });
   }, [readOnly, editMode, processStartTime, data, message]);
 
   const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly: readOnly ?? false, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh: onRefresh ?? (() => {}), enterEdit });
 
   const { aiOpen, setAiOpen, aiCategory, setAiCategory, aiLoading, priceHints, priceHintLoading, categoryOptions, fetchPriceHint, handleAiTemplate } = useStyleProcessAi({ styleId, data, editMode, enterEdit });
+
+  fetchPriceHintRef.current = fetchPriceHint;
 
   const { sortedData, stageSpanMap } = useMemo(() => computeSortedDataAndStageSpan(data), [data]);
   const columns = useMemo(() => buildProcessColumns({

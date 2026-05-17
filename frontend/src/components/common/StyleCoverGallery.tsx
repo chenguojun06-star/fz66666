@@ -1,4 +1,5 @@
 import React from 'react';
+import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -134,6 +135,24 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
     buildStyleImageAssets([], preferredUrl)
   ));
   const [selectedUrl, setSelectedUrl] = React.useState<string | null>(preferredUrl);
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const currentIndex = React.useMemo(() => {
+    if (!selectedUrl) return -1;
+    return assets.findIndex((item) => item.url === selectedUrl);
+  }, [assets, selectedUrl]);
+
+  const goToPrev = React.useCallback(() => {
+    if (assets.length <= 1) return;
+    const nextIndex = currentIndex <= 0 ? assets.length - 1 : currentIndex - 1;
+    setSelectedUrl(assets[nextIndex]?.url || null);
+  }, [assets, currentIndex]);
+
+  const goToNext = React.useCallback(() => {
+    if (assets.length <= 1) return;
+    const nextIndex = currentIndex >= assets.length - 1 ? 0 : currentIndex + 1;
+    setSelectedUrl(assets[nextIndex]?.url || null);
+  }, [assets, currentIndex]);
 
   React.useEffect(() => {
     setSelectedUrl((prev) => prev === preferredUrl ? prev : preferredUrl);
@@ -196,7 +215,10 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          position: 'relative',
         }}
+        onMouseEnter={() => assets.length > 1 && setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onClick={(event) => {
           event.stopPropagation();
           if (selectedImageUrl) {
@@ -212,6 +234,54 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
           />
         ) : (
           <span style={{ color: '#ccc', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
+        )}
+        {assets.length > 1 && isHovered && (
+          <>
+            <div
+              onClick={(e) => { e.stopPropagation(); goToPrev(); }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 28,
+                height: 48,
+                background: 'rgba(0,0,0,0.35)',
+                borderRadius: '0 6px 6px 0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
+            >
+              <LeftOutlined style={{ color: '#fff', fontSize: 14 }} />
+            </div>
+            <div
+              onClick={(e) => { e.stopPropagation(); goToNext(); }}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 28,
+                height: 48,
+                background: 'rgba(0,0,0,0.35)',
+                borderRadius: '6px 0 0 6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
+            >
+              <RightOutlined style={{ color: '#fff', fontSize: 14 }} />
+            </div>
+          </>
         )}
       </div>
       {assets.length > 1 ? (

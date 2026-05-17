@@ -40,14 +40,14 @@
 }
 .followUpExecBadge {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 12px;
   padding: 1px 6px;
   border-radius: 4px;
   background: rgba(9, 88, 217, 0.1);
   color: #0958d9;
 }
 .followUpSummary {
-  font-size: 11px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.45);
   padding: 3px 12px 0;
   line-height: 1.4;
@@ -69,7 +69,7 @@
   margin-bottom: 8px;
 }
 .followUpTag {
-  font-size: 11px;
+  font-size: 13px;
   padding: 2px 8px;
   border-radius: 4px;
   background: rgba(22, 119, 255, 0.08);
@@ -80,7 +80,7 @@
 }
 .followUpFieldLabel {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.55);
   margin-bottom: 3px;
 }

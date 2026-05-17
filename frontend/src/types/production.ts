@@ -515,6 +515,7 @@ export interface WarehousingQueryParams {
   orderNo?: string;
   styleNo?: string;
   warehouse?: string;
+  warehouseAreaId?: string;
   orgUnitId?: string;
   parentOrgUnitId?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL' | '';

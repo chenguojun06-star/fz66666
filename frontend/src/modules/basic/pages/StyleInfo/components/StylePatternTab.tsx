@@ -323,7 +323,7 @@ const StylePatternTab: React.FC<Props> = ({
           <span>
             平均值
             <br />
-            <Text type="secondary" style={{ fontSize: 11 }}>(按码均值)</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>(按码均值)</Text>
           </span>
         ),
         key: 'avgUsage',

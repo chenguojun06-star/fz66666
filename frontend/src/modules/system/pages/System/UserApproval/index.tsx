@@ -329,7 +329,7 @@ const UserApproval: React.FC = () => {
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无待审批用户" />
           ) : (
             <>
-              <Alert message={`当前有 ${total} 个租户员工待审批`} type="info" showIcon style={{ marginBottom: 16 }} />
+              <Alert title={`当前有 ${total} 个租户员工待审批`} type="info" showIcon style={{ marginBottom: 16 }} />
               <ResizableTable
                 columns={columns}
                 dataSource={pendingUsers}

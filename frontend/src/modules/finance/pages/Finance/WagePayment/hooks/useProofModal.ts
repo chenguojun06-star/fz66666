@@ -27,20 +27,15 @@ export function useProofModal({ msg, reportSmartError, showSmartErrorNotice, set
     setProofModalOpen(true);
   };
 
-  const uploadProofImage = async (file: File) => {
+  const uploadProofImage = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
-    try {
-      const res: any = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      const url = res?.data ?? res;
-      if (url) {
-        proofForm.setFieldsValue({ proofUrl: url });
-        setProofFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
-      }
-    } catch (err: unknown) {
-      reportSmartError('支付凭证上传失败', err instanceof Error ? err.message : '请检查文件格式后重试', 'WAGE_PROOF_UPLOAD_FAILED');
-      msg.error(`上传凭证失败: ${err instanceof Error ? err.message : '请检查文件格式'}`);
-    }
+    const res: any = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    const url = res?.data ?? res;
+    if (!url) throw new Error('上传失败：未获取到图片地址');
+    proofForm.setFieldsValue({ proofUrl: url });
+    setProofFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
+    return url;
   };
 
   const handleConfirmProof = async () => {

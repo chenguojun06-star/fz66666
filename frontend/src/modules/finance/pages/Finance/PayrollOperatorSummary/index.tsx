@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Modal, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -124,7 +124,7 @@ const PayrollOperatorSummary: React.FC = () => {
             render: (_text: string, record: any) => (
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
+                        <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
                         <span>{record.factoryName || '-'}</span>
                     </div>
                     {(record.orgPath || record.parentOrgUnitName) &&

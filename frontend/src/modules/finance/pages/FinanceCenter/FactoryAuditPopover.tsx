@@ -95,7 +95,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <XiaoyunCloudAvatar size={18} active />
         <span style={{ fontWeight: 600, fontSize: 13 }}>AI 智能分析</span>
-        <Tag color={analysis.auditedCount === analysis.totalCount ? 'success' : 'orange'} style={{ marginLeft: 'auto', fontSize: 11 }}>
+        <Tag color={analysis.auditedCount === analysis.totalCount ? 'success' : 'orange'} style={{ marginLeft: 'auto', fontSize: 13 }}>
           {analysis.auditedCount === analysis.totalCount ? '全部已审核' : `${analysis.auditedCount}/${analysis.totalCount} 已审核`}
         </Tag>
       </div>
@@ -113,7 +113,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
         <div style={{ textAlign: 'center', padding: '6px', background: 'var(--color-bg-container)', borderRadius: 4 }}>
-          <div style={{ fontSize: 11, color: 'var(--neutral-text-secondary)' }}>利润率</div>
+          <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>利润率</div>
           <div style={{
             fontSize: 16, fontWeight: 600,
             color: analysis.profitRate >= 10 ? 'var(--color-success)' : analysis.profitRate >= 0 ? 'var(--color-warning)' : 'var(--color-danger)'
@@ -122,7 +122,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
           </div>
         </div>
         <div style={{ textAlign: 'center', padding: '6px', background: 'var(--color-bg-container)', borderRadius: 4 }}>
-          <div style={{ fontSize: 11, color: 'var(--neutral-text-secondary)' }}>次品率</div>
+          <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>次品率</div>
           <div style={{
             fontSize: 16, fontWeight: 600,
             color: analysis.defectRate <= 1 ? 'var(--color-success)' : analysis.defectRate <= 3 ? 'var(--color-warning)' : 'var(--color-danger)'

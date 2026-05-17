@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import type { ProductionOrder } from '@/types/production';
 import { useSync } from '@/utils/syncManager';
 
@@ -28,7 +28,7 @@ export const useOrderSync = ({
   useEffect(() => { fetchOrderDetailRef.current = fetchOrderDetail; }, [fetchOrderDetail]);
   useEffect(() => { fetchScanHistoryRef.current = fetchScanHistory; }, [fetchScanHistory]);
 
-  const fetchFn = async () => {
+  const fetchFn = useCallback(async () => {
     if (syncingRef.current || orderSyncingRef.current) return null;
     syncingRef.current = true;
     try {
@@ -45,7 +45,7 @@ export const useOrderSync = ({
       syncingRef.current = false;
     }
     return null;
-  };
+  }, [setActiveOrder, activeOrderRef, orderSyncingRef]);
 
   useSync('progress-detail-order', fetchFn, () => {}, { interval: 30000, pauseOnHidden: true });
 
@@ -56,5 +56,5 @@ export const useOrderSync = ({
     };
     window.addEventListener('order:progress:changed', handleProgressChanged);
     return () => window.removeEventListener('order:progress:changed', handleProgressChanged);
-  }, [orderSyncingRef]);
+  }, [fetchFn, orderSyncingRef]);
 };

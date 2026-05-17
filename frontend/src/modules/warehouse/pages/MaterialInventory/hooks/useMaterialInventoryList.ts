@@ -5,6 +5,7 @@ import { useUser } from '@/utils/AuthContext';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
+import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import type { MaterialInventory } from '../types';
 
@@ -67,11 +68,20 @@ export function useMaterialInventoryList() {
         setStats({
           totalValue: list.reduce((sum: number, i) => sum + (i.totalValue || 0), 0),
           totalQty: list.reduce((sum: number, i) => sum + (i.quantity || 0), 0),
-          lowStockCount: list.filter((i) => (i.quantity || 0) < (i.safetyStock || 100)).length,
-          materialTypes: list.length,
+          lowStockCount: 0,
+          materialTypes: Number(res.data?.total) || list.length,
           todayInCount: res.data?.todayInCount || 0,
           todayOutCount: res.data?.todayOutCount || 0,
         });
+
+        api.get('/dashboard/menu-badge-counts')
+          .then((badgeRes: any) => {
+            if (badgeRes?.code === 200 && badgeRes.data) {
+              const lowCount = badgeRes.data['/warehouse/material'] || 0;
+              setStats(prev => ({ ...prev, lowStockCount: lowCount }));
+            }
+          })
+          .catch(() => {});
         if (showSmartErrorNotice) setSmartError(null);
       }
     } catch {

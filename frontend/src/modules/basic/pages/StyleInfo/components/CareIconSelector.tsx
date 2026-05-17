@@ -74,7 +74,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
                       }}
                     />
                     <span style={{
-                      fontSize: 11,
+                      fontSize: 13,
                       color: isSelected
                         ? 'var(--color-primary, #1677ff)'
                         : 'var(--color-text-tertiary, #8c8c8c)',

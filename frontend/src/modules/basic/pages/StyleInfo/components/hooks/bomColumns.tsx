@@ -267,7 +267,7 @@ export function useBomColumns({
                 return (
                   <span style={{ color: '#8c8c8c' }}>
                     {liveDisplay != null ? liveDisplay : '-'}
-                    {hasPatternData && <span style={{ fontSize: 10, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
+                    {hasPatternData && <span style={{ fontSize: 12, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
                   </span>
                 );
               }}

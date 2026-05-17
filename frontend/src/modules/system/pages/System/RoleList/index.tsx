@@ -5,8 +5,7 @@ import type { ColumnsType } from 'antd/es/table';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import RowActions from '@/components/common/RowActions';
-import { Role, RoleQueryParams } from '@/types/system';
+import { Role } from '@/types/system';
 import { getErrorMessage } from '@/types/api';
 import api, { requestWithPathFallback } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
@@ -17,17 +16,15 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import './styles.css';
-import { readPageSize } from '@/utils/pageSizeStore';
 import { permissionCodes } from '@/routeConfig';
 import {
   SafetyCertificateOutlined, UserOutlined, TeamOutlined,
-  DeleteOutlined, EditOutlined, FileTextOutlined,
-  CrownOutlined, UserAddOutlined, UserSwitchOutlined,
-  SettingOutlined, ApartmentOutlined, BankOutlined,
+  EditOutlined, FileTextOutlined,
+  CrownOutlined, UserSwitchOutlined,
   ShoppingOutlined, FileOutlined, BarChartOutlined,
   ToolOutlined, ContainerOutlined, HomeOutlined,
-  ReconciliationOutlined, DollarOutlined, AuditOutlined,
-  CarOutlined, CloudOutlined, QuestionCircleOutlined,
+  DollarOutlined, AuditOutlined,
+  CarOutlined,
 } from '@ant-design/icons';
 
 const SIDEBAR_PERM_SECTIONS = [
@@ -88,7 +85,6 @@ const SIDEBAR_PERM_SECTIONS = [
     { label: '智能运营中心', code: permissionCodes.intelligenceCenter },
     { label: '数据看板', code: permissionCodes.intelligenceCenter },
   ]},
-  { title: '集成对接中心', items: [{ label: '集成对接中心', code: permissionCodes.integrationCenter }] },
 ];
 
 type PermissionNode = {
@@ -469,7 +465,7 @@ const RoleList: React.FC = () => {
                       {getRoleIcon(role.roleName || '')}
                     </span>
                     <span className="role-list-item-name">{role.roleName}</span>
-                    <Tag color={role.status === 'active' ? 'green' : 'red'} style={{ fontSize: 10, marginLeft: 4 }}>
+                    <Tag color={role.status === 'active' ? 'green' : 'red'} style={{ fontSize: 12, marginLeft: 4 }}>
                       {role.status === 'active' ? '启用' : '停用'}
                     </Tag>
                   </div>

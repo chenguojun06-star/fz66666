@@ -79,6 +79,9 @@ public class WarehouseScanExecutor {
     private com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
     @Autowired
+    private com.fashion.supplychain.warehouse.service.WarehouseAreaService warehouseAreaService;
+
+    @Autowired
     private UCodeWarehouseScanExecutor uCodeWarehouseScanExecutor;
 
     @Autowired
@@ -111,9 +114,22 @@ public class WarehouseScanExecutor {
         String warehouse = TextUtils.safeText(params.get("warehouse"));
         if (!hasText(warehouse)) {
             if (isDefectiveReentry) {
-                warehouse = "待分配"; // 返修申报不必指定仓库，使用默认值
+                warehouse = "待分配";
             } else {
                 throw new IllegalArgumentException("请指定仓库");
+            }
+        }
+
+        String warehouseAreaId = TextUtils.safeText(params.get("warehouseAreaId"));
+        String warehouseAreaName = null;
+        if (hasText(warehouseAreaId)) {
+            try {
+                var area = warehouseAreaService.getById(warehouseAreaId);
+                if (area != null) {
+                    warehouseAreaName = area.getAreaName();
+                }
+            } catch (Exception e) {
+                log.warn("[WarehouseScan] 查询仓库区域失败 areaId={}: {}", warehouseAreaId, e.getMessage());
             }
         }
 
@@ -140,7 +156,7 @@ public class WarehouseScanExecutor {
         if (overResult != null) return overResult;
 
         // 创建入库记录（正常入库路径）
-        ProductWarehousing w = saveWarehousingRecord(order, bundle, qty, warehouse, operatorId, operatorName);
+        ProductWarehousing w = saveWarehousingRecord(order, bundle, qty, warehouse, warehouseAreaId, warehouseAreaName, operatorId, operatorName);
         ScanRecord sr = saveWarehouseScanRecord(params, requestId, operatorId, operatorName,
                 order, bundle, qty, warehouse, colorResolver, sizeResolver);
         updateProcessTrackingForWarehouse(bundle, order, operatorId, operatorName, sr);
@@ -199,9 +215,11 @@ public class WarehouseScanExecutor {
 
     private ProductWarehousing saveWarehousingRecord(ProductionOrder order, CuttingBundle bundle,
                                                       int qty, String warehouse,
+                                                      String warehouseAreaId, String warehouseAreaName,
                                                       String operatorId, String operatorName) {
         ProductWarehousing w = warehousingRecordFactory.createScanWarehousingRecord(
-                order, qty, warehouse, bundle.getQrCode(), operatorId, operatorName, null);
+                order, qty, warehouse, warehouseAreaId, warehouseAreaName,
+                bundle.getQrCode(), operatorId, operatorName, null);
         try {
             boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
             if (!ok) {

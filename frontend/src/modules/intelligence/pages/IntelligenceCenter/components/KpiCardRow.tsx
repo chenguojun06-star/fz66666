@@ -17,7 +17,7 @@ const KpiCardRow: React.FC<any> = ({
             ║   第一行：6 大核心 KPI 闪光数字卡            ║
             ╚══════════════════════════════════════════════╝ */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '0 20px 4px', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleCollapse('kpiRow6')}>
-          <span style={{ color: '#5a7a9a', fontSize: 11 }}>核心 KPI 指标</span>
+          <span style={{ color: '#5a7a9a', fontSize: 13 }}>核心 KPI 指标</span>
           <CollapseChevron panelKey="kpiRow6" collapsed={!!collapsedPanels['kpiRow6']} />
         </div>
         <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['kpiRow6'] ? 0 : 420, transition: 'max-height 0.28s ease' }}>

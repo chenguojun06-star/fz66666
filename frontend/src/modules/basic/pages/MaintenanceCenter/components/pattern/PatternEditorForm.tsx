@@ -1,19 +1,17 @@
-import React from 'react';
-import { Button, DatePicker, Form, Input, Select, Upload } from 'antd';
+import React, { useRef } from 'react';
+import { Button, DatePicker, Form, Input, Select } from 'antd';
 import { unlockNoteStyle, directFieldLabelStyle, directMetaStyle, editorGridStyle, uploadAreaStyle } from './patternPanelStyles';
 
 const { TextArea } = Input;
 
-const normalizeUploadFileList = (event: any) => {
-  if (Array.isArray(event)) return event;
-  return event?.fileList || [];
-};
+const ACCEPT_PATTERN = '.pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.prj,.jpg,.jpeg,.png,.bmp,.gif,.svg';
 
 interface PatternEditorFormProps {
   form: ReturnType<typeof Form.useForm>[0];
 }
 
 export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const unlockRemark = String(form.getFieldValue('unlockRemark') || '').trim();
 
   return (
@@ -47,11 +45,31 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
 
       <div style={uploadAreaStyle}>
         <div style={directFieldLabelStyle}>上传新纸样文件</div>
-        <Form.Item name="patternFile" valuePropName="fileList" getValueFromEvent={normalizeUploadFileList} style={{ marginBottom: 0 }}>
-          <Upload beforeUpload={() => false} maxCount={1} accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.prj,.jpg,.jpeg,.png,.bmp,.gif,.svg">
-            <Button>选择纸样文件</Button>
-          </Upload>
-        </Form.Item>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPT_PATTERN}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) form.setFieldValue('patternFile', [{ uid: '-1', name: f.name, originFileObj: f }]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          }}
+        />
+        <div
+          onDragOver={(e) => { e.preventDefault(); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const f = e.dataTransfer.files?.[0];
+            if (f) form.setFieldValue('patternFile', [{ uid: '-1', name: f.name, originFileObj: f }]);
+          }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+        >
+          <Button onClick={() => fileInputRef.current?.click()}>选择纸样文件</Button>
+          {form.getFieldValue('patternFile')?.[0] && (
+            <Button size="small" onClick={() => form.setFieldValue('patternFile', [])}>移除</Button>
+          )}
+        </div>
       </div>
     </Form>
   );

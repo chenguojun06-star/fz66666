@@ -47,11 +47,11 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
     applyRoleToUser,
     roleOptions,
     roleOptionsLoading,
-    setAccountUser,
-    setAccountModalOpen,
-    openLogModal,
+    setAccountUser: _setAccountUser,
+    setAccountModalOpen: _setAccountModalOpen,
+    openLogModal: _openLogModal,
     toggleUserStatus,
-    isTenantOwner,
+    isTenantOwner: _isTenantOwner,
     onResetPassword,
   } = props;
 
@@ -113,7 +113,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       key: 'action',
       width: 240,
       render: (_: any, record: UserType) => {
-        const roleItems: MenuProps['items'] = (() => {
+        const _roleItems: MenuProps['items'] = (() => {
           const items: MenuProps['items'] = [];
           for (const r of roleOptions) {
             const rid = String(r.id ?? '').trim();

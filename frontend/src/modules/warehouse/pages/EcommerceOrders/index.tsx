@@ -173,7 +173,7 @@ const OrdersTab: React.FC = () => {
       render: (v, r) => (
         <div>
           <div style={{ fontSize: 12, fontWeight: 600 }}>{v || r.orderNo}</div>
-          {v && <div style={{ fontSize: 11, color: '#888' }}>内部 {r.orderNo}</div>}
+          {v && <div style={{ fontSize: 13, color: '#888' }}>内部 {r.orderNo}</div>}
         </div>
       ),
     },
@@ -210,8 +210,8 @@ const OrdersTab: React.FC = () => {
       render: (_: unknown, r: EcOrder) => (
         <div>
           <div style={{ fontSize: 12 }}>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div style={{ fontSize: 11, color: '#52c41a' }}>SKU {r.skuCode}</div>}
-          <div style={{ fontSize: 11, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
+          {r.skuCode && <div style={{ fontSize: 13, color: '#52c41a' }}>SKU {r.skuCode}</div>}
+          <div style={{ fontSize: 13, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
@@ -219,9 +219,9 @@ const OrdersTab: React.FC = () => {
       title: '金额', width: 130,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          {r.unitPrice ? <div style={{ fontSize: 11, color: '#888' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
+          {r.unitPrice ? <div style={{ fontSize: 13, color: '#888' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
           <div style={{ color: '#fa8c16', fontWeight: 600 }}>实付 ¥{r.payAmount ?? '-'}</div>
-          {r.freight ? <div style={{ fontSize: 10, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
+          {r.freight ? <div style={{ fontSize: 12, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
     },
@@ -237,20 +237,20 @@ const OrdersTab: React.FC = () => {
       title: '关联生产单', dataIndex: 'productionOrderNo', width: 140,
       render: v => v
         ? <Tag color="blue" icon={<CheckCircleOutlined />}>{v}</Tag>
-        : <Text type="secondary" style={{ fontSize: 11 }}>未关联</Text>,
+        : <Text type="secondary" style={{ fontSize: 13 }}>未关联</Text>,
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,
       render: (v, r) => v
         ? <div>
-            <div style={{ fontSize: 11, color: '#888' }}>{r.expressCompany}</div>
+            <div style={{ fontSize: 13, color: '#888' }}>{r.expressCompany}</div>
             <div style={{ fontSize: 12 }}>{v}</div>
           </div>
         : <Text type="secondary">-</Text>,
     },
     {
       title: '下单时间', dataIndex: 'createTime', width: 100,
-      render: v => <span style={{ fontSize: 11 }}>{v?.slice(0, 16)}</span>,
+      render: v => <span style={{ fontSize: 13 }}>{v?.slice(0, 16)}</span>,
     },
     {
       title: '操作', width: 130, fixed: 'right',
@@ -286,7 +286,7 @@ const OrdersTab: React.FC = () => {
         ].map((s, i) => (
           <Col span={6} key={i}>
             <Card styles={{ body: { padding: '8px 12px' } }}>
-              <Statistic title={<span style={{ fontSize: 11 }}>{s.title}</span>}
+              <Statistic title={<span style={{ fontSize: 13 }}>{s.title}</span>}
                 value={s.value} suffix={s.suffix}
                 styles={{ content: { fontSize: 22, color: s.color } }} />
             </Card>
@@ -497,7 +497,7 @@ const PricingTab: React.FC = () => {
     { title: '尺码',   dataIndex: 'size',    width: 70 },
     {
       title: 'SKU编码', dataIndex: 'skuCode', width: 190,
-      render: v => <Text style={{ fontSize: 11, color: '#52c41a' }}>{v}</Text>,
+      render: v => <Text style={{ fontSize: 13, color: '#52c41a' }}>{v}</Text>,
     },
     {
       title: '库存', dataIndex: 'stockQuantity', width: 70,

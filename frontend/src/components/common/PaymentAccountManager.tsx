@@ -12,16 +12,16 @@
  *   />
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Card, Form, Input, Select, Space, Tag, Upload } from 'antd';
+import { App, Button, Card, Form, Input, Select, Space, Tag } from 'antd';
 import {
   CreditCardOutlined,
   DeleteOutlined,
   PlusOutlined,
-  UploadOutlined,
   WechatOutlined,
 } from '@ant-design/icons';
 import { AlipayCircleOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { wagePaymentApi, ACCOUNT_TYPE_OPTIONS } from '@/services/finance/wagePaymentApi';
 import type { PaymentAccount } from '@/services/finance/wagePaymentApi';
 import api from '@/utils/api';
@@ -62,7 +62,6 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<PaymentAccount | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [qrFileList, setQrFileList] = useState<any[]>([]);
 
   // ---------- 加载账户 ----------
   const loadAccounts = useCallback(async () => {
@@ -84,27 +83,19 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
       setFormOpen(false);
       setEditing(null);
       form.resetFields();
-      setQrFileList([]);
     }
   }, [open, loadAccounts, form]);
 
   // ---------- 上传二维码 ----------
-  const uploadQrImage = async (file: File) => {
+  const uploadQrImage = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
-    try {
-      const res: any = await api.post('/common/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const url = res?.data ?? res;
-      if (url) {
-        form.setFieldsValue({ qrCodeUrl: url });
-        setQrFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
-        msg.success('上传成功');
-      }
-    } catch (err: unknown) {
-      msg.error(`上传二维码失败: ${err instanceof Error ? err.message : '请检查文件格式'}`);
-    }
+    const res: any = await api.post('/common/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const url = res?.data ?? res;
+    if (!url) throw new Error('上传失败');
+    return String(url);
   };
 
   // ---------- 保存 ----------
@@ -130,7 +121,6 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
       setFormOpen(false);
       setEditing(null);
       form.resetFields();
-      setQrFileList([]);
       loadAccounts();
     } catch (err: unknown) {
       if (err instanceof Error && err.message) msg.error(err.message);
@@ -162,11 +152,6 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
       qrCodeUrl: account.qrCodeUrl,
       isDefault: account.isDefault === 1,
     });
-    if (account.qrCodeUrl) {
-      setQrFileList([{ uid: '-1', name: '收款码', status: 'done', url: account.qrCodeUrl }]);
-    } else {
-      setQrFileList([]);
-    }
     setFormOpen(true);
   };
 
@@ -174,7 +159,6 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
   const handleAdd = () => {
     setEditing(null);
     form.resetFields();
-    setQrFileList([]);
     setFormOpen(true);
   };
 
@@ -319,33 +303,15 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
                           label="收款二维码"
                           name="qrCodeUrl"
                           rules={[{ required: true, message: '请上传收款二维码' }]}
+                          getValueFromEvent={(url: string | null) => url}
                         >
-                          <Input placeholder="自动填充" disabled />
+                          <ImageUploadBox
+                            enableDrop
+                            uploadFn={uploadQrImage}
+                            label="二维码"
+                            size={80}
+                          />
                         </Form.Item>
-                        <div>
-                          <Upload
-                            accept="image/*"
-                            listType="picture-card"
-                            maxCount={1}
-                            fileList={qrFileList}
-                            onRemove={() => {
-                              form.setFieldsValue({ qrCodeUrl: undefined });
-                              setQrFileList([]);
-                              return true;
-                            }}
-                            beforeUpload={(file) => {
-                              void uploadQrImage(file as File);
-                              return Upload.LIST_IGNORE;
-                            }}
-                          >
-                            {qrFileList.length === 0 && (
-                              <div>
-                                <UploadOutlined />
-                                <div style={{ marginTop: 8 }}>上传二维码</div>
-                              </div>
-                            )}
-                          </Upload>
-                        </div>
                       </div>
                     );
                   }

@@ -189,7 +189,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                           onChange={(v) => updateRow(row.key, 'quantity', v ?? 0)}
                         />
                         {overOrder && (
-                          <Tag color="error" style={{ margin: 0, fontSize: 11, lineHeight: '20px' }}>超</Tag>
+                          <Tag color="error" style={{ margin: 0, fontSize: 13, lineHeight: '20px' }}>超</Tag>
                         )}
                       </Space>
                     </td>

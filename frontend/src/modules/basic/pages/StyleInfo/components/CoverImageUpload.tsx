@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { App } from 'antd';
-import { DeleteOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
+import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
@@ -34,6 +34,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   const [images, setImages] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [previewHovered, setPreviewHovered] = useState(false);
   // 本地预览图片URL列表
   const [localPreviewUrls, setLocalPreviewUrls] = useState<string[]>([]);
 
@@ -195,7 +196,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           overflow: 'hidden',
           background: '#fafafa',
           cursor: 'default',
+          position: 'relative',
         }}
+        onMouseEnter={() => displayImages.length > 1 && setPreviewHovered(true)}
+        onMouseLeave={() => setPreviewHovered(false)}
       >
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -225,6 +229,36 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               </>
             )}
           </div>
+        )}
+        {displayImages.length > 1 && previewHovered && (
+          <>
+            <div
+              onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex <= 0 ? displayImages.length - 1 : currentIndex - 1); }}
+              style={{
+                position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
+                width: 28, height: 48, background: 'rgba(0,0,0,0.35)',
+                borderRadius: '0 6px 6px 0', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
+            >
+              <LeftOutlined style={{ color: '#fff', fontSize: 14 }} />
+            </div>
+            <div
+              onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex >= displayImages.length - 1 ? 0 : currentIndex + 1); }}
+              style={{
+                position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+                width: 28, height: 48, background: 'rgba(0,0,0,0.35)',
+                borderRadius: '6px 0 0 6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
+            >
+              <RightOutlined style={{ color: '#fff', fontSize: 14 }} />
+            </div>
+          </>
         )}
       </div>
 

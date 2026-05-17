@@ -404,6 +404,8 @@ Page({
       orderDetails: JSON.stringify({ lines: details, pricing: pricingObj }),
       factoryUnitPrice: unitPrice || 0,
       quotationUnitPrice: d.quotationTotalPrice > 0 ? d.quotationTotalPrice : null,
+      orderUnitPrice: unitPrice || 0,
+      orderUnitPriceType: d.pricingMode || null,
       pricingMode: d.pricingMode,
       plannedStartDate: d.plannedStartDate + 'T09:00:00',
       plannedEndDate: d.plannedEndDate + 'T18:00:00',

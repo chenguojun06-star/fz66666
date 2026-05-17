@@ -71,6 +71,16 @@ public class SampleLoan implements Serializable {
     private String remark;
 
     /**
+     * 仓库区域ID
+     */
+    private String warehouseAreaId;
+
+    /**
+     * 仓库名称
+     */
+    private String warehouseAreaName;
+
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

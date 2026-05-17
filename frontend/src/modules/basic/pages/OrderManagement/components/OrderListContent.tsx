@@ -11,6 +11,7 @@ import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityF
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceText } from '@/utils/styleSource';
+import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 
 interface Props {
@@ -111,7 +112,11 @@ const OrderListContent: React.FC<Props> = ({
               }),
               [
                 { label: '来源', key: 'developmentSourceType', render: (_v: any, record: any) => getStyleSourceText(record as StyleInfo) },
-                { label: '品类', key: 'category', render: (val: any) => val || '-' },
+                { label: '品类', key: 'category', render: (val: any) => toCategoryCn(val) },
+              ],
+              [
+                { label: '季节', key: 'season', render: (val: any) => toSeasonCn(val) },
+                { label: '面料', key: 'fabricComposition', render: (val: any) => val || '-' },
               ],
               [
                 { label: '下单', key: 'latestOrderTime', render: (val: any) => val ? dayjs(val).format('MM-DD') : '-' },

@@ -325,7 +325,7 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <AlertOutlined style={{ color: '#6d28d9' }} /> 首要关注
-                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 今日不再提醒</span>
+                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 今日不再提醒</span>
                 </div>
                 <div
                 className="sap-priority-card"
@@ -367,7 +367,7 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 待处理事项
-                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 今日不再提醒，明日自动重检</span>
+                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 今日不再提醒，明日自动重检</span>
                 </div>
                 {visibleEvents.slice(0, 6).map(ev => (
                   <div
@@ -397,7 +397,7 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <CheckCircleOutlined style={{ color: '#0284c7' }} /> 提醒建议
-                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 今日不再提醒</span>
+                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 今日不再提醒</span>
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -460,11 +460,11 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <span style={{ color: '#d46b08' }}></span> 我的通知
                   {visibleNotices.filter(n => !n.isRead).length > 0 && (
-                    <span style={{ marginLeft: 4, fontSize: 10, background: '#ffa940', color: '#fff', borderRadius: 8, padding: '0 5px' }}>
+                    <span style={{ marginLeft: 4, fontSize: 12, background: '#ffa940', color: '#fff', borderRadius: 8, padding: '0 5px' }}>
                       {visibleNotices.filter(n => !n.isRead).length} 未读
                     </span>
                   )}
-                  <span style={{ marginLeft: 6, fontSize: 10, color: '#999' }}>点 × 关闭该条</span>
+                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 关闭该条</span>
                 </div>
                 {visibleNotices.slice(0, 8).map(n => (
                   <div key={n.id} className="sap-notice-row"
@@ -479,10 +479,10 @@ const SmartAlertBell: React.FC = () => {
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: n.isRead ? 400 : 600, color: '#333', lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 13, fontWeight: n.isRead ? 400 : 600, color: '#333', lineHeight: 1.4 }}>
                         {n.title}
                       </div>
-                      <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>
+                      <div style={{ fontSize: 12, color: '#888', marginTop: 1 }}>
                         {n.fromName} · {n.createdAt?.slice(5, 16)}
                       </div>
                     </div>

@@ -61,7 +61,7 @@ export function useProgressData({
 
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({
       title,
@@ -69,7 +69,7 @@ export function useProgressData({
       code,
       actionText: '刷新重试',
     });
-  };
+  }, [showSmartErrorNotice]);
 
   // ── Refs ──────────────────────────────────────────────────────
   const queryParamsRef = useRef(queryParams);
@@ -175,7 +175,7 @@ export function useProgressData({
         setLoading(false);
       }
     }
-  }, []);
+  }, [clearAllBoardCache, focusedOrderNosRef, message, reportSmartError, showSmartErrorNotice]);
 
   // 获取全局统计数据（根据当前筛选条件）
   const fetchGlobalStats = useCallback(async (params?: typeof queryParams) => {
@@ -239,7 +239,7 @@ export function useProgressData({
   useEffect(() => {
     fetchOrders();
     initialLoadDone.current = true;
-  }, []);
+  }, [fetchOrders]);
 
   // 每次重新切回该页面（浏览器 Tab 或 SPA 菜单）时静默刷新
   useEffect(() => {
@@ -253,8 +253,14 @@ export function useProgressData({
   }, [fetchOrders]);
 
   // 当查询参数改变时获取数据
+  const factoryType = (queryParams as any).factoryType;
+  const factoryName = (queryParams as any).factoryName;
+  const delayedOnly = (queryParams as any).delayedOnly;
+  const todayOnly = (queryParams as any).todayOnly;
+  const dateRangeStart = dateRange?.[0]?.valueOf() ?? 'null-start';
+  const dateRangeEnd = dateRange?.[1]?.valueOf() ?? 'null-end';
+
   useEffect(() => {
-    // 跳过初始加载
     if (!initialLoadDone.current) return;
 
     const timer = setTimeout(() => {
@@ -266,13 +272,13 @@ export function useProgressData({
     queryParams.pageSize,
     queryParams.keyword,
     queryParams.status,
-    (queryParams as any).factoryType,
-    (queryParams as any).factoryName,
-    (queryParams as any).delayedOnly,
-    (queryParams as any).todayOnly,
-    // 使用稳定的值，null 转换为固定字符串
-    dateRange?.[0]?.valueOf() ?? 'null-start',
-    dateRange?.[1]?.valueOf() ?? 'null-end'
+    factoryType,
+    factoryName,
+    delayedOnly,
+    todayOnly,
+    dateRangeStart,
+    dateRangeEnd,
+    fetchOrders,
   ]);
 
   return {

@@ -92,7 +92,7 @@ const PatternRevisionManagement: React.FC = () => {
 
   useEffect(() => {
     fetchList();
-  }, []);
+  }, [fetchList]);
 
   // 打开新增弹窗
   const handleCreate = () => {

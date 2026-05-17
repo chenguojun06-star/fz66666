@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App } from 'antd';
 import api from '@/utils/api';
 import { useTablePagination } from '@/hooks';
@@ -64,7 +64,10 @@ export const useFinishedInventoryData = () => {
     return Array.from(groupMap.values());
   }, [rawDataSource, searchText, selectedFactoryType, statusValue]);
 
-  useEffect(() => { pagination.gotoPage(1); }, [searchText, statusValue, selectedFactoryType]);
+  const gotoPageRef = useRef(pagination.gotoPage);
+  gotoPageRef.current = pagination.gotoPage;
+
+  useEffect(() => { gotoPageRef.current(1); }, [searchText, statusValue, selectedFactoryType]);
 
   const { current: paginationCurrent, pageSize: paginationPageSize } = pagination.pagination;
   const pagedDataSource = useMemo(() => { const start = (paginationCurrent - 1) * paginationPageSize; return dataSource.slice(start, start + paginationPageSize); }, [dataSource, paginationCurrent, paginationPageSize]);

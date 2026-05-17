@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Button,
@@ -12,7 +12,7 @@ import {
   InputNumber,
 } from 'antd';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
-import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
+import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import {
   ScanOutlined,
 } from '@ant-design/icons';
@@ -36,7 +36,9 @@ interface MaterialInventoryModalsProps {
 const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
   inventoryData,
 }) => {
-  const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
+  const { selectOptions: materialWarehouseOptions, areas: materialAreas } = useWarehouseAreaOptions('MATERIAL');
+  const [materialSelectedAreaId, setMaterialSelectedAreaId] = useState<string>('');
+  const { selectOptions: materialLocationOptions, loading: materialLocationLoading } = useWarehouseLocationByArea('MATERIAL', materialSelectedAreaId);
   const {
     instructionVisible,
     closeInstruction,
@@ -339,23 +341,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
           <Form.Item name="supplierContactPerson" hidden><Input /></Form.Item>
           <Form.Item name="supplierContactPhone" hidden><Input /></Form.Item>
           <Row gutter={12}>
-            <Col span={10}>
-              <Form.Item label="供应商" name="supplierName">
-                <SupplierSelect
-                  placeholder="选择供应商"
-                  onChange={(value, option) => {
-                    if (option) {
-                      inboundForm.setFieldsValue({
-                        supplierId: option.id,
-                        supplierContactPerson: option.supplierContactPerson,
-                        supplierContactPhone: option.supplierContactPhone,
-                      });
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={7}>
+            <Col span={5}>
               <Form.Item
                 label="入库数量"
                 name="quantity"
@@ -364,18 +350,65 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
                 <InputNumber min={1} style={{ width: '100%' }} placeholder="数量" />
               </Form.Item>
             </Col>
+            <Col span={6}>
+              <Form.Item
+                label="入库来源"
+                name="sourceType"
+                initialValue="external_purchase"
+                rules={[{ required: true, message: '请选择入库来源' }]}
+              >
+                <Select placeholder="请选择入库来源">
+                  <Option value="external_purchase">采购到货</Option>
+                  <Option value="free_inbound">自由入库</Option>
+                  <Option value="return_in">退货入库</Option>
+                  <Option value="transfer_in">调拨入库</Option>
+                  <Option value="other_in">其他入库</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item noStyle shouldUpdate={(prev, cur) => prev.sourceType !== cur.sourceType}>
+                {({ getFieldValue }) => {
+                  const sourceType = getFieldValue('sourceType');
+                  return (
+                    <Form.Item
+                      label="供应商"
+                      name="supplierName"
+                      rules={sourceType === 'external_purchase' ? [{ required: true, message: '采购到货时供应商为必填' }] : []}
+                    >
+                      <SupplierSelect
+                        placeholder="选择供应商"
+                        onChange={(value, option) => {
+                          if (option) {
+                            inboundForm.setFieldsValue({
+                              supplierId: option.id,
+                              supplierContactPerson: option.supplierContactPerson,
+                              supplierContactPhone: option.supplierContactPhone,
+                            });
+                          }
+                        }}
+                      />
+                    </Form.Item>
+                  );
+                }}
+              </Form.Item>
+            </Col>
             <Col span={7}>
-              <Form.Item label="仓库">
+              <Form.Item label="仓库" name="warehouseAreaId">
                 <Select
                   placeholder="请选择仓库"
-                  defaultValue={materialWarehouseOptions[0]?.label || '物料仓库'}
+                  allowClear
                   style={{ width: '100%' }}
+                  onChange={(areaId: string) => {
+                    setMaterialSelectedAreaId(areaId);
+                    inboundForm.setFieldValue('warehouseLocation', undefined);
+                  }}
                 >
                   {materialWarehouseOptions.length > 0
                     ? materialWarehouseOptions.map(opt => (
-                      <Option key={opt.value} value={opt.label as string}>{opt.label}</Option>
+                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))
-                    : <Option value="物料仓库">物料仓库</Option>
+                    : <Option value="" disabled>暂无仓库，请前往库位地图创建</Option>
                   }
                 </Select>
               </Form.Item>
@@ -386,11 +419,19 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
                 name="warehouseLocation"
                 rules={[{ required: true, message: '请选择库位' }]}
               >
-                <WarehouseLocationAutoComplete
-                  warehouseType="MATERIAL"
-                  placeholder="请选择或输入库位"
-                  style={{ width: '100%' }}
-                />
+                <Select
+                  placeholder={materialSelectedAreaId ? '请选择库位' : '请先选择仓库'}
+                  allowClear
+                  showSearch
+                  loading={materialLocationLoading}
+                  disabled={!materialSelectedAreaId}
+                  notFoundContent={materialLocationLoading ? '加载中...' : materialSelectedAreaId ? '该仓库暂无库位' : '请先选择仓库'}
+                  filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}
+                >
+                  {materialLocationOptions.map(opt => (
+                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>

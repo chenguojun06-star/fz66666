@@ -1,44 +1,34 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback, useMemo, memo } from 'react';
 import { App, Spin } from 'antd';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 export interface ImageUploadBoxProps {
-  /** 当前图片 URL（受控） */
   value?: string | null;
-  /** 图片变更回调，url=null 表示清除 */
   onChange?: (url: string | null) => void;
-  /** 宽高（正方形），默认 64 */
   size?: number;
-  /** 宽度优先于 size */
   width?: number;
-  /** 高度优先于 size */
   height?: number;
   disabled?: boolean;
-  /** 接受的文件类型，默认 "image/*" */
   accept?: string;
-  /** 文件大小上限（MB），默认 5；传 0 可跳过内置验证（适合 uploadFn 自行验证） */
   maxSizeMB?: number;
-  /** 无图时显示的占位文字，默认"图片" */
   label?: string;
-  /** 是否显示清除按钮，默认 true */
   showClear?: boolean;
-  /** 形状：square（默认）或 round（头像用） */
   shape?: 'square' | 'round';
-  /** 开启拖拽 & 粘贴上传，默认 false */
   enableDrop?: boolean;
-  /** square 模式下的圆角，默认 6 */
   borderRadius?: number;
   className?: string;
   style?: React.CSSProperties;
-  /**
-   * 自定义上传函数，接收 File 返回最终 url 字符串。
-   * 传入后将跳过内置 /common/upload，由调用方负责上传逻辑。
-   */
   uploadFn?: (file: File) => Promise<string>;
 }
 
-export default function ImageUploadBox({
+const MUTED_COLOR = '#94a3b8';
+const LIGHT_GRAY = '#d1d5db';
+const ADD_BG = '#f8fafc';
+const BORDER_COLOR = '#e5e7eb';
+const DASHED_BORDER = '#cbd5e1';
+
+function ImageUploadBox({
   value,
   onChange,
   size = 64,
@@ -63,10 +53,9 @@ export default function ImageUploadBox({
 
   const w = width ?? size;
   const h = height ?? size;
-  const radius = shape === 'round' ? '50%' : borderRadius;
   const hasImage = Boolean(value);
 
-  const doUpload = async (file: File) => {
+  const doUpload = useCallback(async (file: File) => {
     if (maxSizeMB > 0 && file.size > maxSizeMB * 1024 * 1024) {
       message.error(`图片最大 ${maxSizeMB}MB`);
       return;
@@ -94,26 +83,25 @@ export default function ImageUploadBox({
     } finally {
       setUploading(false);
     }
-  };
+  }, [maxSizeMB, uploadFn, onChange, message]);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (!disabled && !uploading) inputRef.current?.click();
-  };
+  }, [disabled, uploading]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     if (!disabled && enableDrop) e.preventDefault();
-  };
+  }, [disabled, enableDrop]);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     if (disabled || !enableDrop) return;
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) void doUpload(file);
-  };
+  }, [disabled, enableDrop, doUpload]);
 
-  const handlePaste = (e: React.ClipboardEvent) => {
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
     if (disabled || !enableDrop) return;
-    // files[] 适用于从文件管理器复制的文件；截图和浏览器复制的图片只在 items[] 中
     let file: File | undefined = e.clipboardData.files?.[0];
     if (!file) {
       const items = e.clipboardData.items;
@@ -127,23 +115,75 @@ export default function ImageUploadBox({
     if (!file) return;
     e.preventDefault();
     void doUpload(file);
-  };
+  }, [disabled, enableDrop, doUpload]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) void doUpload(file);
+    e.currentTarget.value = '';
+  }, [doUpload]);
+
+  const handleClear = useCallback(() => {
+    onChange?.(null);
+  }, [onChange]);
+
+  const previewSrc = useMemo(
+    () => (value ? getFullAuthedFileUrl(value) : ''),
+    [value]
+  );
+
+  const containerStyle = useMemo(() => ({
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    ...style,
+  }), [style]);
+
+  const boxStyle = useMemo(() => ({
+    width: w,
+    height: h,
+    borderRadius: shape === 'round' ? '50%' : borderRadius,
+    border: hasImage ? `1px solid ${BORDER_COLOR}` : `1px dashed ${DASHED_BORDER}`,
+    background: ADD_BG,
+    overflow: 'hidden' as const,
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    cursor: disabled ? 'default' : 'pointer',
+    flexShrink: 0,
+    outline: 'none',
+  }), [w, h, shape, borderRadius, hasImage, disabled]);
+
+  const imgStyle = useMemo(() => ({
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover' as const,
+  }), []);
+
+  const placeholderStyle = useMemo(() => ({
+    textAlign: 'center' as const,
+    userSelect: 'none' as const,
+    pointerEvents: 'none' as const,
+  }), []);
+
+  const clearBtnStyle = useMemo(() => ({
+    border: 0,
+    background: 'transparent',
+    color: MUTED_COLOR,
+    padding: 0,
+    cursor: 'pointer',
+    fontSize: 13,
+  }), []);
 
   return (
-    <div
-      className={className}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, ...style }}
-    >
+    <div className={className} style={containerStyle}>
       <input
         ref={inputRef}
         type="file"
         accept={accept}
         style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void doUpload(file);
-          e.currentTarget.value = '';
-        }}
+        onChange={handleFileChange}
       />
       <Spin spinning={uploading}>
         <div
@@ -154,51 +194,31 @@ export default function ImageUploadBox({
           onDrop={enableDrop ? handleDrop : undefined}
           onPaste={enableDrop ? handlePaste : undefined}
           tabIndex={enableDrop && !disabled ? 0 : undefined}
-          style={{
-            width: w,
-            height: h,
-            borderRadius: radius,
-            border: hasImage ? '1px solid #e5e7eb' : '1px dashed #cbd5e1',
-            background: '#f8fafc',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: disabled ? 'default' : 'pointer',
-            flexShrink: 0,
-            outline: 'none',
-          }}
+          style={boxStyle}
         >
           {hasImage ? (
             <img
-              src={getFullAuthedFileUrl(value!)}
+              src={previewSrc}
               alt={label}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              loading="lazy"
+              decoding="async"
+              style={imgStyle}
             />
           ) : (
-            <div style={{ textAlign: 'center', userSelect: 'none', pointerEvents: 'none' }}>
-              <div style={{ fontSize: 20, color: '#d1d5db', lineHeight: 1 }}>+</div>
-              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{label}</div>
+            <div style={placeholderStyle}>
+              <div style={{ fontSize: 20, color: LIGHT_GRAY, lineHeight: 1 }}>+</div>
+              <div style={{ fontSize: 12, color: MUTED_COLOR, marginTop: 2 }}>{label}</div>
             </div>
           )}
         </div>
       </Spin>
       {hasImage && showClear && !disabled && (
-        <button
-          type="button"
-          onClick={() => onChange?.(null)}
-          style={{
-            border: 0,
-            background: 'transparent',
-            color: '#94a3b8',
-            padding: 0,
-            cursor: 'pointer',
-            fontSize: 11,
-          }}
-        >
+        <button type="button" onClick={handleClear} style={clearBtnStyle}>
           清除
         </button>
       )}
     </div>
   );
 }
+
+export default memo(ImageUploadBox);

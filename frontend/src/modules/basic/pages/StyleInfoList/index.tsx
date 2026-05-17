@@ -101,12 +101,12 @@ const StyleInfoListPage: React.FC = () => {
     fetchList();
     loadDevelopmentStats(statsRangeType);
     loadCategoryOptions();
-  }, []);
+  }, [fetchList, loadDevelopmentStats, statsRangeType]);
 
   // queryParams 变化时重新加载
   useEffect(() => {
     fetchList();
-  }, [queryParams.page, queryParams.pageSize, queryParams.styleNo, queryParams.styleName, queryParams.progressNode]);
+  }, [fetchList, queryParams.page, queryParams.pageSize, queryParams.styleNo, queryParams.styleName, queryParams.progressNode]);
 
   useEffect(() => {
     const refreshIfNeeded = () => {
@@ -490,6 +490,7 @@ const StyleInfoListPage: React.FC = () => {
             onScrap={handleScrap}
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
+            onRefresh={fetchList}
             focusedStyleId={focusedStyleId}
           />
         )}

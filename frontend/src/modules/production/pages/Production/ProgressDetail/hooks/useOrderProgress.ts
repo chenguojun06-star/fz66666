@@ -67,7 +67,7 @@ export const useOrderProgress = ({
       message.error('更新进度失败');
     }
   }, [
-    activeOrder?.id,
+    activeOrder,
     fetchOrders,
     fetchOrderDetail,
     setActiveOrder,

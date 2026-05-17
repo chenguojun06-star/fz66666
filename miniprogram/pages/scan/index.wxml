@@ -67,10 +67,6 @@
   <!-- ⑦ 今日扫码记录 -->
   <include src="./sections/scan-history.wxml" />
 
-  <!-- rescan / scan-result-confirm 弹窗 -->
-  <include src="./sections/modal-rescan.wxml" />
-  <include src="./sections/modal-scan-result.wxml" />
-
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->

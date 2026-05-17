@@ -103,6 +103,7 @@ export function useOutboundActions({
         factoryName: values.factoryName, factoryType: values.factoryType || values.pickupType,
         receiverId: values.receiverId, receiverName: values.receiverName,
         pickupType: values.pickupType, usageType: values.usageType,
+        warehouseAreaId: values.warehouseAreaId,
       });
       if (res?.code === 200 || (res as any)?.data?.code === 200) {
         const outboundNo = res?.data?.outboundNo || `MOB-${Date.now()}`;

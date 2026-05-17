@@ -28,11 +28,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RealTimeLearningLoop {
 
     /** 触发实时学习的最低反馈数 */
-    private static final int REAL_TIME_THRESHOLD = 1;
+    private static final int REAL_TIME_THRESHOLD = 3;
     /** 连续低分触发紧急学习 */
     private static final int CONSECUTIVE_LOW_SCORE_THRESHOLD = 3;
 
-    private final AtomicInteger consecutiveLowScoreCount = new AtomicInteger(0);
+    private final java.util.concurrent.ConcurrentHashMap<Long, AtomicInteger> consecutiveLowScoreByTenant = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Autowired
     private IntelligenceFeedbackRecordMapper feedbackMapper;
@@ -62,14 +62,15 @@ public class RealTimeLearningLoop {
                         double selfScore, Long tenantId) {
         try {
             // 1. 检查是否需要紧急学习（连续低分）
+            AtomicInteger tenantCounter = consecutiveLowScoreByTenant.computeIfAbsent(tenantId, k -> new AtomicInteger(0));
             if (selfScore < 60) {
-                int consecutive = consecutiveLowScoreCount.incrementAndGet();
+                int consecutive = tenantCounter.incrementAndGet();
                 if (consecutive >= CONSECUTIVE_LOW_SCORE_THRESHOLD) {
                     performEmergencyLearning(sessionId, tenantId);
-                    consecutiveLowScoreCount.set(0);
+                    tenantCounter.set(0);
                 }
             } else {
-                consecutiveLowScoreCount.set(0);
+                tenantCounter.set(0);
             }
 
             // 2. 检查未分析反馈数量，达到阈值则触发学习

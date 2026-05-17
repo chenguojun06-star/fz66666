@@ -38,12 +38,12 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
     List<Map<String, Object>> selectProcurementSnapshot(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
     @Select("SELECT COUNT(*) FROM t_material_purchase " +
-            "WHERE DATE(actual_arrival_date) = #{today} AND delete_flag = 0" +
+            "WHERE actual_arrival_date >= #{today} AND actual_arrival_date < DATE_ADD(#{today}, INTERVAL 1 DAY) AND delete_flag = 0" +
             " AND tenant_id = #{tenantId}")
     Integer selectTodayArrivalCount(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     @Select("SELECT * FROM t_material_purchase " +
-            "WHERE DATE(actual_arrival_date) = #{today} AND delete_flag = 0" +
+            "WHERE actual_arrival_date >= #{today} AND actual_arrival_date < DATE_ADD(#{today}, INTERVAL 1 DAY) AND delete_flag = 0" +
             " AND tenant_id = #{tenantId}" +
             " ORDER BY actual_arrival_date DESC LIMIT 20")
     List<MaterialPurchase> selectTodayArrivals(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
@@ -52,7 +52,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "  HOUR(actual_arrival_date) as hour, " +
             "  COUNT(*) as count " +
             "FROM t_material_purchase " +
-            "WHERE DATE(actual_arrival_date) = #{today} " +
+            "WHERE actual_arrival_date >= #{today} AND actual_arrival_date < DATE_ADD(#{today}, INTERVAL 1 DAY) " +
             "  AND delete_flag = 0 " +
             "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +

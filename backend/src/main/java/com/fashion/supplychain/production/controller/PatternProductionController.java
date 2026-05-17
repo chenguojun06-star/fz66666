@@ -161,12 +161,15 @@ public class PatternProductionController {
                     return Result.success(receiveMsg);
                 case "complete":
                     Map<String, Object> completeResult = patternProductionOrchestrator.submitScan(
-                        id, "COMPLETE", "PLATE_WORKER", null, null, null, null);
+                        id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null);
                     return Result.success(completeResult);
                 case "warehouse-in":
                     String remark = request != null ? (String) request.get("remark") : null;
                     String warehouseCode = request != null ? (String) request.get("warehouseCode") : null;
-                    Map<String, Object> whResult = patternProductionOrchestrator.warehouseIn(id, remark, warehouseCode);
+                    String warehouseAreaId = request != null ? (String) request.get("warehouseAreaId") : null;
+                    String warehouseLocationCode = request != null ? (String) request.get("warehouseLocationCode") : null;
+                    Map<String, Object> whResult = patternProductionOrchestrator.warehouseIn(
+                            id, remark, warehouseCode, warehouseAreaId, warehouseLocationCode);
                     return Result.success(whResult);
                 case "review":
                     String result = request != null ? (String) request.get("result") : null;
@@ -281,6 +284,12 @@ public class PatternProductionController {
                 String warehouseCode = request.get("warehouseCode") == null
                     ? null
                     : String.valueOf(request.get("warehouseCode"));
+            String warehouseAreaId = request.get("warehouseAreaId") == null
+                    ? null
+                    : String.valueOf(request.get("warehouseAreaId"));
+            String warehouseLocationCode = request.get("warehouseLocationCode") == null
+                    ? null
+                    : String.valueOf(request.get("warehouseLocationCode"));
             Integer quantity = null;
             Object quantityObj = request.get("quantity");
             if (quantityObj != null) {
@@ -293,7 +302,8 @@ public class PatternProductionController {
             }
 
             Map<String, Object> result = patternProductionOrchestrator.submitScan(
-                    patternId, operationType, operatorRole, remark, quantity, warehouseCode, unitPrice);
+                    patternId, operationType, operatorRole, remark, quantity, warehouseCode,
+                    warehouseAreaId, warehouseLocationCode, unitPrice);
             return Result.success(result);
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());

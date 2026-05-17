@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Button, Input, Select, Space, Popconfirm, Modal } from 'antd';
+import { Button, Input, Select, Popconfirm, Modal } from 'antd';
 import { DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { sortSizeNames } from '@/utils/api';
@@ -180,7 +180,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
                 }}
               >
                 {size}
-                {!readOnly && <EditOutlined style={{ fontSize: 11, opacity: 0.45 }} />}
+                {!readOnly && <EditOutlined style={{ fontSize: 13, opacity: 0.45 }} />}
               </span>
             )}
             {!readOnly && value.sizes.length > 1 && (

@@ -331,10 +331,10 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
               <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
               {record.factoryType === 'INTERNAL' && (
                 <Tooltip title="内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
-                  <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>内部</Tag>
+                  <Tag color="orange" style={{ margin: 0, fontSize: 13 }}>内部</Tag>
                 </Tooltip>
               )}
-              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 11 }}>外部</Tag>}
+              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 13 }}>外部</Tag>}
             </Space>
             {record.orgPath || record.parentOrgUnitName ? (
               <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12, marginTop: 4 }}>

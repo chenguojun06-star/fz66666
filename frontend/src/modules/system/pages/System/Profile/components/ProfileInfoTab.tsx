@@ -2,7 +2,7 @@
  * 个人信息 Tab — 用户基本信息、修改密码、工厂信息、员工招募、问题反馈
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Form, Input, Select, Space, Spin, Typography } from 'antd';
 import { LockOutlined, TeamOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
@@ -69,6 +69,8 @@ const ProfileInfoTab: React.FC = () => {
     const [miniprogramMenuFlags, setMiniprogramMenuFlags] = useState(() => getMiniprogramMenuFlags());
     const [savingMiniprogramMenuFlags, setSavingMiniprogramMenuFlags] = useState(false);
     const fallbackTheme = 'white';
+    const userRef = useRef(user);
+    userRef.current = user;
 
     // 主题
     const getUserThemeKey = () => {
@@ -86,6 +88,8 @@ const ProfileInfoTab: React.FC = () => {
     });
 
     const initialRoleName = useMemo(() => String(user?.role || '').trim(), [user?.role]);
+    const initialRoleNameRef = useRef(initialRoleName);
+    initialRoleNameRef.current = initialRoleName;
 
     const applyTheme = (nextTheme: string) => {
         if (typeof document === 'undefined') return;
@@ -95,7 +99,7 @@ const ProfileInfoTab: React.FC = () => {
         root.setAttribute('data-theme', resolvedTheme);
     };
 
-    const loadProfile = async () => {
+    const loadProfile = useCallback(async () => {
         setLoading(true);
         try {
             const res: any = await api.get('/system/user/me');
@@ -104,18 +108,19 @@ const ProfileInfoTab: React.FC = () => {
                 const avatar = (res.data as any).avatarUrl || (res.data as any).avatar || (res.data as any).headUrl || undefined;
                 form.setFieldsValue({
                     username: data.username,
-                    roleName: data.roleName || initialRoleName,
+                    roleName: data.roleName || initialRoleNameRef.current,
                     name: data.name,
                     phone: data.phone,
                     email: data.email,
                     avatarUrl: avatar,
                 });
+                const cur = userRef.current;
                 updateUser({
-                    id: String(data.id ?? user?.id ?? ''),
-                    username: String(data.username ?? user?.username ?? ''),
-                    name: String(data.name ?? user?.name ?? ''),
-                    role: String(data.roleName ?? user?.role ?? ''),
-                    roleId: data.roleId != null ? String(data.roleId) : user?.roleId,
+                    id: String(data.id ?? cur?.id ?? ''),
+                    username: String(data.username ?? cur?.username ?? ''),
+                    name: String(data.name ?? cur?.name ?? ''),
+                    role: String(data.roleName ?? cur?.role ?? ''),
+                    roleId: data.roleId != null ? String(data.roleId) : cur?.roleId,
                     phone: data.phone || undefined,
                     email: data.email || undefined,
                     avatarUrl: avatar,
@@ -128,9 +133,9 @@ const ProfileInfoTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [form, message, updateUser]);
 
-    const syncSmartProfileForm = (profile: TenantIntelligenceProfileResponse) => {
+    const syncSmartProfileForm = useCallback((profile: TenantIntelligenceProfileResponse) => {
         setSmartProfile(profile);
         smartProfileForm.setFieldsValue({
             primaryGoal: profile.primaryGoal,
@@ -138,9 +143,9 @@ const ProfileInfoTab: React.FC = () => {
             anomalyWarningCount: profile.anomalyWarningCount,
             lowMarginThreshold: profile.lowMarginThreshold,
         });
-    };
+    }, [smartProfileForm]);
 
-    const loadSmartProfile = async () => {
+    const loadSmartProfile = useCallback(async () => {
         setLoadingSmartProfile(true);
         try {
             const profile = await tenantIntelligenceProfileService.getCurrent();
@@ -150,17 +155,18 @@ const ProfileInfoTab: React.FC = () => {
         } finally {
             setLoadingSmartProfile(false);
         }
-    };
+    }, [message, syncSmartProfileForm]);
 
     useEffect(() => {
         applyTheme(theme);
+        const cur = userRef.current;
         form.setFieldsValue({
-            username: user?.username,
-            roleName: initialRoleName,
-            name: user?.name,
-            phone: user?.phone,
-            email: user?.email,
-            avatarUrl: (user as any)?.avatarUrl,
+            username: cur?.username,
+            roleName: initialRoleNameRef.current,
+            name: cur?.name,
+            phone: cur?.phone,
+            email: cur?.email,
+            avatarUrl: (cur as any)?.avatarUrl,
         });
         loadProfile();
         tenantSmartFeatureService.list().then((flags) => {
@@ -171,11 +177,10 @@ const ProfileInfoTab: React.FC = () => {
             setMiniprogramMenuFlags(replaceMiniprogramMenuFlags(flags));
         }).catch(() => {});
 
-        // 加载租户信息
-        const tid = (user as any)?.tenantId;
+        const tid = (cur as any)?.tenantId;
         if (tid) {
-            const role = String((user as any)?.role || '').toLowerCase();
-            const isOwner = (user as any)?.isTenantOwner;
+            const role = String((cur as any)?.role || '').toLowerCase();
+            const isOwner = (cur as any)?.isTenantOwner;
             if (isOwner || role.includes('admin') || role.includes('manager') || role.includes('supervisor')) {
                 api.get('/system/tenant/my').then((res: unknown) => {
                     const r = res as any;
@@ -206,7 +211,7 @@ const ProfileInfoTab: React.FC = () => {
             return;
         }
         void loadSmartProfile();
-    }, [canManageSmartFlags]);
+    }, [canManageSmartFlags, loadSmartProfile]);
 
     const onThemeChange = (next: string) => {
         const v = String(next || '').trim() || fallbackTheme;

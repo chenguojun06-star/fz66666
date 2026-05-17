@@ -39,8 +39,8 @@ const CONFIG_HINTS: Record<string, string> = {
 };
 
 const MODE_CONFIG = {
-  LIVE:     { color: 'success', icon: <CheckCircleOutlined />, text: '已接入 LIVE', tagColor: 'green' },
-  MOCK:     { color: 'warning', icon: <WarningOutlined />,     text: 'Mock 模式',  tagColor: 'orange' },
+  LIVE:     { color: 'success', icon: <CheckCircleOutlined />, text: '已接入（生产模式）', tagColor: 'green' },
+  MOCK:     { color: 'warning', icon: <WarningOutlined />,     text: '模拟模式',  tagColor: 'orange' },
   DISABLED: { color: 'default', icon: <StopOutlined />,        text: '未启用',     tagColor: 'default' },
 } as const;
 
@@ -123,20 +123,20 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                   styles={{ body: { paddingTop: 12 } }}
                 >
                   {ch.mode === 'LIVE' && (
-                    <p style={{ color: '#52c41a', margin: '0 0 8px' }}> 密钥已配置，正在调用真实 API</p>
+                    <p style={{ color: '#52c41a', margin: '0 0 8px' }}> 密钥已配置，正在调用真实接口</p>
                   )}
                   {ch.mode === 'MOCK' && (
-                    <p style={{ color: '#fa8c16', margin: '0 0 8px' }}>尚未填写密钥，当前以 Mock 模拟运行</p>
+                    <p style={{ color: '#fa8c16', margin: '0 0 8px' }}>尚未填写密钥，当前以模拟模式运行</p>
                   )}
                   {ch.mode === 'DISABLED' && (
-                    <p style={{ color: '#999', margin: '0 0 8px' }}>application.yml 中 enabled=false</p>
+                    <p style={{ color: '#999', margin: '0 0 8px' }}>配置文件中已禁用（enabled=false）</p>
                   )}
 
                   <Divider style={{ margin: '8px 0' }} />
 
                   <div style={{ fontSize: 12, color: '#666' }}>
                     <div style={{ marginBottom: 4 }}>
-                      <strong>Webhook 地址：</strong>
+                      <strong>回调地址：</strong>
                       <Tooltip title={webhookUrl}>
                         <span style={{ fontFamily: 'monospace', marginRight: 6, wordBreak: 'break-all' }}>
                           ...{ch.webhookPath}
@@ -150,8 +150,8 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
 
                     {ch.mode !== 'LIVE' && hint && (
                       <div style={{ marginTop: 8 }}>
-                        <strong>填写到 application.yml：</strong>
-                        <Tooltip title={<pre style={{ fontSize: 11 }}>{hint}</pre>} placement="bottom">
+                        <strong>填写到配置文件：</strong>
+                        <Tooltip title={<pre style={{ fontSize: 13 }}>{hint}</pre>} placement="bottom">
                           <Button type="link" icon={<QuestionCircleOutlined />}
                             style={{ padding: '0 4px' }}>查看配置项</Button>
                         </Tooltip>

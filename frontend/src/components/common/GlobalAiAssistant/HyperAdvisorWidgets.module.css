@@ -43,7 +43,7 @@
 }
 .riskDesc {
   color: #666;
-  font-size: 11px;
+  font-size: 13px;
   margin-top: 2px;
 }
 
@@ -64,7 +64,7 @@
 .simulationTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 13px;
 }
 .simulationTable th,
 .simulationTable td {
@@ -80,7 +80,7 @@
 .simulationRec {
   margin-top: 6px;
   color: #531dab;
-  font-size: 11px;
+  font-size: 13px;
   font-style: italic;
 }
 
@@ -96,7 +96,7 @@
 .clarificationLabel {
   font-weight: 600;
   margin-bottom: 4px;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .feedbackRow {
@@ -130,7 +130,7 @@
   color: #1890ff;
 }
 .feedbackLabel {
-  font-size: 11px;
+  font-size: 13px;
   color: #999;
   margin-left: auto;
 }

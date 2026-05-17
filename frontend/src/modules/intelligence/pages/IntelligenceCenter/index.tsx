@@ -301,7 +301,7 @@ const IntelligenceCenter: React.FC = () => {
                           : { g: 'D', c: '#e03030' };
                         return (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 10 }}>{grd.g}</b>
+                            <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 12 }}>{grd.g}</b>
                             {w.trend === 'UP' ? '' : w.trend === 'DOWN' ? '' : ''}
                           </span>
                         );
@@ -326,7 +326,7 @@ const IntelligenceCenter: React.FC = () => {
               <LiveDot size={7} color="#00e5ff" />
               工厂工序卡点
               <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
-              <span style={{ fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
+              <span style={{ fontSize: 12, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
               <CollapseChevron panelKey="bottleneck" collapsed={!!collapsedPanels['bottleneck']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['bottleneck'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
@@ -356,7 +356,7 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-shortage-name">{item.materialName}</span>
                   <span className="c-shortage-qty">缺&nbsp;{item.shortageQuantity}&nbsp;{item.unit}</span>
                   <span style={{
-                    marginLeft: 'auto', fontSize: 10, flexShrink: 0, fontWeight: 600,
+                    marginLeft: 'auto', fontSize: 12, flexShrink: 0, fontWeight: 600,
                     color: item.riskLevel === 'HIGH' ? '#e03030' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
                   }}>
                     {item.riskLevel === 'HIGH' ? ' 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
@@ -448,10 +448,10 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-heal-detail">{item.detail}</span>
                   <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
                     {item.autoFixed
-                      ? <Tag style={{ fontSize: 11, background: '#1677ff22', color: '#4096ff', borderColor: '#4096ff55' }}>已自修</Tag>
+                      ? <Tag style={{ fontSize: 13, background: '#1677ff22', color: '#4096ff', borderColor: '#4096ff55' }}>已自修</Tag>
                       : item.status !== 'OK'
-                        ? <Tag style={{ fontSize: 11, background: '#d4880622', color: '#d48806', borderColor: '#d4880655' }}>需处理</Tag>
-                        : <Tag style={{ fontSize: 11, background: '#52c41a22', color: '#73d13d', borderColor: '#73d13d55' }}>正常</Tag>
+                        ? <Tag style={{ fontSize: 13, background: '#d4880622', color: '#d48806', borderColor: '#d4880655' }}>需处理</Tag>
+                        : <Tag style={{ fontSize: 13, background: '#52c41a22', color: '#73d13d', borderColor: '#73d13d55' }}>正常</Tag>
                     }
                   </span>
                 </div>
@@ -471,7 +471,7 @@ const IntelligenceCenter: React.FC = () => {
                   {repairing ? '修复中…' : ' 一键修复'}
                 </button>
                 {repairResult && (
-                  <span style={{ fontSize: 11, color: repairResult.needManual < 0 ? '#ff7875' : '#73d13d' }}>
+                  <span style={{ fontSize: 13, color: repairResult.needManual < 0 ? '#ff7875' : '#73d13d' }}>
                     {repairResult.needManual < 0 ? '修复失败' : `已修复 ${repairResult.autoFixed} 项，${repairResult.needManual} 项需人工`}
                   </span>
                 )}

@@ -48,7 +48,7 @@ export const useScanAutoFill = (options: UseScanAutoFillOptions) => {
     if (scanBundlesFetchOnceRef.current === activeOrder.id) return;
     scanBundlesFetchOnceRef.current = activeOrder.id;
     void fetchCuttingBundles(activeOrder);
-  }, [scanOpen, activeOrder?.id, cuttingBundles.length, cuttingBundlesLoading]);
+  }, [scanOpen, activeOrder, cuttingBundles.length, cuttingBundlesLoading, fetchCuttingBundles]);
 
   useEffect(() => {
     if (!scanOpen) return;
@@ -63,5 +63,5 @@ export const useScanAutoFill = (options: UseScanAutoFillOptions) => {
       processCode: code || '',
       unitPrice: Number.isFinite(p) && p >= 0 ? p : undefined,
     });
-  }, [scanOpen, activeOrder?.id, activeOrderProductionProgress, nodes, scanForm]);
+  }, [scanOpen, activeOrder, activeOrderProductionProgress, nodes, scanForm, progressNodesByStyleNo]);
 };

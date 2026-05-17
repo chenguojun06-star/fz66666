@@ -8,9 +8,15 @@
     <title>云裳智链</title>
     <script>
     (function(){
-      var RK='__crit_reload__',LK='__crit_log__';
+      var RK='__crit_reload__',LK='__crit_log__',TK='__crit_reload_ts__',COOLDOWN=30000;
       if(sessionStorage.getItem(RK))return;
-      function rl(){sessionStorage.setItem(RK,'1');location.reload();}
+      function rl(){
+        var last=Number(sessionStorage.getItem(TK)||'0');
+        if(Date.now()-last<COOLDOWN)return;
+        sessionStorage.setItem(TK,String(Date.now()));
+        sessionStorage.setItem(RK,'1');
+        location.reload();
+      }
       function lg(m){try{var a=JSON.parse(sessionStorage.getItem(LK)||'[]');a.push({t:Date.now(),m:m});if(a.length>10)a=a.slice(-10);sessionStorage.setItem(LK,JSON.stringify(a));}catch(e){}}
       document.addEventListener('error',function(e){
         var t=e.target||e.srcElement;

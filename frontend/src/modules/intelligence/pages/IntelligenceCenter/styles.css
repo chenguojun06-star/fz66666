@@ -100,7 +100,7 @@
 .cockpit-header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 
 .cockpit-badge-live {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 1.5px;
   color: #39ff14;
@@ -118,7 +118,7 @@
   text-shadow: 0 0 20px rgba(0,229,255,0.4);
 }
 .cockpit-subtitle {
-  font-size: 11px;
+  font-size: 13px;
   color: #6ba8c6;
   border-left: 1px solid rgba(0,229,255,0.15);
   padding-left: 14px;
@@ -147,7 +147,7 @@
   line-height: 1;
 }
 .cockpit-date {
-  font-size: 11px;
+  font-size: 13px;
   color: #5d92b0;
   letter-spacing: 0.5px;
   margin-top: 2px;
@@ -299,7 +299,7 @@
 }
 .c-stage-stagnant-bar {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: 13px;
   color: #e03030;
   font-weight: 700;
   letter-spacing: 0.3px;
@@ -469,7 +469,7 @@
 }
 
 .c-stage-order-date {
-  font-size: 11px;
+  font-size: 13px;
   color: #6a8fa8;
   white-space: nowrap;
 }
@@ -497,7 +497,7 @@
 }
 
 .c-stagnant-badge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #e03030;
   border: 1px solid rgba(224,48,48,0.4);
@@ -568,7 +568,7 @@
 
 /* 卡片小徽标 */
 .c-card-badge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 4px;
@@ -618,8 +618,8 @@
 .neon-cyan  { animation: neon-pulse-cyan  3s ease-in-out infinite; }
 .neon-green { animation: neon-pulse-green 3s ease-in-out infinite; }
 
-.c-kpi-unit { font-size: 11px; color: #7dacc4; margin-top: 2px; }
-.c-kpi-sub  { font-size: 11px; color: #7dacc4; margin-top: 2px; min-height: 14px; } /* 预占行高，副文本出现时下方元素不位移 */
+.c-kpi-unit { font-size: 13px; color: #7dacc4; margin-top: 2px; }
+.c-kpi-sub  { font-size: 13px; color: #7dacc4; margin-top: 2px; min-height: 14px; } /* 预占行高，副文本出现时下方元素不位移 */
 .c-kpi-delta-row {
   display: flex;
   align-items: center;
@@ -636,7 +636,7 @@
   min-width: 62px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.03em;
   border: 1px solid rgba(255,255,255,0.14);
@@ -657,7 +657,7 @@
   border-color: rgba(143,182,203,0.18);
 }
 .c-kpi-delta-note {
-  font-size: 10px;
+  font-size: 12px;
   color: #6f9bb5;
   letter-spacing: 0.02em;
 }
@@ -776,7 +776,7 @@
   text-overflow: ellipsis;
 }
 .c-fa-time {
-  font-size: 11px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -788,7 +788,7 @@
 }
 .c-fa-qty em {
   font-style: normal;
-  font-size: 10px;
+  font-size: 12px;
   color: #7aaec8;
   margin-left: 1px;
 }
@@ -860,7 +860,7 @@
 ─────────────────────────────────────────────────── */
 .c-heatmap-meta { font-size: 12px; color: #6ba8c6; margin-bottom: 8px; }
 .c-heatmap-grid { display: grid; gap: 3px; font-size: 12px; }
-.c-heat-head { text-align: center; color: #6ba8c6; padding: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 500; }
+.c-heat-head { text-align: center; color: #6ba8c6; padding: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; }
 .c-heat-row-label { color: #6ba8c6; font-size: 12px; font-weight: 500; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .c-heat-cell { text-align: center; padding: 5px 2px; border-radius: 3px; background: rgba(255,255,255,0.02); font-size: 12px; font-weight: 600; min-width: 24px; transition: background 0.3s; }
 
@@ -877,7 +877,7 @@
 }
 .c-shortage-row:last-of-type { border-bottom: none; }
 .c-shortage-risk {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   padding: 1px 6px;
   border-radius: 3px;
@@ -913,7 +913,7 @@
 .c-chat-card { margin: 0 24px; padding: 14px 20px; }
 .c-chat-card::before { background: linear-gradient(90deg, transparent, #7c4dff55, #7c4dffcc, #7c4dff55, transparent); }
 
-.c-chat-hint { font-size: 11px; color: #5d92b0; font-weight: 400; margin-left: 4px; }
+.c-chat-hint { font-size: 13px; color: #5d92b0; font-weight: 400; margin-left: 4px; }
 
 .c-chat-row { display: flex; gap: 10px; margin: 8px 0 10px; }
 .c-chat-row .c-chat-input { flex: 1; }
@@ -988,7 +988,7 @@
   border: 1px solid rgba(0,229,255,0.14);
   border-radius: 14px;
   color: #0098aa;
-  font-size: 11px;
+  font-size: 13px;
   padding: 3px 12px;
   cursor: pointer;
   transition: all 0.2s;
@@ -1080,7 +1080,7 @@
 }
 /* 左：工厂名 */
 .c-order-factory {
-  font-size: 11px;
+  font-size: 13px;
   color: #7ab8d8;
   font-weight: 500;
   width: 86px;
@@ -1098,7 +1098,7 @@
   gap: 3px;
 }
 .c-order-no {
-  font-size: 11px;
+  font-size: 13px;
   color: #90c0d4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1121,7 +1121,7 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 10px;
+  font-size: 12px;
   color: #6e9ab0;
   letter-spacing: 0.2px;
 }
@@ -1149,12 +1149,12 @@
   width: 40px;
 }
 .c-order-pct {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .c-order-days {
-  font-size: 10px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1174,11 +1174,11 @@
   gap: 8px;
   padding: 4px 0;
   border-bottom: 1px solid rgba(255,255,255,0.03);
-  font-size: 11px;
+  font-size: 13px;
 }
 .c-risk-row:last-child { border-bottom: none; }
 .c-risk-badge {
-  font-size: 10px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   border: 1px solid; border-radius: 3px;
   padding: 0 4px; flex-shrink: 0; min-width: 34px; text-align: center;
 }
@@ -1199,13 +1199,13 @@
 .c-bottleneck-item { display: flex; flex-direction: column; gap: 3px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .c-bottleneck-item:last-child { border-bottom: none; padding-bottom: 0; }
 .c-bottleneck-row {
-  display: flex; align-items: center; gap: 8px; font-size: 11px;
+  display: flex; align-items: center; gap: 8px; font-size: 13px;
 }
 .c-bottleneck-orders {
   display: flex; flex-wrap: wrap; gap: 4px; flex: 1;
 }
 .c-bottleneck-order-chip {
-  font-size: 10px; border: 1px solid; border-radius: 3px;
+  font-size: 12px; border: 1px solid; border-radius: 3px;
   padding: 1px 6px; font-variant-numeric: tabular-nums; white-space: nowrap;
   background: rgba(255,255,255,0.03); line-height: 1.6;
 }
@@ -1213,11 +1213,11 @@
   color: #5c9abf; font-weight: 500; width: 80px; flex-shrink: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.c-bottleneck-stage { font-weight: 700; width: 58px; flex-shrink: 0; font-size: 11px; }
+.c-bottleneck-stage { font-weight: 700; width: 58px; flex-shrink: 0; font-size: 13px; }
 .c-bottleneck-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
 .c-bottleneck-bar { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
 .c-bottleneck-pct { font-weight: 700; width: 30px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.c-bottleneck-cnt { color: #2a4455; font-size: 10px; width: 20px; text-align: right; flex-shrink: 0; }
+.c-bottleneck-cnt { color: #2a4455; font-size: 12px; width: 20px; text-align: right; flex-shrink: 0; }
 
 /* ────────────────────────────────────────────────
    订单悬浮详情卡（cockpit-order-pop）
@@ -1271,7 +1271,7 @@
   letter-spacing: 0.5px;
 }
 .order-pop-days {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -1279,7 +1279,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: 13px;
   color: #6ba8c6;
   margin-bottom: 12px;
 }
@@ -1301,7 +1301,7 @@
   width: 28px;
   color: #6ba8c6;
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 13px;
 }
 .order-pop-stage-bar-wrap {
   flex: 1;
@@ -1319,7 +1319,7 @@
   width: 32px;
   text-align: right;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
@@ -1375,7 +1375,7 @@
   animation: scan-top 3s linear infinite;
 }
 .kpi-pop-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   color: #00e5ff;
   text-transform: uppercase;
@@ -1438,7 +1438,7 @@
   box-shadow: 0 8px 28px rgba(0,229,255,0.1);
 }
 .c-kpi-hover-hint {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(0,229,255,0.25);
   margin-top: 8px;
   letter-spacing: 0.5px;
@@ -1468,7 +1468,7 @@
 }
 .cockpit-ticker-label {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #e03030;
   padding: 0 10px;
@@ -1488,7 +1488,7 @@
   animation: ticker-scroll 20s linear infinite;
 }
 .cockpit-ticker-item {
-  font-size: 11px;
+  font-size: 13px;
   color: #f7a600;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
@@ -1638,7 +1638,7 @@
 }
 
 .lsf-live-label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: #39ff14;
@@ -1650,12 +1650,12 @@
 }
 
 .lsf-title {
-  font-size: 11px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.45);
   letter-spacing: 0.04em;
 }
 .lsf-summary {
-  font-size: 10px;
+  font-size: 12px;
   color: #00e5ff;
   background: rgba(0,229,255,0.08);
   border: 1px solid rgba(0,229,255,0.16);
@@ -1685,7 +1685,7 @@
   border-radius: 999px;
   padding: 1px 8px;
   line-height: 18px;
-  font-size: 10px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.18s ease;
 }
@@ -1753,7 +1753,7 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: 13px;
   color: #8fb6cb;
 }
 .lsf-bucket-orders-title span {
@@ -1784,15 +1784,15 @@
 .lsf-bucket-chip em {
   font-style: normal;
   color: #00e5ff;
-  font-size: 10px;
+  font-size: 12px;
 }
 .lsf-bucket-empty {
-  font-size: 10px;
+  font-size: 12px;
   color: #6f9bb5;
 }
 .lsf-idle-note {
   margin-bottom: 8px;
-  font-size: 10px;
+  font-size: 12px;
   color: #6f9bb5;
 }
 .lsf-idle-note.warn {
@@ -1878,7 +1878,7 @@
 /* 订单 / 款号 */
 .lsf-order {
   color: rgba(255, 255, 255, 0.28);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1891,7 +1891,7 @@
 .lsf-age {
   margin-left: auto;
   color: rgba(255,255,255,0.34);
-  font-size: 10px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 

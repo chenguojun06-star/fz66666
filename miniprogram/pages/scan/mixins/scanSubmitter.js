@@ -55,7 +55,7 @@ module.exports = {
         return;
       }
       if (scanType === 'stock') { this.handleStockQuery(codeStr); return; }
-      var options = { scanType: scanType, quantity: this._quantity, warehouse: this.data.warehouse };
+      var options = { scanType: scanType, quantity: this._quantity, warehouse: this.data.warehouse, warehouseAreaId: this.data.warehouseAreaId, warehouseLocationCode: this.data.warehouseLocationCode };
       this._ensureScanHandler();
       this.scanHandler.handleScan(codeStr, options).then(function(result) {
         self._handleScanResult(result, codeStr, scanType);

@@ -32,13 +32,15 @@ interface Props {
   onRefresh?: () => void;
 }
 
+const DEFAULT_LINKED_SIZES: string[] = [];
+
 const StyleSizeTab: React.FC<Props> = ({
   styleId,
   readOnly,
   sizeAssignee,
   sizeStartTime,
   sizeCompletedTime,
-  linkedSizes = [],
+  linkedSizes = DEFAULT_LINKED_SIZES,
   simpleView = false,
   hideStageControl = false,
   onRefresh,

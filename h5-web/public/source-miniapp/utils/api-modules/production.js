@@ -125,7 +125,7 @@ const production = {
     return ok('/api/production/cutting/list', 'GET', { orderNo, page, pageSize });
   },
   getBundleByCode(qrCode) {
-    return ok(`/api/production/cutting/by-code/${encodeURIComponent(qrCode)}`, 'GET', {});
+    return ok('/api/production/cutting/by-code', 'POST', { qrCode });
   },
   splitTransfer(data) {
     return ok('/api/production/cutting/split-transfer', 'POST', data);

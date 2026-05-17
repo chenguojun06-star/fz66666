@@ -41,33 +41,33 @@ interface ShopInfo {
 // ============================================================
 const CREDENTIAL_GUIDES: Record<string, { title: string; steps: { title: string; description: string }[]; docUrl: string }> = {
   JST: {
-    title: '如何获取聚水潭 AppKey 和 AppSecret？',
+    title: '如何获取聚水潭应用凭证？',
     steps: [
       { title: '登录聚水潭开放平台', description: '打开 open.jushuitan.com，使用企业账号登录' },
-      { title: '创建应用', description: '进入「开发者中心」→「应用管理」→「创建应用」，选择"自研ERP对接"，填写应用名称和回调地址（填写成为本系统的 Webhook 地址）' },
-      { title: '获取凭证', description: '应用审核通过后，在应用详情页复制 AppKey 和 AppSecret' },
-      { title: '填写到本系统', description: '将 AppKey 和 AppSecret 填入下方表单，点击"保存并测试连接"' },
+      { title: '创建应用', description: '进入「开发者中心」→「应用管理」→「创建应用」，选择"自研ERP对接"，填写应用名称和回调地址（填写本系统的回调地址）' },
+      { title: '获取凭证', description: '应用审核通过后，在应用详情页复制应用标识和密钥' },
+      { title: '填写到本系统', description: '将应用标识和密钥填入下方表单，点击"保存并测试连接"' },
       { title: '授权店铺数据', description: '在聚水潭应用管理中，授权需要同步的店铺。系统会自动发现并拉取这些店铺的订单数据' },
     ],
     docUrl: 'https://open.jushuitan.com',
   },
   DONGFANG: {
-    title: '如何获取东纺纺织 API 密钥？',
+    title: '如何获取东纺纺织接口密钥？',
     steps: [
       { title: '联系东纺纺织平台', description: '联系东纺纺织客户经理，申请 API 对接权限' },
-      { title: '获取 API 凭证', description: '平台会下发 AppKey 和 AppSecret，同时配置数据同步范围（面料/供应商/订单）' },
-      { title: '填写到本系统', description: '将获取到的 AppKey 和 AppSecret 填入下方表单' },
-      { title: '配置回调', description: '将本系统生成的 Webhook 地址提供给东纺纺织，完成双向对接' },
+      { title: '获取 API 凭证', description: '平台会下发应用标识和密钥，同时配置数据同步范围（面料/供应商/订单）' },
+      { title: '填写到本系统', description: '将获取到的应用标识和密钥填入下方表单' },
+      { title: '配置回调', description: '将本系统生成的回调地址提供给东纺纺织，完成双向对接' },
     ],
     docUrl: '',
   },
   DEFAULT: {
-    title: '如何获取平台的 API 凭证？',
+    title: '如何获取平台接口凭证？',
     steps: [
       { title: '打开平台开放平台', description: '登录该平台的开放平台/开发者中心' },
-      { title: '创建应用/获取密钥', description: '创建对接应用，获取 AppKey 和 AppSecret' },
+      { title: '创建应用/获取密钥', description: '创建对接应用，获取应用标识和密钥' },
       { title: '填写到本系统', description: '将获取到的凭证填入下方表单' },
-      { title: '配置回调地址', description: '将本系统的 Webhook 地址配置到平台的回调URL中' },
+      { title: '配置回调地址', description: '将本系统的回调地址配置到平台中' },
     ],
     docUrl: '',
   },
@@ -208,7 +208,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
     return (
       <Col key={p.code} xs={24} sm={12} lg={8} xl={6}>
         <Badge.Ribbon
-          text={p.syncMode === 'pull' ? '主动同步' : 'Webhook'}
+          text={p.syncMode === 'pull' ? '主动同步' : '回调推送'}
           color={p.syncMode === 'pull' ? 'blue' : 'green'}
           style={{ opacity: 0.85 }}
         >
@@ -229,9 +229,9 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
 
             {/* 功能标签 */}
             <div style={{ marginBottom: 8 }}>
-              {p.features.slice(0, 3).map(f => (<Tag key={f} style={{ marginBottom: 4, fontSize: 11 }}>{f}</Tag>))}
+              {p.features.slice(0, 3).map(f => (<Tag key={f} style={{ marginBottom: 4, fontSize: 13 }}>{f}</Tag>))}
               {p.features.length > 3 && (
-                <Tooltip title={p.features.slice(3).join('、')}><Tag style={{ fontSize: 11 }}>+{p.features.length - 3}</Tag></Tooltip>
+                <Tooltip title={p.features.slice(3).join('、')}><Tag style={{ fontSize: 13 }}>+{p.features.length - 3}</Tag></Tooltip>
               )}
             </div>
 
@@ -239,11 +239,11 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
             {isConfigured && statsData && (
               <Row gutter={8} style={{ marginBottom: 8 }}>
                 <Col span={12}>
-                  <div style={{ fontSize: 11, color: '#888' }}>今日订单</div>
+                  <div style={{ fontSize: 13, color: '#888' }}>今日订单</div>
                   <Text strong style={{ color: '#1677ff' }}>{statsData.todayOrders}</Text>
                 </Col>
                 <Col span={12}>
-                  <div style={{ fontSize: 11, color: '#888' }}>今日销售额</div>
+                  <div style={{ fontSize: 13, color: '#888' }}>今日销售额</div>
                   <Text strong style={{ color: '#52c41a' }}>¥{statsData.todaySales}</Text>
                 </Col>
               </Row>
@@ -301,7 +301,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         </Row>
 
         <Alert type="info" showIcon style={{ marginBottom: 20, borderRadius: 8 }}
-          message={<span>选择一个电商/ERP平台，填写 AppKey 和 AppSecret 即可自动对接。支持 <strong>主动拉取</strong> 和 <strong>Webhook 推送</strong>。<span style={{ color: '#fa8c16' }}>不知道怎么获取凭证？点击「配置连接」→「如何获取凭证？」查看教程。</span></span>}
+          message={<span>选择一个电商/ERP平台，填写应用标识和密钥即可自动对接。支持 <strong>主动拉取</strong> 和 <strong>回调推送</strong>。<span style={{ color: '#fa8c16' }}>不知道怎么获取凭证？点击「配置连接」→「如何获取凭证？」查看教程。</span></span>}
         />
         <Row gutter={[16, 16]}>{PLATFORM_LIST.map(renderPlatformCard)}</Row>
         {stats.connected === 0 && (
@@ -322,7 +322,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
             <Alert type="warning" showIcon icon={<QuestionCircleOutlined />} style={{ marginBottom: 16, borderRadius: 8 }}
               message={
                 <span>
-                  不知道怎么获取 {activePlatform?.name} 的 AppKey 和 AppSecret？
+                  不知道怎么获取 {activePlatform?.name} 的应用标识和密钥？
                   <Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>
                     点击查看获取教程 →
                   </Button>
@@ -357,11 +357,11 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
 
           <Divider style={{ margin: '12px 0' }} />
           <Form form={form} layout="vertical">
-            <Form.Item name="appKey" label={<span><KeyOutlined /> AppKey / Client ID</span>} rules={[{ required: true, message: '请输入 AppKey' }]} tooltip={`${activePlatform?.name} 开放平台颁发的应用标识`}>
-              <Input placeholder={`${activePlatform?.name} 开放平台 AppKey`} autoComplete="off" />
+            <Form.Item name="appKey" label={<span><KeyOutlined /> 应用标识 (AppKey)</span>} rules={[{ required: true, message: '请输入应用标识' }]} tooltip={`${activePlatform?.name} 开放平台颁发的应用标识`}>
+              <Input placeholder={`请输入 ${activePlatform?.name} 的应用标识`} autoComplete="off" />
             </Form.Item>
-            <Form.Item name="appSecret" label={<span><SafetyCertificateOutlined /> AppSecret</span>} rules={[{ required: true, message: '请输入 AppSecret' }]} tooltip="密钥加密传输，仅存储不可逆Hash">
-              <Input.Password placeholder={`${activePlatform?.name} 开放平台 AppSecret`} autoComplete="off" />
+            <Form.Item name="appSecret" label={<span><SafetyCertificateOutlined /> 应用密钥 (AppSecret)</span>} rules={[{ required: true, message: '请输入应用密钥' }]} tooltip="密钥加密传输，仅存储不可逆Hash">
+              <Input.Password placeholder={`请输入 ${activePlatform?.name} 的应用密钥`} autoComplete="off" />
             </Form.Item>
             <Form.Item name="shopName" label={<span><ShopOutlined /> 店铺名称（可选）</span>}>
               <Input placeholder="给这个连接起个名字，如：主店铺" />
@@ -379,7 +379,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
           footer={<Button onClick={() => setTestModalOpen(false)}>关闭</Button>} width={540} destroyOnHidden>
           {testResult ? (
             <div>
-              <Alert type={testResult.success ? 'success' : 'error'} showIcon message={testResult.success ? '连接成功' : '连接失败'} description={testResult.message} style={{ marginBottom: 16 }} />
+              <Alert type={testResult.success ? 'success' : 'error'} showIcon title={testResult.success ? '连接成功' : '连接失败'} description={testResult.message} style={{ marginBottom: 16 }} />
               {testResult.success && testResult.supportedActions && (
                 <Descriptions bordered column={2} style={{ marginBottom: 16 }}>
                   <Descriptions.Item label="同步能力" span={2}>
@@ -411,22 +411,22 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                 <Col span={6}>
                   <Card style={{ background: '#e6f7ff', borderRadius: 8, border: 'none' }}>
-                    <Statistic title="今日订单" value={activeStats.todayOrders} suffix="单" valueStyle={{ color: '#1677ff' }} prefix={<ShoppingCartOutlined />} />
+                    <Statistic title="今日订单" value={activeStats.todayOrders} suffix="单" styles={{ content: { color: '#1677ff' } }} prefix={<ShoppingCartOutlined />} />
                   </Card>
                 </Col>
                 <Col span={6}>
                   <Card style={{ background: '#f6ffed', borderRadius: 8, border: 'none' }}>
-                    <Statistic title="今日销售额" value={parseFloat(activeStats.todaySales).toFixed(2)} prefix="¥" valueStyle={{ color: '#52c41a' }} />
+                    <Statistic title="今日销售额" value={parseFloat(activeStats.todaySales).toFixed(2)} prefix="¥" styles={{ content: { color: '#52c41a' } }} />
                   </Card>
                 </Col>
                 <Col span={6}>
                   <Card style={{ background: '#fff7e6', borderRadius: 8, border: 'none' }}>
-                    <Statistic title="累计订单" value={activeStats.totalOrders} suffix="单" valueStyle={{ color: '#fa8c16' }} />
+                    <Statistic title="累计订单" value={activeStats.totalOrders} suffix="单" styles={{ content: { color: '#fa8c16' } }} />
                   </Card>
                 </Col>
                 <Col span={6}>
                   <Card style={{ background: '#f9f0ff', borderRadius: 8, border: 'none' }}>
-                    <Statistic title="关联店铺" value={activeStats.shopCount} suffix="个" valueStyle={{ color: '#722ed1' }} />
+                    <Statistic title="关联店铺" value={activeStats.shopCount} suffix="个" styles={{ content: { color: '#722ed1' } }} />
                   </Card>
                 </Col>
               </Row>
@@ -441,8 +441,8 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#1677ff' }}>
                           📦 链路一：成品仓（有生产单）
                         </div>
-                        <div style={{ fontSize: 11, color: '#555', lineHeight: 1.8 }}>
-                          订单 → SKU匹配款号 → <Tag color="blue" style={{ fontSize: 10 }}>关联生产单</Tag>
+                        <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8 }}>
+                          订单 → SKU匹配款号 → <Tag color="blue" style={{ fontSize: 12 }}>关联生产单</Tag>
                           → 生产加工 → 完工入库 → 出库发货 → 物流回传
                         </div>
                         <div style={{ marginTop: 6 }}>
@@ -455,8 +455,8 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#52c41a' }}>
                           🛒 链路二：电商仓（现货发货）
                         </div>
-                        <div style={{ fontSize: 11, color: '#555', lineHeight: 1.8 }}>
-                          订单 → <Tag color="orange" style={{ fontSize: 10 }}>待拣货</Tag>
+                        <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8 }}>
+                          订单 → <Tag color="orange" style={{ fontSize: 12 }}>待拣货</Tag>
                           → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                         </div>
                         <div style={{ marginTop: 6 }}>
@@ -475,21 +475,21 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                 <Col span={8}>
                   <Card style={{ background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591' }}>
                     <Statistic title="待拣货" value={activeStats.pendingPick} suffix="单"
-                      valueStyle={{ color: '#fa8c16', fontSize: 20 }}
+                      styles={{ content: { color: '#fa8c16', fontSize: 20 } }}
                       prefix={<ShoppingCartOutlined />} />
                   </Card>
                 </Col>
                 <Col span={8}>
                   <Card style={{ background: '#e6f7ff', borderRadius: 8, border: '1px solid #91caff' }}>
                     <Statistic title="备货中" value={activeStats.preparing} suffix="单"
-                      valueStyle={{ color: '#1677ff', fontSize: 20 }}
+                      styles={{ content: { color: '#1677ff', fontSize: 20 } }}
                       prefix={<SyncOutlined />} />
                   </Card>
                 </Col>
                 <Col span={8}>
                   <Card style={{ background: '#f6ffed', borderRadius: 8, border: '1px solid #95de64' }}>
                     <Statistic title="已出库" value={activeStats.shippedToday} suffix="单"
-                      valueStyle={{ color: '#52c41a', fontSize: 20 }}
+                      styles={{ content: { color: '#52c41a', fontSize: 20 } }}
                       prefix={<CheckCircleOutlined />} />
                   </Card>
                 </Col>

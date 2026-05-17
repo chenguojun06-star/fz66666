@@ -163,8 +163,9 @@ public class FinishedInventoryController {
         String scanCode = (String) params.get("scanCode");
         Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
         String outstockType = (String) params.get("outstockType");
+        String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
         String remark = (String) params.get("remark");
-        ProductOutstock result = finishedWarehouseOperationOrchestrator.scanOutbound(scanCode, quantity, outstockType, remark);
+        ProductOutstock result = finishedWarehouseOperationOrchestrator.scanOutbound(scanCode, quantity, outstockType, warehouseAreaId, remark);
         return Result.success(result);
     }
 

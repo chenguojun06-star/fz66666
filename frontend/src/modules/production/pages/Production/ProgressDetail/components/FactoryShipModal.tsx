@@ -133,7 +133,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
         <span>剩余可发：<b style={{ color: '#389e0d' }}>{canShip}</b></span>
         {currentTotal > 0 && (
           <span>本次发货：<b style={{ color: currentTotal > canShip ? '#cf1322' : '#d46b08' }}>{currentTotal}</b>
-            {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 11 }}>超出可发数量</Tag>}
+            {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 13 }}>超出可发数量</Tag>}
           </span>
         )}
       </div>
@@ -202,7 +202,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
                 <span><b>{rec.shipQuantity ?? '-'}</b> 件</span>
                 {rec.trackingNo && <span style={{ color: '#555' }}>单号：{rec.trackingNo}</span>}
                 {rec.receiveStatus && (
-                  <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} style={{ fontSize: 11, padding: '0 4px', lineHeight: '16px' }}>
+                  <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} style={{ fontSize: 13, padding: '0 4px', lineHeight: '16px' }}>
                     {rec.receiveStatus === 'received' ? '已收货' : rec.receiveStatus === 'pending' ? '待收货' : rec.receiveStatus}
                   </Tag>
                 )}

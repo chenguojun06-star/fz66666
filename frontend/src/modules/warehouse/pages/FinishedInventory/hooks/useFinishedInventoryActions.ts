@@ -4,6 +4,8 @@ import api from '@/utils/api';
 import { useModal } from '@/hooks';
 import type { FinishedInventory, SKUDetail } from '../finishedInventoryColumns';
 
+export type OutboundType = 'sales' | 'free' | 'transfer' | 'scrap';
+
 export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], loadData: () => Promise<void>) => {
   const { message } = App.useApp();
   const outboundModal = useModal<FinishedInventory>();
@@ -11,6 +13,8 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
   const [outstockTotal, setOutstockTotal] = useState(0);
+  const [outboundType, setOutboundType] = useState<OutboundType>('sales');
+  const [outboundReason, setOutboundReason] = useState('');
   const [outboundProductionOrderNo, setOutboundProductionOrderNo] = useState('');
   const [outboundTrackingNo, setOutboundTrackingNo] = useState('');
   const [outboundExpressCompany, setOutboundExpressCompany] = useState('');
@@ -25,6 +29,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
       return colors.flatMap(color => sizes.map(size => ({ color, size, sku: `${item.styleNo}-${color}-${size}`, availableQty: item.availableQty ?? 0, lockedQty: item.lockedQty ?? 0, defectQty: item.defectQty ?? 0, warehouseLocation: item.warehouseLocation || '-', costPrice: item.costPrice, salesPrice: item.salesPrice })));
     });
     setSkuDetails(styleSKUs.length > 0 ? styleSKUs : [{ color: record.color || '', size: record.size || '', sku: record.sku || `${record.styleNo}-${record.color}-${record.size}`, availableQty: record.availableQty ?? 0, lockedQty: record.lockedQty ?? 0, defectQty: record.defectQty ?? 0, warehouseLocation: record.warehouseLocation || '-', costPrice: record.costPrice, salesPrice: record.salesPrice }]);
+    setOutboundType('sales'); setOutboundReason('');
     setOutboundProductionOrderNo(''); setOutboundTrackingNo(''); setOutboundExpressCompany('');
     setOutboundCustomerName(''); setOutboundCustomerPhone(''); setOutboundShippingAddress('');
     outboundModal.open(record);
@@ -35,7 +40,8 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
   }, []);
 
   const handleOutboundConfirm = useCallback(async () => {
-    if (!outboundCustomerName.trim()) { message.warning('请填写客户名称，出库必须选择客户'); return; }
+    if (outboundType === 'sales' && !outboundCustomerName.trim()) { message.warning('销售出库请填写客户名称'); return; }
+    if (outboundType === 'scrap' && !outboundReason.trim()) { message.warning('请填写报废原因'); return; }
     const selectedItems = skuDetails.filter(item => (item.outboundQty || 0) > 0);
     if (selectedItems.length === 0) { message.warning('请至少输入一个SKU的出库数量'); return; }
     const invalidItems = selectedItems.filter(item => (item.outboundQty || 0) > item.availableQty);
@@ -44,6 +50,8 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
       const outboundItems = skuDetails.filter(item => (item.outboundQty ?? 0) > 0).map(item => ({ sku: item.sku, quantity: item.outboundQty }));
       if (outboundItems.length === 0) { message.warning('请至少填写一个SKU的出库数量'); return; }
       await api.post('/warehouse/finished-inventory/outbound', {
+        outboundType,
+        ...(outboundReason.trim() ? { outboundReason: outboundReason.trim() } : {}),
         items: outboundItems,
         ...(outboundModal.data?.orderId ? { orderId: outboundModal.data.orderId } : {}),
         ...(outboundModal.data?.orderNo ? { orderNo: outboundModal.data.orderNo } : {}),
@@ -54,7 +62,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
         ...(outboundProductionOrderNo ? { productionOrderNo: outboundProductionOrderNo } : {}),
         ...(outboundTrackingNo ? { trackingNo: outboundTrackingNo } : {}),
         ...(outboundExpressCompany ? { expressCompany: outboundExpressCompany } : {}),
-        customerName: outboundCustomerName.trim(),
+        ...(outboundType === 'sales' ? { customerName: outboundCustomerName.trim() } : {}),
         ...(outboundCustomerPhone ? { customerPhone: outboundCustomerPhone } : {}),
         ...(outboundShippingAddress ? { shippingAddress: outboundShippingAddress } : {}),
       });
@@ -65,7 +73,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
       setSkuDetails([]);
       loadData();
     } catch (error: unknown) { message.error(error instanceof Error ? error.message : '出库失败，请重试'); }
-  }, [skuDetails, outboundModal, outboundProductionOrderNo, outboundTrackingNo, outboundExpressCompany, outboundCustomerName, outboundCustomerPhone, outboundShippingAddress, message, loadData]);
+  }, [skuDetails, outboundModal, outboundType, outboundReason, outboundProductionOrderNo, outboundTrackingNo, outboundExpressCompany, outboundCustomerName, outboundCustomerPhone, outboundShippingAddress, message, loadData]);
 
   const handleViewInboundHistory = useCallback(async (record: FinishedInventory) => {
     try {
@@ -99,6 +107,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
 
   return {
     outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal,
+    outboundType, setOutboundType, outboundReason, setOutboundReason,
     outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo,
     outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName,
     outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress,

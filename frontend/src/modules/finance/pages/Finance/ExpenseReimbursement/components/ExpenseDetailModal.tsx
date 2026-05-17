@@ -175,7 +175,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
               )}
               {record.applicantId === Number(user?.id) && !isSupervisorOrAbove(user) && (
                 <div style={{ margin: '16px 0 8px' }}>
-                  <Alert type="info" showIcon message="等待审批" description={<><>您提交的报销单需由其他人审批。</><br /><span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>审批人请切换至「全部报销」标签页查看并操作。</span></>} />
+                  <Alert type="info" showIcon title="等待审批" description={<><>您提交的报销单需由其他人审批。</><br /><span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>审批人请切换至「全部报销」标签页查看并操作。</span></>} />
                 </div>
               )}
             </>

@@ -134,7 +134,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
 
   useEffect(() => {
     void fetchData(keyword || undefined);
-  }, [fetchData]); // 仅首次挂载执行；带入父层持久关键字
+  }, [fetchData, keyword]); // 仅首次挂载执行；带入父层持久关键字
 
   /** 触发搜索：关键字同步到父层，页码归 1 */
   const handleSearch = useCallback(() => {
@@ -167,7 +167,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       width: 80,
       render: (v) =>
         v ? (
-          <Tag color={STAGE_COLOR[v] || 'default'} style={{ fontSize: 11 }}>
+          <Tag color={STAGE_COLOR[v] || 'default'} style={{ fontSize: 13 }}>
             {v}
           </Tag>
         ) : (

@@ -60,6 +60,8 @@ const OutstockRecordTab: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [approving, setApproving] = useState(false);
   const pagination = useTablePagination(20);
+  const paginationCurrent = pagination.pagination.current;
+  const paginationPageSize = pagination.pagination.pageSize;
   const [total, setTotal] = useState(0);
 
   // 分享
@@ -69,8 +71,8 @@ const OutstockRecordTab: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.post('/warehouse/finished-inventory/outstock-records', {
-        page: pagination.pagination.current,
-        pageSize: pagination.pagination.pageSize,
+        page: paginationCurrent,
+        pageSize: paginationPageSize,
         keyword: searchText || undefined,
         outstockType: outstockTypeFilter || undefined,
         approvalStatus: approvalStatusFilter || undefined,
@@ -83,7 +85,7 @@ const OutstockRecordTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, outstockTypeFilter, approvalStatusFilter, message]);
+  }, [paginationCurrent, paginationPageSize, searchText, outstockTypeFilter, approvalStatusFilter, message]);
 
   useEffect(() => {
     loadRecords();

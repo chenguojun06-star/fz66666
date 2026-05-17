@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.integration.im.service.DingtalkNotifyService;
+import com.fashion.supplychain.integration.im.service.FeishuNotifyService;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -50,6 +52,12 @@ public class SysNoticeOrchestrator {
 
     @Autowired
     private WechatWorkNotifyService wechatWorkNotifyService;
+
+    @Autowired(required = false)
+    private FeishuNotifyService feishuNotifyService;
+
+    @Autowired(required = false)
+    private DingtalkNotifyService dingtalkNotifyService;
 
     // ──────────────────────────────────────────────────────────────────────
     // 发送通知
@@ -152,6 +160,26 @@ public class SysNoticeOrchestrator {
                 order.getStyleNo(),
                 noticeType,
                 notice.getContent());
+
+        if (feishuNotifyService != null) {
+            try {
+                feishuNotifyService.sendOrderAlertForTenant(
+                        tenantId, order.getOrderNo(), order.getStyleNo(),
+                        noticeType, notice.getContent());
+            } catch (Exception e) {
+                log.warn("[SysNotice] 飞书推送失败: {}", e.getMessage());
+            }
+        }
+
+        if (dingtalkNotifyService != null) {
+            try {
+                dingtalkNotifyService.sendOrderAlertForTenant(
+                        tenantId, order.getOrderNo(), order.getStyleNo(),
+                        noticeType, notice.getContent());
+            } catch (Exception e) {
+                log.warn("[SysNotice] 钉钉推送失败: {}", e.getMessage());
+            }
+        }
     }
 
     /**
@@ -347,6 +375,25 @@ public class SysNoticeOrchestrator {
         // 同步推送到企业微信群（优先使用租户自己的 Webhook，无则回退全局配置）
         String wechatContent = String.format("**%s — %s**\n>%s", title, orderNo != null ? orderNo : "", content);
         wechatWorkNotifyService.sendMarkdownForTenant(tenantId, wechatContent);
+
+        if (feishuNotifyService != null) {
+            try {
+                feishuNotifyService.sendTextForTenant(tenantId,
+                        String.format("⚠️ %s — %s\n%s", title, orderNo != null ? orderNo : "", content));
+            } catch (Exception e) {
+                log.warn("[SysNotice] 飞书异常推送失败: {}", e.getMessage());
+            }
+        }
+
+        if (dingtalkNotifyService != null) {
+            try {
+                dingtalkNotifyService.sendMarkdownForTenant(tenantId,
+                        "异常检测 — " + (orderNo != null ? orderNo : ""),
+                        String.format("### %s — %s\n\n> %s", title, orderNo != null ? orderNo : "", content));
+            } catch (Exception e) {
+                log.warn("[SysNotice] 钉钉异常推送失败: {}", e.getMessage());
+            }
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────

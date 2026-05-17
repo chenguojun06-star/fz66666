@@ -38,10 +38,10 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
 
   const prevParamsRef = useRef<string>('');
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
-  };
+  }, [showSmartErrorNotice]);
 
   const fetchStyles = useCallback(async (params: StyleQueryParams) => {
     setLoading(true);
@@ -66,7 +66,7 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
     } finally {
       setLoading(false);
     }
-  }, [showSmartErrorNotice, message]);
+  }, [showSmartErrorNotice, message, reportSmartError]);
 
   const fetchFactories = async () => {
     try {

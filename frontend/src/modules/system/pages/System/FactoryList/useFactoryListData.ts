@@ -38,7 +38,7 @@ export function useFactoryListData() {
     const codeChanged = debouncedFactoryCode !== (queryParams.factoryCode || '');
     const nameChanged = debouncedFactoryName !== (queryParams.factoryName || '');
     if (codeChanged || nameChanged) setQueryParams((prev) => ({ ...prev, factoryCode: debouncedFactoryCode, factoryName: debouncedFactoryName, page: 1 }));
-  }, [debouncedFactoryCode, debouncedFactoryName]);
+  }, [debouncedFactoryCode, debouncedFactoryName, queryParams.factoryCode, queryParams.factoryName]);
 
   const [factoryList, setFactoryList] = useState<FactoryType[]>([]);
   const [total, setTotal] = useState(0);
@@ -59,7 +59,7 @@ export function useFactoryListData() {
   const [scorecardLoaded, setScorecardLoaded] = useState(false);
   const [scorecardLoading, setScorecardLoading] = useState(false);
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => { if (!showSmartErrorNotice) return; setSmartError({ title, reason, code }); };
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => { if (!showSmartErrorNotice) return; setSmartError({ title, reason, code }); }, [showSmartErrorNotice]);
 
   const loadScorecardOnce = useCallback(async () => {
     if (scorecardLoaded || scorecardLoading) return;
@@ -75,7 +75,7 @@ export function useFactoryListData() {
       else { reportSmartError('供应商列表加载失败', response.message || '服务返回异常', 'SYSTEM_FACTORY_LIST_FAILED'); message.error(response.message || '获取供应商列表失败'); }
     } catch (error: unknown) { reportSmartError('供应商列表加载失败', error instanceof Error ? error.message : '网络异常', 'SYSTEM_FACTORY_LIST_EXCEPTION'); message.error(error instanceof Error ? error.message : '获取供应商列表失败'); }
     finally { setLoading(false); }
-  }, [queryParams, showSmartErrorNotice, message]);
+  }, [queryParams, showSmartErrorNotice, message, reportSmartError]);
 
   const fetchDepartments = useCallback(async () => {
     try { const [deptResult, userResult] = await Promise.all([organizationApi.departments(), organizationApi.assignableUsers()]); setDepartmentOptions(Array.isArray(deptResult) ? deptResult : []); setUserOptions(Array.isArray(userResult) ? userResult : []); } catch (error) { console.warn('[FactoryList] fetchData failed', error); }

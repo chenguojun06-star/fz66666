@@ -72,6 +72,12 @@ public class MaterialOutboundLog {
     /** 仓位 */
     private String warehouseLocation;
 
+    /** 仓库区域ID */
+    private String warehouseAreaId;
+
+    /** 仓库名称 */
+    private String warehouseAreaName;
+
     /** 备注/出库原因 */
     private String remark;
 

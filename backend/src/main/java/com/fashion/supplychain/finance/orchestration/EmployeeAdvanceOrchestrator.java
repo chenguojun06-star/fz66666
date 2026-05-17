@@ -17,6 +17,7 @@ import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -94,20 +95,15 @@ public class EmployeeAdvanceOrchestrator {
         if (advance == null || advance.getDeleteFlag() == 1) {
             throw new NoSuchElementException("借支记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(advance.getTenantId(), "员工借支");
-        if (!"pending".equalsIgnoreCase(advance.getStatus())) {
-            throw new IllegalStateException("只有待审批状态可审批");
-        }
-        LocalDateTime now = LocalDateTime.now();
+        TenantAssert.assertBelongsToCurrentTenant(advance.getTenantId(), "借支记录");
         UserContext ctx = UserContext.get();
-        advance.setStatus("approved");
-        advance.setApproverId(ctx != null ? ctx.getUserId() : null);
-        advance.setApproverName(ctx != null ? ctx.getUsername() : null);
-        advance.setApprovalTime(now);
-        advance.setApprovalRemark(remark);
-        advance.setUpdateTime(now);
-        employeeAdvanceService.updateById(advance);
-        log.info("[EmployeeAdvance] 借支已审批通过: advanceNo={}, approver={}", advance.getAdvanceNo(), advance.getApproverName());
+        String approverId = ctx != null ? ctx.getUserId() : null;
+        String approverName = ctx != null ? ctx.getUsername() : null;
+        int rows = employeeAdvanceService.atomicApprove(advanceId, approverId, approverName, remark);
+        if (rows == 0) {
+            throw new OptimisticLockingFailureException("借支审批冲突，记录可能已被处理，请刷新后重试");
+        }
+        log.info("[EmployeeAdvance] 借支已审批通过: advanceNo={}, approver={}", advance.getAdvanceNo(), approverName);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -120,20 +116,15 @@ public class EmployeeAdvanceOrchestrator {
         if (advance == null || advance.getDeleteFlag() == 1) {
             throw new NoSuchElementException("借支记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(advance.getTenantId(), "员工借支");
-        if (!"pending".equalsIgnoreCase(advance.getStatus())) {
-            throw new IllegalStateException("只有待审批状态可驳回");
-        }
-        advance.setStatus("rejected");
-        advance.setApprovalRemark(remark);
-        advance.setUpdateTime(LocalDateTime.now());
+        TenantAssert.assertBelongsToCurrentTenant(advance.getTenantId(), "借支记录");
         UserContext ctx = UserContext.get();
-        if (ctx != null) {
-            advance.setApproverId(ctx.getUserId());
-            advance.setApproverName(ctx.getUsername());
-            advance.setApprovalTime(LocalDateTime.now());
+        String approverId = ctx != null ? ctx.getUserId() : null;
+        String approverName = ctx != null ? ctx.getUsername() : null;
+        int rows = employeeAdvanceService.atomicReject(advanceId, approverId, approverName, remark);
+        if (rows == 0) {
+            throw new OptimisticLockingFailureException("借支驳回冲突，记录可能已被处理，请刷新后重试");
         }
-        employeeAdvanceService.updateById(advance);
+        log.info("[EmployeeAdvance] 借支已驳回: advanceNo={}, approver={}", advance.getAdvanceNo(), approverName);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -154,13 +145,12 @@ public class EmployeeAdvanceOrchestrator {
         if (repayAmount.compareTo(remaining) > 0) {
             throw new IllegalArgumentException("还款金额不能超过剩余未还金额: " + remaining);
         }
+        int rows = employeeAdvanceService.atomicRepay(advance.getId(), repayAmount, advance.getRepaymentAmount());
+        if (rows == 0) {
+            throw new OptimisticLockingFailureException("还款操作冲突，请重试");
+        }
         BigDecimal newRepaid = advance.getRepaymentAmount().add(repayAmount);
         BigDecimal newRemaining = advance.getAmount().subtract(newRepaid);
-        advance.setRepaymentAmount(newRepaid);
-        advance.setRemainingAmount(newRemaining);
-        advance.setRepaymentStatus(newRemaining.compareTo(BigDecimal.ZERO) == 0 ? "repaid" : "partial");
-        advance.setUpdateTime(LocalDateTime.now());
-        employeeAdvanceService.updateById(advance);
         log.info("[EmployeeAdvance] 借支还款: advanceNo={}, repayAmount={}, remaining={}",
                 advance.getAdvanceNo(), repayAmount, newRemaining);
     }

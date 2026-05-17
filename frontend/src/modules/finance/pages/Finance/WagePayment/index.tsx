@@ -17,7 +17,6 @@ import {
   Space,
   Tabs,
   Tag,
-  Upload,
   message,
 } from 'antd';
 import {
@@ -35,6 +34,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
 import {
@@ -562,12 +562,12 @@ const PaymentCenterPage: React.FC = () => {
                   ) : (
                     <span style={{ color: '#faad14' }}>
                       收款方暂无{pay.selectedMethod === 'BANK' ? '银行卡' : pay.selectedMethod === 'WECHAT' ? '微信' : '支付宝'}账户，
-                      <a onClick={() => {
+                      <Button type="link" style={{ padding: 0, height: 'auto', fontSize: 'inherit' }} onClick={() => {
                         const pt = pay.payForm.getFieldValue('payeeType');
                         const pi = pay.payForm.getFieldValue('payeeId');
                         const pn = pay.payForm.getFieldValue('payeeName');
                         if (pt && pi) acct.openAccountModal(pt, pi, pn || '');
-                      }}>点击添加</a>
+                      }}>点击添加</Button>
                     </span>
                   )}
                 </div>
@@ -693,18 +693,19 @@ const PaymentCenterPage: React.FC = () => {
               <Form.Item label="上传支付凭证" name="proofUrl">
                 <Input placeholder="自动填充" disabled />
               </Form.Item>
-              <Upload
-                accept="image/*"
-                listType="picture-card"
-                maxCount={1}
-                fileList={proof.proofFileList}
-                onRemove={() => { proof.proofForm.setFieldsValue({ proofUrl: undefined }); proof.setProofFileList([]); return true; }}
-                beforeUpload={(file) => { void proof.uploadProofImage(file as File); return Upload.LIST_IGNORE; }}
-              >
-                {proof.proofFileList.length === 0 && (
-                  <div><UploadOutlined /><div style={{ marginTop: 8 }}>上传凭证</div></div>
-                )}
-              </Upload>
+              <ImageUploadBox
+                value={proof.proofFileList.length > 0 ? (proof.proofFileList[0] as any)?.url || null : null}
+                onChange={(url) => {
+                  if (!url) {
+                    proof.proofForm.setFieldsValue({ proofUrl: undefined });
+                    proof.setProofFileList([]);
+                  }
+                }}
+                enableDrop
+                size={104}
+                label="支付凭证"
+                uploadFn={async (file) => { return await proof.uploadProofImage(file); }}
+              />
               <Form.Item label="备注" name="remark">
                 <Input.TextArea rows={2} placeholder="选填" />
               </Form.Item>

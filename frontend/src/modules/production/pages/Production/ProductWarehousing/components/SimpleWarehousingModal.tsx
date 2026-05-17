@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Row, Col, Select } from 'antd';
 import SmallModal from '@/components/common/SmallModal';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
@@ -36,7 +36,15 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
   width: _width,
 }) => {
   const [form] = Form.useForm();
-  const { selectOptions: finishedWarehouseOptions } = useWarehouseAreaOptions('FINISHED');
+  const { selectOptions: finishedWarehouseOptions, areas } = useWarehouseAreaOptions('FINISHED');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+
+  useEffect(() => {
+    if (areas.length > 0 && !selectedAreaId) {
+      setSelectedAreaId(areas[0].id);
+    }
+  }, [areas, selectedAreaId]);
+
   return (
     <SmallModal
       title="入库"
@@ -83,23 +91,18 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
             <Form.Item label="仓库" required>
               <Select
                 placeholder="请选择仓库"
-                value={finishedWarehouseOptions[0]?.label || '成品仓'}
-                onChange={() => {}}
+                value={selectedAreaId || undefined}
+                onChange={(value) => setSelectedAreaId(value)}
                 style={{ width: '100%' }}
-              >
-                {finishedWarehouseOptions.length > 0
-                  ? finishedWarehouseOptions.map(opt => (
-                    <Select.Option key={opt.value} value={opt.label as string}>{opt.label}</Select.Option>
-                  ))
-                  : <Select.Option value="成品仓">成品仓</Select.Option>
-                }
-              </Select>
+                options={finishedWarehouseOptions}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item label="库位" required>
               <WarehouseLocationAutoComplete
                 warehouseType="FINISHED"
+                areaId={selectedAreaId}
                 placeholder="请选择或输入库位"
                 value={warehouse || undefined}
                 onChange={(v) => setWarehouse(String(v || '').trim())}

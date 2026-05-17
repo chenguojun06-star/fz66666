@@ -11,7 +11,7 @@ interface BatchUnqualifiedModalProps {
   unqualifiedFileList: any[];
   onCancel: () => void;
   onOk: (defectCategory: string, defectRemark: string, imageUrls: string[]) => Promise<void>;
-  onUploadImage: (file: File) => Promise<string | undefined>;
+  onUploadImage: (file: File) => Promise<any> | void;
   onRemoveImage: (file: any) => void;
   onFileListChange: (fileList: any[]) => void;
 }

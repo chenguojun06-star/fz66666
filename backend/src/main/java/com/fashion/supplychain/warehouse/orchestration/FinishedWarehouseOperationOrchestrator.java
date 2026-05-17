@@ -607,12 +607,13 @@ public class FinishedWarehouseOperationOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ProductOutstock scanOutbound(String scanCode, int quantity, String outstockType, String remark) {
+    public ProductOutstock scanOutbound(String scanCode, int quantity, String outstockType, String warehouseAreaId, String remark) {
         String skuCode = resolveSkuCodeFromScan(scanCode);
         Map<String, Object> params = new HashMap<>();
         params.put("skuCode", skuCode);
         params.put("quantity", quantity);
         params.put("outstockType", outstockType != null ? outstockType : "scan_outbound");
+        params.put("warehouseAreaId", warehouseAreaId);
         params.put("remark", remark);
         return freeOutbound(params);
     }

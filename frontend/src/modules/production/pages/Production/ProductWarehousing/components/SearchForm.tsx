@@ -28,7 +28,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
   };
 
   const handleStatusChange = (value: string) => {
-    setQueryParams({ ...queryParams, warehouse: value, page: 1 });
+    setQueryParams({ ...queryParams, warehouseAreaId: value || undefined, page: 1 });
     onSearch();
   };
 

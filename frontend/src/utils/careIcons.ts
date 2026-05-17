@@ -61,6 +61,7 @@ export const CARE_CATEGORIES: CareCategoryDef[] = [
   { key: 'iron', label: '熨烫', codes: ['iron_LOW', 'iron_MED', 'iron_HIGH', 'iron_NO'] },
   { key: 'dryclean', label: '干洗', codes: ['dryclean_A', 'dryclean_F', 'dryclean_P', 'dryclean_W', 'dryclean_NO'] },
   { key: 'naturaldry', label: '自然晾干', codes: ['naturaldry_LINE', 'naturaldry_DRIP', 'naturaldry_FLAT', 'naturaldry_DRIP_FLAT', 'naturaldry_SHADE_LINE', 'naturaldry_SHADE_FLAT'] },
+  { key: 'special', label: '特殊处理', codes: ['special_WET', 'special_NO_STEAM', 'special_PROF'] },
 ];
 
 export const CARE_ICONS: Record<string, CareIconDef> = {
@@ -99,6 +100,10 @@ export const CARE_ICONS: Record<string, CareIconDef> = {
   naturaldry_DRIP_FLAT: { code: 'naturaldry_DRIP_FLAT', label: '平铺滴干',    svg: sqSvg('<line x1="4" y1="13" x2="16" y2="13" stroke="#000" stroke-width="1.5"/><line x1="4" y1="16" x2="16" y2="16" stroke="#000" stroke-width="1.5"/><line x1="10" y1="16" x2="10" y2="18" stroke="#000" stroke-width="1" stroke-dasharray="1.5,1"/>'), category: 'naturaldry', categoryLabel: '自然晾干' },
   naturaldry_SHADE_LINE: { code: 'naturaldry_SHADE_LINE', label: '阴凉处悬挂晾干', svg: sqSvg('<line x1="3" y1="4" x2="7" y2="8" stroke="#000" stroke-width="1.2"/><line x1="13" y1="4" x2="17" y2="8" stroke="#000" stroke-width="1.2"/><line x1="5" y1="8" x2="5" y2="15" stroke="#000" stroke-width="1.2"/><line x1="5" y1="15" x2="15" y2="15" stroke="#000" stroke-width="1.2"/>'), category: 'naturaldry', categoryLabel: '自然晾干' },
   naturaldry_SHADE_FLAT: { code: 'naturaldry_SHADE_FLAT', label: '阴凉处平铺晾干', svg: sqSvg('<line x1="3" y1="4" x2="7" y2="8" stroke="#000" stroke-width="1.2"/><line x1="13" y1="4" x2="17" y2="8" stroke="#000" stroke-width="1.2"/><line x1="4" y1="13" x2="16" y2="13" stroke="#000" stroke-width="1.5"/><line x1="4" y1="16" x2="16" y2="16" stroke="#000" stroke-width="1.5"/>'), category: 'naturaldry', categoryLabel: '自然晾干' },
+
+  special_WET:      { code: 'special_WET',      label: '专业湿洗',       svg: circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,serif" font-style="italic">W</text><line x1="3" y1="3" x2="17" y2="17" stroke="#000" stroke-width="1"/>'), category: 'special', categoryLabel: '特殊处理' },
+  special_NO_STEAM: { code: 'special_NO_STEAM', label: '不可蒸汽熨烫',    svg: ironSvg(2, true), category: 'special', categoryLabel: '特殊处理' },
+  special_PROF:     { code: 'special_PROF',     label: '专业养护',        svg: circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,serif" font-style="italic">P</text><line x1="3" y1="3" x2="17" y2="17" stroke="#000" stroke-width="1"/>'), category: 'special', categoryLabel: '特殊处理' },
 };
 
 export const DEFAULT_CARE_ICON_CODES: string[] = [

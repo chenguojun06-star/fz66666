@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.CuttingFactoryContextHelper;
 import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -36,6 +37,7 @@ public class CuttingOrderFactory {
     private final ProductionOrderScanRecordDomainService scanRecordDomainService;
     private final CuttingFactoryContextHelper factoryContextHelper;
     private final CuttingWorkflowBuilderHelper workflowBuilderHelper;
+    private final OrderRemarkHelper orderRemarkHelper;
     private final ObjectMapper objectMapper;
 
     @Transactional(rollbackFor = Exception.class)
@@ -47,6 +49,8 @@ public class CuttingOrderFactory {
         String factoryName = getTrimmedText(body, "factoryName");
         String orgUnitId = getTrimmedText(body, "orgUnitId");
         String styleImageUrl = getTrimmedText(body, "styleImageUrl");
+        String customerName = getTrimmedText(body, "customerName");
+        String remarks = getTrimmedText(body, "remarks");
         LocalDateTime requestedOrderDate = parseDate(body, "orderDate", false);
         LocalDateTime requestedDeliveryDate = parseDate(body, "deliveryDate", true);
         List<Map<String, Object>> requestedOrderLines = resolveRequestedOrderLines(body);
@@ -92,7 +96,7 @@ public class CuttingOrderFactory {
 
         ProductionOrder order = buildProductionOrder(baseOrderNo, styleNo, resolvedStyleId, resolvedStyleName,
                 requestedOrderLines, totalOrderQuantity, requestedOrderDate, requestedDeliveryDate,
-                progressWorkflowJson, factoryCtx);
+                progressWorkflowJson, factoryCtx, customerName, remarks);
 
         boolean orderOk = productionOrderService.save(order);
         if (!orderOk) {
@@ -100,6 +104,14 @@ public class CuttingOrderFactory {
         }
 
         initializePostCreateRecords(order);
+
+        if (StringUtils.hasText(remarks)) {
+            try {
+                orderRemarkHelper.append(order, "下单备注", remarks);
+            } catch (Exception e) {
+                log.warn("无资料下单备注写入时间线失败: orderNo={}", baseOrderNo, e);
+            }
+        }
 
         CuttingTask firstTask = cuttingTaskService.createTaskIfAbsent(order);
         if (firstTask == null) {
@@ -163,7 +175,8 @@ public class CuttingOrderFactory {
     private ProductionOrder buildProductionOrder(String baseOrderNo, String styleNo, String resolvedStyleId,
             String resolvedStyleName, List<Map<String, Object>> requestedOrderLines, int totalOrderQuantity,
             LocalDateTime requestedOrderDate, LocalDateTime requestedDeliveryDate,
-            String progressWorkflowJson, CuttingFactoryContextHelper.FactoryContext factoryCtx) {
+            String progressWorkflowJson, CuttingFactoryContextHelper.FactoryContext factoryCtx,
+            String customerName, String remarks) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
         UserContext ctx = UserContext.get();
@@ -201,6 +214,12 @@ public class CuttingOrderFactory {
         if (ctx != null) {
             order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
             order.setCreatedByName(ctx.getUsername());
+        }
+        if (StringUtils.hasText(customerName)) {
+            order.setCustomerName(customerName);
+        }
+        if (StringUtils.hasText(remarks)) {
+            order.setRemarks(remarks);
         }
         return order;
     }

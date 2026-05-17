@@ -30,7 +30,7 @@ export function useBottleneckBanner(orders: ProductionOrder[]) {
 
   useEffect(() => {
     if (orders.length > 0) void fetchBottleneck();
-  }, [orders.length]);
+  }, [orders.length, fetchBottleneck]);
 
   return { bottleneckItems, bottleneckBannerVisible, setBottleneckBannerVisible, bottleneckLoading };
 }

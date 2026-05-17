@@ -222,13 +222,13 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Button
             type="link"
-            icon={<ReloadOutlined style={{ fontSize: 11 }} />}
+            icon={<ReloadOutlined style={{ fontSize: 13 }} />}
             onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
-            style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 11 }}
+            style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 13 }}
           >
             刷新
           </Button>
-          {collapsed ? <RightOutlined style={{ fontSize: 11, color: '#8c8c8c' }} /> : <DownOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />}
+          {collapsed ? <RightOutlined style={{ fontSize: 13, color: '#8c8c8c' }} /> : <DownOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
         </div>
       </div>
 
@@ -254,16 +254,16 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           <div key={item.label} style={{ background: '#fff', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
               <span style={{ fontSize: 17, fontWeight: 700, color: item.color }}>{item.value}</span>
-              <span style={{ fontSize: 11, color: '#8c8c8c' }}>{item.suffix}</span>
+              <span style={{ fontSize: 13, color: '#8c8c8c' }}>{item.suffix}</span>
             </div>
-            <div style={{ color: '#8c8c8c', fontSize: 11 }}>{item.label}</div>
+            <div style={{ color: '#8c8c8c', fontSize: 13 }}>{item.label}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
         {quickTags.map((text) => (
-          <Tag key={text} style={{ fontSize: 11, color: '#667085', background: '#f8fafc', border: '1px solid #e5e7eb', marginInlineEnd: 0 }}>
+          <Tag key={text} style={{ fontSize: 13, color: '#667085', background: '#f8fafc', border: '1px solid #e5e7eb', marginInlineEnd: 0 }}>
             {text}
           </Tag>
         ))}
@@ -294,7 +294,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
               <Button
                 type="link"
                 onClick={() => setAiAdviceVisible(false)}
-                style={{ padding: 0, height: 'auto', fontSize: 11 }}
+                style={{ padding: 0, height: 'auto', fontSize: 13 }}
               >
                 关闭
               </Button>

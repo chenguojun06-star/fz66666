@@ -62,17 +62,17 @@ export function useMaterialDatabaseActions(deps: {
     if (localCode) form.setFieldsValue({ materialCode: localCode });
   }, [form, generateLocalMaterialCode]);
 
-  const uploadImage = useCallback(async (file: File) => {
+  const uploadImage = useCallback(async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
-    try {
-      const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (res.code === 200 && res.data) {
-        form.setFieldsValue({ image: res.data });
-        setImageFiles([{ uid: '-1', name: file.name, status: 'done', url: getFullAuthedFileUrl(res.data) }]);
-      } else { message.error(res.message || '上传失败'); }
-    } catch (e) { message.error((e as Error)?.message || '上传失败'); }
-  }, [form, message]);
+    const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    if (res.code === 200 && res.data) {
+      form.setFieldsValue({ image: res.data });
+      setImageFiles([{ uid: '-1', name: file.name, status: 'done', url: getFullAuthedFileUrl(res.data) }]);
+      return res.data;
+    }
+    throw new Error(res.message || '上传失败');
+  }, [form]);
 
   const openDialog = useCallback((dialogMode: 'create' | 'edit' | 'copy', record?: MaterialDatabase) => {
     if ((dialogMode === 'edit' || dialogMode === 'copy') && record) {

@@ -13,7 +13,7 @@ const CATEGORY_LIST = [
 export default function FeedbackPage() {
   const [activeTab, setActiveTab] = useState('submit');
   const [categoryIndex, setCategoryIndex] = useState(0);
-  const [form, setForm] = useState({ title: '', content: '', contactInfo: '', category: 'BUG' });
+  const [form, setForm] = useState({ title: '', content: '', contact: '', category: 'BUG' });
   const [submitting, setSubmitting] = useState(false);
   const [myFeedbacks, setMyFeedbacks] = useState([]);
   const [images, setImages] = useState([]);
@@ -64,16 +64,16 @@ export default function FeedbackPage() {
   };
 
   const onSubmitFeedback = async () => {
-    const { title, content, category, contactInfo } = form;
+    const { title, content, category, contact } = form;
     if (!title.trim()) { toast.error('请填写标题'); return; }
     if (!content.trim()) { toast.error('请填写描述'); return; }
     setSubmitting(true);
     try {
-      const payload = { title: title.trim(), content: content.trim(), category, contactInfo: contactInfo.trim(), source: 'H5' };
+      const payload = { title: title.trim(), content: content.trim(), category, contact: contact.trim(), source: 'H5' };
       if (images.length > 0) payload.imageUrls = JSON.stringify(images);
       await api.system.submitFeedback(payload);
       toast.success('提交成功');
-      setForm({ title: '', content: '', contactInfo: '', category: 'BUG' });
+      setForm({ title: '', content: '', contact: '', category: 'BUG' });
       setCategoryIndex(0);
       setImages([]);
       loadMyFeedbacks();
@@ -145,7 +145,7 @@ export default function FeedbackPage() {
           </div>
           <div className="field-block">
             <label>联系方式（选填）</label>
-            <input className="text-input" value={form.contactInfo} onChange={e => setForm({ ...form, contactInfo: e.target.value })} placeholder="手机号或微信号" />
+            <input className="text-input" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} placeholder="手机号或微信号" />
           </div>
           <button className="primary-button" onClick={onSubmitFeedback} disabled={submitting || uploading} style={{ marginTop: 8 }}>
             {uploading ? '上传中...' : submitting ? '提交中...' : '提交反馈'}

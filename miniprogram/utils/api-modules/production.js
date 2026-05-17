@@ -202,10 +202,12 @@ const production = {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/complete`, 'POST', {});
   },
-  warehouseIn(patternId, warehouseCode, remark) {
+  warehouseIn(patternId, warehouseCode, warehouseAreaId, warehouseLocationCode, remark) {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=warehouse-in`, 'POST', {
       warehouseCode: warehouseCode || '',
+      warehouseAreaId: warehouseAreaId || '',
+      warehouseLocationCode: warehouseLocationCode || '',
       remark: remark || '',
     });
   },

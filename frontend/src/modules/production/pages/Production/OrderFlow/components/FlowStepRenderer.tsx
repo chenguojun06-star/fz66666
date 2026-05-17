@@ -179,7 +179,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                             try {
                               const map: Record<string, string> = JSON.parse(record.sizeUsageMap);
                               const entries = Object.entries(map);
-                              if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ margin: 0, fontSize: 11, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
+                              if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ margin: 0, fontSize: 13, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
                             } catch { /* ignore */ }
                           }
                           return <span style={{ color: '#999' }}>{record.size || '-'}</span>;

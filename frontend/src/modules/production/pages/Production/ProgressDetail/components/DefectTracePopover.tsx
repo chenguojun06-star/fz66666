@@ -105,10 +105,10 @@ const DefectTracePopover: React.FC<{
               <span style={{ color: riskColor[w.riskLevel], fontWeight: 500, flexShrink: 0 }}>
                 {w.defectCount}次
               </span>
-              <span style={{ color: '#8c8c8c', fontSize: 11 }}>
+              <span style={{ color: '#8c8c8c', fontSize: 13 }}>
                 ({w.defectRate}%)
               </span>
-              <Tag color={riskColor[w.riskLevel]} style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
+              <Tag color={riskColor[w.riskLevel]} style={{ fontSize: 12, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                 {riskLabel[w.riskLevel]}
               </Tag>
             </div>

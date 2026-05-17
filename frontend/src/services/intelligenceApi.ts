@@ -196,15 +196,20 @@ export interface FeedbackData {
   impactDescription?: string;
 }
 
+// TODO: 后端端点尚未实现
 export async function submitFeedback(
   commandId: string,
   feedback: FeedbackData
 ): Promise<any> {
-  const response = await api.post<ApiResult<any>>(
-    `/intelligence/commands/${commandId}/feedback`,
-    feedback
-  );
-  return response.data;
+  try {
+    const response = await api.post<ApiResult<any>>(
+      `/intelligence/commands/${commandId}/feedback`,
+      feedback
+    );
+    return response.data;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -216,11 +221,16 @@ export async function submitFeedback(
  * @example
  * const workflow = await intelligenceApi.queryWorkflowHistory('CMD-001');
  */
+// TODO: 后端端点尚未实现
 export async function queryWorkflowHistory(commandId: string): Promise<any> {
-  const response = await api.get<ApiResult<any>>(
-    `/intelligence/commands/${commandId}/workflow`
-  );
-  return response.data;
+  try {
+    const response = await api.get<ApiResult<any>>(
+      `/intelligence/commands/${commandId}/workflow`
+    );
+    return response.data;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -241,11 +251,22 @@ export interface ExecutionConfig {
   auditEnabled: boolean;
 }
 
+// TODO: 后端端点尚未实现
 export async function getExecutionConfig(): Promise<ExecutionConfig> {
-  const response = await api.get<ApiResult<ExecutionConfig>>(
-    '/intelligence/config'
-  );
-  return response.data;
+  try {
+    const response = await api.get<ApiResult<ExecutionConfig>>(
+      '/intelligence/config'
+    );
+    return response.data;
+  } catch {
+    return {
+      autoExecutionEnabled: false,
+      autoExecutionThreshold: 3,
+      approvalTimeoutMinutes: 60,
+      notificationEnabled: true,
+      auditEnabled: true,
+    };
+  }
 }
 
 /**
@@ -260,14 +281,19 @@ export async function getExecutionConfig(): Promise<ExecutionConfig> {
  *   approvalTimeoutMinutes: 3600
  * });
  */
+// TODO: 后端端点尚未实现
 export async function updateExecutionConfig(
   config: Partial<ExecutionConfig>
 ): Promise<any> {
-  const response = await api.put<ApiResult<any>>(
-    '/intelligence/config',
-    config
-  );
-  return response.data;
+  try {
+    const response = await api.put<ApiResult<any>>(
+      '/intelligence/config',
+      config
+    );
+    return response.data;
+  } catch {
+    return null;
+  }
 }
 
 /** 自愈一键修复 */

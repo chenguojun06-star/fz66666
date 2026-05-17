@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select } from 'antd';
+import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select, Button } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, WarningOutlined, CheckCircleOutlined, DashboardOutlined } from '@ant-design/icons';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import * as echarts from 'echarts/core';
@@ -51,7 +51,7 @@ const DashboardContent: React.FC = () => {
       {healthData && !healthCollapsed && (
         <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', border: '1px solid #bae7ff' }}
           title={<span><DashboardOutlined /> 系统健康指数 <b style={{ fontSize: 20, color: healthData.score >= 80 ? '#52c41a' : healthData.score >= 60 ? '#faad14' : '#ff4d4f' }}>{healthData.score}</b> 分</span>}
-          extra={<a onClick={() => setHealthCollapsed(true)}>收起</a>}>
+          extra={<Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => setHealthCollapsed(true)}>收起</Button>}>
           <Row gutter={16}>
             <Col span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 24, fontWeight: 700, color: healthData.score >= 80 ? '#52c41a' : healthData.score >= 60 ? '#faad14' : '#ff4d4f' }}>{healthData.score >= 80 ? 'A' : healthData.score >= 60 ? 'B' : 'C'}</div><div style={{ fontSize: 12, color: '#999' }}>等级</div></div></Col>
             {healthData.subScores?.map((sub: any, i: number) => <Col key={i} span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 16, fontWeight: 600, color: sub.score >= 80 ? '#52c41a' : sub.score >= 60 ? '#faad14' : '#ff4d4f' }}>{sub.score}</div><div style={{ fontSize: 12, color: '#999' }}>{sub.name}</div></div></Col>)}

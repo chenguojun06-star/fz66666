@@ -2,6 +2,7 @@ package com.fashion.supplychain.integration.openapi.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.util.AesEncryptor;
 import com.fashion.supplychain.integration.openapi.dto.TenantAppRequest;
 import com.fashion.supplychain.integration.openapi.dto.TenantAppResponse;
 import com.fashion.supplychain.integration.openapi.entity.TenantApp;
@@ -65,6 +66,45 @@ public class TenantAppOrchestrator {
     @Autowired
     private TenantAppLogService tenantAppLogService;
 
+    @Autowired
+    private AesEncryptor aesEncryptor;
+
+    @jakarta.annotation.PostConstruct
+    void migratePlaintextSecrets() {
+        try {
+            List<TenantApp> apps = tenantAppService.list();
+            int migrated = 0;
+            for (TenantApp app : apps) {
+                boolean changed = false;
+                if (app.getAppSecret() != null && !app.getAppSecret().isEmpty()) {
+                    try {
+                        aesEncryptor.decrypt(app.getAppSecret());
+                    } catch (Exception e) {
+                        app.setAppSecret(aesEncryptor.encrypt(app.getAppSecret()));
+                        changed = true;
+                    }
+                }
+                if (app.getCallbackSecret() != null && !app.getCallbackSecret().isEmpty()) {
+                    try {
+                        aesEncryptor.decrypt(app.getCallbackSecret());
+                    } catch (Exception e) {
+                        app.setCallbackSecret(aesEncryptor.encrypt(app.getCallbackSecret()));
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    tenantAppService.updateById(app);
+                    migrated++;
+                }
+            }
+            if (migrated > 0) {
+                log.info("[TenantApp] 自动迁移 {} 个应用的明文密钥为AES加密存储", migrated);
+            }
+        } catch (Exception e) {
+            log.error("[TenantApp] 密钥迁移失败: {}", e.getMessage());
+        }
+    }
+
     // ========== 应用管理 ==========
 
     /**
@@ -98,8 +138,8 @@ public class TenantAppOrchestrator {
         String callbackSecret = generateSecret(16);
 
         app.setAppKey(appKey);
-        app.setAppSecret(rawSecret); // 实际生产环境应加密存储
-        app.setCallbackSecret(callbackSecret);
+        app.setAppSecret(aesEncryptor.encrypt(rawSecret));
+        app.setCallbackSecret(aesEncryptor.encrypt(callbackSecret));
 
         // 解析过期时间
         if (StringUtils.hasText(request.getExpireTime())) {
@@ -227,12 +267,12 @@ public class TenantAppOrchestrator {
 
         String newSecret = generateSecret(32);
         String newCallbackSecret = generateSecret(16);
-        app.setAppSecret(newSecret);
-        app.setCallbackSecret(newCallbackSecret);
+        app.setAppSecret(aesEncryptor.encrypt(newSecret));
+        app.setCallbackSecret(aesEncryptor.encrypt(newCallbackSecret));
         tenantAppService.updateById(app);
 
         TenantAppResponse resp = toResponse(app);
-        resp.setAppSecret(newSecret); // 明文返回
+        resp.setAppSecret(newSecret);
         resp.setCallbackSecret(newCallbackSecret);
         return resp;
     }
@@ -270,8 +310,8 @@ public class TenantAppOrchestrator {
             throw new SecurityException("应用已过期");
         }
 
-        // 验证签名: HMAC-SHA256(appSecret, timestamp + body)
-        String expectedSignature = hmacSha256(app.getAppSecret(), timestamp + (body != null ? body : ""));
+        String decryptedSecret = aesEncryptor.decrypt(app.getAppSecret());
+        String expectedSignature = hmacSha256(decryptedSecret, timestamp + (body != null ? body : ""));
         if (!expectedSignature.equals(signature)) {
             throw new SecurityException("签名验证失败");
         }
@@ -431,11 +471,11 @@ public class TenantAppOrchestrator {
         resp.setAppType(app.getAppType());
         resp.setAppTypeName(APP_TYPE_NAMES.getOrDefault(app.getAppType(), app.getAppType()));
         resp.setAppKey(app.getAppKey());
-        resp.setAppSecret("****"); // 默认脱敏
+        resp.setAppSecret("****");
         resp.setStatus(app.getStatus());
         resp.setStatusName(STATUS_NAMES.getOrDefault(app.getStatus(), app.getStatus()));
         resp.setCallbackUrl(app.getCallbackUrl());
-        resp.setCallbackSecret(app.getCallbackSecret());
+        resp.setCallbackSecret("****");
         resp.setExternalApiUrl(app.getExternalApiUrl());
         resp.setConfigJson(app.getConfigJson());
         resp.setDailyQuota(app.getDailyQuota());
@@ -534,10 +574,7 @@ public class TenantAppOrchestrator {
         }
 
         // 递增计数
-        app.setDailyUsed((app.getDailyUsed() != null ? app.getDailyUsed() : 0) + 1);
-        app.setTotalCalls((app.getTotalCalls() != null ? app.getTotalCalls() : 0) + 1);
-        app.setLastCallTime(LocalDateTime.now());
-        tenantAppService.updateById(app);
+        tenantAppService.atomicIncrementCallCount(app.getId());
     }
 
     private String generateAppKey(String appType) {

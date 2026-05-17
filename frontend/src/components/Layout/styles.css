@@ -143,12 +143,12 @@
 .header-recents {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-left: 6px;
+  padding-left: 4px;
   scroll-behavior: smooth;
 }
 
@@ -175,8 +175,10 @@
   align-items: center;
   border: 1px solid var(--recent-tab-border);
   background: var(--recent-tab-bg);
-  border-radius: 6px;
+  border-radius: 4px;
   flex: 0 0 auto;
+  padding: 0 1px;
+  gap: 0;
 }
 
 .recent-tab.active {
@@ -185,27 +187,42 @@
 }
 
 .recent-tab-label.ant-btn {
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 6px;
-  min-width: 0;
-  font-size: 12px;
+  height: auto !important;
+  padding: 1px 4px !important;
+  border-radius: 3px !important;
+  min-width: 0 !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+}
+
+.recent-tab-label.ant-btn.ant-btn-text {
+  height: auto !important;
+  padding: 1px 4px !important;
+  min-width: 0 !important;
 }
 
 .recent-tab-label.ant-btn > span {
   display: inline-block;
-  max-width: 100px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .recent-tab-close.ant-btn {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: 6px;
-  font-size: 10px;
+  width: 16px !important;
+  height: 16px !important;
+  padding: 0 !important;
+  border-radius: 3px !important;
+  font-size: 9px !important;
+  min-width: 0 !important;
+}
+
+.recent-tab-close.ant-btn.ant-btn-text {
+  width: 16px !important;
+  height: 16px !important;
+  padding: 0 !important;
+  min-width: 0 !important;
 }
 
 .header-user {
@@ -293,7 +310,7 @@
   margin-top: auto;
   padding: 10px 14px 14px;
   text-align: center;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.38);
   border-top: 1px solid rgba(255, 255, 255, 0.07);
@@ -527,7 +544,7 @@
 }
 
 .sidebar-icp-collapsed-btn.ant-btn span {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.1;
 }
 
@@ -954,7 +971,7 @@
   color: #1e1b4b;
 }
 .sap-date {
-  font-size: 11px;
+  font-size: 13px;
   color: #9ca3af;
   font-weight: 400;
 }
@@ -1013,7 +1030,7 @@
   line-height: 1;
 }
 .sap-stat-label {
-  font-size: 10px;
+  font-size: 12px;
   color: #9ca3af;
   white-space: nowrap;
 }
@@ -1024,7 +1041,7 @@
   border-bottom: 1px solid #f3f4f6;
 }
 .sap-section-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
@@ -1054,7 +1071,7 @@
   margin-bottom: 6px;
 }
 .sap-priority-no  { font-size: 12px; font-weight: 600; color: #1a5fb4; }
-.sap-priority-factory { font-size: 11px; color: #9ca3af; }
+.sap-priority-factory { font-size: 13px; color: #9ca3af; }
 .sap-priority-bar-wrap {
   display: flex;
   align-items: center;
@@ -1075,7 +1092,7 @@
 }
 .sap-priority-pct {
   position: relative;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #1a5fb4;
   margin-left: auto;
@@ -1083,7 +1100,7 @@
 }
 .sap-priority-days {
   position: relative;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   z-index: 1;
 }
@@ -1106,7 +1123,7 @@
   flex-shrink: 0;
 }
 .sap-event-title { font-size: 12px; color: #374151; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sap-event-time  { font-size: 10px; color: #d1d5db; white-space: nowrap; }
+.sap-event-time  { font-size: 12px; color: #d1d5db; white-space: nowrap; }
 .sap-event-dismiss-btn {
   flex-shrink: 0;
   width: 18px; height: 18px;
@@ -1130,7 +1147,7 @@
 }
 .sap-notice-row:hover { filter: brightness(0.97); }
 .sap-notice-read-btn {
-  flex-shrink: 0; font-size: 10px; padding: 1px 5px; cursor: pointer;
+  flex-shrink: 0; font-size: 12px; padding: 1px 5px; cursor: pointer;
   background: #fff; border: 1px solid #ffa940; border-radius: 4px; color: #d46b08;
 }
 .sap-notice-dismiss-btn {
@@ -1159,7 +1176,7 @@
   background: #fafafe;
 }
 .sap-ai-label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: #2D7FF9;
   margin-bottom: 6px;
@@ -1180,7 +1197,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 13px;
   color: #6b7895;
   margin-bottom: 8px;
 }
@@ -1265,7 +1282,7 @@
   border: 1px solid rgba(45, 127, 249, 0.35);
   background: rgba(45, 127, 249, 0.04);
   color: #2D7FF9;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;

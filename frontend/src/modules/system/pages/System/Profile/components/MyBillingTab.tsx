@@ -107,7 +107,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

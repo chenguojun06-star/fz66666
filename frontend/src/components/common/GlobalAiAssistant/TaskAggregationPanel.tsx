@@ -116,11 +116,11 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
           </div>
         </div>
         {onBackToChat && (
-          <button className={styles.panelBackBtn} onClick={onBackToChat} title="返回聊天">
+          <button type="button" className={styles.panelBackBtn} onClick={onBackToChat} title="返回聊天">
             <MessageOutlined style={{ fontSize: 14 }} />
           </button>
         )}
-        <button className={styles.panelCloseBtn} onClick={onClose}>
+        <button type="button" className={styles.panelCloseBtn} onClick={onClose}>
           <CloseOutlined style={{ fontSize: 12 }} />
         </button>
       </div>

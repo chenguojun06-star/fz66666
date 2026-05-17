@@ -92,6 +92,9 @@ public class StyleInfoOrchestrator {
     private com.fashion.supplychain.style.service.StyleOperationLogService styleOperationLogService;
 
     @Autowired
+    private com.fashion.supplychain.style.service.ProductSkuService productSkuService;
+
+    @Autowired
     private StringRedisTemplate redisTemplate;
 
     public IPage<StyleInfo> list(Map<String, Object> params) {
@@ -145,6 +148,7 @@ public class StyleInfoOrchestrator {
         styleListEnrichmentHelper.fillOrderCountFields(records);
         styleListEnrichmentHelper.fillScrapFields(records);
         styleListEnrichmentHelper.fillWarehousedFields(records);
+        styleListEnrichmentHelper.fillStockFields(records);
 
         return page;
     }
@@ -332,7 +336,9 @@ public class StyleInfoOrchestrator {
 
     public boolean completeProductionStage(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.completeProductionStage(id);
+        boolean result = styleStageHelper.completeProductionStage(id);
+        tryAutoGenerateSkus(id);
+        return result;
     }
 
     public boolean resetProductionStage(Long id, Map<String, Object> body) {
@@ -781,6 +787,30 @@ public class StyleInfoOrchestrator {
             }
         } catch (Exception e) {
             log.warn("[缓存淘汰] 清除租户 {} 缓存失败: {}", tid, e.getMessage());
+        }
+    }
+
+    private void tryAutoGenerateSkus(Long styleId) {
+        try {
+            StyleInfo style = styleInfoService.getById(styleId);
+            if (style == null) {
+                return;
+            }
+            String mode = style.getSkuMode();
+            if (mode == null) {
+                mode = "AUTO";
+            }
+            if (!"AUTO".equals(mode)) {
+                return;
+            }
+            if (!StringUtils.hasText(style.getSizeColorConfig())) {
+                log.info("SKU auto-generation skipped: no sizeColorConfig for styleId={}", styleId);
+                return;
+            }
+            productSkuService.generateSkusForStyle(styleId);
+            log.info("Auto-generated SKUs after production stage completion: styleId={}", styleId);
+        } catch (Exception e) {
+            log.warn("Failed to auto-generate SKUs after production completion: styleId={}", styleId, e);
         }
     }
 }

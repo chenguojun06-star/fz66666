@@ -206,7 +206,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:${w}mm ${h}mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}
-html,body{color:#000!important;background:#fff!important}
+html,body{width:${w}mm;min-height:${h}mm;color:#000!important;background:#fff!important}
 body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif}
 .page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
 .page:last-child{page-break-after:auto}
@@ -551,7 +551,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                                     <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} />
                                   ))}
                                 </div>
-                              : <span style={{ color: '#ccc', fontSize: 11 }}>无图</span>
+                              : <span style={{ color: '#ccc', fontSize: 13 }}>无图</span>
                             }
                           </td>
                         )}

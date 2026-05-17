@@ -104,7 +104,21 @@ public class CuttingTaskController {
     }
 
     @GetMapping("/by-style-no")
+    @Deprecated
     public Result<?> listByStyleNo(@RequestParam String styleNo) {
+        return doListByStyle(styleNo);
+    }
+
+    @PostMapping("/list-by-style")
+    public Result<?> listByStyle(@RequestBody Map<String, Object> body) {
+        String styleNo = body.get("styleNo") != null ? String.valueOf(body.get("styleNo")) : null;
+        if (styleNo == null || styleNo.trim().isEmpty()) {
+            return Result.fail("缺少styleNo参数");
+        }
+        return doListByStyle(styleNo.trim());
+    }
+
+    private Result<?> doListByStyle(String styleNo) {
         List<com.fashion.supplychain.production.entity.CuttingTask> tasks = cuttingTaskService.lambdaQuery()
                 .eq(com.fashion.supplychain.production.entity.CuttingTask::getStyleNo, styleNo)
                 .orderByDesc(com.fashion.supplychain.production.entity.CuttingTask::getCreateTime)

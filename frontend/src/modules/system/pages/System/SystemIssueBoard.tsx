@@ -163,9 +163,9 @@ export default function SystemIssueBoard() {
       render: (_: unknown, r: FrontendErrorRecord) => (
         <Space orientation="vertical" size={2} style={{ maxWidth: 500 }}>
           <Text strong style={{ wordBreak: 'break-all' }}>{r.message}</Text>
-          <Text type="secondary" style={{ fontSize: 11, wordBreak: 'break-all' }}>{r.url}</Text>
+          <Text type="secondary" style={{ fontSize: 13, wordBreak: 'break-all' }}>{r.url}</Text>
           {r.stack && (
-            <pre style={{ fontSize: 10, color: '#888', margin: 0, maxHeight: 80, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            <pre style={{ fontSize: 12, color: '#888', margin: 0, maxHeight: 80, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
               {r.stack.slice(0, 400)}
             </pre>
           )}

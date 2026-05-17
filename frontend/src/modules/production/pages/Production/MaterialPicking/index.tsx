@@ -59,10 +59,10 @@ const MaterialPickingList: React.FC = () => {
       dataIndex: 'pickingNo',
       width: 150,
       render: (text: string, record: any) => (
-        <a onClick={() => {
+        <Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => {
           setSelectedPickingId(record.id);
           setDetailVisible(true);
-        }}>{text}</a>
+        }}>{text}</Button>
       ),
     },
     {

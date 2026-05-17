@@ -5,6 +5,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { UnifiedDatePicker, dayjs } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import CustomerSelect from '@/components/common/CustomerSelect';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import { CUTTING_STAGE_ORDER, computeStageSortedAndSpan } from '@/utils/productionStage';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
@@ -219,6 +220,38 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 }))}
           />
         </Space>
+        <Space wrap style={{ marginTop: 8 }}>
+          <span>客户</span>
+          <CustomerSelect
+            value={createTask.createCustomerName}
+            onChange={(value) => createTask.setCreateCustomerName(value)}
+            style={{ width: 260 }}
+            placeholder="选择或输入客户名称"
+          />
+          <span>品类</span>
+          <Select
+            value={createTask.createCategory || undefined}
+            onChange={(v) => createTask.setCreateCategory(v || '')}
+            placeholder="选择或搜索品类"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            style={{ width: 200 }}
+            options={createTask.categoryOptions}
+          />
+        </Space>
+        <div style={{ marginTop: 8 }}>
+          <span style={{ color: 'rgba(0,0,0,0.65)', fontSize: 13 }}>备注</span>
+          <Input.TextArea
+            value={createTask.createRemarks}
+            onChange={(e) => createTask.setCreateRemarks(e.target.value)}
+            placeholder="输入订单备注（下单后可在订单备注时间线查看）"
+            rows={2}
+            maxLength={500}
+            showCount
+            style={{ marginTop: 4 }}
+          />
+        </div>
         {createTask.selectedFactoryStat && <FactoryCapacityCard stat={createTask.selectedFactoryStat} />}
         <div style={{ display: 'flex', gap: 16, marginTop: 12, alignItems: 'flex-start' }}>
           {/* 左：款式图上传（支持点击/拖拽/粘贴） */}
@@ -588,9 +621,9 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
         <span style={{ fontWeight: 600, color: stat.matchScore >= 70 ? '#52c41a' : stat.matchScore >= 40 ? '#fa8c16' : '#ff4d4f' }}>
           推荐指数 {stat.matchScore}分
         </span>
-        {stat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 11, border: '1px solid #b7eb8f' }}>推荐</span>}
-        {stat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 11, border: '1px solid #ffd591' }}>配置产能</span>}
-        {stat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 11, border: '1px solid #ffa39e' }}>无产能数据</span>}
+        {stat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #b7eb8f' }}>推荐</span>}
+        {stat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffd591' }}>配置产能</span>}
+        {stat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffa39e' }}>无产能数据</span>}
       </div>
     )}
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ModelRoutingConfig;
+import com.fashion.supplychain.intelligence.service.SpecialistPersonaService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.system.entity.Factory;
@@ -24,6 +25,7 @@ public class SourcingSpecialistAgent implements SpecialistAgent {
     private final ModelRoutingConfig routingConfig;
     private final MaterialPurchaseMapper materialPurchaseMapper;
     private final FactoryMapper factoryMapper;
+    private final SpecialistPersonaService personaService;
 
     @Override
     public String getRoute() { return "sourcing"; }
@@ -32,8 +34,12 @@ public class SourcingSpecialistAgent implements SpecialistAgent {
     public AgentState analyze(AgentState state) {
         String dataContext = buildDataContext(state);
         String prompt = buildPrompt(state, dataContext);
-        var profile = routingConfig.getProfile("sourcing");
-        var result = inference.chat("sourcing_specialist", profile.getSystemPromptPrefix() + "\n" + buildSystemPrompt(), prompt);
+        String systemPrompt = personaService.buildFullPrompt("sourcing");
+        if (systemPrompt == null || systemPrompt.isBlank()) {
+            var profile = routingConfig.getProfile("sourcing");
+            systemPrompt = profile.getSystemPromptPrefix() + "\n你是服装供应链采购专家。基于提供的真实采购数据和供应商表现数据进行分析。输出简洁结论+建议。";
+        }
+        var result = inference.chat("sourcing_specialist", systemPrompt, prompt);
         if (result.isSuccess()) {
             String analysis = result.getContent();
             state.getSpecialistResults().put("sourcing", analysis);
@@ -86,10 +92,6 @@ public class SourcingSpecialistAgent implements SpecialistAgent {
             sb.append("数据查询异常，仅基于LLM推理\n");
         }
         return sb.toString();
-    }
-
-    private String buildSystemPrompt() {
-        return "你是服装供应链采购专家。基于提供的真实采购数据和供应商表现数据进行分析。输出简洁结论+建议。";
     }
 
     private String buildPrompt(AgentState state, String dataContext) {

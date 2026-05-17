@@ -65,7 +65,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
       </div>
       <Row gutter={12}>
         <Col span={8}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}><span style={{ color: '#ff4d4f' }}>*</span> 客户名称</div>
+          <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}><span style={{ color: '#ff4d4f' }}>*</span> 客户名称</div>
           <Input
            
             placeholder="必填：输入客户/公司名称"
@@ -75,7 +75,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           />
         </Col>
         <Col span={8}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>联系电话</div>
+          <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>联系电话</div>
           <Input
            
             placeholder="输入联系电话"
@@ -84,7 +84,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           />
         </Col>
         <Col span={8}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>收货地址</div>
+          <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>收货地址</div>
           <Input
            
             placeholder="输入收货地址"

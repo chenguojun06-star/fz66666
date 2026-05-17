@@ -69,7 +69,7 @@ export const useFocusNodeEffect = ({
     );
     setPendingFocusNode(null);
   }, [
-    boardStatsByOrder, boardStatsLoadingByOrder, defaultNodes,
+    boardStatsByOrder, boardStatsLoadingByOrder,
     getFocusNodeType, normalizeFocusNodeName, openNodeDetail,
     orders, pendingFocusNode, progressNodesByStyleNo,
     triggerOrderFocus, setPendingFocusNode,

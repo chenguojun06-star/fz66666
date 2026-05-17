@@ -1,7 +1,7 @@
 import { Tag } from 'antd';
 import type { StyleInfo } from '@/types/style';
 import { formatDateTime } from '@/utils/datetime';
-import { toCategoryCn } from '@/utils/styleCategory';
+import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
 import { getStyleSourceMeta } from '@/utils/styleSource';
 import RowActions from '@/components/common/RowActions';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -40,6 +40,20 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       key: 'category',
       width: 120,
       render: (v: unknown) => toCategoryCn(v),
+    },
+    {
+      title: '季节',
+      dataIndex: 'season',
+      key: 'season',
+      width: 100,
+      render: (v: unknown) => toSeasonCn(v),
+    },
+    {
+      title: '面料成分',
+      dataIndex: 'fabricComposition',
+      key: 'fabricComposition',
+      width: 140,
+      render: (v: unknown) => v ? String(v) : '-',
     },
     {
       title: '来源',

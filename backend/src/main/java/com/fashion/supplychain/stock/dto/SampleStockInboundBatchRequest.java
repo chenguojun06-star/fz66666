@@ -11,6 +11,8 @@ public class SampleStockInboundBatchRequest {
     private String styleName;
     private String sampleType;
     private String location;
+    private String warehouseAreaId;
+    private String warehouseAreaName;
     private String remark;
     private String imageUrl;
     private List<Row> rows;

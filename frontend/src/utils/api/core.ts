@@ -1,10 +1,11 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 
 let __authRedirectTs = 0;
+const AUTH_REDIRECT_COOLDOWN_MS = 30_000;
 
 function navigateToLogin() {
   const nowTs = Date.now();
-  if (nowTs - __authRedirectTs > 1000) {
+  if (nowTs - __authRedirectTs > AUTH_REDIRECT_COOLDOWN_MS) {
     __authRedirectTs = nowTs;
     const w = window as any;
     if (typeof w.__appAuthLogoutNavigate === 'function') {
@@ -222,8 +223,6 @@ export const createApiClient = (): ApiClient => {
                     localStorage.removeItem('refreshToken');
                     localStorage.removeItem('userId');
                   } catch { /* ignore */ }
-                  navigateToLogin();
-                  return Promise.reject(new Error('登录已过期，请重新登录'));
                 }
               } catch {
                 try {
@@ -231,16 +230,12 @@ export const createApiClient = (): ApiClient => {
                   localStorage.removeItem('refreshToken');
                   localStorage.removeItem('userId');
                 } catch { /* ignore */ }
-                navigateToLogin();
-                return Promise.reject(new Error('登录已过期，请重新登录'));
               }
             } else {
               try {
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('userId');
               } catch { /* ignore */ }
-              navigateToLogin();
-              return Promise.reject(new Error('登录已过期，请重新登录'));
             }
           } else {
             setHeader('Authorization', `Bearer ${token}`);
@@ -345,7 +340,11 @@ export const createApiClient = (): ApiClient => {
             } catch {
               // Ignore
             }
-            navigateToLogin();
+            try {
+              window.dispatchEvent(new CustomEvent('app:auth:logout'));
+            } catch {
+              // Ignore
+            }
             break;
           }
           case 403: {
@@ -364,7 +363,6 @@ export const createApiClient = (): ApiClient => {
               } catch {
                 // Ignore
               }
-              navigateToLogin();
             } else {
               errorMessage = msg || '没有权限执行此操作';
             }

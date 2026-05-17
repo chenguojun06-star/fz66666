@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ModelRoutingConfig;
+import com.fashion.supplychain.intelligence.service.SpecialistPersonaService;
 import com.fashion.supplychain.production.entity.FactoryShipment;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.mapper.FactoryShipmentMapper;
@@ -23,6 +24,7 @@ public class LogisticsSpecialistAgent implements SpecialistAgent {
     private final ModelRoutingConfig routingConfig;
     private final FactoryShipmentMapper factoryShipmentMapper;
     private final ProductOutstockMapper productOutstockMapper;
+    private final SpecialistPersonaService personaService;
 
     @Override
     public String getRoute() { return "logistics"; }
@@ -31,8 +33,12 @@ public class LogisticsSpecialistAgent implements SpecialistAgent {
     public AgentState analyze(AgentState state) {
         String dataContext = buildDataContext(state);
         String prompt = buildPrompt(state, dataContext);
-        var profile = routingConfig.getProfile("logistics");
-        var result = inference.chat("logistics_specialist", profile.getSystemPromptPrefix() + "\n" + buildSystemPrompt(), prompt);
+        String systemPrompt = personaService.buildFullPrompt("logistics");
+        if (systemPrompt == null || systemPrompt.isBlank()) {
+            var profile = routingConfig.getProfile("logistics");
+            systemPrompt = profile.getSystemPromptPrefix() + "\n你是服装物流仓储专家。基于提供的真实发货和出库数据进行分析。输出库存状态+物流建议。";
+        }
+        var result = inference.chat("logistics_specialist", systemPrompt, prompt);
         if (result.isSuccess()) {
             String analysis = result.getContent();
             state.getSpecialistResults().put("logistics", analysis);
@@ -83,10 +89,6 @@ public class LogisticsSpecialistAgent implements SpecialistAgent {
             sb.append("数据查询异常，仅基于LLM推理\n");
         }
         return sb.toString();
-    }
-
-    private String buildSystemPrompt() {
-        return "你是服装物流仓储专家。基于提供的真实发货和出库数据进行分析。输出库存状态+物流建议。";
     }
 
     private String buildPrompt(AgentState state, String dataContext) {

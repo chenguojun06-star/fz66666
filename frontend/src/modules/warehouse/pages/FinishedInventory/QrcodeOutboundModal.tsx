@@ -1,10 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { App, Button, InputNumber, Space, Typography } from 'antd';
+import { App, Button, Input, InputNumber, Select, Space, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined, ScanOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import api, { type ApiResult } from '@/utils/api';
 import CustomerInfoSection from './CustomerInfoSection';
+import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+
+type QrcodeOutboundType = 'sales' | 'transfer' | 'scrap';
 
 interface QrcodeItem {
   key: string;
@@ -48,10 +51,17 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const [inputVal, setInputVal] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [outboundType, setOutboundType] = useState<QrcodeOutboundType>('sales');
+  const [outboundReason, setOutboundReason] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
+  const [warehouseAreaId, setWarehouseAreaId] = useState<string | undefined>(undefined);
+  const [warehouseLocation, setWarehouseLocation] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { selectOptions: areaOptions } = useWarehouseAreaOptions('FINISHED');
+  const { selectOptions: locationOptions } = useWarehouseLocationByArea('FINISHED', warehouseAreaId);
 
   const handleAdd = async () => {
     const code = inputVal.trim();
@@ -122,14 +132,19 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!customerName.trim()) { message.warning('请填写客户名称，出库必须选择客户'); return; }
+    if (outboundType === 'sales' && !customerName.trim()) { message.warning('销售出库请填写客户名称'); return; }
+    if (outboundType === 'scrap' && !outboundReason.trim()) { message.warning('请填写报废原因'); return; }
     if (items.length === 0) { message.warning('请先扫码添加出库明细'); return; }
     setSubmitting(true);
     try {
       await api.post('/warehouse/finished-inventory/qrcode-outbound', {
-        customerName: customerName.trim(),
+        outboundType,
+        ...(outboundReason.trim() ? { outboundReason: outboundReason.trim() } : {}),
+        ...(outboundType === 'sales' ? { customerName: customerName.trim() } : {}),
         ...(customerPhone.trim() ? { customerPhone: customerPhone.trim() } : {}),
         ...(shippingAddress.trim() ? { shippingAddress: shippingAddress.trim() } : {}),
+        ...(warehouseAreaId ? { warehouseAreaId } : {}),
+        ...(warehouseLocation ? { warehouseLocation } : {}),
         items: items.map(it => ({ qrCode: it.qrCode, quantity: it.quantity })),
       });
       message.success(`出库成功，共 ${items.length} 项`);
@@ -146,9 +161,12 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const handleClose = () => {
     setItems([]);
     setInputVal('');
+    setOutboundType('sales'); setOutboundReason('');
     setCustomerName('');
     setCustomerPhone('');
     setShippingAddress('');
+    setWarehouseAreaId(undefined);
+    setWarehouseLocation(undefined);
     onClose();
   };
 
@@ -272,6 +290,51 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 SKU、颜色、码数、当前库存，再填写本次要出库的数量。
       </Typography.Text>
 
+      <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
+        <Space wrap style={{ width: '100%' }}>
+          <span>
+            出库类型：
+            <Select style={{ width: 140 }} value={outboundType} onChange={v => setOutboundType(v)} options={[{ label: '销售出库', value: 'sales' }, { label: '调拨出库', value: 'transfer' }, { label: '报废出库', value: 'scrap' }]} />
+          </span>
+          <span>
+            出库仓库：
+            <Select
+              style={{ width: 160 }}
+              placeholder="选择仓库"
+              allowClear
+              value={warehouseAreaId}
+              onChange={(v) => { setWarehouseAreaId(v); setWarehouseLocation(undefined); }}
+              options={areaOptions}
+            />
+          </span>
+          <span>
+            库位：
+            <Select
+              style={{ width: 140 }}
+              placeholder="选择库位"
+              allowClear
+              value={warehouseLocation}
+              onChange={setWarehouseLocation}
+              options={locationOptions}
+              disabled={!warehouseAreaId}
+            />
+          </span>
+          {outboundType === 'scrap' && (
+            <span>
+              报废原因：
+              <Input
+                value={outboundReason}
+                onChange={e => setOutboundReason(e.target.value)}
+                placeholder="请填写报废原因"
+                style={{ width: 200 }}
+                status={!outboundReason.trim() ? 'warning' : undefined}
+              />
+            </span>
+          )}
+        </Space>
+      </div>
+
+      {outboundType === 'sales' && (
       <CustomerInfoSection
         variant="inline"
         customerName={customerName}
@@ -281,6 +344,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         shippingAddress={shippingAddress}
         onShippingAddressChange={setShippingAddress}
       />
+      )}
 
       <ResizableTable
        

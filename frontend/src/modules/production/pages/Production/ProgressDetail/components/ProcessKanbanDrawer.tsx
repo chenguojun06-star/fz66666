@@ -69,9 +69,9 @@ const RemarkTimelineContent: React.FC<{ targetType: string; targetNo: string; ca
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                   <span>
                     <strong style={{ fontSize: 13 }}>{r.authorName || '匿名'}</strong>
-                    {r.authorRole && <Tag style={{ marginLeft: 6, fontSize: 11 }}>{r.authorRole}</Tag>}
+                    {r.authorRole && <Tag style={{ marginLeft: 6, fontSize: 13 }}>{r.authorRole}</Tag>}
                   </span>
-                  <span style={{ color: '#999', fontSize: 11 }}>{r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}</span>
+                  <span style={{ color: '#999', fontSize: 13 }}>{r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}</span>
                 </div>
                 <div style={{ fontSize: 13, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{r.content}</div>
               </div>
@@ -636,7 +636,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                                   {r.repairStatus === 'pending' && <Tag color="warning">待返修</Tag>}
                                   {r.repairStatus === 'repairing' && <Tag color="processing">返修中</Tag>}
                                   {r.repairStatus === 'repair_done' && <Tag color="cyan">待复检</Tag>}
-                                  {r.qualityOperatorName && <span style={{ fontSize: 11, color: '#999' }}>质检: {r.qualityOperatorName}</span>}
+                                  {r.qualityOperatorName && <span style={{ fontSize: 13, color: '#999' }}>质检: {r.qualityOperatorName}</span>}
                                 </div>
                               )}
                             </div>
@@ -707,7 +707,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             {stage.processBreakdown && Object.keys(stage.processBreakdown).length > 0 && (
               <div style={{ marginTop: 8, borderTop: '1px solid #f0f0f0', paddingTop: 8 }}>
                 {Object.entries(stage.processBreakdown).map(([name, count]) => (
-                  <Tag key={name} style={{ marginBottom: 4, fontSize: 11 }}>{name}: {count}</Tag>
+                  <Tag key={name} style={{ marginBottom: 4, fontSize: 13 }}>{name}: {count}</Tag>
                 ))}
               </div>
             )}
@@ -726,7 +726,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
           {orderNo && <Tag color="blue" style={{ fontSize: 13 }}>{orderNo}</Tag>}
         </Space>
       }
-      placement="right" width={960} open={visible} onClose={onClose}
+      placement="right" size="large" open={visible} onClose={onClose}
       styles={{ body: { padding: '16px 20px' } }}
       extra={
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>刷新</Button>
@@ -761,9 +761,9 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         {qcRecord && (
           <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f8f9fa', borderRadius: 8 }}>
             <Row gutter={16}>
-              <Col span={8}><Statistic title="菲号" value={qcRecord.bundleNo} valueStyle={{ fontSize: 18 }} /></Col>
-              <Col span={8}><Statistic title="总数量" value={qcRecord.quantity} valueStyle={{ fontSize: 18 }} /></Col>
-              <Col span={8}><Statistic title="工序" value={qcRecord.processName} valueStyle={{ fontSize: 15 }} /></Col>
+              <Col span={8}><Statistic title="菲号" value={qcRecord.bundleNo} styles={{ content: { fontSize: 18 } }} /></Col>
+              <Col span={8}><Statistic title="总数量" value={qcRecord.quantity} styles={{ content: { fontSize: 18 } }} /></Col>
+              <Col span={8}><Statistic title="工序" value={qcRecord.processName} styles={{ content: { fontSize: 15 } }} /></Col>
             </Row>
             <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>

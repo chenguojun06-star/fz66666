@@ -3,6 +3,7 @@ package com.fashion.supplychain.finance.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
+import java.math.BigDecimal;
 import java.util.Map;
 
 public interface PayrollSettlementService extends IService<PayrollSettlement> {
@@ -10,8 +11,9 @@ public interface PayrollSettlementService extends IService<PayrollSettlement> {
 
     PayrollSettlement getDetailById(String id);
 
-    /**
-     * 按订单ID删除工资结算单（用于订单级联清理）
-     */
     void deleteByOrderId(String orderId);
+
+    int atomicAddPaidAmount(String id, BigDecimal delta, BigDecimal expectedPaidAmount);
+
+    int atomicAddDeductionAmount(String id, BigDecimal delta, BigDecimal expectedDeductionAmount);
 }

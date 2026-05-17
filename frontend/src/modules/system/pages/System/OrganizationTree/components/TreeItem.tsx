@@ -55,7 +55,7 @@ export const TreeItem: React.FC<TreeItemProps> = ({
           }
           <span className="tree-node-name">{node.unitName}</span>
           {node.managerUserName && (
-            <Tag color="blue" style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>
+            <Tag color="blue" style={{ marginLeft: 6, fontSize: 12, lineHeight: '16px', padding: '0 4px' }}>
               负责人: {node.managerUserName}
             </Tag>
           )}

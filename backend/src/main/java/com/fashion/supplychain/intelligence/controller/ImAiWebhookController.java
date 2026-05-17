@@ -48,6 +48,11 @@ public class ImAiWebhookController {
                                             @RequestHeader(value = "X-Lark-Request-Nonce", required = false) String nonce) {
         if (!feishuEnabled) return ResponseEntity.ok(Map.of());
 
+        if (feishuVerificationToken == null || feishuVerificationToken.isBlank()) {
+            log.error("[IM-AI/Feishu] verification-token 未配置，拒绝回调请求（安全策略：未配置验证凭据时禁止处理外部消息）");
+            return ResponseEntity.status(401).body(Map.of("error", "verification not configured"));
+        }
+
         if (body.contains("\"challenge\"")) {
             try {
                 String challenge = extractJsonValue(body, "challenge");
@@ -60,20 +65,18 @@ public class ImAiWebhookController {
             }
         }
 
-        if (feishuVerificationToken != null && !feishuVerificationToken.isBlank()) {
-            if (signature == null || timestamp == null || nonce == null) {
-                log.warn("[IM-AI/Feishu] missing signature headers, rejecting");
-                return ResponseEntity.status(401).body(Map.of("error", "missing signature headers"));
-            }
-            if (feishuEncryptKey == null || feishuEncryptKey.isBlank()) {
-                log.error("[IM-AI/Feishu] encrypt-key not configured, rejecting callback for safety");
-                return ResponseEntity.status(500).body(Map.of("error", "server misconfiguration"));
-            }
-            String expected = hmacSha256(feishuEncryptKey, timestamp + nonce + body);
-            if (!expected.equals(signature)) {
-                log.warn("[IM-AI/Feishu] signature verification failed");
-                return ResponseEntity.status(401).body(Map.of("error", "signature mismatch"));
-            }
+        if (signature == null || timestamp == null || nonce == null) {
+            log.warn("[IM-AI/Feishu] missing signature headers, rejecting");
+            return ResponseEntity.status(401).body(Map.of("error", "missing signature headers"));
+        }
+        if (feishuEncryptKey == null || feishuEncryptKey.isBlank()) {
+            log.error("[IM-AI/Feishu] encrypt-key not configured, rejecting callback for safety");
+            return ResponseEntity.status(500).body(Map.of("error", "server misconfiguration"));
+        }
+        String expected = hmacSha256(feishuEncryptKey, timestamp + nonce + body);
+        if (!expected.equals(signature)) {
+            log.warn("[IM-AI/Feishu] signature verification failed");
+            return ResponseEntity.status(401).body(Map.of("error", "signature mismatch"));
         }
 
         try {
@@ -122,16 +125,19 @@ public class ImAiWebhookController {
                                               @RequestHeader(value = "timestamp", required = false) String timestamp) {
         if (!dingtalkEnabled) return ResponseEntity.ok(Map.of());
 
-        if (dingtalkAppSecret != null && !dingtalkAppSecret.isBlank()) {
-            if (sign == null || timestamp == null) {
-                log.warn("[IM-AI/DingTalk] missing signature headers, rejecting");
-                return ResponseEntity.status(401).body(Map.of("error", "missing signature headers"));
-            }
-            String expected = hmacSha256(dingtalkAppSecret, timestamp);
-            if (!expected.equals(sign)) {
-                log.warn("[IM-AI/DingTalk] signature verification failed");
-                return ResponseEntity.status(401).body(Map.of("error", "signature mismatch"));
-            }
+        if (dingtalkAppSecret == null || dingtalkAppSecret.isBlank()) {
+            log.error("[IM-AI/DingTalk] app-secret 未配置，拒绝回调请求（安全策略：未配置验证凭据时禁止处理外部消息）");
+            return ResponseEntity.status(401).body(Map.of("error", "verification not configured"));
+        }
+
+        if (sign == null || timestamp == null) {
+            log.warn("[IM-AI/DingTalk] missing signature headers, rejecting");
+            return ResponseEntity.status(401).body(Map.of("error", "missing signature headers"));
+        }
+        String expected = hmacSha256(dingtalkAppSecret, timestamp);
+        if (!expected.equals(sign)) {
+            log.warn("[IM-AI/DingTalk] signature verification failed");
+            return ResponseEntity.status(401).body(Map.of("error", "signature mismatch"));
         }
 
         try {

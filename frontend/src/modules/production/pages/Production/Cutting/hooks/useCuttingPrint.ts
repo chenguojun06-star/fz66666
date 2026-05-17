@@ -129,7 +129,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       <div class="print-page">
         <div class="label ${printConfig.orientation === 'vertical' ? 'label--vertical' : ''}">
           <div class="qr">
-            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" onerror="this.outerHTML='<span style=display:flex;align-items:center;justify-content:center;width:'+this.width+'px;height:'+this.height+'px;font-size:10px;color:#999>QR错误</span>'" />
+            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" onerror="this.outerHTML='<span style=display:flex;align-items:center;justify-content:center;width:'+this.width+'px;height:'+this.height+'px;font-size:12px;color:#999>QR错误</span>'" />
           </div>
           <div class="text">
             <div>订单：${String(b.productionOrderNo || '').trim() || '-'}</div>

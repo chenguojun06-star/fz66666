@@ -11,6 +11,7 @@ import {
   DatabaseOutlined,
   DeleteOutlined,
   DollarOutlined,
+  EnvironmentOutlined,
   FileSearchOutlined,
   FileTextOutlined,
   InboxOutlined,
@@ -24,6 +25,9 @@ import {
   FireOutlined,
   RadarChartOutlined,
   AuditOutlined,
+  ShopOutlined,
+  TagOutlined,
+  ProfileOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -74,6 +78,9 @@ export const paths = {
   sampleInventory: '/warehouse/sample',
   ecommerceOrders: '/warehouse/ecommerce',
   inventoryCheck: '/warehouse/inventory-check',
+  labelPrint: '/warehouse/label-print',
+  productInfo: '/warehouse/product-info',
+  warehouseLocationMap: '/warehouse/location-map',
 
   profile: '/system/profile',
   user: '/system/user',
@@ -93,7 +100,8 @@ export const paths = {
   dataImport: '/system/data-import',
   systemIssues: '/system/issues',
   orphanData: '/system/orphan-data',
-  integrationCenter: '/integration/center',
+  ecommerceCenter: '/ecommerce/center',
+  ecommercePlatform: '/ecommerce/platform',
   cockpit: '/cockpit',
   cockpitTrace: '/cockpit/agent-traces',
   intelligenceCenter: '/intelligence/center',
@@ -132,6 +140,9 @@ export const permissionCodes = {
   sampleInventory: 'MENU_SAMPLE_INVENTORY',
   ecommerceOrders: 'MENU_FINISHED_INVENTORY',
   inventoryCheck: 'MENU_FINISHED_INVENTORY',
+  labelPrint: 'MENU_LABEL_PRINT',
+  productInfo: 'MENU_PRODUCT_INFO',
+  warehouseLocationMap: 'MENU_WAREHOUSE_LOCATION_MAP',
 
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
@@ -148,7 +159,8 @@ export const permissionCodes = {
   customerManagement: 'MENU_CUSTOMER',
   appStore: 'MENU_APP_STORE_VIEW',
   dataImport: 'MENU_DATA_IMPORT',
-  integrationCenter: 'MENU_INTEGRATION',
+  ecommerceCenter: 'MENU_ECOMMERCE',
+  ecommercePlatform: 'MENU_ECOMMERCE',
   intelligenceCenter: 'MENU_INTELLIGENCE_CENTER', // 智能运营中心独立权限码（full_admin专用）
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
   financeTaxExport: 'MENU_FINANCE_EXPORT',
@@ -231,8 +243,20 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(InboxOutlined),
     items: [
       { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
+      { label: '成品资料', path: paths.productInfo, icon: React.createElement(ProfileOutlined) },
+      { label: '标签打印', path: paths.labelPrint, icon: React.createElement(TagOutlined) },
       { label: '库存盘点', path: paths.inventoryCheck, icon: React.createElement(AuditOutlined) },
-      { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },
+      { label: '库位地图', path: paths.warehouseLocationMap, icon: React.createElement(EnvironmentOutlined) },
+    ],
+  },
+  {
+    title: '电商运营',
+    key: 'ecommerce',
+    icon: React.createElement(ShopOutlined),
+    items: [
+      { label: '平台总览', path: paths.ecommerceCenter, icon: React.createElement(ShopOutlined) },
+      { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ShoppingCartOutlined) },
+      { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },
     ],
   },
   {
@@ -255,7 +279,6 @@ export const menuConfig: MenuSection[] = [
       { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
       { label: '员工借支', path: paths.employeeAdvance, icon: React.createElement(AccountBookOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
-      { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },
       { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
   },
@@ -305,12 +328,6 @@ export const menuConfig: MenuSection[] = [
       { label: '数据看板', path: paths.cockpit, icon: React.createElement(RadarChartOutlined) },
     ],
   },
-  {
-    title: '集成对接中心',
-    key: 'integrationCenter',
-    icon: React.createElement(ApiOutlined),
-    path: paths.integrationCenter,
-  },
 ];
 
 export const routeToPermissionCode: Record<string, string> = {
@@ -327,6 +344,9 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.sampleInventory]: permissionCodes.sampleInventory,
   [paths.ecommerceOrders]: permissionCodes.ecommerceOrders,
   [paths.inventoryCheck]: permissionCodes.inventoryCheck,
+  [paths.labelPrint]: permissionCodes.labelPrint,
+  [paths.productInfo]: permissionCodes.productInfo,
+  [paths.warehouseLocationMap]: permissionCodes.warehouseLocationMap,
 
 
   [paths.productionList]: permissionCodes.productionList,
@@ -363,7 +383,8 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.customerManagement]: permissionCodes.customerManagement,
   [paths.appStore]: permissionCodes.appStore,
   [paths.dataImport]: permissionCodes.dataImport,
-  [paths.integrationCenter]: permissionCodes.integrationCenter,
+  [paths.ecommerceCenter]: permissionCodes.ecommerceCenter,
+  [paths.ecommercePlatform]: permissionCodes.ecommercePlatform,
   [paths.cockpit]: permissionCodes.intelligenceCenter,
   [paths.cockpitTrace]: permissionCodes.intelligenceCenter,
   [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,

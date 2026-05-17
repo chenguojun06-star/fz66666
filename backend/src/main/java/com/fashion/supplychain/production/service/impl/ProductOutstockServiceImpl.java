@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -210,5 +211,10 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
         return "OS" + ts + rand;
+    }
+
+    @Override
+    public int atomicAddPaidAmount(String id, BigDecimal delta) {
+        return baseMapper.atomicAddPaidAmount(id, delta);
     }
 }

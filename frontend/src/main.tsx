@@ -19,6 +19,8 @@
 //       通过 sessionStorage 防止无限循环（同一会话只自动刷新一次）。
 (function handleChunkLoadError() {
   const RELOAD_KEY = '__chunk_reload__';
+  const LAST_RELOAD_KEY = '__chunk_reload_ts__';
+  const RELOAD_COOLDOWN_MS = 30_000;
   const CHUNK_ERR_PATTERNS = [
     'dynamically imported module',
     'Failed to fetch',
@@ -28,10 +30,12 @@
   const isChunkError = (msg: string) => CHUNK_ERR_PATTERNS.some(p => msg.includes(p));
 
   const tryReload = () => {
-    if (!sessionStorage.getItem(RELOAD_KEY)) {
-      sessionStorage.setItem(RELOAD_KEY, '1');
-      window.location.reload();
-    }
+    if (sessionStorage.getItem(RELOAD_KEY)) return;
+    const lastTs = Number(sessionStorage.getItem(LAST_RELOAD_KEY) || '0');
+    if (Date.now() - lastTs < RELOAD_COOLDOWN_MS) return;
+    sessionStorage.setItem(LAST_RELOAD_KEY, String(Date.now()));
+    sessionStorage.setItem(RELOAD_KEY, '1');
+    window.location.reload();
   };
 
   window.addEventListener('error', (event) => {
@@ -453,7 +457,7 @@ const AppWrapper: React.FC = () => {
 
   // useMemo 确保只有 currentTheme 真正变化时才重建主题对象，
   // 防止每次父组件渲染时 ConfigProvider 收到新引用而触发全量 CSS-in-JS 重算（全屏闪烁根因）
-  const themeConfig = useMemo(() => getThemeConfig(), [currentTheme, getThemeConfig]);
+  const themeConfig = useMemo(() => getThemeConfig(), [currentTheme]);
 
   const resolveAntdLocale = (lang: AppLanguage) => {
     if (lang === 'en-US') return enUS;
@@ -462,11 +466,27 @@ const AppWrapper: React.FC = () => {
     return zhCN;
   };
 
+  // 根据屏幕宽度动态选择 antd 组件尺寸 — 5档分辨率智能适配
+  const resolveComponentSize = (): 'small' | 'middle' | 'large' => {
+    const w = window.innerWidth;
+    if (w <= 1366) return 'small';
+    if (w <= 1920) return 'middle';
+    return 'large';
+  };
+
+  const [componentSize, setComponentSize] = useState<'small' | 'middle' | 'large'>(resolveComponentSize);
+
+  useEffect(() => {
+    const handleResize = () => setComponentSize(resolveComponentSize());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <ConfigProvider
       locale={resolveAntdLocale(language)}
       theme={themeConfig}
-      componentSize={window.innerWidth >= 2560 ? 'large' : 'middle'}
+      componentSize={componentSize}
       getPopupContainer={(triggerNode) => {
         // Modal 内的弹出层锚定到 .ant-modal-body（保证定位正确、outside-click 不误关闭）
         // 其余情况统一用 document.body，避免 sticky 容器的 z-index 堆叠上下文导致下拉被遮挡

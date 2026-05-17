@@ -1,6 +1,7 @@
 import React from 'react';
-import { Card, Button, Space, Popover } from 'antd';
-import { StyleCoverThumb } from '@/components/StyleAssets';
+import { Card, Button, Space, Popover, Dropdown } from 'antd';
+import type { MenuProps } from 'antd';
+import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import './style.css';
@@ -37,21 +38,22 @@ export interface CardAction {
 export interface UniversalCardViewProps {
   dataSource: any[];
   loading?: boolean;
-  columns?: number; // PC端列数，默认4
-  coverField?: string; // 封面图字段名
-  styleIdField?: string; // 款式ID字段名（用于封面回退查询）
-  styleNoField?: string; // 款号字段名（用于封面回退查询）
-  titleField: string; // 标题字段名
-  subtitleField?: string; // 副标题字段名
-  fields: CardField[]; // 显示的字段配置
-  fieldGroups?: CardField[][]; // 自定义字段分组（二维数组），优先级高于fields
-  progressConfig?: CardProgressConfig; // 进度条配置
-  actions?: (record: any) => CardAction[]; // 操作按钮配置
-  coverPlaceholder?: string; // 封面占位文字
-  onCardClick?: (record: any) => void; // 卡片点击事件
-  pagination?: any; // 分页配置（由外部渲染）
-  hoverRender?: (record: any) => React.ReactNode; // 悬停弹出内容
-  titleTags?: (record: any) => React.ReactNode; // 标题旁的标签（急/首/翻等）
+  columns?: number;
+  coverField?: string;
+  styleIdField?: string;
+  styleNoField?: string;
+  titleField: string;
+  subtitleField?: string;
+  fields: CardField[];
+  fieldGroups?: CardField[][];
+  progressConfig?: CardProgressConfig;
+  actions?: (record: any) => CardAction[];
+  maxInlineActions?: number;
+  coverPlaceholder?: string;
+  onCardClick?: (record: any) => void;
+  pagination?: any;
+  hoverRender?: (record: any) => React.ReactNode;
+  titleTags?: (record: any) => React.ReactNode;
   getCardId?: (record: any) => string | undefined;
   getCardStyle?: (record: any) => React.CSSProperties | undefined;
 }
@@ -68,6 +70,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   fieldGroups,
   progressConfig,
   actions,
+  maxInlineActions = 3,
   coverPlaceholder = '暂无图片',
   onCardClick,
   hoverRender,
@@ -102,21 +105,19 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     return groups;
   };
 
-  // 排序：已完成/已关单卡片沉底，活跃卡片按交期升序（最紧迫在前）
+  const TERMINAL_STATUSES = new Set(['COMPLETED', 'CLOSED', 'CANCELLED', 'SCRAPPED', 'ARCHIVED']);
   const sortedData = [...dataSource].sort((a, b) => {
     const isDone = (r: any) =>
       !!(progressConfig?.isCompleted?.(r)) ||
       !!(r.actualEndDate) ||
-      String(r.status).toUpperCase() === 'CLOSED' ||
+      TERMINAL_STATUSES.has(String(r.status || '').toUpperCase()) ||
       (progressConfig ? progressConfig.calculate(r) >= 100 : false);
     const aDone = isDone(a);
     const bDone = isDone(b);
     if (aDone !== bDone) return aDone ? 1 : -1;
     if (aDone) {
-      // 都已完成/关单：最近关单的排前面
       return (b.actualEndDate ?? '').localeCompare(a.actualEndDate ?? '');
     }
-    // 都活跃：交期最近的排前面（无交期的沉底）
     return (a.plannedEndDate ?? '9999-99-99').localeCompare(b.plannedEndDate ?? '9999-99-99');
   });
 
@@ -157,16 +158,12 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
             cover={
               <div className="universal-card-cover">
                 {hasCoverSource ? (
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-                    <StyleCoverThumb
-                      styleId={styleId}
-                      styleNo={styleNo}
-                      src={coverSrc}
-                      size="fill"
-                      fit="contain"
-                      borderRadius={0}
-                    />
-                  </div>
+                  <CardCoverSwitcher
+                    styleId={styleId}
+                    styleNo={styleNo}
+                    src={coverSrc}
+                    fit="contain"
+                  />
                 ) : (
                   <div className="universal-card-cover-placeholder">
                     <span>{coverPlaceholder}</span>
@@ -244,12 +241,11 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
               {actionButtons.length > 0 && (
                 <div className="universal-card-actions">
                   <Space size={4}>
-                    {actionButtons.map((action) => (
+                    {actionButtons.slice(0, maxInlineActions).map((action) => (
                       <Button
                         key={action.key}
                         type="link"
                         danger={action.danger}
-                       
                         disabled={action.disabled}
                         title={action.title}
                         onClick={(e) => {
@@ -266,6 +262,32 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         {action.label}
                       </Button>
                     ))}
+                    {actionButtons.length > maxInlineActions && (
+                      <Dropdown
+                        trigger={['click']}
+                        menu={{
+                          items: actionButtons.slice(maxInlineActions).map((action) => ({
+                            key: action.key,
+                            label: action.label,
+                            danger: action.danger,
+                            disabled: action.disabled,
+                          })),
+                          onClick: ({ key, domEvent }) => {
+                            domEvent?.stopPropagation?.();
+                            const action = actionButtons.slice(maxInlineActions).find(a => a.key === key);
+                            if (action && !action.disabled) action.onClick?.(record);
+                          },
+                        }}
+                      >
+                        <Button
+                          type="link"
+                          style={{ fontSize: '12px', padding: '0 6px', height: 'auto' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          更多
+                        </Button>
+                      </Dropdown>
+                    )}
                   </Space>
                 </div>
               )}

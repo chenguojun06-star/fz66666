@@ -109,10 +109,10 @@ const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ resul
           background: 'rgba(0,0,0,0.18)', borderRadius: 6, padding: '8px 10px',
           border: '1px solid rgba(255,255,255,0.06)',
         }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
             {nameMap[key] ?? key}
           </div>
-          <div style={{ fontSize: 11, color: '#bbb', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 13, color: '#bbb', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
             {(val?.length ?? 0) > 300 ? val.slice(0, 300) + '…' : val}
           </div>
         </div>
@@ -259,24 +259,24 @@ const AgentGraphPanel: React.FC = () => {
                 <BranchesOutlined style={{ color: '#a78bfa' }} />
                 <RouteTag route={result.route} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>置信度</div>
+                  <div style={{ fontSize: 13, color: '#888', marginBottom: 2 }}>置信度</div>
                   <Progress
                     percent={result.confidenceScore}
                     strokeColor={confColor(result.confidenceScore)}
                    
                     style={{ marginBottom: 0 }}
-                    format={v => <span style={{ fontSize: 11, color: confColor(v!) }}>{v} 分</span>}
+                    format={v => <span style={{ fontSize: 13, color: confColor(v!) }}>{v} 分</span>}
                   />
                 </div>
-                <span style={{ fontSize: 11, color: '#666' }}>{result.latencyMs} ms</span>
+                <span style={{ fontSize: 13, color: '#666' }}>{result.latencyMs} ms</span>
               </div>
 
               {/* 节点轨迹 */}
               {result.nodeTrace && result.nodeTrace.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, color: '#888', marginRight: 6 }}>执行路径:</span>
+                  <span style={{ fontSize: 13, color: '#888', marginRight: 6 }}>执行路径:</span>
                   {result.nodeTrace.map((n, i) => (
-                    <Tag key={i} style={{ fontSize: 10 }}>{n}</Tag>
+                    <Tag key={i} style={{ fontSize: 12 }}>{n}</Tag>
                   ))}
                 </div>
               )}
@@ -289,7 +289,7 @@ const AgentGraphPanel: React.FC = () => {
               {/* 分析摘要 */}
               {result.contextSummary && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
                     <XiaoyunCloudAvatar size={16} active />分析结果
                   </div>
                   <div style={{ fontSize: 12, color: '#d4d4d4', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
@@ -301,7 +301,7 @@ const AgentGraphPanel: React.FC = () => {
               {/* 优化建议 */}
               {result.optimizationSuggestion && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: '#34d399', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, color: '#34d399', fontWeight: 600, marginBottom: 4 }}>
                      AI 优化建议
                   </div>
                   <div style={{ fontSize: 12, color: '#d4d4d4', lineHeight: 1.65 }}>
@@ -313,11 +313,11 @@ const AgentGraphPanel: React.FC = () => {
               {/* 自我反思 */}
               {result.reflection && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: '#faad14', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, color: '#faad14', fontWeight: 600, marginBottom: 4 }}>
                      自我反思（置信评估）
                   </div>
                   <div style={{
-                    fontSize: 11, color: '#8b8b8b', fontFamily: 'monospace',
+                    fontSize: 13, color: '#8b8b8b', fontFamily: 'monospace',
                     background: 'rgba(0,0,0,0.22)',
                     padding: '6px 8px', borderRadius: 4, lineHeight: 1.5, whiteSpace: 'pre-wrap',
                   }}>
@@ -329,7 +329,7 @@ const AgentGraphPanel: React.FC = () => {
               {/* 反馈评分 */}
               {result.executionId && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: '#888' }}>结果评分:</span>
+                  <span style={{ fontSize: 13, color: '#888' }}>结果评分:</span>
                   <Rate
                     count={5}
                     style={{ fontSize: 14 }}

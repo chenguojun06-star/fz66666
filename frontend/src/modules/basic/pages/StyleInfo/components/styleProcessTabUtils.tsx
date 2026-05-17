@@ -264,8 +264,8 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             />
             {/* AI 单价提示卡片 */}
             {loading && (
-              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <LoadingOutlined style={{ fontSize: 10 }} /> 查询历史...
+              <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <LoadingOutlined style={{ fontSize: 12 }} /> 查询历史...
               </span>
             )}
             {!loading && hint && (
@@ -280,17 +280,17 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
                     updateField(record.id!, 'price', hint.suggestedPrice);
                   }}
                 >
-                  <BulbOutlined style={{ fontSize: 11, color: '#2D7FF9' }} />
-                  <span style={{ fontSize: 11, color: '#2D7FF9' }}>
+                  <BulbOutlined style={{ fontSize: 13, color: '#2D7FF9' }} />
+                  <span style={{ fontSize: 13, color: '#2D7FF9' }}>
                     建议 ¥{Number(hint.suggestedPrice).toFixed(2)}
                   </span>
                   <Tag
                     color="blue"
-                    style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
+                    style={{ fontSize: 12, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
                   >
                     采用
                   </Tag>
-                  <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
                     均¥{Number(hint.avgPrice).toFixed(2)} · {hint.usageCount}款
                   </span>
                 </div>

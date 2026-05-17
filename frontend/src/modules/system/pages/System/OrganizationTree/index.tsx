@@ -135,7 +135,7 @@ const OrganizationTreePage: React.FC = () => {
   const [inviteQr, setInviteQr] = useState<{ open: boolean; loading: boolean; qrBase64?: string; expiresAt?: string }>({ open: false, loading: false });
 
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [accountUser, setAccountUser] = useState<{ id: string; name: string }>({ id: '', name: '' });
+  const [accountUser, _setAccountUser] = useState<{ id: string; name: string }>({ id: '', name: '' });
 
   useEffect(() => {
     if (tplModal.open) {
@@ -465,7 +465,7 @@ const OrganizationTreePage: React.FC = () => {
           <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, #1677ff)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
           {selectedUnit?.managerUserId && String(r.id) === String(selectedUnit.managerUserId) && (
-            <Tag color="blue" style={{ fontSize: 10 }}>负责人</Tag>
+            <Tag color="blue" style={{ fontSize: 12 }}>负责人</Tag>
           )}
         </Space>
       ),
@@ -647,7 +647,7 @@ const OrganizationTreePage: React.FC = () => {
                         共 {displayedMembers.length} 人
                       </span>
                       {selectedUnit?.managerUserName && (
-                        <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ marginLeft: 8, fontSize: 11 }}>
+                        <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ marginLeft: 8, fontSize: 13 }}>
                           审批人: {selectedUnit.managerUserName}
                         </Tag>
                       )}

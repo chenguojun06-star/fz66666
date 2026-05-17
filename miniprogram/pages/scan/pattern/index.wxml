@@ -104,13 +104,53 @@
     </view>
 
     <!-- 仓位编号（仓库操作时显示） -->
-    <view wx:if="{{detail.requiresWarehouseInput}}" class="input-row">
-      <text class="input-label">仓位编号</text>
+    <view wx:if="{{detail.requiresWarehouseInput}}" class="warehouse-section">
+      <view class="input-label">入库仓库</view>
+      <view class="warehouse-option-row">
+        <view
+          wx:for="{{warehouseOptions}}"
+          wx:key="index"
+          class="warehouse-chip {{detail.warehouseCode === item ? 'warehouse-chip--active' : ''}}"
+          bindtap="onWarehouseChipTap"
+          data-value="{{item}}"
+          hover-class="warehouse-chip-hover"
+        >{{item}}</view>
+        <view
+          class="warehouse-chip warehouse-chip--clear {{detail.warehouseCode ? '' : 'warehouse-chip--disabled'}}"
+          bindtap="onWarehouseClear"
+          hover-class="warehouse-chip-hover"
+        >清除</view>
+      </view>
       <input
         class="input-field"
-        placeholder="例如 A-01-01"
+        placeholder="或手动输入仓库编号"
         value="{{detail.warehouseCode}}"
         bindinput="onWarehouseInput"
+      />
+
+      <!-- 库位选择（仓库选择后出现） -->
+      <view wx:if="{{detail.warehouseCode && locationOptions.length > 0}}" class="input-label" style="margin-top: 16rpx;">入库库位</view>
+      <view wx:if="{{detail.warehouseCode && locationOptions.length > 0}}" class="warehouse-option-row">
+        <view
+          wx:for="{{locationOptions}}"
+          wx:key="index"
+          class="warehouse-chip {{warehouseLocationCode === item ? 'warehouse-chip--active' : ''}}"
+          bindtap="onLocationChipTap"
+          data-value="{{item}}"
+          hover-class="warehouse-chip-hover"
+        >{{item}}</view>
+        <view
+          class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
+          bindtap="onLocationClear"
+          hover-class="warehouse-chip-hover"
+        >清除</view>
+      </view>
+      <input
+        wx:if="{{detail.warehouseCode}}"
+        class="input-field"
+        placeholder="或手动输入库位编号"
+        value="{{warehouseLocationCode}}"
+        bindinput="onLocationCodeInput"
       />
     </view>
 

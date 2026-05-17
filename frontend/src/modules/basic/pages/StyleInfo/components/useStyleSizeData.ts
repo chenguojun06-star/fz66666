@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
@@ -24,7 +24,7 @@ export const useStyleSizeData = (
   const combinedSizeIdsRef = useRef<Array<string | number>>([]);
 
   const { message } = App.useApp();
-  const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes]);
+  const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes.join(',')]);
 
   const fetchSizeTemplates = async (sourceStyleNo?: string) => {
     const sn = String(sourceStyleNo ?? '').trim();
@@ -72,7 +72,7 @@ export const useStyleSizeData = (
     }
   };
 
-  const fetchSize = async () => {
+  const fetchSize = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get<StyleSize[]>(`/style/size/list?styleId=${styleId}`);
@@ -156,7 +156,7 @@ export const useStyleSizeData = (
     } finally {
       setLoading(false);
     }
-  };
+  }, [styleId, message, linkedSizeColumns]);
 
   useEffect(() => {
     fetchSizeTemplates('');
@@ -164,7 +164,7 @@ export const useStyleSizeData = (
 
   useEffect(() => {
     fetchSize();
-  }, [styleId]);
+  }, [fetchSize]);
 
   return {
     loading, sizeColumns, rows, sizeTemplates, templateLoading, sizeOptions, setSizeOptions,

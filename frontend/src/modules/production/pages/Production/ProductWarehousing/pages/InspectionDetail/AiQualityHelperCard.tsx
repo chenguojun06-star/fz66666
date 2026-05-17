@@ -21,7 +21,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
           <span style={{ fontWeight: 600, color: '#1677ff' }}>智能质检助手</span>
           {aiSuggestion?.historicalDefectRate !== undefined && (
             <span style={{
-              fontSize: 11, fontWeight: 400, padding: '1px 7px',
+              fontSize: 13, fontWeight: 400, padding: '1px 7px',
               borderRadius: 10, background:
                 aiSuggestion.historicalDefectRate > 0.05 ? '#fff1f0'
                   : aiSuggestion.historicalDefectRate > 0.02 ? '#fff7e6' : '#f6ffed',
@@ -94,7 +94,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         {isActual && (
-                          <span style={{ background: '#ff4d4f', color: '#fff', fontSize: 11, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
+                          <span style={{ background: '#ff4d4f', color: '#fff', fontSize: 13, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
                         )}
                         <span style={{ fontWeight: 600, color: isActual ? '#cf1322' : '#595959', fontSize: 13 }}>
                           {getDefectCategoryLabel(defect)}

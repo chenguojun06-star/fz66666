@@ -77,27 +77,30 @@ public class WeChatAiWebhookController {
                                       @RequestParam(value = "nonce", required = false) String nonce) {
         if (!enabled) return buildTextReply("", "AI助手未启用");
 
-        if (verifyToken != null && !verifyToken.isBlank()) {
-            if (signature == null || timestamp == null || nonce == null) {
-                log.warn("[WeChat-AI] POST callback missing signature params, rejecting");
+        if (verifyToken == null || verifyToken.isBlank()) {
+            log.error("[WeChat-AI] verifyToken 未配置，拒绝回调请求（安全策略：未配置验证凭据时禁止处理外部消息）");
+            return "";
+        }
+
+        if (signature == null || timestamp == null || nonce == null) {
+            log.warn("[WeChat-AI] POST callback missing signature params, rejecting");
+            return "";
+        }
+        try {
+            String[] arr = {verifyToken, timestamp, nonce};
+            Arrays.sort(arr);
+            StringBuilder sb = new StringBuilder();
+            for (String s : arr) sb.append(s);
+            byte[] digest = MessageDigest.getInstance("SHA-1").digest(sb.toString().getBytes());
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest) hex.append(String.format("%02x", b));
+            if (!hex.toString().equals(signature)) {
+                log.warn("[WeChat-AI] POST callback signature mismatch, rejecting");
                 return "";
             }
-            try {
-                String[] arr = {verifyToken, timestamp, nonce};
-                Arrays.sort(arr);
-                StringBuilder sb = new StringBuilder();
-                for (String s : arr) sb.append(s);
-                byte[] digest = MessageDigest.getInstance("SHA-1").digest(sb.toString().getBytes());
-                StringBuilder hex = new StringBuilder();
-                for (byte b : digest) hex.append(String.format("%02x", b));
-                if (!hex.toString().equals(signature)) {
-                    log.warn("[WeChat-AI] POST callback signature mismatch, rejecting");
-                    return "";
-                }
-            } catch (Exception e) {
-                log.error("[WeChat-AI] POST callback signature verify error: {}", e.getMessage());
-                return "";
-            }
+        } catch (Exception e) {
+            log.error("[WeChat-AI] POST callback signature verify error: {}", e.getMessage());
+            return "";
         }
 
         try {
@@ -230,13 +233,18 @@ public class WeChatAiWebhookController {
         return Result.success(reply);
     }
 
+    private String escapeCdata(String s) {
+        if (s == null) return "";
+        return s.replace("]]>", "]]]]><![CDATA[>");
+    }
+
     private String buildTextReply(String toUser, String content) {
         return "<xml>" +
-                "<ToUserName><![CDATA[" + toUser + "]]></ToUserName>" +
+                "<ToUserName><![CDATA[" + escapeCdata(toUser) + "]]></ToUserName>" +
                 "<FromUserName><![CDATA[xiaoyun]]></FromUserName>" +
                 "<CreateTime>" + System.currentTimeMillis() / 1000 + "</CreateTime>" +
                 "<MsgType><![CDATA[text]]></MsgType>" +
-                "<Content><![CDATA[" + content + "]]></Content>" +
+                "<Content><![CDATA[" + escapeCdata(content) + "]]></Content>" +
                 "</xml>";
     }
 

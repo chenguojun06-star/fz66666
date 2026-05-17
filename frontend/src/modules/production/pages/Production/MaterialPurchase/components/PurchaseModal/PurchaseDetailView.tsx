@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip, Upload } from 'antd';
-import { FileImageOutlined, PlusOutlined, LoadingOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { RcFile } from 'antd/es/upload/interface';
+import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip } from 'antd';
+import { FileImageOutlined, LoadingOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
+import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { formatMaterialSpecWidth, getMaterialTypeCategory } from '@/utils/materialType';
@@ -106,56 +106,38 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   const [invoiceUploading, setInvoiceUploading] = useState(false);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
 
-  // currentPurchase 切换时同步解析
-  useEffect(() => {
-    setInvoiceUrls(parseInvoiceUrls((currentPurchase as any)?.invoiceUrls));
+  const persistInvoiceUrls = useCallback(async (urls: string[]) => {
+    if (!currentPurchase?.id) return;
+    await api.post('/production/purchase/update-invoice-urls', {
+      purchaseId: currentPurchase.id,
+      invoiceUrls: JSON.stringify(urls),
+    }).catch(() => { /* 非致命 */ });
   }, [currentPurchase?.id]);
 
-  const beforeInvoiceUpload = (file: RcFile) => {
-    const ok = ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type);
-    if (!ok) { void import('@/utils/antdStatic').then(({ message }) => message.error('只能上传 JPG/PNG 图片')); return false; }
-    const lt5m = file.size / 1024 / 1024 < 5;
-    if (!lt5m) { void import('@/utils/antdStatic').then(({ message }) => message.error('图片不能超过 5MB')); return false; }
-    return true;
-  };
-
-  const handleInvoiceUpload = async (options: any) => {
-    const { file, onSuccess, onError } = options;
+  const handleInvoiceUpload = useCallback(async (file: File): Promise<string> => {
     setInvoiceUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
     try {
+      const formData = new FormData();
+      formData.append('file', file);
       const res = await api.post('/common/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       }) as any;
-      if (res?.code === 200 && res?.data) {
-        const url: string = typeof res.data === 'string' ? res.data : (res.data?.url ?? '');
-        const next = [...invoiceUrls, url];
-        setInvoiceUrls(next);
-        // 持久化保存到后端
-        await api.post('/production/purchase/update-invoice-urls', {
-          purchaseId: currentPurchase?.id,
-          invoiceUrls: JSON.stringify(next),
-        }).catch(() => { /* 非致命，本地已更新 */ });
-        onSuccess(res);
-      } else {
-        onError(new Error(res?.message || '上传失败'));
-      }
-    } catch (err) {
-      onError(err);
+      if (res?.code !== 200 || !res?.data) throw new Error(res?.message || '上传失败');
+      const url: string = typeof res.data === 'string' ? res.data : (res.data?.url ?? '');
+      return url;
     } finally {
       setInvoiceUploading(false);
     }
-  };
+  }, []);
 
-  const handleInvoiceDelete = async (url: string) => {
-    const next = invoiceUrls.filter((u) => u !== url);
-    setInvoiceUrls(next);
-    await api.post('/production/purchase/update-invoice-urls', {
-      purchaseId: currentPurchase?.id,
-      invoiceUrls: JSON.stringify(next),
-    }).catch(() => { /* 非致命 */ });
-  };
+  const handleInvoiceChange = useCallback((urls: string[]) => {
+    setInvoiceUrls(urls);
+    void persistInvoiceUrls(urls);
+  }, [persistInvoiceUrls]);
+
+  useEffect(() => {
+    setInvoiceUrls(parseInvoiceUrls((currentPurchase as any)?.invoiceUrls));
+  }, [currentPurchase?.id]);
 
   const loadDocs = useCallback(async () => {
     if (!currentPurchase?.orderNo) return;
@@ -543,66 +525,30 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           <Space>
             <FileImageOutlined />
             <span>发票/单据</span>
-            <span style={{ color: '#999', fontWeight: 'normal' }}>（{invoiceUrls.length}张，点击可预览放大）</span>
+            <span style={{ color: '#999', fontWeight: 'normal' }}>（{invoiceUrls.length}张，支持拖拽/粘贴/点击上传）</span>
           </Space>
         }
-        extra={
-          <Upload
-            accept="image/jpeg,image/jpg,image/png"
-            showUploadList={false}
-            beforeUpload={beforeInvoiceUpload}
-            customRequest={handleInvoiceUpload}
-            disabled={!currentPurchase?.id}
-          >
-            <Button icon={invoiceUploading ? <LoadingOutlined /> : <PlusOutlined />} disabled={invoiceUploading || !currentPurchase?.id}>
-              上传图片
-            </Button>
-          </Upload>
-        }
       >
-        {invoiceUrls.length === 0 && !invoiceUploading ? (
-          <div style={{ color: '#bbb', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
-            暂无发票/单据，点击右上角「上传图片」添加
+        {invoiceUploading && (
+          <div style={{ marginBottom: 8 }}>
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 16 }} />} /> 上传中...
           </div>
-        ) : (
-          <Image.PreviewGroup>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              {invoiceUrls.map((url, idx) => (
-                <div
-                  key={url + idx}
-                  style={{ position: 'relative', width: 64, height: 64 }}
-                >
-                  <Image
-                    src={getFullAuthedFileUrl(url)}
-                    width={64}
-                    height={64}
-                    style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #f0f0f0' }}
-                    preview={{ mask: '预览' }}
-                  />
-                  <Button
-                    type="text"
-                    danger
-                   
-                    icon={<DeleteOutlined />}
-                    style={{
-                      position: 'absolute',
-                      top: 2,
-                      right: 2,
-                      background: 'rgba(255,255,255,0.85)',
-                      padding: '0 4px',
-                      minWidth: 0,
-                    }}
-                    onClick={() => void handleInvoiceDelete(url)}
-                  />
-                </div>
-              ))}
-              {invoiceUploading && (
-                <div style={{ width: 120, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9', borderRadius: 4 }}>
-                  <LoadingOutlined style={{ fontSize: 24, color: '#1677ff' }} />
-                </div>
-              )}
-            </div>
-          </Image.PreviewGroup>
+        )}
+        <MultiImageUploadBox
+          value={invoiceUrls}
+          onChange={handleInvoiceChange}
+          uploadFn={handleInvoiceUpload}
+          maxCount={20}
+          size={80}
+          accept="image/jpeg,image/jpg,image/png"
+          maxSizeMB={5}
+          label="发票/单据"
+          disabled={!currentPurchase?.id}
+        />
+        {invoiceUrls.length === 0 && !invoiceUploading && (
+          <div style={{ color: '#bbb', fontSize: 13, textAlign: 'center', padding: '4px 0 0' }}>
+            暂无发票/单据，支持拖拽、粘贴或点击上传
+          </div>
         )}
       </Card>
 

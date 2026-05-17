@@ -12,6 +12,7 @@ interface UseCardViewConfigParams {
   handleShareOrder: (record: ProductionOrder) => void;
   handleCloseOrder: (record: ProductionOrder) => void;
   onOpenRemark?: (record: ProductionOrder) => void;
+  onOpenKanban?: (record: ProductionOrder) => void;
   isFactoryAccount: boolean;
   canManageOrderLifecycle: boolean;
   embedded: boolean;
@@ -26,6 +27,7 @@ export function useCardViewConfig({
   handleShareOrder,
   handleCloseOrder,
   onOpenRemark,
+  onOpenKanban,
   isFactoryAccount,
   canManageOrderLifecycle,
   embedded,
@@ -46,6 +48,12 @@ export function useCardViewConfig({
     });
 
     return [
+      ...(onOpenKanban ? [{
+        key: 'kanban',
+        label: '看板',
+        title: '工序看板',
+        onClick: () => onOpenKanban(record),
+      }] : []),
       {
         key: 'print',
         label: '打印',
@@ -68,19 +76,15 @@ export function useCardViewConfig({
         title: frozen ? frozenTitle : '发货',
         onClick: () => handleFactoryShip(record),
       }] : []),
-      ...(commonActions.length ? [{
-        key: 'divider1',
-        type: 'divider' as const,
-      }] : []),
       ...commonActions,
     ].filter(Boolean);
-  }, [isOrderFrozenByStatus, setPrintingRecord, handlePrintLabel, handleFactoryShip, handleQuickEdit, handleShareOrder, handleCloseOrder, onOpenRemark, isFactoryAccount, canManageOrderLifecycle, embedded]);
+  }, [isOrderFrozenByStatus, setPrintingRecord, handlePrintLabel, handleFactoryShip, handleQuickEdit, handleShareOrder, handleCloseOrder, onOpenRemark, onOpenKanban, isFactoryAccount, canManageOrderLifecycle, embedded]);
 
   const titleTags = useCallback((record: any) => (
     <>
-      {(record as ProductionOrder).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
-      {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
-      {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
+      {(record as ProductionOrder).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
+      {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
+      {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
     </>
   ), []);
 

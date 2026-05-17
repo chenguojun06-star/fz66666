@@ -45,7 +45,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
           )}
         </div>
         <span style={{ display: 'flex', alignItems: 'center' }}>
-          {expanded ? <DownOutlined style={{ fontSize: 11, color: '#8c8c8c' }} /> : <RightOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />}
+          {expanded ? <DownOutlined style={{ fontSize: 13, color: '#8c8c8c' }} /> : <RightOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
         </span>
       </div>
 

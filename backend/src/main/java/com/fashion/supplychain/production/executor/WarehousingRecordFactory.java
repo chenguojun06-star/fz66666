@@ -14,10 +14,23 @@ public class WarehousingRecordFactory {
                                                           String warehouse, String qrCode,
                                                           String operatorId, String operatorName,
                                                           String scanMode) {
+        return createScanWarehousingRecord(order, quantity, warehouse, null, null, qrCode, operatorId, operatorName, scanMode);
+    }
+
+    public ProductWarehousing createScanWarehousingRecord(ProductionOrder order, int quantity,
+                                                          String warehouse, String warehouseAreaId, String warehouseAreaName,
+                                                          String qrCode, String operatorId, String operatorName,
+                                                          String scanMode) {
         ProductWarehousing w = new ProductWarehousing();
         w.setOrderId(order.getId());
         w.setWarehousingType("scan");
         w.setWarehouse(warehouse);
+        if (StringUtils.hasText(warehouseAreaId)) {
+            w.setWarehouseAreaId(warehouseAreaId);
+        }
+        if (StringUtils.hasText(warehouseAreaName)) {
+            w.setWarehouseAreaName(warehouseAreaName);
+        }
         w.setWarehousingQuantity(quantity);
         w.setQualifiedQuantity(quantity);
         w.setUnqualifiedQuantity(0);

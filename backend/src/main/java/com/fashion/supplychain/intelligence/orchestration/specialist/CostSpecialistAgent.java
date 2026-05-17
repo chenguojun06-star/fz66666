@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ModelRoutingConfig;
+import com.fashion.supplychain.intelligence.service.SpecialistPersonaService;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class CostSpecialistAgent implements SpecialistAgent {
     private final IntelligenceInferenceOrchestrator inference;
     private final ModelRoutingConfig routingConfig;
     private final ScanRecordMapper scanRecordMapper;
+    private final SpecialistPersonaService personaService;
 
     @Override
     public String getRoute() { return "cost"; }
@@ -31,8 +33,11 @@ public class CostSpecialistAgent implements SpecialistAgent {
     public AgentState analyze(AgentState state) {
         String dataContext = buildDataContext(state);
         String prompt = buildPrompt(state, dataContext);
-        var result = inference.chat("cost_specialist",
-                "你是一名服装成本核算专家，擅长工资核算、工序成本分析和对账管理。\n" + buildSystemPrompt(), prompt);
+        String systemPrompt = personaService.buildFullPrompt("cost");
+        if (systemPrompt == null || systemPrompt.isBlank()) {
+            systemPrompt = "你是一名服装成本核算专家，擅长工资核算、工序成本分析和对账管理。\n基于提供的真实扫码成本、工序工价和操作员工资数据进行分析。输出成本结构+优化建议。";
+        }
+        var result = inference.chat("cost_specialist", systemPrompt, prompt);
         if (result.isSuccess()) {
             String analysis = result.getContent();
             state.getSpecialistResults().put("cost", analysis);
@@ -94,10 +99,6 @@ public class CostSpecialistAgent implements SpecialistAgent {
             sb.append("数据查询异常，仅基于LLM推理\n");
         }
         return sb.toString();
-    }
-
-    private String buildSystemPrompt() {
-        return "基于提供的真实扫码成本、工序工价和操作员工资数据进行分析。输出成本结构+优化建议。";
     }
 
     private String buildPrompt(AgentState state, String dataContext) {

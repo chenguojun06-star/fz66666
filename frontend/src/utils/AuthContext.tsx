@@ -500,8 +500,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!e.newValue) {
           setUser(null);
           setIsAuthenticated(false);
-        } else if (e.newValue !== e.oldValue) {
-          window.location.reload();
         }
       }
     };

@@ -11,7 +11,9 @@ import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.warehouse.entity.StockChangeLog;
+import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.service.StockChangeLogService;
+import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class MaterialWarehouseOperationOrchestrator {
     private final MaterialInboundMapper materialInboundMapper;
     private final MaterialOutboundLogMapper materialOutboundLogMapper;
     private final StockChangeLogService stockChangeLogService;
+    private final WarehouseAreaService warehouseAreaService;
     private final ObjectMapper objectMapper;
 
     private static final Set<String> VALID_SOURCE_TYPES = Set.of(
@@ -58,6 +61,7 @@ public class MaterialWarehouseOperationOrchestrator {
         String purchaseOrderId = trimToNull(params.get("purchaseOrderId"));
         String batchNo = trimToNull(params.get("batchNo"));
         String traceId = trimToNull(params.get("traceId"));
+        String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
 
         if (!StringUtils.hasText(materialCode)) {
             throw new IllegalArgumentException("物料编码不能为空");
@@ -128,7 +132,17 @@ public class MaterialWarehouseOperationOrchestrator {
         inbound.setUpdateTime(now);
         inbound.setDeleteFlag(0);
         inbound.setTenantId(tenantId);
+        inbound.setWarehouseAreaId(warehouseAreaId);
+        inbound.setWarehouseAreaName(resolveWarehouseAreaName(warehouseAreaId));
         materialInboundMapper.insert(inbound);
+
+        if (StringUtils.hasText(warehouseAreaId) && stock != null) {
+            materialStockService.lambdaUpdate()
+                    .eq(MaterialStock::getId, stock.getId())
+                    .set(MaterialStock::getWarehouseAreaId, warehouseAreaId)
+                    .set(MaterialStock::getWarehouseAreaName, resolveWarehouseAreaName(warehouseAreaId))
+                    .update();
+        }
 
         logStockChange("INBOUND", stock, beforeQty, quantity, afterQty,
                 inbound.getInboundNo(), sourceType, effectivePrice, totalAmount,
@@ -341,6 +355,7 @@ public class MaterialWarehouseOperationOrchestrator {
         MaterialStock stock = materialStockService.getOne(
                 new LambdaQueryWrapper<MaterialStock>()
                         .eq(MaterialStock::getMaterialCode, materialCode)
+                        .eq(MaterialStock::getTenantId, tenantId)
                         .eq(MaterialStock::getDeleteFlag, 0)
                         .last("LIMIT 1"));
         if (stock == null) {
@@ -373,6 +388,9 @@ public class MaterialWarehouseOperationOrchestrator {
         logEntry.setOperatorName(UserContext.username());
         logEntry.setReceiverName(receiverName);
         logEntry.setWarehouseLocation(stock.getLocation());
+        String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
+        logEntry.setWarehouseAreaId(warehouseAreaId);
+        logEntry.setWarehouseAreaName(resolveWarehouseAreaName(warehouseAreaId));
         logEntry.setRemark(remark);
         logEntry.setOutboundTime(now);
         logEntry.setCreateTime(now);
@@ -390,27 +408,35 @@ public class MaterialWarehouseOperationOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public MaterialStock scanInbound(String materialCode, int quantity, String warehouseLocation, String sourceType, String remark) {
+    public MaterialStock scanInbound(String materialCode, int quantity, String warehouseLocation,
+                                      String warehouseAreaId, String sourceType, String remark) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        
         Map<String, Object> params = new HashMap<>();
         params.put("materialCode", materialCode);
         params.put("quantity", quantity);
         params.put("warehouseLocation", warehouseLocation != null ? warehouseLocation : "默认仓");
+        params.put("warehouseAreaId", warehouseAreaId);
         params.put("sourceType", sourceType != null ? sourceType : "scan_inbound");
         params.put("remark", remark);
         freeInbound(params);
         return materialStockService.getOne(
                 new LambdaQueryWrapper<MaterialStock>()
                         .eq(MaterialStock::getMaterialCode, materialCode)
+                        .eq(MaterialStock::getTenantId, tenantId)
                         .eq(MaterialStock::getDeleteFlag, 0)
                         .last("LIMIT 1"));
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public MaterialOutboundLog scanOutbound(String materialCode, int quantity, String outstockType, String remark) {
+    public MaterialOutboundLog scanOutbound(String materialCode, int quantity, String outstockType, String warehouseAreaId, String remark) {
+        TenantAssert.assertTenantContext();
         Map<String, Object> params = new HashMap<>();
         params.put("materialCode", materialCode);
         params.put("quantity", quantity);
         params.put("outstockType", outstockType != null ? outstockType : "scan_outbound");
+        params.put("warehouseAreaId", warehouseAreaId);
         params.put("remark", remark);
         return freeOutbound(params);
     }
@@ -561,5 +587,15 @@ public class MaterialWarehouseOperationOrchestrator {
         if (value instanceof Number) return BigDecimal.valueOf(((Number) value).doubleValue());
         try { return new BigDecimal(String.valueOf(value).trim()); }
         catch (NumberFormatException e) { return null; }
+    }
+
+    private String resolveWarehouseAreaName(String areaId) {
+        if (!StringUtils.hasText(areaId)) return null;
+        try {
+            WarehouseArea area = warehouseAreaService.getById(areaId);
+            return area != null ? area.getAreaName() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

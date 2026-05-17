@@ -217,7 +217,7 @@
   height: 24px;
   padding: 0 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -275,12 +275,12 @@
 
 .style-smart-row__meta-label {
   color: var(--color-text-tertiary);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .style-smart-row__meta-value {
   color: var(--color-text-primary);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -329,16 +329,17 @@
 
 .style-smart-row__progress-wrap {
   position: absolute;
-  bottom: 2px;
-  right: 4px;
+  bottom: 4px;
+  right: 12px;
   display: flex;
   align-items: center;
   gap: 4px;
+  z-index: 1;
 }
 
 .style-smart-row__progress-pct {
   color: #6b7280;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -361,7 +362,7 @@
   position: relative;
   min-width: 0;
   overflow: visible;
-  padding: 0 0 40px;
+  padding: 0;
   align-self: center;
   width: 100%;
 }
@@ -369,9 +370,10 @@
 .style-smart-row__timeline-track,
 .style-smart-row__timeline-progress {
   position: absolute;
-  top: 84px;
+  top: 24px;
   height: 1px;
   border-radius: 999px;
+  z-index: 0;
 }
 
 .style-smart-row__timeline-track {
@@ -401,9 +403,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   text-align: center;
-  padding: 60px 8px 0;
+  padding: 0 8px;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -412,7 +414,7 @@
 }
 
 .style-smart-stage__time {
-  min-height: 16px;
+  min-height: 18px;
   color: #10b981;
   font-size: 12px;
   line-height: 1.45;
@@ -420,7 +422,7 @@
 }
 
 .style-smart-stage__time-start {
-  min-height: 16px;
+  min-height: 18px;
   color: #6b7280;
   font-size: 12px;
   line-height: 1.45;
@@ -428,34 +430,45 @@
 }
 
 .style-smart-stage__time-combined {
-  min-height: 16px;
-  font-size: 11px;
+  min-height: 32px;
+  font-size: 12px;
   line-height: 1.45;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .style-smart-stage__time-start-inline {
   color: #6b7280;
   font-weight: 400;
+  font-size: 12px;
 }
 
 .style-smart-stage__time-sep {
   color: #9ca3af;
   margin: 0 1px;
+  font-size: 12px;
 }
 
 .style-smart-stage__time-end-inline {
   color: #10b981;
   font-weight: 600;
+  font-size: 12px;
 }
 
 .style-smart-stage__node {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .style-smart-stage__ring,
@@ -651,7 +664,7 @@
 .style-smart-row__actions .ant-btn {
   border-radius: 999px;
   padding-inline: 8px;
-  font-size: 11px;
+  font-size: 13px;
   min-width: 0;
 }
 
@@ -880,7 +893,7 @@
 
 .style-workbench__eyebrow {
   color: #2563eb;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -919,7 +932,7 @@
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--color-text-primary);
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
   text-align: center;
 }

@@ -147,16 +147,24 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             }
         }
 
-        boolean ok;
-        try {
-            ok = this.saveOrUpdate(productionOrder);
-        } catch (DuplicateKeyException e) {
-            // 订单号冲突（跨租户同号或并发竞争），自动重新生成订单号后重试
-            log.warn("订单号 {} 冲突，自动重新生成: {}", productionOrder.getOrderNo(), e.getMessage());
-            productionOrder.setId(null);
-            productionOrder.setOrderNo(nextOrderNo());
-            productionOrder.setQrCode(productionOrder.getOrderNo());
-            ok = this.saveOrUpdate(productionOrder);
+        boolean ok = false;
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                if (attempt > 0) {
+                    productionOrder.setId(null);
+                    productionOrder.setOrderNo(nextOrderNo());
+                    productionOrder.setQrCode(productionOrder.getOrderNo());
+                }
+                ok = this.saveOrUpdate(productionOrder);
+                if (ok) break;
+            } catch (DuplicateKeyException e) {
+                log.warn("订单号 {} 冲突(attempt {}/{}), 重新生成: {}",
+                        productionOrder.getOrderNo(), attempt + 1, maxRetries, e.getMessage());
+                if (attempt == maxRetries - 1) {
+                    throw e;
+                }
+            }
         }
         if (ok && isCreate) {
             cuttingTaskService.createTaskIfAbsent(productionOrder);

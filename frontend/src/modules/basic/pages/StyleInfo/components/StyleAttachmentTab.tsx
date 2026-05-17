@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Upload, Tag, Space, Modal } from 'antd';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { App, Button, Tag, Space, Modal } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   FileOutlined,
@@ -35,6 +35,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
   }, [styleId]);
 
   const normalizedStyleNo = useMemo(() => String(styleNo || '').trim(), [styleNo]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isPattern = useMemo(() => {
     const type = String(bizType || '').trim().toLowerCase();
@@ -71,7 +72,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
   };
 
   // 获取附件列表
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     if (!normalizedStyleId && !normalizedStyleNo) {
       return;
     }
@@ -95,11 +96,11 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
     } finally {
       setLoading(false);
     }
-  };
+  }, [normalizedStyleId, normalizedStyleNo, bizType, message, onListChange]);
 
   useEffect(() => {
     fetchList();
-  }, [normalizedStyleId, normalizedStyleNo, bizType]);
+  }, [fetchList]);
 
   // 删除附件
   const handleDelete = async (id: string | number) => {
@@ -122,12 +123,12 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
   const uploadOne = async (file: File) => {
     if (file.size > 15 * 1024 * 1024) {
       message.error('文件过大，最大15MB');
-      return Upload.LIST_IGNORE;
+      return;
     }
     // 不限制文件类型，所有格式均允许（dxf/plt/ets/paj 等 CAD 纸样格式）
     if (!normalizedStyleId && !normalizedStyleNo) {
       message.error('请先保存基础信息，再上传附件');
-      return Upload.LIST_IGNORE;
+      return;
     }
     const formData = new FormData();
     formData.append('file', file);
@@ -153,7 +154,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '上传失败');
     }
-    return Upload.LIST_IGNORE;
   };
 
   // 获取文件图标
@@ -355,29 +355,61 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
         <span style={{ color: 'var(--neutral-text-lighter)', fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>
           {'单个文件不超过10MB，一次最多上传4个'}
         </span>
-        <Upload
+        <input
+          ref={fileInputRef}
+          type="file"
           multiple
-          accept="*"
-          showUploadList={false}
+          style={{ display: 'none' }}
           disabled={Boolean(readOnly)}
-          beforeUpload={(file: any, fileList: unknown[]) => {
-            if (readOnly) {
-              return Upload.LIST_IGNORE;
-            }
-            const list = Array.isArray(fileList) ? fileList : [];
-            if (list.length > 4) {
-              if (list.indexOf(file) === 0) {
-                message.error('一次最多上传4个附件');
+          onChange={(e) => {
+            const files = e.target.files;
+            if (!files?.length) return;
+            Array.from(files).slice(0, 4).forEach((f) => {
+              if (f.size > 15 * 1024 * 1024) {
+                message.error(`${f.name} 超过15MB限制`);
+                return;
               }
-              if (list.indexOf(file) >= 4) {
-                return Upload.LIST_IGNORE;
-              }
-            }
-            return uploadOne(file as File);
+              void uploadOne(f);
+            });
+            if (fileInputRef.current) fileInputRef.current.value = '';
           }}
+        />
+        <span
+          onDragOver={(e) => { e.preventDefault(); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            Array.from(e.dataTransfer.files || []).slice(0, 4).forEach((f) => {
+              if (f.size > 15 * 1024 * 1024) {
+                message.error(`${f.name} 超过15MB限制`);
+                return;
+              }
+              void uploadOne(f);
+            });
+          }}
+          onPaste={(e) => {
+            const files = e.clipboardData.files;
+            if (files?.length) {
+              e.preventDefault();
+              Array.from(files).slice(0, 4).forEach((f) => { void uploadOne(f); });
+              return;
+            }
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+              if (items[i].type.startsWith('image/')) {
+                e.preventDefault();
+                const f = items[i].getAsFile();
+                if (f) void uploadOne(f);
+                break;
+              }
+            }
+          }}
+          style={{ display: 'inline-block' }}
         >
-          <Button type="primary" disabled={Boolean(readOnly)}>{uploadText || '上传附件'}</Button>
-        </Upload>
+          <Button type="primary" disabled={Boolean(readOnly)}
+            onClick={() => fileInputRef.current?.click()}>
+            {uploadText || '上传附件'}
+          </Button>
+        </span>
       </div>
 
       <ResizableTable

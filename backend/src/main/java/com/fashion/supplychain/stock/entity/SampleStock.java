@@ -69,6 +69,16 @@ public class SampleStock implements Serializable {
     private String location;
 
     /**
+     * 仓库区域ID
+     */
+    private String warehouseAreaId;
+
+    /**
+     * 仓库区域名称
+     */
+    private String warehouseAreaName;
+
+    /**
      * 样衣图片
      */
     private String imageUrl;

@@ -47,7 +47,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
                         percent={v ?? 0}
                        
                         strokeColor={v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff4d4f'}
-                        format={() => <span style={{ fontSize: 11 }}>{v}</span>}
+                        format={() => <span style={{ fontSize: 13 }}>{v}</span>}
                         style={{ flex: 1, minWidth: 80 }}
                     />
                 </div>

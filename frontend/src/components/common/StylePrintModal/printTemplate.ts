@@ -58,7 +58,7 @@ export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bo
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 10px;
+              font-size: 12px;
               color: #666;
               padding: 0 5mm;
               z-index: 1000;
@@ -119,7 +119,7 @@ export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bo
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            font-size: 13px;
             margin-bottom: 16px;
           }
           th, td {

@@ -7,7 +7,7 @@ const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 
-// ---- 常量（与 PatternHandler.js 保持一致） ----
+// ---- 常量（样板操作类型定义） ----
 const OPERATION_LABELS = {
   RECEIVE: '领取样板',
   PLATE: '车板扫码',
@@ -59,6 +59,10 @@ Page({
   data: {
     detail: {},
     loading: false,
+    warehouseOptions: [],
+    warehouseAreaId: '',
+    warehouseLocationCode: '',
+    locationOptions: [],
   },
 
   onLoad() {
@@ -70,7 +74,7 @@ Page({
       return;
     }
 
-    // 复用 PatternHandler.showPatternConfirmModal 的构建逻辑
+    // 构建样板详情页数据
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
     // 四步扫码：领取 → 完成 → 审核 → 入库（与PC端对齐）
@@ -180,6 +184,8 @@ Page({
 
       this.setData(matrixUpdate);
     }
+
+    this._loadWarehouseOptions();
   },
 
   onUnload() {
@@ -225,6 +231,102 @@ Page({
     this.setData({ 'detail.remark': e.detail.value });
   },
 
+  /* ====== 仓库区域 + 库位选择 ====== */
+
+  async _loadWarehouseOptions() {
+    try {
+      const res = await api.warehouse.listWarehouseAreas('SAMPLE');
+      const data = res?.data || res;
+      const list = Array.isArray(data) ? data : [];
+      if (list.length > 0) {
+        var areaMap = {};
+        var options = [];
+        var sorted = list
+          .filter(function(item) { return item.areaName && item.id; })
+          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
+        for (var i = 0; i < sorted.length; i++) {
+          var item = sorted[i];
+          options.push(item.areaName);
+          areaMap[item.areaName] = item.id;
+        }
+        if (options.length > 0) {
+          this.setData({ warehouseOptions: options });
+          this._warehouseAreaMap = areaMap;
+        }
+      }
+    } catch (e) {
+      console.warn('[PatternPage] 加载仓库选项失败', e);
+    }
+  },
+
+  onWarehouseChipTap(e) {
+    const value = e.currentTarget.dataset.value;
+    const areaId = this._warehouseAreaMap && this._warehouseAreaMap[value];
+    this.setData({
+      'detail.warehouseCode': value,
+      warehouseAreaId: areaId || '',
+      warehouseLocationCode: '',
+      locationOptions: [],
+    });
+    if (areaId) this._loadLocationOptions(areaId);
+  },
+
+  onWarehouseClear() {
+    this.setData({
+      'detail.warehouseCode': '',
+      warehouseAreaId: '',
+      warehouseLocationCode: '',
+      locationOptions: [],
+    });
+  },
+
+  async _loadLocationOptions(areaId) {
+    if (!areaId) {
+      this.setData({ locationOptions: [] });
+      this._locationMap = {};
+      return;
+    }
+    try {
+      var res = await api.warehouse.listLocations('SAMPLE', areaId);
+      var data = res?.data || res;
+      var list = Array.isArray(data) ? data : [];
+      if (list.length > 0) {
+        var locMap = {};
+        var options = [];
+        for (var i = 0; i < list.length; i++) {
+          var item = list[i];
+          var label = item.locationCode || item.locationName || '';
+          if (label) {
+            options.push(label);
+            locMap[label] = item.locationCode || label;
+          }
+        }
+        this.setData({ locationOptions: options });
+        this._locationMap = locMap;
+      } else {
+        this.setData({ locationOptions: [] });
+        this._locationMap = {};
+      }
+    } catch (e) {
+      console.warn('[PatternPage] 加载库位选项失败', e);
+      this.setData({ locationOptions: [] });
+      this._locationMap = {};
+    }
+  },
+
+  onLocationChipTap(e) {
+    const value = e.currentTarget.dataset.value;
+    this.setData({ warehouseLocationCode: value });
+  },
+
+  onLocationClear() {
+    this.setData({ warehouseLocationCode: '' });
+  },
+
+  onLocationCodeInput(e) {
+    this.setData({ warehouseLocationCode: e.detail.value });
+  },
+
   onReviewResultChange(e) {
     const result = e.currentTarget.dataset.result;
     this.setData({ 'detail.reviewResult': result });
@@ -262,9 +364,19 @@ Page({
       toast.error('请填写审核备注');
       return;
     }
-    if (WAREHOUSE_OPERATIONS.has(operationType) && !String(d.warehouseCode || '').trim()) {
-      toast.error('仓库操作请填写仓位编号');
-      return;
+    if (WAREHOUSE_OPERATIONS.has(operationType)) {
+      if (!String(d.warehouseCode || '').trim()) {
+        toast.error('请选择入库仓库');
+        return;
+      }
+      if (!this.data.warehouseAreaId) {
+        toast.error('请选择仓库区域');
+        return;
+      }
+      if (!this.data.warehouseLocationCode) {
+        toast.error('请选择库位');
+        return;
+      }
     }
 
     this.setData({ loading: true });
@@ -293,7 +405,8 @@ Page({
           }
         }
         if (!result) {
-          const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '', remark);
+          const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '',
+            this.data.warehouseAreaId, this.data.warehouseLocationCode, remark);
           result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
         }
 
@@ -309,6 +422,8 @@ Page({
           operatorRole: 'PLATE_WORKER',
           quantity: qty,
           warehouseCode: d.warehouseCode,
+          warehouseAreaId: this.data.warehouseAreaId,
+          warehouseLocationCode: this.data.warehouseLocationCode,
           remark: remark,
         });
         result = {

@@ -70,7 +70,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
               );
             })}
             {items.length > 5 && (
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>…还有 {items.length - 5} 条，建议继续按异常项逐条处理</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>…还有 {items.length - 5} 条，建议继续按异常项逐条处理</div>
             )}
           </div>
         }

@@ -100,6 +100,7 @@ export interface ManualOutboundRequest {
   receiverName?: string;
   pickupType?: string;
   usageType?: string;
+  warehouseAreaId?: string;
 }
 
 export interface ManualOutboundResponse {
@@ -114,6 +115,8 @@ export interface ManualInboundRequest {
   size?: string;
   quantity: number;
   warehouseLocation?: string;
+  warehouseAreaId?: string;
+  sourceType?: string;
   supplierName?: string;
   supplierId?: string;
   supplierContactPerson?: string;

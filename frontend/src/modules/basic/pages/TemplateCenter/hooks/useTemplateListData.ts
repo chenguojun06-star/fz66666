@@ -25,10 +25,10 @@ export const useTemplateListData = () => {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
-  };
+  }, [showSmartErrorNotice]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(readPageSize(10));
@@ -88,7 +88,7 @@ export const useTemplateListData = () => {
     } finally {
       setLoading(false);
     }
-  }, [queryForm, message]);
+  }, [queryForm, message, reportSmartError, showSmartErrorNotice]);
 
   return {
     queryForm,

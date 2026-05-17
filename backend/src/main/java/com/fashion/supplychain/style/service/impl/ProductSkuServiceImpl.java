@@ -47,28 +47,92 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         }
 
         try {
-            List<Map<String, Object>> configList = objectMapper.readValue(sizeColorConfig,
-                    new TypeReference<List<Map<String, Object>>>() {
-                    });
+            List<String> sizes;
+            List<String> colors;
 
-            for (Map<String, Object> colorGroup : configList) {
-                String color = (String) colorGroup.get("color");
-                Object sizesObj = colorGroup.get("sizes");
-
-                if (sizesObj instanceof List) {
-                    List<Map<String, Object>> sizes = (List<Map<String, Object>>) sizesObj;
-                    for (Map<String, Object> sizeItem : sizes) {
-                        String size = (String) sizeItem.get("size");
-
-                        if (StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                            createOrUpdateSku(style, color.trim(), size.trim());
+            String trimmed = sizeColorConfig.trim();
+            if (trimmed.startsWith("[")) {
+                List<Map<String, Object>> configList = objectMapper.readValue(trimmed,
+                        new TypeReference<List<Map<String, Object>>>() {
+                        });
+                colors = new java.util.ArrayList<>();
+                sizes = new java.util.ArrayList<>();
+                for (Map<String, Object> colorGroup : configList) {
+                    String color = (String) colorGroup.get("color");
+                    if (StringUtils.hasText(color)) {
+                        colors.add(color.trim());
+                    }
+                    Object sizesObj = colorGroup.get("sizes");
+                    if (sizesObj instanceof List) {
+                        for (Object sizeItem : (List<?>) sizesObj) {
+                            if (sizeItem instanceof Map) {
+                                String size = (String) ((Map<?, ?>) sizeItem).get("size");
+                                if (StringUtils.hasText(size) && !sizes.contains(size.trim())) {
+                                    sizes.add(size.trim());
+                                }
+                            } else if (sizeItem instanceof String && StringUtils.hasText((String) sizeItem)) {
+                                String s = ((String) sizeItem).trim();
+                                if (!sizes.contains(s)) {
+                                    sizes.add(s);
+                                }
+                            }
                         }
                     }
+                }
+            } else {
+                Map<String, Object> config = objectMapper.readValue(trimmed,
+                        new TypeReference<Map<String, Object>>() {
+                        });
+
+                sizes = extractStringList(config, "sizes");
+                colors = extractStringList(config, "colors");
+
+                if (colors.isEmpty()) {
+                    Object matrixRows = config.get("matrixRows");
+                    if (matrixRows instanceof List) {
+                        for (Object row : (List<?>) matrixRows) {
+                            if (row instanceof Map) {
+                                String color = (String) ((Map<?, ?>) row).get("color");
+                                if (StringUtils.hasText(color)) {
+                                    colors.add(color.trim());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (sizes.isEmpty() || colors.isEmpty()) {
+                log.info("SKU generation skipped: no sizes or colors configured for styleId={}", styleId);
+                return;
+            }
+
+            for (String color : colors) {
+                for (String size : sizes) {
+                    createOrUpdateSku(style, color, size);
                 }
             }
         } catch (Exception e) {
             log.error("Failed to generate SKUs for style: " + styleId, e);
         }
+    }
+
+    private List<String> extractStringList(Map<String, Object> config, String key) {
+        List<String> result = new java.util.ArrayList<>();
+        Object value = config.get(key);
+        if (value instanceof List) {
+            for (Object item : (List<?>) value) {
+                if (item instanceof String && StringUtils.hasText((String) item)) {
+                    result.add(((String) item).trim());
+                } else if (item instanceof Map) {
+                    Object sizeVal = ((Map<?, ?>) item).get("size");
+                    if (sizeVal instanceof String && StringUtils.hasText((String) sizeVal)) {
+                        result.add(((String) sizeVal).trim());
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     @Override
@@ -316,9 +380,14 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
     private void createOrUpdateSku(StyleInfo style, String color, String size) {
         String skuCode = String.format("%s-%s-%s", style.getStyleNo(), color, size);
         Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            log.error("Cannot createOrUpdateSku: tenantId is null for styleId={}, skuCode={}", style.getId(), skuCode);
+            return;
+        }
 
         ProductSku existing = this.getOne(new LambdaQueryWrapper<ProductSku>()
-                .eq(ProductSku::getSkuCode, skuCode));
+                .eq(ProductSku::getSkuCode, skuCode)
+                .eq(ProductSku::getTenantId, tenantId));
 
         if (existing == null) {
             ProductSku sku = new ProductSku();

@@ -55,6 +55,14 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
             picking.setPickerName(UserContext.username());
         }
 
+        // 防御：确保 pickupType 和 usageType 不为 null
+        if (!StringUtils.hasText(picking.getPickupType())) {
+            picking.setPickupType("INTERNAL");
+        }
+        if (!StringUtils.hasText(picking.getUsageType())) {
+            picking.setUsageType("SAMPLE");
+        }
+
         this.save(picking);
 
         // 2. 保存明细并扣减库存
@@ -100,6 +108,12 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
         if (picking.getPickerId() == null) {
             picking.setPickerId(UserContext.userId());
             picking.setPickerName(UserContext.username());
+        }
+        if (!StringUtils.hasText(picking.getPickupType())) {
+            picking.setPickupType("INTERNAL");
+        }
+        if (!StringUtils.hasText(picking.getUsageType())) {
+            picking.setUsageType("SAMPLE");
         }
         this.save(picking);
         if (items != null) {

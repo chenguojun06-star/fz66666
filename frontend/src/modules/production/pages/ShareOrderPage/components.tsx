@@ -14,7 +14,7 @@ export const MetricCard: React.FC<InfoItemProps> = ({ icon, label, value, highli
   <div style={S.metricCardStyle}>
     <span style={{ color: highlightColor || '#3b82f6', marginRight: 6 }}>{icon}</span>
     <div>
-      <div style={{ fontSize: 11, color: '#94a3b8' }}>{label}</div>
+      <div style={{ fontSize: 13, color: '#94a3b8' }}>{label}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: highlightColor || '#0f172a' }}>{value}</div>
     </div>
   </div>

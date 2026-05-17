@@ -328,7 +328,7 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
 
   return (
     <div style={{ borderTop: '1px dashed #e8e8e8', marginTop: 6, paddingTop: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6, fontWeight: 600, fontSize: 11 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
         <span> 小云实时推演</span>
         <span style={{
           fontSize: 9, padding: '0 5px', borderRadius: 3,

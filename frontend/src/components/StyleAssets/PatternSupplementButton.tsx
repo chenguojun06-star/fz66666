@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Space, Tag, Upload, message as antdMessage } from 'antd';
+import { Button, Space, Tag, message as antdMessage } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { StyleAttachment } from '@/types/style';
@@ -20,6 +20,9 @@ const PatternSupplementButton: React.FC<{
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<StyleAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const acceptFormats = '.dxf,.plt,.ets,.prj,.pdf,.jpg,.jpeg,.png,.zip,.rar';
 
   const tableWrapRef = useRef<HTMLDivElement | null>(null);
   const tableScrollY = useResizableModalTableScrollY({ open, ref: tableWrapRef });
@@ -50,7 +53,7 @@ const PatternSupplementButton: React.FC<{
     if (open) fetchList();
   }, [open, fetchList]);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = useCallback(async (file: File) => {
     if (!styleId && !styleNo) {
       antdMessage.error('缺少款式信息');
       return;
@@ -77,9 +80,33 @@ const PatternSupplementButton: React.FC<{
       antdMessage.error('上传失败');
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-    return false;
-  };
+  }, [styleId, styleNo, fetchList]);
+
+  const handleFileSelect = useCallback((files: FileList | File[]) => {
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    void handleUpload(arr[0]);
+  }, [handleUpload]);
+
+  const handleClickUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files);
+  }, [handleFileSelect]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const files = e.clipboardData.files;
+    if (files && files.length > 0) {
+      e.preventDefault();
+      handleFileSelect(files);
+      return;
+    }
+  }, [handleFileSelect]);
 
   const handleClaim = async (id: string) => {
     try {
@@ -199,18 +226,28 @@ const PatternSupplementButton: React.FC<{
         onCancel={() => setOpen(false)}
         footer={
           <Space>
-            <Upload
-              showUploadList={false}
-              beforeUpload={(file) => { handleUpload(file); return false; }}
-              accept=".dxf,.plt,.ets,.prj,.pdf,.jpg,.jpeg,.png,.zip,.rar"
-            >
-              <Button type="primary" icon={<UploadOutlined />} loading={uploading}>上传纸样</Button>
-            </Upload>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={acceptFormats}
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                if (e.target.files?.length) handleFileSelect(e.target.files);
+              }}
+            />
+            <Button type="primary" icon={<UploadOutlined />} loading={uploading} onClick={handleClickUpload}>
+              上传纸样
+            </Button>
             <Button onClick={() => setOpen(false)}>关闭</Button>
           </Space>
         }
       >
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div
+          style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}
+          onDragOver={(e) => { e.preventDefault(); }}
+          onDrop={handleDrop}
+          onPaste={handlePaste}
+        >
           <div ref={tableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
             <ResizableTable
               rowKey={(r) => String((r as any).id)}

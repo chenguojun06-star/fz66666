@@ -21,7 +21,10 @@ Page({
     quantity: 1,
     warehouseName: '成品库',
     warehouseCode: '',
+    warehouseAreaId: '',
     warehouseOptions: [],
+    warehouseLocationCode: '',
+    locationOptions: [],
     showWarehouse: false,
     isQualityReceive: false,
     imageInsight: '',
@@ -126,7 +129,8 @@ Page({
       quantity: normalizePositiveInt(raw.quantity, 1),
       showWarehouse: isWarehouseStage,
       isQualityReceive: isQualityReceive,
-      warehouseCode: raw.warehouseCode || ''
+      warehouseCode: raw.warehouseCode || '',
+      warehouseAreaId: raw.warehouseAreaId || '',
     });
 
     if (isWarehouseStage) {
@@ -310,36 +314,105 @@ Page({
     });
   },
 
-  onWarehouseChipTap(e) {
-    var val = e.currentTarget.dataset.value || '';
-    this.setData({ warehouseCode: val });
-  },
-
-  onWarehouseClear() {
-    this.setData({ warehouseCode: '' });
-  },
-
-  onWarehouseInput(e) {
-    this.setData({ warehouseCode: e.detail.value || '' });
-  },
-
   async _loadWarehouseOptions() {
     try {
-      var res = await api.warehouse.listWarehouseAreas('FINISHED');
-      var data = res && res.data ? res.data : res;
-      var list = Array.isArray(data) ? data : [];
+      const res = await api.warehouse.listWarehouseAreas('FINISHED');
+      const data = res?.data || res;
+      const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
-        var options = list
-          .filter(function(item) { return item.areaName; })
-          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); })
-          .map(function(item) { return item.areaName; });
-        if (options.length > 0) {
-          this.setData({ warehouseOptions: options });
+        var areaMap = {};
+        var options = [];
+        var sorted = list
+          .filter(function(item) { return item.areaName && item.id; })
+          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
+        for (var i = 0; i < sorted.length; i++) {
+          var item = sorted[i];
+          options.push(item.areaName);
+          areaMap[item.areaName] = item.id;
         }
+        this.setData({ warehouseOptions: options });
+        this._warehouseAreaMap = areaMap;
       }
     } catch (e) {
       console.warn('[scan-result] 加载仓库选项失败', e);
     }
+  },
+
+  async _loadLocationOptions(areaId) {
+    if (!areaId) {
+      this.setData({ locationOptions: [], warehouseLocationCode: '' });
+      this._locationMap = {};
+      return;
+    }
+    try {
+      var res = await api.warehouse.listLocations('FINISHED', areaId);
+      var data = res?.data || res;
+      var list = Array.isArray(data) ? data : [];
+      if (list.length > 0) {
+        var locMap = {};
+        var options = [];
+        for (var i = 0; i < list.length; i++) {
+          var item = list[i];
+          var label = item.locationCode || item.locationName || '';
+          if (label) {
+            options.push(label);
+            locMap[label] = item.locationCode || label;
+          }
+        }
+        this.setData({ locationOptions: options });
+        this._locationMap = locMap;
+      } else {
+        this.setData({ locationOptions: [] });
+        this._locationMap = {};
+      }
+    } catch (e) {
+      console.warn('[scan-result] 加载库位选项失败', e);
+      this.setData({ locationOptions: [] });
+      this._locationMap = {};
+    }
+  },
+
+  onWarehouseChipTap(e) {
+    var val = e.currentTarget.dataset.value;
+    if (this.data.warehouseCode === val) {
+      this.setData({ warehouseCode: '', warehouseAreaId: '', warehouseLocationCode: '', locationOptions: [] });
+    } else {
+      var areaId = (this._warehouseAreaMap && this._warehouseAreaMap[val]) || '';
+      this.setData({ warehouseCode: val, warehouseAreaId: areaId, warehouseLocationCode: '', locationOptions: [] });
+      if (areaId) { this._loadLocationOptions(areaId); }
+    }
+  },
+
+  onWarehouseClear() {
+    this.setData({ warehouseCode: '', warehouseAreaId: '', warehouseLocationCode: '', locationOptions: [] });
+  },
+
+  onWarehouseInput(e) {
+    var val = e.detail.value || '';
+    var areaId = (this._warehouseAreaMap && this._warehouseAreaMap[val]) || '';
+    this.setData({ warehouseCode: val, warehouseAreaId: areaId, warehouseLocationCode: '' });
+    if (areaId) {
+      this._loadLocationOptions(areaId);
+    } else {
+      this.setData({ locationOptions: [] });
+    }
+  },
+
+  onLocationChipTap(e) {
+    var val = e.currentTarget.dataset.value;
+    if (this.data.warehouseLocationCode === val) {
+      this.setData({ warehouseLocationCode: '' });
+    } else {
+      this.setData({ warehouseLocationCode: val });
+    }
+  },
+
+  onLocationClear() {
+    this.setData({ warehouseLocationCode: '' });
+  },
+
+  onLocationInput(e) {
+    this.setData({ warehouseLocationCode: e.detail.value || '' });
   },
 
   goBack() {
@@ -424,6 +497,12 @@ Page({
         }
         if (warehouseCode) {
           scanPayload.warehouse = warehouseCode;
+        }
+        if (this.data.warehouseAreaId) {
+          scanPayload.warehouseAreaId = this.data.warehouseAreaId;
+        }
+        if (this.data.warehouseLocationCode) {
+          scanPayload.warehouseLocation = this.data.warehouseLocationCode;
         }
         if (raw.isDefectiveReentry) {
           scanPayload.isDefectiveReentry = true;

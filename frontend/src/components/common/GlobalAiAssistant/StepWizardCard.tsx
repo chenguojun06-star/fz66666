@@ -200,9 +200,10 @@ export default function StepWizardCard({ data, onSubmit }: StepWizardCardProps) 
 
       <div className={styles.footer}>
         {currentStep > 0 && (
-          <button className={styles.prevBtn} onClick={handlePrev}>上一步</button>
+          <button type="button" className={styles.prevBtn} onClick={handlePrev}>上一步</button>
         )}
         <button
+          type="button"
           className={`${styles.nextBtn} ${!canNext() ? styles.nextDisabled : ''}`}
           onClick={handleNext}
           disabled={!canNext()}

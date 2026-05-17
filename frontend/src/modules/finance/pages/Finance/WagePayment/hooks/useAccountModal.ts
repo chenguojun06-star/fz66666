@@ -133,21 +133,16 @@ export function useAccountModal({ msg, reportSmartError, showSmartErrorNotice, s
     setAccountDetailOpen(true);
   };
 
-  const uploadQrImage = async (file: File) => {
+  const uploadQrImage = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
-    try {
-      const res: any = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      const url = res?.data ?? res;
-      if (url) {
-        accountForm.setFieldsValue({ qrCodeUrl: url });
-        setQrFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
-        msg.success('上传成功');
-      }
-    } catch (err: unknown) {
-      reportSmartError('账户二维码上传失败', err instanceof Error ? err.message : '请检查文件格式后重试', 'WAGE_ACCOUNT_QR_UPLOAD_FAILED');
-      msg.error(`上传二维码失败: ${err instanceof Error ? err.message : '请检查文件格式'}`);
-    }
+    const res: any = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    const url = res?.data ?? res;
+    if (!url) throw new Error('上传失败：未获取到图片地址');
+    accountForm.setFieldsValue({ qrCodeUrl: url });
+    setQrFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
+    msg.success('上传成功');
+    return url;
   };
 
   return {

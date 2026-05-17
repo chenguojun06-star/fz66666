@@ -300,8 +300,22 @@ public class DataTruthGuard {
         // 1. 时间矛盾检测
         List<String> dates = extractDates(aiContent);
         if (dates.size() >= 2) {
-            // 简化：如果提到多个日期，检查是否有明显矛盾（如"昨天入库"但日期是明天）
-            // 实际实现需要更复杂的日期解析
+            boolean hasFutureRef = aiContent.contains("明天") || aiContent.contains("下周") || aiContent.contains("下月");
+            boolean hasPastRef = aiContent.contains("昨天") || aiContent.contains("上周") || aiContent.contains("上月") || aiContent.contains("前天");
+            if (hasFutureRef && hasPastRef) {
+                issues.add("同一回答中同时引用过去和未来时间，可能存在时间矛盾");
+            }
+            boolean hasAlready = aiContent.contains("已经") || aiContent.contains("已完成") || aiContent.contains("已结束");
+            boolean hasNotYet = aiContent.contains("还没") || aiContent.contains("尚未") || aiContent.contains("未完成");
+            if (hasAlready && hasNotYet) {
+                String[] timeWords = {"今天", "昨天", "本周", "上周", "本月", "上月"};
+                for (String tw : timeWords) {
+                    if (aiContent.indexOf(tw) != aiContent.lastIndexOf(tw)) {
+                        issues.add("同一时间词\"" + tw + "\"出现多次，可能存在时间矛盾");
+                        break;
+                    }
+                }
+            }
         }
 
         // 2. 检测"已经"与"还没"的矛盾

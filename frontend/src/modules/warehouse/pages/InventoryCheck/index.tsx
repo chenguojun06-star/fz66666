@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Table, Tag, Space, Modal, Form, InputNumber, Select, Input, message, Statistic, Row, Col, Descriptions, Popconfirm, Tooltip } from 'antd';
+import { Card, Button, Table, Tag, Space, Modal, Form, InputNumber, Select, Input, App, Statistic, Row, Col, Descriptions, Popconfirm, Tooltip, Steps, Empty, Alert, Image } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
-import { PlusOutlined, AuditOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, AuditOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { inventoryCheckApi } from '../../../../services/warehouse/inventoryCheckApi';
 import ResizableTable from '../../../../components/common/ResizableTable';
 
 const CHECK_TYPE_MAP: Record<string, { label: string; color: string }> = {
   MATERIAL: { label: '物料盘点', color: 'blue' },
   FINISHED: { label: '成品盘点', color: 'green' },
+  SAMPLE: { label: '样衣盘点', color: 'purple' },
 };
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -23,6 +24,7 @@ const DIFF_TYPE_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const InventoryCheck: React.FC = () => {
+  const { message } = App.useApp();
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -97,10 +99,16 @@ const InventoryCheck: React.FC = () => {
     }
   };
 
-  const handleOpenFill = (record: any) => {
-    setCurrentCheck(record);
-    setCurrentItems((record.items || []).map((it: any) => ({ ...it })));
-    setFillModalVisible(true);
+  const handleOpenFill = async (record: any) => {
+    try {
+      const res = await inventoryCheckApi.detail(record.id);
+      const data = res.data?.data || res.data;
+      setCurrentCheck(data);
+      setCurrentItems((data?.items || []).map((it: any) => ({ ...it })));
+      setFillModalVisible(true);
+    } catch (e: any) {
+      message.error(e.message || '查询盘点明细失败');
+    }
   };
 
   const handleFillActual = async () => {
@@ -143,6 +151,20 @@ const InventoryCheck: React.FC = () => {
     }
   };
 
+  const renderDiff = (v: number) => v ? <span style={{ color: v > 0 ? '#cf1322' : '#1890ff' }}>{v > 0 ? `+${v}` : v}</span> : '-';
+
+  const renderDiffType = (v: string) => { const m = DIFF_TYPE_MAP[v] || { label: v || '-', color: 'default' }; return <Tag color={m.color}>{m.label}</Tag>; };
+
+  const imageColumn = {
+    title: '图片', dataIndex: 'imageUrl', key: 'imageUrl', width: 60,
+    render: (v: string) => v ? <Image src={v} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 12 }}>无</div>,
+  };
+
+  const styleNoColumn = {
+    title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true,
+    render: (v: string, r: any) => v || r.materialCode || r.skuCode || '-',
+  };
+
   const columns = [
     { title: '盘点单号', dataIndex: 'checkNo', key: 'checkNo', width: 180, ellipsis: true },
     {
@@ -165,7 +187,7 @@ const InventoryCheck: React.FC = () => {
     { title: '实盘总量', dataIndex: 'totalActualQty', key: 'totalActualQty', width: 100, align: 'right' as const },
     {
       title: '差异数量', dataIndex: 'totalDiffQty', key: 'totalDiffQty', width: 100, align: 'right' as const,
-      render: (v: number) => v ? <span style={{ color: v > 0 ? '#cf1322' : '#1890ff' }}>{v > 0 ? `+${v}` : v}</span> : '-',
+      render: renderDiff,
     },
     { title: '仓位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100, ellipsis: true },
     { title: '创建人', dataIndex: 'createdByName', key: 'createdByName', width: 90 },
@@ -192,8 +214,9 @@ const InventoryCheck: React.FC = () => {
   ];
 
   const itemColumns = [
-    { title: '物料/SKU', dataIndex: 'materialCode', key: 'materialCode', width: 140, render: (v: string, r: any) => v || r.skuCode || '-' },
-    { title: '名称', dataIndex: 'materialName', key: 'materialName', width: 140, ellipsis: true },
+    imageColumn,
+    styleNoColumn,
+    { title: '名称', dataIndex: 'materialName', key: 'materialName', width: 120, ellipsis: true },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 70 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 70 },
     { title: '账面数量', dataIndex: 'bookQuantity', key: 'bookQuantity', width: 90, align: 'right' as const },
@@ -210,41 +233,47 @@ const InventoryCheck: React.FC = () => {
         />
       ),
     },
-    {
-      title: '差异', dataIndex: 'diffQuantity', key: 'diffQuantity', width: 80, align: 'right' as const,
-      render: (v: number) => v ? <span style={{ color: v > 0 ? '#cf1322' : '#1890ff' }}>{v > 0 ? `+${v}` : v}</span> : '-',
-    },
-    {
-      title: '差异类型', dataIndex: 'diffType', key: 'diffType', width: 80,
-      render: (v: string) => { const m = DIFF_TYPE_MAP[v] || { label: v || '-', color: 'default' }; return <Tag color={m.color}>{m.label}</Tag>; },
-    },
+    { title: '差异', dataIndex: 'diffQuantity', key: 'diffQuantity', width: 80, align: 'right' as const, render: renderDiff },
+    { title: '差异类型', dataIndex: 'diffType', key: 'diffType', width: 80, render: renderDiffType },
   ];
 
   const detailItemColumns = [
-    { title: '物料/SKU', dataIndex: 'materialCode', key: 'materialCode', width: 140, render: (v: string, r: any) => v || r.skuCode || '-' },
-    { title: '名称', dataIndex: 'materialName', key: 'materialName', width: 140, ellipsis: true },
+    imageColumn,
+    styleNoColumn,
+    { title: '名称', dataIndex: 'materialName', key: 'materialName', width: 120, ellipsis: true },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 70 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 70 },
     { title: '账面数量', dataIndex: 'bookQuantity', key: 'bookQuantity', width: 90, align: 'right' as const },
     { title: '实盘数量', dataIndex: 'actualQuantity', key: 'actualQuantity', width: 90, align: 'right' as const },
-    {
-      title: '差异', dataIndex: 'diffQuantity', key: 'diffQuantity', width: 80, align: 'right' as const,
-      render: (v: number) => v ? <span style={{ color: v > 0 ? '#cf1322' : '#1890ff' }}>{v > 0 ? `+${v}` : v}</span> : '-',
-    },
-    {
-      title: '差异类型', dataIndex: 'diffType', key: 'diffType', width: 80,
-      render: (v: string) => { const m = DIFF_TYPE_MAP[v] || { label: v || '-', color: 'default' }; return <Tag color={m.color}>{m.label}</Tag>; },
-    },
+    { title: '差异', dataIndex: 'diffQuantity', key: 'diffQuantity', width: 80, align: 'right' as const, render: renderDiff },
+    { title: '差异类型', dataIndex: 'diffType', key: 'diffType', width: 80, render: renderDiffType },
     { title: '差异金额', dataIndex: 'diffAmount', key: 'diffAmount', width: 100, align: 'right' as const, render: (v: number) => v ? `¥${v.toFixed(2)}` : '-' },
   ];
 
+  const [guideVisible, setGuideVisible] = useState(false);
+
   return (
     <div style={{ padding: 16 }}>
+      <Alert
+        type="info"
+        showIcon
+        icon={<QuestionCircleOutlined />}
+        title="盘点操作流程"
+        description={
+          <span>
+            新建盘点单 → 系统自动加载库存快照 → 填写实盘数量 → 确认盘点（自动调整库存）
+            <Button type="link" size="small" onClick={() => setGuideVisible(true)} style={{ padding: 0, marginLeft: 8 }}>查看详细说明</Button>
+          </span>
+        }
+        style={{ marginBottom: 16 }}
+        closable
+      />
+
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}><Card><Statistic title="物料库存品种" value={summary.materialVarietyCount ?? '-'} /></Card></Col>
-        <Col span={6}><Card><Statistic title="成品库存SKU" value={summary.finishedSkuCount ?? '-'} /></Card></Col>
-        <Col span={6}><Card><Statistic title="待处理盘点" value={summary.pendingCheckCount ?? 0} valueStyle={{ color: summary.pendingCheckCount > 0 ? '#faad14' : undefined }} /></Card></Col>
-        <Col span={6}><Card><Statistic title="差异总金额" value={summary.totalDiffAmount ?? 0} prefix="¥" precision={2} valueStyle={{ color: (summary.totalDiffAmount ?? 0) > 0 ? '#cf1322' : undefined }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="物料库存品种" value={summary.materialStockCount ?? '-'} /></Card></Col>
+        <Col span={6}><Card><Statistic title="成品库存SKU" value={summary.skuStockCount ?? '-'} /></Card></Col>
+        <Col span={6}><Card><Statistic title="样衣库存" value={summary.sampleStockCount ?? '-'} /></Card></Col>
+        <Col span={6}><Card><Statistic title="待处理盘点" value={summary.pendingChecks ?? 0} styles={{ content: { color: summary.pendingChecks > 0 ? '#faad14' : undefined } }} /></Card></Col>
       </Row>
 
       <Card
@@ -254,6 +283,7 @@ const InventoryCheck: React.FC = () => {
             <Select placeholder="盘点类型" allowClear style={{ width: 120 }} value={filterType} onChange={setFilterType}>
               <Select.Option value="MATERIAL">物料盘点</Select.Option>
               <Select.Option value="FINISHED">成品盘点</Select.Option>
+              <Select.Option value="SAMPLE">样衣盘点</Select.Option>
             </Select>
             <Select placeholder="状态" allowClear style={{ width: 100 }} value={filterStatus} onChange={setFilterStatus}>
               <Select.Option value="draft">待盘点</Select.Option>
@@ -273,7 +303,18 @@ const InventoryCheck: React.FC = () => {
           loading={loading}
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
           scroll={{ x: 1500 }}
-         
+          locale={{
+            emptyText: (
+              <Empty
+                description="暂无盘点记录"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              >
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
+                  新建第一笔盘点
+                </Button>
+              </Empty>
+            ),
+          }}
         />
       </Card>
 
@@ -283,7 +324,11 @@ const InventoryCheck: React.FC = () => {
             <Select placeholder="选择盘点类型">
               <Select.Option value="MATERIAL">物料盘点</Select.Option>
               <Select.Option value="FINISHED">成品盘点</Select.Option>
+              <Select.Option value="SAMPLE">样衣盘点</Select.Option>
             </Select>
+          </Form.Item>
+          <Form.Item name="styleNo" label="款号/物料编码（可选）">
+            <Input placeholder="填写后只盘点指定款号或物料，不填则盘点全部" />
           </Form.Item>
           <Form.Item name="warehouseLocation" label="仓位（可选）">
             <Input placeholder="不填则盘点所有仓位" />
@@ -316,6 +361,43 @@ const InventoryCheck: React.FC = () => {
       <StandardModal title={`填写实盘数量 - ${currentCheck?.checkNo || ''}`} open={fillModalVisible} onOk={handleFillActual} onCancel={() => setFillModalVisible(false)} size="lg">
         <Table rowKey="id" size="small" columns={itemColumns} dataSource={currentItems} pagination={false} scroll={{ y: 400 }} />
       </StandardModal>
+
+      <Modal
+        title="盘点操作流程说明"
+        open={guideVisible}
+        onCancel={() => setGuideVisible(false)}
+        footer={<Button onClick={() => setGuideVisible(false)}>知道了</Button>}
+        width={640}
+      >
+        <Steps orientation="vertical" current={-1} items={[
+          {
+            title: '第一步：新建盘点单',
+            content: '选择盘点类型（物料盘点/成品盘点/样衣盘点），可选指定款号或仓位。系统会自动加载对应库存快照作为账面数据，生成盘点明细。',
+          },
+          {
+            title: '第二步：填写实盘数量',
+            content: '在盘点单中逐项填写实际盘点数量。系统自动计算差异（实盘-账面），标记盘盈/盘亏/持平。',
+          },
+          {
+            title: '第三步：确认盘点',
+            content: '确认后系统自动调整库存：盘盈增加库存，盘亏扣减库存。确认后不可撤销，请确保实盘数据准确。',
+          },
+        ]} />
+        <Alert
+          type="warning"
+          showIcon
+          title="注意事项"
+          description={
+            <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+              <li>盘点确认后库存会自动调整，请确保实盘数据准确</li>
+              <li>填写款号/物料编码可只盘点指定款号，不填则盘点全部库存</li>
+              <li>物料盘点基于 t_material_stock 表，成品盘点基于 t_product_sku 表，样衣盘点基于 t_sample_stock 表</li>
+              <li>未填写实盘数量的项目不会参与差异计算</li>
+            </ul>
+          }
+          style={{ marginTop: 16 }}
+        />
+      </Modal>
     </div>
   );
 };

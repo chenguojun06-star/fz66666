@@ -74,6 +74,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         String orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orderNo"));
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
         String warehouse = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "warehouse"));
+        String warehouseAreaId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "warehouseAreaId"));
         String qualityStatus = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "qualityStatus"));
         String cuttingBundleId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleId"));
         String cuttingBundleQrCode = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleQrCode"));
@@ -82,7 +83,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
         List<String> keywordMatchedOrderIds = resolveKeywordMatchedOrderIds(warehousingNo);
         LambdaQueryWrapper<ProductWarehousing> wrapper = buildWarehousingQueryWrapper(
-                orderId, orderNo, styleNo, warehouse, qualityStatus, cuttingBundleId, cuttingBundleQrCode, warehousingNo, keywordMatchedOrderIds);
+                orderId, orderNo, styleNo, warehouse, warehouseAreaId, qualityStatus, cuttingBundleId, cuttingBundleQrCode, warehousingNo, keywordMatchedOrderIds);
         List<String> scopedOrderIds = resolveScopedOrderIds(safeParams, parentOrgUnitId, factoryType);
 
         if (scopedOrderIds != null) {
@@ -105,7 +106,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     }
 
     private LambdaQueryWrapper<ProductWarehousing> buildWarehousingQueryWrapper(
-            String orderId, String orderNo, String styleNo, String warehouse, String qualityStatus,
+            String orderId, String orderNo, String styleNo, String warehouse, String warehouseAreaId, String qualityStatus,
             String cuttingBundleId, String cuttingBundleQrCode, String warehousingNo, List<String> keywordMatchedOrderIds) {
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
                 .select(
@@ -131,6 +132,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 .like(StringUtils.hasText(orderNo), ProductWarehousing::getOrderNo, orderNo)
                 .like(StringUtils.hasText(styleNo), ProductWarehousing::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(warehouse), ProductWarehousing::getWarehouse, warehouse)
+                .eq(StringUtils.hasText(warehouseAreaId), ProductWarehousing::getWarehouseAreaId, warehouseAreaId)
                 .eq(StringUtils.hasText(qualityStatus), ProductWarehousing::getQualityStatus, qualityStatus)
                 .eq(StringUtils.hasText(cuttingBundleId), ProductWarehousing::getCuttingBundleId, cuttingBundleId)
                 .eq(StringUtils.hasText(cuttingBundleQrCode), ProductWarehousing::getCuttingBundleQrCode, cuttingBundleQrCode)

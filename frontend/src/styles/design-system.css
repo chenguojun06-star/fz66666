@@ -511,66 +511,165 @@ html.dark-mode {
   background-clip: text;
 }
 
-/* ========== 10. 响应式断点 ========== */
+/* ========== 10. 响应式断点 — 5档分辨率智能适配 ========== */
 
-/* ── 超宽屏 / 4K (≥2560px) ── */
-@media (min-width: 2560px) {
+/* ── 第1档：小屏 (≤1366px) 小笔记本/平板 ── */
+@media (max-width: 1366px) {
   :root {
+    --font-size-title: 16px;
+    --font-size-subtitle: 14px;
+    --font-size-lg: 14px;
+    --font-size-xl: 16px;
+    --font-size-base: 13px;
+    --font-size-md: 14px;
+    --font-size-sm: 12px;
+    --font-size-xs: 11px;
+    --font-size-xxs: 10px;
+    --font-size-xxl: 16px;
+    --font-size-display: 20px;
+    --spacing-base: 12px;
+    --spacing-md: 16px;
+    --spacing-lg: 20px;
+    --table-header-font-size: 12px;
+    --table-cell-font-size: 12px;
+    --table-cell-padding-x: 5px;
+    --table-cell-padding-y: 6px;
+    --table-header-padding-x: 5px;
+    --table-header-padding-y: 7px;
+    --table-header-height: 36px;
+    --table-min-col-width: 50px;
+    --table-action-col-width: 110px;
+    --table-row-height: 38px;
+    --table-condensed-row-height: 32px;
+  }
+}
+
+/* ── 第2档：标准 (1367-1600px) 普通笔记本 ── */
+@media (min-width: 1367px) and (max-width: 1600px) {
+  :root {
+    --font-size-title: 17px;
+    --font-size-subtitle: 15px;
+    --font-size-lg: 15px;
+    --font-size-xl: 17px;
+    --font-size-base: 14px;
+    --font-size-md: 15px;
+    --font-size-sm: 13px;
+    --font-size-xs: 12px;
+    --font-size-xxs: 11px;
+    --font-size-xxl: 18px;
+    --font-size-display: 22px;
+    --spacing-base: 14px;
+    --spacing-md: 20px;
+    --spacing-lg: 24px;
+    --table-header-font-size: 13px;
+    --table-cell-font-size: 13px;
+    --table-cell-padding-x: 7px;
+    --table-cell-padding-y: 8px;
+    --table-header-padding-x: 8px;
+    --table-header-padding-y: 10px;
+    --table-header-height: 40px;
+    --table-min-col-width: 60px;
+    --table-action-col-width: 130px;
+    --table-row-height: 42px;
+    --table-condensed-row-height: 36px;
+  }
+}
+
+/* ── 第3档：大屏 (1601-1920px) 台式机1080p ── */
+@media (min-width: 1601px) and (max-width: 1920px) {
+  :root {
+    --font-size-title: 18px;
+    --font-size-subtitle: 16px;
+    --font-size-lg: 16px;
+    --font-size-xl: 18px;
+    --font-size-base: 15px;
+    --font-size-md: 16px;
+    --font-size-sm: 14px;
+    --font-size-xs: 13px;
+    --font-size-xxs: 12px;
+    --font-size-xxl: 20px;
+    --font-size-display: 24px;
+    --spacing-base: 16px;
+    --spacing-md: 24px;
+    --spacing-lg: 32px;
+    --table-header-font-size: 14px;
+    --table-cell-font-size: 14px;
+    --table-cell-padding-x: 10px;
+    --table-cell-padding-y: 10px;
+    --table-header-padding-x: 12px;
+    --table-header-padding-y: 12px;
+    --table-header-height: 46px;
+    --table-min-col-width: 70px;
+    --table-action-col-width: 150px;
+    --table-row-height: 46px;
+    --table-condensed-row-height: 40px;
+  }
+}
+
+/* ── 第4档：宽屏 (1921-2560px) 2K显示器 ── */
+@media (min-width: 1921px) and (max-width: 2560px) {
+  :root {
+    --font-size-title: 19px;
+    --font-size-subtitle: 17px;
+    --font-size-lg: 17px;
+    --font-size-xl: 19px;
+    --font-size-base: 16px;
+    --font-size-md: 17px;
+    --font-size-sm: 15px;
+    --font-size-xs: 14px;
+    --font-size-xxs: 13px;
+    --font-size-xxl: 22px;
+    --font-size-display: 26px;
     --spacing-base: 18px;
     --spacing-md: 28px;
     --spacing-lg: 36px;
     --table-header-font-size: 15px;
-    --table-cell-font-size: 14px;
+    --table-cell-font-size: 15px;
     --table-cell-padding-x: 12px;
     --table-cell-padding-y: 12px;
     --table-header-padding-x: 14px;
-    --table-header-padding-y: 16px;
-    --table-header-height: 52px;
+    --table-header-padding-y: 14px;
+    --table-header-height: 50px;
     --table-min-col-width: 80px;
     --table-action-col-width: 160px;
     --table-row-height: 50px;
+    --table-condensed-row-height: 44px;
   }
 }
 
-@media (min-width: 3840px) {
+/* ── 第5档：超宽屏 (≥2561px) 4K+显示器 ── */
+@media (min-width: 2561px) {
   :root {
+    --font-size-title: 21px;
+    --font-size-subtitle: 18px;
+    --font-size-lg: 18px;
+    --font-size-xl: 21px;
+    --font-size-base: 17px;
+    --font-size-md: 18px;
+    --font-size-sm: 16px;
+    --font-size-xs: 15px;
+    --font-size-xxs: 14px;
+    --font-size-xxl: 24px;
+    --font-size-display: 30px;
     --spacing-base: 20px;
     --spacing-md: 32px;
     --spacing-lg: 40px;
-    --table-header-font-size: 16px;
-    --table-cell-font-size: 15px;
-    --table-cell-padding-x: 14px;
+    --table-header-font-size: 17px;
+    --table-cell-font-size: 16px;
+    --table-cell-padding-x: 16px;
     --table-cell-padding-y: 14px;
-    --table-header-padding-x: 16px;
-    --table-header-padding-y: 18px;
+    --table-header-padding-x: 20px;
+    --table-header-padding-y: 16px;
     --table-header-height: 56px;
     --table-min-col-width: 90px;
     --table-action-col-width: 180px;
     --table-row-height: 54px;
+    --table-condensed-row-height: 48px;
   }
-}
 
-/* ── 标准桌面 (≤1400px) ── */
-@media (max-width: 1400px) {
-  :root {
-    --spacing-base: 14px;
-    --spacing-md: 20px;
-  }
-}
-
-/* ── 小屏桌面 / 大平板 (≤1280px) ── */
-@media (max-width: 1280px) {
-  :root {
-    --table-header-font-size: 13px;
-    --table-cell-font-size: 12px;
-    --table-cell-padding-x: 6px;
-    --table-cell-padding-y: 8px;
-    --table-header-padding-x: 8px;
-    --table-header-padding-y: 10px;
-    --table-header-height: 42px;
-    --table-min-col-width: 50px;
-    --table-action-col-width: 110px;
-    --table-row-height: 40px;
+  .btn-pill {
+    padding: 12px 28px;
+    font-size: 16px;
   }
 }
 
@@ -596,8 +695,8 @@ html.dark-mode {
   :root {
     --spacing-base: 12px;
     --spacing-md: 16px;
-    --table-header-font-size: 11px;
-    --table-cell-font-size: 11px;
+    --table-header-font-size: 13px;
+    --table-cell-font-size: 13px;
     --table-cell-padding-x: 4px;
     --table-cell-padding-y: 6px;
     --table-header-padding-x: 4px;

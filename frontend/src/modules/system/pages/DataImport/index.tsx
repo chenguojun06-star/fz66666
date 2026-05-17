@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Tabs, Card, Button, Upload, Alert, Space, Typography, Tag, Result as AntResult, Progress, Steps } from 'antd';
+import React, { useState, useCallback, useRef } from 'react';
+import { Tabs, Card, Button, Alert, Space, Typography, Tag, Result as AntResult, Progress, Steps } from 'antd';
 import {
   DownloadOutlined,
   UploadOutlined,
@@ -91,6 +91,7 @@ const TAB_CONFIGS: TabConfig[] = [
 
 const ZipImportPanel: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const zipInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -158,22 +159,45 @@ const ZipImportPanel: React.FC = () => {
         {/* 上传 ZIP */}
         <Card title={<span><PictureOutlined style={{ marginRight: 6 }} />第二步：上传 ZIP 包</span>}>
           <Space orientation="vertical" style={{ width: '100%' }}>
-            <Upload
-              fileList={fileList}
-              beforeUpload={(file) => {
-                const isZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
-                if (!isZip) { message.error('仅支持 .zip 格式'); return Upload.LIST_IGNORE; }
-                if (file.size > 500 * 1024 * 1024) { message.error('ZIP 包不能超过 500MB'); return Upload.LIST_IGNORE; }
-                setFileList([{ ...file, uid: file.uid, name: file.name, originFileObj: file } as UploadFile]);
-                setResult(null);
-                return false;
-              }}
-              onRemove={() => { setFileList([]); setResult(null); }}
-              maxCount={1}
+            <input
+              ref={zipInputRef}
+              type="file"
               accept=".zip"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const isZip = f.name.toLowerCase().endsWith('.zip') || f.type === 'application/zip' || f.type === 'application/x-zip-compressed';
+                if (!isZip) { message.error('仅支持 .zip 格式'); if (zipInputRef.current) zipInputRef.current.value = ''; return; }
+                if (f.size > 500 * 1024 * 1024) { message.error('ZIP 包不能超过 500MB'); if (zipInputRef.current) zipInputRef.current.value = ''; return; }
+                setFileList([{ ...f, uid: f.name + '-' + Date.now(), name: f.name, originFileObj: f } as unknown as UploadFile]);
+                setResult(null);
+                if (zipInputRef.current) zipInputRef.current.value = '';
+              }}
+            />
+            <div
+              onDragOver={(e) => { e.preventDefault(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const f = e.dataTransfer.files?.[0];
+                if (!f) return;
+                const isZip = f.name.toLowerCase().endsWith('.zip') || f.type === 'application/zip' || f.type === 'application/x-zip-compressed';
+                if (!isZip) { message.error('仅支持 .zip 格式'); return; }
+                if (f.size > 500 * 1024 * 1024) { message.error('ZIP 包不能超过 500MB'); return; }
+                setFileList([{ ...f, uid: f.name + '-' + Date.now(), name: f.name, originFileObj: f } as unknown as UploadFile]);
+                setResult(null);
+              }}
+              style={{ display: 'inline-block' }}
             >
-              <Button icon={<FileZipOutlined />}>选择 ZIP 文件</Button>
-            </Upload>
+              <Button icon={<FileZipOutlined />} onClick={() => zipInputRef.current?.click()}>
+                {fileList.length > 0 ? `已选择: ${fileList[0].name}` : '选择 ZIP 文件'}
+              </Button>
+              {fileList.length > 0 && (
+                <Button size="small" style={{ marginLeft: 8 }} onClick={() => { setFileList([]); setResult(null); }}>
+                  移除
+                </Button>
+              )}
+            </div>
 
             {uploading && <Progress percent={progress} status="active" />}
 
@@ -241,6 +265,7 @@ const ZipImportPanel: React.FC = () => {
 
 const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const excelInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
@@ -340,36 +365,49 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
         {/* 步骤2：上传文件 */}
         <Card title="第二步：上传数据">
           <Space orientation="vertical" style={{ width: '100%' }}>
-            <Upload
-              fileList={fileList}
-              beforeUpload={(file) => {
-                const isExcel =
-                  file.type ===
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                  file.type === 'application/vnd.ms-excel' ||
-                  file.name.endsWith('.xlsx') ||
-                  file.name.endsWith('.xls');
-                if (!isExcel) {
-                  message.error('仅支持 .xlsx 或 .xls 格式的Excel文件');
-                  return Upload.LIST_IGNORE;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                  message.error('文件大小不能超过5MB');
-                  return Upload.LIST_IGNORE;
-                }
-                setFileList([{ ...file, uid: file.uid, name: file.name, originFileObj: file } as UploadFile]);
-                setResult(null);
-                return false; // 阻止自动上传
-              }}
-              onRemove={() => {
-                setFileList([]);
-                setResult(null);
-              }}
-              maxCount={1}
+            <input
+              ref={excelInputRef}
+              type="file"
               accept=".xlsx,.xls"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const isExcel = f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                  || f.type === 'application/vnd.ms-excel'
+                  || f.name.endsWith('.xlsx') || f.name.endsWith('.xls');
+                if (!isExcel) { message.error('仅支持 .xlsx 或 .xls 格式的Excel文件'); if (excelInputRef.current) excelInputRef.current.value = ''; return; }
+                if (f.size > 5 * 1024 * 1024) { message.error('文件大小不能超过5MB'); if (excelInputRef.current) excelInputRef.current.value = ''; return; }
+                setFileList([{ ...f, uid: f.name + '-' + Date.now(), name: f.name, originFileObj: f } as unknown as UploadFile]);
+                setResult(null);
+                if (excelInputRef.current) excelInputRef.current.value = '';
+              }}
+            />
+            <div
+              onDragOver={(e) => { e.preventDefault(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const f = e.dataTransfer.files?.[0];
+                if (!f) return;
+                const isExcel = f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                  || f.type === 'application/vnd.ms-excel'
+                  || f.name.endsWith('.xlsx') || f.name.endsWith('.xls');
+                if (!isExcel) { message.error('仅支持 .xlsx 或 .xls 格式的Excel文件'); return; }
+                if (f.size > 5 * 1024 * 1024) { message.error('文件大小不能超过5MB'); return; }
+                setFileList([{ ...f, uid: f.name + '-' + Date.now(), name: f.name, originFileObj: f } as unknown as UploadFile]);
+                setResult(null);
+              }}
+              style={{ display: 'inline-block' }}
             >
-              <Button icon={<UploadOutlined />}>选择 Excel 文件</Button>
-            </Upload>
+              <Button icon={<UploadOutlined />} onClick={() => excelInputRef.current?.click()}>
+                {fileList.length > 0 ? `已选择: ${fileList[0].name}` : '选择 Excel 文件'}
+              </Button>
+              {fileList.length > 0 && (
+                <Button size="small" style={{ marginLeft: 8 }} onClick={() => { setFileList([]); setResult(null); }}>
+                  移除
+                </Button>
+              )}
+            </div>
 
             <Space>
               <Button

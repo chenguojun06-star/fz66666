@@ -84,8 +84,8 @@ const DecisionInsightCard: React.FC<{
           <span style={{ color: tone.title, fontSize: compact ? 12 : 13, fontWeight: 700 }}>{insight.title}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-          {insight.source ? <Tag color="default" style={{ margin: 0, fontSize: 10 }}>{insight.source}</Tag> : null}
-          {insight.confidence ? <Tag color="blue" style={{ margin: 0, fontSize: 10 }}>{insight.confidence}</Tag> : null}
+          {insight.source ? <Tag color="default" style={{ margin: 0, fontSize: 12 }}>{insight.source}</Tag> : null}
+          {insight.confidence ? <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>{insight.confidence}</Tag> : null}
         </div>
       </div>
 
@@ -116,7 +116,7 @@ const DecisionInsightCard: React.FC<{
               {insight.actionLabel}
             </Button>
           ) : (
-            <span style={{ fontSize: 11, fontWeight: 600, color: tone.title }}>{insight.actionLabel}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: tone.title }}>{insight.actionLabel}</span>
           )}
         </div>
       ) : null}

@@ -110,14 +110,14 @@ export const useProgressColumns = ({
       ),
     }] : []),
   ], [
-    orderSortField, orderSortOrder, handleOrderSort,
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
-    openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
+    openNodeDetail, handleCloseOrder,
     setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal,
     getPredictHint, triggerPredict,
     deliveryRiskMap, onShareOrder,
     isFactoryAccount, onFactoryShip,
+    canManageOrderLifecycle, stagnantOrderIds, openKanban,
   ]);
 
   return { columns };

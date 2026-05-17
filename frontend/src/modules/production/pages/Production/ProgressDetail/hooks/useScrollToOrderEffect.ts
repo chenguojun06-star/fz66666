@@ -30,5 +30,5 @@ export const useScrollToOrderEffect = ({
       }
     }, 120);
     return () => window.clearTimeout(timer);
-  }, [getOrderDomKey, orders, pendingScrollOrderId, scrollToFocusedOrder, smartQueueFilter, smartQueueOrders, viewMode]);
+  }, [getOrderDomKey, orders, pendingScrollOrderId, scrollToFocusedOrder, setPendingScrollOrderId, smartQueueFilter, smartQueueOrders, viewMode]);
 };

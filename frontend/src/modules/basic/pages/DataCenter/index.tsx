@@ -1,19 +1,57 @@
-import React from 'react';
-import { Button, Card, Col, Form, Input, Row, Space, Select, DatePicker, Upload } from 'antd';
+import React, { useRef } from 'react';
+import { Button, Card, Col, Form, Input, Row, Space, Select, DatePicker } from 'antd';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { useDataCenterActions } from './useDataCenterActions';
 import { useDataCenterColumns } from './useDataCenterColumns';
-import { normalizeUploadFileList } from './useDataCenterActions';
 
 const { TextArea } = Input;
+
+const ACCEPT_PATTERN = '.pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.prj,.jpg,.jpeg,.png,.bmp,.gif,.svg';
+
+const PatternFilePicker: React.FC<{
+  value?: any[];
+  onChange?: (file: File | null) => void;
+}> = ({ value, onChange }) => {
+  const ref = useRef<HTMLInputElement | null>(null);
+  const current = value?.[0];
+  return (
+    <div
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+      onDragOver={(e) => { e.preventDefault(); }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files?.[0];
+        if (f) onChange?.(f);
+      }}
+    >
+      <input
+        ref={ref}
+        type="file"
+        accept={ACCEPT_PATTERN}
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onChange?.(f);
+          if (ref.current) ref.current.value = '';
+        }}
+      />
+      <Button onClick={() => ref.current?.click()}>
+        {current ? current.name : '选择文件上传'}
+      </Button>
+      {current && (
+        <Button size="small" onClick={() => onChange?.(null)}>移除</Button>
+      )}
+    </div>
+  );
+};
 
 const DataCenter: React.FC = () => {
   const {
@@ -71,6 +109,7 @@ const DataCenter: React.FC = () => {
         columns={columns as any}
         dataSource={styles}
         loading={loading}
+        locale={{ emptyText: '暂无资料数据' }}
         pagination={{
           current: queryParams.page,
           pageSize: queryParams.pageSize,
@@ -179,10 +218,8 @@ const DataCenter: React.FC = () => {
             <Form.Item name="expectedCompleteDate" label="预计完成日期"><DatePicker style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="remark" label="备注" style={{ gridColumn: 'span 3' }}><Input placeholder="其他说明" /></Form.Item>
           </div>
-          <Form.Item name="patternFile" label="纸样文件" valuePropName="fileList" getValueFromEvent={normalizeUploadFileList}>
-            <Upload beforeUpload={() => false} maxCount={1} accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.prj,.jpg,.jpeg,.png,.bmp,.gif,.svg">
-              <Button>选择文件上传</Button>
-            </Upload>
+          <Form.Item name="patternFile" label="纸样文件" getValueFromEvent={(file: File | null) => file ? [{ uid: '-1', name: file.name, originFileObj: file }] : []}>
+            <PatternFilePicker />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -201,7 +238,7 @@ const DataCenter: React.FC = () => {
               <Col span={8}>
                 <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {detailRecord.cover ? (
-                    <img loading="lazy" src={getFullAuthedFileUrl(detailRecord.cover)} alt="封面" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <StyleCoverThumb styleId={detailRecord.id} styleNo={detailRecord.styleNo} src={detailRecord.cover} size="fill" />
                   ) : (
                     <span style={{ color: 'var(--neutral-text-secondary)' }}>暂无封面</span>
                   )}

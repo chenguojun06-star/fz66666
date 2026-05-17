@@ -46,7 +46,7 @@ const AiHoverCard: React.FC<{
               <ThunderboltOutlined style={{ color: '#722ed1' }} />
               <Text type="secondary" style={{ fontSize: 12 }}>趋势评分</Text>
               <Tooltip title={scoreMeta.title}>
-                <Tag color={scoreMeta.color} style={{ margin: 0, fontSize: 10 }}>{scoreMeta.label}</Tag>
+                <Tag color={scoreMeta.color} style={{ margin: 0, fontSize: 12 }}>{scoreMeta.label}</Tag>
               </Tooltip>
               <Text strong style={{
                 color: record.trendScore! >= 75 ? '#52c41a' : record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f',
@@ -62,7 +62,7 @@ const AiHoverCard: React.FC<{
             style={{ marginBottom: 8 }}
           />
           {record.trendScoreReason && (
-            <Paragraph style={{ fontSize: 11, color: '#555', marginBottom: 8, lineHeight: 1.5 }}>
+            <Paragraph style={{ fontSize: 13, color: '#555', marginBottom: 8, lineHeight: 1.5 }}>
               {record.trendScoreReason.slice(0, 150)}{record.trendScoreReason.length > 150 ? '…' : ''}
             </Paragraph>
           )}
@@ -78,19 +78,19 @@ const AiHoverCard: React.FC<{
       <Row gutter={[8, 6]}>
         {record.costEstimate != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 11 }}>成本估算</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>成本估算</Text>
             <div style={{ fontSize: 13, fontWeight: 600 }}>¥{record.costEstimate}</div>
           </Col>
         )}
         {record.targetPrice != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 11 }}>目标报价</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>目标报价</Text>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#52c41a' }}>¥{record.targetPrice}</div>
           </Col>
         )}
         {record.profitEstimate != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 11 }}>预估利润率</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>预估利润率</Text>
             <div style={{ fontSize: 13, fontWeight: 600, color: record.profitEstimate >= 30 ? '#52c41a' : '#fa8c16' }}>
               {record.profitEstimate}%
             </div>
@@ -98,7 +98,7 @@ const AiHoverCard: React.FC<{
         )}
         {record.targetQty != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 11 }}>预计下单</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>预计下单</Text>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{record.targetQty} 件</div>
           </Col>
         )}
@@ -109,7 +109,7 @@ const AiHoverCard: React.FC<{
           const tags: string[] = JSON.parse(record.seasonTags);
           return tags.length > 0 ? (
             <div style={{ marginTop: 8 }}>
-              {tags.map(t => <Tag key={t} style={{ fontSize: 11, marginBottom: 2 }}>{t}</Tag>)}
+              {tags.map(t => <Tag key={t} style={{ fontSize: 13, marginBottom: 2 }}>{t}</Tag>)}
             </div>
           ) : null;
         } catch { return null; }

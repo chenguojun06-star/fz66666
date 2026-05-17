@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   Button,
   Checkbox,
@@ -7,7 +7,6 @@ import {
   Input,
   InputNumber,
   Tag,
-  Upload,
 } from 'antd';
 import {
   DeleteOutlined,
@@ -60,6 +59,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
   onUploadImage,
   onRemoveImage,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const sortedSteps = useMemo(() => {
     return value.steps
       .map((step, index) => ({ ...step, _origIdx: index }))
@@ -336,11 +336,43 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
                 </div>
               ))}
               {imageUrls.length < 4 ? (
-                <Upload accept="image/*" showUploadList={false} beforeUpload={(file) => onUploadImage(file as File)}>
-                  <Button icon={<UploadOutlined />} loading={imageUploading} disabled={readOnly}>
+                <span
+                  onDragOver={(e) => { if (!readOnly) e.preventDefault(); }}
+                  onDrop={(e) => {
+                    if (readOnly) return;
+                    e.preventDefault();
+                    Array.from(e.dataTransfer.files || []).forEach((f) => {
+                      if (f.type.startsWith('image/')) void onUploadImage(f);
+                    });
+                  }}
+                  onPaste={(e) => {
+                    if (readOnly) return;
+                    const files = e.clipboardData.files;
+                    if (files?.length) { e.preventDefault(); Array.from(files).forEach((f) => { if (f.type.startsWith('image/')) void onUploadImage(f); }); return; }
+                    const items = e.clipboardData.items;
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].type.startsWith('image/')) { e.preventDefault(); const f = items[i].getAsFile(); if (f) void onUploadImage(f); break; }
+                    }
+                  }}
+                  style={{ display: 'inline-block' }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    disabled={readOnly}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onUploadImage(f);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                  />
+                  <Button icon={<UploadOutlined />} loading={imageUploading} disabled={readOnly}
+                    onClick={() => fileInputRef.current?.click()}>
                     上传图片
                   </Button>
-                </Upload>
+                </span>
               ) : null}
             </div>
           </div>

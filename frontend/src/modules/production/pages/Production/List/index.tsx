@@ -11,6 +11,7 @@ import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder } from '@/types/production';
 import {
   isOrderFrozenByStatus,
+  withQuery,
 } from '@/utils/api';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import '../../../styles.css';
@@ -46,6 +47,7 @@ import AnomalyBanner from './AnomalyBanner';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import ProductionModals from './components/ProductionModals';
 import ProductionFilterBar from './components/ProductionFilterBar';
+import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -348,12 +350,12 @@ const ProductionList: React.FC = () => {
                     const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
                     return (
                       <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <Tag color={statusColor} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
-                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+                        <Tag color={statusColor} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
+                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
                         {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
-                          && <Tag style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
+                          && <Tag style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
                       </div>
                     );
                   }},
@@ -383,14 +385,22 @@ const ProductionList: React.FC = () => {
               actions={(record: ProductionOrder) => {
                 const frozen = isOrderFrozenByStatus(record);
                 const frozenTitle = '订单已关单/报废/完成，无法操作';
+                const commonActions = buildCommonOrderActions({
+                  record, frozen, completed: frozen,
+                  canManageOrderLifecycle: !!canManageOrderLifecycle,
+                  isSupervisorOrAbove: !!isSupervisorOrAbove,
+                  onQuickEdit: (r) => quickEditModal.open(r),
+                  handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder, handleShareOrder,
+                  onOpenRemark: (r) => setRemarkTarget({ open: true, orderNo: r.orderNo || '', merchandiser: r.merchandiser }),
+                });
                 return [
-                { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
-                { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
-                ...(canManageOrderLifecycle ? [{ key: 'close', label: '关单', disabled: frozen, title: frozen ? frozenTitle : '关单', onClick: () => { handleCloseOrder(record); } }] : []),
-                { key: 'divider1', type: 'divider' as const, label: '' },
-                { key: 'edit', label: '编辑', disabled: frozen, title: frozen ? frozenTitle : '编辑', onClick: () => { quickEditModal.open(record); } },
-                { key: 'share', label: '分享', disabled: frozen, title: frozen ? frozenTitle : '分享', onClick: () => { void handleShareOrder(record); } },
-              ].filter(Boolean);
+                  { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
+                  { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
+                  ...(!isFactoryAccount ? [{ key: 'process', label: '工序', disabled: frozen, title: frozen ? frozenTitle : '工序', onClick: () => openProcessDetail(record, 'all') }] : []),
+                  ...(isFactoryAccount ? [{ key: 'subProcessRemap', label: '子工序', disabled: frozen, title: frozen ? frozenTitle : '子工序单价配置', onClick: () => openSubProcessRemap(record) }] : []),
+                  ...commonActions,
+                  ...(isFactoryAccount ? [{ key: 'orderFlow', label: '全流程', title: '查看订单全流程记录', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) }] : []),
+                ];
               }}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
               titleTags={undefined}

@@ -35,6 +35,11 @@ export const MODULE_SECTIONS = [
     { path: '/warehouse/finished', label: '成品进销存' },
     { path: '/warehouse/ecommerce', label: '电商订单' },
   ]},
+  { key: 'ecommerce', title: '电商运营', paths: [
+    { path: '/ecommerce/center', label: '平台总览' },
+    { path: '/warehouse/ecommerce', label: '电商订单' },
+    { path: '/finance/ec-revenue', label: 'EC销售收入' },
+  ]},
   { key: 'finance', title: '财务管理', paths: [
     { path: '/finance/material-reconciliation', label: '物料对账' },
     { path: '/finance/payroll-operator-summary', label: '工资结算' },
@@ -70,9 +75,6 @@ export const MODULE_SECTIONS = [
     { path: '/intelligence/center', label: '智能运营中心' },
     { path: '/cockpit', label: '数据看板' },
   ] },
-  { key: 'integrationCenter', title: '集成对接中心', paths: [
-    { path: '/integration/center', label: '集成对接中心' },
-  ]},
 ];
 
 export const ALL_MODULE_PATHS = MODULE_SECTIONS.flatMap(section => section.paths.map(item => item.path));

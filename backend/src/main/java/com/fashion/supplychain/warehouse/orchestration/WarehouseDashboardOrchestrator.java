@@ -112,7 +112,7 @@ public class WarehouseDashboardOrchestrator {
         try {
             Long outstockCount = productOutstockMapper.selectCount(
                 new QueryWrapper<ProductOutstock>()
-                    .apply("DATE(create_time) = {0}", today)
+                    .apply("create_time >= {0} AND create_time < DATE_ADD({0}, INTERVAL 1 DAY)", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
                     .eq("tenant_id", tid)
             );
@@ -223,7 +223,7 @@ public class WarehouseDashboardOrchestrator {
         try {
             List<ProductOutstock> todayOutstock = productOutstockMapper.selectList(
                 new QueryWrapper<ProductOutstock>()
-                    .apply("DATE(create_time) = {0}", today)
+                    .apply("create_time >= {0} AND create_time < DATE_ADD({0}, INTERVAL 1 DAY)", today)
                     .apply("(delete_flag IS NULL OR delete_flag = 0)")
                     .eq("tenant_id", tid)
                     .orderByDesc("create_time")
@@ -310,7 +310,7 @@ public class WarehouseDashboardOrchestrator {
                 List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
                     new QueryWrapper<ProductOutstock>()
                         .select("HOUR(create_time) as hour, COUNT(*) as count")
-                        .apply("DATE(create_time) = {0}", today)
+                        .apply("create_time >= {0} AND create_time < DATE_ADD({0}, INTERVAL 1 DAY)", today)
                         .apply("(delete_flag IS NULL OR delete_flag = 0)")
                         .eq("tenant_id", tid)
                         .groupBy("HOUR(create_time)")
@@ -388,7 +388,7 @@ public class WarehouseDashboardOrchestrator {
                 List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
                     new QueryWrapper<ProductOutstock>()
                         .select("DATE(create_time) as date, COUNT(*) as count")
-                        .apply("DATE(create_time) BETWEEN {0} AND {1}", startDate, today)
+                        .apply("create_time >= {0} AND create_time < DATE_ADD({1}, INTERVAL 1 DAY)", startDate, today)
                         .apply("(delete_flag IS NULL OR delete_flag = 0)")
                         .eq("tenant_id", tid)
                         .groupBy("DATE(create_time)")
@@ -468,7 +468,7 @@ public class WarehouseDashboardOrchestrator {
                 List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
                     new QueryWrapper<ProductOutstock>()
                         .select("DAY(create_time) as day, COUNT(*) as count")
-                        .apply("DATE(create_time) BETWEEN {0} AND {1}", startDate, today)
+                        .apply("create_time >= {0} AND create_time < DATE_ADD({1}, INTERVAL 1 DAY)", startDate, today)
                         .apply("(delete_flag IS NULL OR delete_flag = 0)")
                         .eq("tenant_id", tid)
                         .groupBy("DAY(create_time)")

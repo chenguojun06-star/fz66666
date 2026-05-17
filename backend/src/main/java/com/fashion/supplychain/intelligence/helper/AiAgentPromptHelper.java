@@ -33,6 +33,10 @@ public class AiAgentPromptHelper {
     private com.fashion.supplychain.intelligence.orchestration.XiaoyunCoreUpgrade coreUpgrade;
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService;
+    @Autowired(required = false)
+    private com.fashion.supplychain.system.service.TenantService tenantService;
+    @Autowired(required = false)
+    private com.fashion.supplychain.system.service.FactoryService factoryService;
 
     private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
             4, 8, 60L, TimeUnit.SECONDS,
@@ -48,6 +52,7 @@ public class AiAgentPromptHelper {
         if (userMessage == null || userMessage.length() < 8) return 3;
         String msg = userMessage.trim();
         if (msg.length() < 25 && msg.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗).*")) return 2;
+        if (msg.matches("(?s).*(我是谁|你知道我|我是什么角色|我有什么权限|我的权限|我的角色).*")) return 2;
         if (msg.matches("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作).*")) return 8;
         if (msg.matches("(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*")) return 6;
         return 5;
@@ -222,23 +227,68 @@ public class AiAgentPromptHelper {
             .append("- 当前用户：").append(userName != null ? userName : "未知").append("\n")
             .append("- 用户角色：").append(userRole != null ? userRole : "普通用户")
             .append(isSuperAdmin ? "（超级管理员）" : isTenantOwner ? "（租户老板）" : isManager ? "（管理人员）" : "（生产员工）").append("\n");
-        // 注入工厂上下文
+        String permissionRange = UserContext.getDataScope();
+        if (permissionRange != null && !permissionRange.isBlank()) {
+            String rangeLabel;
+            if ("all".equals(permissionRange)) { rangeLabel = "全部数据"; }
+            else if ("team".equals(permissionRange)) { rangeLabel = "本团队数据"; }
+            else if ("own".equals(permissionRange)) { rangeLabel = "仅本人数据"; }
+            else { rangeLabel = permissionRange; }
+            ctx.append("- 数据权限范围：").append(rangeLabel).append("\n");
+        }
+        if (isTenantOwner) {
+            ctx.append("- 租户主账号：是（拥有该租户全部管理权限）\n");
+        }
+        if (isSuperAdmin) {
+            ctx.append("- 平台超级管理员：是（跨租户全局权限）\n");
+        }
         String factoryId = UserContext.factoryId();
         if (factoryId != null && !factoryId.isBlank()) {
-            ctx.append("- 所属工厂ID：").append(factoryId).append("（你是外发工厂账号，只能操作本工厂的生产数据）\n");
-        }
-        // 注入租户名称（如果有）
-        try {
-            Long tenantId = UserContext.tenantId();
-            if (tenantId != null) {
-                ctx.append("- 当前租户ID：").append(tenantId).append("\n");
+            ctx.append("- 所属工厂ID：").append(factoryId);
+            String factoryName = resolveFactoryName(factoryId);
+            if (factoryName != null && !factoryName.isBlank()) {
+                ctx.append("（").append(factoryName).append("）");
             }
-        } catch (Exception ignore) {}
-        // 非管理员简化回答提示
+            ctx.append("（你是外发工厂账号，只能操作本工厂的生产数据）\n");
+        }
+        Long tenantId = UserContext.tenantId();
+        if (tenantId != null) {
+            ctx.append("- 当前租户ID：").append(tenantId).append("\n");
+            String tenantName = resolveTenantName(tenantId);
+            if (tenantName != null && !tenantName.isBlank()) {
+                ctx.append("- 所属公司：").append(tenantName).append("\n");
+            }
+        }
         if (!isManager) {
             ctx.append("⚠️ 你是生产员工，回答应简洁明了，多用短句和数字，少用技术术语。\n");
         }
+        ctx.append("\n【身份认知规则】你已通过系统上下文获知当前用户的完整身份信息（姓名、角色、公司、工厂、权限范围等）。")
+            .append("当用户问「我是谁」「你知道我是谁吗」「我是什么角色」「我有什么权限」等身份相关问题时，")
+            .append("必须根据【当前环境】中的信息准确回答，绝不能说「我不知道你是谁」「你还没告诉我」之类的话。")
+            .append("回答示例：「你是XX公司的管理员张三，拥有全部数据查看权限」或「你是XX工厂的生产员工李四，只能查看本人相关的生产数据」。\n");
         return ctx.toString();
+    }
+
+    private String resolveTenantName(Long tenantId) {
+        try {
+            if (tenantService == null) return null;
+            com.fashion.supplychain.system.entity.Tenant tenant = tenantService.getById(tenantId);
+            return tenant != null ? tenant.getTenantName() : null;
+        } catch (Exception e) {
+            log.debug("[AiAgent] 租户名称解析跳过: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String resolveFactoryName(String factoryId) {
+        try {
+            if (factoryService == null) return null;
+            com.fashion.supplychain.system.entity.Factory factory = factoryService.getById(factoryId);
+            return factory != null ? factory.getFactoryName() : null;
+        } catch (Exception e) {
+            log.debug("[AiAgent] 工厂名称解析跳过: {}", e.getMessage());
+            return null;
+        }
     }
 
     private String buildPageContextBlock(String pageContext) {

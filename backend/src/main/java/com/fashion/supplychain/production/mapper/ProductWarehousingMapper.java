@@ -24,7 +24,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
      * 统计今日入库次数
      */
     @Select("SELECT COUNT(*) FROM t_product_warehousing " +
-            "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0" +
+            "WHERE warehousing_end_time >= #{today} AND warehousing_end_time < DATE_ADD(#{today}, INTERVAL 1 DAY) AND delete_flag = 0" +
             " AND tenant_id = #{tenantId}")
     Integer selectTodayInboundCount(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
@@ -32,7 +32,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
      * 查询今日入库列表
      */
     @Select("SELECT * FROM t_product_warehousing " +
-            "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0" +
+            "WHERE warehousing_end_time >= #{today} AND warehousing_end_time < DATE_ADD(#{today}, INTERVAL 1 DAY) AND delete_flag = 0" +
             " AND tenant_id = #{tenantId}" +
             " ORDER BY warehousing_end_time DESC LIMIT 20")
     List<ProductWarehousing> selectTodayInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
@@ -42,7 +42,7 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
      */
     @Select("SELECT HOUR(warehousing_end_time) as hour, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
-            "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0 " +
+            "WHERE warehousing_end_time >= #{today} AND warehousing_end_time < DATE_ADD(#{today}, INTERVAL 1 DAY) AND delete_flag = 0 " +
             "AND tenant_id = #{tenantId} " +
             "GROUP BY HOUR(warehousing_end_time)")
     List<Map<String, Object>> selectTodayInboundByHour(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
@@ -104,4 +104,15 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
             "AND tenant_id = #{tenantId}"
     })
     Map<String, Object> selectWarehousingStats(@Param("tenantId") Long tenantId);
+
+    @Select("SELECT cb.size AS size, pw.qualified_quantity AS qualified_quantity " +
+            "FROM t_product_warehousing pw " +
+            "JOIN t_cutting_bundle cb ON pw.cutting_bundle_id = cb.id " +
+            "WHERE pw.tenant_id = #{tenantId} AND pw.delete_flag = 0 " +
+            "AND pw.style_no = #{styleNo} AND pw.create_time >= #{start} " +
+            "LIMIT 5000")
+    List<Map<String, Object>> selectSizeQuantityByStyleNo(
+            @Param("tenantId") Long tenantId,
+            @Param("styleNo") String styleNo,
+            @Param("start") java.time.LocalDateTime start);
 }

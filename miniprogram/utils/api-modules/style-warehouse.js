@@ -50,6 +50,9 @@ const warehouse = {
   listWarehouseAreas(warehouseType) {
     return ok('/api/warehouse/area/list-by-type', 'GET', { warehouseType: warehouseType || '' });
   },
+  listLocations(warehouseType, areaId) {
+    return ok('/api/warehouse/location/list-by-type', 'GET', { warehouseType: warehouseType || '', areaId: areaId });
+  },
 };
 
 

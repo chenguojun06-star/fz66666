@@ -77,7 +77,7 @@ public class DataPermissionHelper {
      * @param operatorName 操作人姓名
      * @return true=有权查看
      */
-    public static boolean canViewRecord(String operatorId, String operatorName) {
+    public static boolean canViewRecord(String operatorId, String operatorName, String recordOrgUnitId) {
         String dataScope = UserContext.getDataScope();
 
         if ("all".equals(dataScope)) {
@@ -92,12 +92,12 @@ public class DataPermissionHelper {
                 return true;
             }
             String myOrgUnitId = UserContext.orgUnitId();
-            if (StringUtils.hasText(myOrgUnitId) && StringUtils.hasText(operatorId)) {
+            if (StringUtils.hasText(myOrgUnitId) && StringUtils.hasText(recordOrgUnitId)
+                    && myOrgUnitId.equals(recordOrgUnitId)) {
                 return true;
             }
         }
 
-        // own: 只能看自己
         if (StringUtils.hasText(operatorId) && StringUtils.hasText(currentUserId)) {
             return operatorId.equals(currentUserId);
         }
@@ -106,6 +106,10 @@ public class DataPermissionHelper {
         }
 
         return false;
+    }
+
+    public static boolean canViewRecord(String operatorId, String operatorName) {
+        return canViewRecord(operatorId, operatorName, null);
     }
 
     /**
@@ -118,7 +122,7 @@ public class DataPermissionHelper {
         String dataScope = UserContext.getDataScope();
 
         if ("all".equals(dataScope)) {
-            return null; // null表示不限制
+            return null;
         }
 
         List<String> ids = new ArrayList<>();
@@ -127,8 +131,9 @@ public class DataPermissionHelper {
             ids.add(userId);
         }
 
-        // 注意：当前 team 范围的权限检查未完全实现
-        // 未来需要：查询 t_user_team 表判断是否同团队
+        if ("team".equals(dataScope)) {
+            return null;
+        }
 
         return ids;
     }

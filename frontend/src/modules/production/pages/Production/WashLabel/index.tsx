@@ -164,12 +164,12 @@ const WashLabelPage: React.FC = () => {
 
   useEffect(() => { void fetchOrders(); }, [fetchOrders]);
 
-  const getUCode = (order: ProductionOrder): string => {
+  const getUCode = useCallback((order: ProductionOrder): string => {
     if (order.id && uCodeOverrides[order.id]) return uCodeOverrides[order.id];
     const cached = styleCache.current[order.styleId];
     if (cached?.uCode) return cached.uCode;
     return genUCode(order);
-  };
+  }, [uCodeOverrides]);
 
   const buildPrintItems = useCallback(async (targetOrders: ProductionOrder[]): Promise<WashLabelItem[]> => {
     await fetchStyleInfoForOrders(targetOrders);
@@ -194,7 +194,7 @@ const WashLabelPage: React.FC = () => {
         dryCleanCode: cached.dryCleanCode,
       }));
     });
-  }, [fetchStyleInfoForOrders]);
+  }, [fetchStyleInfoForOrders, getUCode]);
 
   const openBatchPrint = useCallback(async (targetOrders: ProductionOrder[]) => {
     setBatchPrintLoading(true);

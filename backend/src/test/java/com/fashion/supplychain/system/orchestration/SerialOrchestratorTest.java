@@ -1,21 +1,28 @@
 package com.fashion.supplychain.system.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SerialOrchestratorTest {
@@ -30,100 +37,175 @@ class SerialOrchestratorTest {
     private JdbcTemplate jdbcTemplate;
 
     @InjectMocks
-    private SerialOrchestrator orchestrator;
+    private SerialOrchestrator serialOrchestrator;
 
-    // ── generate validation ───────────────────────────────────────────
+    private MockedStatic<UserContext> mockedUserContext;
 
-    @Test
-    void generate_nullRuleCode_throwsIllegalArgument() {
-        assertThatThrownBy(() -> orchestrator.generate(null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("ruleCode不能为空");
+    @BeforeEach
+    void setUp() {
+        mockedUserContext = mockStatic(UserContext.class);
+    }
+
+    @AfterEach
+    void tearDown() {
+        mockedUserContext.close();
     }
 
     @Test
-    void generate_blankRuleCode_throwsIllegalArgument() {
-        assertThatThrownBy(() -> orchestrator.generate("   "))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("ruleCode不能为空");
+    void generate_shouldThrowExceptionWhenRuleCodeEmpty() {
+        assertThrows(IllegalArgumentException.class, () -> serialOrchestrator.generate(null));
+        assertThrows(IllegalArgumentException.class, () -> serialOrchestrator.generate(""));
+        assertThrows(IllegalArgumentException.class, () -> serialOrchestrator.generate("   "));
     }
 
     @Test
-    void generate_unknownRuleCode_throwsIllegalArgument() {
-        assertThatThrownBy(() -> orchestrator.generate("UNKNOWN_CODE"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("不支持的ruleCode");
-    }
-
-    // ── STYLE_NO ──────────────────────────────────────────────────────
-
-    @Test
-    void generate_styleNo_noExisting_returnsFormattedNo() {
-        when(styleInfoService.getOne(any())).thenReturn(null);
-        when(styleInfoService.count(any())).thenReturn(0L);
-
-        String result = orchestrator.generate("STYLE_NO");
-
-        assertThat(result).isNotNull();
-        assertThat(result).startsWith("ST");
-        // format: ST(2) + yyyyMMdd(8) + 001(3) = 13
-        assertThat(result).hasSize(13);
-        assertThat(result).endsWith("001");
+    void generate_shouldThrowExceptionWhenRuleCodeUnknown() {
+        assertThrows(IllegalArgumentException.class, () -> serialOrchestrator.generate("UNKNOWN_CODE"));
     }
 
     @Test
-    void generate_styleNo_existingSeq_incrementsSeq() {
-        // Latest existing style has suffix 005
-        String today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String prefix = "ST" + today;
+    void generate_shouldGenerateStyleNoWhenNoExistingRecords() {
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(null);
+        when(styleInfoService.count(any(LambdaQueryWrapper.class))).thenReturn(0L);
+
+        String result = serialOrchestrator.generate("STYLE_NO");
+
+        assertNotNull(result);
+        assertTrue(result.startsWith("ST"));
+        assertTrue(result.matches("ST\\d{8}\\d{3}"));
+    }
+
+    @Test
+    void generate_shouldGenerateNextStyleNoWhenExistingRecordExists() {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String existingStyleNo = "ST" + today + "005";
         StyleInfo existing = new StyleInfo();
-        existing.setStyleNo(prefix + "005");
-        when(styleInfoService.getOne(any())).thenReturn(existing);
-        when(styleInfoService.count(any())).thenReturn(0L); // next seq 006 is free
+        existing.setStyleNo(existingStyleNo);
 
-        String result = orchestrator.generate("STYLE_NO");
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+        when(styleInfoService.count(any(LambdaQueryWrapper.class))).thenReturn(0L);
 
-        assertThat(result).isEqualTo(prefix + "006");
+        String result = serialOrchestrator.generate("STYLE_NO");
+
+        assertNotNull(result);
+        assertEquals("ST" + today + "006", result);
     }
 
     @Test
-    void generate_styleNo_lowercaseInput_normalizes() {
-        when(styleInfoService.getOne(any())).thenReturn(null);
-        when(styleInfoService.count(any())).thenReturn(0L);
+    void generate_shouldHandleStyleNoConflictAndRetry() {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String existingStyleNo = "ST" + today + "005";
+        StyleInfo existing = new StyleInfo();
+        existing.setStyleNo(existingStyleNo);
 
-        String result = orchestrator.generate("style_no");
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+        when(styleInfoService.count(any(LambdaQueryWrapper.class)))
+                .thenReturn(1L)  // 006 已存在
+                .thenReturn(1L)  // 007 已存在
+                .thenReturn(0L); // 008 可用
 
-        assertThat(result).startsWith("ST");
+        String result = serialOrchestrator.generate("STYLE_NO");
+
+        assertNotNull(result);
+        assertEquals("ST" + today + "008", result);
     }
 
-    // ── ORDER_NO ──────────────────────────────────────────────────────
+    @Test
+    void generate_shouldGenerateOrderNoWhenNoExistingRecords() {
+        mockedUserContext.when(UserContext::tenantId).thenReturn(1L);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any(Object[].class))).thenReturn(0);
+
+        String result = serialOrchestrator.generate("ORDER_NO");
+
+        assertNotNull(result);
+        assertTrue(result.startsWith("PO"));
+        assertTrue(result.matches("PO\\d{14}"));
+    }
 
     @Test
-    void generate_orderNo_noExisting_returnsFormattedNo() {
+    void generate_shouldGenerateNextOrderNoWhenConflictExists() {
+        mockedUserContext.when(UserContext::tenantId).thenReturn(1L);
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+                .thenReturn(1)  // 基础号存在
+                .thenReturn(1)  // 01 存在
+                .thenReturn(0); // 02 可用
 
-        String result = orchestrator.generate("ORDER_NO");
+        String result = serialOrchestrator.generate("ORDER_NO");
 
-        assertThat(result).isNotNull();
-        assertThat(result).startsWith("PO");
-        // format: PO(2) + yyyyMMddHHmmss(14) = 16
-        assertThat(result).hasSize(16);
-        assertThat(result.substring(2)).matches("\\d{14}");
+        assertNotNull(result);
+        assertTrue(result.startsWith("PO"));
+        assertTrue(result.matches("PO\\d{14}02"));
     }
 
     @Test
-    void generate_orderNo_existingSeq_incrementsSeq() {
-        // First call: prefix exists (count=1), second call: prefix+"01" is free (count=0)
+    void generate_shouldGenerateOrderNoWithNullTenantId() {
+        mockedUserContext.when(UserContext::tenantId).thenReturn(null);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any(Object[].class))).thenReturn(0);
+
+        String result = serialOrchestrator.generate("ORDER_NO");
+
+        assertNotNull(result);
+        assertTrue(result.startsWith("PO"));
+        assertTrue(result.matches("PO\\d{14}"));
+    }
+
+    @Test
+    void generate_shouldUseFallbackWhenTooManyStyleNoConflicts() {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String existingStyleNo = "ST" + today + "200";
+        StyleInfo existing = new StyleInfo();
+        existing.setStyleNo(existingStyleNo);
+
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+        when(styleInfoService.count(any(LambdaQueryWrapper.class))).thenReturn(1L); // 所有 200 以内的都已存在
+
+        String result = serialOrchestrator.generate("STYLE_NO");
+
+        assertNotNull(result);
+        assertTrue(result.startsWith("ST" + today));
+    }
+
+    @Test
+    void generate_shouldUseFallbackWhenTooManyOrderNoConflicts() {
+        mockedUserContext.when(UserContext::tenantId).thenReturn(1L);
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any(Object[].class)))
-            .thenReturn(1)
-            .thenReturn(0);
+                .thenReturn(1); // 所有 99 以内的都已存在
 
-        String result = orchestrator.generate("ORDER_NO");
+        String result = serialOrchestrator.generate("ORDER_NO");
 
-        // format: PO(2) + yyyyMMddHHmmss(14) + 01(2) = 18
-        assertThat(result).hasSize(18);
-        assertThat(result).startsWith("PO");
-        assertThat(result.substring(16)).isEqualTo("01");
+        assertNotNull(result);
+        assertTrue(result.startsWith("PO"));
+    }
+
+    @Test
+    void generate_shouldHandleInvalidStyleNoFormatGracefully() {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String invalidStyleNo = "ST" + today + "xxx"; // 非数字后缀
+        StyleInfo existing = new StyleInfo();
+        existing.setStyleNo(invalidStyleNo);
+
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+        when(styleInfoService.count(any(LambdaQueryWrapper.class))).thenReturn(0L);
+
+        String result = serialOrchestrator.generate("STYLE_NO");
+
+        assertNotNull(result);
+        assertEquals("ST" + today + "001", result); // 从 001 开始
+    }
+
+    @Test
+    void generate_shouldHandleStyleNoTooShortGracefully() {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String shortStyleNo = "ST" + today; // 没有后缀
+        StyleInfo existing = new StyleInfo();
+        existing.setStyleNo(shortStyleNo);
+
+        when(styleInfoService.getOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+        when(styleInfoService.count(any(LambdaQueryWrapper.class))).thenReturn(0L);
+
+        String result = serialOrchestrator.generate("STYLE_NO");
+
+        assertNotNull(result);
+        assertEquals("ST" + today + "001", result); // 从 001 开始
     }
 }

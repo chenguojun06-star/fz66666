@@ -32,7 +32,7 @@ export const useStyleNoSearch = () => {
     } finally {
       if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
     }
-  }, []);
+  }, [message]);
 
   const scheduleFetchStyleNos = (keyword: string) => {
     if (styleNoTimerRef.current != null) {

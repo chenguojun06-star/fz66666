@@ -1,0 +1,5 @@
+ALTER TABLE t_style_info ADD COLUMN quality_grade VARCHAR(20) DEFAULT NULL;
+ALTER TABLE t_style_info ADD COLUMN execute_standard VARCHAR(100) DEFAULT NULL;
+ALTER TABLE t_style_info ADD COLUMN safety_category VARCHAR(20) DEFAULT NULL;
+ALTER TABLE t_style_info ADD COLUMN inspector VARCHAR(50) DEFAULT NULL;
+ALTER TABLE t_style_info ADD COLUMN inspection_date VARCHAR(20) DEFAULT NULL;

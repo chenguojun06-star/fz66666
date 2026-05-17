@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, Input, InputNumber, Select, Modal, Upload, Image } from 'antd';
+import { Button, Input, InputNumber, Select, Modal, Image } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';
 import { MatrixRow, DisplayRow, normalizeGradingZones } from './styleSizeTabUtils';
@@ -49,6 +49,22 @@ export function useStyleSizeColumns({
 }: UseStyleSizeColumnsParams) {
   return useMemo(() => {
     const editableMode = editMode && !readOnly;
+
+    const doUploadImage = async (file: File, chunkRowKeys: string[], imgs: string[]) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res: any = await (api as any).post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        if (res?.code === 200 && res?.data) {
+          setChunkImageUrls(chunkRowKeys, [...imgs, String(res.data)].slice(0, 2));
+        } else {
+          message.error('图片上传失败');
+        }
+      } catch {
+        message.error('图片上传失败');
+      }
+    };
+
     const left = [
       {
         title: '参考图',
@@ -80,34 +96,56 @@ export function useStyleSizeColumns({
                     {editableMode && (
                       <DeleteOutlined
                         onClick={() => setChunkImageUrls(record.chunkRowKeys, imgs.filter((_, ii) => ii !== i))}
-                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', padding: 2, fontSize: 10, cursor: 'pointer' }}
+                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', padding: 2, fontSize: 12, cursor: 'pointer' }}
                       />
                     )}
                   </div>
                 ))}
               </Image.PreviewGroup>
               {editableMode && imgs.length < 2 && (
-                <Upload
-                  accept="image/*"
-                  showUploadList={false}
-                  beforeUpload={async (file) => {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    try {
-                      const res: any = await (api as any).post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-                      if (res?.code === 200 && res?.data) {
-                        setChunkImageUrls(record.chunkRowKeys, [...imgs, String(res.data)].slice(0, 2));
-                      } else {
-                        message.error('图片上传失败');
-                      }
-                    } catch {
-                      message.error('图片上传失败');
-                    }
-                    return false;
+                <span
+                  onDragOver={(e) => { e.preventDefault(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    Array.from(e.dataTransfer.files || []).forEach((f) => {
+                      if (f.type.startsWith('image/')) doUploadImage(f, record.chunkRowKeys, imgs);
+                    });
                   }}
+                  onPaste={(e) => {
+                    const files = e.clipboardData.files;
+                    if (files?.length) {
+                      e.preventDefault();
+                      Array.from(files).forEach((f) => {
+                        if (f.type.startsWith('image/')) doUploadImage(f, record.chunkRowKeys, imgs);
+                      });
+                      return;
+                    }
+                    const items = e.clipboardData.items;
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].type.startsWith('image/')) {
+                        e.preventDefault();
+                        const f = items[i].getAsFile();
+                        if (f) doUploadImage(f, record.chunkRowKeys, imgs);
+                        break;
+                      }
+                    }
+                  }}
+                  style={{ display: 'inline-block', width: '100%' }}
                 >
-                  <Button icon={<PlusOutlined />} style={{ width: '100%', height: imgs.length > 0 ? 84 : 220, borderRadius: 8, borderStyle: 'dashed' }} />
-                </Upload>
+                  <Button icon={<PlusOutlined />} style={{ width: '100%', height: imgs.length > 0 ? 84 : 220, borderRadius: 8, borderStyle: 'dashed' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = (ev) => {
+                        const f = (ev.target as HTMLInputElement).files?.[0];
+                        if (f) doUploadImage(f, record.chunkRowKeys, imgs);
+                      };
+                      input.click();
+                    }}
+                  />
+                </span>
               )}
             </div>
           );
@@ -230,7 +268,7 @@ export function useStyleSizeColumns({
           }).join('；');
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 11, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
               {editableMode ? (
                 <Button onClick={() => openGradingConfig(record)}>
                   配置跳码区

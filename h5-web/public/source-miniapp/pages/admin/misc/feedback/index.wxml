@@ -26,7 +26,7 @@
     </view>
     <view class="form-field">
       <text class="form-label">联系方式（选填）</text>
-      <input class="form-input" placeholder="手机号或微信号" bindinput="onContactInput" value="{{form.contactInfo}}" maxlength="30" />
+      <input class="form-input" placeholder="手机号或微信号" bindinput="onContactInput" value="{{form.contact}}" maxlength="30" />
     </view>
     <view class="form-actions">
       <view class="btn-submit {{submitting ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmitFeedback">

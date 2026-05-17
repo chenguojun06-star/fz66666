@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -47,6 +48,7 @@ public class AiAgentOrchestrator {
     @Autowired private com.fashion.supplychain.intelligence.gateway.AiInferenceGateway inferenceGateway;
     @Autowired(required = false) private com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService;
     @Autowired private com.fashion.supplychain.intelligence.helper.PromptContextProvider promptContextProvider;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.helper.PromptTemplateLoader promptTemplateLoader;
 
     // 自我进化系统组件
     @Autowired(required = false) private SelfCriticService selfCriticService;
@@ -193,7 +195,7 @@ public class AiAgentOrchestrator {
 
     public void executeAgentStreaming(String userMessage, String pageContext, SseEmitter emitter) {
         long requestStartAt = System.currentTimeMillis();
-        ScheduledExecutorService heartbeat = null;
+        ScheduledFuture<?> heartbeatFuture = null;
         AtomicBoolean cancelled = new AtomicBoolean(false);
         try {
             if (!contextBuilder.isModelEnabled()) {
@@ -222,7 +224,7 @@ public class AiAgentOrchestrator {
                 log.info("[AiAgent-Stream] 快速通道未产出有效回答，降级到Agent循环");
             }
 
-            heartbeat = startHeartbeat(emitter, 15, cancelled);
+            heartbeatFuture = startHeartbeat(emitter, 15, cancelled);
 
             String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
             AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
@@ -253,8 +255,8 @@ public class AiAgentOrchestrator {
                 emitter.completeWithError(e);
             }
         } finally {
-            if (heartbeat != null) {
-                heartbeat.shutdownNow();
+            if (heartbeatFuture != null) {
+                heartbeatFuture.cancel(false);
             }
             lastCommandIdHolder.remove();
             lastToolRecordsHolder.remove();
@@ -399,22 +401,27 @@ public class AiAgentOrchestrator {
         }
     }
 
-    private ScheduledExecutorService startHeartbeat(SseEmitter emitter, int intervalSeconds, AtomicBoolean cancelled) {
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "sse-hb-" + emitter.hashCode());
-            t.setDaemon(true);
-            return t;
-        });
-        scheduler.scheduleAtFixedRate(() -> {
+    private static final ScheduledExecutorService SHARED_HEARTBEAT_SCHEDULER =
+            Executors.newScheduledThreadPool(2, r -> {
+                Thread t = new Thread(r, "sse-hb-shared");
+                t.setDaemon(true);
+                return t;
+            });
+
+    private ScheduledFuture<?> startHeartbeat(SseEmitter emitter, int intervalSeconds, AtomicBoolean cancelled) {
+        java.util.concurrent.atomic.AtomicReference<ScheduledFuture<?>> futureRef = new java.util.concurrent.atomic.AtomicReference<>();
+        ScheduledFuture<?> future = SHARED_HEARTBEAT_SCHEDULER.scheduleAtFixedRate(() -> {
             try {
                 emitter.send(SseEmitter.event().comment("heartbeat " + System.currentTimeMillis()));
             } catch (Exception e) {
                 log.debug("[AiAgent-Stream] 心跳发送失败，连接已断开，中断Agent执行");
                 cancelled.set(true);
-                scheduler.shutdownNow();
+                ScheduledFuture<?> f = futureRef.get();
+                if (f != null) f.cancel(false);
             }
         }, intervalSeconds, intervalSeconds, TimeUnit.SECONDS);
-        return scheduler;
+        futureRef.set(future);
+        return future;
     }
 
     private String deduplicateAnswer(String content) {
@@ -473,8 +480,15 @@ public class AiAgentOrchestrator {
             }
 
             StringBuilder sysPrompt = new StringBuilder();
-            sysPrompt.append("你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。\n");
-            sysPrompt.append("当用户问你是谁、谁开发的你等身份问题时，只回答：我是小云，由云裳智链Trivia团队开发的服装供应链智能顾问。不要编造任何公司名称。\n");
+            String identity = promptTemplateLoader != null ? promptTemplateLoader.getBaseIdentity() : null;
+            if (identity == null || identity.isBlank()) {
+                identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
+            }
+            sysPrompt.append(identity).append("\n\n");
+            String principles = promptTemplateLoader != null ? promptTemplateLoader.getBasePrinciples() : null;
+            if (principles != null && !principles.isBlank()) {
+                sysPrompt.append(principles).append("\n\n");
+            }
             sysPrompt.append("请简洁、准确地回答用户问题。如果下方有知识库参考资料，优先引用；如无相关内容，根据业务经验作答，不要编造。\n\n");
             if (intelligenceCtx != null && !intelligenceCtx.isBlank()) {
                 sysPrompt.append(intelligenceCtx).append("\n\n");

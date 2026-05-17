@@ -49,7 +49,7 @@ const OrderFlow: React.FC = () => {
                 <StyleCoverThumb src={(order as any)?.styleCover} styleId={(order as any)?.styleId} size={80} borderRadius={8} />
               </Col>
               <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>基本信息</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>基本信息</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>订单号</span>
                   <span style={{ fontSize: 13, fontWeight: 600, lineHeight: '22px' }}>{(order as any)?.orderNo || '-'}</span>
@@ -68,7 +68,7 @@ const OrderFlow: React.FC = () => {
                 </div>
               </Col>
               <Col flex="1" style={{ minWidth: 200, paddingLeft: 20, borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>生产统计</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>生产统计</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>下单数</span>
                   <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.orderQuantity)}</span>

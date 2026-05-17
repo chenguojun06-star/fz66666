@@ -35,11 +35,13 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
   imageStyle,
 }) => {
   const resolvedSrc = React.useMemo(() => {
+    const directSrc = src || cover || null;
+    if (directSrc) return directSrc;
     const override = getStyleCoverOverride(styleId);
     if (override !== null) {
       return override || null;
     }
-    return src || cover || null;
+    return null;
   }, [cover, src, styleId]);
   const overrideKey = React.useMemo(() => `style-cover-override:id:${String(styleId)}`, [styleId]);
   const [url, setUrl] = useState<string | null>(resolvedSrc);

@@ -53,5 +53,5 @@ export const useNodeStats = ({ scanHistory, activeOrder, cuttingBundles, nodes }
     }
 
     return { statsByName, totalQty: total };
-  }, [scanHistory, activeOrder?.id, activeOrder?.orderNo, activeOrder?.orderQuantity, cuttingBundles, nodes]);
+  }, [scanHistory, activeOrder, cuttingBundles, nodes]);
 };

@@ -33,8 +33,8 @@ const AppStore: React.FC = () => {
                 <div className="desc-text">{app.appDesc}</div>
                 {activated && myApp ? (
                   <div style={{ marginTop: 6 }}>
-                    <Tag color={myApp.configured ? 'green' : 'orange'} style={{ fontSize: 11 }}>{myApp.configured ? ' 已配置' : ' 待配置URL'}</Tag>
-                    {(myApp.totalCalls ?? 0) > 0 && <Tag style={{ fontSize: 11 }}>调用 {myApp.totalCalls} 次</Tag>}
+                    <Tag color={myApp.configured ? 'green' : 'orange'} style={{ fontSize: 13 }}>{myApp.configured ? ' 已配置' : ' 待配置URL'}</Tag>
+                    {(myApp.totalCalls ?? 0) > 0 && <Tag style={{ fontSize: 13 }}>调用 {myApp.totalCalls} 次</Tag>}
                   </div>
                 ) : (<>
                   {app.trialDays > 0 && <div className="trial-badge"><GiftOutlined style={{ marginRight: 4 }} />免费试用 {app.trialDays} 天</div>}
@@ -54,7 +54,7 @@ const AppStore: React.FC = () => {
     return (
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, fontSize: 15 }}><ApiOutlined style={{ marginRight: 6 }} />我的已开通应用{needSetup.length > 0 && <Tag color="orange" style={{ marginLeft: 8, fontSize: 11 }}>{needSetup.length} 个待配置</Tag>}</div>
+          <div style={{ fontWeight: 600, fontSize: 15 }}><ApiOutlined style={{ marginRight: 6 }} />我的已开通应用{needSetup.length > 0 && <Tag color="orange" style={{ marginLeft: 8, fontSize: 13 }}>{needSetup.length} 个待配置</Tag>}</div>
           <Button type="link" onClick={() => navigate('/system/tenant?tab=apps')}>管理全部 →</Button>
         </div>
         <Row gutter={[16, 16]}>
@@ -65,10 +65,10 @@ const AppStore: React.FC = () => {
                 <Card hoverable style={{ borderTop: `3px solid ${cfg.color}`, background: app.isExpired ? '#fafafa' : '#fff' }} onClick={() => navigate('/system/tenant?tab=apps')}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 24 }}>{cfg.icon}</span>
-                    <div><div style={{ fontWeight: 600, fontSize: 14 }}>{app.appName}</div><Tag color={app.isExpired ? 'default' : app.configured ? 'success' : 'warning'} style={{ fontSize: 11 }}>{app.isExpired ? '已过期' : app.configured ? ' 运行中' : ' 待配置'}</Tag></div>
+                    <div><div style={{ fontWeight: 600, fontSize: 14 }}>{app.appName}</div><Tag color={app.isExpired ? 'default' : app.configured ? 'success' : 'warning'} style={{ fontSize: 13 }}>{app.isExpired ? '已过期' : app.configured ? ' 运行中' : ' 待配置'}</Tag></div>
                   </div>
-                  {app.appKey && <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontFamily: 'monospace' }}>Key: {app.appKey.substring(0, 16)}...</div>}
-                  {app.totalCalls != null && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>累计调用 {app.totalCalls} 次{app.dailyQuota ? ` · 今日 ${app.dailyUsed || 0}/${app.dailyQuota}` : ''}</div>}
+                  {app.appKey && <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', fontFamily: 'monospace' }}>Key: {app.appKey.substring(0, 16)}...</div>}
+                  {app.totalCalls != null && <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>累计调用 {app.totalCalls} 次{app.dailyQuota ? ` · 今日 ${app.dailyUsed || 0}/${app.dailyQuota}` : ''}</div>}
                 </Card>
               </Col>
             );
@@ -91,7 +91,7 @@ const AppStore: React.FC = () => {
       {/* 应用详情弹窗 */}
       <ResizableModal title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 20 }}>{selectedApp?.appIcon}</span><span style={{ fontSize: 15 }}>{selectedApp?.appName}</span>{isAppActivated(selectedApp?.appCode || '') && <Tag color="green">已开通</Tag>}</div>}
         open={detailVisible} onCancel={() => setDetailVisible(false)} width="40vw"
-        footer={isAppActivated(selectedApp?.appCode || '') ? [<Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate(isEcApp(selectedApp?.appCode || '') ? '/integration/center' : '/system/tenant?tab=apps'); }}>管理配置</Button>] : [
+        footer={isAppActivated(selectedApp?.appCode || '') ? [<Button key="manage" type="primary" icon={<SettingOutlined />} onClick={() => { setDetailVisible(false); navigate(isEcApp(selectedApp?.appCode || '') ? '/ecommerce/center' : '/system/tenant?tab=apps'); }}>管理配置</Button>] : [
           <Button key="cancel" onClick={() => setDetailVisible(false)}>取消</Button>,
           selectedApp?.trialDays ? <Button key="trial" icon={<GiftOutlined />} loading={trialLoading} onClick={handleTrialClick} style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}>一键开通试用 {selectedApp.trialDays} 天</Button> : null,
           <Button key="buy" type="primary" icon={<ShoppingCartOutlined />} onClick={handleBuyClick}>立即购买</Button>,
@@ -115,10 +115,10 @@ const AppStore: React.FC = () => {
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, borderLeft: '3px solid var(--primary-color, #1890ff)', paddingLeft: 8 }}>价格方案</div>
             <div style={{ display: 'grid', gridTemplateColumns: selectedApp?.trialDays ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: 10 }}>
-              {selectedApp?.trialDays ? (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #52c41a', background: 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)', minHeight: 88 }}><GiftOutlined style={{ fontSize: 15, color: '#52c41a', marginBottom: 4 }} /><div style={{ fontSize: 10, color: '#389e0d', fontWeight: 600, marginBottom: 3 }}>免费试用</div><div style={{ fontSize: 16, fontWeight: 700, color: '#52c41a', lineHeight: 1.2 }}>¥0</div><div style={{ fontSize: 10, color: '#73d13d', marginTop: 3 }}>{selectedApp.trialDays} 天</div></div>) : null}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #d9d9d9', background: '#fafafa', minHeight: 88 }}><div style={{ fontSize: 10, color: '#8c8c8c', fontWeight: 500, marginBottom: 4 }}>月 付</div><div style={{ fontSize: 16, fontWeight: 700, color: '#1677ff', lineHeight: 1.2 }}>¥{selectedApp?.priceMonthly}</div><div style={{ fontSize: 10, color: '#bfbfbf', marginTop: 3 }}>/ 月</div></div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #faad14', background: 'linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%)', minHeight: 88, position: 'relative' }}><div style={{ position: 'absolute', top: -1, right: -1, background: '#faad14', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: '0 9px 0 8px', letterSpacing: 0.5 }}>推荐</div><div style={{ fontSize: 10, color: '#d48806', fontWeight: 600, marginBottom: 4 }}>年 付</div><div style={{ fontSize: 16, fontWeight: 700, color: '#fa8c16', lineHeight: 1.2 }}>¥{selectedApp?.priceYearly}</div><div style={{ fontSize: 9, color: '#ffc53d', marginTop: 3 }}>/ 年 · 省2个月</div></div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #adc6ff', background: 'linear-gradient(135deg, #f0f5ff 0%, #d6e4ff 100%)', minHeight: 88 }}><div style={{ fontSize: 10, color: '#2f54eb', fontWeight: 600, marginBottom: 4 }}>买 断</div><div style={{ fontSize: 16, fontWeight: 700, color: '#2f54eb', lineHeight: 1.2 }}>¥{selectedApp?.priceOnce}</div><div style={{ fontSize: 10, color: '#85a5ff', marginTop: 3 }}>永久使用</div></div>
+              {selectedApp?.trialDays ? (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #52c41a', background: 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)', minHeight: 88 }}><GiftOutlined style={{ fontSize: 15, color: '#52c41a', marginBottom: 4 }} /><div style={{ fontSize: 12, color: '#389e0d', fontWeight: 600, marginBottom: 3 }}>免费试用</div><div style={{ fontSize: 16, fontWeight: 700, color: '#52c41a', lineHeight: 1.2 }}>¥0</div><div style={{ fontSize: 12, color: '#73d13d', marginTop: 3 }}>{selectedApp.trialDays} 天</div></div>) : null}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #d9d9d9', background: '#fafafa', minHeight: 88 }}><div style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 500, marginBottom: 4 }}>月 付</div><div style={{ fontSize: 16, fontWeight: 700, color: '#1677ff', lineHeight: 1.2 }}>¥{selectedApp?.priceMonthly}</div><div style={{ fontSize: 12, color: '#bfbfbf', marginTop: 3 }}>/ 月</div></div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #faad14', background: 'linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%)', minHeight: 88, position: 'relative' }}><div style={{ position: 'absolute', top: -1, right: -1, background: '#faad14', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: '0 9px 0 8px', letterSpacing: 0.5 }}>推荐</div><div style={{ fontSize: 12, color: '#d48806', fontWeight: 600, marginBottom: 4 }}>年 付</div><div style={{ fontSize: 16, fontWeight: 700, color: '#fa8c16', lineHeight: 1.2 }}>¥{selectedApp?.priceYearly}</div><div style={{ fontSize: 9, color: '#ffc53d', marginTop: 3 }}>/ 年 · 省2个月</div></div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 6px', borderRadius: 10, border: '1.5px solid #adc6ff', background: 'linear-gradient(135deg, #f0f5ff 0%, #d6e4ff 100%)', minHeight: 88 }}><div style={{ fontSize: 12, color: '#2f54eb', fontWeight: 600, marginBottom: 4 }}>买 断</div><div style={{ fontSize: 16, fontWeight: 700, color: '#2f54eb', lineHeight: 1.2 }}>¥{selectedApp?.priceOnce}</div><div style={{ fontSize: 12, color: '#85a5ff', marginTop: 3 }}>永久使用</div></div>
             </div>
           </div>
         </div>
@@ -133,10 +133,10 @@ const AppStore: React.FC = () => {
             <Alert type="success" showIcon icon={<CheckCircleOutlined />} title="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。" style={{ marginBottom: 16 }} />
             <div style={{ background: '#f6f8fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
               <div style={{ marginBottom: 8 }}><Text type="secondary" style={{ fontSize: 12 }}>AppKey</Text><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Text code style={{ fontSize: 13, fontWeight: 600 }}>{wizardData.appKey}</Text><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appKey || '')} /></div></div>
-              <div><Text type="secondary" style={{ fontSize: 12 }}>AppSecret</Text><Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 11, marginBottom: 4 }} title=" 密镂仅显示一次，请立即保存！" /><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Text code style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }}>{wizardData.appSecret}</Text><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appSecret || '')} /></div></div>
+              <div><Text type="secondary" style={{ fontSize: 12 }}>AppSecret</Text><Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 13, marginBottom: 4 }} title=" 密镂仅显示一次，请立即保存！" /><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Text code style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }}>{wizardData.appSecret}</Text><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appSecret || '')} /></div></div>
             </div></>
           ) : <Alert type="error" showIcon title="API凭证生成失败" description="试用已开通但API凭证创建失败，请前往「API对接管理」手动创建凭证，或联系管理员处理。" style={{ marginBottom: 16 }} />}
-          {wizardData.apiEndpoints && wizardData.apiEndpoints.length > 0 && (<div style={{ marginBottom: 16 }}><div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}> 已自动匹配的API端点：</div><div style={{ background: '#f0f5ff', borderRadius: 6, padding: 12 }}>{wizardData.apiEndpoints.map((ep, idx) => (<div key={idx} style={{ display: 'flex', gap: 8, padding: '3px 0', fontSize: 12, alignItems: 'center' }}><Tag color={ep.method === 'PUSH' ? 'green' : 'blue'} style={{ fontSize: 11, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag><Text code style={{ fontSize: 11 }}>{ep.path}</Text><Text type="secondary" style={{ fontSize: 11 }}>{ep.desc}</Text></div>))}</div></div>)}
+          {wizardData.apiEndpoints && wizardData.apiEndpoints.length > 0 && (<div style={{ marginBottom: 16 }}><div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}> 已自动匹配的API端点：</div><div style={{ background: '#f0f5ff', borderRadius: 6, padding: 12 }}>{wizardData.apiEndpoints.map((ep, idx) => (<div key={idx} style={{ display: 'flex', gap: 8, padding: '3px 0', fontSize: 12, alignItems: 'center' }}><Tag color={ep.method === 'PUSH' ? 'green' : 'blue'} style={{ fontSize: 13, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag><Text code style={{ fontSize: 13 }}>{ep.path}</Text><Text type="secondary" style={{ fontSize: 13 }}>{ep.desc}</Text></div>))}</div></div>)}
           <div style={{ textAlign: 'right', marginTop: 16 }}><Button style={{ marginRight: 8 }} onClick={handleSetupSkip}>稍后配置</Button><Button type="primary" icon={<SettingOutlined />} onClick={() => setWizardStep(1)} disabled={!wizardData.tenantAppId}>{wizardData.tenantAppId ? '下一步：填写您的接口地址' : '凭证未就绪，请稍后在管理页配置'}</Button></div>
         </div>)}
         {wizardStep === 1 && (<div>
@@ -146,14 +146,14 @@ const AppStore: React.FC = () => {
               <Form.Item label="店铺名称" name="shopName"><Input placeholder="请输入店铺名称" /></Form.Item>
               <Form.Item label="AppKey / Client ID" name="ecAppKey" rules={[{ required: true, message: '请输入AppKey' }]}><Input placeholder="平台颁发的AppKey或Client ID" /></Form.Item>
               <Form.Item label="AppSecret / Client Secret" name="ecAppSecret" rules={[{ required: true, message: '请输入AppSecret' }]}><Input.Password placeholder="平台颁发的AppSecret或Client Secret" autoComplete="off" /></Form.Item>
-              {EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint && <Form.Item label={<span>扩展字段<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>{EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint}</Text></span>} name="extraField"><Input placeholder={EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint} /></Form.Item>}
-              <Form.Item label={<span>物流回传地址<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>出库后自动回传物流信息到此地址</Text></span>} name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder="https://open.platform.com/api/logistics/callback" prefix={<LinkOutlined />} /></Form.Item>
+              {EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint && <Form.Item label={<span>扩展字段<Text type="secondary" style={{ fontSize: 13, marginLeft: 4 }}>{EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint}</Text></span>} name="extraField"><Input placeholder={EC_PLATFORM_MAP[wizardData.appCode || '']?.extraHint} /></Form.Item>}
+              <Form.Item label={<span>物流回传地址<Text type="secondary" style={{ fontSize: 13, marginLeft: 4 }}>出库后自动回传物流信息到此地址</Text></span>} name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder="https://open.platform.com/api/logistics/callback" prefix={<LinkOutlined />} /></Form.Item>
             </Form></>
           ) : (<>
             <Alert type="info" showIcon title="只需填写您的接口地址，内部API已全部自动配置好" description="我们会将数据推送到您填写的回调地址。如果您需要主动调用我们的API，使用上一步的凭证即可。" style={{ marginBottom: 16 }} />
             <Form form={setupForm} layout="vertical">
-              <Form.Item label={<span>回调地址（Webhook）<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>我们会向此地址推送数据</Text></span>} name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder={MODULE_CONFIG[wizardData.appCode || '']?.urlHint || 'https://your-system.com/webhook/callback'} prefix={<LinkOutlined />} /></Form.Item>
-              <Form.Item label={<span>您的API地址<Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>用于我们主动调用您的系统</Text></span>} name="externalApiUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder="https://your-system.com/api" prefix={<ApiOutlined />} /></Form.Item>
+              <Form.Item label={<span>回调地址（Webhook）<Text type="secondary" style={{ fontSize: 13, marginLeft: 4 }}>我们会向此地址推送数据</Text></span>} name="callbackUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder={MODULE_CONFIG[wizardData.appCode || '']?.urlHint || 'https://your-system.com/webhook/callback'} prefix={<LinkOutlined />} /></Form.Item>
+              <Form.Item label={<span>您的API地址<Text type="secondary" style={{ fontSize: 13, marginLeft: 4 }}>用于我们主动调用您的系统</Text></span>} name="externalApiUrl" rules={[{ type: 'url', message: '请输入正确的URL地址' }]}><Input placeholder="https://your-system.com/api" prefix={<ApiOutlined />} /></Form.Item>
             </Form>
             <Divider style={{ margin: '16px 0' }} />
             <div style={{ background: '#f6f8fa', borderRadius: 6, padding: 12, marginBottom: 16, fontSize: 12 }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 不确定填什么？</div><ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li><strong>回调地址</strong>：您系统中接收推送通知的URL</li><li><strong>您的API地址</strong>：我们主动调用您系统的地址</li><li>两个地址都可以稍后再填，不影响试用开通</li></ul></div>
@@ -171,8 +171,8 @@ const AppStore: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
             <Button onClick={() => setWizardVisible(false)}>关闭</Button>
             {isEcApp(wizardData.appCode || '') ? (
-              <Button type="primary" icon={<SettingOutlined />} onClick={() => { setWizardVisible(false); navigate('/integration/center'); }}>
-                前往集成中心管理平台
+              <Button type="primary" icon={<SettingOutlined />} onClick={() => { setWizardVisible(false); navigate('/ecommerce/center'); }}>
+                前往电商运营管理平台
               </Button>
             ) : (
               <Button type="primary" icon={<BookOutlined />} onClick={() => { setWizardVisible(false); navigate('/system/tenant?tab=guide'); }}>

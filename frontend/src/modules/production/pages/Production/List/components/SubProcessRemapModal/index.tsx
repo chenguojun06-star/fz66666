@@ -192,7 +192,7 @@ export default function SubProcessRemapModal({
         return (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8 }}>
-              <Text style={{ fontSize: 11, color: '#9ca3af', width: 18, flexShrink: 0 }}>
+              <Text style={{ fontSize: 13, color: '#9ca3af', width: 18, flexShrink: 0 }}>
                 {row.subIndex + 1}.
               </Text>
               <Input
@@ -235,7 +235,7 @@ export default function SubProcessRemapModal({
                   style={{ width: 130 }}
                   onChange={v => updateSubProcessUnitPrice(row.parentNode.stageKey, row.subprocess!.id, v ?? undefined)}
                 />
-                <Text style={{ fontSize: 11, color: '#9ca3af' }}>厂方内部参考，不参与结算</Text>
+                <Text style={{ fontSize: 13, color: '#9ca3af' }}>厂方内部参考，不参与结算</Text>
               </div>
             )}
           </>
@@ -267,7 +267,7 @@ export default function SubProcessRemapModal({
               : '未启用'}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Text style={{ fontSize: 11, color: row.entry.enabled ? ACTIVE_COLOR : '#9ca3af' }}>
+            <Text style={{ fontSize: 13, color: row.entry.enabled ? ACTIVE_COLOR : '#9ca3af' }}>
               {row.entry.enabled ? '已启用' : '已关闭'}
             </Text>
             <Switch

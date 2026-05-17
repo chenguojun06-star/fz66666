@@ -118,7 +118,7 @@ const _MaterialInventory: React.FC = () => {
     },
     { title: '领取人', dataIndex: 'pickerName', width: 100 },
     {
-      title: '出库类型',
+      title: '领取类型',
       dataIndex: 'pickupType',
       width: 90,
       render: (v: string) => v === 'EXTERNAL' ? <Tag color="blue">外部</Tag> : <Tag color="green">内部</Tag>,
@@ -317,7 +317,7 @@ const _MaterialInventory: React.FC = () => {
                     <Badge count={Number(stats.lowStockCount || 0)} />
                   )}
                 </Space>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>物料进销存与预警</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>物料进销存与预警</div>
               </div>
             ),
             children: (
@@ -391,9 +391,9 @@ const _MaterialInventory: React.FC = () => {
               <div>
                 <Space size={4}>
                   领取记录
-                  <Badge count={pickupData.pagination.pagination.total || 0} />
+                  <Badge count={pickupData.pendingPickupCount || 0} />
                 </Space>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
               </div>
             ),
             children: (
@@ -428,7 +428,7 @@ const _MaterialInventory: React.FC = () => {
                         <Option value="cancelled">已取消</Option>
                       </Select>
                       <Select
-                        placeholder="出库类型"
+                        placeholder="领取类型"
                         allowClear
                         style={{ width: 120 }}
                         value={pickupData.pickupType || undefined}

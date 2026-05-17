@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Button, Input, Space, Form, Select, Tag, Upload } from 'antd';
+import React, { useState, useRef } from 'react';
+import { Button, Input, Space, Form, Select, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
 import { withQuery } from '@/utils/api/core';
@@ -95,6 +95,7 @@ const StyleProductionTab: React.FC<Props> = ({
   // ---- 工艺单 OCR Modal ----
   const [ocrModalOpen, setOcrModalOpen] = useState(false);
   const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const ocrFileInputRef = useRef<HTMLInputElement | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrText, setOcrText] = useState('');
   const [ocrError, setOcrError] = useState('');
@@ -409,19 +410,67 @@ const StyleProductionTab: React.FC<Props> = ({
         footer={null}
         width={480}
       >
-        <Upload.Dragger
+        <input
+          ref={ocrFileInputRef}
+          type="file"
           accept="image/*,.pdf"
-          maxCount={1}
-          beforeUpload={(file) => { setOcrFile(file); setOcrText(''); setOcrError(''); return false; }}
-          fileList={ocrFile ? [{ uid: '-1', name: ocrFile.name, status: 'done' }] : []}
-          onRemove={() => { setOcrFile(null); setOcrText(''); }}
-          style={{ marginBottom: 12 }}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) { setOcrFile(f); setOcrText(''); setOcrError(''); }
+            if (ocrFileInputRef.current) ocrFileInputRef.current.value = '';
+          }}
+        />
+        <div
+          onDragOver={(e) => { e.preventDefault(); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const f = e.dataTransfer.files?.[0];
+            if (f) { setOcrFile(f); setOcrText(''); setOcrError(''); }
+          }}
+          onPaste={(e) => {
+            const files = e.clipboardData.files;
+            if (files?.length) { e.preventDefault(); setOcrFile(files[0]); setOcrText(''); setOcrError(''); return; }
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+              if (items[i].type.startsWith('image/')) {
+                e.preventDefault();
+                const f = items[i].getAsFile();
+                if (f) { setOcrFile(f); setOcrText(''); setOcrError(''); }
+                break;
+              }
+            }
+          }}
+          onClick={() => ocrFileInputRef.current?.click()}
+          tabIndex={0}
+          style={{
+            border: '1px dashed #d9d9d9', borderRadius: 8, padding: 16,
+            textAlign: 'center', cursor: 'pointer', background: '#fafafa',
+            transition: 'border-color 0.3s', marginBottom: 12, outline: 'none',
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--primary-color)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#d9d9d9'; }}
         >
-          <p style={{ margin: '12px 0 4px' }}>点击或将工艺单图片拖拽到此处</p>
-          <p style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-            支持 JPG / PNG / WEBP / PDF
-          </p>
-        </Upload.Dragger>
+          {ocrFile ? (
+            <div>
+              <p style={{ color: 'var(--primary-color)', fontWeight: 500 }}>{ocrFile.name}</p>
+              <p style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)', marginTop: 4 }}>
+                {(ocrFile.size / 1024 / 1024).toFixed(1)} MB — 点击更换或拖拽新文件
+              </p>
+              <Button size="small" style={{ marginTop: 6 }}
+                onClick={(e) => { e.stopPropagation(); setOcrFile(null); setOcrText(''); }}>
+                移除
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p style={{ margin: '12px 0 4px' }}>点击或将工艺单图片拖拽到此处</p>
+              <p style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+                支持 JPG / PNG / WEBP / PDF
+              </p>
+            </>
+          )}
+        </div>
         <Button
           type="primary"
           block

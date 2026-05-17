@@ -74,6 +74,16 @@ public class PatternScanRecord {
     private String warehouseCode;
 
     /**
+     * 仓库区域ID
+     */
+    private String warehouseAreaId;
+
+    /**
+     * 库位编码
+     */
+    private String warehouseLocationCode;
+
+    /**
      * 备注
      */
     private String remark;

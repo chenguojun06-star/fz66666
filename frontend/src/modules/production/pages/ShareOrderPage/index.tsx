@@ -138,11 +138,11 @@ const ShareOrderPage: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
                           <span style={{ color: tone.color }}>{stageIconMap[stage.stageName] || <DeploymentUnitOutlined />}</span><span>{stage.stageName}</span>
                         </div>
-                        <Tag color={tone.tagColor} style={{ marginInlineEnd: 0, paddingInline: 6, lineHeight: '16px', fontSize: 10 }}>{tone.label}</Tag>
+                        <Tag color={tone.tagColor} style={{ marginInlineEnd: 0, paddingInline: 6, lineHeight: '16px', fontSize: 12 }}>{tone.label}</Tag>
                       </div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: tone.color, marginBottom: 4, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `当前节点 · 总进度 ${progress}%` : tone.label}</div>
                       <Progress percent={Math.max(0, Math.min(100, stage.rate ?? 0))} showInfo={false} strokeColor={tone.color} trailColor="rgba(148, 163, 184, 0.18)" />
-                      <div style={{ marginTop: 4, fontSize: 10, color: '#64748b', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
+                      <div style={{ marginTop: 4, fontSize: 12, color: '#64748b', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
                     </div>
                   );
                 }) : <div style={S.emptyPanelStyle}>暂未同步到节点数据</div>}

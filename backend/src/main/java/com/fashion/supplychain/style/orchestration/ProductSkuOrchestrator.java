@@ -37,7 +37,35 @@ public class ProductSkuOrchestrator {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
-        return productSkuService.listByStyleId(styleId);
+        List<ProductSku> skus = productSkuService.listByStyleId(styleId);
+        if (skus.isEmpty()) {
+            tryAutoGenerateOnEmptyList(styleId);
+            skus = productSkuService.listByStyleId(styleId);
+        }
+        return skus;
+    }
+
+    private void tryAutoGenerateOnEmptyList(Long styleId) {
+        try {
+            StyleInfo style = styleInfoMapper.selectById(styleId);
+            if (style == null) {
+                return;
+            }
+            String mode = style.getSkuMode();
+            if (mode == null) {
+                mode = "AUTO";
+            }
+            if (!"AUTO".equals(mode)) {
+                return;
+            }
+            if (!StringUtils.hasText(style.getSizeColorConfig())) {
+                return;
+            }
+            productSkuService.generateSkusForStyle(styleId);
+            log.info("Auto-generated SKUs on first load: styleId={}", styleId);
+        } catch (Exception e) {
+            log.warn("Failed to auto-generate SKUs on first load: styleId={}", styleId, e);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

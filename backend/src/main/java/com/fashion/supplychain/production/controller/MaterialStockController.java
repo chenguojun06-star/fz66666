@@ -10,11 +10,13 @@ import com.fashion.supplychain.production.dto.MaterialTransactionDto;
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.orchestration.MaterialStockOrchestrator;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.warehouse.orchestration.MaterialWarehouseOperationOrchestrator;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -55,14 +57,41 @@ public class MaterialStockController {
     private MaterialInboundMapper materialInboundMapper;
 
     @GetMapping("/list")
-    public Result<IPage<MaterialStock>> getPage(@RequestParam Map<String, Object> params) {
-        // 工厂账号不可查看面辅料库存（属于租户级仓库数据）
+    public Result<Map<String, Object>> getPage(@RequestParam Map<String, Object> params) {
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
-            return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("records", List.of());
+            empty.put("total", 0L);
+            empty.put("size", 10L);
+            empty.put("current", 1L);
+            empty.put("pages", 0L);
+            empty.put("todayInCount", 0);
+            empty.put("todayOutCount", 0);
+            return Result.success(empty);
         }
         IPage<MaterialStock> page = materialStockService.queryPage(params);
         enrichLastOperationInfo(page.getRecords());
-        return Result.success(page);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", page.getRecords());
+        result.put("total", page.getTotal());
+        result.put("size", page.getSize());
+        result.put("current", page.getCurrent());
+        result.put("pages", page.getPages());
+
+        Long tenantId = UserContext.tenantId();
+        LocalDate today = LocalDate.now();
+        Integer todayOutCount = materialOutboundLogMapper.selectTodayOutboundCount(today, tenantId);
+        result.put("todayOutCount", todayOutCount != null ? todayOutCount : 0);
+
+        long todayInCount = materialInboundMapper.selectCount(new LambdaQueryWrapper<MaterialInbound>()
+                .eq(MaterialInbound::getTenantId, tenantId)
+                .eq(MaterialInbound::getDeleteFlag, 0)
+                .ge(MaterialInbound::getInboundTime, today.atStartOfDay())
+                .lt(MaterialInbound::getInboundTime, today.plusDays(1).atStartOfDay()));
+        result.put("todayInCount", (int) todayInCount);
+
+        return Result.success(result);
     }
 
     @GetMapping("/summary")
@@ -120,7 +149,8 @@ public class MaterialStockController {
                 body.getReceiverId(),
                 body.getReceiverName(),
                 body.getPickupType(),
-                body.getUsageType());
+                body.getUsageType(),
+                body.getWarehouseAreaId());
         return Result.success(Map.of("outboundNo", outboundNo));
     }
 
@@ -284,6 +314,7 @@ public class MaterialStockController {
         private String receiverName;
         private String pickupType;
         private String usageType;
+        private String warehouseAreaId;
 
         public String getStockId() {
             return stockId;
@@ -380,6 +411,14 @@ public class MaterialStockController {
         public void setUsageType(String usageType) {
             this.usageType = usageType;
         }
+
+        public String getWarehouseAreaId() {
+            return warehouseAreaId;
+        }
+
+        public void setWarehouseAreaId(String warehouseAreaId) {
+            this.warehouseAreaId = warehouseAreaId;
+        }
     }
 
     @PostMapping("/free-inbound")
@@ -399,9 +438,10 @@ public class MaterialStockController {
         String materialCode = (String) params.get("materialCode");
         Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
         String warehouseLocation = (String) params.get("warehouseLocation");
+        String warehouseAreaId = (String) params.get("warehouseAreaId");
         String sourceType = (String) params.get("sourceType");
         String remark = (String) params.get("remark");
-        MaterialStock result = materialWarehouseOperationOrchestrator.scanInbound(materialCode, quantity, warehouseLocation, sourceType, remark);
+        MaterialStock result = materialWarehouseOperationOrchestrator.scanInbound(materialCode, quantity, warehouseLocation, warehouseAreaId, sourceType, remark);
         return Result.success(result);
     }
 
@@ -410,8 +450,9 @@ public class MaterialStockController {
         String materialCode = (String) params.get("materialCode");
         Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
         String outstockType = (String) params.get("outstockType");
+        String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
         String remark = (String) params.get("remark");
-        MaterialOutboundLog result = materialWarehouseOperationOrchestrator.scanOutbound(materialCode, quantity, outstockType, remark);
+        MaterialOutboundLog result = materialWarehouseOperationOrchestrator.scanOutbound(materialCode, quantity, outstockType, warehouseAreaId, remark);
         return Result.success(result);
     }
 

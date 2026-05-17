@@ -118,6 +118,57 @@
 
     <!-- 操作按钮区域 -->
     <view class="action-area" wx:if="{{!successMsg}}">
+      <!-- 仓库区域选择（入库时显示） -->
+      <view wx:if="{{actions.indexOf('inbound') !== -1}}" class="warehouse-section">
+        <view class="warehouse-label">入库仓库：</view>
+        <view class="warehouse-option-row">
+          <view
+            wx:for="{{warehouseOptions}}"
+            wx:key="index"
+            class="warehouse-chip {{warehouse === item ? 'warehouse-chip--active' : ''}}"
+            bindtap="onWarehouseChipTap"
+            data-value="{{item}}"
+            hover-class="warehouse-chip-hover"
+          >{{item}}</view>
+          <view
+            class="warehouse-chip warehouse-chip--clear {{warehouse ? '' : 'warehouse-chip--disabled'}}"
+            bindtap="onWarehouseClear"
+            hover-class="warehouse-chip-hover"
+          >清除</view>
+        </view>
+        <input
+          class="input-box"
+          placeholder="或手动输入仓库编号"
+          value="{{warehouse}}"
+          bindinput="onWarehouseCodeInput"
+        />
+
+        <!-- 库位选择（仓库选择后出现） -->
+        <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">入库库位：</view>
+        <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-option-row">
+          <view
+            wx:for="{{locationOptions}}"
+            wx:key="index"
+            class="warehouse-chip {{warehouseLocationCode === item ? 'warehouse-chip--active' : ''}}"
+            bindtap="onLocationChipTap"
+            data-value="{{item}}"
+            hover-class="warehouse-chip-hover"
+          >{{item}}</view>
+          <view
+            class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
+            bindtap="onLocationClear"
+            hover-class="warehouse-chip-hover"
+          >清除</view>
+        </view>
+        <input
+          wx:if="{{warehouse}}"
+          class="input-box"
+          placeholder="或手动输入库位编号"
+          value="{{warehouseLocationCode}}"
+          bindinput="onLocationCodeInput"
+        />
+      </view>
+
       <view
         class="btn-inbound {{submitting ? 'btn-disabled' : ''}}"
         wx:if="{{actions.indexOf('inbound') !== -1}}"

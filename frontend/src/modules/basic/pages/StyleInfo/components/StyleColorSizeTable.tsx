@@ -396,7 +396,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                             }
                           }}
                         />
-                        <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 11, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
+                        <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 13, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
                       </div>
                     </td>
                     {selectedSizes.map((_, columnIndex) => (

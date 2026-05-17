@@ -88,14 +88,17 @@
 }
 
 .universal-card-field .field-label {
-  color: #999;
+  color: var(--color-text-tertiary, #999);
   white-space: nowrap;
   flex-shrink: 0;
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
 }
 
 .universal-card-field .field-value {
-  color: #333;
+  color: var(--color-text-primary, #333);
   font-weight: 500;
   flex: 1;
   min-width: 0;
@@ -124,6 +127,9 @@
   font-weight: 700;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .universal-card-progress-success {
@@ -171,6 +177,6 @@
 /* 响应式 */
 @media (max-width: 768px) {
   .universal-card-title { font-size: 12px; }
-  .universal-card-field { font-size: 10px; }
+  .universal-card-field { font-size: 12px; }
   .universal-card .ant-card-body { padding: 6px 8px; }
 }

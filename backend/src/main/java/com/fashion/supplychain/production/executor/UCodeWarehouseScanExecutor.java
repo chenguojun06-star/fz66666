@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.executor;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
+import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -22,6 +24,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 @Slf4j
@@ -48,11 +51,28 @@ public class UCodeWarehouseScanExecutor {
     @Autowired
     private WarehousingRecordFactory warehousingRecordFactory;
 
+    @Autowired
+    private WarehouseAreaService warehouseAreaService;
+
+    private static final Set<String> WAREHOUSE_OPERATIONS = Set.of("WAREHOUSE_IN", "WAREHOUSE_OUT", "WAREHOUSE_RETURN");
+
     public Map<String, Object> execute(Map<String, Object> params, String requestId,
             String operatorId, String operatorName, ProductionOrder order) {
         int quantity = NumberUtils.toInt(params.get("quantity"));
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         String warehouse = TextUtils.safeText(params.get("warehouse"));
+        String warehouseAreaId = TextUtils.safeText(params.get("warehouseAreaId"));
+        String warehouseAreaName = null;
+        if (hasText(warehouseAreaId)) {
+            try {
+                WarehouseArea area = warehouseAreaService.getById(warehouseAreaId);
+                if (area != null) {
+                    warehouseAreaName = area.getAreaName();
+                }
+            } catch (Exception e) {
+                log.warn("[UCodeWarehouse] 查询仓库区域失败 areaId={}: {}", warehouseAreaId, e.getMessage());
+            }
+        }
 
         Map<String, Object> validationError = validateUCodeParams(quantity, scanCode, order);
         if (validationError != null) return validationError;
@@ -70,7 +90,8 @@ public class UCodeWarehouseScanExecutor {
         productSkuService.updateStock(scanCode, quantity);
 
         ProductWarehousing pw = warehousingRecordFactory.createScanWarehousingRecord(
-                order, quantity, warehouse, scanCode, operatorId, operatorName, "ucode");
+                order, quantity, warehouse, warehouseAreaId, warehouseAreaName,
+                scanCode, operatorId, operatorName, "ucode");
         try {
             boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(pw);
             if (!ok) return failResult("入库记录保存失败");

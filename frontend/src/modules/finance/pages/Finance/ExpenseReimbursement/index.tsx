@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { App, Button, Card, Col, Form, Image, Input, InputNumber, Row, Select, Space, Spin, Statistic, Tag, Upload } from 'antd';
+import React, { useState, useRef } from 'react';
+import { App, Button, Card, Col, Form, Image, Input, InputNumber, Row, Select, Space, Spin, Statistic, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -28,6 +28,15 @@ const statusTag = (val: string) => {
 const ExpenseReimbursementPage: React.FC = () => {
   const { user } = useUser();
   const { message, modal } = App.useApp();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFiles = (files: FileList) => {
+    Array.from(files).forEach((file) => {
+      if (file.type.startsWith('image/')) {
+        void handleDocUpload(file);
+      }
+    });
+  };
 
   const {
     list, loading, total, page, pageSize, filterStatus, filterType, keyword,
@@ -88,7 +97,7 @@ const ExpenseReimbursementPage: React.FC = () => {
   const openDetail = (record: ExpenseReimbursement) => { setDetailRecord(record); setDetailOpen(true); };
 
   const columns: ColumnsType<ExpenseReimbursement> = [
-    { title: '报销单号', dataIndex: 'reimbursementNo', width: 160, render: (text: string, record) => <a onClick={() => openDetail(record)}>{text}</a> },
+    { title: '报销单号', dataIndex: 'reimbursementNo', width: 160, render: (text: string, record) => <Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => openDetail(record)}>{text}</Button> },
     { title: '事由', dataIndex: 'title', width: 180, ellipsis: true },
     { title: '类型', dataIndex: 'expenseType', width: 110, render: (val: string) => typeLabel(val) },
     { title: '金额', dataIndex: 'amount', width: 110, align: 'right', render: (val: number) => <span style={{ color: 'var(--color-danger)', fontWeight: 500 }}>¥{(val || 0).toFixed(2)}</span> },
@@ -149,14 +158,43 @@ const ExpenseReimbursementPage: React.FC = () => {
         <div style={{ padding: '0 8px', maxHeight: '68vh', overflowY: 'auto', overflowX: 'hidden' }}>
           <Form form={form} layout="vertical" requiredMark="optional">
             <Form.Item label="报销凭证" required={!editingRecord} validateStatus={uploadedDocs.some(d => d.docId) ? 'success' : undefined}
-              help={uploadedDocs.some(d => d.docId) ? ` 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览` : editingRecord ? undefined : '请上传发票/收据图片，系统将自动识别金额和日期'}
+              help={uploadedDocs.some(d => d.docId) ? ` 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览` : editingRecord ? undefined : '请上传发票/收据图片，支持拖拽、粘贴或点击上传'}
             >
               <Space orientation="vertical" style={{ width: '100%' }} size={8}>
-                <Upload accept="image/*" multiple showUploadList={false} beforeUpload={(file) => { void handleDocUpload(file); return false; }}>
-                  <Button icon={uploadedDocs.some(d => d.recognizing) ? <Spin /> : <UploadOutlined />} disabled={uploadedDocs.some(d => d.recognizing)}>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); }}
+                  onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) processFiles(e.dataTransfer.files); }}
+                  onPaste={(e) => {
+                    const files = e.clipboardData.files;
+                    if (files && files.length > 0) { e.preventDefault(); processFiles(files); return; }
+                    const items = e.clipboardData.items;
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].type.startsWith('image/')) {
+                        e.preventDefault();
+                        const f = items[i].getAsFile();
+                        if (f) void handleDocUpload(f);
+                        break;
+                      }
+                    }
+                  }}
+                  style={{ display: 'inline-block' }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => { if (e.target.files?.length) processFiles(e.target.files); e.target.value = ''; }}
+                  />
+                  <Button
+                    icon={uploadedDocs.some(d => d.recognizing) ? <Spin /> : <UploadOutlined />}
+                    disabled={uploadedDocs.some(d => d.recognizing)}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     {uploadedDocs.some(d => d.recognizing) ? 'AI识别中...' : '上传凭证图片（可多张）'}
                   </Button>
-                </Upload>
+                </div>
                 {uploadedDocs.length > 0 && (
                   <Image.PreviewGroup>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

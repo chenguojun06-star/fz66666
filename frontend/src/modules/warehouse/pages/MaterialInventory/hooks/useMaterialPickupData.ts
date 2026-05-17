@@ -4,6 +4,7 @@ import { useUser } from '@/utils/AuthContext';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
+import api from '@/utils/api';
 import type { PendingPicking as PickingRecord } from '@/types/warehouse';
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
 import { message } from '@/utils/antdStatic';
@@ -69,6 +70,8 @@ export function useMaterialPickupData() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [auditingId, setAuditingId] = useState<string | null>(null);
 
+  const [pendingPickupCount, setPendingPickupCount] = useState(0);
+
   const [printPayload, setPrintPayload] = useState<MaterialOutboundPrintPayload | null>(null);
   const [printVisible, setPrintVisible] = useState(false);
 
@@ -130,6 +133,16 @@ export function useMaterialPickupData() {
   useEffect(() => {
     void fetchData({ silent: true });
   }, [fetchData]);
+
+  useEffect(() => {
+    api.get('/dashboard/menu-badge-counts')
+      .then((res: any) => {
+        if (res?.code === 200 && res.data) {
+          setPendingPickupCount(res.data['/warehouse/material-pickup'] || 0);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const buildPrintPayload = (record: PickingRow): MaterialOutboundPrintPayload => ({
     outboundNo: record.pickingNo,
@@ -260,6 +273,7 @@ export function useMaterialPickupData() {
     dateRange,
     setDateRange,
     pagination,
+    pendingPickupCount,
     confirmingId,
     cancellingId,
     auditingId,

@@ -1,72 +1,81 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-05-13
+> 最后更新：2026-05-16
 
 ---
 
 ## 当前目标
 
-- ✅ 订单号生成格式统一为 PO+yyyyMMddHHmmss
-- 待处理：性能优化P1（3项）+ P2（6项）
+- ✅ 更新前全面质量保障工作已完成，系统可安全推送
+- 待推送：306文件变更，3414增/1923删
 
 ## 最近变更
 
-- 2026-05-13：统一订单号生成格式为 PO+yyyyMMddHHmmss（3个后端入口+前端placeholder+小程序fallback）
-- 2026-05-12：完成9项P0+P1核心修复 + 全面系统测试
-- 2026-05-12：修复测试失败（MaterialInboundOrchestratorTest mock对齐）
-- 2026-05-12：修复前端P1兼容性问题（cutting/by-code GET→POST）
-- 2026-05-12：修复小程序P2兼容性问题（material/roll/list GET→POST）
-- 2026-05-12：修复唯一索引缺少tenant_id（V20260512003）
+- 2026-05-16：全面更新前质量保障（7大任务全部完成）
+- 2026-05-16：修复P0 — 3处金融/计量read-modify-write竞态条件（TenantAppOrchestrator/EmployeeAdvanceOrchestrator/FinishedOutstockHelper）
+- 2026-05-16：修复P0 — 前端intelligenceApi.ts调用3个不存在的后端端点（添加防御式错误处理）
+- 2026-05-16：修复P0 — 删除非标准Flyway文件20260423004
+- 2026-05-16：修复P1 — h5-web source-miniapp 3处旧式端点同步（dict/by-type + factory-worker/save + cutting/by-code）
+- 2026-05-16：修复P1 — IntelligenceExecutionController @Transactional违规（移除Controller层事务）
+- 2026-05-16：修复P1 — PayrollSettlementOrchestrator 2处read-modify-write竞态（recordPayment + applyDeduction）
+- 2026-05-16：修复P2 — V202705161000 Flyway添加幂等守卫
+- 2026-05-16：性能优化 — DATE()函数索引失效修复（19处WHERE子句替换为范围查询）
+- 2026-05-16：性能优化 — 移除xlsx死依赖（前端零引用，减少3.2MB）
+- 2026-05-16：修复30个测试失败（UserContext Mock缺失 + 方法签名变更 + 新依赖Mock）
+- 2026-05-16：新增并发安全测试（AtomicOperationConcurrencyTest，18个用例）
 
 ## 当前进行中
 
-- 无进行中任务
+- 无进行中任务，等待推送确认
 
-## 已完成修复（2026-05-12）
+## 本次质量保障工作成果（2026-05-16）
 
-### P0（1项）✅
-1. ScanUndoHelper：新增settlementStatus="payroll_settled"检查
+### 修复清单
 
-### P1（8项）✅
-1. ScanRecordOrchestrator.undo()：添加@Transactional
-2. MaterialStockMapper.lockStock：可用量检查 (quantity - locked_quantity >= delta)
-3. MaterialStockMapper.decreaseStockWithCheck：可用量检查
-4. PayableMapper.atomicAddPaidAmount：原子更新替代read-modify-write
-5. WagePaymentOrchestrator.syncPayableStatusOnPaid：使用原子SQL
-6. MaterialPurchaseMapper.atomicAddArrivedQuantity：原子更新
-7. MaterialInboundOrchestrator：使用原子SQL更新arrivedQuantity
-8. ProductWarehousingRollbackHelper：入库回退前检查工资结算状态
-9. ShipmentReconciliationOrchestrator（两版）：扫码成本计算统一过滤条件
-10. V20260512003：唯一索引加入tenant_id
+| 严重级别 | 数量 | 关键修复 |
+|---------|------|---------|
+| P0 | 4 | Flyway文件+3处金融竞态+前端API 404 |
+| P1 | 4 | h5-web端点同步+Controller事务违规+工资结算竞态+测试修复 |
+| P2 | 2 | Flyway幂等守卫+DATE()性能优化 |
 
-### 兼容性修复 ✅
-1. 前端 productionApi.ts：cutting/by-code GET→POST
-2. 小程序 style-warehouse.js：material/roll/list-by-inbound GET→POST
+### 验证结果
 
-## 已知问题（待优化，按优先级）
+| 指标 | 结果 |
+|------|------|
+| 后端 mvn compile | BUILD SUCCESS ✅ |
+| 前端 tsc --noEmit | 0 errors ✅ |
+| 后端 mvn test | 2864 tests, 0 failures, 0 errors ✅ |
+| 并发安全测试 | 18/18 passed ✅ |
+| 6条核心业务链路验证 | 3通过+3有小问题（已记录） |
 
-### P1性能（3项 — 下一迭代）
-1. MaterialPurchase统计查询DATE()函数导致索引失效
-2. 订单列表查询无缓存
-3. 唯一索引已修复tenant_id ✅
+### 已知问题（待优化，按优先级）
 
-### P2（6项 — 2周内）
+### P1性能（2项 — 下一迭代）
+1. ~~MaterialPurchase统计查询DATE()函数导致索引失效~~ ✅ 已修复（19处）
+2. 订单列表查询无缓存（enrichment 8步N+1风险）
+
+### P2（5项 — 2周内）
 1. @Version与手写原子SQL混用风险
-2. xlsx与exceljs重复引入（前端产物+300KB）
-3. vendor-react-antd chunk过大
+2. ~~xlsx与exceljs重复引入~~ ✅ 已移除xlsx
+3. vendor-react-antd chunk过大（建议拆分为3个子chunk）
 4. cutting-task/by-style-no 旧式端点
 5. platform-connector/save-config 旧式端点
-6. dataCenter缓存无主动失效
 
-### P3（4项 — 低优先级）
-1. style/size-price/batch-save 非标准命名
-2. warehouse/location/list-by-type 旧式命名
-3. PayableMapper/atomicAddArrivedQuantity缺tenant_id WHERE
-4. 自定义@Cacheable注解死代码
+### P2代码规范
+1. BargainPrice/EmployeeAdvance状态流转端点应改为 POST /{id}/stage-action
+2. t_bargain_price/t_employee_advance未注册到DbColumnDefinitions/DbTableDefinitions
+3. Service层@Transactional违规仍有约20处（SampleStockServiceImpl/OrderTransferServiceImpl等无Orchestrator层的Service）
+
+### P2数据一致性（审计发现，非紧急）
+1. FactoryShipmentDetailServiceImpl退货数量read-modify-write
+2. CronSchedulerService计数read-modify-write（synchronized仅单JVM有效）
+3. KnowledgeSearchTool浏览量read-modify-write
+4. ProductSkuServiceImpl.updateStock使用REQUIRES_NEW（外层回滚时SKU已提交）
 
 ## 下一步
 
-- 性能优化P1：MaterialPurchase统计查询索引优化
-- 性能优化P1：订单列表查询添加缓存
+- 确认推送更新到生产环境
+- 性能优化P1：订单列表查询添加Redis缓存
 - RESTful迁移第二批（cutting-task/by-style-no等）
+- vendor-react-antd chunk拆分

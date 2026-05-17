@@ -24,6 +24,10 @@ public class InventoryCheckItem {
 
     private String skuCode;
 
+    private String styleNo;
+
+    private String imageUrl;
+
     private String color;
 
     private String size;

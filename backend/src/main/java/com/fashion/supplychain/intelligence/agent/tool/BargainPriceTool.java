@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.BargainPrice;
 import com.fashion.supplychain.finance.service.BargainPriceService;
 import com.fashion.supplychain.intelligence.agent.AiTool;
@@ -40,6 +41,7 @@ public class BargainPriceTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         Map<String, Object> args = parseArgs(argumentsJson);
         String targetType = requireString(args, "targetType");
         String targetId = requireString(args, "targetId");

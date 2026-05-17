@@ -15,14 +15,13 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* ── 内容分区（仅分割线，无卡片断开） ── */
+/* ── 内容分区（连贯流动，无分割线） ── */
 .detail-section {
-  padding: 24rpx 28rpx;
-  border-bottom: 1rpx solid var(--color-border-light);
+  padding: 20rpx 28rpx;
 }
 
-.detail-section:last-child {
-  border-bottom: none;
+.detail-section + .detail-section {
+  padding-top: 0;
 }
 
 /* ── 加载状态 ── */

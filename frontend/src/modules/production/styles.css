@@ -245,6 +245,9 @@
   margin-right: 20px;
   white-space: nowrap;
   flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ofh-inline-kv .ofh-kv-label {
   font-size: 12px;
@@ -269,7 +272,7 @@
   min-width: 0;
 }
 .ofh-kv-label {
-  font-size: 11px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.42);
   white-space: nowrap;
 }
@@ -400,7 +403,7 @@
 .progress-row-actions .ant-btn {
   border-radius: 999px;
   padding-inline: 8px;
-  font-size: 11px;
+  font-size: 13px;
   min-width: 0;
 }
 
@@ -565,6 +568,8 @@
   font-size: var(--font-size-sm);
   color: rgba(0, 0, 0, 0.45);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .order-flow-h-scroll {
@@ -746,6 +751,9 @@
   color: #1f1f1f;
   font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
   border: 1px solid #e6e8f0;
   background: #fff;
 }
@@ -852,6 +860,8 @@
   font-size: var(--font-size-base);
   line-height: 32px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wh-control {

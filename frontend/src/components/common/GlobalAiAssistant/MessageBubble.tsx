@@ -253,7 +253,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     </div>
 
     {msg.role === 'ai' && (
-      <button className={msgStyles.speechBtn} onClick={() => onSpeak(msg.text)} title="朗读回答">
+      <button type="button" className={msgStyles.speechBtn} onClick={() => onSpeak(msg.text)} title="朗读回答">
         <SoundOutlined />
       </button>
     )}

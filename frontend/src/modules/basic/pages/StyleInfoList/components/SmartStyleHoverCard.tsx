@@ -117,7 +117,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
         borderBottom: '1px solid #f0f0f0',
       }}>
         <span style={{ fontWeight: 600, color: '#333', fontSize: 13 }}>{record.styleNo}</span>
-        <Tag color="blue" style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>{progressNode}</Tag>
+        <Tag color="blue" style={{ margin: 0, fontSize: 13, lineHeight: '18px' }}>{progressNode}</Tag>
       </div>
 
       <div style={{ marginBottom: 10 }}>
@@ -141,12 +141,12 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
                 {s.label}
               </span>
               {isNext && !s.done && (
-                <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16, flexShrink: 0 }}>
+                <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16, flexShrink: 0 }}>
                   下一步
                 </Tag>
               )}
               {s.completedAt && (
-                <span style={{ color: '#bbb', fontSize: 11, flexShrink: 0 }}>{s.completedAt}</span>
+                <span style={{ color: '#bbb', fontSize: 13, flexShrink: 0 }}>{s.completedAt}</span>
               )}
             </div>
           );

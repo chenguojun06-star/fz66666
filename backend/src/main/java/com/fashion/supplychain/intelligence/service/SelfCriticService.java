@@ -107,7 +107,7 @@ public class SelfCriticService {
             // 4. 无论分数高低，都保存执行快照到记忆系统（用于后续模式挖掘）
             saveExecutionSnapshot(sessionId, userMessage, aiResponse, overallScore, metrics, usedQuickPath);
 
-            log.info("[SelfCritic] session={} score={:.1f} quickPath={} tools={}耗时={}ms",
+            log.info("[SelfCritic] session={} score={} quickPath={} tools={}耗时={}ms",
                     sessionId, overallScore, usedQuickPath,
                     toolCalls == null ? 0 : toolCalls.size(),
                     System.currentTimeMillis() - start);
@@ -272,7 +272,7 @@ public class SelfCriticService {
 
             feedbackMapper.insert(feedback);
 
-            log.info("[SelfCritic] 低分反馈已自动沉淀 session={} score={:.1f}", sessionId, score);
+            log.info("[SelfCritic] 低分反馈已自动沉淀 session={} score={}", sessionId, String.format("%.1f", score));
         } catch (Exception e) {
             log.warn("[SelfCritic] 自动保存反馈失败: {}", e.getMessage());
         }

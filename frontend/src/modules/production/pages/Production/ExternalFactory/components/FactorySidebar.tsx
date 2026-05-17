@@ -110,22 +110,22 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
                 )}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
-                <Tag color="processing" icon={<SyncOutlined spin />} style={{ margin: 0, fontSize: 11 }}>
+                <Tag color="processing" icon={<SyncOutlined spin />} style={{ margin: 0, fontSize: 13 }}>
                   {item.inProgressCount}
                 </Tag>
-                <Tag color="success" icon={<CheckCircleOutlined />} style={{ margin: 0, fontSize: 11 }}>
+                <Tag color="success" icon={<CheckCircleOutlined />} style={{ margin: 0, fontSize: 13 }}>
                   {item.completedCount}
                 </Tag>
               </div>
               {((item.overdueCount && item.overdueCount > 0) || (item.warningCount && item.warningCount > 0)) && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {item.overdueCount && item.overdueCount > 0 && (
-                    <Tag color="error" icon={<WarningOutlined />} style={{ margin: 0, fontSize: 11 }}>
+                    <Tag color="error" icon={<WarningOutlined />} style={{ margin: 0, fontSize: 13 }}>
                       {item.overdueCount} 逾期
                     </Tag>
                   )}
                   {item.warningCount && item.warningCount > 0 && (
-                    <Tag color="warning" style={{ margin: 0, fontSize: 11 }}>
+                    <Tag color="warning" style={{ margin: 0, fontSize: 13 }}>
                       {item.warningCount} 预警
                     </Tag>
                   )}

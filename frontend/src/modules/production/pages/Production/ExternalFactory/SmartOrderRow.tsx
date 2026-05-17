@@ -123,11 +123,11 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
             </div>
             <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 2, alignItems: 'center' }}>
-              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
-              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 11, fontWeight: 600 }}>
+              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 13, fontWeight: 600 }}>
                 {deliveryMeta.label}
               </span>
             </div>
@@ -243,4 +243,4 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   );
 };
 
-export default SmartOrderRow;
+export default React.memo(SmartOrderRow);

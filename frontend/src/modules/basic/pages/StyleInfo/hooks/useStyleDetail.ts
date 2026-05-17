@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Form, App } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import api from '@/utils/api';
@@ -41,7 +41,7 @@ export const useStyleDetail = (styleId?: string) => {
   /**
    * 加载款式详情
    */
-  const fetchDetail = async (id: string) => {
+  const fetchDetail = useCallback(async (id: string) => {
     if (!id || id === 'new') return;
 
     setLoading(true);
@@ -60,17 +60,17 @@ export const useStyleDetail = (styleId?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
   /**
    * 重置表单和状态
    */
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setCurrentStyle(null);
     form.resetFields();
     setEditLocked(false);
     setActiveTabKey('1');
-  };
+  }, [form]);
 
   // 加载详情（当styleId变化时）
   useEffect(() => {
@@ -85,7 +85,7 @@ export const useStyleDetail = (styleId?: string) => {
     // 详情页：加载数据
     fetchDetail(styleId);
     setActiveTabKey(tabKeyFromQuery || '1');
-  }, [styleId, tabKeyFromQuery, isNewPage]);
+  }, [styleId, tabKeyFromQuery, isNewPage, fetchDetail, resetForm]);
 
   // 当详情数据变化时，同步到表单
   useEffect(() => {

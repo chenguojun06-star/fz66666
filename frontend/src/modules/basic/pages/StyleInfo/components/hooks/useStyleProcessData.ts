@@ -94,7 +94,7 @@ export const useStyleProcessData = ({ styleId, onDataLoaded }: UseStyleProcessDa
     } catch {}
   };
 
-  useEffect(() => { fetchProcess(); }, [styleId]);
+  useEffect(() => { fetchProcess(); }, [styleId, fetchProcess]);
   useEffect(() => { fetchProcessTemplates(''); }, []);
 
   return { data, setData, loading, sizes, setSizes, sizeOptions, setSizeOptions, fetchSizeDictOptions, fetchProcess, processTemplates, templateLoading, fetchProcessTemplates };

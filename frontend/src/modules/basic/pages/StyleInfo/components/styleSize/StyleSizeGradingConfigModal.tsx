@@ -223,7 +223,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                         <Tag
                           key={`front-${zone.key}-${size}`}
                           color={checked ? 'default' : 'default'}
-                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 11, background: checked ? '#e2e8f0' : undefined }}
+                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 13, background: checked ? '#e2e8f0' : undefined }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
                             if (item.key !== zone.key) return item;
                             const nextSizes = (item.frontSizes || []).includes(size)
@@ -255,7 +255,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                         <Tag
                           key={`back-${zone.key}-${size}`}
                           color={checked ? 'default' : 'default'}
-                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 11, background: checked ? '#e2e8f0' : undefined }}
+                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 13, background: checked ? '#e2e8f0' : undefined }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
                             if (item.key !== zone.key) return item;
                             const nextSizes = (item.backSizes || []).includes(size)
@@ -289,7 +289,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                             <Tag
                               key={`dynamic-${zone.key}-${col.key}-${size}`}
                               color={checked ? 'default' : 'default'}
-                              style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 11, background: checked ? '#e2e8f0' : undefined }}
+                              style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 13, background: checked ? '#e2e8f0' : undefined }}
                               onClick={() => toggleSizeInColumn(zone.key, col.key, size)}
                             >
                               {size}

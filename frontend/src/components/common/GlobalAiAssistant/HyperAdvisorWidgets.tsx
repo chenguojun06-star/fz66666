@@ -81,8 +81,8 @@ export const FeedbackWidget: React.FC<{
   return (
     <div className={styles.feedbackRow}>
       <span className={styles.feedbackLabel}>这个回答有帮助吗？</span>
-      <button className={styles.feedbackBtn} onClick={() => handleClick(5)} title="有用"><LikeOutlined /></button>
-      <button className={styles.feedbackBtn} onClick={() => handleClick(1)} title="不太好"><DislikeOutlined /></button>
+      <button type="button" className={styles.feedbackBtn} onClick={() => handleClick(5)} title="有用"><LikeOutlined /></button>
+      <button type="button" className={styles.feedbackBtn} onClick={() => handleClick(1)} title="不太好"><DislikeOutlined /></button>
     </div>
   );
 };

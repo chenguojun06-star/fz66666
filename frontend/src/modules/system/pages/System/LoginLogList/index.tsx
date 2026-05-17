@@ -26,7 +26,7 @@ const LoginLogList: React.FC = () => {
     if (debouncedUsername !== (queryParams.username || '')) {
       setQueryParams((prev) => ({ ...prev, username: debouncedUsername, page: 1 }));
     }
-  }, [debouncedUsername]);
+  }, [debouncedUsername, queryParams.username]);
 
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [total, setTotal] = useState(0);

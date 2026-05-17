@@ -5,6 +5,7 @@ import { factoryApi, type Factory } from '@/services/system/factoryApi';
 import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit } from '@/types/system';
 import { CUTTING_STAGE_ORDER } from '@/utils/productionStage';
+import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery } from '@/utils/styleCategory';
 import { productionOrderApi, type FactoryCapacityItem } from '@/services/production/productionApi';
 
 export type CuttingFactoryMode = 'INTERNAL' | 'EXTERNAL';
@@ -113,6 +114,9 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createFactoryLoading, setCreateFactoryLoading] = useState(false);
   const [createProcessNodes, setCreateProcessNodes] = useState<CuttingProcessNode[]>([]);
   const [createStyleImageUrl, setCreateStyleImageUrl] = useState<string | null>(null);
+  const [createCustomerName, setCreateCustomerName] = useState<string>('');
+  const [createRemarks, setCreateRemarks] = useState<string>('');
+  const [createCategory, setCreateCategory] = useState<string>('');
   const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
   const [dynamicProcessMapping, setDynamicProcessMapping] = useState<Record<string, string>>({});
   const mappingLoadedRef = useRef(false);
@@ -341,6 +345,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     setCreateFactoryId('');
     setCreateProcessNodes([]);
     setCreateStyleImageUrl(null);
+    setCreateCategory('');
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
     fetchInternalUnitOptions();
@@ -415,6 +420,9 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         orderLines,
         progressWorkflowJson: buildCuttingWorkflowJson(),
         styleImageUrl: String(createStyleImageUrl || '').trim() || undefined,
+        customerName: String(createCustomerName || '').trim() || undefined,
+        remarks: String(createRemarks || '').trim() || undefined,
+        productCategory: normalizeCategoryQuery(createCategory) || undefined,
       });
       if (res.code === 200) {
         message.success('新建裁剪任务成功');
@@ -452,6 +460,10 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     createFactoryOptions, createFactoryLoading,
     createProcessNodes, setCreateProcessNodes,
     createStyleImageUrl, setCreateStyleImageUrl,
+    createCustomerName, setCreateCustomerName,
+    createRemarks, setCreateRemarks,
+    createCategory, setCreateCategory,
+    categoryOptions: CATEGORY_CODE_OPTIONS,
     selectedFactoryStat,
     addProcessNode, addProcessNodeToStage, removeProcessNode, updateProcessNode,
     importFromTemplate,

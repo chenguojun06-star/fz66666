@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Form, Upload } from 'antd';
+import { Form } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
@@ -145,15 +145,15 @@ export const useWarehousingForm = (
   };
 
   const uploadOneUnqualifiedImage = async (file: File) => {
-    if (!file.type.startsWith('image/')) { message.error('仅支持图片文件'); return Upload.LIST_IGNORE; }
-    if (file.size > MAX_UNQUALIFIED_IMAGE_MB * 1024 * 1024) { message.error(`图片过大，最大${MAX_UNQUALIFIED_IMAGE_MB}MB`); return Upload.LIST_IGNORE; }
+    if (!file.type.startsWith('image/')) { message.error('仅支持图片文件'); return; }
+    if (file.size > MAX_UNQUALIFIED_IMAGE_MB * 1024 * 1024) { message.error(`图片过大，最大${MAX_UNQUALIFIED_IMAGE_MB}MB`); return; }
     const formData = new FormData();
     formData.append('file', file);
     try {
       const res = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
-      if (res.code !== 200) { message.error(res.message || '上传失败'); return Upload.LIST_IGNORE; }
+      if (res.code !== 200) { message.error(res.message || '上传失败'); return; }
       const url = String(res.data || '').trim();
-      if (!url) { message.error('上传失败'); return Upload.LIST_IGNORE; }
+      if (!url) { message.error('上传失败'); return; }
       setUnqualifiedFileList((prev) => {
         const next = [...prev, { uid: `${Date.now()}-${Math.random()}`, name: file.name, status: 'done', url } as UploadFile].slice(0, MAX_UNQUALIFIED_IMAGES);
         form.setFieldsValue({ unqualifiedImageUrls: JSON.stringify(next.map((f) => String((f as any)?.url || '').trim()).filter(Boolean).slice(0, MAX_UNQUALIFIED_IMAGES)) });
@@ -163,7 +163,6 @@ export const useWarehousingForm = (
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '上传失败');
     }
-    return Upload.LIST_IGNORE;
   };
 
   return {

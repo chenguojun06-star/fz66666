@@ -78,7 +78,7 @@ const FollowUpCard: React.FC<{
   return (
     <div className={styles.followUpCard}>
       {/* 主按钮行 */}
-      <button className={styles.followUpBtn} onClick={handleClick}>
+      <button type="button" className={styles.followUpBtn} onClick={handleClick}>
         {action.icon && <span style={{ marginRight: 4 }}>{resolveIcon(action.icon)}</span>}
         {action.label}
         {action.actionType === 'EXECUTE' && <span className={styles.followUpExecBadge}>可执行</span>}
@@ -114,6 +114,7 @@ const FollowUpCard: React.FC<{
           {/* 执行 / 取消 */}
           <div className={styles.followUpFormActions}>
             <button
+              type="button"
               className={`${sharedStyles.actionBtn} ${sharedStyles.actionBtnPrimary}`}
               onClick={() => {
                 const mergedParams = { ...action.prefilledParams, ...formValues };
@@ -123,7 +124,7 @@ const FollowUpCard: React.FC<{
             >
               执行
             </button>
-            <button className={sharedStyles.actionBtn} onClick={handleCancel}>
+            <button type="button" className={sharedStyles.actionBtn} onClick={handleCancel}>
               取消
             </button>
           </div>

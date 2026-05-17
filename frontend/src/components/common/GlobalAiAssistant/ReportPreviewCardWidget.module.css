@@ -23,7 +23,7 @@
 }
 
 .reportMeta {
-  font-size: 11px;
+  font-size: 13px;
   color: #5c5c5c;
   line-height: 1.5;
 }
@@ -59,7 +59,7 @@
 }
 
 .kpiName {
-  font-size: 11px;
+  font-size: 13px;
   color: #8c8c8c;
   margin-bottom: 4px;
 }
@@ -72,13 +72,13 @@
 }
 
 .kpiUnit {
-  font-size: 11px;
+  font-size: 13px;
   color: #595959;
   margin-left: 2px;
 }
 
 .kpiChange {
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 2px;
   font-weight: 600;
 }
@@ -98,7 +98,7 @@
   border: 1px solid #e8e8e8;
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: 13px;
   color: #595959;
 }
 
@@ -120,7 +120,7 @@
   padding: 4px 6px;
   background: #fafafa;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .rankBadge {
@@ -131,7 +131,7 @@
   color: #fff;
   text-align: center;
   line-height: 18px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -151,7 +151,7 @@
 
 .rankMeta {
   color: #8c8c8c;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .riskGrid {
@@ -182,7 +182,7 @@
 .riskChipDanger .riskValue { color: #cf1322; }
 
 .riskLabel {
-  font-size: 10px;
+  font-size: 12px;
   color: #595959;
   margin-top: 2px;
 }
@@ -194,7 +194,7 @@
 }
 
 .orderItem {
-  font-size: 11px;
+  font-size: 13px;
   padding: 4px 6px;
   background: #fafafa;
   border-radius: 6px;
@@ -212,12 +212,12 @@
 
 .orderMeta {
   color: #8c8c8c;
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 2px;
 }
 
 .emptyHint {
-  font-size: 11px;
+  font-size: 13px;
   color: #8c8c8c;
   text-align: center;
   padding: 6px 0;

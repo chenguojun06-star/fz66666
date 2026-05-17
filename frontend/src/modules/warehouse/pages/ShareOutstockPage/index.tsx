@@ -212,7 +212,7 @@ const ShareOutstockPage: React.FC = () => {
                       <td style={tdStyle}>{item.orderNo || '—'}</td>
                       <td style={tdStyle}>
                         <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.styleNo || '—'}</div>
-                        {item.styleName && <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.styleName}</div>}
+                        {item.styleName && <div style={{ fontSize: 13, color: '#94a3b8' }}>{item.styleName}</div>}
                       </td>
                       <td style={tdStyle}>{item.color} / {item.size}</td>
                       <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{item.outstockQuantity}</td>
@@ -226,7 +226,7 @@ const ShareOutstockPage: React.FC = () => {
                         {item.expressCompany || item.trackingNo ? (
                           <div>
                             {item.expressCompany && <div style={{ fontSize: 12 }}>{item.expressCompany}</div>}
-                            {item.trackingNo && <div style={{ fontSize: 11, color: '#64748b' }}>{item.trackingNo}</div>}
+                            {item.trackingNo && <div style={{ fontSize: 13, color: '#64748b' }}>{item.trackingNo}</div>}
                           </div>
                         ) : '—'}
                       </td>
@@ -281,7 +281,7 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string }>
 const SummaryCard: React.FC<{ icon: React.ReactNode; label: string; value: string; color: string }> = ({ icon, label, value, color }) => (
   <div style={summaryCardStyle}>
     <span style={{ color, fontSize: 20, marginBottom: 4 }}>{icon}</span>
-    <div style={{ fontSize: 11, color: '#94a3b8' }}>{label}</div>
+    <div style={{ fontSize: 13, color: '#94a3b8' }}>{label}</div>
     <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{value}</div>
   </div>
 );

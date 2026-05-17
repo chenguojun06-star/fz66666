@@ -15,6 +15,8 @@ import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
+import com.fashion.supplychain.warehouse.entity.WarehouseArea;
+import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,6 +48,9 @@ public class MaterialStockOrchestrator {
 
     @Autowired
     private StyleBomService styleBomService;
+
+    @Autowired
+    private WarehouseAreaService warehouseAreaService;
 
     @Autowired
     private MaterialOutboundLogMapper materialOutboundLogMapper;
@@ -191,7 +196,8 @@ public class MaterialStockOrchestrator {
             String receiverId,
             String receiverName,
             String pickupType,
-            String usageType) {
+            String usageType,
+            String warehouseAreaId) {
         if (!StringUtils.hasText(stockId)) {
             throw new IllegalArgumentException("库存记录不能为空");
         }
@@ -255,6 +261,8 @@ public class MaterialStockOrchestrator {
         log.setReceiverId(StringUtils.hasText(receiverId) ? receiverId.trim() : null);
         log.setReceiverName(receiverName.trim());
         log.setWarehouseLocation(stock.getLocation());
+        log.setWarehouseAreaId(warehouseAreaId);
+        log.setWarehouseAreaName(resolveWarehouseAreaName(warehouseAreaId));
         log.setRemark(StringUtils.hasText(reason) ? reason.trim() : "手动出库");
         log.setOutboundTime(outboundTime);
         log.setCreateTime(outboundTime);
@@ -455,6 +463,16 @@ public class MaterialStockOrchestrator {
         String date = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
         int seq = outboundSequence.incrementAndGet() % 1000;
         return String.format("MOB%s%03d", date, seq);
+    }
+
+    private String resolveWarehouseAreaName(String areaId) {
+        if (!StringUtils.hasText(areaId)) return null;
+        try {
+            WarehouseArea area = warehouseAreaService.getById(areaId);
+            return area != null ? area.getAreaName() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Data

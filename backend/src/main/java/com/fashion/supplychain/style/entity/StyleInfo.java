@@ -338,6 +338,9 @@ public class StyleInfo {
     @TableField(exist = false)
     private Integer totalWarehousedQuantity;
 
+    @TableField(exist = false)
+    private Integer stockQuantity;
+
     /**
      * 码数颜色配置（JSON格式）
      * 存储样板的尺码、颜色、数量配置信息
@@ -474,6 +477,21 @@ public class StyleInfo {
      */
     @TableField("care_icon_codes")
     private String careIconCodes;
+
+    @TableField("quality_grade")
+    private String qualityGrade;
+
+    @TableField("execute_standard")
+    private String executeStandard;
+
+    @TableField("safety_category")
+    private String safetyCategory;
+
+    @TableField("inspector")
+    private String inspector;
+
+    @TableField("inspection_date")
+    private String inspectionDate;
 
     /**
      * 租户ID（多租户隔离，自动填充）

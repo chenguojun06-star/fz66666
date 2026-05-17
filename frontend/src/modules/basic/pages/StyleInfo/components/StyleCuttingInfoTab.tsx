@@ -57,9 +57,9 @@ const StyleCuttingInfoTab: React.FC<CuttingInfoTabProps> = ({ styleNo }) => {
     if (!styleNo?.trim()) return;
     setLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { tasks: CuttingTaskInfo[]; bomList: CuttingBomInfo[] } }>(
-        '/production/cutting-task/by-style-no',
-        { params: { styleNo: styleNo.trim() } }
+      const res = await api.post<{ code: number; data: { tasks: CuttingTaskInfo[]; bomList: CuttingBomInfo[] } }>(
+        '/production/cutting-task/list-by-style',
+        { styleNo: styleNo.trim() }
       );
       if (res.code === 200) {
         setTasks(res.data?.tasks || []);

@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.mapper.PayrollSettlementMapper;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
+import java.math.BigDecimal;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -52,5 +53,15 @@ public class PayrollSettlementServiceImpl extends ServiceImpl<PayrollSettlementM
         if (!StringUtils.hasText(orderId)) return;
         remove(new LambdaQueryWrapper<PayrollSettlement>()
                 .eq(PayrollSettlement::getOrderId, orderId));
+    }
+
+    @Override
+    public int atomicAddPaidAmount(String id, BigDecimal delta, BigDecimal expectedPaidAmount) {
+        return baseMapper.atomicAddPaidAmount(id, delta, expectedPaidAmount);
+    }
+
+    @Override
+    public int atomicAddDeductionAmount(String id, BigDecimal delta, BigDecimal expectedDeductionAmount) {
+        return baseMapper.atomicAddDeductionAmount(id, delta, expectedDeductionAmount);
     }
 }

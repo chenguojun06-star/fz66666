@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { App, Upload } from 'antd';
+import { App } from 'antd';
 import api, { toNumberSafe, isApiSuccess, getApiMessage, sortSizeNames } from '@/utils/api';
 
 const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -163,11 +163,11 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
   const handleUploadImage = useCallback(async (file: File) => {
     if (!selectedStyleNo.trim()) {
       message.error('请先输入款号');
-      return Upload.LIST_IGNORE;
+      return;
     }
     if (imageUrls.length >= 4) {
       message.warning('最多上传4张图片');
-      return Upload.LIST_IGNORE;
+      return;
     }
     setImageUploading(true);
     try {
@@ -176,7 +176,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
       const res = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData);
       if (res.code !== 200 || !res.data) {
         message.error(res.message || '上传失败');
-        return Upload.LIST_IGNORE;
+        return;
       }
       setImageUrls((prev) => [...prev, res.data].slice(0, 4));
       message.success('图片已上传，保存后生效');
@@ -185,7 +185,6 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     } finally {
       setImageUploading(false);
     }
-    return Upload.LIST_IGNORE;
   }, [selectedStyleNo, imageUrls.length, message]);
 
   const handleSelectStyle = useCallback((styleNo: string) => {

@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Form, Input, Select, Row, Col, Image, Tag, Alert } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
-import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
+import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
 import api, { type ApiResult, isApiSuccess } from '@/utils/api';
@@ -172,6 +172,8 @@ const isNotFoundError = (error: unknown) => {
 const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSuccess, initialValues }) => {
   const [form] = Form.useForm();
   const { selectOptions: sampleWarehouseOptions } = useWarehouseAreaOptions('SAMPLE');
+  const [sampleSelectedAreaId, setSampleSelectedAreaId] = useState<string>('');
+  const { selectOptions: sampleLocationOptions, loading: sampleLocationLoading } = useWarehouseLocationByArea('SAMPLE', sampleSelectedAreaId);
   const [loading, setLoading] = React.useState(false);
   const [smartError, setSmartError] = React.useState<SmartErrorInfo | null>(null);
   const [prefillLoading, setPrefillLoading] = React.useState(false);
@@ -259,7 +261,8 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
         styleNo: values.styleNo,
         styleName: values.styleName,
         sampleType: values.sampleType,
-        location: values.location,
+        location: values.warehouseLocation,
+        warehouseAreaId: values.warehouseAreaId,
         remark: values.remark,
         imageUrl: styleSnapshot.cover,
         rows: styleSnapshot.planRows.map((row) => ({
@@ -303,6 +306,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
             styleName: payload.styleName,
             sampleType: payload.sampleType,
             location: payload.location,
+            warehouseAreaId: payload.warehouseAreaId,
             remark: payload.remark,
             imageUrl: payload.imageUrl,
             color: row.color,
@@ -486,28 +490,40 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
 
         <Row gutter={16}>
           <Col span={8}>
-            <Form.Item label="仓库">
+            <Form.Item label="仓库" name="warehouseAreaId">
               <Select
                 placeholder="请选择仓库"
-                defaultValue={sampleWarehouseOptions[0]?.label || '样衣仓'}
+                allowClear
                 style={{ width: '100%' }}
+                onChange={(areaId: string) => {
+                  setSampleSelectedAreaId(areaId);
+                  form.setFieldValue('warehouseLocation', undefined);
+                }}
               >
                 {sampleWarehouseOptions.length > 0
                   ? sampleWarehouseOptions.map(opt => (
-                    <Option key={opt.value} value={opt.label as string}>{opt.label}</Option>
+                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                   ))
-                  : <Option value="样衣仓">样衣仓</Option>
+                  : <Option value="" disabled>暂无仓库，请前往库位地图创建</Option>
                 }
               </Select>
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="location" label="库位">
-              <WarehouseLocationAutoComplete
-                warehouseType="SAMPLE"
-                placeholder="请选择或输入库位"
-                style={{ width: '100%' }}
-              />
+            <Form.Item name="warehouseLocation" label="库位">
+              <Select
+                placeholder={sampleSelectedAreaId ? '请选择库位' : '请先选择仓库'}
+                allowClear
+                showSearch
+                loading={sampleLocationLoading}
+                disabled={!sampleSelectedAreaId}
+                notFoundContent={sampleLocationLoading ? '加载中...' : sampleSelectedAreaId ? '该仓库暂无库位' : '请先选择仓库'}
+                filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}
+              >
+                {sampleLocationOptions.map(opt => (
+                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
           <Col span={16}>

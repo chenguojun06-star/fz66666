@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -47,6 +48,7 @@ public class OrderTimelineTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        TenantAssert.assertTenantContext();
         Map<String, Object> args = parseArgs(argumentsJson);
         String orderNo = optionalString(args, "orderNo");
         String orderId = optionalString(args, "orderId");

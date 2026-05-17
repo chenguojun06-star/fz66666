@@ -143,6 +143,6 @@ export function getPlatformMeta(code: string): PlatformMeta | undefined {
 /** 同步模式中文 */
 export const SYNC_MODE_LABELS: Record<string, string> = {
   pull: '主动拉取',
-  webhook: 'Webhook推送',
+  webhook: '回调推送',
   both: '双向同步',
 };

@@ -142,7 +142,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
           （当前已开启 {enabledCount}/{SMART_FEATURE_KEYS.length}）
         </Typography.Text>
-        <DownOutlined style={{ marginLeft: 'auto', fontSize: 11, transition: 'transform 0.2s', transform: smartFlagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
+        <DownOutlined style={{ marginLeft: 'auto', fontSize: 13, transition: 'transform 0.2s', transform: smartFlagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
       </div>
       {!smartFlagsCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
         <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
@@ -280,7 +280,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             （当前已显示 {miniprogramMenuEnabledCount}/{MINIPROGRAM_MENU_KEYS.length}）
           </Typography.Text>
-          <DownOutlined style={{ marginLeft: 'auto', fontSize: 11, transition: 'transform 0.2s', transform: miniprogramMenuCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
+          <DownOutlined style={{ marginLeft: 'auto', fontSize: 13, transition: 'transform 0.2s', transform: miniprogramMenuCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
         </div>
         {!miniprogramMenuCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
           <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>

@@ -165,7 +165,7 @@ export function useMaterialInventoryColumns({
                 onClick={() => onPickStock?.(record)}
                 title={onPickStock ? '点击领取库存' : undefined}
               >
-                <div className="stock-label">可用库存 <span style={{fontSize:10,color:'#1890ff'}}>📦领</span></div>
+                <div className="stock-label">可用库存 <span style={{fontSize:12,color:'#1890ff'}}>📦领</span></div>
                 <div className="stock-value stock-value--ok">
                   {availableQty.toLocaleString()}
                 </div>

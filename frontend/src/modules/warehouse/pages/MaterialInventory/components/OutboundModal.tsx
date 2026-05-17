@@ -16,6 +16,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import MaterialInfoCard from './MaterialInfoCard';
 import StandardModal from '@/components/common/StandardModal';
 import type { MaterialBatchDetail } from '../hooks/useMaterialInventoryData';
+import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 
 const { Option } = Select;
 
@@ -58,6 +59,9 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
   receiverOptions,
   autoMatchOutboundContext,
 }) => {
+  const warehouseAreaId = Form.useWatch('warehouseAreaId', outboundForm);
+  const { selectOptions: areaOptions } = useWarehouseAreaOptions('MATERIAL');
+  const { selectOptions: locationOptions } = useWarehouseLocationByArea('MATERIAL', warehouseAreaId);
   return (
     <StandardModal
       title={
@@ -117,10 +121,14 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                             outboundForm.setFieldsValue({ factoryName: undefined, factoryId: undefined, factoryType: undefined });
                           }
                         }
+                        if (value === 'FREE') {
+                          outboundForm.setFieldsValue({ usageType: 'OTHER', factoryName: undefined, factoryId: undefined, factoryType: undefined, orderNo: undefined });
+                        }
                       }}
                     >
                       <Option value="INTERNAL">内部</Option>
                       <Option value="EXTERNAL">外部</Option>
+                      <Option value="FREE">自由出库</Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -139,15 +147,27 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                   </Form.Item>
                 </Col>
                 <Col span={6}>
-                  <Form.Item label="关联订单" name="orderNo">
-                    <AutoComplete
-                      placeholder="按工厂自动匹配或手填订单号"
-                      options={outboundOrderOptions}
-                      filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
-                      onSearch={(value) => { void handleOutboundOrderInput(value); }}
-                      onSelect={(value) => handleOutboundOrderSelect(String(value))}
-                      onChange={(value) => { outboundForm.setFieldValue('orderNo', value); }}
-                    />
+                  <Form.Item noStyle shouldUpdate={(prev, cur) => prev.pickupType !== cur.pickupType}>
+                    {() => {
+                      const pickupType = outboundForm.getFieldValue('pickupType');
+                      return (
+                        <Form.Item
+                          label="关联订单"
+                          name="orderNo"
+                          rules={[{ required: pickupType !== 'FREE', message: '请输入关联订单' }]}
+                        >
+                          <AutoComplete
+                            placeholder={pickupType === 'FREE' ? '自由出库无需关联订单' : '按工厂自动匹配或手填订单号'}
+                            options={outboundOrderOptions}
+                            filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
+                            onSearch={(value) => { if (pickupType !== 'FREE') void handleOutboundOrderInput(value); }}
+                            onSelect={(value) => { if (pickupType !== 'FREE') handleOutboundOrderSelect(String(value)); }}
+                            onChange={(value) => { outboundForm.setFieldValue('orderNo', value); }}
+                            disabled={pickupType === 'FREE'}
+                          />
+                        </Form.Item>
+                      );
+                    }}
                   </Form.Item>
                 </Col>
                 <Col span={6}>
@@ -185,21 +205,23 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                     {() => {
                       const pickupType = outboundForm.getFieldValue('pickupType');
                       const isExternal = pickupType === 'EXTERNAL';
-                      const filteredFactoryOptions = pickupType
+                      const isFree = pickupType === 'FREE';
+                      const filteredFactoryOptions = pickupType && !isFree
                         ? factoryOptions.filter(f => f.factoryType === pickupType)
                         : factoryOptions;
                       return (
                         <Form.Item
                           label="关联内外部生产方"
                           name="factoryName"
-                          rules={[{ required: true, message: '请选择关联生产方' }]}
+                          rules={[{ required: !isFree, message: '请选择关联生产方' }]}
                         >
                           <AutoComplete
-                            placeholder={isExternal ? '筛选选择外发工厂' : '可筛选选择，也可直接手填工厂'}
+                            placeholder={isFree ? '自由出库无需关联生产方' : isExternal ? '筛选选择外发工厂' : '可筛选选择，也可直接手填工厂'}
                             options={filteredFactoryOptions}
                             filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
-                            onSearch={(value) => { void handleOutboundFactoryInput(value); }}
+                            onSearch={(value) => { if (!isFree) void handleOutboundFactoryInput(value); }}
                             onSelect={(value) => {
+                              if (isFree) return;
                               void handleOutboundFactoryInput(String(value));
                               const matched = factoryOptions.find((item) => item.value === String(value));
                               if (matched?.factoryType === 'EXTERNAL' && matched?.factoryId) {
@@ -217,6 +239,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                               }
                             }}
                             onChange={(value) => { outboundForm.setFieldValue('factoryName', value); }}
+                            disabled={isFree}
                           />
                         </Form.Item>
                       );
@@ -231,8 +254,47 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                   </Form.Item>
                 </Col>
                 <Col span={24}>
-                  <Form.Item label="出库说明" name="reason">
-                    <Input placeholder="如：车间补料 / 大货首批发料" />
+                  <Form.Item noStyle shouldUpdate={(prev, cur) => prev.pickupType !== cur.pickupType}>
+                    {() => {
+                      const pickupType = outboundForm.getFieldValue('pickupType');
+                      return (
+                        <Form.Item
+                          label="出库说明"
+                          name="reason"
+                          rules={[{ required: pickupType === 'FREE', message: '自由出库必须填写出库说明' }]}
+                        >
+                          <Input placeholder={pickupType === 'FREE' ? '请说明自由出库原因' : '如：车间补料 / 大货首批发料'} />
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="出库仓库" name="warehouseAreaId">
+                    <Select
+                      placeholder="选择仓库"
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      options={areaOptions}
+                      onChange={() => outboundForm.setFieldValue('warehouseLocation', undefined)}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item noStyle shouldUpdate={(prev, cur) => prev.warehouseAreaId !== cur.warehouseAreaId}>
+                    {() => (
+                      <Form.Item label="库位" name="warehouseLocation">
+                        <Select
+                          placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'}
+                          allowClear
+                          showSearch
+                          optionFilterProp="label"
+                          options={locationOptions}
+                          disabled={!warehouseAreaId}
+                        />
+                      </Form.Item>
+                    )}
                   </Form.Item>
                 </Col>
               </Row>

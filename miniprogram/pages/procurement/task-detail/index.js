@@ -334,7 +334,7 @@ Page({
     const map = {
       pending: 'orange', received: 'blue', partial: 'blue',
       partial_arrival: 'blue', awaiting_confirm: 'gold', completed: 'green',
-      cancelled: 'gray', warehouse_pending: 'cyan',
+      cancelled: 'red', warehouse_pending: 'cyan',
       waiting_procurement: 'orange', procurement_in_progress: 'blue',
       procurement_completed: 'green',
     };

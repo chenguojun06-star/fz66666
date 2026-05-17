@@ -43,6 +43,8 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
         size: values.size || '',
         quantity: values.quantity,
         warehouseLocation: values.warehouseLocation || '默认仓',
+        warehouseAreaId: values.warehouseAreaId || '',
+        sourceType: values.sourceType || 'external_purchase',
         supplierName: values.supplierName || '',
         supplierId: values.supplierId || '',
         supplierContactPerson: values.supplierContactPerson || '',
@@ -85,7 +87,7 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
       body{font-family:'Heiti SC','Songti SC','Hiragino Sans GB','STSong','Arial Unicode MS',serif;padding:10px}
       .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
       .card{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;break-inside:avoid}
-      .code{font-size:11px;color:#666;margin:2px 0}.name{font-size:12px;font-weight:bold;margin:2px 0}
+      .code{font-size:13px;color:#666;margin:2px 0}.name{font-size:12px;font-weight:bold;margin:2px 0}
       .qty{font-size:12px;color:#333;margin:2px 0} img{width:140px;height:140px}
       @media print{body{padding:0}.grid{gap:8px}}
     </style></head><body>

@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tag } from 'antd';
 
 import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StandardPagination from '@/components/common/StandardPagination';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
+import StyleCopyModal from './StyleCopyModal';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { StyleInfo } from '@/types/style';
+import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
@@ -25,6 +28,7 @@ interface StyleCardViewProps {
   onScrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
+  onRefresh: () => void;
   focusedStyleId?: string | null;
 }
 
@@ -45,12 +49,17 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   onScrap,
   onPrint,
   onMaintenance,
+  onRefresh,
   focusedStyleId,
 }) => {
   const navigate = useNavigate();
   const { user } = useUser();
   const { columns: cardColumns } = useCardGridLayout(10);
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
+
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copySource, setCopySource] = useState<StyleInfo | null>(null);
+  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string }>({ open: false, styleNo: '' });
 
   const resolveDisplayColor = (record: StyleInfo) => {
     return getStyleCardColorText(record);
@@ -111,7 +120,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
             return Number(record.sampleQuantity) || Number((record as any).quantity) || 0;
           },
         }),
-        [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => val || '-' }],
+        [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => toCategoryCn(val) }],
         [{ label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '创建', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }],
         [{ label: '状态', key: 'latestPatternStatus', render: (_val, record) => isStageDoneRow(record as StyleInfo) ? '已入库' : '待入库' }],
       ]}
@@ -187,33 +196,30 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         const r = record as StyleInfo;
         if (isScrappedRow(r)) {
           return [
-            {
-              key: 'print',
-              label: '打印',
-              onClick: () => onPrint(r),
-            },
+            { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
+            { key: 'print', label: '打印', onClick: () => onPrint(r) },
+            { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) },
           ];
         }
         if (isStageDoneRow(r)) {
-          // 已完成：生产订单 + 维护(主管+)
-          const items: { key: string; label: string; onClick: () => void }[] = [
+          const items: { key: string; label: string; onClick: () => void; danger?: boolean }[] = [
+            { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
             {
               key: 'production',
               label: '生产订单',
               onClick: () => navigate(`/production?keyword=${encodeURIComponent((r as any).orderNo || (r as any).styleNo || '')}`),
             },
+            { key: 'print', label: '打印', onClick: () => onPrint(r) },
           ];
           if (isSupervisorOrAbove) {
-            items.push({
-              key: 'maintenance',
-              label: '维护',
-              onClick: () => onMaintenance(r),
-            });
+            items.push({ key: 'maintenance', label: '维护', onClick: () => onMaintenance(r) });
           }
+          items.push({ key: 'copy', label: '复制', onClick: () => { setCopySource(r); setCopyModalOpen(true); } });
+          items.push({ key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) });
           return items;
         }
-        // 开发中：纸样开发 + 样衣生产 + 打印 + 报废
         return [
+          { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
           {
             key: 'pattern',
             label: '纸样开发',
@@ -224,17 +230,10 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
             label: '样衣生产',
             onClick: () => navigate(`/style-info/${r.id}?tab=8`),
           },
-          {
-            key: 'print',
-            label: '打印',
-            onClick: () => onPrint(r),
-          },
-          {
-            key: 'delete',
-            label: '报废',
-            danger: true,
-            onClick: () => onScrap(String(r.id!)),
-          },
+          { key: 'print', label: '打印', onClick: () => onPrint(r) },
+          { key: 'scrap', label: '报废', danger: true, onClick: () => onScrap(String(r.id!)) },
+          { key: 'copy', label: '复制', onClick: () => { setCopySource(r); setCopyModalOpen(true); } },
+          { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) },
         ];
       }}
       pagination={{
@@ -254,6 +253,20 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       total={total}
       wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
       onChange={onPageChange}
+    />
+
+    <StyleCopyModal
+      open={copyModalOpen}
+      onCancel={() => setCopyModalOpen(false)}
+      copySource={copySource}
+      onSuccess={onRefresh}
+    />
+
+    <RemarkTimelineModal
+      open={remarkTarget.open}
+      onClose={() => setRemarkTarget({ open: false, styleNo: '' })}
+      targetType="style"
+      targetNo={remarkTarget.styleNo}
     />
     </>
   );

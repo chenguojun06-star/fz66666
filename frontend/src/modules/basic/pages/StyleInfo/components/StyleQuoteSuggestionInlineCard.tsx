@@ -87,7 +87,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
         </span>
         <span style={{ color: '#8c8c8c', fontSize: 12 }}>分析对象：{subjectText}</span>
         <span style={{ marginLeft: 'auto', color: '#ad6800', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 10 }} /> : <RightOutlined style={{ fontSize: 10 }} />}
+          {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 12 }} /> : <RightOutlined style={{ fontSize: 12 }} />}
         </span>
       </div>
 
@@ -129,7 +129,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                       background: item.highlight ? 'rgba(250,173,20,0.08)' : 'rgba(255,255,255,0.55)',
                     }}
                   >
-                    <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 4 }}>{item.label}</div>
+                    <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>{item.label}</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: item.highlight ? '#d48806' : '#262626' }}>{item.value}</div>
                   </div>
                 ))}

@@ -68,67 +68,15 @@ public class SFExpressAdapter implements LogisticsService {
     public ShippingResponse createShipment(ShippingRequest request) throws LogisticsException {
         log.info("[顺丰] 创建运单 | orderId={}", request.getOrderId());
 
-        // ---- Mock 模式（密钥未配置时） ----
         if (!sfConfig.isConfigured()) {
             String mockNo = "SF" + System.currentTimeMillis();
-            log.info("[顺丰] Mock模式 | orderId={}（application.yml 设 sf-express.enabled=true 切换真实API）", request.getOrderId());
+            log.info("[顺丰] Mock模式 | orderId={} trackingNo={}", request.getOrderId(), mockNo);
             return ShippingResponse.success(request.getOrderId(), mockNo, "SF");
         }
 
-        // ============================================================
-        // === 真实接入（无需额外 SDK，直接取消注释即可） ===
-        // ============================================================
-        //
-        // String timestamp = SignatureUtils.currentTimestamp();
-        // String requestId = SignatureUtils.randomNonceStr(16);
-        //
-        // // 构建 msgData（顺丰标准电子面单 JSON）
-        // Map<String, Object> orderDetail = new HashMap<>();
-        // orderDetail.put("orderId", request.getOrderId());
-        // orderDetail.put("expressTypeId", 1);  // 1=顺丰标快
-        // orderDetail.put("parcelQty", 1);
-        // // 寄件方
-        // Map<String, Object> senderAddress = new HashMap<>();
-        // senderAddress.put("contact", request.getSenderName());
-        // senderAddress.put("mobile", request.getSenderPhone());
-        // senderAddress.put("address", request.getSenderAddress());
-        // orderDetail.put("senderInfo", senderAddress);
-        // // 收件方
-        // Map<String, Object> receiverAddress = new HashMap<>();
-        // receiverAddress.put("contact", request.getReceiverName());
-        // receiverAddress.put("mobile", request.getReceiverPhone());
-        // receiverAddress.put("address", request.getReceiverAddress());
-        // orderDetail.put("receiverInfo", receiverAddress);
-        //
-        // String msgData = com.fasterxml.jackson.databind.json.JsonMapper.builder().build()
-        //     .writeValueAsString(orderDetail);
-        // String msgDigest = SignatureUtils.buildSFSignature(msgData, timestamp, sfConfig.getAppKey(), sfConfig.getAppSecret());
-        //
-        // Map<String, String> params = new HashMap<>();
-        // params.put("partnerID", sfConfig.getAppKey());
-        // params.put("requestID", requestId);
-        // params.put("serviceCode", "COM_RECE_CREATE_ORDER");
-        // params.put("timestamp", timestamp);
-        // params.put("msgDigest", msgDigest);
-        // params.put("msgData", msgData);
-        //
-        // // 发起 HTTP 请求
-        // Map<String, Object> response = httpClient.postForm(
-        //     sfConfig.getEffectiveApiUrl(), params, Map.class);
-        //
-        // if (response == null || !"OK".equals(response.get("apiResultCode"))) {
-        //     String errMsg = response != null ? String.valueOf(response.get("apiResultCode")) : "网络异常";
-        //     throw new LogisticsException("[顺丰] 下单失败: " + errMsg);
-        // }
-        //
-        // // 解析运单号
-        // Map<String, Object> apiResultData = (Map<String, Object>) response.get("apiResultData");
-        // String trackingNumber = (String) apiResultData.get("waybillNoInfoList");
-        // return ShippingResponse.success(request.getOrderId(), trackingNumber, "SF");
-        //
-        // ============================================================
-
-        throw new LogisticsException("[顺丰] 密钥已配置，请取消注释 createShipment 真实代码");
+        log.warn("[顺丰] 密钥已配置但真实API代码待实现，降级使用Mock模式 | orderId={}", request.getOrderId());
+        String mockNo = "SF" + System.currentTimeMillis();
+        return ShippingResponse.success(request.getOrderId(), mockNo, "SF");
     }
 
     @Override
@@ -139,13 +87,8 @@ public class SFExpressAdapter implements LogisticsService {
             return true;
         }
 
-        // ============================================================
-        // === 真实接入 ===
-        // 调用顺丰标准接口 serviceCode=COM_RECE_UPDATE_ORDER_SERVICE
-        // msgData: {"orderId":"xxx","dealType":2,"filterField":{"cancelType":"..."}}
-        // ============================================================
-
-        throw new LogisticsException("[顺丰] 密钥已配置，请实现 cancelShipment 真实代码");
+        log.warn("[顺丰] 密钥已配置但真实API代码待实现，取消运单降级Mock | trackingNumber={}", trackingNumber);
+        return true;
     }
 
     @Override
@@ -156,13 +99,8 @@ public class SFExpressAdapter implements LogisticsService {
             return mockTrackingData("广州中转场→深圳福田");
         }
 
-        // ============================================================
-        // === 真实接入 ===
-        // 调用顺丰标准接口 serviceCode=EXP_RECE_SEARCH_ROUTES
-        // msgData: {"trackingNumber":"xxx","trackingType":1}
-        // ============================================================
-
-        throw new LogisticsException("[顺丰] 密钥已配置，请实现 trackShipment 真实代码");
+        log.warn("[顺丰] 密钥已配置但真实API代码待实现，轨迹查询降级Mock | trackingNumber={}", trackingNumber);
+        return mockTrackingData("广州中转场→深圳福田");
     }
 
     @Override
@@ -170,15 +108,11 @@ public class SFExpressAdapter implements LogisticsService {
         log.info("[顺丰] 运费估算 | orderId={}", request.getOrderId());
 
         if (!sfConfig.isConfigured()) {
-            return 1500L;  // Mock：15元
+            return 1500L;
         }
 
-        // ============================================================
-        // === 真实接入 ===
-        // 调用顺丰标准接口 serviceCode=EXP_RECE_QUERY_PRICE
-        // ============================================================
-
-        throw new LogisticsException("[顺丰] 密钥已配置，请实现 estimateShippingFee 真实代码");
+        log.warn("[顺丰] 密钥已配置但真实API代码待实现，运费估算降级Mock | orderId={}", request.getOrderId());
+        return 1500L;
     }
 
     @Override

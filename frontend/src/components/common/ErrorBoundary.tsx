@@ -31,8 +31,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       const key = '__chunk_reload__';
       const last = sessionStorage.getItem(key);
       const now = Date.now();
-      // 5秒内只允许刷新一次，防止无限循环
-      if (!last || now - Number(last) > 5000) {
+      if (!last || now - Number(last) > 30000) {
         sessionStorage.setItem(key, String(now));
         window.location.reload();
         return;

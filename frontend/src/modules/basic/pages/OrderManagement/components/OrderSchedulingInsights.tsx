@@ -70,30 +70,30 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1f1f1f' }}>
                       {item.pinned ? '当前工厂' : `推荐${item.rank}`} · {item.factoryName}
                     </div>
-                    <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>{item.estimatedText}</div>
+                    <div style={{ fontSize: 13, color: '#8c8c8c', marginTop: 2 }}>{item.estimatedText}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {item.pinned ? <Tag color="green" style={{ marginInlineEnd: 0 }}>当前</Tag> : null}
                     <Tag color="blue" style={{ marginInlineEnd: 0 }}>{item.score}分</Tag>
-                    <span style={{ fontSize: 11, color: item.sourceTone }}>{item.sourceLabel}</span>
+                    <span style={{ fontSize: 13, color: item.sourceTone }}>{item.sourceLabel}</span>
                   </div>
                 </div>
                 <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 11, color: '#8c8c8c' }}>在制</div>
+                    <div style={{ fontSize: 13, color: '#8c8c8c' }}>在制</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{item.currentLoadText}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, color: '#8c8c8c' }}>可用</div>
+                    <div style={{ fontSize: 13, color: '#8c8c8c' }}>可用</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{item.availableCapacityText}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, color: '#8c8c8c' }}>日产能</div>
+                    <div style={{ fontSize: 13, color: '#8c8c8c' }}>日产能</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{item.dailyCapacityText}</div>
                   </div>
                 </div>
                 {item.dataNote ? (
-                  <div style={{ marginTop: 8, fontSize: 11, color: '#8c8c8c' }}>{item.dataNote}</div>
+                  <div style={{ marginTop: 8, fontSize: 13, color: '#8c8c8c' }}>{item.dataNote}</div>
                 ) : null}
                 <div style={{ marginTop: 8 }}>
                   <Button

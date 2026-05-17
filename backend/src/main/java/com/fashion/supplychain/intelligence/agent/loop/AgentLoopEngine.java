@@ -149,7 +149,7 @@ public class AgentLoopEngine {
                 recordCompensableExecs(ctx.getCommandId(), ctx.getVisibleToolMap(), execRecords);
 
                 boolean hasFailure = execRecords.stream()
-                        .anyMatch(r -> r.rawResult.startsWith("{\"error\""));
+                        .anyMatch(r -> r.rawResult != null && r.rawResult.startsWith("{\"error\""));
                 if (hasFailure && compensatingTxManager.activeSessionCount() > 0) {
                     CompensationResult rollbackResult = compensatingTxManager.rollbackSession(ctx.getCommandId());
                     String rollbackMsg = buildRollbackMessage(rollbackResult);
@@ -186,9 +186,9 @@ public class AgentLoopEngine {
 
     private void injectProgressHint(AgentLoopContext ctx, int iteration) {
         if (iteration > 2) {
-            ctx.getMessages().removeIf(m -> "system".equals(m.getRole())
+            ctx.getMessages().removeIf(m -> "user".equals(m.getRole())
                     && m.getContent() != null && m.getContent().startsWith("[进度提示]"));
-            ctx.getMessages().add(AiMessage.system(String.format(
+            ctx.getMessages().add(AiMessage.user(String.format(
                     "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。",
                     iteration, ctx.getMaxIterations())));
         }
@@ -385,7 +385,7 @@ public class AgentLoopEngine {
                                          Map<String, com.fashion.supplychain.intelligence.agent.tool.AgentTool> toolMap,
                                          List<AiAgentToolExecHelper.ToolExecRecord> execRecords) {
         for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
-            if (rec.rawResult.startsWith("{\"error\"")) {
+            if (rec.rawResult == null || rec.rawResult.startsWith("{\"error\"")) {
                 continue;
             }
             com.fashion.supplychain.intelligence.agent.tool.AgentTool tool = toolMap.get(rec.toolName);

@@ -185,7 +185,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
         <span> 智能采购分析</span>
         <span style={{
-          fontSize: 10, padding: '1px 6px', borderRadius: 4,
+          fontSize: 12, padding: '1px 6px', borderRadius: 4,
           background: VERDICT_COLOR[insight.verdict], color: '#fff',
         }}>{VERDICT_LABEL[insight.verdict]}</span>
       </div>

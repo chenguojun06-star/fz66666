@@ -19,7 +19,7 @@ Page({
     activeTab: 'submit',
     categoryList: CATEGORY_LIST,
     categoryIndex: 0,
-    form: { title: '', content: '', contactInfo: '', category: 'BUG' },
+    form: { title: '', content: '', contact: '', category: 'BUG' },
     submitting: false,
     myFeedbacks: []
   },
@@ -44,10 +44,10 @@ Page({
 
   onTitleInput(e) { this.setData({ 'form.title': e.detail.value }); },
   onContentInput(e) { this.setData({ 'form.content': e.detail.value }); },
-  onContactInput(e) { this.setData({ 'form.contactInfo': e.detail.value }); },
+  onContactInput(e) { this.setData({ 'form.contact': e.detail.value }); },
 
   async onSubmitFeedback() {
-    const { title, content, category, contactInfo } = this.data.form;
+    const { title, content, category, contact } = this.data.form;
     if (!title.trim()) return wx.showToast({ title: '请填写标题', icon: 'none' });
     if (!content.trim()) return wx.showToast({ title: '请填写描述', icon: 'none' });
 
@@ -57,12 +57,12 @@ Page({
         title: title.trim(),
         content: content.trim(),
         category,
-        contactInfo: contactInfo.trim(),
+        contact: contact.trim(),
         source: 'MINIPROGRAM'
       });
       wx.showToast({ title: '提交成功', icon: 'success' });
       this.setData({
-        form: { title: '', content: '', contactInfo: '', category: 'BUG' },
+        form: { title: '', content: '', contact: '', category: 'BUG' },
         categoryIndex: 0
       });
       this.loadMyFeedbacks();

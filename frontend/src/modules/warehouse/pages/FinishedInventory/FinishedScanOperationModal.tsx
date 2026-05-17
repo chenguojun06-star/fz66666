@@ -3,7 +3,7 @@ import { Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message
 import StandardModal from '@/components/common/StandardModal';
 import { ScanOutlined, InboxOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
-import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
 
 interface FinishedScanOperationModalProps {
   open: boolean;
@@ -16,6 +16,9 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   const [scanResult, setScanResult] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [warehouseLocation, setWarehouseLocation] = useState('');
+  const [warehouseAreaId, setWarehouseAreaId] = useState('');
+  const { selectOptions: areaOptions, loading: areaLoading } = useWarehouseAreaOptions('FINISHED');
+  const { selectOptions: locationOptions, loading: locationLoading } = useWarehouseLocationByArea('FINISHED', warehouseAreaId);
   const [operationType, setOperationType] = useState<'inbound' | 'outbound'>('inbound');
   const [sourceType, setSourceType] = useState('scan_inbound');
   const [outstockType, setOutstockType] = useState('scan_outbound');
@@ -27,7 +30,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   useEffect(() => {
     if (open) {
       setScanCode(''); setScanResult(null); setQuantity(1);
-      setWarehouseLocation(''); setSourceType('scan_inbound');
+      setWarehouseLocation(''); setWarehouseAreaId(''); setSourceType('scan_inbound');
       setOutstockType('scan_outbound'); setRemark('');
       setTimeout(() => inputRef.current?.focus?.(), 100);
     }
@@ -53,10 +56,10 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
     setLoading(true);
     try {
       if (operationType === 'inbound') {
-        await finishedWarehouseApi.scanInbound({ scanCode: scanCode.trim(), quantity, warehouseLocation: warehouseLocation || '默认仓', sourceType, remark });
+        await finishedWarehouseApi.scanInbound({ scanCode: scanCode.trim(), quantity, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, sourceType, remark });
         message.success('成品扫码入库成功');
       } else {
-        await finishedWarehouseApi.scanOutbound({ scanCode: scanCode.trim(), quantity, outstockType, remark });
+        await finishedWarehouseApi.scanOutbound({ scanCode: scanCode.trim(), quantity, outstockType, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, remark });
         message.success('成品扫码出库成功');
       }
       onSuccess();
@@ -114,21 +117,50 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
                 </Select>
               </Col>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>仓位</div>
-                <WarehouseLocationAutoComplete warehouseType="FINISHED" value={warehouseLocation} onChange={setWarehouseLocation} placeholder="默认仓" />
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>入库仓库</div>
+                <Select style={{ width: '100%' }} placeholder="选择仓库" allowClear loading={areaLoading} value={warehouseAreaId || undefined} onChange={(v) => { setWarehouseAreaId(v || ''); setWarehouseLocation(''); }} notFoundContent={areaLoading ? '加载中...' : '暂无仓库'}>
+                  {areaOptions.map(opt => (
+                    <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col span={8}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>库位</div>
+                <Select style={{ width: '100%' }} placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
+                  {locationOptions.map(opt => (
+                    <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+                  ))}
+                </Select>
               </Col>
             </>
           ) : (
-            <Col span={8}>
-              <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>出库类型</div>
-              <Select style={{ width: '100%' }} value={outstockType} onChange={setOutstockType}>
-                <Select.Option value="scan_outbound">扫码出库</Select.Option>
-                <Select.Option value="free_outbound">自由出库</Select.Option>
-                <Select.Option value="sample_out">样品出库</Select.Option>
-                <Select.Option value="damage_out">报损出库</Select.Option>
-                <Select.Option value="transfer_out">调拨出库</Select.Option>
-              </Select>
-            </Col>
+            <>
+              <Col span={8}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>出库类型</div>
+                <Select style={{ width: '100%' }} value={outstockType} onChange={setOutstockType}>
+                  <Select.Option value="scan_outbound">扫码出库</Select.Option>
+                  <Select.Option value="sample_out">样品出库</Select.Option>
+                  <Select.Option value="damage_out">报损出库</Select.Option>
+                  <Select.Option value="transfer_out">调拨出库</Select.Option>
+                </Select>
+              </Col>
+              <Col span={8}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>出库仓库</div>
+                <Select style={{ width: '100%' }} placeholder="选择仓库" allowClear loading={areaLoading} value={warehouseAreaId || undefined} onChange={(v) => { setWarehouseAreaId(v || ''); setWarehouseLocation(''); }} notFoundContent={areaLoading ? '加载中...' : '暂无仓库'}>
+                  {areaOptions.map(opt => (
+                    <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col span={8}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>库位</div>
+                <Select style={{ width: '100%' }} placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
+                  {locationOptions.map(opt => (
+                    <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+                  ))}
+                </Select>
+              </Col>
+            </>
           )}
         </Row>
         <div>

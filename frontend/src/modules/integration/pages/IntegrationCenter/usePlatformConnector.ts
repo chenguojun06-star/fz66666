@@ -50,7 +50,7 @@ export function usePlatformConnector() {
   const saveConfig = useCallback(async (platformCode: string, appKey: string, appSecret: string, shopName?: string, callbackUrl?: string) => {
     setLoading(true);
     try {
-      const res = await api.post('/platform-connector/save-config', {
+      const res = await api.put('/platform-connector/config', {
         platformCode, appKey, appSecret, shopName, callbackUrl,
       });
       if (res.code === 200) return res.data;

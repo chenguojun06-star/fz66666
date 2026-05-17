@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Layout as AntLayout, Menu, Tooltip } from 'antd';
+import { Badge, Button, Layout as AntLayout, Menu, Tooltip } from 'antd';
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { menuConfig, paths } from '../../routeConfig';
 import { useAppLanguage } from '../../i18n/useAppLanguage';
@@ -17,6 +17,8 @@ interface SideMenuProps {
   onMenuOpenChange: (openKeys: string[]) => void;
   onSidebarCollapse: (collapsed: boolean) => void;
   auth: LayoutAuthResult;
+  badgeCounts: Record<string, number>;
+  onMenuClick: (path: string) => void;
 }
 
 const SideMenu: React.FC<SideMenuProps> = ({
@@ -28,6 +30,8 @@ const SideMenu: React.FC<SideMenuProps> = ({
   onMenuOpenChange,
   onSidebarCollapse,
   auth,
+  badgeCounts,
+  onMenuClick,
 }) => {
   const { language } = useAppLanguage();
   const {
@@ -83,7 +87,6 @@ const SideMenu: React.FC<SideMenuProps> = ({
     appStore: 'menu.sections.appStore',
     customer: 'menu.sections.customer',
     tenant: 'menu.sections.tenant',
-    integrationCenter: 'menu.sections.integrationCenter',
   }), []);
 
   const localizedMenuConfig = useMemo(() => {
@@ -136,11 +139,29 @@ const SideMenu: React.FC<SideMenuProps> = ({
               if (isFactoryAccount && factoryVisiblePaths.has(normalizePath(item.path))) return true;
               return hasPermissionForPath(item.path);
             })
-            .map((item) => ({
-              key: item.path,
-              icon: item.icon,
-              label: <Link to={item.path}>{item.label}</Link>,
-            }));
+            .map((item) => {
+              const itemPath = item.path;
+              const badgeCount = badgeCounts[itemPath] || 0;
+              return {
+                key: itemPath,
+                icon: item.icon,
+                label: (
+                  <span
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                    onClick={() => { if (badgeCount > 0) onMenuClick(itemPath); }}
+                  >
+                    <Link to={itemPath}>{item.label}</Link>
+                    {badgeCount > 0 && (
+                      <Badge
+                        count={badgeCount}
+                        size="small"
+                        style={{ backgroundColor: '#ff4d4f', boxShadow: 'none' }}
+                      />
+                    )}
+                  </span>
+                ),
+              };
+            });
 
           return {
             key: section.key,
@@ -172,7 +193,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
           };
         }
       });
-  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules]);
+  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules, badgeCounts, onMenuClick]);
 
   const handleMenuOpenChange = (openKeys: string[]) => {
     if (sidebarIsCollapsed) return;

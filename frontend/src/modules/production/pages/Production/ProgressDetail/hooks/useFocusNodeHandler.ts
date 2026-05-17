@@ -98,7 +98,6 @@ export const useFocusNodeHandler = (options: UseFocusNodeHandlerOptions) => {
   }, [
     boardStatsByOrder,
     boardStatsLoadingByOrder,
-    defaultNodes,
     getFocusNodeType,
     normalizeFocusNodeName,
     openNodeDetail,

@@ -161,7 +161,7 @@ export default function useProcessPriceColumns(
           <span>{size}码</span>
           {editable && (
             <DeleteOutlined
-              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}
+              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 12 }}
               onClick={(event) => {
                 event.stopPropagation();
                 Modal.confirm({

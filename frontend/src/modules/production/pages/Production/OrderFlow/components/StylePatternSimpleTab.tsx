@@ -15,14 +15,12 @@ interface Props {
   styleNo?: string;
 }
 
+const EMPTY_LINKED_SIZES: string[] = [];
+
 const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
   const [allPatternFiles, setAllPatternFiles] = useState<StyleAttachment[]>([]);
   const [productionReq, setProductionReq] = useState<string>('');
   const [loading, setLoading] = useState(false);
-
-  // 调试：打印styleId
-  React.useEffect(() => {
-  }, [styleId, styleNo]);
 
   const fetchAllPatternFiles = async () => {
     if (!styleId) return;
@@ -153,7 +151,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             label: ' 尺寸表',
             children: (
               <Card style={{ marginBottom: 16 }}>
-                <StyleSizeTab styleId={styleId} readOnly={true} simpleView={true} />
+                <StyleSizeTab styleId={styleId} readOnly={true} simpleView={true} linkedSizes={EMPTY_LINKED_SIZES} />
               </Card>
             ),
           },

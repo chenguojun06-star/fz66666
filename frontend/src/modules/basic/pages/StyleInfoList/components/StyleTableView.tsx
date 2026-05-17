@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { App, Button, Empty, Form, Input, InputNumber, Modal, Popover, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
+import { App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Popover, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
+import type { MenuProps } from 'antd';
 import dayjs from 'dayjs';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
@@ -367,10 +368,9 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               </div>
 
               <div className="style-smart-row__actions">
-                {actionButtons.map((action) => (
+                {actionButtons.slice(0, 3).map((action) => (
                   <Button
                     key={action.key}
-                   
                     type={action.type}
                     danger={action.danger}
                     disabled={action.disabled}
@@ -379,6 +379,25 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     {action.label}
                   </Button>
                 ))}
+                {actionButtons.length > 3 && (
+                  <Dropdown
+                    trigger={['click']}
+                    menu={{
+                      items: actionButtons.slice(3).map((action) => ({
+                        key: action.key,
+                        label: action.label,
+                        danger: action.danger,
+                        disabled: action.disabled,
+                      })),
+                      onClick: ({ key }) => {
+                        const action = actionButtons.slice(3).find(a => a.key === key);
+                        if (action && !action.disabled) action.onClick?.();
+                      },
+                    }}
+                  >
+                    <Button type="default">更多</Button>
+                  </Dropdown>
+                )}
               </div>
             </div>
           );
@@ -640,4 +659,4 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   );
 };
 
-export default StyleTableView;
+export default React.memo(StyleTableView);

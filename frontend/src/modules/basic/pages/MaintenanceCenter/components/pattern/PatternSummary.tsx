@@ -123,7 +123,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
         <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px', background: '#fafafa', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>历史封存版本</span>
-            <span style={{ fontSize: 11, color: '#8c8c8c', background: '#fff7e6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
+            <span style={{ fontSize: 13, color: '#8c8c8c', background: '#fff7e6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
           </div>
           <div>
             {patternVersionList
@@ -134,10 +134,10 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', flexShrink: 0 }}>V{ver.version || '-'}</span>
-                      <span style={{ fontSize: 11, color: '#8c8c8c', background: '#f5f5f5', padding: '0 6px', borderRadius: 3, border: '1px solid #e8e8e8', flexShrink: 0 }}>封存</span>
+                      <span style={{ fontSize: 13, color: '#8c8c8c', background: '#f5f5f5', padding: '0 6px', borderRadius: 3, border: '1px solid #e8e8e8', flexShrink: 0 }}>封存</span>
                       <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{ver.fileName || '-'}</span>
                     </div>
-                    <div style={{ marginTop: 2, fontSize: 11, color: 'var(--neutral-text-disabled)' }}>
+                    <div style={{ marginTop: 2, fontSize: 13, color: 'var(--neutral-text-disabled)' }}>
                       上传人 {ver.uploader || '-'} · {ver.createTime ? formatDateTime(ver.createTime) : '-'}
                     </div>
                   </div>

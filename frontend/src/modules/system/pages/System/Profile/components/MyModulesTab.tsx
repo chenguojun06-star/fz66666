@@ -167,17 +167,17 @@ const MyModulesTab: React.FC = () => {
                         <Space size={4} wrap>
                           <Tag>{SUB_TYPE_LABELS[app.subscriptionType] || app.subscriptionType}</Tag>
                           {app.startTime && (
-                            <Text type="secondary" style={{ fontSize: 11 }}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
                               {dayjs(app.startTime).format('YYYY-MM-DD')} 开通
                             </Text>
                           )}
                           {daysLeft !== null && daysLeft >= 0 && (
-                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} style={{ fontSize: 11 }}>
+                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} style={{ fontSize: 13 }}>
                               · 剩余 {daysLeft} 天
                             </Text>
                           )}
                           {daysLeft === null && !app.endTime && (
-                            <Text type="success" style={{ fontSize: 11 }}>· 永久有效</Text>
+                            <Text type="success" style={{ fontSize: 13 }}>· 永久有效</Text>
                           )}
                         </Space>
                       </div>

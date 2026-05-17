@@ -2,6 +2,8 @@ package com.fashion.supplychain.intelligence.orchestration.agent;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.lock.DistributedLockService;
+import com.fashion.supplychain.integration.im.service.DingtalkNotifyService;
+import com.fashion.supplychain.integration.im.service.FeishuNotifyService;
 import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
@@ -47,6 +49,10 @@ public class SmartRemarkAgent {
     private SysNoticeService sysNoticeService;
     @Autowired(required = false)
     private WxAlertNotifyService wxAlertNotifyService;
+    @Autowired(required = false)
+    private FeishuNotifyService feishuNotifyService;
+    @Autowired(required = false)
+    private DingtalkNotifyService dingtalkNotifyService;
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
     @Autowired
@@ -363,6 +369,26 @@ public class SmartRemarkAgent {
                 log.info("[SmartRemark] 已推送微信订阅消息: {}", title);
             } catch (Exception e) {
                 log.warn("[SmartRemark] 微信订阅消息推送失败: {}", e.getMessage());
+            }
+        }
+
+        if (feishuNotifyService != null) {
+            try {
+                feishuNotifyService.sendOrderAlertForTenant(
+                        tenantId, order.getOrderNo(), order.getStyleNo(),
+                        score >= 80 ? "danger_alert" : "stagnant", content);
+            } catch (Exception e) {
+                log.warn("[SmartRemark] 飞书推送失败: {}", e.getMessage());
+            }
+        }
+
+        if (dingtalkNotifyService != null) {
+            try {
+                dingtalkNotifyService.sendOrderAlertForTenant(
+                        tenantId, order.getOrderNo(), order.getStyleNo(),
+                        score >= 80 ? "danger_alert" : "stagnant", content);
+            } catch (Exception e) {
+                log.warn("[SmartRemark] 钉钉推送失败: {}", e.getMessage());
             }
         }
 

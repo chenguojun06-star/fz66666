@@ -67,10 +67,10 @@ const FactoryList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
-  };
+  }, [showSmartErrorNotice]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const businessLicenseUrl = Form.useWatch('businessLicense', form) as string | undefined;
   const [logLoading, setLogLoading] = useState(false);
@@ -107,7 +107,7 @@ const FactoryList: React.FC = () => {
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   // ===== 数据获取 =====
-  const fetchFactories = async () => {
+  const fetchFactories = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get<{ code: number; message: string; data: { records: FactoryType[]; total: number } }>('/system/factory/list', { params: queryParams });
@@ -125,7 +125,7 @@ const FactoryList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryParams, showSmartErrorNotice, reportSmartError, message]);
 
   const fetchDepartments = useCallback(async () => {
     try {
@@ -147,12 +147,12 @@ const FactoryList: React.FC = () => {
     if (codeChanged || nameChanged) {
       setQueryParams((prev) => ({ ...prev, factoryCode: debouncedFactoryCode, factoryName: debouncedFactoryName, page: 1 }));
     }
-  }, [debouncedFactoryCode, debouncedFactoryName]);
+  }, [debouncedFactoryCode, debouncedFactoryName, queryParams.factoryCode, queryParams.factoryName]);
 
   useEffect(() => {
     if (managementTab !== 'supplier') return;
     fetchFactories();
-  }, [managementTab, queryParams]);
+  }, [managementTab, queryParams, fetchFactories]);
 
   useEffect(() => { void fetchDepartments(); }, [fetchDepartments]);
 
@@ -170,7 +170,7 @@ const FactoryList: React.FC = () => {
         factoryCode: factoryCode || prev.factoryCode,
       }));
     }
-  }, [location.search]);
+  }, [location.search, setManagementTab]);
 
   useEffect(() => {
     if (!factoryModal.visible) {
@@ -218,16 +218,16 @@ const FactoryList: React.FC = () => {
     setQueryParams((prev) => ({ ...prev, page: 1, supplierType: t === 'ALL' ? undefined : t }));
   };
 
-  const openDialog = (mode: DialogMode, factory?: FactoryType) => {
+  const openDialog = useCallback((mode: DialogMode, factory?: FactoryType) => {
     setDialogMode(mode);
     factoryModal.open(factory ?? undefined);
-  };
+  }, [factoryModal]);
   const closeDialog = () => {
     factoryModal.close();
     form.resetFields();
   };
 
-  const openRemarkModal = (
+  const openRemarkModal = useCallback((
     title: string,
     okText: string,
     okButtonProps: any,
@@ -240,7 +240,7 @@ const FactoryList: React.FC = () => {
       okDanger: (okButtonProps as any)?.danger === true,
       onConfirm,
     });
-  };
+  }, []);
   const handleRemarkConfirm = async (remark: string) => {
     if (!remarkModalState) return;
     setRemarkLoading(true);
@@ -254,7 +254,7 @@ const FactoryList: React.FC = () => {
     }
   };
 
-  const openLogModal = async (bizType: string, bizId: string, title: string) => {
+  const openLogModal = useCallback(async (bizType: string, bizId: string, title: string) => {
     setLogTitle(title);
     logModal.open();
     setLogLoading(true);
@@ -273,7 +273,7 @@ const FactoryList: React.FC = () => {
     } finally {
       setLogLoading(false);
     }
-  };
+  }, [logModal, message]);
 
   const handleSave = async () => {
     const values = await form.validateFields();
@@ -309,7 +309,7 @@ const FactoryList: React.FC = () => {
     await submit();
   };
 
-  const handleDelete = async (id?: string) => {
+  const handleDelete = useCallback(async (id?: string) => {
     if (!id) return;
     openRemarkModal('确认删除', '删除', { danger: true }, async (remark) => {
       const response = await api.delete<{ code: number; message: string }>(`/system/factory/${id}`, { params: { remark } });
@@ -320,7 +320,7 @@ const FactoryList: React.FC = () => {
       }
       throw new Error(response.message || '删除失败');
     });
-  };
+  }, [message, openRemarkModal]);
 
   // ===== Columns =====
   const columns = useMemo(() => getFactoryColumns({
@@ -335,7 +335,7 @@ const FactoryList: React.FC = () => {
     scorecardMap,
     scorecardLoading,
     navigate,
-  }), [scorecardMap, scorecardLoading, loadScorecardOnce, navigate]);
+  }), [scorecardMap, scorecardLoading, loadScorecardOnce, navigate, handleDelete, openDialog, openLogModal]);
 
   return (
     <>

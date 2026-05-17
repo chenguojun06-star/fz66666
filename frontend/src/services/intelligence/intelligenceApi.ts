@@ -392,7 +392,9 @@ export const intelligenceApi = {
           const lines = buf.split('\n');
           buf = lines.pop() || '';
           for (const line of lines) {
-            if (line.startsWith('event:')) {
+            if (line.startsWith(':')) {
+              continue;
+            } else if (line.startsWith('event:')) {
               eventName = line.slice(6).trim();
             } else if (line.startsWith('data:')) {
               const dataStr = line.slice(5).trim();

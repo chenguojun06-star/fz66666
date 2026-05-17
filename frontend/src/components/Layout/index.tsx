@@ -16,7 +16,8 @@ import DailyTodoModal from './DailyTodoModal';
 import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
 import GlobalAiAssistant from '../common/GlobalAiAssistant';
 import SideMenu from './SideMenu';
-import { useLayoutAuth } from './useLayoutAuth';
+import { useMenuBadgeCounts } from './useMenuBadgeCounts';
+import { useLayoutAuth, normalizePath } from './useLayoutAuth';
 import { useActivePath, useActiveSectionKey, useRecentPages } from './router';
 import { menuConfig } from '../../routeConfig';
 import './styles.css';
@@ -36,6 +37,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { message } = App.useApp();
   const { isMobile } = useViewport();
   const auth = useLayoutAuth();
+  const { badgeCounts, getVisibleCount, markViewed, viewVersion } = useMenuBadgeCounts();
+
+  const visibleBadgeCounts = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const path of Object.keys(badgeCounts)) {
+      const visible = getVisibleCount(path);
+      if (visible > 0) result[path] = visible;
+    }
+    return result;
+  }, [badgeCounts, getVisibleCount, viewVersion]);
 
   const backgroundLocation = (location.state as any)?.backgroundLocation;
   const effectivePathname: string = backgroundLocation?.pathname || location.pathname;
@@ -162,7 +173,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {recentPages.length ? (
               <div className="header-recents" role="tablist" aria-label={t('layout.recentPages', language)} ref={recentsContainerRef}>
                 {recentPages.map((p) => {
-                  const isCurrent = p.path === effectiveFullPath;
+                  const isCurrent = p.basePath === (getActivePath || normalizePath(effectivePathname));
                   return (
                     <div
                       key={p.path}
@@ -176,7 +187,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         title={p.path}
                         aria-current={isCurrent ? 'page' : undefined}
                         onClick={() => {
-                          if (p.path !== effectiveFullPath) navigate(p.path);
+                          const targetBase = p.basePath;
+                          const currentBase = getActivePath || normalizePath(effectivePathname);
+                          if (targetBase !== currentBase) navigate(p.basePath);
                         }}
                       >
                         {p.title}
@@ -242,6 +255,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           onMenuOpenChange={setMenuOpenKeys}
           onSidebarCollapse={setSidebarCollapsed}
           auth={auth}
+          badgeCounts={visibleBadgeCounts}
+          onMenuClick={markViewed}
         />
 
         <main className="layout-content">

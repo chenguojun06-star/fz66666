@@ -151,7 +151,7 @@ export const TeamStatusCardWidget: React.FC<{
           </div>
         </div>
         {card.routePath && (
-          <button className={`${sharedStyles.actionBtn} ${sharedStyles.actionBtnPrimary}`} onClick={() => onNavigate(card.routePath)}>
+          <button type="button" className={`${sharedStyles.actionBtn} ${sharedStyles.actionBtnPrimary}`} onClick={() => onNavigate(card.routePath)}>
             去处理页
           </button>
         )}
@@ -222,8 +222,8 @@ export const PurchaseDocCardWidget: React.FC<{
           </div>
         </div>
         <div className={styles.purchaseDocActions}>
-          <button className={sharedStyles.actionBtn} onClick={() => onAutoAction('arrival', card)}>自动到货</button>
-          <button className={`${sharedStyles.actionBtn} ${sharedStyles.actionBtnPrimary}`} onClick={() => onAutoAction('inbound', card)}>到货并入库</button>
+          <button type="button" className={sharedStyles.actionBtn} onClick={() => onAutoAction('arrival', card)}>自动到货</button>
+          <button type="button" className={`${sharedStyles.actionBtn} ${sharedStyles.actionBtnPrimary}`} onClick={() => onAutoAction('inbound', card)}>到货并入库</button>
         </div>
       </div>
       {card.summary && <div className={styles.purchaseDocSummary}>{card.summary}</div>}
@@ -310,7 +310,7 @@ export const BundleSplitCardWidget: React.FC<{
         </div>
         {onNavigateToCutting && (
           <div className={styles.purchaseDocActions}>
-            <button className={sharedStyles.actionBtn} onClick={() => onNavigateToCutting(card)}>
+            <button type="button" className={sharedStyles.actionBtn} onClick={() => onNavigateToCutting(card)}>
               打印子菲号
             </button>
           </div>

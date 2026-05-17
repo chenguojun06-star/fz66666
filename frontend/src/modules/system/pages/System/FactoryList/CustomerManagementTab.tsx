@@ -62,7 +62,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
     if (debouncedKeyword !== (queryParams.keyword || '')) {
       setQueryParams((prev) => ({ ...prev, keyword: debouncedKeyword, page: 1 }));
     }
-  }, [debouncedKeyword]);
+  }, [debouncedKeyword, queryParams.keyword]);
 
   const fetchCustomers = useCallback(async () => {
     if (!active) return;

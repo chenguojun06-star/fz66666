@@ -464,15 +464,6 @@ class ScanHandler {
   async _handlePatternScan(parsedData, manualScanType) {
     return PatternScanProcessor.handlePatternScan(this, parsedData, manualScanType);
   }
-
-  /**
-   * 提交样板生产扫码
-   * @param {Object} data - 扫码数据
-   * @returns {Promise<Object>} 提交结果
-   */
-  async submitPatternScan(data) {
-    return PatternScanProcessor.submitPatternScan(this, data);
-  }
 }
 
 // 导出类

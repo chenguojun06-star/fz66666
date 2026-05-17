@@ -7,7 +7,7 @@ import type { ProductionOrder } from '@/types/production';
 import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { safePrint } from '@/utils/safePrint';
-import { parseCareIconCodes, getCareIconSvgs } from '@/utils/careIcons';
+import { parseCareIconCodes, getCareIconSvgs, CARE_ICONS } from '@/utils/careIcons';
 
 type PaperSize = '30x80' | '40x60' | '50x80' | '60x90';
 
@@ -68,22 +68,36 @@ const CARE_SVGS: Record<string, string> = {
 };
 function buildCareIconsHtml(s: StyleData): string {
   const explicitCodes = parseCareIconCodes(s.careIconCodes);
-  if (explicitCodes.length > 0) {
-    const icons = getCareIconSvgs(explicitCodes);
-    if (icons.length > 0) {
-      return `<div class="icons">${icons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
-    }
+  let codes: string[] = explicitCodes.length > 0 ? explicitCodes : [];
+  if (!codes.length) {
+    const legacy = getDisplayWashCareCodes(s, s.washInstructions);
+    codes = [
+      legacy.washTempCode ? `wash_${legacy.washTempCode}` : '',
+      legacy.bleachCode ? `bleach_${legacy.bleachCode}` : '',
+      legacy.tumbleDryCode ? `dry_${legacy.tumbleDryCode}` : '',
+      legacy.ironCode ? `iron_${legacy.ironCode}` : '',
+      legacy.dryCleanCode ? `dryclean_${legacy.dryCleanCode}` : '',
+    ].filter(Boolean);
   }
-  const codes = getDisplayWashCareCodes(s, s.washInstructions);
-  const icons = [
-    codes.washTempCode ? (CARE_SVGS[`wash_${codes.washTempCode}`] ?? '') : '',
-    codes.bleachCode ? (CARE_SVGS[`bleach_${codes.bleachCode}`] ?? '') : '',
-    codes.tumbleDryCode ? (CARE_SVGS[`dry_${codes.tumbleDryCode}`] ?? '') : '',
-    codes.ironCode ? (CARE_SVGS[`iron_${codes.ironCode}`] ?? '') : '',
-    codes.dryCleanCode ? (CARE_SVGS[`dryclean_${codes.dryCleanCode}`] ?? '') : '',
-  ].filter(Boolean);
-  if (!icons.length) return '';
-  return `<div class="icons">${icons.map(icon => `<span class="icon-cell">${icon}</span>`).join('')}</div>`;
+  if (!codes.length) return '';
+
+  // 按类别分组：水洗 → 漂白 → 烘干 → 熨烫 → 干洗 → 自然晾干 → 特殊处理
+  const categoryOrder = ['wash', 'bleach', 'dry', 'iron', 'dryclean', 'naturaldry', 'special'];
+  const groups: Record<string, string[]> = {};
+  codes.forEach(code => {
+    const def = CARE_ICONS[code];
+    if (!def) return;
+    const cat = def.category;
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(def.svg);
+  });
+
+  const rows = categoryOrder
+    .filter(cat => groups[cat]?.length)
+    .map(cat => `<div class="icon-row">${groups[cat].map(svg => `<span class="icon-cell">${svg}</span>`).join('')}</div>`)
+    .join('');
+
+  return rows ? `<div class="icons">${rows}</div>` : '';
 }
 
 export default function WashCareLabelModal({ open, onCancel, order }: Props) {
@@ -162,22 +176,23 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
 @page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm;font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif}
-.lbl{position:relative;width:${w}mm;height:${h}mm;padding:0 2.2mm}
-.top-block{position:absolute;left:2.2mm;right:2.2mm;top:15mm;text-align:center}
-.style-no{font-size:${w <= 30 ? 5.8 : 6.2}pt;font-weight:bold;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.style-name{font-size:${w <= 30 ? 5.1 : 5.5}pt;line-height:1.35;margin-top:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.content-block{position:absolute;left:2.2mm;right:2.2mm;top:24mm;bottom:24mm;overflow:hidden}
+.lbl{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.top-block{text-align:center;flex:0 0 auto;width:100%}
+.style-no{font-size:${w <= 30 ? 5.8 : 6.2}pt;font-weight:bold;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.style-name{font-size:${w <= 30 ? 5.1 : 5.5}pt;line-height:1.35;margin-top:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.content-block{flex:1 1 0;overflow:hidden;min-height:0;padding-top:1.5mm;width:100%;text-align:center}
 .comp-block{margin:.3mm 0}
-.comp-name{font-size:${w <= 30 ? 6.1 : 7}pt;font-weight:bold;display:block;margin-bottom:.6mm}
-.comp-mats{font-size:${w <= 30 ? 7.1 : 6.5}pt;line-height:1.55;white-space:pre-wrap;padding-left:${w <= 30 ? 0 : 3}mm;font-weight:bold}
-.wash-title{font-size:${w <= 30 ? 5.2 : 6}pt;line-height:1.5;color:#444;margin-bottom:.6mm}
-.care-wash{font-size:${w <= 30 ? 5.2 : 6}pt;line-height:1.6;color:#444;white-space:pre-wrap;margin-top:1.6mm}
-.bottom-block{position:absolute;left:2.2mm;right:2.2mm;bottom:6.5mm;display:flex;flex-direction:column;align-items:center}
-.icons{display:flex;gap:.45mm;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;margin:1.8mm auto 0;min-height:6mm}
-.icon-cell{width:4.8mm;height:4.8mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.comp-name{font-size:${w <= 30 ? 6.1 : 7}pt;font-weight:bold;display:block;margin-bottom:.6mm;text-align:center}
+.comp-mats{font-size:${w <= 30 ? 7.1 : 6.5}pt;line-height:1.55;white-space:pre-wrap;font-weight:bold;text-align:center}
+.wash-title{font-size:${w <= 30 ? 5.2 : 6}pt;line-height:1.5;color:#444;margin-bottom:.6mm;text-align:center}
+.care-wash{font-size:${w <= 30 ? 5.2 : 6}pt;line-height:1.6;color:#444;white-space:pre-wrap;margin-top:1.6mm;text-align:center}
+.bottom-block{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:100%}
+.icons{display:flex;flex-direction:column;gap:.8mm;align-items:center;width:100%;margin:1mm auto 0}
+.icon-row{display:flex;gap:.6mm;align-items:center;justify-content:center;flex-wrap:wrap}
+.icon-cell{width:5mm;height:5mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .icons svg{width:100%;height:100%}
-.footer{margin-top:2.1mm;font-size:${w <= 30 ? 5.4 : 5.8}pt;font-weight:bold;letter-spacing:.6mm;line-height:1.3;text-align:center;white-space:nowrap}
-.date{margin-top:2.2mm;font-size:${w <= 30 ? 5.2 : 6}pt;color:#777;text-align:center}
+.footer{margin-top:1.5mm;font-size:${w <= 30 ? 5.4 : 5.8}pt;font-weight:bold;letter-spacing:.6mm;line-height:1.3;text-align:center;white-space:nowrap}
+.date{margin-top:1.5mm;font-size:${w <= 30 ? 5.2 : 6}pt;color:#777;text-align:center}
 </style></head><body><div class="lbl">
   <div class="top-block">
     <div class="style-no">款号：${order.styleNo || '-'}</div>

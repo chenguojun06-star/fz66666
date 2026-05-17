@@ -179,8 +179,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           />
           {loading && <Spin style={{ marginRight: 8 }} />}
           {!loading && query && (
-            <button className="cp-clear" onClick={() => { setQuery(''); setItems([]); inputRef.current?.focus(); }}>
-              <CloseOutlined style={{ fontSize: 11 }} />
+            <button type="button" className="cp-clear" onClick={() => { setQuery(''); setItems([]); inputRef.current?.focus(); }}>
+              <CloseOutlined style={{ fontSize: 13 }} />
             </button>
           )}
           <kbd className="cp-kbd">ESC</kbd>

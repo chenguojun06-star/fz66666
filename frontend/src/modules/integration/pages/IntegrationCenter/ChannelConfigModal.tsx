@@ -12,25 +12,25 @@ import { message } from '@/utils/antdStatic';
 /** 各渠道表单字段定义 */
 const CHANNEL_FIELDS: Record<string, { label: string; key: string; icon: React.ReactNode; required?: boolean; isSecret?: boolean; placeholder?: string }[]> = {
   ALIPAY: [
-    { label: 'AppID', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '支付宝分配的 AppID，如 2021000000000000' },
+    { label: '应用标识 (AppID)', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '支付宝分配的应用标识，如 2021000000000000' },
     { label: '应用私钥', key: 'privateKey', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: 'RSA2私钥（PKCS8，不含头尾）' },
     { label: '支付宝公钥', key: 'publicKey', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: '从开放平台复制的支付宝公钥' },
     { label: '回调通知地址', key: 'notifyUrl', icon: <LinkOutlined />, placeholder: 'https://你的域名/api/webhook/payment/alipay' },
   ],
   WECHAT_PAY: [
-    { label: 'AppID', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '公众号/小程序/APP 的 AppID' },
-    { label: '商户号(MchId)', key: 'appSecret', icon: <KeyOutlined />, required: true, placeholder: '微信支付商户号，如 1600000000' },
-    { label: 'API V3 密钥', key: 'privateKey', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: '32位 API V3 密钥' },
+    { label: '应用标识 (AppID)', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '公众号/小程序/APP 的应用标识' },
+    { label: '商户号', key: 'appSecret', icon: <KeyOutlined />, required: true, placeholder: '微信支付商户号，如 1600000000' },
+    { label: '接口 V3 密钥', key: 'privateKey', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: '32位接口 V3 密钥' },
     { label: '回调通知地址', key: 'notifyUrl', icon: <LinkOutlined />, placeholder: 'https://你的域名/api/webhook/payment/wechat' },
   ],
   SF: [
-    { label: 'AppKey', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '顺丰开放平台 AppKey' },
-    { label: 'AppSecret', key: 'appSecret', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: '顺丰开放平台 AppSecret' },
+    { label: '应用标识 (AppKey)', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '顺丰开放平台应用标识' },
+    { label: '应用密钥 (AppSecret)', key: 'appSecret', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: '顺丰开放平台应用密钥' },
     { label: '回调通知地址', key: 'notifyUrl', icon: <LinkOutlined />, placeholder: 'https://你的域名/api/webhook/logistics/sf' },
   ],
   STO: [
-    { label: 'AppKey', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '申通开放平台 AppKey' },
-    { label: 'AppSecret', key: 'appSecret', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: '申通开放平台 AppSecret' },
+    { label: '应用标识 (AppKey)', key: 'appId', icon: <KeyOutlined />, required: true, placeholder: '申通开放平台应用标识' },
+    { label: '应用密钥 (AppSecret)', key: 'appSecret', icon: <SafetyCertificateOutlined />, required: true, isSecret: true, placeholder: '申通开放平台应用密钥' },
     { label: '回调通知地址', key: 'notifyUrl', icon: <LinkOutlined />, placeholder: 'https://你的域名/api/webhook/logistics/sto' },
   ],
 };
@@ -140,7 +140,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
           style={{ marginBottom: 16 }}
           title={
             <span>
-              填写 API 密钥后开启渠道即可使用。
+              填写接口密钥后开启渠道即可使用。
               {helpLink && (
                 <>
                   {' '}密钥获取：
@@ -160,7 +160,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
             </Descriptions.Item>
             {configData.hasAppSecret && (
               <Descriptions.Item label="密钥状态">
-                AppSecret/私钥已配置（脱敏显示）
+                密钥已配置（脱敏显示）
               </Descriptions.Item>
             )}
           </Descriptions>

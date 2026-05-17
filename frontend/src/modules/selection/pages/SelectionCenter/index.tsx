@@ -88,10 +88,10 @@ export default function SelectionCenter() {
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', color: '#ccc' }}>
                               <FireOutlined style={{ fontSize: 36 }} />
-                              <div style={{ fontSize: 11, marginTop: 6 }}>暂无参考图</div>
+                              <div style={{ fontSize: 13, marginTop: 6 }}>暂无参考图</div>
                             </div>
                           )}
-                          <div style={{ position: 'absolute', top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 11 }}>{label}</Tag></div>
+                          <div style={{ position: 'absolute', top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 13 }}>{label}</Tag></div>
                           {item.trendScore != null && (
                             <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(114,46,209,0.88)', borderRadius: 4, padding: '2px 8px', color: '#fff', fontSize: 12, fontWeight: 700 }}>
                               <ThunderboltOutlined /> {item.trendScore}
@@ -100,8 +100,8 @@ export default function SelectionCenter() {
                         </div>
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.styleName || '未命名'}</div>
-                          <div style={{ fontSize: 11, color: '#999', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType].filter(Boolean).join(' · ')}</div>
-                          <div style={{ fontSize: 11, color: '#777', marginBottom: 8, minHeight: 18 }}>
+                          <div style={{ fontSize: 13, color: '#999', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType].filter(Boolean).join(' · ')}</div>
+                          <div style={{ fontSize: 13, color: '#777', marginBottom: 8, minHeight: 18 }}>
                             {item.reviewCount ? `已评审 ${item.reviewCount} 次` : '待审核'}{item.avgReviewScore != null ? ` · 平均分 ${item.avgReviewScore}` : ''}
                           </div>
                           <div style={{ marginBottom: 8, minHeight: 22 }}>
@@ -109,22 +109,22 @@ export default function SelectionCenter() {
                             {item.status === 'REJECTED' && <Tag color="red" style={{ margin: 0 }}>未通过</Tag>}
                             {item.status === 'HOLD' && <Tag color="blue" style={{ margin: 0 }}>待定</Tag>}
                             {item.status === 'PENDING' && <Tag color="orange" style={{ margin: 0 }}>待评审</Tag>}
-                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 11 }}>{scoreMeta.label}</Tag>}
+                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 13 }}>{scoreMeta.label}</Tag>}
                           </div>
-                          <div style={{ fontSize: 11, color: '#666', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 13, color: '#666', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
                             {latestReview?.comment || item.rejectReason || item.trendScoreReason || '悬停查看 AI 分析、趋势与价值建议'}
                           </div>
                           <Space size={6} style={{ width: '100%' }}>
                             {(item.status === 'PENDING' || item.status === 'HOLD') && (
-                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 11 }}>审核</Button></Tooltip>
+                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 13 }}>审核</Button></Tooltip>
                             )}
                             {item.status === 'APPROVED' && !item.createdStyleId && (
-                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 11 }}>下版到样衣</Button></Tooltip>
+                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 13 }}>下版到样衣</Button></Tooltip>
                             )}
-                            {item.createdStyleId && <Tag color="green" style={{ fontSize: 11, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
+                            {item.createdStyleId && <Tag color="green" style={{ fontSize: 13, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
                             {canDeleteCandidate(item) && (
                               <Tooltip title={item.status === 'APPROVED' ? '审核通过满 10 天后可手动删除候选款' : '审核不通过可直接删除'}>
-                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 11 }}>删除</Button>
+                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 13 }}>删除</Button>
                               </Tooltip>
                             )}
                           </Space>

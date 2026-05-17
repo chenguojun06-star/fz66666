@@ -235,7 +235,8 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> submitScan(String patternId, String operationType, String operatorRole, String remark,
-                                          Integer quantity, String warehouseCode, BigDecimal unitPrice) {
+                                          Integer quantity, String warehouseCode, String warehouseAreaId,
+                                          String warehouseLocationCode, BigDecimal unitPrice) {
         assertSubmitScanParams(patternId, operationType);
         PatternProduction pattern = loadPatternForScan(patternId);
         statusHelper.validateWarehouseOperationFlow(patternId, operationType);
@@ -244,7 +245,8 @@ public class PatternProductionOrchestrator {
         String operatorName = UserContext.username();
         updatePatternQuantityIfNeeded(pattern, quantity, operatorName);
 
-        PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName, operatorRole, remark, warehouseCode);
+        PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName,
+                operatorRole, remark, warehouseCode, warehouseAreaId, warehouseLocationCode);
         patternScanRecordService.save(scanRecord);
 
         syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice);
@@ -281,7 +283,8 @@ public class PatternProductionOrchestrator {
     }
 
     private PatternScanRecord createPatternScanRecord(PatternProduction pattern, String operationType,
-            String operatorId, String operatorName, String operatorRole, String remark, String warehouseCode) {
+            String operatorId, String operatorName, String operatorRole, String remark, String warehouseCode,
+            String warehouseAreaId, String warehouseLocationCode) {
         PatternScanRecord scanRecord = new PatternScanRecord();
         scanRecord.setPatternProductionId(pattern.getId());
         scanRecord.setStyleId(pattern.getStyleId());
@@ -293,6 +296,8 @@ public class PatternProductionOrchestrator {
         scanRecord.setOperatorRole(operatorRole);
         scanRecord.setScanTime(LocalDateTime.now());
         scanRecord.setWarehouseCode(StringUtils.hasText(warehouseCode) ? warehouseCode.trim() : null);
+        scanRecord.setWarehouseAreaId(StringUtils.hasText(warehouseAreaId) ? warehouseAreaId.trim() : null);
+        scanRecord.setWarehouseLocationCode(StringUtils.hasText(warehouseLocationCode) ? warehouseLocationCode.trim() : null);
         scanRecord.setRemark(remark);
         scanRecord.setCreateTime(LocalDateTime.now());
         scanRecord.setDeleteFlag(0);
@@ -352,7 +357,8 @@ public class PatternProductionOrchestrator {
      * 样衣入库（跨域：扫码 + 状态更新）
      */
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> warehouseIn(String patternId, String remark, String warehouseCode) {
+    public Map<String, Object> warehouseIn(String patternId, String remark, String warehouseCode,
+            String warehouseAreaId, String warehouseLocationCode) {
         PatternProduction pattern = getPatternWithTenant(patternId);
         if (pattern == null || pattern.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("样板生产记录不存在");
@@ -365,7 +371,8 @@ public class PatternProductionOrchestrator {
             throw new IllegalStateException("样衣审核未通过，无法入库");
         }
 
-        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, pattern.getQuantity(), warehouseCode, null);
+        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark,
+                pattern.getQuantity(), warehouseCode, warehouseAreaId, warehouseLocationCode, null);
         result.put("message", "样衣入库成功");
         return result;
     }

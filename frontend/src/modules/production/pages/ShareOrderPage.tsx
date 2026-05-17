@@ -153,7 +153,7 @@ const ShareOrderPage: React.FC = () => {
     : ai?.riskLevel
       ? { label: RISK_LABEL[ai.riskLevel], color: RISK_COLOR[ai.riskLevel] }
       : { label: '跟踪中', color: '#00e5ff' };
-  const shareInfoLabelStyle: React.CSSProperties = { color: '#79a8c7', fontSize: 11 };
+  const shareInfoLabelStyle: React.CSSProperties = { color: '#79a8c7', fontSize: 13 };
   const shareInfoValueStyle: React.CSSProperties = { color: '#dff3ff', fontSize: 13, fontWeight: 600 };
 
   return (
@@ -183,7 +183,7 @@ const ShareOrderPage: React.FC = () => {
         <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>订单编号</div>
+              <div style={{ fontSize: 13, color: '#79a8c7', marginBottom: 2 }}>订单编号</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#f2fbff', fontFamily: 'monospace' }}>{data.orderNo}</div>
             </div>
             <Tag color={pageRiskTone.color} style={{ fontSize: 12, padding: '2px 10px', borderRadius: 20, border: 'none', color: '#fff', boxShadow: `0 0 18px ${pageRiskTone.color}33` }}>
@@ -217,15 +217,15 @@ const ShareOrderPage: React.FC = () => {
           <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 12 }}> 智能进度说明</div>
           <div style={{ display: 'grid', gap: 10 }}>
             <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
-              <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>当前状态</div>
+              <div style={{ fontSize: 13, color: '#7fa7c2', marginBottom: 4 }}>当前状态</div>
               <div style={{ fontSize: 13, color: '#dff5ff', lineHeight: 1.7 }}>{smartNarrative.summary}</div>
             </div>
             <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
-              <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>当前判断</div>
+              <div style={{ fontSize: 13, color: '#7fa7c2', marginBottom: 4 }}>当前判断</div>
               <div style={{ fontSize: 13, color: '#dff5ff', lineHeight: 1.7 }}>{smartNarrative.reason}</div>
             </div>
             <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
-              <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>预计说明</div>
+              <div style={{ fontSize: 13, color: '#7fa7c2', marginBottom: 4 }}>预计说明</div>
               <div style={{ fontSize: 13, color: '#dff5ff', lineHeight: 1.7 }}>{smartNarrative.prediction}</div>
             </div>
           </div>
@@ -260,11 +260,11 @@ const ShareOrderPage: React.FC = () => {
             <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff', marginBottom: 12 }}> AI 预测分析</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>预测完成日期</div>
+                <div style={{ fontSize: 13, color: '#7fa7c2', marginBottom: 4 }}>预测完成日期</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#e6f7ff' }}>{ai.predictedFinishDate || '计算中'}</div>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 11, color: '#7fa7c2', marginBottom: 4 }}>预测置信度</div>
+                <div style={{ fontSize: 13, color: '#7fa7c2', marginBottom: 4 }}>预测置信度</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: riskColor }}>{ai.confidence ?? 0}%</div>
               </div>
             </div>
@@ -288,7 +288,7 @@ const ShareOrderPage: React.FC = () => {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, color: '#dff5ff', fontWeight: 500 }}>{s.processName || '工序'}</div>
-                    <div style={{ fontSize: 11, color: '#7fa7c2' }}>{formatTime(s.scanTime as string | null | undefined)}</div>
+                    <div style={{ fontSize: 13, color: '#7fa7c2' }}>{formatTime(s.scanTime as string | null | undefined)}</div>
                   </div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#00e5ff' }}>×{s.quantity as React.ReactNode}</div>
@@ -298,7 +298,7 @@ const ShareOrderPage: React.FC = () => {
         )}
 
         {/* 底部说明 */}
-        <div style={{ textAlign: 'center', padding: '16px 0 8px', color: '#7fa7c2', fontSize: 11 }}>
+        <div style={{ textAlign: 'center', padding: '16px 0 8px', color: '#7fa7c2', fontSize: 13 }}>
           此链接由供应链系统生成
           {data.expiresAt && (
             <span> · 失效时间 {formatTime(new Date(data.expiresAt).toISOString())}</span>

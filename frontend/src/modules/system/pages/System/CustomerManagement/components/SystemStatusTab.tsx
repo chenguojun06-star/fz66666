@@ -93,7 +93,7 @@ const SystemStatusTab: React.FC = () => {
                   value={dbUp ? '正常' : '异常'}
                   styles={{ content: { color: dbUp ? '#52c41a' : '#ff4d4f', fontSize: 20 } }}
                 />
-                {dbUp && <Text type="secondary" style={{ fontSize: 11 }}>{overview.database.product} {overview.database.version?.split('-')[0]}</Text>}
+                {dbUp && <Text type="secondary" style={{ fontSize: 13 }}>{overview.database.product} {overview.database.version?.split('-')[0]}</Text>}
               </Card>
             </Col>
           </Row>

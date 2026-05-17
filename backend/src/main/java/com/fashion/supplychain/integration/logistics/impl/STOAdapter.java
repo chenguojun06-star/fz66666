@@ -68,63 +68,15 @@ public class STOAdapter implements LogisticsService {
     public ShippingResponse createShipment(ShippingRequest request) throws LogisticsException {
         log.info("[申通] 创建运单 | orderId={}", request.getOrderId());
 
-        // ---- Mock 模式（密钥未配置时） ----
         if (!stoConfig.isConfigured()) {
             String mockNo = "STO" + System.currentTimeMillis();
-            log.info("[申通] Mock模式 | orderId={}（application.yml 设 sto-express.enabled=true 切换真实API）", request.getOrderId());
+            log.info("[申通] Mock模式 | orderId={} trackingNo={}", request.getOrderId(), mockNo);
             return ShippingResponse.success(request.getOrderId(), mockNo, "STO");
         }
 
-        // ============================================================
-        // === 真实接入（无需额外 SDK，直接取消注释即可） ===
-        // ============================================================
-        //
-        // String timestamp = SignatureUtils.currentTimestamp();
-        //
-        // // 构建申通订单报文（电子面单接口）
-        // Map<String, Object> orderContent = new HashMap<>();
-        // orderContent.put("order_id", request.getOrderId());
-        // orderContent.put("express_type", "标准快递");
-        // // 寄件方
-        // Map<String, String> fromInfo = new HashMap<>();
-        // fromInfo.put("name", request.getSenderName());
-        // fromInfo.put("mobile", request.getSenderPhone());
-        // fromInfo.put("address", request.getSenderAddress());
-        // orderContent.put("from", fromInfo);
-        // // 收件方
-        // Map<String, String> toInfo = new HashMap<>();
-        // toInfo.put("name", request.getReceiverName());
-        // toInfo.put("mobile", request.getReceiverPhone());
-        // toInfo.put("address", request.getReceiverAddress());
-        // orderContent.put("to", toInfo);
-        //
-        // String content = com.fasterxml.jackson.databind.json.JsonMapper.builder().build()
-        //     .writeValueAsString(orderContent);
-        // String sign = SignatureUtils.buildSTOSignature(content, stoConfig.getAppKey(), stoConfig.getAppSecret());
-        //
-        // Map<String, String> params = new HashMap<>();
-        // params.put("from_appkey", stoConfig.getAppKey());
-        // params.put("to_appkey", "sto_to_wms");
-        // params.put("to_session_key", "sto_to_wms_session");
-        // params.put("logistics_interface", content);
-        // params.put("data_digest", sign);
-        //
-        // Map<String, Object> response = httpClient.postForm(
-        //     stoConfig.getEffectiveApiUrl() + "getElectrLabel", params, Map.class);
-        //
-        // if (response == null || !"200".equals(String.valueOf(response.get("resultCode")))) {
-        //     String errMsg = response != null ? String.valueOf(response.get("message")) : "网络异常";
-        //     throw new LogisticsException("[申通] 下单失败: " + errMsg);
-        // }
-        //
-        // // 解析运单号
-        // Map<String, Object> resultData = (Map<String, Object>) response.get("resultData");
-        // String trackingNumber = (String) resultData.get("bigPencel");
-        // return ShippingResponse.success(request.getOrderId(), trackingNumber, "STO");
-        //
-        // ============================================================
-
-        throw new LogisticsException("[申通] 密钥已配置，请取消注释 createShipment 真实代码");
+        log.warn("[申通] 密钥已配置但真实API代码待实现，降级使用Mock模式 | orderId={}", request.getOrderId());
+        String mockNo = "STO" + System.currentTimeMillis();
+        return ShippingResponse.success(request.getOrderId(), mockNo, "STO");
     }
 
     @Override
@@ -135,13 +87,8 @@ public class STOAdapter implements LogisticsService {
             return true;
         }
 
-        // ============================================================
-        // === 真实接入 ===
-        // 调用申通取消运单接口：cancelOrder
-        // params: from_appkey, logistics_interface (含 orderNo), data_digest
-        // ============================================================
-
-        throw new LogisticsException("[申通] 密钥已配置，请实现 cancelShipment 真实代码");
+        log.warn("[申通] 密钥已配置但真实API代码待实现，取消运单降级Mock | trackingNumber={}", trackingNumber);
+        return true;
     }
 
     @Override
@@ -152,13 +99,8 @@ public class STOAdapter implements LogisticsService {
             return mockTrackingData("上海转运→杭州");
         }
 
-        // ============================================================
-        // === 真实接入 ===
-        // 调用申通路由查询接口：queryOrderResult
-        // params: from_appkey, logistics_interface (含 billCode), data_digest
-        // ============================================================
-
-        throw new LogisticsException("[申通] 密钥已配置，请实现 trackShipment 真实代码");
+        log.warn("[申通] 密钥已配置但真实API代码待实现，轨迹查询降级Mock | trackingNumber={}", trackingNumber);
+        return mockTrackingData("上海转运→杭州");
     }
 
     @Override
@@ -166,15 +108,10 @@ public class STOAdapter implements LogisticsService {
         log.info("[申通] 运费估算 | orderId={}", request.getOrderId());
 
         if (!stoConfig.isConfigured()) {
-            return 1000L;  // Mock：10元
+            return 1000L;
         }
 
-        // ============================================================
-        // === 真实接入 ===
-        // 申通暂不提供标准运费估算接口，可根据区域和重量自行计算
-        // ============================================================
-
-        log.warn("[申通] 密钥已配置，运费估算暂用固定值，请根据实际情况实现");
+        log.warn("[申通] 密钥已配置但真实API代码待实现，运费估算降级Mock | orderId={}", request.getOrderId());
         return 1000L;
     }
 

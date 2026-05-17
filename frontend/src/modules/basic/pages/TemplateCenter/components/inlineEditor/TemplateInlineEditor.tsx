@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Form, Input, Select, Tag, Upload } from 'antd';
+import { App, Button, Form, Input, Select, Tag } from 'antd';
 import api from '@/utils/api';
 import { sortSizeNames } from '@/utils/api';
 import type { TemplateLibrary } from '@/types/style';
@@ -223,7 +223,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
   const handleUploadImage = async (file: File) => {
     if (imageUrls.length >= 4) {
       message.warning('最多上传4张图片');
-      return Upload.LIST_IGNORE;
+      return;
     }
     setImageUploading(true);
     try {
@@ -232,7 +232,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
       const response = await api.post<{ code: number; data: string; message?: string }>('/common/upload', formData);
       if (response.code !== 200 || !response.data) {
         message.error(response.message || '上传失败');
-        return Upload.LIST_IGNORE;
+        return;
       }
       setImageUrls((prev) => [...prev, response.data].slice(0, 4));
       message.success('图片已上传，保存后生效');
@@ -241,7 +241,6 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
     } finally {
       setImageUploading(false);
     }
-    return Upload.LIST_IGNORE;
   };
 
   const addSize = () => {

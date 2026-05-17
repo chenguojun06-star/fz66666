@@ -6,8 +6,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.stock.entity.SampleStock;
+import com.fashion.supplychain.stock.mapper.SampleStockMapper;
+import com.fashion.supplychain.stock.service.SampleStockService;
 import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.entity.InventoryCheck;
 import com.fashion.supplychain.warehouse.entity.InventoryCheckItem;
 import com.fashion.supplychain.warehouse.service.InventoryCheckItemService;
@@ -41,6 +46,12 @@ public class InventoryCheckOrchestrator {
     @Autowired
     private ProductSkuService productSkuService;
 
+    @Autowired
+    private SampleStockService sampleStockService;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
+
     @Transactional(rollbackFor = Exception.class)
     public InventoryCheck createCheck(Map<String, Object> params) {
         Long tenantId = UserContext.tenantId();
@@ -49,6 +60,7 @@ public class InventoryCheckOrchestrator {
                 ? LocalDate.parse((String) params.get("checkDate"))
                 : LocalDate.now();
         String warehouseLocation = (String) params.get("warehouseLocation");
+        String styleNo = (String) params.get("styleNo");
         String remark = (String) params.get("remark");
 
         InventoryCheck check = new InventoryCheck();
@@ -73,10 +85,18 @@ public class InventoryCheckOrchestrator {
         check.setUpdateTime(LocalDateTime.now());
 
         List<InventoryCheckItem> items = new ArrayList<>();
-        if ("MATERIAL".equals(checkType)) {
-            loadMaterialStockItems(tenantId, warehouseLocation, items);
-        } else {
-            loadFinishedProductItems(tenantId, items);
+        switch (checkType) {
+            case "MATERIAL":
+                loadMaterialStockItems(tenantId, warehouseLocation, styleNo, items);
+                break;
+            case "FINISHED":
+                loadFinishedProductItems(tenantId, styleNo, items);
+                break;
+            case "SAMPLE":
+                loadSampleStockItems(tenantId, styleNo, items);
+                break;
+            default:
+                throw new IllegalArgumentException("不支持的盘点类型: " + checkType);
         }
 
         check.setTotalItems(items.size());
@@ -93,13 +113,16 @@ public class InventoryCheckOrchestrator {
         return check;
     }
 
-    private void loadMaterialStockItems(Long tenantId, String warehouseLocation, List<InventoryCheckItem> items) {
+    private void loadMaterialStockItems(Long tenantId, String warehouseLocation, String styleNo, List<InventoryCheckItem> items) {
         LambdaQueryWrapper<MaterialStock> qw = new LambdaQueryWrapper<>();
         qw.eq(MaterialStock::getTenantId, tenantId);
         qw.eq(MaterialStock::getDeleteFlag, 0);
         qw.gt(MaterialStock::getQuantity, 0);
         if (StringUtils.hasText(warehouseLocation)) {
             qw.eq(MaterialStock::getLocation, warehouseLocation);
+        }
+        if (StringUtils.hasText(styleNo)) {
+            qw.eq(MaterialStock::getMaterialCode, styleNo);
         }
         List<MaterialStock> stocks = materialStockService.list(qw);
         for (MaterialStock stock : stocks) {
@@ -108,6 +131,7 @@ public class InventoryCheckOrchestrator {
             item.setStockId(stock.getId());
             item.setMaterialCode(stock.getMaterialCode());
             item.setMaterialName(stock.getMaterialName());
+            item.setStyleNo(stock.getMaterialCode());
             item.setColor(stock.getColor());
             item.setSize(stock.getSize());
             item.setSpecifications(stock.getSpecifications());
@@ -123,20 +147,28 @@ public class InventoryCheckOrchestrator {
         }
     }
 
-    private void loadFinishedProductItems(Long tenantId, List<InventoryCheckItem> items) {
+    private void loadFinishedProductItems(Long tenantId, String styleNo, List<InventoryCheckItem> items) {
         LambdaQueryWrapper<ProductSku> qw = new LambdaQueryWrapper<>();
         qw.eq(ProductSku::getTenantId, tenantId);
         qw.gt(ProductSku::getStockQuantity, 0);
+        if (StringUtils.hasText(styleNo)) {
+            qw.eq(ProductSku::getStyleNo, styleNo);
+        }
         List<ProductSku> skus = productSkuService.list(qw);
+
+        Map<String, String> styleCoverMap = buildStyleCoverMap(tenantId);
+
         for (ProductSku sku : skus) {
             InventoryCheckItem item = new InventoryCheckItem();
             item.setId(UUID.randomUUID().toString().replace("-", ""));
             item.setStockId(sku.getId() != null ? sku.getId().toString() : null);
             item.setSkuCode(sku.getSkuCode());
+            item.setStyleNo(sku.getStyleNo());
             item.setColor(sku.getColor());
             item.setSize(sku.getSize());
             item.setUnitPrice(sku.getCostPrice());
             item.setBookQuantity(sku.getStockQuantity() != null ? sku.getStockQuantity() : 0);
+            item.setImageUrl(styleCoverMap.get(sku.getStyleNo()));
             item.setCheckStatus("pending");
             item.setTenantId(tenantId);
             item.setDeleteFlag(0);
@@ -144,6 +176,49 @@ public class InventoryCheckOrchestrator {
             item.setUpdateTime(LocalDateTime.now());
             items.add(item);
         }
+    }
+
+    private void loadSampleStockItems(Long tenantId, String styleNo, List<InventoryCheckItem> items) {
+        LambdaQueryWrapper<SampleStock> qw = new LambdaQueryWrapper<>();
+        qw.eq(SampleStock::getTenantId, tenantId);
+        qw.eq(SampleStock::getDeleteFlag, 0);
+        qw.gt(SampleStock::getQuantity, 0);
+        if (StringUtils.hasText(styleNo)) {
+            qw.eq(SampleStock::getStyleNo, styleNo);
+        }
+        List<SampleStock> samples = sampleStockService.list(qw);
+        for (SampleStock sample : samples) {
+            InventoryCheckItem item = new InventoryCheckItem();
+            item.setId(UUID.randomUUID().toString().replace("-", ""));
+            item.setStockId(sample.getId());
+            item.setSkuCode(sample.getStyleNo() + "-" + sample.getColor() + "-" + sample.getSize());
+            item.setStyleNo(sample.getStyleNo());
+            item.setMaterialName(sample.getStyleName());
+            item.setColor(sample.getColor());
+            item.setSize(sample.getSize());
+            item.setBookQuantity(sample.getQuantity() != null ? sample.getQuantity() : 0);
+            item.setImageUrl(sample.getImageUrl());
+            item.setCheckStatus("pending");
+            item.setTenantId(tenantId);
+            item.setDeleteFlag(0);
+            item.setCreateTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            items.add(item);
+        }
+    }
+
+    private Map<String, String> buildStyleCoverMap(Long tenantId) {
+        List<StyleInfo> styles = styleInfoService.list(
+                new LambdaQueryWrapper<StyleInfo>()
+                        .eq(StyleInfo::getTenantId, tenantId)
+                        .isNotNull(StyleInfo::getCover));
+        Map<String, String> map = new HashMap<>();
+        for (StyleInfo s : styles) {
+            if (StringUtils.hasText(s.getCover()) && StringUtils.hasText(s.getStyleNo())) {
+                map.put(s.getStyleNo(), s.getCover());
+            }
+        }
+        return map;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -262,8 +337,8 @@ public class InventoryCheckOrchestrator {
         Long tenantId = UserContext.tenantId();
         for (InventoryCheckItem item : items) {
             if (item.getDiffQuantity() == null || item.getDiffQuantity() == 0) continue;
+            int delta = item.getDiffQuantity();
             if ("MATERIAL".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
-                int delta = item.getDiffQuantity();
                 if (delta < 0) {
                     int rows = ((com.fashion.supplychain.production.mapper.MaterialStockMapper) materialStockService.getBaseMapper())
                             .decreaseStockWithCheck(item.getStockId(), Math.abs(delta), tenantId);
@@ -280,9 +355,15 @@ public class InventoryCheckOrchestrator {
                 }
                 log.info("盘点调整物料库存: stockId={}, delta={}", item.getStockId(), delta);
             } else if ("FINISHED".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
-                int delta = item.getDiffQuantity();
                 productSkuService.updateStockById(Long.valueOf(item.getStockId()), delta);
                 log.info("盘点调整成品库存: skuId={}, delta={}", item.getStockId(), delta);
+            } else if ("SAMPLE".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
+                int rows = ((SampleStockMapper) sampleStockService.getBaseMapper())
+                        .updateStockQuantity(item.getStockId(), delta, tenantId);
+                if (rows == 0) {
+                    log.warn("[盘点调整] 样衣库存调整失败: stockId={}, delta={}", item.getStockId(), delta);
+                }
+                log.info("盘点调整样衣库存: stockId={}, delta={}", item.getStockId(), delta);
             }
         }
     }
@@ -354,12 +435,29 @@ public class InventoryCheckOrchestrator {
                         .gt(ProductSku::getStockQuantity, 0));
         result.put("skuStockCount", skuCount);
 
+        long sampleCount = sampleStockService.count(
+                new LambdaQueryWrapper<SampleStock>()
+                        .eq(SampleStock::getTenantId, tenantId)
+                        .eq(SampleStock::getDeleteFlag, 0)
+                        .gt(SampleStock::getQuantity, 0));
+        result.put("sampleStockCount", sampleCount);
+
         long pendingChecks = checkService.count(
                 new LambdaQueryWrapper<InventoryCheck>()
                         .eq(InventoryCheck::getTenantId, tenantId)
                         .eq(InventoryCheck::getDeleteFlag, 0)
                         .eq(InventoryCheck::getStatus, "draft"));
         result.put("pendingChecks", pendingChecks);
+
+        List<InventoryCheck> confirmedChecks = checkService.list(
+                new LambdaQueryWrapper<InventoryCheck>()
+                        .eq(InventoryCheck::getTenantId, tenantId)
+                        .eq(InventoryCheck::getDeleteFlag, 0)
+                        .eq(InventoryCheck::getStatus, "confirmed"));
+        BigDecimal totalDiffAmount = confirmedChecks.stream()
+                .map(c -> c.getTotalDiffAmount() != null ? c.getTotalDiffAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        result.put("totalDiffAmount", totalDiffAmount);
 
         return result;
     }

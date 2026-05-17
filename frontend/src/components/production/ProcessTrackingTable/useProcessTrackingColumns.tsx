@@ -83,7 +83,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
           reset: { color: 'var(--color-danger)', label: '已重置' },
         };
         const cfg = sm[status] || { color: '#d9d9d9', label: '未知' };
-        return <Tag color={cfg.color} style={{ fontSize: 11, margin: 0 }}>{cfg.label}</Tag>;
+        return <Tag color={cfg.color} style={{ fontSize: 13, margin: 0 }}>{cfg.label}</Tag>;
       },
     },
     {
@@ -92,7 +92,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       key: 'scanTime',
       width: 140,
       render: (time: string) => (
-        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{time ? formatDateTime(time) : '-'}</span>
+        <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{time ? formatDateTime(time) : '-'}</span>
       ),
     },
     {

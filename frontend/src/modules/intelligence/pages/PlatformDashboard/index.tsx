@@ -100,7 +100,7 @@ export const PlatformDashboard: React.FC = () => {
   React.useEffect(() => { load(days); }, []);
 
   if (!user?.isSuperAdmin) {
-    return <Alert type="error" message="无权限" description="仅平台超级管理员可访问本页面" showIcon />;
+    return <Alert type="error" title="无权限" description="仅平台超级管理员可访问本页面" showIcon />;
   }
 
   const toolColumns = [
@@ -158,7 +158,7 @@ export const PlatformDashboard: React.FC = () => {
         </div>
       </div>
 
-      {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} closable />}
+      {error && <Alert type="error" title={error} style={{ marginBottom: 16 }} closable />}
 
       <Spin spinning={loading}>
         {/* 综合指标卡 */}

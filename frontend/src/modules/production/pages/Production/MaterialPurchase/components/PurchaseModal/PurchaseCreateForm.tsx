@@ -1,30 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip, Upload } from 'antd';
-import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
-import type { UploadChangeParam } from 'antd/es/upload';
-import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
+import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip } from 'antd';
 
 
 import api from '@/utils/api';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
+import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import { message } from '@/utils/antdStatic';
 import { formatReferenceKilograms } from '../../utils';
 
 const { Option } = Select;
-
-// 上传组件样式
-const uploadStyles = `
-  .avatar-uploader .ant-upload {
-    width: 104px !important;
-    height: 104px !important;
-    border-radius: 6px;
-  }
-  .avatar-uploader .ant-upload-select {
-    width: 104px !important;
-    height: 104px !important;
-  }
-`;
 
 interface PurchaseCreateFormProps {
   form: any;
@@ -43,7 +28,6 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const watchedColor = Form.useWatch('color', form);
   const watchedSize = Form.useWatch('size', form);
   const [stockInfo, setStockInfo] = useState<{ quantity: number, location: string, safetyStock: number } | null>(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
 
   // 面辅料数据库搜索
   const [materialDbOptions, setMaterialDbOptions] = useState<Array<{ label: string; value: string; record?: any }>>([]);
@@ -109,76 +93,6 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
     form.setFieldsValue(patch);
   };
 
-  // 图片上传前验证
-  const beforeUpload = (file: RcFile) => {
-    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg';
-    if (!isJpgOrPng) {
-      message.error('只能上传 JPG/PNG 格式的图片！');
-      return false;
-    }
-    const isLt5M = file.size / 1024 / 1024 < 5;
-    if (!isLt5M) {
-      message.error('图片大小不能超过 5MB！');
-      return false;
-    }
-    return true;
-  };
-
-  // 图片上传处理
-  const handleUploadChange: UploadProps['onChange'] = (info: UploadChangeParam<UploadFile>) => {
-    if (info.file.status === 'uploading') {
-      setUploadLoading(true);
-      return;
-    }
-    if (info.file.status === 'done') {
-      setUploadLoading(false);
-      // 后端返回格式：{ code: 200, data: "/api/common/download/xxx.jpg" }
-      const response = info.file.response;
-      if (response?.code === 200 && response?.data) {
-        // data 本身就是 url 路径
-        const imageUrl = typeof response.data === 'string' ? response.data : response.data.url;
-        form.setFieldsValue({ styleCover: imageUrl });
-        message.success('图片上传成功');
-      } else {
-        message.error(response?.message || '图片上传失败');
-      }
-    }
-    if (info.file.status === 'error') {
-      setUploadLoading(false);
-      message.error('图片上传失败');
-    }
-  };
-
-  // 自定义上传
-  const customUpload = async (options: any) => {
-    const { file, onSuccess, onError } = options;
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      // 调用后端通用上传接口
-      const res = await api.post('/common/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      if (res.code === 200 && res.data) {
-        // 后端返回的是相对路径，直接使用
-        onSuccess({ code: 200, data: { url: res.data } });
-      } else {
-        onError(new Error(res.message || '上传失败'));
-      }
-    } catch (error) {
-      onError(error);
-    }
-  };
-
-  const uploadButton = (
-    <div>
-      {uploadLoading ? <LoadingOutlined /> : <PlusOutlined />}
-      <div style={{ marginTop: 8, fontSize: "var(--font-size-xs)" }}>上传图片</div>
-    </div>
-  );
-
   useEffect(() => {
     const qty = Number(watchedArrivedQuantity || 0);
     const price = Number(watchedUnitPrice || 0);
@@ -225,7 +139,6 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
 
   return (
     <>
-      <style>{uploadStyles}</style>
       <Form
         form={form}
         layout="horizontal"
@@ -236,25 +149,15 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
           <Form.Item label="图片">
-            <Upload
-              name="file"
-              listType="picture-card"
-              className="avatar-uploader"
-              showUploadList={false}
-              beforeUpload={beforeUpload}
-              onChange={handleUploadChange}
-              customRequest={customUpload}
-            >
-              {watchedStyleCover ? (
-                <img
-                  src={getFullAuthedFileUrl(watchedStyleCover)}
-                  alt="款式图片"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                uploadButton
-              )}
-            </Upload>
+            <ImageUploadBox
+              value={watchedStyleCover}
+              onChange={(url) => form.setFieldsValue({ styleCover: url })}
+              size={104}
+              enableDrop
+              accept="image/jpeg,image/jpg,image/png"
+              maxSizeMB={5}
+              label="款式图片"
+            />
             {/* 隐藏的表单项存储图片URL */}
             <Form.Item name="styleCover" hidden>
               <Input />
@@ -470,59 +373,19 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
             <Input id="invoiceUrls" />
           </Form.Item>
           <Form.Item label="采购单据" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
-            <Upload
-              accept="image/jpeg,image/jpg,image/png,application/pdf"
-              listType="picture-card"
-              fileList={(() => {
+            <MultiImageUploadBox
+              value={(() => {
                 const urlsStr = form.getFieldValue('invoiceUrls');
                 if (!urlsStr) return [];
-                try {
-                  const urls = JSON.parse(urlsStr);
-                  return urls.map((url: string, i: number) => ({ uid: `-${i}`, name: `单据${i+1}`, status: 'done', url }));
-                } catch {
-                  return [];
-                }
+                try { return JSON.parse(urlsStr); } catch { return []; }
               })()}
-              onRemove={(file) => {
-                const urlsStr = form.getFieldValue('invoiceUrls');
-                if (!urlsStr) return;
-                try {
-                  const urls = JSON.parse(urlsStr);
-                  const newUrls = urls.filter((u: string) => u !== file.url);
-                  form.setFieldsValue({ invoiceUrls: JSON.stringify(newUrls) });
-                } catch {}
-              }}
-              customRequest={async (options: any) => {
-                const { file, onSuccess, onError } = options;
-                const formData = new FormData();
-                formData.append('file', file);
-                try {
-                  const res = await api.post('/common/upload', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                  }) as any;
-                  if (res?.code === 200 && res?.data) {
-                    const url = typeof res.data === 'string' ? res.data : (res.data?.url ?? '');
-                    const urlsStr = form.getFieldValue('invoiceUrls');
-                    let urls = [];
-                    if (urlsStr) {
-                      try { urls = JSON.parse(urlsStr); } catch {}
-                    }
-                    urls.push(url as never);
-                    form.setFieldsValue({ invoiceUrls: JSON.stringify(urls) });
-                    onSuccess(res);
-                  } else {
-                    onError(new Error(res?.message || '上传失败'));
-                  }
-                } catch (error) {
-                  onError(error);
-                }
-              }}
-            >
-              <div>
-                <PlusOutlined />
-                <div style={{ marginTop: 8 }}>上传单据</div>
-              </div>
-            </Upload>
+              onChange={(urls) => form.setFieldsValue({ invoiceUrls: JSON.stringify(urls) })}
+              maxCount={10}
+              size={80}
+              accept="image/jpeg,image/jpg,image/png,application/pdf"
+              maxSizeMB={10}
+              label="单据"
+            />
           </Form.Item>
         </Col>
       </Row>

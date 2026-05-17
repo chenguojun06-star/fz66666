@@ -54,6 +54,9 @@ public class StyleListEnrichmentHelper {
     @Autowired
     private SampleStockMapper sampleStockMapper;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.ProductSkuService productSkuService;
+
     public void fillOrderCountFields(List<StyleInfo> records) {
         if (records == null || records.isEmpty()) return;
         Long readableTenantId = resolveReadableTenantId();
@@ -225,6 +228,39 @@ public class StyleListEnrichmentHelper {
             if (byId != null && byId > 0) { s.setTotalWarehousedQuantity(byId); continue; }
             String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
             s.setTotalWarehousedQuantity(StringUtils.hasText(sno) ? warehousedByStyleNo.getOrDefault(sno, 0) : 0);
+        }
+    }
+
+    public void fillStockFields(List<StyleInfo> records) {
+        if (records == null || records.isEmpty()) return;
+
+        Set<Long> ids = new HashSet<>();
+        for (StyleInfo s : records) {
+            if (s != null && s.getId() != null) ids.add(s.getId());
+        }
+        if (ids.isEmpty()) return;
+
+        try {
+            QueryWrapper<com.fashion.supplychain.style.entity.ProductSku> qw = new QueryWrapper<>();
+            qw.select("style_id as styleId", "COALESCE(SUM(stock_quantity), 0) as totalStock")
+              .in("style_id", ids)
+              .eq("status", "ENABLED")
+              .groupBy("style_id");
+            List<Map<String, Object>> rows = productSkuService.listMaps(qw);
+            Map<String, Integer> stockByStyleId = new HashMap<>();
+            for (Map<String, Object> r : rows) {
+                if (r == null) continue;
+                String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
+                int qty = r.get("totalStock") == null ? 0 : Integer.parseInt(String.valueOf(r.get("totalStock")));
+                if (StringUtils.hasText(sid) && qty > 0) stockByStyleId.put(sid, qty);
+            }
+            for (StyleInfo s : records) {
+                if (s == null || s.getId() == null) continue;
+                String idKey = String.valueOf(s.getId());
+                s.setStockQuantity(stockByStyleId.getOrDefault(idKey, 0));
+            }
+        } catch (Exception e) {
+            log.warn("fillStockFields 查询SKU库存异常: {}", e.getMessage());
         }
     }
 

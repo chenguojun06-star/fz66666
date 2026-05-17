@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Form, Input, InputNumber, DatePicker } from 'antd';
+import { Form, Input, InputNumber, DatePicker, Select } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SampleStock } from './types';
 import api from '@/utils/api';
@@ -8,6 +8,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
+import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 
 interface LoanModalProps {
   visible: boolean;
@@ -21,6 +22,10 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
   const [loading, setLoading] = React.useState(false);
   const [smartError, setSmartError] = React.useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const warehouseAreaId = Form.useWatch('warehouseAreaId', form);
+  const { selectOptions: areaOptions } = useWarehouseAreaOptions('SAMPLE');
+  const { selectOptions: locationOptions } = useWarehouseLocationByArea('SAMPLE', warehouseAreaId);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -111,6 +116,30 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           label="借出原因/备注"
         >
           <Input.TextArea rows={2} />
+        </Form.Item>
+        <Form.Item label="出库仓库" name="warehouseAreaId">
+          <Select
+            placeholder="选择仓库"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            options={areaOptions}
+            onChange={() => form.setFieldValue('warehouseLocation', undefined)}
+          />
+        </Form.Item>
+        <Form.Item noStyle shouldUpdate={(prev, cur) => prev.warehouseAreaId !== cur.warehouseAreaId}>
+          {() => (
+            <Form.Item label="库位" name="warehouseLocation">
+              <Select
+                placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                options={locationOptions}
+                disabled={!warehouseAreaId}
+              />
+            </Form.Item>
+          )}
         </Form.Item>
       </Form>
     </ResizableModal>

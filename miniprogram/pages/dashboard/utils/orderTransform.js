@@ -49,7 +49,6 @@ function mapFactoryTypeLabel(factoryType) {
 function sortSizes(sizes) {
   return sortSizeNames(sizes);
 }
-}
 
 /**
  * 判断订单是否为已关闭状态

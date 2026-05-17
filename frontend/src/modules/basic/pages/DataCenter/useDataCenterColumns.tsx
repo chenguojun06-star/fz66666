@@ -1,54 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
+import AttachmentThumb from '@/components/common/AttachmentThumb';
 import RowActions from '@/components/common/RowActions';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import api from '@/utils/api';
 import type { StyleInfo } from '@/types/style';
-
-const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | null }> = ({ styleId, cover }) => {
-  const [url, setUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    let mounted = true;
-    if (!styleId) {
-      setUrl(cover || null);
-      return () => { mounted = false; };
-    }
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);
-        if (res.code === 200) {
-          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
-          const first = (images[0] as any)?.fileUrl || null;
-          if (mounted) setUrl(first || cover || null);
-          return;
-        }
-        if (mounted) setUrl(cover || null);
-      } catch {
-        if (mounted) setUrl(cover || null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, [styleId, cover]);
-
-  return (
-    <div style={{ width: 56, height: 56, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {loading ? (
-        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
-      ) : url ? (
-        <img loading="lazy" src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
-      )}
-    </div>
-  );
-};
 
 interface ColumnCallbacks {
   openDetailModal: (record: StyleInfo) => void;

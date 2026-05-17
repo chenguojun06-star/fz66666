@@ -60,7 +60,7 @@ const OrphanDataPage: React.FC = () => {
     } finally {
       setLoadingItems(false);
     }
-  }, []);
+  }, [msgApi]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedTable || selectedRowKeys.length === 0) return;
@@ -87,7 +87,7 @@ const OrphanDataPage: React.FC = () => {
         }
       },
     });
-  }, [selectedTable, selectedRowKeys, handleSelectCategory, handleScan]);
+  }, [selectedTable, selectedRowKeys, handleSelectCategory, handleScan, msgApi]);
 
   const columns = [
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140,
@@ -135,7 +135,7 @@ const OrphanDataPage: React.FC = () => {
             <Col span={8}>
               <Card>
                 <Statistic title="孤立数据总量" value={scanResult.totalOrphanCount} suffix="条"
-                  valueStyle={{ color: scanResult.totalOrphanCount > 0 ? '#cf1322' : '#52c41a' }} />
+                  styles={{ content: { color: scanResult.totalOrphanCount > 0 ? '#cf1322' : '#52c41a' } }} />
               </Card>
             </Col>
             <Col span={8}>
@@ -145,7 +145,7 @@ const OrphanDataPage: React.FC = () => {
             </Col>
             <Col span={8}>
               <Card>
-                <Statistic title="扫描时间" value={scanResult.scanTime ? new Date(scanResult.scanTime).toLocaleString('zh-CN') : '-'} valueStyle={{ fontSize: 14 }} />
+                <Statistic title="扫描时间" value={scanResult.scanTime ? new Date(scanResult.scanTime).toLocaleString('zh-CN') : '-'} styles={{ content: { fontSize: 14 } }} />
               </Card>
             </Col>
           </Row>

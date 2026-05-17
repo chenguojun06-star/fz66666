@@ -79,7 +79,7 @@ export const xiaoYunBubbleStyle: React.CSSProperties = {
   boxShadow: '0 12px 24px rgba(37,99,235,0.12)',
 };
 
-export const aiSupportTextStyle: React.CSSProperties = { marginTop: 6, fontSize: 11, color: '#94a3b8', lineHeight: 1.5 };
+export const aiSupportTextStyle: React.CSSProperties = { marginTop: 6, fontSize: 13, color: '#94a3b8', lineHeight: 1.5 };
 export const confidenceStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#0f172a', background: 'rgba(241,245,249,0.9)', borderRadius: 999, padding: '8px 12px' };
 export const aiGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 };
 

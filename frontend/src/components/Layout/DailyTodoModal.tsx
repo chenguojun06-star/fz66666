@@ -130,7 +130,7 @@ const DecisionCardRow: React.FC<{
         </Tag>
         <span style={{ fontWeight: 600, fontSize: 14, color: '#141414' }}>{card.title}</span>
         {card.confidence > 0 && (
-          <span style={{ fontSize: 11, color: '#8c8c8c', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 13, color: '#8c8c8c', marginLeft: 'auto' }}>
             置信度 {card.confidence}%
           </span>
         )}
@@ -160,7 +160,7 @@ const DecisionCardRow: React.FC<{
             fontWeight: 500,
           }}
         >
-          {card.actionLabel} <RightOutlined style={{ fontSize: 10 }} />
+          {card.actionLabel} <RightOutlined style={{ fontSize: 12 }} />
         </div>
       )}
     </div>
@@ -183,17 +183,17 @@ function buildTrendOption(trend: TrendPoint[]) {
     },
     legend: {
       data: ['扫码次数', '入库单数', '下单数'],
-      bottom: 0, textStyle: { fontSize: 11 }, itemWidth: 16, itemHeight: 8,
+      bottom: 0, textStyle: { fontSize: 13 }, itemWidth: 16, itemHeight: 8,
     },
     grid: { left: 36, right: 16, top: 10, bottom: 32, containLabel: false },
     xAxis: {
       type: 'category' as const, data: dates, boundaryGap: false,
       axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { fontSize: 11, color: '#8c8c8c' },
+      axisLabel: { fontSize: 13, color: '#8c8c8c' },
     },
     yAxis: {
       type: 'value' as const, splitLine: { lineStyle: { color: '#f5f5f5' } },
-      axisLabel: { fontSize: 11, color: '#8c8c8c' },
+      axisLabel: { fontSize: 13, color: '#8c8c8c' },
     },
     series: [
       {
@@ -326,7 +326,7 @@ const DailyTodoModal: React.FC = () => {
               <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>
                 {brief.date} · 数据已实时同步
                 {brief.suggestionsSource === 'ai' && (
-                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 11 }}>
+                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 13 }}>
                     <RobotOutlined /> AI 增强
                   </Tag>
                 )}
@@ -484,7 +484,7 @@ const ActionRow: React.FC<{
   >
     <span style={{ fontSize: 16, color }}>{icon}</span>
     <span style={{ flex: 1, fontSize: 13, color: '#262626' }}>{title}</span>
-    <RightOutlined style={{ fontSize: 11, color: '#bfbfbf' }} />
+    <RightOutlined style={{ fontSize: 13, color: '#bfbfbf' }} />
   </div>
 );
 

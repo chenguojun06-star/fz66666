@@ -28,19 +28,46 @@ public class EmployeeAdvanceController {
         return Result.success(employeeAdvanceOrchestrator.create(advance));
     }
 
+    @PostMapping("/{id}/stage-action")
+    public Result<Void> stageAction(@PathVariable String id, @RequestParam String action, @RequestBody(required = false) Map<String, String> body) {
+        String remark = body != null ? body.get("remark") : null;
+        switch (action) {
+            case "approve" -> {
+                employeeAdvanceOrchestrator.approve(id, remark);
+                return Result.success();
+            }
+            case "reject" -> {
+                employeeAdvanceOrchestrator.reject(id, remark);
+                return Result.success();
+            }
+            case "repay" -> {
+                BigDecimal amount = body != null && body.get("amount") != null
+                        ? new BigDecimal(body.get("amount")) : null;
+                employeeAdvanceOrchestrator.repay(id, amount);
+                return Result.success();
+            }
+            default -> {
+                return Result.fail("不支持的操作: " + action);
+            }
+        }
+    }
+
     @PutMapping("/{id}/approve")
+    @Deprecated
     public Result<Void> approve(@PathVariable String id, @RequestBody Map<String, String> body) {
         employeeAdvanceOrchestrator.approve(id, body != null ? body.get("remark") : null);
         return Result.success();
     }
 
     @PutMapping("/{id}/reject")
+    @Deprecated
     public Result<Void> reject(@PathVariable String id, @RequestBody Map<String, String> body) {
         employeeAdvanceOrchestrator.reject(id, body != null ? body.get("remark") : null);
         return Result.success();
     }
 
     @PutMapping("/{id}/repay")
+    @Deprecated
     public Result<Void> repay(@PathVariable String id, @RequestBody Map<String, Object> body) {
         BigDecimal amount = body != null && body.get("amount") != null
                 ? new BigDecimal(String.valueOf(body.get("amount")))

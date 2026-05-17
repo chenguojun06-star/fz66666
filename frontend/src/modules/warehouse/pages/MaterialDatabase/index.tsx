@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Input, Select, Form, Row, Col, InputNumber, Upload } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Button, Card, Input, Select, Form, Row, Col, InputNumber } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { useUser } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
 import { MaterialDatabase } from '@/types/production';
@@ -119,11 +119,19 @@ const MaterialDatabasePage: React.FC = () => {
           <Row gutter={[12, 8]}>
             <Col xs={24} sm={8} md={6} lg={4} xl={4}>
               <Form.Item name="image" label="物料图片">
-                <Upload accept="image/*" listType="picture-card" maxCount={1} fileList={imageFiles}
-                  onRemove={() => { form.setFieldsValue({ image: undefined }); setImageFiles([]); return true; }}
-                  beforeUpload={(file) => { void uploadImage(file as File); return Upload.LIST_IGNORE; }}>
-                  {imageFiles.length ? null : (<div><UploadOutlined /><div style={{ marginTop: 8, fontSize: 'var(--font-size-sm)' }}>上传</div></div>)}
-                </Upload>
+                <ImageUploadBox
+                  value={imageFiles.length > 0 ? (imageFiles[0] as any)?.url?.replace(/^.*\/api\//, '/api/') || null : null}
+                  onChange={(url) => {
+                    if (!url) {
+                      form.setFieldsValue({ image: undefined });
+                      setImageFiles([]);
+                    }
+                  }}
+                  enableDrop
+                  size={104}
+                  label="物料图片"
+                  uploadFn={uploadImage}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8} md={6} lg={5} xl={4}>

@@ -61,7 +61,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
               <Button icon={<LinkOutlined />} onClick={() => onCopyRegisterUrl(registerUrl)}>复制注册链接</Button>
               <Button icon={<QrcodeOutlined />} onClick={() => onCopyTenantCode(tenantInfo.tenantCode || '')}>复制工厂码</Button>
             </div>
-            <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
+            <Typography.Text type="secondary" style={{ fontSize: 13, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
               员工扫码二维码或输入工厂码即可申请加入
             </Typography.Text>
           </div>

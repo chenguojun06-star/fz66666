@@ -70,7 +70,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
         <Text strong style={{ fontSize: 13, color: '#1677ff' }}>AI质检助手</Text>
         {loading && <Spin style={{ marginLeft: 4 }} />}
         {data && data.historicalVerdict && (
-          <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 11 }}>
+          <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 13 }}>
             {verdictLabel[data.historicalVerdict]}
             {data.historicalDefectRate != null && ` ${(data.historicalDefectRate * 100).toFixed(1)}%`}
           </Tag>
@@ -143,7 +143,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           </div>
         ) : (
           !loading && data && (
-            <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 4 }}>
               暂无该次品类别的处理建议
             </Text>
           )

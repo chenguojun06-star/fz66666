@@ -108,7 +108,7 @@ const InspectionDetail: React.FC = () => {
         .catch(() => {});
     }
     autoInitRef.current = true;
-  }, [orderId, orderDetail]);
+  }, [orderId, orderDetail, formHook]);
 
   const fetchBriefing = useCallback(async () => {
     if (!orderId) return;

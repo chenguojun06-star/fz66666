@@ -5,7 +5,7 @@
 /* ========== Ant Design 按钮全局覆盖 ========== */
 
 /* 按钮基础高度与胶囊统一 */
-.ant-btn:not(.ant-btn-icon-only) {
+.ant-btn:not(.ant-btn-icon-only):not(.recent-tab-label):not(.recent-tab-close) {
   height: 32px !important;
   padding: 0 16px !important;
   border-radius: 6px !important;
@@ -192,8 +192,8 @@
 }
 
 /* 图标按钮 */
-.ant-btn-icon-only {
-  border-radius: 6px !important; /* 圆角矩形 */
+.ant-btn-icon-only:not(.recent-tab-close) {
+  border-radius: 6px !important;
   width: auto !important;
   height: auto !important;
   padding: 8px !important;

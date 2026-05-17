@@ -13,12 +13,11 @@
 }
 
 .detail-section {
-  padding: 24rpx 28rpx;
-  border-bottom: 1rpx solid var(--color-border-light);
+  padding: 20rpx 28rpx;
 }
 
-.detail-section:last-child {
-  border-bottom: none;
+.detail-section + .detail-section {
+  padding-top: 0;
 }
 
 .order-header {
@@ -175,7 +174,9 @@
 .tag-orange { background: var(--color-warning-bg); color: var(--color-warning); }
 .tag-blue   { background: var(--color-info-bg); color: var(--color-primary); }
 .tag-green  { background: var(--color-success-bg); color: var(--color-success); }
-.tag-gray   { background: var(--color-bg-gray); color: var(--color-text-tertiary); }
+.tag-red    { background: var(--color-danger-bg); color: var(--color-danger); }
+.tag-gold   { background: var(--color-warning-bg); color: #d48806; }
+.tag-cyan   { background: var(--color-info-bg); color: #0891b2; }
 
 .confirm-badge {
   font-size: var(--font-size-xs);

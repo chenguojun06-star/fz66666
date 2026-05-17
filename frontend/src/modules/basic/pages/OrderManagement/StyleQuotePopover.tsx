@@ -148,7 +148,7 @@ const StyleQuotePopover: React.FC<{
                   </span>
                   <span>{o.quantity}件</span>
                   <span style={{ color: '#fa8c16' }}>{fmt(o.unitPrice)}</span>
-                  <Tag color={st.color} style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
+                  <Tag color={st.color} style={{ fontSize: 12, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                     {st.text}
                   </Tag>
                 </div>

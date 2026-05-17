@@ -158,7 +158,7 @@ function ProfileContent({ profile }: { profile: WorkerProfile }) {
         </div>
       )}
 
-      <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
+      <div style={{ fontSize: 13, color: '#aaa', marginTop: 6 }}>
         {stages.length > 0 ? `近${profile.dateDays}天 · ` : ''}最近扫码：{lastDate}
       </div>
     </div>

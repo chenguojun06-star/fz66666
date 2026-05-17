@@ -16,6 +16,24 @@ const isViteDevServerRequest = (): boolean => {
   }
 };
 
+let _cachedToken: string | null = null;
+let _tokenCacheTs = 0;
+const TOKEN_CACHE_TTL_MS = 60_000;
+
+function getCachedToken(): string | null {
+  const now = Date.now();
+  if (_cachedToken !== null && now - _tokenCacheTs < TOKEN_CACHE_TTL_MS) {
+    return _cachedToken;
+  }
+  try {
+    _cachedToken = localStorage.getItem('authToken');
+  } catch {
+    _cachedToken = null;
+  }
+  _tokenCacheTs = now;
+  return _cachedToken;
+}
+
 /**
  * 给文件URL附加认证 token（用于浏览器直接打开/下载/图片显示）
  *
@@ -27,7 +45,7 @@ export function getAuthedFileUrl(fileUrl: string | undefined | null): string {
   const url = fileUrl.trim();
   if (!url) return '';
 
-  const token = localStorage.getItem('authToken');
+  const token = getCachedToken();
   if (!token) return url;
 
   if (url.startsWith('http://') || url.startsWith('https://')) {

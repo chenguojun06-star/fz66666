@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect } from 'react';
-import { Button, Input, Modal, Popover, Space, Spin, Upload, Tooltip } from 'antd';
+import { memo, useCallback, useEffect, useRef } from 'react';
+import { Button, Input, Modal, Popover, Space, Spin, Tooltip } from 'antd';
 import {
   CloudSyncOutlined,
   DeleteOutlined,
@@ -36,6 +36,8 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
     updateField, updateSizePrice, handleAddSize, handleRemoveSize,
     saveAll, syncToOrders, saveAndSync: hookSaveAndSync, handleClose,
   } = useProcessPriceActions(open, styleNo);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const columns = useProcessPriceColumns(
     editMode, sizes, data, updateField, updateSizePrice, handleRemoveSize, handleDelete,
@@ -144,16 +146,46 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
 
   const renderImageArea = () => (
     <div style={{ marginBottom: 12 }}>
-      <Upload
-        accept="image/*"
-        showUploadList={false}
-        beforeUpload={handleUploadImage}
-        disabled={!readyForScope || imageUploading}
+      <span
+        onDragOver={(e) => { if (readyForScope && !imageUploading) e.preventDefault(); }}
+        onDrop={(e) => {
+          if (!readyForScope || imageUploading) return;
+          e.preventDefault();
+          Array.from(e.dataTransfer.files || []).forEach((f) => {
+            if (f.type.startsWith('image/')) void handleUploadImage(f);
+          });
+        }}
+        onPaste={(e) => {
+          if (!readyForScope || imageUploading) return;
+          const files = e.clipboardData.files;
+          if (files?.length) { e.preventDefault(); Array.from(files).forEach((f) => { if (f.type.startsWith('image/')) void handleUploadImage(f); }); return; }
+          const items = e.clipboardData.items;
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) { e.preventDefault(); const f = items[i].getAsFile(); if (f) void handleUploadImage(f); break; }
+          }
+        }}
+        style={{ display: 'inline-block' }}
       >
-        <Button icon={imageUploading ? <Spin /> : <CameraOutlined />} disabled={!readyForScope}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          disabled={!readyForScope || imageUploading}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleUploadImage(f);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          }}
+        />
+        <Button
+          icon={imageUploading ? <Spin /> : <CameraOutlined />}
+          disabled={!readyForScope}
+          onClick={() => fileInputRef.current?.click()}
+        >
           上传工艺图
         </Button>
-      </Upload>
+      </span>
       {imageUrls.length > 0 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
           {imageUrls.map((url, idx) => (

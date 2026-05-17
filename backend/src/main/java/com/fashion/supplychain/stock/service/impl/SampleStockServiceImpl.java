@@ -23,6 +23,8 @@ import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.stock.service.SampleStockService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
+import com.fashion.supplychain.warehouse.entity.WarehouseArea;
+import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -65,6 +67,9 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
 
     @Autowired
     private com.fashion.supplychain.production.service.ScanRecordService scanRecordService;
+
+    @Autowired
+    private WarehouseAreaService warehouseAreaService;
 
     @Override
     public IPage<SampleStock> queryPage(Map<String, Object> params) {
@@ -152,6 +157,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         scanRecord.setScanTime(LocalDateTime.now());
         scanRecord.setRemark(stock.getRemark() != null ? stock.getRemark() : "PC端样衣库存入库");
         scanRecord.setWarehouseCode(stock.getLocation());
+        scanRecord.setWarehouseAreaId(stock.getWarehouseAreaId());
+        scanRecord.setWarehouseLocationCode(stock.getLocation());
         scanRecord.setCreateTime(LocalDateTime.now());
         scanRecord.setDeleteFlag(0);
         patternScanRecordService.save(scanRecord);
@@ -195,6 +202,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             stock.setStyleName(request.getStyleName());
             stock.setSampleType(StringUtils.hasText(request.getSampleType()) ? request.getSampleType().trim() : "development");
             stock.setLocation(request.getLocation());
+            stock.setWarehouseAreaId(request.getWarehouseAreaId());
+            stock.setWarehouseAreaName(request.getWarehouseAreaName());
             stock.setRemark(request.getRemark());
             stock.setImageUrl(request.getImageUrl());
             stock.setColor(row == null ? null : row.getColor());
@@ -238,6 +247,12 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         loan.setStatus("borrowed");
         loan.setDeleteFlag(0);
         loan.setTenantId(currentTenantId);
+        if (StringUtils.hasText(loan.getWarehouseAreaId()) && !StringUtils.hasText(loan.getWarehouseAreaName())) {
+            try {
+                WarehouseArea area = warehouseAreaService.getById(loan.getWarehouseAreaId());
+                if (area != null) loan.setWarehouseAreaName(area.getAreaName());
+            } catch (Exception ignored) {}
+        }
         sampleLoanMapper.insert(loan);
 
         baseMapper.updateLoanedQuantity(stock.getId(), loanQty, currentTenantId);

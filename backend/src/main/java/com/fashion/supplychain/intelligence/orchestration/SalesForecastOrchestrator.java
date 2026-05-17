@@ -23,7 +23,6 @@ public class SalesForecastOrchestrator {
 
     public SalesForecastResponse forecastSales(String styleNo, int horizonMonths) {
         TenantAssert.assertTenantContext();
-        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         LocalDateTime start = LocalDateTime.now().minusMonths(6);
@@ -75,25 +74,17 @@ public class SalesForecastOrchestrator {
 
     public SizeCurveResponse forecastSizeCurve(String styleNo) {
         TenantAssert.assertTenantContext();
-        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         LocalDateTime start = LocalDateTime.now().minusMonths(3);
-        List<ProductWarehousing> records = warehousingMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductWarehousing>()
-                        .select("size", "qualified_quantity")
-                        .eq("tenant_id", tenantId)
-                        .eq("delete_flag", 0)
-                        .eq("style_no", styleNo)
-                        .ge("create_time", start)
-                        .last("LIMIT 5000"));
+        List<Map<String, Object>> records = warehousingMapper.selectSizeQuantityByStyleNo(tenantId, styleNo, start);
 
         Map<String, Integer> sizeQty = new LinkedHashMap<>();
         int total = 0;
-        for (ProductWarehousing w : records) {
-            String size = w.getSize();
+        for (Map<String, Object> row : records) {
+            String size = row.get("size") != null ? String.valueOf(row.get("size")) : null;
             if (size == null || size.isEmpty()) continue;
-            int qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
+            int qty = row.get("qualified_quantity") != null ? ((Number) row.get("qualified_quantity")).intValue() : 0;
             sizeQty.merge(size, qty, Integer::sum);
             total += qty;
         }
