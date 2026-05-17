@@ -227,7 +227,7 @@ public class AgentLoopEngine {
         log.info("[AgentLoop] 完成任务，进入自反思审查层");
         String revisedContent;
 
-        if (XiaoyunPatterns.shouldSkipCritic(ctx.getUserMessage(), ctx.getAllExecRecords().size())) {
+        if (XiaoyunPatterns.shouldSkipCritic(ctx.getUserMessage(), ctx.getAllExecRecords().size(), rawContent.length())) {
             log.info("[AgentLoop] 简单场景跳过Critic审查 (iter={}, tools={})",
                     ctx.getCurrentIteration(), ctx.getAllExecRecords().size());
             revisedContent = rawContent;
