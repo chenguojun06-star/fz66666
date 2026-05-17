@@ -6,7 +6,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import api, { type ApiResult } from '@/utils/api';
 import CustomerInfoSection from './CustomerInfoSection';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
-import { useDictOptions } from '@/hooks/useDictOptions';
 
 type QrcodeOutboundType = 'sales' | 'transfer' | 'scrap';
 
@@ -63,11 +62,6 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
 
   const { selectOptions: areaOptions } = useWarehouseAreaOptions('FINISHED');
   const { selectOptions: locationOptions } = useWarehouseLocationByArea('FINISHED', warehouseAreaId);
-  const { options: outboundTypeOptions } = useDictOptions('outbound_type', [
-    { label: '销售出库', value: 'sales' },
-    { label: '调拨出库', value: 'transfer' },
-    { label: '报废出库', value: 'scrap' },
-  ]);
 
   const handleAdd = async () => {
     const code = inputVal.trim();
@@ -300,7 +294,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         <Space wrap style={{ width: '100%' }}>
           <span>
             出库类型：
-            <Select style={{ width: 140 }} value={outboundType} onChange={v => setOutboundType(v)} options={outboundTypeOptions} />
+            <Select style={{ width: 140 }} value={outboundType} onChange={v => setOutboundType(v)} options={[{ label: '销售出库', value: 'sales' }, { label: '调拨出库', value: 'transfer' }, { label: '报废出库', value: 'scrap' }]} />
           </span>
           <span>
             出库仓库：

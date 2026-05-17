@@ -6,7 +6,6 @@ import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { UnifiedDatePicker, dayjs } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CustomerSelect from '@/components/common/CustomerSelect';
-import { useDictOptions } from '@/hooks/useDictOptions';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import { CUTTING_STAGE_ORDER, computeStageSortedAndSpan } from '@/utils/productionStage';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
@@ -18,19 +17,6 @@ interface Props {
 
 const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   const { sorted, spanMap } = computeStageSortedAndSpan(createTask.createProcessNodes, CUTTING_STAGE_ORDER);
-  const { options: factoryLabelOptions } = useDictOptions('factory_label', [
-    { label: '内部工厂', value: 'INTERNAL' },
-    { label: '外发加工', value: 'EXTERNAL' },
-  ]);
-  const urgencyLevelOptions = useDictOptions('urgency_level', [
-    { label: '普通', value: 'normal' },
-    { label: '急单', value: 'urgent' },
-  ]).options;
-  const difficultyOptions = useDictOptions('process_difficulty', [
-    { label: '易', value: 'EASY' },
-    { label: '中', value: 'MEDIUM' },
-    { label: '难', value: 'HARD' },
-  ]).options;
 
   // ── 快速批量录入 状态 ──────────────────────────────────────────────────
   const [matrixColors, setMatrixColors] = useState<string[]>([]);
@@ -183,7 +169,10 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <span>生产方</span>
           <Segmented
             value={createTask.createFactoryMode}
-            options={factoryLabelOptions}
+            options={[
+              { label: '内部工厂', value: 'INTERNAL' },
+              { label: '外发加工', value: 'EXTERNAL' },
+            ]}
             style={{ width: 220 }}
             onChange={(value) => {
               const nextMode = value as 'INTERNAL' | 'EXTERNAL';
@@ -255,7 +244,10 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             value={createTask.createUrgencyLevel}
             onChange={(v) => createTask.setCreateUrgencyLevel(v)}
             style={{ width: 100 }}
-            options={urgencyLevelOptions}
+            options={[
+              { label: '普通', value: 'normal' },
+              { label: '急单', value: 'urgent' },
+            ]}
           />
         </Space>
         <div style={{ marginTop: 8 }}>
@@ -541,7 +533,11 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                         placeholder="选择"
                         style={{ width: '100%' }}
                         onChange={(v) => createTask.updateProcessNode(originalIndex, 'difficulty', v || '')}
-                        options={difficultyOptions}
+                        options={[
+                          { value: '易', label: '易' },
+                          { value: '中', label: '中' },
+                          { value: '难', label: '难' },
+                        ]}
                       />
                     </td>
                     <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>

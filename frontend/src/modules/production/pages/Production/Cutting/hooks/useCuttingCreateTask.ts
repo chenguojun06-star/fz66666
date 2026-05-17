@@ -7,7 +7,6 @@ import type { OrganizationUnit } from '@/types/system';
 import { CUTTING_STAGE_ORDER } from '@/utils/productionStage';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery } from '@/utils/styleCategory';
 import { productionOrderApi, type FactoryCapacityItem } from '@/services/production/productionApi';
-import { useDictOptions } from '@/hooks/useDictOptions';
 
 export type CuttingFactoryMode = 'INTERNAL' | 'EXTERNAL';
 
@@ -97,7 +96,6 @@ interface UseCuttingCreateTaskOptions {
 
 export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCuttingCreateTaskOptions) {
   useUser();
-  const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);
@@ -469,7 +467,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     createRemarks, setCreateRemarks,
     createUrgencyLevel, setCreateUrgencyLevel,
     createCategory, setCreateCategory,
-    categoryOptions,
+    categoryOptions: CATEGORY_CODE_OPTIONS,
     selectedFactoryStat,
     addProcessNode, addProcessNodeToStage, removeProcessNode, updateProcessNode,
     importFromTemplate,

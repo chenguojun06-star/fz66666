@@ -9,6 +9,7 @@ import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.gateway.StreamChunkConsumer;
 import com.fashion.supplychain.intelligence.orchestration.AiCriticOrchestrator;
@@ -226,14 +227,19 @@ public class AgentLoopEngine {
         log.info("[AgentLoop] 完成任务，进入自反思审查层");
         String revisedContent;
 
-        if (shouldSkipCritic(ctx.getUserMessage(), ctx.getCurrentIteration(), ctx.getAllExecRecords().size())) {
+        if (XiaoyunPatterns.shouldSkipCritic(ctx.getUserMessage(), ctx.getAllExecRecords().size())) {
             log.info("[AgentLoop] 简单场景跳过Critic审查 (iter={}, tools={})",
                     ctx.getCurrentIteration(), ctx.getAllExecRecords().size());
             revisedContent = rawContent;
         } else {
             cb.onCriticThinking();
-            revisedContent = criticOrchestrator.reviewAndRevise(
-                    ctx.getUserMessage(), rawContent, ctx.getAllExecRecords());
+            try {
+                revisedContent = criticOrchestrator.reviewAndRevise(
+                        ctx.getUserMessage(), rawContent, ctx.getAllExecRecords());
+            } catch (Exception e) {
+                log.warn("[AgentLoop] Critic审查异常，使用原始回答: {}", e.getMessage());
+                revisedContent = rawContent;
+            }
         }
 
         revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, ctx.getTeamDispatchCards());
@@ -293,6 +299,43 @@ public class AgentLoopEngine {
     }
 
     private String runDataTruthGuards(AgentLoopContext ctx, String content) {
+        String toolEvidence = ctx.getToolEvidence();
+        StringBuilder warnings = new StringBuilder();
+        try {
+            java.util.concurrent.CompletableFuture<DataTruthGuard.TruthCheckResult> truthF = java.util.concurrent.CompletableFuture.supplyAsync(() -> dataTruthGuard.checkAiOutputTruth(content, toolEvidence));
+            java.util.concurrent.CompletableFuture<DataTruthGuard.NumericConsistencyResult> numF = java.util.concurrent.CompletableFuture.supplyAsync(() -> dataTruthGuard.checkNumericConsistency(content, toolEvidence));
+            java.util.concurrent.CompletableFuture<EntityFactChecker.FactCheckResult> factF = java.util.concurrent.CompletableFuture.supplyAsync(() -> entityFactChecker.verifyEntities(content));
+            java.util.concurrent.CompletableFuture<GroundedGenerationGuard.GroundingResult> groundF = java.util.concurrent.CompletableFuture.supplyAsync(() -> groundedGenerationGuard.verify(content, ctx.getAllExecRecords()));
+            java.util.concurrent.CompletableFuture.allOf(truthF, numF, factF, groundF).get(10, java.util.concurrent.TimeUnit.SECONDS);
+            DataTruthGuard.TruthCheckResult truthCheck = truthF.getNow(dataTruthGuard.checkAiOutputTruth(content, toolEvidence));
+            DataTruthGuard.NumericConsistencyResult numCheck = numF.getNow(dataTruthGuard.checkNumericConsistency(content, toolEvidence));
+            EntityFactChecker.FactCheckResult factCheck = factF.getNow(entityFactChecker.verifyEntities(content));
+            GroundedGenerationGuard.GroundingResult grounding = groundF.getNow(groundedGenerationGuard.verify(content, ctx.getAllExecRecords()));
+            if (!truthCheck.isPassed()) {
+                log.warn("[AgentLoop] 数据真实性校验未通过: {}", truthCheck.getReason());
+                warnings.append("\n> ⚠️ 数据校验提示：").append(truthCheck.getReason());
+            }
+            if (!numCheck.isConsistent() && numCheck.getMismatches() != null && !numCheck.getMismatches().isEmpty()) {
+                log.warn("[AgentLoop] 数字一致性校验异常: {}", numCheck.getMismatches());
+                warnings.append("\n> ⚠️ 以下数字在工具返回结果中未找到，可能不准确：").append(String.join("、", numCheck.getMismatches()));
+            }
+            if (!factCheck.allVerified() && factCheck.phantomEntities() != null && !factCheck.phantomEntities().isEmpty()) {
+                log.warn("[AgentLoop] 实体事实校验发现不存在的实体: {}", factCheck.phantomEntities());
+                warnings.append("\n> ⚠️ 以下引用的实体在系统中不存在：").append(String.join("、", factCheck.phantomEntities()));
+            }
+            if (!grounding.passed()) {
+                log.warn("[AgentLoop] 接地率检查未通过: rate={}", grounding.groundingRate());
+                String gw = grounding.toWarningText();
+                if (gw != null && !gw.isEmpty()) warnings.append("\n> ⚠️ ").append(gw);
+            }
+        } catch (Exception e) {
+            log.warn("[AgentLoop] 并行数据校验异常，回退串行: {}", e.getMessage());
+            return runDataTruthGuardsFallback(ctx, content);
+        }
+        return warnings.toString();
+    }
+
+    private String runDataTruthGuardsFallback(AgentLoopContext ctx, String content) {
         String toolEvidence = ctx.getToolEvidence();
         StringBuilder warnings = new StringBuilder();
         DataTruthGuard.TruthCheckResult truthCheck = dataTruthGuard.checkAiOutputTruth(content, toolEvidence);
@@ -371,14 +414,6 @@ public class AgentLoopEngine {
                 log.debug("[AgentLoop] 状态失败跳过: {}", e.getMessage());
             }
         }
-    }
-
-    private boolean shouldSkipCritic(String userMessage, int currentIteration, int totalToolCalls) {
-        if (userMessage != null && userMessage.length() < 15
-                && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|在吗|辛苦了|好的|收到|明白|知道了|了解).*")) {
-            return true;
-        }
-        return totalToolCalls <= 1;
     }
 
     private void recordCompensableExecs(String sessionId,

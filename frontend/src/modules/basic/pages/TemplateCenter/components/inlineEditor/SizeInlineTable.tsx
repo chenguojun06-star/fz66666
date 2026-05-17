@@ -209,7 +209,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
       render: (text: string, _: SizeTablePart, index?: number) => (
         <Input
           value={String(text || '')}
-          placeholder="如：0.5"
+          placeholder="如：±0.5"
           disabled={readOnly}
           onChange={(e) => updatePart(index ?? 0, { tolerance: e.target.value })}
         />

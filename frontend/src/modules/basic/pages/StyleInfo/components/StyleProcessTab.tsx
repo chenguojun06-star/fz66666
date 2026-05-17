@@ -11,7 +11,6 @@ import { StyleProcessTabProps, StyleProcessWithSizePrice, STAGE_ORDER, computeSo
 import { useStyleProcessData } from './hooks/useStyleProcessData';
 import { useStyleProcessActions } from './hooks/useStyleProcessActions';
 import { useStyleProcessAi } from './hooks/useStyleProcessAi';
-import { useDictOptions } from '@/hooks/useDictOptions';
 
 const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   styleId, styleNo, readOnly, hidePrice = false,
@@ -49,16 +48,11 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   fetchPriceHintRef.current = fetchPriceHint;
 
   const { sortedData, stageSpanMap } = useMemo(() => computeSortedDataAndStageSpan(data), [data]);
-  const { options: difficultyOptions } = useDictOptions('process_difficulty', [
-    { label: '易', value: 'EASY' },
-    { label: '中', value: 'MEDIUM' },
-    { label: '难', value: 'HARD' },
-  ]);
   const columns = useMemo(() => buildProcessColumns({
-    editableMode: editMode && !readOnly, hidePrice, showSizePrices: true, sizes, stageSpanMap, difficultyOptions, priceHints, priceHintLoading,
+    editableMode: editMode && !readOnly, hidePrice, showSizePrices: true, sizes, stageSpanMap, priceHints, priceHintLoading,
     updateField: (id: string | number, field: any, value: any) => updateField(id, field, value, fetchPriceHint),
     updateSizePrice, handleAdd, handleDelete, handleRemoveSize,
-  }), [data, editMode, readOnly, sizes, stageSpanMap, difficultyOptions]);
+  }), [data, editMode, readOnly, sizes, stageSpanMap]);
 
   return (
     <div>

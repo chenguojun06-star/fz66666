@@ -4,7 +4,6 @@ import { Button, Card, Select, Segmented, Space } from 'antd';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
-import { useDictOptions } from '@/hooks/useDictOptions';
 import type { Dayjs } from 'dayjs';
 
 interface MaterialSearchFormProps {
@@ -28,11 +27,6 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   hasData = false,
 }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const { options: materialCategoryOptions } = useDictOptions('material_category', [
-    { label: '面料', value: 'fabric' },
-    { label: '里料', value: 'lining' },
-    { label: '辅料', value: 'accessory' },
-  ]);
 
   const handleSearchChange = (value: string) => {
     setQueryParams(prev => ({ ...prev, orderNo: value, page: 1 }));
@@ -95,7 +89,9 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
           <Segmented
             value={queryParams.materialType || ''}
             options={[
-              ...materialCategoryOptions,
+              { label: '面料', value: 'fabric' },
+              { label: '里料', value: 'lining' },
+              { label: '辅料', value: 'accessory' },
               { label: '全部', value: '' },
             ]}
             onChange={(value) => {

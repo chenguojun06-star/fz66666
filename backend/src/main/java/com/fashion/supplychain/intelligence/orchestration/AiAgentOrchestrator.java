@@ -13,20 +13,25 @@ import com.fashion.supplychain.intelligence.agent.loop.SyncAgentLoopCallback;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
 import com.fashion.supplychain.intelligence.service.SelfCriticService;
 import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -49,6 +54,7 @@ public class AiAgentOrchestrator {
     @Autowired(required = false) private com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService;
     @Autowired private com.fashion.supplychain.intelligence.helper.PromptContextProvider promptContextProvider;
     @Autowired(required = false) private com.fashion.supplychain.intelligence.helper.PromptTemplateLoader promptTemplateLoader;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper aiAgentPromptHelper;
 
     // 自我进化系统组件
     @Autowired(required = false) private SelfCriticService selfCriticService;
@@ -63,17 +69,37 @@ public class AiAgentOrchestrator {
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
 
-    private static final long AGENT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(180);
-    private static final long CONTEXT_REFRESH_MS = TimeUnit.MINUTES.toMillis(10);
+    @Value("${xiaoyun.agent.timeout-ms:180000}")
+    private long agentTimeoutMs;
+    @Value("${xiaoyun.agent.context-refresh-ms:600000}")
+    private long contextRefreshMs;
+    @Value("${xiaoyun.agent.quick-path-timeout-ms:15000}")
+    private long quickPathTimeoutMs;
+    @Value("${xiaoyun.agent.sse-heartbeat-interval-s:15}")
+    private int sseHeartbeatIntervalS;
+    private static final ObjectMapper SSE_MAPPER = new ObjectMapper();
+
+    private final ExecutorService postTurnExecutor = new ThreadPoolExecutor(
+            2, 4, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(64),
+            r -> { Thread t = new Thread(r, "post-turn-hook"); t.setDaemon(true); return t; },
+            new ThreadPoolExecutor.CallerRunsPolicy());
+
     private final com.github.benmanes.caffeine.cache.Cache<String, String> queryCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
             .maximumSize(200)
             .expireAfterWrite(5, TimeUnit.MINUTES)
             .build();
 
-    private volatile String cachedSystemContext = "";
-    private volatile long lastContextRefresh = 0;
-    private volatile String cachedSkillContext = "";
-    private volatile long lastSkillRefresh = 0;
+    private static class TenantCachedContext {
+        final String content;
+        final long timestamp;
+        TenantCachedContext(String content, long timestamp) {
+            this.content = content;
+            this.timestamp = timestamp;
+        }
+    }
+    private final ConcurrentHashMap<Long, TenantCachedContext> systemContextCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, TenantCachedContext> skillContextCache = new ConcurrentHashMap<>();
 
     private String buildAugmentedPageContext(String userMessage, String originalPageContext) {
         StringBuilder augmented = new StringBuilder();
@@ -98,45 +124,40 @@ public class AiAgentOrchestrator {
     }
 
     private String getOrRefreshSystemContext(Long tenantId) {
+        if (agentContextFileService == null || tenantId == null) return "";
+        TenantCachedContext cached = systemContextCache.get(tenantId);
         long now = System.currentTimeMillis();
-        if (agentContextFileService == null) return "";
-        if (now - lastContextRefresh > CONTEXT_REFRESH_MS) {
-            synchronized (this) {
-                if (now - lastContextRefresh > CONTEXT_REFRESH_MS) {
-                    cachedSystemContext = agentContextFileService.buildSystemContext(tenantId);
-                    lastContextRefresh = now;
-                }
-            }
+        if (cached != null && (now - cached.timestamp) <= contextRefreshMs) {
+            return cached.content;
         }
-        return cachedSystemContext;
+        String content = agentContextFileService.buildSystemContext(tenantId);
+        systemContextCache.put(tenantId, new TenantCachedContext(content, now));
+        return content;
     }
 
     private String getOrRefreshSkillContext(Long tenantId) {
+        if (skillEvolutionOrchestrator == null || tenantId == null) return "";
+        TenantCachedContext cached = skillContextCache.get(tenantId);
         long now = System.currentTimeMillis();
-        if (skillEvolutionOrchestrator == null) return "";
-        if (now - lastSkillRefresh > CONTEXT_REFRESH_MS) {
-            synchronized (this) {
-                if (now - lastSkillRefresh > CONTEXT_REFRESH_MS) {
-                    List<SkillTemplate> skills = skillEvolutionOrchestrator.loadActiveSkills(tenantId);
-                    if (skills != null && !skills.isEmpty()) {
-                        StringBuilder sb = new StringBuilder("## 可用技能 (系统自动学习)\n");
-                        for (SkillTemplate s : skills) {
-                            sb.append("- /").append(s.getSkillName())
-                                    .append(": ").append(s.getTitle());
-                            if (s.getTriggerPhrases() != null && !s.getTriggerPhrases().isBlank()) {
-                                sb.append(" (触发词: ").append(s.getTriggerPhrases()).append(")");
-                            }
-                            sb.append("\n");
-                        }
-                        cachedSkillContext = sb.toString();
-                    } else {
-                        cachedSkillContext = "";
-                    }
-                    lastSkillRefresh = now;
-                }
-            }
+        if (cached != null && (now - cached.timestamp) <= contextRefreshMs) {
+            return cached.content;
         }
-        return cachedSkillContext;
+        List<SkillTemplate> skills = skillEvolutionOrchestrator.loadActiveSkills(tenantId);
+        String content = "";
+        if (skills != null && !skills.isEmpty()) {
+            StringBuilder sb = new StringBuilder("## 可用技能 (系统自动学习)\n");
+            for (SkillTemplate s : skills) {
+                sb.append("- /").append(s.getSkillName())
+                        .append(": ").append(s.getTitle());
+                if (s.getTriggerPhrases() != null && !s.getTriggerPhrases().isBlank()) {
+                    sb.append(" (触发词: ").append(s.getTriggerPhrases()).append(")");
+                }
+                sb.append("\n");
+            }
+            content = sb.toString();
+        }
+        skillContextCache.put(tenantId, new TenantCachedContext(content, now));
+        return content;
     }
 
     public Result<String> executeAgent(String userMessage) {
@@ -224,11 +245,11 @@ public class AiAgentOrchestrator {
                 log.info("[AiAgent-Stream] 快速通道未产出有效回答，降级到Agent循环");
             }
 
-            heartbeatFuture = startHeartbeat(emitter, 15, cancelled);
+            heartbeatFuture = startHeartbeat(emitter, sseHeartbeatIntervalS, cancelled);
 
             String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
             AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
-            ctx.setDeadlineMs(requestStartAt + AGENT_TIMEOUT_MS);
+            ctx.setDeadlineMs(requestStartAt + agentTimeoutMs);
             ctx.setCancelled(cancelled);
             StreamingAgentLoopCallback cb = new StreamingAgentLoopCallback(
                     emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
@@ -341,11 +362,11 @@ public class AiAgentOrchestrator {
         if (reflectionOrchestrator != null) {
             final String finalToolResults = toolResultsStr;
             final String finalConversationId = conversationId;
-            new Thread(UserContext.wrap(() -> {
+            postTurnExecutor.execute(UserContext.wrap(() -> {
                 reflectionOrchestrator.reflectAsync(
                         tenantId, finalConversationId, sessionId,
                         userMessage, assistantResponse, finalToolResults);
-            }), "post-turn-reflection").start();
+            }));
         }
 
         if (sessionSearchService != null) {
@@ -363,20 +384,20 @@ public class AiAgentOrchestrator {
 
         if (memoryNudgeOrchestrator != null) {
             final List<String> finalToolNames = toolNames;
-            new Thread(UserContext.wrap(() -> {
+            postTurnExecutor.execute(UserContext.wrap(() -> {
                 memoryNudgeOrchestrator.analyzeAndNudge(
                         tenantId, userId, sessionId, conversationId,
                         userMessage, assistantResponse, finalToolNames);
-            }), "post-turn-nudge").start();
+            }));
         }
 
         if (userProfileEvolutionOrchestrator != null) {
             final List<String> finalToolNames2 = toolNames;
-            new Thread(UserContext.wrap(() -> {
+            postTurnExecutor.execute(UserContext.wrap(() -> {
                 userProfileEvolutionOrchestrator.evolveProfile(
                         tenantId, userId, userMessage, assistantResponse,
                         conversationId, finalToolNames2);
-            }), "post-turn-profile").start();
+            }));
         }
     }
 
@@ -394,8 +415,7 @@ public class AiAgentOrchestrator {
 
     private void emitSse(SseEmitter emitter, String eventName, java.util.Map<String, Object> data) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            emitter.send(SseEmitter.event().name(eventName).data(mapper.writeValueAsString(data)));
+            emitter.send(SseEmitter.event().name(eventName).data(SSE_MAPPER.writeValueAsString(data)));
         } catch (Exception e) {
             log.warn("[AiAgent-Stream] 发送SSE事件失败: event={}, error={}", eventName, e.getMessage());
         }
@@ -442,18 +462,12 @@ public class AiAgentOrchestrator {
         return sb.toString();
     }
 
-    private static final java.util.regex.Pattern QUICK_GREETING =
-            java.util.regex.Pattern.compile("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|辛苦了|好的|收到|明白|知道了|了解).*");
-    private static final java.util.regex.Pattern COMPLEX_TRIGGER =
-            java.util.regex.Pattern.compile("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作|对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*");
-    private static final java.util.regex.Pattern BUSINESS_KEYWORD =
-            java.util.regex.Pattern.compile("(?s).*(订单|进度|逾期|异常|风险|工厂|工资|库存|物料|裁剪|扫码|入库|出货|对账|结算|款式|样衣|采购|催单|备注|紧急|延期|交期|产能|成本|利润|质量|次品|领料|盘点|发票|税务|报价|BOM|模板|工序|菲号|转厂|撤回|审批|通知|跟单|客户|供应商|成品|面辅|面料|辅料|报价单|生产|完成率|准时率|逾期率|在制|待处理|待审批|待质检|待入库).*");
 
     private boolean isQuickPathEligible(String userMessage) {
         if (userMessage == null || userMessage.length() > 200) return false;
-        if (COMPLEX_TRIGGER.matcher(userMessage).matches()) return false;
-        if (BUSINESS_KEYWORD.matcher(userMessage).matches()) return false;
-        if (QUICK_GREETING.matcher(userMessage).matches()) return true;
+        if (XiaoyunPatterns.isComplexTrigger(userMessage)) return false;
+        if (XiaoyunPatterns.isBusinessKeyword(userMessage)) return false;
+        if (XiaoyunPatterns.isGreeting(userMessage)) return true;
         if (userMessage.length() <= 8) return true;
         return false;
     }
@@ -489,6 +503,16 @@ public class AiAgentOrchestrator {
             if (principles != null && !principles.isBlank()) {
                 sysPrompt.append(principles).append("\n\n");
             }
+            if (aiAgentPromptHelper != null) {
+                try {
+                    String userCtx = aiAgentPromptHelper.buildUserContextBlock();
+                    if (userCtx != null && !userCtx.isBlank()) {
+                        sysPrompt.append(userCtx).append("\n\n");
+                    }
+                } catch (Exception e) {
+                    log.warn("[QuickPath] 用户身份上下文注入失败: {}", e.getMessage());
+                }
+            }
             sysPrompt.append("请简洁、准确地回答用户问题。如果下方有知识库参考资料，优先引用；如无相关内容，根据业务经验作答，不要编造。\n\n");
             if (intelligenceCtx != null && !intelligenceCtx.isBlank()) {
                 sysPrompt.append(intelligenceCtx).append("\n\n");
@@ -521,6 +545,12 @@ public class AiAgentOrchestrator {
                 return false;
             }
 
+            long elapsed = System.currentTimeMillis() - requestStartAt;
+            if (elapsed > quickPathTimeoutMs) {
+                log.info("[QuickPath] 耗时{}ms超过快速通道上限{}ms，降级到Agent循环", elapsed, quickPathTimeoutMs);
+                return false;
+            }
+
             String answer = result.getContent();
 
             // === 快速通道质量门审查（新增）===
@@ -532,7 +562,6 @@ public class AiAgentOrchestrator {
                 }
             }
 
-            long elapsed = System.currentTimeMillis() - requestStartAt;
             log.info("[QuickPath] 快速通道完成: {}字符, {}ms", answer.length(), elapsed);
 
             emitSse(emitter, "answer", java.util.Map.of("content", answer, "commandId", commandId));

@@ -58,6 +58,8 @@ public class AgentLoopContextBuilder {
 
         List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
         Set<ToolDomain> domains = domainRouter.route(userMessage);
+        List<ToolDomain> multiDomains = domainRouter.routeMulti(userMessage);
+        boolean isMultiDomain = domainRouter.isMultiDomain(userMessage);
         if (!domains.isEmpty()) {
             visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
             log.info("[ContextBuilder] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
@@ -70,11 +72,21 @@ public class AgentLoopContextBuilder {
 
         List<AiMessage> messages = new ArrayList<>();
         messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));
+        if (isMultiDomain && multiDomains.size() > 1) {
+            String domainHint = "用户的问题涉及" + domainRouter.describeDomains(multiDomains)
+                    + "多个领域，请综合分析各领域数据，给出跨域关联洞察。";
+            messages.add(AiMessage.system(domainHint));
+        }
         List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
         messages.addAll(memoryHelper.compactConversationHistory(history));
         messages.add(AiMessage.user(userMessage));
 
         int maxIterations = promptHelper.estimateMaxIterations(userMessage);
+        if (isMultiDomain) {
+            int extraIterations = Math.max(0, multiDomains.size() - 1) * 2;
+            maxIterations = maxIterations + extraIterations;
+            log.info("[ContextBuilder] 多域查询提升maxIterations: {} → {}", maxIterations - extraIterations, maxIterations);
+        }
 
         return AgentLoopContext.builder()
                 .userMessage(userMessage)

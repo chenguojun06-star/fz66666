@@ -116,6 +116,16 @@ public class AiAgentToolAccessService {
         register("tool_skill_execute", "执行预定义技能工作流：一句话触发多步操作，如月底财务结算、质检批量处理、风险订单巡检", false, ToolDomain.GENERAL);
         // ── ANALYSIS 新增 ── 顾问
         register("tool_hyper_advisor", "高级供应链AI顾问：风险量化、延期推演、产能模拟、策略建议，适合深度分析与专业建议", false, ToolDomain.ANALYSIS);
+        // ── 2026-05-17 补注册之前遗漏的工具 ──
+        register("tool_sourcing_expert", "采购供应商专家：评估供应商资质、成本、交期（通常由采购顾问触发）", false, ToolDomain.WAREHOUSE);
+        register("tool_logistics_expert", "物流专家：查询订单物流状态、运输进度（通常由物流顾问触发）", false, ToolDomain.PRODUCTION);
+        register("tool_compliance_expert", "合规专家：检查订单是否含违规内容、被审核拒绝原因（通常由合规顾问触发）", false, ToolDomain.PRODUCTION);
+        register("tool_order_timeline", "订单操作时间线：查询订单从创建到当前各节点操作记录与时间线", false, ToolDomain.PRODUCTION);
+        register("bargain_price_tool", "还价记录查询：订单/款式/工序的还价历史与最新还价单价", false, ToolDomain.FINANCE);
+        register("tool_unit_price_query", "开发单价查询：查询开发阶段设定的工价单价", false, ToolDomain.FINANCE);
+        register("tool_inventory_summary", "库存价值汇总：按仓库/品类统计库存总值、均价、数量分布", false, ToolDomain.WAREHOUSE);
+        register("tool_avg_completion_time", "历史完工周期分析：按工厂/品类统计平均完成天数、中位数、准时率", false, ToolDomain.ANALYSIS);
+        register("tool_quality_statistics", "质量统计：按工厂/类型统计质量缺陷分布与趋势", false, ToolDomain.WAREHOUSE);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(

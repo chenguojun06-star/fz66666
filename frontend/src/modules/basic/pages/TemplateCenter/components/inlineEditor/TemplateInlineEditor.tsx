@@ -331,20 +331,23 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
         return;
       }
 
-      const response = await api.put<{ code: number; message?: string }>(`/template-library/${row.id}`, {
-        id: row.id,
+      const isNew = !row.id;
+      const payload = {
         templateName,
         templateKey: templateKey || null,
         templateType: row.templateType,
         sourceStyleNo: sourceStyleNo || null,
         templateContent,
-      });
+      };
+      const response = isNew
+        ? await api.post<{ code: number; message?: string }>('/template-library', payload)
+        : await api.put<{ code: number; message?: string }>(`/template-library/${row.id}`, { id: row.id, ...payload });
       if (response.code !== 200) {
-        message.error(response.message || '更新失败');
+        message.error(response.message || (isNew ? '创建失败' : '更新失败'));
         return;
       }
 
-      message.success('更新成功');
+      message.success(isNew ? '创建成功' : '更新成功');
       await onSaved();
     } catch (error: unknown) {
       if (hasErrorFields(error)) return;

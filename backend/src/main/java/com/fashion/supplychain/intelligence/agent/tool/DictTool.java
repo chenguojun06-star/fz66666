@@ -58,7 +58,7 @@ public class DictTool extends AbstractAgentTool {
         int limit = optionalInt(args, "limit") != null ? optionalInt(args, "limit") : 20;
 
         LambdaQueryWrapper<Dict> query = new LambdaQueryWrapper<Dict>()
-                .eq(Dict::getStatus, "ENABLED")
+                .eq(Dict::getStatus, "1")
                 .like(StringUtils.hasText(keyword), Dict::getDictLabel, keyword)
                 .orderByAsc(Dict::getDictType)
                 .orderByAsc(Dict::getSort)
@@ -75,8 +75,8 @@ public class DictTool extends AbstractAgentTool {
     private String queryByType(Map<String, Object> args) throws Exception {
         String dictType = requireString(args, "dictType");
         List<Dict> items = dictService.lambdaQuery()
-                .eq(Dict::getDictType, dictType.trim().toLowerCase())
-                .eq(Dict::getStatus, "ENABLED")
+                .eq(Dict::getDictType, dictType)
+                .eq(Dict::getStatus, "1")
                 .orderByAsc(Dict::getSort)
                 .last("LIMIT 100")
                 .list();

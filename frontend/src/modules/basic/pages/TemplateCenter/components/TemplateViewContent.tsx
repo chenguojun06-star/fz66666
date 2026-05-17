@@ -208,7 +208,7 @@ const SizeView: React.FC<{ obj: unknown }> = ({ obj }) => {
     { title: '测量方式', dataIndex: 'measureMethod', key: 'measureMethod', width: 140, render: (v: unknown) => String(v || '-') },
     {
       title: '公差', dataIndex: 'tolerance', key: 'tolerance', width: 100, align: 'right' as const,
-      render: (v: unknown) => { const n = typeof v === 'number' ? v : Number(v); return Number.isFinite(n) ? n : '-'; },
+      render: (v: unknown) => { const s = String(v ?? '').trim(); return s || '-'; },
     },
   ];
 

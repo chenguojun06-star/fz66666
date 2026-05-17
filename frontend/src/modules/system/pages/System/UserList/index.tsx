@@ -20,14 +20,7 @@ import { useModal } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { organizationApi } from '@/services/system/organizationApi';
-import { useDictOptions } from '@/hooks/useDictOptions';
 import './styles.css';
-
-const EMPLOYMENT_STATUS_FALLBACK = [
-  { label: '正式', value: 'normal' },
-  { label: '试用期', value: 'probation' },
-  { label: '临时工', value: 'temporary' },
-];
 
 const { Option } = Select;
 
@@ -113,7 +106,6 @@ const UserList: React.FC = () => {
   const { isMobile, modalWidth } = useViewport();
   const userModal = useModal<UserType>();
   const logModal = useModal();
-  const { options: employmentStatusOptions } = useDictOptions('employment_status', EMPLOYMENT_STATUS_FALLBACK);
 
   const {
     queryParams, setQueryParams, userList, total, loading, submitLoading,
@@ -235,7 +227,9 @@ const UserList: React.FC = () => {
                       onChange={(value) => setEmploymentFilter(value || '')}
                       options={[
                         { label: '全部', value: '' },
-                        ...employmentStatusOptions,
+                        { label: '正式', value: 'normal' },
+                        { label: '试用期', value: 'probation' },
+                        { label: '临时工', value: 'temporary' },
                       ]}
                       placeholder="在职状态"
                       allowClear
@@ -368,7 +362,11 @@ const UserList: React.FC = () => {
               </Col>
               <Col span={8}>
                 <Form.Item name="employmentStatus" label="在职状态">
-                  <Select placeholder="请选择在职状态" allowClear options={employmentStatusOptions} />
+                  <Select placeholder="请选择在职状态" allowClear>
+                    <Option value="normal">正式</Option>
+                    <Option value="probation">试用期</Option>
+                    <Option value="temporary">临时工</Option>
+                  </Select>
                 </Form.Item>
               </Col>
             </Row>

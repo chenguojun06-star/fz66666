@@ -97,6 +97,7 @@ page {
   --font-size-3xl: 24px;
   --font-size-4xl: 32px;
   --font-size-5xl: 40px;
+  --font-size-6xl: 48px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -146,6 +147,8 @@ page {
   --nav-bar-height: 44px;
 
   /* ========== 兼容别名（xiaoyun → 统一） ========== */
+  --color-error: var(--color-danger);
+  --color-error-bg: var(--color-danger-bg);
   --xiaoyun-primary: var(--color-primary);
   --xiaoyun-primary-bg: var(--color-primary-bg);
   --xiaoyun-primary-border: var(--color-primary-border);

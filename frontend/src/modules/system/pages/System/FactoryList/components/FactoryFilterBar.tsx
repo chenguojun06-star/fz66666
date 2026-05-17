@@ -2,7 +2,6 @@ import React from 'react';
 import { Button, Card, Input, Select, Space } from 'antd';
 import type { OrganizationUnit, FactoryQueryParams } from '@/types/system';
 import { getDepartmentLabel } from '../factoryListHelpers';
-import { useDictOptions } from '@/hooks/useDictOptions';
 
 interface FactoryFilterBarProps {
   queryParams: FactoryQueryParams;
@@ -18,10 +17,6 @@ const FactoryFilterBar: React.FC<FactoryFilterBarProps> = ({
   queryParams, setQueryParams, setFactoryCodeInput, setFactoryNameInput,
   departmentOptions, activeTab, onCreate,
 }) => {
-  const { options: factoryLabelOptions } = useDictOptions('factory_label', [
-    { label: '内部', value: 'INTERNAL' },
-    { label: '外部', value: 'EXTERNAL' },
-  ]);
   return (
     <Card className="filter-card mb-sm">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
@@ -56,7 +51,10 @@ const FactoryFilterBar: React.FC<FactoryFilterBarProps> = ({
             style={{ width: 140 }}
             allowClear
             value={String((queryParams as any)?.factoryType || '') || undefined}
-            options={factoryLabelOptions}
+            options={[
+              { value: 'INTERNAL', label: '内部' },
+              { value: 'EXTERNAL', label: '外部' },
+            ]}
             onChange={(value) => setQueryParams((prev) => ({ ...prev, factoryType: value, page: 1 }))}
           />
           <Select

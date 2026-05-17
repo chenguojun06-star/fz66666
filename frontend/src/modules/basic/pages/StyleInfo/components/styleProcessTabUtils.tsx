@@ -11,7 +11,6 @@ import { StyleProcess } from '@/types/style';
 import { toNumberSafe } from '@/utils/api';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import type { DictOption } from '@/hooks/useDictOptions';
 import type { ProcessPriceHintResponse } from '@/services/intelligence/intelligenceApi';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import { STAGE_ORDER, computeStageSortedAndSpan } from '@/utils/productionStage';
@@ -88,7 +87,6 @@ export interface BuildProcessColumnsOptions {
   showSizePrices: boolean;
   sizes: string[];
   stageSpanMap: Map<number, StageSpanInfo>;
-  difficultyOptions: DictOption[];
   priceHints: Record<string | number, ProcessPriceHintResponse | null>;
   priceHintLoading: Record<string | number, boolean>;
   updateField: (id: string | number, field: string, value: any) => void;
@@ -100,7 +98,7 @@ export interface BuildProcessColumnsOptions {
 
 export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
   const {
-    editableMode, hidePrice, showSizePrices, sizes, stageSpanMap, difficultyOptions,
+    editableMode, hidePrice, showSizePrices, sizes, stageSpanMap,
     priceHints, priceHintLoading,
     updateField, updateSizePrice, handleAdd, handleDelete, handleRemoveSize,
   } = opts;
@@ -200,7 +198,11 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             allowClear
             placeholder="-"
             onChange={(v) => updateField(record.id!, 'difficulty', v ?? null)}
-            options={difficultyOptions}
+            options={[
+              { label: '易', value: '易' },
+              { label: '中', value: '中' },
+              { label: '难', value: '难' },
+            ]}
           />
         ) : (
           text || '-'

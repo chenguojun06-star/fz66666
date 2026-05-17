@@ -53,6 +53,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     <div className={`${msgStyles.messageBubble} ${msg.role === 'ai' ? msgStyles.bubbleAi : msgStyles.bubbleUser}`}>
       {msg.role === 'ai' ? (
         <>
+          <div
+            className={msgStyles.mdContent}
+            onClick={(e) => {
+              const el = (e.target as HTMLElement).closest?.('[data-orderno]') as HTMLElement | null;
+              const orderNo = el?.dataset?.orderno;
+              if (orderNo) onSafeNavigate(`/production/order-flow?orderNo=${encodeURIComponent(orderNo)}`);
+            }}
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(renderSimpleMarkdown(
+                msg.text.includes('【推荐追问】：') ? msg.text.split('【推荐追问】：')[0] : msg.text
+              ))
+            }}
+          />
           {msg.overdueFactoryCard && (
             <OverdueFactoryCardWidget data={msg.overdueFactoryCard} onNavigate={(path) => onSafeNavigate(path)} />
           )}
@@ -159,19 +172,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>
           )}
           {msg.simulation && <SimulationWidget data={msg.simulation} />}
-          <div
-            className={msgStyles.mdContent}
-            onClick={(e) => {
-              const el = (e.target as HTMLElement).closest?.('[data-orderno]') as HTMLElement | null;
-              const orderNo = el?.dataset?.orderno;
-              if (orderNo) onSafeNavigate(`/production/order-flow?orderNo=${encodeURIComponent(orderNo)}`);
-            }}
-            dangerouslySetInnerHTML={{
-              __html: sanitizeHtml(renderSimpleMarkdown(
-                msg.text.includes('【推荐追问】：') ? msg.text.split('【推荐追问】：')[0] : msg.text
-              ))
-            }}
-          />
           {msg.text.includes('【推荐追问】：') && (
             <div className={msgStyles.recommendWrapper}>
               <div className={msgStyles.recommendTitle}>你可以接着问：</div>

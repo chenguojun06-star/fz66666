@@ -1,12 +1,11 @@
 import React from 'react';
 import { Button, Col, Form, Input, InputNumber, Row, Select, Space, Tooltip } from 'antd';
-import type { FormInstance } from 'antd/es/form';
+import type { FormInstance } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import type { OrganizationUnit, User } from '@/types/system';
 import { getDepartmentLabel } from '../factoryListHelpers';
-import { useDictOptions } from '@/hooks/useDictOptions';
 
 interface FactoryFormModalProps {
   open: boolean;
@@ -27,10 +26,6 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
   open, mode, form, submitLoading, modalWidth, isMobile, initialHeight,
   departmentOptions, userOptions, businessLicenseUrl, onCancel, onOk,
 }) => {
-  const { options: factoryLabelOptions } = useDictOptions('factory_label', [
-    { label: '内部工厂', value: 'INTERNAL' },
-    { label: '外部工厂', value: 'EXTERNAL' },
-  ]);
   return (
     <ResizableModal
       open={open}
@@ -91,7 +86,10 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
                   form.setFieldsValue({ managerId: undefined });
                 }
               }}
-              options={factoryLabelOptions}
+              options={[
+                { value: 'INTERNAL', label: '内部工厂（工资结算）' },
+                { value: 'EXTERNAL', label: '外部工厂（订单结算）' }
+              ]}
             />
           </Form.Item>
           <Form.Item name="parentOrgUnitId" label="归属部门">

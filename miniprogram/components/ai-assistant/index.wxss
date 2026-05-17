@@ -589,12 +589,6 @@
   background: var(--color-info-bg);
 }
 
-.msg-image {
-  max-width: 180px;
-  border-radius: var(--radius-md);
-  margin-bottom: 6px;
-}
-
 .dynamic-suggestions {
   padding: 8px 12px 0;
 }

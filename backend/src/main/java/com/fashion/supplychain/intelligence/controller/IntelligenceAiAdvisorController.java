@@ -99,7 +99,7 @@ public class IntelligenceAiAdvisorController {
     }
 
     /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping(value = "/ai-advisor/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter aiAdvisorChatStream(@RequestParam String question,
                                           @RequestParam(required = false) String pageContext,
@@ -112,9 +112,6 @@ public class IntelligenceAiAdvisorController {
                                           jakarta.servlet.http.HttpServletResponse response) {
         response.setHeader("X-Accel-Buffering", "no");
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        // 前置鉴权：必须在 SseEmitter 创建（响应头提交）之前完成 Token 校验。
-        // 若 UserContext 未填充（Token 过期/无效），此时响应头尚未发出，Spring Security
-        // 能正常返回 401，避免 "response is already committed" 异常。
         String userId = UserContext.userId();
         if (userId == null || userId.isBlank()) {
             throw new org.springframework.security.access.AccessDeniedException("登录已过期，请重新登录");

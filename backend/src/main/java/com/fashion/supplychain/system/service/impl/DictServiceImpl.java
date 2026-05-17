@@ -25,7 +25,7 @@ import org.springframework.util.StringUtils;
 public class DictServiceImpl extends ServiceImpl<DictMapper, Dict> implements DictService {
 
     @Override
-    @Cacheable(value = "dict", key = "#params.toString()", unless = "#result == null || #result.records.empty")
+    @Cacheable(value = "dict", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + #params.toString()", unless = "#result == null || #result.records.empty")
     public IPage<Dict> queryPage(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
 

@@ -49,13 +49,7 @@ public class AiAgentPromptHelper {
             new ThreadPoolExecutor.CallerRunsPolicy());
 
     public int estimateMaxIterations(String userMessage) {
-        if (userMessage == null || userMessage.length() < 8) return 3;
-        String msg = userMessage.trim();
-        if (msg.length() < 25 && msg.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗).*")) return 2;
-        if (msg.matches("(?s).*(我是谁|你知道我|我是什么角色|我有什么权限|我的权限|我的角色).*")) return 2;
-        if (msg.matches("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作).*")) return 8;
-        if (msg.matches("(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*")) return 6;
-        return 5;
+        return XiaoyunPatterns.estimateMaxIterations(userMessage);
     }
 
     public void updateMasAnalysisCache(String analysisSummary) {
@@ -108,7 +102,6 @@ public class AiAgentPromptHelper {
         String selfCritiqueBlock = safeJoin(selfCritiqueCtx, "自我评分反馈");
 
         String masInsightBlock = buildMasInsightBlock();
-        String digitalTwinBlock = buildDigitalTwinBlock();
         String contextBlock = buildContextBlock(userName, userRole, isSuperAdmin, isTenantOwner, isManager);
         String pageCtxBlock = buildPageContextBlock(pageContext);
         // 智能工具筛选：工具太多时用 RAG 选最相关的
@@ -118,28 +111,59 @@ public class AiAgentPromptHelper {
         String roleBlock = buildRoleBlock(isManager, workerProfileBlock, mgmtInsightBlock);
 
         String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, exceptionReportBlock, activePatrolBlock,
-                masInsightBlock, digitalTwinBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
+                masInsightBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
                 userBehaviorBlock, contextFileBlockStr, userProfileBlockStr, memoryBankBlockStr, selfCritiqueBlock,
                 toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
-            // 按优先级保住核心内容，先从低优先级块开始缩减
             int excess = prompt.length() - maxSystemPromptChars;
             log.warn("[AiAgent] systemPrompt过长({}字符 > {}上限)，超出{}字符，按优先级缩减", prompt.length(), maxSystemPromptChars, excess);
-            String[] lowPriorityBlocks = {userBehaviorBlock, longTermMemBlock, masInsightBlock, contextFileBlockStr, selfCritiqueBlock};
-            for (String lowBlock : lowPriorityBlocks) {
+            String[] lowPriorityLabels = {"userBehavior", "longTermMem", "masInsight", "contextFile", "selfCritique"};
+            // 第一轮：缩短低优先级块至200字符
+            for (String label : lowPriorityLabels) {
                 if (prompt.length() <= maxSystemPromptChars) break;
-                if (lowBlock != null && prompt.contains(lowBlock)) {
-                    prompt = prompt.replace(lowBlock, (lowBlock.length() > 200 ? lowBlock.substring(0, 200) + "…\n" : lowBlock));
+                String openTag = "<!--BLOCK:" + label + "-->";
+                String closeTag = "<!--/BLOCK:" + label + "-->";
+                int start = prompt.indexOf(openTag);
+                int end = prompt.indexOf(closeTag);
+                if (start >= 0 && end > start) {
+                    String blockContent = prompt.substring(start + openTag.length(), end);
+                    if (blockContent.length() > 200) {
+                        int cutAt = blockContent.lastIndexOf('\n', 200);
+                        if (cutAt < 50) cutAt = 200;
+                        String truncated = blockContent.substring(0, cutAt) + "…\n";
+                        prompt = prompt.substring(0, start + openTag.length()) + truncated + prompt.substring(end);
+                    }
                 }
             }
-            // 如果还是超，做最终硬截断（保护工具指南不出现在截断尾部）
+            // 第二轮：若仍超限，完全移除低优先级块
             if (prompt.length() > maxSystemPromptChars) {
-                int cutPoint = prompt.lastIndexOf(toolGuide);
-                if (cutPoint > 0) {
-                    int available = maxSystemPromptChars - (prompt.length() - cutPoint) - 100;
+                for (String label : lowPriorityLabels) {
+                    if (prompt.length() <= maxSystemPromptChars) break;
+                    String openTag = "<!--BLOCK:" + label + "-->";
+                    String closeTag = "<!--/BLOCK:" + label + "-->";
+                    int start = prompt.indexOf(openTag);
+                    int end = prompt.indexOf(closeTag);
+                    if (start >= 0 && end > start) {
+                        prompt = prompt.substring(0, start) + prompt.substring(end + closeTag.length());
+                        log.debug("[AiAgent] 截断: 已移除 {} 块", label);
+                    }
+                }
+            }
+            // 第三轮：核心约束保护 — 以toolGuide为锚点，保留尾部核心指令
+            if (prompt.length() > maxSystemPromptChars) {
+                String toolOpenTag = "<!--BLOCK:toolGuide-->";
+                int toolStart = prompt.indexOf(toolOpenTag);
+                if (toolStart > 0) {
+                    int available = maxSystemPromptChars - (prompt.length() - toolStart) - 100;
                     if (available > 500) {
-                        prompt = prompt.substring(0, available) + "\n...(上下文已截断)..." + prompt.substring(cutPoint);
+                        prompt = prompt.substring(0, available) + "\n...(上下文已截断)..." + prompt.substring(toolStart);
+                    } else {
+                        String toolGuideContent = prompt.substring(toolStart + toolOpenTag.length());
+                        int toolClose = toolGuideContent.indexOf("<!--/BLOCK:toolGuide-->");
+                        if (toolClose > 0) toolGuideContent = toolGuideContent.substring(0, toolClose);
+                        prompt = prompt.substring(0, Math.min(prompt.length(), maxSystemPromptChars))
+                            + "\n...(上下文已截断)...\n" + toolOpenTag + toolGuideContent + "<!--/BLOCK:toolGuide-->";
                     }
                 } else {
                     prompt = prompt.substring(0, maxSystemPromptChars) + "\n...(系统提示词已截断，请用工具查询补充信息)";
@@ -216,6 +240,15 @@ public class AiAgentPromptHelper {
         return "";
     }
 
+    public String buildUserContextBlock() {
+        String userName = UserContext.username();
+        String userRole = UserContext.role();
+        boolean isSuperAdmin = UserContext.isSuperAdmin();
+        boolean isTenantOwner = UserContext.isTenantOwner();
+        boolean isManager = aiAgentToolAccessService.hasManagerAccess();
+        return buildContextBlock(userName, userRole, isSuperAdmin, isTenantOwner, isManager);
+    }
+
     private String buildContextBlock(String userName, String userRole, boolean isSuperAdmin, boolean isTenantOwner, boolean isManager) {
         String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String currentDate = LocalDate.now().toString();
@@ -262,10 +295,6 @@ public class AiAgentPromptHelper {
         if (!isManager) {
             ctx.append("⚠️ 你是生产员工，回答应简洁明了，多用短句和数字，少用技术术语。\n");
         }
-        ctx.append("\n【身份认知规则】你已通过系统上下文获知当前用户的完整身份信息（姓名、角色、公司、工厂、权限范围等）。")
-            .append("当用户问「我是谁」「你知道我是谁吗」「我是什么角色」「我有什么权限」等身份相关问题时，")
-            .append("必须根据【当前环境】中的信息准确回答，绝不能说「我不知道你是谁」「你还没告诉我」之类的话。")
-            .append("回答示例：「你是XX公司的管理员张三，拥有全部数据查看权限」或「你是XX工厂的生产员工李四，只能查看本人相关的生产数据」。\n");
         return ctx.toString();
     }
 
@@ -275,7 +304,7 @@ public class AiAgentPromptHelper {
             com.fashion.supplychain.system.entity.Tenant tenant = tenantService.getById(tenantId);
             return tenant != null ? tenant.getTenantName() : null;
         } catch (Exception e) {
-            log.debug("[AiAgent] 租户名称解析跳过: {}", e.getMessage());
+            log.warn("[AiAgent] 租户名称解析失败, tenantId={}: {}", tenantId, e.getMessage());
             return null;
         }
     }
@@ -286,7 +315,7 @@ public class AiAgentPromptHelper {
             com.fashion.supplychain.system.entity.Factory factory = factoryService.getById(factoryId);
             return factory != null ? factory.getFactoryName() : null;
         } catch (Exception e) {
-            log.debug("[AiAgent] 工厂名称解析跳过: {}", e.getMessage());
+            log.warn("[AiAgent] 工厂名称解析失败, factoryId={}: {}", factoryId, e.getMessage());
             return null;
         }
     }
@@ -349,7 +378,7 @@ public class AiAgentPromptHelper {
 
     private String assemblePrompt(String contextBlock, String pageCtxBlock, String roleBlock,
             String exceptionReportBlock, String activePatrolBlock,
-            String masInsightBlock, String digitalTwinBlock, String intelligenceContext,
+            String masInsightBlock, String intelligenceContext,
             String longTermMemBlock, String memoryContext, String ragContext,
             String userBehaviorBlock, String contextFileBlockStr, String userProfileBlockStr,
             String memoryBankBlockStr, String selfCritiqueBlock, String toolGuide, String domainHint) {
@@ -358,26 +387,25 @@ public class AiAgentPromptHelper {
             identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
         }
         return identity + "\n\n" +
-                promptTemplateLoader.getBasePrinciples() + "\n\n" +
-                contextBlock + "\n" +
-                pageCtxBlock +
-                roleBlock +
-                exceptionReportBlock +
-                activePatrolBlock +
-                masInsightBlock +
-                digitalTwinBlock +
-                contextFileBlockStr +
-                userProfileBlockStr +
-                intelligenceContext + "\n" +
-                longTermMemBlock +
-                memoryBankBlockStr +
-                memoryContext +
-                ragContext +
-                userBehaviorBlock +
-                selfCritiqueBlock +
+                "<!--BLOCK:principles-->" + promptTemplateLoader.getBasePrinciples() + "<!--/BLOCK:principles-->\n\n" +
+                "<!--BLOCK:context-->" + contextBlock + "<!--/BLOCK:context-->\n" +
+                "<!--BLOCK:pageContext-->" + pageCtxBlock + "<!--/BLOCK:pageContext-->" +
+                "<!--BLOCK:role-->" + roleBlock + "<!--/BLOCK:role-->" +
+                "<!--BLOCK:exceptionReport-->" + exceptionReportBlock + "<!--/BLOCK:exceptionReport-->" +
+                "<!--BLOCK:activePatrol-->" + activePatrolBlock + "<!--/BLOCK:activePatrol-->" +
+                "<!--BLOCK:masInsight-->" + masInsightBlock + "<!--/BLOCK:masInsight-->" +
+                "<!--BLOCK:contextFile-->" + contextFileBlockStr + "<!--/BLOCK:contextFile-->" +
+                "<!--BLOCK:userProfile-->" + userProfileBlockStr + "<!--/BLOCK:userProfile-->" +
+                "<!--BLOCK:intelligence-->" + intelligenceContext + "<!--/BLOCK:intelligence-->\n" +
+                "<!--BLOCK:longTermMem-->" + longTermMemBlock + "<!--/BLOCK:longTermMem-->" +
+                "<!--BLOCK:memoryBank-->" + memoryBankBlockStr + "<!--/BLOCK:memoryBank-->" +
+                "<!--BLOCK:memory-->" + memoryContext + "<!--/BLOCK:memory-->" +
+                "<!--BLOCK:rag-->" + ragContext + "<!--/BLOCK:rag-->" +
+                "<!--BLOCK:userBehavior-->" + userBehaviorBlock + "<!--/BLOCK:userBehavior-->" +
+                "<!--BLOCK:selfCritique-->" + selfCritiqueBlock + "<!--/BLOCK:selfCritique-->" +
                 promptTemplateLoader.getSelfCritiqueFeedback() + "\n\n" +
-                toolGuide +
-                domainHint +
+                "<!--BLOCK:toolGuide-->" + toolGuide + "<!--/BLOCK:toolGuide-->" +
+                "<!--BLOCK:domainHint-->" + domainHint + "<!--/BLOCK:domainHint-->" +
                 promptTemplateLoader.getCollaborationRules() + "\n\n" +
                 promptTemplateLoader.getToolStrategy() + "\n\n" +
                 promptTemplateLoader.getThinkToolGuide() + "\n\n" +

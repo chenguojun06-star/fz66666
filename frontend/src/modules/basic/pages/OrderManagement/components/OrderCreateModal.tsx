@@ -4,7 +4,6 @@ import dayjs from 'dayjs';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import ResizableModal from '@/components/common/ResizableModal';
 import CustomerSelect from '@/components/common/CustomerSelect';
-import { useDictOptions } from '@/hooks/useDictOptions';
 import { StyleInfo } from '@/types/style';
 import OrderFactorySelector from './OrderFactorySelector';
 import OrderPricingMaterialPanel from './OrderPricingMaterialPanel';
@@ -74,23 +73,6 @@ const OrderCreateModal: React.FC<Props> = (p) => {
     orderOrchestration, orderLearningLoading, orderLearningRecommendation,
     deliverySuggestion, suggestionLoading, generateOrderNo,
   } = p;
-
-  const urgencyLevelOptions = useDictOptions('urgency_level', [
-    { label: '普通', value: 'normal' },
-    { label: '急单', value: 'urgent' },
-  ]).options;
-
-  const orderTypeOptions = useDictOptions('order_type', [
-    { label: '首单', value: 'FIRST' },
-    { label: '翻单', value: 'REORDER' },
-  ]).options;
-
-  const orderBizTypeOptions = useDictOptions('order_biz_type', [
-    { label: 'FOB', value: 'FOB' },
-    { label: 'ODM', value: 'ODM' },
-    { label: 'OEM', value: 'OEM' },
-    { label: 'CMT', value: 'CMT' },
-  ]).options;
 
   return (
     <ResizableModal
@@ -195,7 +177,10 @@ const OrderCreateModal: React.FC<Props> = (p) => {
                     <Select
                       placeholder="普通"
                       allowClear
-                      options={urgencyLevelOptions}
+                      options={[
+                        { label: ' 急单', value: 'urgent' },
+                        { label: '普通', value: 'normal' },
+                      ]}
                     />
                   </Form.Item>
                 </InlineField>
@@ -236,14 +221,19 @@ const OrderCreateModal: React.FC<Props> = (p) => {
                 <Col xs={24} sm={8}>
                   <InlineField label="首翻单">
                     <Form.Item name="plateType" style={{ marginBottom: 0 }}>
-                      <Select placeholder="不填自动判断" allowClear options={orderTypeOptions} />
+                      <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
                     </Form.Item>
                   </InlineField>
                 </Col>
                 <Col xs={24} sm={8}>
                   <InlineField label="下单类型">
                     <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
-                      <Select placeholder="选填" allowClear options={orderBizTypeOptions} />
+                      <Select placeholder="选填" allowClear options={[
+                        { label: 'FOB', value: 'FOB' },
+                        { label: 'ODM', value: 'ODM' },
+                        { label: 'OEM', value: 'OEM' },
+                        { label: 'CMT', value: 'CMT' },
+                      ]} />
                     </Form.Item>
                   </InlineField>
                 </Col>

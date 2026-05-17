@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 领域路由器 — 根据用户消息关键词判定涉及的业务领域，
@@ -18,10 +19,25 @@ import java.util.regex.Pattern;
 @Service
 public class AiAgentDomainRouter {
 
-    /**
-     * 领域 → 关键词列表（中文 + 英文缩写）
-     */
     private static final Map<ToolDomain, List<Pattern>> DOMAIN_PATTERNS;
+
+    private static final List<CombinationPattern> COMBINATION_PATTERNS = List.of(
+            new CombinationPattern("overdue+ranking",
+                    Pattern.compile("(?s).*(延期|逾期|超期|延迟).*?(严重|排名|最多|最少|最差|最好|对比|哪个)"),
+                    List.of(ToolDomain.PRODUCTION, ToolDomain.ANALYSIS)),
+            new CombinationPattern("inventory+procurement",
+                    Pattern.compile("(?s).*(缺货|缺料|库存不足|面料不够|物料不够).*?(采购|补货|下单|进货|购买)"),
+                    List.of(ToolDomain.WAREHOUSE)),
+            new CombinationPattern("quality+cost",
+                    Pattern.compile("(?s).*(次品|质量|返工|报废|不良率).*?(成本|费用|利润|亏|花费)"),
+                    List.of(ToolDomain.PRODUCTION, ToolDomain.FINANCE)),
+            new CombinationPattern("delivery+factory",
+                    Pattern.compile("(?s).*(交期|交付|准时率|达成率).*?(工厂|车间|产线|各厂|每个厂)"),
+                    List.of(ToolDomain.PRODUCTION)),
+            new CombinationPattern("finance+production",
+                    Pattern.compile("(?s).*(成本|费用|利润|工资|结算).*?(订单|生产|完成率|产量|进度)"),
+                    List.of(ToolDomain.FINANCE, ToolDomain.PRODUCTION))
+    );
 
     static {
         DOMAIN_PATTERNS = new EnumMap<>(ToolDomain.class);
@@ -90,7 +106,7 @@ public class AiAgentDomainRouter {
             for (Pattern p : entry.getValue()) {
                 if (p.matcher(text).find()) {
                     matched.add(entry.getKey());
-                    break; // 该领域已命中，跳到下一个领域
+                    break;
                 }
             }
         }
@@ -99,6 +115,37 @@ public class AiAgentDomainRouter {
             log.debug("[DomainRouter] 用户意图={}, 命中领域={}", abbreviate(userMessage), matched);
         }
         return matched;
+    }
+
+    public List<ToolDomain> routeMulti(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return List.of();
+        }
+
+        for (CombinationPattern pattern : COMBINATION_PATTERNS) {
+            if (pattern.regex.matcher(userMessage).matches()) {
+                log.info("[DomainRouter] 命中组合模板: {}, domains={}", pattern.name, pattern.domains);
+                return pattern.domains;
+            }
+        }
+
+        Set<ToolDomain> matched = route(userMessage);
+        if (matched.isEmpty()) return List.of();
+        return matched.stream().limit(3).collect(Collectors.toList());
+    }
+
+    public boolean isMultiDomain(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) return false;
+        for (CombinationPattern pattern : COMBINATION_PATTERNS) {
+            if (pattern.regex.matcher(userMessage).matches()) return true;
+        }
+        return route(userMessage).size() > 1;
+    }
+
+    public String describeDomains(List<ToolDomain> domains) {
+        return domains.stream()
+                .map(ToolDomain::getLabel)
+                .collect(Collectors.joining("和"));
     }
 
     // ── 内部辅助 ──
@@ -114,4 +161,6 @@ public class AiAgentDomainRouter {
     private static String abbreviate(String text) {
         return text.length() <= 30 ? text : text.substring(0, 30) + "...";
     }
+
+    private record CombinationPattern(String name, Pattern regex, List<ToolDomain> domains) {}
 }

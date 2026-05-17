@@ -33,7 +33,6 @@ public final class SecurityConstants {
             "/api/intelligence/wechat-ai/callback",
             "/api/intelligence/im-ai/feishu/callback",
             "/api/intelligence/im-ai/dingtalk/callback",
-            "/api/intelligence/ai-advisor/chat/stream",
             "/api/webhook/**",
             "/api/ecommerce/webhook/**",
             "/api/public/**",

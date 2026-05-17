@@ -84,9 +84,10 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const [advisorSessionId, setAdvisorSessionId] = useState(loadSession);
 
   const streamAbortRef = useRef<AbortController | null>(null);
+  const accumulatedTextRef = useRef('');
   const requestSeqRef = useRef(0);
   const historyFetchedRef = useRef(false);
-  const SSE_INACTIVITY_TIMEOUT_MS = 180_000;
+  const SSE_INACTIVITY_TIMEOUT_MS = 60_000;
 
   useEffect(() => {
     return () => { streamAbortRef.current?.abort(); };
@@ -211,6 +212,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     const aiMsgId = `a-${Date.now()}`;
     let inactivityTimer: ReturnType<typeof setTimeout> | undefined;
     let accumulatedText = '';
+    accumulatedTextRef.current = '';
     let completed = false;
     let answerReceived = false;
 
@@ -265,10 +267,12 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             const chunk = String(event.data.chunk || '');
             if (chunk) {
               accumulatedText += chunk;
+              accumulatedTextRef.current = accumulatedText;
               setMessages(prev => {
+                const currentText = accumulatedTextRef.current;
                 const existing = prev.find(m => m.id === aiMsgId);
-                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m);
-                return [...prev, { id: aiMsgId, role: 'ai' as const, text: accumulatedText }];
+                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: currentText } : m);
+                return [...prev, { id: aiMsgId, role: 'ai' as const, text: currentText }];
               });
             }
           } else if (event.type === 'answer') {
@@ -279,6 +283,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
               displayText = '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
             }
             accumulatedText = displayText;
+            accumulatedTextRef.current = displayText;
             setMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               const msgData = {
@@ -307,6 +312,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             }
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
+            accumulatedTextRef.current = accumulatedText;
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m));
           }
         },

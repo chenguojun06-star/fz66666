@@ -8,8 +8,10 @@ import com.fashion.supplychain.intelligence.entity.KgSynonym;
 import com.fashion.supplychain.intelligence.mapper.KgEntityMapper;
 import com.fashion.supplychain.intelligence.mapper.KgRelationMapper;
 import com.fashion.supplychain.intelligence.mapper.KgSynonymMapper;
-import com.fashion.supplychain.production.entity.*;
-import com.fashion.supplychain.production.mapper.*;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
+import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
@@ -30,6 +32,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KnowledgeGraphOrchestrator {
 
+    private static final String REL_PROCESS_DEPENDS_ON = "PROCESS_DEPENDS_ON";
+    private static final String REL_SUPPLIER_SUPPLIES = "SUPPLIER_SUPPLIES";
+    private static final String REL_ORDER_BELONGS_TO_FACTORY = "ORDER_BELONGS_TO_FACTORY";
+    private static final String REL_STYLE_CONTAINS_PROCESS = "STYLE_CONTAINS_PROCESS";
+    private static final String REL_MATERIAL_USED_IN_STYLE = "MATERIAL_USED_IN_STYLE";
+    private static final String REL_FACTORY_SPECIALIZES_IN = "FACTORY_SPECIALIZES_IN";
+    private static final String REL_CUSTOMER_RELATED_STYLE = "CUSTOMER_RELATED_STYLE";
+    private static final String REL_ORDER_RELATED_STYLE = "ORDER_RELATED_STYLE";
+
+    private static final List<List<String>> SYNONYM_GROUPS = List.of(
+            List.of("超期", "延期", "逾期", "overdue"),
+            List.of("面料", "面辅料", "布料"),
+            List.of("工厂", "加工厂", "外发厂"),
+            List.of("款式", "样衣", "板衣"),
+            List.of("进度", "生产进度", "完成率"),
+            List.of("质检", "品检", "检验")
+    );
+
+    private static final Map<String, List<String>> SYNONYM_EXPANSION = buildSynonymExpansion();
+
+    private static Map<String, List<String>> buildSynonymExpansion() {
+        Map<String, List<String>> map = new HashMap<>();
+        for (List<String> group : SYNONYM_GROUPS) {
+            for (String word : group) {
+                map.put(word, group);
+            }
+        }
+        return map;
+    }
+
     private final KgEntityMapper entityMapper;
     private final KgRelationMapper relationMapper;
     private final KgSynonymMapper synonymMapper;
@@ -38,9 +70,6 @@ public class KnowledgeGraphOrchestrator {
     private final StyleProcessMapper styleProcessMapper;
     private final FactoryMapper factoryMapper;
     private final MaterialPurchaseMapper materialPurchaseMapper;
-    private final FactoryShipmentMapper factoryShipmentMapper;
-    private final ScanRecordMapper scanRecordMapper;
-    private final ProductWarehousingMapper productWarehousingMapper;
 
     @Data
     public static class ReasoningPath {
@@ -48,6 +77,23 @@ public class KnowledgeGraphOrchestrator {
         private List<String> relationTypes = new ArrayList<>();
         private String pathDescription;
         private double confidence;
+    }
+
+    @Data
+    private static class BuildContext {
+        private Long tenantId;
+        private int entityCount;
+        private int relationCount;
+        private Map<String, KgEntity> factoryEntityMap = new LinkedHashMap<>();
+        private Map<Long, KgEntity> styleEntityMap = new LinkedHashMap<>();
+        private Map<String, KgEntity> processEntityMap = new LinkedHashMap<>();
+        private Map<String, KgEntity> orderEntityMap = new LinkedHashMap<>();
+        private Map<String, KgEntity> supplierEntityMap = new LinkedHashMap<>();
+        private Map<String, KgEntity> materialEntityMap = new LinkedHashMap<>();
+        private Map<String, KgEntity> customerEntityMap = new LinkedHashMap<>();
+        private List<Factory> factories;
+        private List<StyleProcess> styleProcesses;
+        private List<ProductionOrder> orders;
     }
 
     public List<ReasoningPath> reason(Long tenantId, String query, int maxHops) {
@@ -73,6 +119,10 @@ public class KnowledgeGraphOrchestrator {
                         .eq(KgSynonym::getWord, query));
         for (KgSynonym syn : synonyms) {
             searchTerms.add(syn.getCanonicalEntity());
+        }
+
+        if (SYNONYM_EXPANSION.containsKey(query)) {
+            searchTerms.addAll(SYNONYM_EXPANSION.get(query));
         }
 
         List<KgEntity> results = new ArrayList<>();
@@ -153,164 +203,20 @@ public class KnowledgeGraphOrchestrator {
         UserContext.set(ctx);
         log.info("[KnowledgeGraph] Building graph for tenant {}", tenantId);
         try {
-            int entityCount = 0;
-            int relationCount = 0;
-
-            List<Factory> factories = factoryMapper.selectList(
-                    new LambdaQueryWrapper<Factory>()
-                            .eq(Factory::getTenantId, tenantId)
-                            .eq(Factory::getDeleteFlag, 0)
-                            .last("LIMIT 500"));
-            Map<String, KgEntity> factoryEntityMap = new LinkedHashMap<>();
-            for (Factory f : factories) {
-                String props = String.format("{\"type\":\"%s\",\"supplierType\":\"%s\"}",
-                        f.getFactoryType(), f.getSupplierType());
-                KgEntity e = upsertEntity(tenantId, "factory", f.getFactoryName(), f.getId(), props);
-                factoryEntityMap.put(f.getId(), e);
-                entityCount++;
-            }
-
-            List<StyleInfo> styles = styleInfoMapper.selectList(
-                    new LambdaQueryWrapper<StyleInfo>()
-                            .eq(StyleInfo::getTenantId, tenantId)
-                            .last("LIMIT 1000"));
-            Map<Long, KgEntity> styleEntityMap = new LinkedHashMap<>();
-            for (StyleInfo s : styles) {
-                String props = String.format("{\"category\":\"%s\",\"season\":\"%s\"}",
-                        s.getCategory(), s.getSeason());
-                KgEntity e = upsertEntity(tenantId, "style", s.getStyleNo() + "-" + s.getStyleName(),
-                        String.valueOf(s.getId()), props);
-                styleEntityMap.put(s.getId(), e);
-                entityCount++;
-            }
-
-            List<StyleProcess> styleProcesses = styleProcessMapper.selectList(
-                    new LambdaQueryWrapper<StyleProcess>()
-                            .eq(StyleProcess::getTenantId, tenantId)
-                            .last("LIMIT 2000"));
-            Map<String, KgEntity> processEntityMap = new LinkedHashMap<>();
-            for (StyleProcess sp : styleProcesses) {
-                String props = String.format("{\"stage\":\"%s\",\"difficulty\":\"%s\",\"price\":%s}",
-                        sp.getProgressStage(), sp.getDifficulty(),
-                        sp.getPrice() != null ? sp.getPrice().toPlainString() : "0");
-                KgEntity e = upsertEntity(tenantId, "process", sp.getProcessName(),
-                        sp.getId(), props);
-                processEntityMap.put(sp.getId(), e);
-                entityCount++;
-            }
-
-            List<ProductionOrder> orders = productionOrderMapper.selectList(
-                    new LambdaQueryWrapper<ProductionOrder>()
-                            .eq(ProductionOrder::getTenantId, tenantId)
-                            .eq(ProductionOrder::getDeleteFlag, 0)
-                            .last("LIMIT 200"));
-            Map<String, KgEntity> orderEntityMap = new LinkedHashMap<>();
-            for (ProductionOrder o : orders) {
-                String props = String.format("{\"status\":\"%s\",\"quantity\":%s,\"urgency\":\"%s\"}",
-                        o.getStatus(),
-                        o.getOrderQuantity() != null ? o.getOrderQuantity() : 0,
-                        o.getUrgencyLevel());
-                KgEntity e = upsertEntity(tenantId, "order", o.getOrderNo(), o.getId(), props);
-                orderEntityMap.put(o.getId(), e);
-                entityCount++;
-
-                if (o.getFactoryId() != null && factoryEntityMap.containsKey(o.getFactoryId())) {
-                    KgEntity factoryEntity = factoryEntityMap.get(o.getFactoryId());
-                    upsertRelation(tenantId, factoryEntity.getId(), e.getId(), "produces", 1.0);
-                    relationCount++;
-                }
-
-                if (o.getStyleId() != null) {
-                    try {
-                        Long styleId = Long.parseLong(o.getStyleId());
-                        if (styleEntityMap.containsKey(styleId)) {
-                            KgEntity styleEntity = styleEntityMap.get(styleId);
-                            upsertRelation(tenantId, e.getId(), styleEntity.getId(), "contains", 1.0);
-                            relationCount++;
-                        }
-                    } catch (NumberFormatException ex) {
-                        log.debug("[KnowledgeGraph] styleId非数字格式: {}", o.getStyleId());
-                    }
-                }
-            }
-
-            for (StyleProcess sp : styleProcesses) {
-                if (sp.getStyleId() != null && styleEntityMap.containsKey(sp.getStyleId())
-                        && processEntityMap.containsKey(sp.getId())) {
-                    KgEntity styleEntity = styleEntityMap.get(sp.getStyleId());
-                    KgEntity processEntity = processEntityMap.get(sp.getId());
-                    upsertRelation(tenantId, styleEntity.getId(), processEntity.getId(), "requires", 1.0);
-                    relationCount++;
-                }
-            }
-
-            buildProcessDependencyRelations(tenantId, styleProcesses, processEntityMap);
-
-            List<MaterialPurchase> purchases = materialPurchaseMapper.selectList(
-                    new LambdaQueryWrapper<MaterialPurchase>()
-                            .eq(MaterialPurchase::getTenantId, tenantId)
-                            .eq(MaterialPurchase::getDeleteFlag, 0)
-                            .last("LIMIT 200"));
-            Map<String, KgEntity> supplierEntityMap = new LinkedHashMap<>();
-            for (MaterialPurchase mp : purchases) {
-                if (mp.getSupplierName() != null && !supplierEntityMap.containsKey(mp.getSupplierId())) {
-                    KgEntity e = upsertEntity(tenantId, "supplier", mp.getSupplierName(),
-                            mp.getSupplierId(), "{\"type\":\"material\"}");
-                    supplierEntityMap.put(mp.getSupplierId(), e);
-                    entityCount++;
-                }
-                if (mp.getSupplierId() != null && supplierEntityMap.containsKey(mp.getSupplierId())) {
-                    KgEntity supplierEntity = supplierEntityMap.get(mp.getSupplierId());
-                    String materialName = mp.getMaterialName() != null ? mp.getMaterialName() : mp.getMaterialCode();
-                    KgEntity materialEntity = upsertEntity(tenantId, "material", materialName,
-                            mp.getMaterialId(), String.format("{\"type\":\"%s\"}", mp.getMaterialType()));
-                    upsertRelation(tenantId, supplierEntity.getId(), materialEntity.getId(), "supplies", 1.0);
-                    entityCount++;
-                    relationCount++;
-                }
-            }
-
-            List<FactoryShipment> shipments = factoryShipmentMapper.selectList(
-                    new LambdaQueryWrapper<FactoryShipment>()
-                            .eq(FactoryShipment::getTenantId, tenantId)
-                            .eq(FactoryShipment::getDeleteFlag, 0)
-                            .last("LIMIT 200"));
-            for (FactoryShipment fs : shipments) {
-                if (fs.getFactoryId() != null && factoryEntityMap.containsKey(fs.getFactoryId())) {
-                    KgEntity factoryEntity = factoryEntityMap.get(fs.getFactoryId());
-                    KgEntity shipmentEntity = upsertEntity(tenantId, "shipment",
-                            fs.getShipmentNo(), fs.getId(),
-                            String.format("{\"quantity\":%s,\"status\":\"%s\"}",
-                                    fs.getShipQuantity() != null ? fs.getShipQuantity() : 0,
-                                    fs.getReceiveStatus()));
-                    upsertRelation(tenantId, factoryEntity.getId(), shipmentEntity.getId(), "delivers", 1.0);
-                    entityCount++;
-                    relationCount++;
-                }
-            }
-
-            List<ScanRecord> scans = scanRecordMapper.selectList(
-                    new LambdaQueryWrapper<ScanRecord>()
-                            .eq(ScanRecord::getTenantId, tenantId)
-                            .eq(ScanRecord::getScanResult, "success")
-                            .eq(ScanRecord::getScanType, "quality")
-                            .ne(ScanRecord::getScanType, "orchestration")
-                            .last("LIMIT 200"));
-            for (ScanRecord sr : scans) {
-                if (sr.getOperatorName() != null) {
-                    KgEntity workerEntity = upsertEntity(tenantId, "worker",
-                            sr.getOperatorName(), sr.getOperatorId(), "{}");
-                    KgEntity qualityEntity = upsertEntity(tenantId, "quality_event",
-                            "质检-" + sr.getOrderNo(), String.valueOf(sr.getId()),
-                            String.format("{\"process\":\"%s\"}", sr.getProcessName()));
-                    upsertRelation(tenantId, workerEntity.getId(), qualityEntity.getId(), "inspects", 1.0);
-                    entityCount++;
-                    relationCount++;
-                }
-            }
-
-            log.info("[KnowledgeGraph] Graph building completed for tenant {}: {} entities, {} relations",
-                    tenantId, entityCount, relationCount);
+            BuildContext bc = new BuildContext();
+            bc.tenantId = tenantId;
+            buildFactoryEntities(bc);
+            buildStyleEntities(bc);
+            buildProcessEntities(bc);
+            buildOrderEntities(bc);
+            buildStyleProcessRelations(bc);
+            buildProcessDependencyRelations(bc);
+            buildSupplierMaterialRelations(bc);
+            buildFactorySpecializationRelations(bc);
+            buildCustomerStyleRelations(bc);
+            seedSynonyms(tenantId);
+            log.info("[KnowledgeGraph] Graph built for tenant {}: {} entities, {} relations",
+                    tenantId, bc.entityCount, bc.relationCount);
         } catch (Exception e) {
             log.warn("[KnowledgeGraph] buildGraphFromBusinessData failed: {}", e.getMessage());
         } finally {
@@ -318,9 +224,107 @@ public class KnowledgeGraphOrchestrator {
         }
     }
 
-    private void buildProcessDependencyRelations(Long tenantId, List<StyleProcess> styleProcesses,
-                                                  Map<String, KgEntity> processEntityMap) {
-        Map<Long, List<StyleProcess>> processesByStyle = styleProcesses.stream()
+    private void buildFactoryEntities(BuildContext bc) {
+        bc.factories = factoryMapper.selectList(
+                new LambdaQueryWrapper<Factory>()
+                        .eq(Factory::getTenantId, bc.tenantId)
+                        .eq(Factory::getDeleteFlag, 0)
+                        .last("LIMIT 500"));
+        for (Factory f : bc.factories) {
+            String props = String.format("{\"type\":\"%s\",\"supplierType\":\"%s\",\"category\":\"%s\"}",
+                    f.getFactoryType(), f.getSupplierType(), f.getSupplierCategory());
+            KgEntity e = upsertEntity(bc.tenantId, "factory", f.getFactoryName(), f.getId(), props);
+            bc.factoryEntityMap.put(f.getId(), e);
+            bc.entityCount++;
+        }
+    }
+
+    private void buildStyleEntities(BuildContext bc) {
+        List<StyleInfo> styles = styleInfoMapper.selectList(
+                new LambdaQueryWrapper<StyleInfo>()
+                        .eq(StyleInfo::getTenantId, bc.tenantId)
+                        .last("LIMIT 1000"));
+        for (StyleInfo s : styles) {
+            String props = String.format("{\"category\":\"%s\",\"season\":\"%s\",\"customer\":\"%s\"}",
+                    s.getCategory(), s.getSeason(), s.getCustomer());
+            KgEntity e = upsertEntity(bc.tenantId, "style", s.getStyleNo() + "-" + s.getStyleName(),
+                    String.valueOf(s.getId()), props);
+            bc.styleEntityMap.put(s.getId(), e);
+            bc.entityCount++;
+        }
+    }
+
+    private void buildProcessEntities(BuildContext bc) {
+        bc.styleProcesses = styleProcessMapper.selectList(
+                new LambdaQueryWrapper<StyleProcess>()
+                        .eq(StyleProcess::getTenantId, bc.tenantId)
+                        .last("LIMIT 2000"));
+        for (StyleProcess sp : bc.styleProcesses) {
+            String props = String.format("{\"stage\":\"%s\",\"difficulty\":\"%s\",\"price\":%s}",
+                    sp.getProgressStage(), sp.getDifficulty(),
+                    sp.getPrice() != null ? sp.getPrice().toPlainString() : "0");
+            KgEntity e = upsertEntity(bc.tenantId, "process", sp.getProcessName(),
+                    sp.getId(), props);
+            bc.processEntityMap.put(sp.getId(), e);
+            bc.entityCount++;
+        }
+    }
+
+    private void buildOrderEntities(BuildContext bc) {
+        bc.orders = productionOrderMapper.selectList(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getTenantId, bc.tenantId)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .last("LIMIT 200"));
+        for (ProductionOrder o : bc.orders) {
+            String props = String.format("{\"status\":\"%s\",\"quantity\":%s,\"urgency\":\"%s\"}",
+                    o.getStatus(),
+                    o.getOrderQuantity() != null ? o.getOrderQuantity() : 0,
+                    o.getUrgencyLevel());
+            KgEntity e = upsertEntity(bc.tenantId, "order", o.getOrderNo(), o.getId(), props);
+            bc.orderEntityMap.put(o.getId(), e);
+            bc.entityCount++;
+            buildOrderRelations(bc, o, e);
+        }
+    }
+
+    private void buildOrderRelations(BuildContext bc, ProductionOrder o, KgEntity orderEntity) {
+        if (o.getFactoryId() != null && bc.factoryEntityMap.containsKey(o.getFactoryId())) {
+            KgEntity factoryEntity = bc.factoryEntityMap.get(o.getFactoryId());
+            upsertRelation(bc.tenantId, orderEntity.getId(), factoryEntity.getId(),
+                    REL_ORDER_BELONGS_TO_FACTORY, 1.0);
+            bc.relationCount++;
+        }
+        if (o.getStyleId() != null) {
+            try {
+                Long styleId = Long.parseLong(o.getStyleId());
+                KgEntity styleEntity = bc.styleEntityMap.get(styleId);
+                if (styleEntity != null) {
+                    upsertRelation(bc.tenantId, orderEntity.getId(), styleEntity.getId(),
+                            REL_ORDER_RELATED_STYLE, 1.0);
+                    bc.relationCount++;
+                }
+            } catch (NumberFormatException ex) {
+                log.debug("[KnowledgeGraph] styleId非数字格式: {}", o.getStyleId());
+            }
+        }
+    }
+
+    private void buildStyleProcessRelations(BuildContext bc) {
+        for (StyleProcess sp : bc.styleProcesses) {
+            if (sp.getStyleId() != null && bc.styleEntityMap.containsKey(sp.getStyleId())
+                    && bc.processEntityMap.containsKey(sp.getId())) {
+                KgEntity styleEntity = bc.styleEntityMap.get(sp.getStyleId());
+                KgEntity processEntity = bc.processEntityMap.get(sp.getId());
+                upsertRelation(bc.tenantId, styleEntity.getId(), processEntity.getId(),
+                        REL_STYLE_CONTAINS_PROCESS, 1.0);
+                bc.relationCount++;
+            }
+        }
+    }
+
+    private void buildProcessDependencyRelations(BuildContext bc) {
+        Map<Long, List<StyleProcess>> processesByStyle = bc.styleProcesses.stream()
                 .filter(sp -> sp.getStyleId() != null)
                 .collect(Collectors.groupingBy(StyleProcess::getStyleId));
 
@@ -332,11 +336,116 @@ public class KnowledgeGraphOrchestrator {
             for (int i = 1; i < sorted.size(); i++) {
                 StyleProcess prev = sorted.get(i - 1);
                 StyleProcess curr = sorted.get(i);
-                KgEntity prevEntity = processEntityMap.get(prev.getId());
-                KgEntity currEntity = processEntityMap.get(curr.getId());
+                KgEntity prevEntity = bc.processEntityMap.get(prev.getId());
+                KgEntity currEntity = bc.processEntityMap.get(curr.getId());
                 if (prevEntity != null && currEntity != null) {
-                    upsertRelation(tenantId, prevEntity.getId(), currEntity.getId(), "depends_on", 0.8);
+                    upsertRelation(bc.tenantId, prevEntity.getId(), currEntity.getId(),
+                            REL_PROCESS_DEPENDS_ON, 0.8);
+                    bc.relationCount++;
                 }
+            }
+        }
+    }
+
+    private void buildSupplierMaterialRelations(BuildContext bc) {
+        List<MaterialPurchase> purchases = materialPurchaseMapper.selectList(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .eq(MaterialPurchase::getTenantId, bc.tenantId)
+                        .eq(MaterialPurchase::getDeleteFlag, 0)
+                        .last("LIMIT 200"));
+        for (MaterialPurchase mp : purchases) {
+            if (mp.getSupplierName() != null && mp.getSupplierId() != null
+                    && !bc.supplierEntityMap.containsKey(mp.getSupplierId())) {
+                KgEntity e = upsertEntity(bc.tenantId, "supplier", mp.getSupplierName(),
+                        mp.getSupplierId(), "{\"type\":\"material\"}");
+                bc.supplierEntityMap.put(mp.getSupplierId(), e);
+                bc.entityCount++;
+            }
+            if (mp.getSupplierId() == null || !bc.supplierEntityMap.containsKey(mp.getSupplierId())) continue;
+            KgEntity supplierEntity = bc.supplierEntityMap.get(mp.getSupplierId());
+            String materialName = mp.getMaterialName() != null ? mp.getMaterialName() : mp.getMaterialCode();
+            KgEntity materialEntity = upsertEntity(bc.tenantId, "material", materialName,
+                    mp.getMaterialId(), String.format("{\"type\":\"%s\"}", mp.getMaterialType()));
+            bc.materialEntityMap.putIfAbsent(mp.getMaterialId(), materialEntity);
+            upsertRelation(bc.tenantId, supplierEntity.getId(), materialEntity.getId(),
+                    REL_SUPPLIER_SUPPLIES, 1.0);
+            bc.entityCount++;
+            bc.relationCount++;
+            if (mp.getStyleId() != null) {
+                linkMaterialToStyle(bc, mp.getStyleId(), materialEntity);
+            }
+        }
+    }
+
+    private void linkMaterialToStyle(BuildContext bc, String styleIdStr, KgEntity materialEntity) {
+        try {
+            Long styleId = Long.parseLong(styleIdStr);
+            KgEntity styleEntity = bc.styleEntityMap.get(styleId);
+            if (styleEntity != null) {
+                upsertRelation(bc.tenantId, materialEntity.getId(), styleEntity.getId(),
+                        REL_MATERIAL_USED_IN_STYLE, 0.9);
+                bc.relationCount++;
+            }
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private void buildFactorySpecializationRelations(BuildContext bc) {
+        Map<String, Set<String>> factoryStages = new HashMap<>();
+        Map<Long, List<StyleProcess>> procsByStyle = bc.styleProcesses.stream()
+                .filter(sp -> sp.getStyleId() != null && sp.getProgressStage() != null)
+                .collect(Collectors.groupingBy(StyleProcess::getStyleId));
+
+        for (ProductionOrder o : bc.orders) {
+            if (o.getFactoryId() == null || o.getStyleId() == null) continue;
+            try {
+                Long styleId = Long.parseLong(o.getStyleId());
+                for (StyleProcess sp : procsByStyle.getOrDefault(styleId, Collections.emptyList())) {
+                    factoryStages.computeIfAbsent(o.getFactoryId(), k -> new HashSet<>())
+                            .add(sp.getProgressStage());
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+
+        Map<String, KgEntity> stageCache = new HashMap<>();
+        for (Map.Entry<String, Set<String>> entry : factoryStages.entrySet()) {
+            KgEntity factoryEntity = bc.factoryEntityMap.get(entry.getKey());
+            if (factoryEntity == null) continue;
+            for (String stage : entry.getValue()) {
+                KgEntity stageEntity = stageCache.computeIfAbsent(stage,
+                        s -> upsertEntity(bc.tenantId, "process_stage", s, "stage-" + s, "{\"level\":\"parent\"}"));
+                upsertRelation(bc.tenantId, factoryEntity.getId(), stageEntity.getId(),
+                        REL_FACTORY_SPECIALIZES_IN, 0.7);
+                bc.relationCount++;
+            }
+        }
+    }
+
+    private void buildCustomerStyleRelations(BuildContext bc) {
+        for (ProductionOrder o : bc.orders) {
+            if (o.getCustomerId() == null || o.getStyleId() == null) continue;
+            KgEntity customerEntity = bc.customerEntityMap.computeIfAbsent(o.getCustomerId(), id -> {
+                String name = o.getCustomerName() != null ? o.getCustomerName() : id;
+                KgEntity e = upsertEntity(bc.tenantId, "customer", name, id, "{}");
+                bc.entityCount++;
+                return e;
+            });
+            try {
+                Long styleId = Long.parseLong(o.getStyleId());
+                KgEntity styleEntity = bc.styleEntityMap.get(styleId);
+                if (styleEntity != null) {
+                    upsertRelation(bc.tenantId, customerEntity.getId(), styleEntity.getId(),
+                            REL_CUSTOMER_RELATED_STYLE, 0.9);
+                    bc.relationCount++;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    private void seedSynonyms(Long tenantId) {
+        for (List<String> group : SYNONYM_GROUPS) {
+            String canonical = group.get(0);
+            for (String word : group) {
+                addSynonym(tenantId, word, canonical, "business_term");
             }
         }
     }

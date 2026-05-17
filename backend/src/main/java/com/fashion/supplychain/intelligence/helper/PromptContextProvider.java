@@ -278,13 +278,7 @@ public class PromptContextProvider {
         if (profile != null && !profile.isBlank() && !profile.contains("暂时不可用")) {
             wc.append(profile);
         }
-        // 预警注入：简单列出待处理任务提醒（不占太多token）
-        try {
-            String patrolBlock = buildActivePatrolBlock();
-            if (patrolBlock != null && !patrolBlock.isBlank()) {
-                wc.append("\n📋 当前与你相关的风险提醒：\n").append(patrolBlock);
-            }
-        } catch (Exception e) { log.debug("[AiAgent-Worker] 预警注入跳过"); }
+        // 预警注入：仅工人看，且 activePatrolBlock 已独立注入，不再重复
         return wc.toString();
     }
 
@@ -295,14 +289,7 @@ public class PromptContextProvider {
     public String buildExceptionReport(Long tenantId) {
         StringBuilder report = new StringBuilder();
         int alertCount = 0;
-        // 1. 巡查风险
-        try {
-            String patrolBlock = buildActivePatrolBlock();
-            if (patrolBlock != null && !patrolBlock.isBlank()) {
-                report.append(patrolBlock);
-                alertCount++;
-            }
-        } catch (Exception e) { log.debug("[ExceptionReport] 巡查风险获取跳过"); }
+        // 巡查风险由独立的 activePatrolBlock 注入，此处不再重复
         // 2. 智能信号：未处理的高优先级信号
         try {
             if (intelligenceSignalOrchestrator != null && tenantId != null) {

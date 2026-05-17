@@ -158,7 +158,7 @@ export interface StyleSize extends Record<string, unknown> {
   measureMethod?: string;
   baseSize?: string;
   standardValue: number;
-  tolerance: number;
+  tolerance: string | number;
   sort: number;
   /** 部位参考图片URLs（JSON数组字符串） */
   imageUrls?: string;
