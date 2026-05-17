@@ -356,13 +356,18 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
 
   // 裁剪数量按尺码汇总
   const cuttingSizeItems = useMemo(() => {
-    const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
+    const sizeSet = new Set<string>();
+    bundles.forEach(b => {
+      const size = (b.size || '').trim();
+      if (size) sizeSet.add(size);
+    });
+    const sizes = Array.from(sizeSet);
     const sizeMap: Record<string, number> = {};
     sizes.forEach(s => { sizeMap[s] = 0; });
 
     bundles.forEach(b => {
-      const size = (b.size || '').toUpperCase().trim();
-      if (Object.prototype.hasOwnProperty.call(sizeMap, size)) {
+      const size = (b.size || '').trim();
+      if (size && Object.prototype.hasOwnProperty.call(sizeMap, size)) {
         sizeMap[size] += (b.quantity || 0);
       }
     });

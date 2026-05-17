@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.hook;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AgentModeContext;
+import com.fashion.supplychain.intelligence.orchestration.TaskTrackerOrchestrator;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService.ConfirmLevel;
 import com.fashion.supplychain.intelligence.service.HighRiskAuditService;
@@ -10,38 +11,31 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * 统一操作确认 Hook — 双重确认机制的核心。
- *
- * <p>确认层级：</p>
- * <ul>
- *   <li>{@link ConfirmLevel#HIGH_RISK}：高风险写操作 → 展示详细预览+风险提示+审计落库</li>
- *   <li>{@link ConfirmLevel#WRITE}：普通写操作 → 展示简洁预览+轻量确认</li>
- *   <li>{@link ConfirmLevel#READ_ONLY}：只读查询 → 直接放行</li>
- * </ul>
- *
- * <p>双重确认流程：</p>
- * <ol>
- *   <li>首次调用 → 登记 PENDING + Redis 标记 → 拦截，AI 向用户展示执行预览</li>
- *   <li>用户确认 → AI 用相同参数再次调用 → 命中 Redis pending → 放行执行</li>
- * </ol>
- *
- * <p>历史问题修复（2026-12 升级）：</p>
- * <ol>
- *   <li>原 {@code hashArgs()} 仅取参数前 32 字符 → 已替换为 SHA-256 全量哈希</li>
- *   <li>原 pending 状态存内存 ConcurrentHashMap → 已迁移到 Redis 共享存储 (60s TTL)</li>
- *   <li>原本无任何审计落库 → 已在 {@link HighRiskAuditService} 中异步写入审计表</li>
- * </ol>
- */
+import java.util.Set;
+
 @Slf4j
 @Component
 public class HighRiskAuditHook implements ToolExecutionHook {
 
+    private static final Set<String> SAFE_AUTO_EXECUTE = Set.of(
+            "tool_order_contact_urge",
+            "tool_production_exception",
+            "tool_material_quality_issue"
+    );
+
     @Autowired
     private HighRiskAuditService auditService;
 
+    @Autowired(required = false)
+    private TaskTrackerOrchestrator taskTracker;
+
     @Override
     public boolean preToolUse(String toolName, String arguments) {
+        if (SAFE_AUTO_EXECUTE.contains(toolName)) {
+            log.debug("[OperationConfirm] 安全自动执行 tool={}", toolName);
+            return true;
+        }
+
         ConfirmLevel level = AiAgentToolAccessService.getConfirmLevel(toolName);
 
         if (level == ConfirmLevel.READ_ONLY) {
@@ -89,6 +83,23 @@ public class HighRiskAuditHook implements ToolExecutionHook {
     @Override
     public void postToolUse(String toolName, String arguments, String result, long elapsedMs, boolean success) {
         ConfirmLevel level = AiAgentToolAccessService.getConfirmLevel(toolName);
+
+        if (success && taskTracker != null) {
+            boolean isWrite = SAFE_AUTO_EXECUTE.contains(toolName)
+                    || level == ConfirmLevel.HIGH_RISK
+                    || level == ConfirmLevel.WRITE;
+            if (isWrite) {
+                try {
+                    String taskType = level == ConfirmLevel.HIGH_RISK ? "ACTION" : "NOTIFY";
+                    taskTracker.recordTask(toolName, taskType, resolveTargetType(toolName),
+                            extractSummary(arguments), extractSummary(result),
+                            UserContext.username());
+                } catch (Exception e) {
+                    log.debug("[TaskTracker] 记录任务失败: {}", e.getMessage());
+                }
+            }
+        }
+
         if (level != ConfirmLevel.HIGH_RISK) {
             return;
         }
@@ -96,5 +107,19 @@ public class HighRiskAuditHook implements ToolExecutionHook {
         log.info("[OperationConfirm] 高风险操作完成 auditId={}, tool={}, success={}, elapsed={}ms",
                 auditId, toolName, success, elapsedMs);
         auditService.markExecuted(auditId, success, result, elapsedMs, success ? null : result);
+    }
+
+    private String resolveTargetType(String toolName) {
+        if (toolName.contains("order")) return "ORDER";
+        if (toolName.contains("factory")) return "FACTORY";
+        if (toolName.contains("material")) return "MATERIAL";
+        if (toolName.contains("sample")) return "SAMPLE";
+        if (toolName.contains("production")) return "ORDER";
+        return "SYSTEM";
+    }
+
+    private String extractSummary(String jsonOrText) {
+        if (jsonOrText == null || jsonOrText.length() <= 100) return jsonOrText;
+        return jsonOrText.substring(0, 100);
     }
 }

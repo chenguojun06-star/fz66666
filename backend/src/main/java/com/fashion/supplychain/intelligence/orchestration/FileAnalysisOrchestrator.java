@@ -1,9 +1,11 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,6 +14,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -26,6 +29,9 @@ public class FileAnalysisOrchestrator {
     private static final int MAX_ROWS = 50;
     private static final int MAX_COLS = 20;
     private static final int MAX_SHEETS = 3;
+
+    @Autowired
+    private VisionAnalysisService visionAnalysisService;
 
     /** 分析上传文件，返回 Markdown 格式内容供注入到 AI 对话上下文 */
     public String analyzeFile(MultipartFile file) {
@@ -46,7 +52,7 @@ public class FileAnalysisOrchestrator {
                 return parseCsv(file, filename);
             } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")
                     || lower.endsWith(".png") || lower.endsWith(".gif") || lower.endsWith(".webp")) {
-                return "【收到图片文件：" + filename + "】\n（图片内容识别正在集成中，请用文字描述图片内容，我可以基于描述帮你分析）";
+                return analyzeImageFile(file, filename);
             } else {
                 return "【不支持的文件类型：" + filename + "】\n支持格式：.xlsx / .xls / .csv / 图片（jpg/png/gif）";
             }
@@ -134,5 +140,32 @@ public class FileAnalysisOrchestrator {
             }
             default -> "";
         };
+    }
+
+    private String analyzeImageFile(MultipartFile file, String filename) {
+        if (!visionAnalysisService.isAvailable()) {
+            return "【收到图片文件：" + filename + "】\n（视觉AI未配置，请用文字描述图片内容，我可以基于描述帮你分析）";
+        }
+        try {
+            String base64 = "data:" + file.getContentType() + ";base64,"
+                    + Base64.getEncoder().encodeToString(file.getBytes());
+            VisionAnalysisService.VisionResult result = visionAnalysisService.analyzeGeneric(
+                    base64, "用户上传了一张图片，请分析图片内容并用中文简要描述。如果是服装/布料相关图片，" +
+                            "请重点分析款式、颜色、面料、缺陷等信息。如果不是服装相关图片，请简要描述图片包含的内容。");
+            if (!result.isAvailable() || result.getConfidence() == 0) {
+                return "【收到图片文件：" + filename + "】\n视觉分析未能识别图片内容，请用文字描述图片内容";
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("【图片文件：").append(filename).append("】\n");
+            sb.append("视觉分析结果：\n");
+            sb.append(result.getReport());
+            if (result.getRecommendation() != null && !result.getRecommendation().isBlank()) {
+                sb.append("\n\n建议：").append(result.getRecommendation());
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.warn("[FileAnalysis] 图片视觉分析失败 fileName={}: {}", filename, e.getMessage());
+            return "【收到图片文件：" + filename + "】\n（图片分析暂时不可用，请用文字描述图片内容）";
+        }
     }
 }

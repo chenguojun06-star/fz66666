@@ -1,8 +1,9 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input, Select, Popconfirm, Modal } from 'antd';
 import { DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { sortSizeNames } from '@/utils/api';
+import api from '@/utils/api';
 import type { SizeTableData, SizeTablePart } from '../../utils/templateUtils';
 
 interface SizeInlineTableProps {
@@ -14,20 +15,45 @@ interface SizeInlineTableProps {
 
 type SizeTablePartRow = SizeTablePart & { __rowKey: string };
 
-const BASE_SIZE_RAW = [
+const FALLBACK_SIZE_RAW = [
   'XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL',
   '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
   '80', '90', '100', '110', '120', '130', '140', '150', '160', '170', '180', '190', '200',
 ];
 
-const BASE_SIZE_OPTIONS = sortSizeNames(BASE_SIZE_RAW).map((s) => ({ value: s, label: s }));
-
 const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, readOnly = false, compact = false }) => {
   const [editingSizeHeader, setEditingSizeHeader] = useState<string | null>(null);
   const [sizeHeaderDraft, setSizeHeaderDraft] = useState('');
-  const [sizeOptions, setSizeOptions] = useState(BASE_SIZE_OPTIONS);
+  const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
   const sizeHeaderInputRef = useRef<any>(null);
   const sortedRef = useRef(false);
+  const dictLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (dictLoadedRef.current) return;
+    dictLoadedRef.current = true;
+    (async () => {
+      try {
+        const res = await api.get<{ code: number; data: { records?: any[] } | any[] }>('/system/dict/list', {
+          params: { dictType: 'size', page: 1, pageSize: 200 },
+        });
+        const result = res as Record<string, unknown>;
+        if (result.code === 200) {
+          const data = result.data as { records?: any[] } | any[];
+          const records = Array.isArray(data) ? data : ((data as { records?: any[] })?.records || []);
+          const dictLabels = (Array.isArray(records) ? records : [])
+            .filter((item: any) => item.dictLabel)
+            .map((item: any) => item.dictLabel as string);
+          if (dictLabels.length > 0) {
+            const merged = Array.from(new Set([...dictLabels, ...FALLBACK_SIZE_RAW]));
+            setSizeOptions(sortSizeNames(merged).map((s) => ({ value: s, label: s })));
+            return;
+          }
+        }
+      } catch {}
+      setSizeOptions(sortSizeNames(FALLBACK_SIZE_RAW).map((s) => ({ value: s, label: s })));
+    })();
+  }, []);
 
   const sortedSizes = useMemo(() => sortSizeNames(value.sizes), [value.sizes]);
 

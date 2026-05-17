@@ -427,6 +427,10 @@ xiaoyun:
   agent:
     max-system-prompt-chars: ${XIAOYUN_MAX_PROMPT_CHARS:12000}
     token-budget: ${XIAOYUN_TOKEN_BUDGET:30000}
+    timeout-ms: ${XIAOYUN_AGENT_TIMEOUT_MS:180000}
+    context-refresh-ms: ${XIAOYUN_CONTEXT_REFRESH_MS:600000}
+    quick-path-timeout-ms: ${XIAOYUN_QUICK_PATH_TIMEOUT_MS:15000}
+    sse-heartbeat-interval-s: ${XIAOYUN_SSE_HEARTBEAT_INTERVAL:15}
     rag:
       recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:3}
       similarity-threshold: ${XIAOYUN_RAG_SIMILARITY_THRESHOLD:0.45}

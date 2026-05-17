@@ -73,9 +73,20 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
   const [imageUploading, setImageUploading] = useState(false);
   const [editTableData, setEditTableData] = useState<unknown>(null);
   const [showSizePrices, setShowSizePrices] = useState(false);
-  const [templateSizes, setTemplateSizes] = useState<string[]>(sortSizeNames(['XS', 'S', 'M', 'L', 'XL', 'XXL']));
+  const [templateSizes, setTemplateSizes] = useState<string[]>([]);
   const [newSizeName, setNewSizeName] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const dictSizesRef = useRef<string[]>(sortSizeNames(['XS', 'S', 'M', 'L', 'XL', 'XXL']));
+
+  useEffect(() => {
+    api.get<any>('/system/dict/list', { params: { dictType: 'size', page: 1, pageSize: 200 } })
+      .then((res: any) => {
+        const records = res?.data?.records || (Array.isArray(res?.data) ? res.data : []);
+        const labels = records.filter((item: any) => item.dictLabel).map((item: any) => item.dictLabel);
+        if (labels.length) dictSizesRef.current = sortSizeNames(labels);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     form.setFieldsValue({
@@ -90,7 +101,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
     if (!parsedContent) {
       setEditTableData(null);
       setShowSizePrices(false);
-      setTemplateSizes(sortSizeNames(['XS', 'S', 'M', 'L', 'XL', 'XXL']));
+      setTemplateSizes(sortSizeNames(dictSizesRef.current));
       setImageUrls([]);
       return;
     }
@@ -112,7 +123,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
       setTemplateSizes(sortSizeNames(nextContent.sizes));
       setShowSizePrices(nextContent.sizes.length > 0);
     } else {
-      setTemplateSizes(sortSizeNames(['XS', 'S', 'M', 'L', 'XL', 'XXL']));
+      setTemplateSizes(sortSizeNames(dictSizesRef.current));
       setShowSizePrices(false);
     }
 

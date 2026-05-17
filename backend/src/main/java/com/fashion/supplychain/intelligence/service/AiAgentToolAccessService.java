@@ -363,15 +363,25 @@ public class AiAgentToolAccessService {
         return rule != null && FACTORY_BLOCKED_DOMAINS.contains(rule.domain);
     }
 
+    private java.util.Map<String, String> toolGuideCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private java.util.Map<String, Long> toolGuideCacheTime = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long TOOL_GUIDE_CACHE_TTL_MS = 5 * 60 * 1000L;
+
     public String buildToolGuide(List<AgentTool> visibleTools) {
+        String cacheKey = buildToolCacheKey(visibleTools);
+        Long cachedTime = toolGuideCacheTime.get(cacheKey);
+        if (cachedTime != null && (System.currentTimeMillis() - cachedTime) < TOOL_GUIDE_CACHE_TTL_MS) {
+            return toolGuideCache.get(cacheKey);
+        }
         StringBuilder builder = new StringBuilder();
         builder.append("【当前会话可用工具】\n");
-
         if (visibleTools == null || visibleTools.isEmpty()) {
             builder.append("当前账号未开放任何业务工具，本轮只能基于已有上下文回答。\n\n");
-            return builder.toString();
+            String result = builder.toString();
+            toolGuideCache.put(cacheKey, result);
+            toolGuideCacheTime.put(cacheKey, System.currentTimeMillis());
+            return result;
         }
-
         int index = 1;
         for (AgentTool tool : visibleTools) {
             String label = com.fashion.supplychain.intelligence.helper.PromptToolLabelMapper.toolNameToLabel(tool.getName());
@@ -382,12 +392,22 @@ public class AiAgentToolAccessService {
                     .append(resolveGuide(tool))
                     .append("\n");
         }
-
         if (!hasManagerAccess()) {
             builder.append("当前账号开放本人直接相关的查询：工序跟进、本人计件工资明细、系统知识库；管理、审批、财务总览、跨部门协同类工具已自动隐藏。\n");
         }
         builder.append("\n");
-        return builder.toString();
+        String result = builder.toString();
+        toolGuideCache.put(cacheKey, result);
+        toolGuideCacheTime.put(cacheKey, System.currentTimeMillis());
+        return result;
+    }
+
+    private String buildToolCacheKey(List<AgentTool> tools) {
+        if (tools == null || tools.isEmpty()) return "empty";
+        StringBuilder sb = new StringBuilder();
+        sb.append(hasManagerAccess() ? "M" : "W");
+        for (AgentTool t : tools) sb.append('|').append(t.getName());
+        return sb.toString();
     }
 
     private boolean isWorkerVisible(String toolName) {

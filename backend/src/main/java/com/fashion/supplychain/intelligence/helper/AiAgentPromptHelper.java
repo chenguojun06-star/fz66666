@@ -19,7 +19,7 @@ import java.util.concurrent.*;
 @Slf4j
 public class AiAgentPromptHelper {
 
-    @Value("${xiaoyun.agent.max-system-prompt-chars:16000}")
+    @Value("${xiaoyun.agent.max-system-prompt-chars:12000}")
     private int maxSystemPromptChars;
 
     private volatile String masAnalysisCache = "";
@@ -171,19 +171,6 @@ public class AiAgentPromptHelper {
             }
         }
         return prompt;
-    }
-
-    /**
-     * 构建数字孪生提示词块（全模块实时快照）。
-     */
-    private String buildDigitalTwinBlock() {
-        if (coreUpgrade == null) return "";
-        try {
-            return coreUpgrade.buildDigitalTwinPrompt();
-        } catch (Exception e) {
-            log.debug("[AiAgent-DT] 数字孪生构建跳过: {}", e.getMessage());
-            return "";
-        }
     }
 
     /**

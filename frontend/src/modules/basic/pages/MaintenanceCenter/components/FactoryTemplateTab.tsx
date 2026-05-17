@@ -77,15 +77,26 @@ const FactoryTemplateTab: React.FC = () => {
 
   useEffect(() => { fetchList(1); }, [templateType]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleCreateBlank = (type: string) => {
+  const handleCreateBlank = async (type: string) => {
     setCreateType(type);
+    let content = getDefaultContent(type);
+    if (type === 'size') {
+      try {
+        const res = await api.get<any>('/system/dict/list', { params: { dictType: 'size', page: 1, pageSize: 200 } });
+        const records = res?.data?.records || (Array.isArray(res?.data) ? res.data : []);
+        const labels = records.filter((item: any) => item.dictLabel).map((item: any) => item.dictLabel);
+        if (labels.length) {
+          content = JSON.stringify({ sizes: sortSizeNames(labels), parts: [{ partName: '', measureMethod: '', tolerance: 0.5, values: {} }] });
+        }
+      } catch {}
+    }
     const newTpl: Partial<TemplateLibrary> = {
       templateType: type,
       templateName: '',
       templateKey: `factory_${type}_${Date.now()}`,
       sourceStyleNo: '',
       locked: 0,
-      templateContent: getDefaultContent(type),
+      templateContent: content,
     };
     setEditingRow(newTpl as TemplateLibrary);
     setEditOpen(true);

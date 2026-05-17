@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.dto.VisualAIRequest;
 import com.fashion.supplychain.intelligence.dto.VisualAIResponse;
 import com.fashion.supplychain.intelligence.entity.VisualAiLog;
 import com.fashion.supplychain.intelligence.mapper.VisualAiLogMapper;
+import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,7 +30,7 @@ import java.util.regex.Pattern;
 public class VisualAIOrchestrator {
 
     @Autowired
-    private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+    private VisionAnalysisService visionAnalysisService;
 
     @Autowired
     private VisualAiLogMapper visualAiLogMapper;
@@ -55,34 +57,40 @@ public class VisualAIOrchestrator {
             log.debug("[VisualAI] trace startRequest 失败: {}", e.getMessage());
         }
 
-        String systemPrompt = buildSystemPrompt(taskType);
-        String userMsg = buildUserMessage(taskType, req.getImageUrl());
-
-        String llmRaw;
+        VisionAnalysisService.VisionResult visionResult;
         try {
-            var result = inferenceOrchestrator.chat("visual-ai-" + taskType.toLowerCase(), systemPrompt, userMsg);
+            switch (taskType) {
+                case "STYLE_IDENTIFY":
+                    visionResult = visionAnalysisService.analyzeStyle(req.getImageUrl(), null);
+                    break;
+                case "COLOR_CHECK":
+                    visionResult = visionAnalysisService.analyzeColor(req.getImageUrl(), null);
+                    break;
+                default:
+                    visionResult = visionAnalysisService.analyzeDefect(req.getImageUrl(), null);
+            }
             if (commandId != null) {
                 try {
-                    traceOrchestrator.recordStep(commandId, "llm-vision", userMsg,
-                            result.getContent(), result.getLatencyMs(), result.isSuccess());
+                    traceOrchestrator.recordStep(commandId, "llm-vision", req.getImageUrl(),
+                            visionResult.getReport(), System.currentTimeMillis() - startTime, visionResult.getConfidence() > 0);
                 } catch (Exception e) { log.debug("[VisualAI] trace recordStep 失败: {}", e.getMessage()); }
             }
-            if (!result.isSuccess()) {
+            if (!visionResult.isAvailable() || visionResult.getConfidence() == 0) {
                 if (commandId != null) {
-                    try { traceOrchestrator.finishRequest(commandId, null, result.getContent(), System.currentTimeMillis() - startTime); }
+                    try { traceOrchestrator.finishRequest(commandId, null, visionResult.getErrorMessage(), System.currentTimeMillis() - startTime); }
                     catch (Exception e) { log.debug("[VisualAI] trace finishRequest 失败: {}", e.getMessage()); }
                 }
-                return errorResponse("视觉AI分析失败：" + result.getContent(), req);
+                return errorResponse(visionResult.getErrorMessage() != null ? visionResult.getErrorMessage() : "视觉AI分析失败", req);
             }
-            llmRaw = result.getContent();
         } catch (Exception e) {
-            log.warn("[VisualAI] LLM call failed: {}", e.getMessage());
+            log.warn("[VisualAI] Vision call failed: {}", e.getMessage());
             if (commandId != null) {
                 try { traceOrchestrator.finishRequest(commandId, null, e.getMessage(), System.currentTimeMillis() - startTime); }
                 catch (Exception ex) { log.debug("[VisualAI] trace finishRequest 失败: {}", ex.getMessage()); }
             }
             return errorResponse("视觉AI服务暂时不可用", req);
         }
+        String llmRaw = visionResult.getRawResponse() != null ? visionResult.getRawResponse() : visionResult.getReport();
 
         VisualAIResponse resp = parseResponse(llmRaw, taskType);
         resp.setTaskType(taskType);

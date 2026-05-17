@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { App } from 'antd';
 import api, { toNumberSafe, isApiSuccess, getApiMessage, sortSizeNames } from '@/utils/api';
 
-const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const FALLBACK_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const norm = (v: unknown) => String(v || '').trim();
 
 interface StyleProcessRow {
@@ -21,7 +21,7 @@ interface StyleProcessRow {
 
 type MatchedScope = 'style' | 'order' | 'empty';
 
-const buildRowsFromContent = (content: any, fallbackSizes: string[] = DEFAULT_SIZES): { rows: StyleProcessRow[]; sizes: string[] } => {
+const buildRowsFromContent = (content: any, fallbackSizes: string[] = FALLBACK_SIZES): { rows: StyleProcessRow[]; sizes: string[] } => {
   const rawSteps = Array.isArray(content?.steps) ? content.steps : [];
   const rawSizes = Array.isArray(content?.sizes)
     ? content.sizes.map((item: unknown) => String(item || '').trim().toUpperCase()).filter(Boolean)
@@ -73,12 +73,25 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [sizes, setSizes] = useState<string[]>([...DEFAULT_SIZES]);
+  const [sizes, setSizes] = useState<string[]>([...FALLBACK_SIZES]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const [newSizeName, setNewSizeName] = useState('');
   const [addSizePopoverOpen, setAddSizePopoverOpen] = useState(false);
   const snapshotRef = useRef<StyleProcessRow[] | null>(null);
+  const dictSizesLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (dictSizesLoadedRef.current) return;
+    dictSizesLoadedRef.current = true;
+    api.get<any>('/system/dict/list', { params: { dictType: 'size', page: 1, pageSize: 200 } })
+      .then((res: any) => {
+        const records = res?.data?.records || (Array.isArray(res?.data) ? res.data : []);
+        const labels = records.filter((item: any) => item.dictLabel).map((item: any) => item.dictLabel);
+        if (labels.length) setSizes(sortSizeNames(labels));
+      })
+      .catch(() => {});
+  }, []);
 
   const resetEditingState = useCallback(() => {
     setEditMode(false);
