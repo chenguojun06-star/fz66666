@@ -2,6 +2,7 @@ package com.fashion.supplychain.warehouse.orchestration;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import org.junit.jupiter.api.AfterEach;
@@ -32,6 +33,9 @@ class WarehouseAreaOrchestratorTest {
     @Mock
     private com.fashion.supplychain.warehouse.service.WarehouseLocationService locationService;
 
+    @Mock
+    private OperationLogService operationLogService;
+
     private WarehouseAreaOrchestrator orchestrator;
 
     @BeforeEach
@@ -44,7 +48,7 @@ class WarehouseAreaOrchestratorTest {
         ctx.setTenantId(1L);
         ctx.setPermissionRange("all");
         UserContext.set(ctx);
-        orchestrator = new WarehouseAreaOrchestrator(areaService, locationService);
+        orchestrator = new WarehouseAreaOrchestrator(areaService, locationService, operationLogService);
     }
 
     @AfterEach
