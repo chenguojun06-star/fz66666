@@ -22,8 +22,8 @@ export const warehouseLocationMapApi = {
   quickCreateArea: (areaName: string, warehouseType: string) =>
     api.post(`${AREA_BASE}/quick-create`, { areaName, warehouseType }),
 
-  deleteArea: (id: string) =>
-    api.delete(`${AREA_BASE}/${id}`),
+  deleteArea: (id: string, reason: string) =>
+    api.delete(`${AREA_BASE}/${id}`, { params: { reason } }),
 
   getLocationList: (params?: { page?: number; pageSize?: number; locationType?: string; warehouseType?: string; areaId?: string; status?: string; keyword?: string }) =>
     api.get(`${LOCATION_BASE}/list`, { params }),
@@ -33,6 +33,9 @@ export const warehouseLocationMapApi = {
 
   createLocation: (data: Record<string, unknown>) =>
     api.post(LOCATION_BASE, data),
+
+  deleteLocation: (id: string, reason: string) =>
+    api.delete(`${LOCATION_BASE}/${id}`, { params: { reason } }),
 
   batchInitLocations: (data: Record<string, unknown>) =>
     api.post(`${LOCATION_BASE}/batch-init`, data),

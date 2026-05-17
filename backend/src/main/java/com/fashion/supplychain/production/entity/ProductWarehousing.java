@@ -81,6 +81,8 @@ public class ProductWarehousing {
 
     private String defectRemark;
 
+    private String processName;
+
     private String repairRemark;
 
     /**

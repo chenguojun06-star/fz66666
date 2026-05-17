@@ -9,6 +9,8 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.system.entity.OperationLog;
+import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
@@ -32,6 +34,7 @@ public class WarehouseLocationOrchestrator {
     private final WarehouseAreaService warehouseAreaService;
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final OperationLogService operationLogService;
 
     private static final Map<String, String> WAREHOUSE_TYPE_LABELS = Map.of(
             "FINISHED", "成品仓",
@@ -144,9 +147,14 @@ public class WarehouseLocationOrchestrator {
         return Result.success(location);
     }
 
-    public Result<Void> delete(String id) {
+    @Transactional(rollbackFor = Exception.class)
+    public Result<Void> delete(String id, String reason) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
+
+        if (StringUtils.isBlank(reason)) {
+            return Result.fail("删除原因不能为空");
+        }
 
         WarehouseLocation existing = locationService.lambdaQuery()
                 .eq(WarehouseLocation::getId, id)
@@ -161,11 +169,28 @@ public class WarehouseLocationOrchestrator {
             return Result.fail("库位正在使用中，无法删除");
         }
 
-        existing.setDeleteFlag(1);
-        existing.setUpdateTime(LocalDateTime.now());
-        locationService.updateById(existing);
+        String locationCode = existing.getLocationCode();
+        String locationName = existing.getLocationName();
+        String warehouseType = existing.getWarehouseType();
 
-        log.info("[库位] 删除库位: id={}, code={}", id, existing.getLocationCode());
+        locationService.removeById(id);
+
+        OperationLog opLog = new OperationLog();
+        opLog.setModule("仓库管理");
+        opLog.setOperation("删除库位");
+        opLog.setOperatorId(parseLongSafe(UserContext.userId()));
+        opLog.setOperatorName(UserContext.username());
+        opLog.setTargetType("WarehouseLocation");
+        opLog.setTargetId(id);
+        opLog.setTargetName(locationCode);
+        opLog.setReason(reason);
+        opLog.setDetails(String.format("库位编码=%s, 名称=%s, 仓库类型=%s", locationCode, locationName, warehouseType));
+        opLog.setOperationTime(LocalDateTime.now());
+        opLog.setStatus("success");
+        opLog.setTenantId(tenantId);
+        operationLogService.save(opLog);
+
+        log.info("[库位] 硬删除库位: id={}, code={}, reason={}", id, locationCode, reason);
         return Result.success(null);
     }
 
@@ -359,5 +384,10 @@ public class WarehouseLocationOrchestrator {
             overview.put(type, typeInfo);
         }
         return Result.success(overview);
+    }
+
+    private Long parseLongSafe(String s) {
+        if (s == null || s.isBlank()) return null;
+        try { return Long.parseLong(s); } catch (NumberFormatException e) { return null; }
     }
 }

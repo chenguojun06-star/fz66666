@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.system.entity.OperationLog;
+import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
@@ -26,6 +28,7 @@ public class WarehouseAreaOrchestrator {
 
     private final WarehouseAreaService areaService;
     private final WarehouseLocationService locationService;
+    private final OperationLogService operationLogService;
 
     private static final Map<String, String> WAREHOUSE_TYPE_LABELS = Map.of(
             "FINISHED", "成品仓",
@@ -136,9 +139,14 @@ public class WarehouseAreaOrchestrator {
         return Result.success(area);
     }
 
-    public Result<Void> delete(String id) {
+    @Transactional(rollbackFor = Exception.class)
+    public Result<Void> delete(String id, String reason) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
+
+        if (StringUtils.isBlank(reason)) {
+            return Result.fail("删除原因不能为空");
+        }
 
         WarehouseArea existing = areaService.lambdaQuery()
                 .eq(WarehouseArea::getId, id)
@@ -149,20 +157,43 @@ public class WarehouseAreaOrchestrator {
             return Result.fail("仓库区域不存在");
         }
 
-        long locationCount = locationService.count(new LambdaQueryWrapper<WarehouseLocation>()
+        long usedLocationCount = locationService.count(new LambdaQueryWrapper<WarehouseLocation>()
                 .eq(WarehouseLocation::getTenantId, tenantId)
                 .eq(WarehouseLocation::getAreaId, id)
                 .eq(WarehouseLocation::getDeleteFlag, 0)
-                .eq(WarehouseLocation::getStatus, "ACTIVE"));
-        if (locationCount > 0) {
-            return Result.fail("该仓库区域下有 " + locationCount + " 个活跃库位，无法删除");
+                .gt(WarehouseLocation::getUsedCapacity, 0));
+        if (usedLocationCount > 0) {
+            return Result.fail("该仓库区域下有 " + usedLocationCount + " 个正在使用的库位，无法删除");
         }
 
-        existing.setDeleteFlag(1);
-        existing.setUpdateTime(LocalDateTime.now());
-        areaService.updateById(existing);
+        List<WarehouseLocation> allLocations = locationService.list(new LambdaQueryWrapper<WarehouseLocation>()
+                .eq(WarehouseLocation::getTenantId, tenantId)
+                .eq(WarehouseLocation::getAreaId, id)
+                .eq(WarehouseLocation::getDeleteFlag, 0));
+        if (!allLocations.isEmpty()) {
+            locationService.removeByIds(allLocations.stream().map(WarehouseLocation::getId).collect(Collectors.toList()));
+        }
 
-        log.info("[仓库区域] 删除: id={}, code={}", id, existing.getAreaCode());
+        String areaCode = existing.getAreaCode();
+        String areaName = existing.getAreaName();
+        areaService.removeById(id);
+
+        OperationLog opLog = new OperationLog();
+        opLog.setModule("仓库管理");
+        opLog.setOperation("删除仓库区域");
+        opLog.setOperatorId(parseLongSafe(UserContext.userId()));
+        opLog.setOperatorName(UserContext.username());
+        opLog.setTargetType("WarehouseArea");
+        opLog.setTargetId(id);
+        opLog.setTargetName(areaName);
+        opLog.setReason(reason);
+        opLog.setDetails(String.format("区域编码=%s, 名称=%s, 同时删除%d个空闲库位", areaCode, areaName, allLocations.size()));
+        opLog.setOperationTime(LocalDateTime.now());
+        opLog.setStatus("success");
+        opLog.setTenantId(tenantId);
+        operationLogService.save(opLog);
+
+        log.info("[仓库区域] 硬删除: id={}, code={}, 删除子库位={}, reason={}", id, areaCode, allLocations.size(), reason);
         return Result.success(null);
     }
 
@@ -300,5 +331,10 @@ public class WarehouseAreaOrchestrator {
             overview.put(type, typeInfo);
         }
         return Result.success(overview);
+    }
+
+    private Long parseLongSafe(String s) {
+        if (s == null || s.isBlank()) return null;
+        try { return Long.parseLong(s); } catch (NumberFormatException e) { return null; }
     }
 }

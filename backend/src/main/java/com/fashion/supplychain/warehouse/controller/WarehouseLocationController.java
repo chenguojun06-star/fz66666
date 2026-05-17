@@ -66,15 +66,15 @@ public class WarehouseLocationController {
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
-        return locationOrchestrator.delete(id);
+    public Result<Void> delete(@PathVariable String id, @RequestParam String reason) {
+        return locationOrchestrator.delete(id, reason);
     }
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/delete/{id}")
-    @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
-    public Result<Void> deleteLegacy(@PathVariable String id) {
-        return locationOrchestrator.delete(id);
+    @Deprecated
+    public Result<Void> deleteLegacy(@PathVariable String id, @RequestParam String reason) {
+        return locationOrchestrator.delete(id, reason);
     }
 
     @PreAuthorize("isAuthenticated()")

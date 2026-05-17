@@ -349,9 +349,9 @@ const _MaterialInventory: React.FC = () => {
                         onDateChange={setDateRange}
                         statusOptions={[
                           { label: '全部', value: '' },
-                          { label: '面料', value: '面料' },
-                          { label: '辅料', value: '辅料' },
-                          { label: '配件', value: '配件' },
+                          { label: '面料', value: 'fabric' },
+                          { label: '辅料', value: 'accessory' },
+                          { label: '里料', value: 'lining' },
                         ]}
                       />
                     )}

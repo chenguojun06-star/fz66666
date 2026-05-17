@@ -14,6 +14,7 @@ const DEFECT_CATEGORY_MAP = {
 
 const REPAIR_STATUS_MAP = {
   pending: '待返修',
+  pending_repair: '待返修',
   repairing: '返修中',
   repair_done: '待复检',
   scrapped: '已报废',
@@ -40,15 +41,14 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 });
     }
-    const app = getApp();
-    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
-      return;
-    }
+    var app = getApp();
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     if (this._dataLoaded && !this._needsRefresh) {
       this._bindWsEvents();
       return;
     }
     this._needsRefresh = false;
+    this._dataLoaded = false;
     this.loadDefectList(true);
     this._bindWsEvents();
   },
@@ -68,16 +68,20 @@ Page({
   },
 
   onFilter: function (e) {
-    const filter = e.currentTarget.dataset.filter;
+    var filter = e.currentTarget.dataset.filter;
     if (filter === this.data.activeFilter) return;
     this.setData({ activeFilter: filter });
     this.loadDefectList(true);
   },
 
-  onToggleDetail: function (e) {
-    const index = e.currentTarget.dataset.index;
-    const expanded = this.data.list[index].expanded;
-    this.setData({ ['list[' + index + '].expanded']: !expanded });
+  onViewDetail: function (e) {
+    var index = e.currentTarget.dataset.index;
+    var item = this.data.list[index];
+    if (!item) return;
+    var data = JSON.stringify(item);
+    wx.navigateTo({
+      url: '/pages/quality-detail/index?data=' + encodeURIComponent(data),
+    });
   },
 
   onLoadMore: function () {
@@ -86,11 +90,11 @@ Page({
   },
 
   loadDefectList: function (reset) {
-    const self = this;
+    var self = this;
     if (self.data.loading) return Promise.resolve();
 
-    const page = reset ? 1 : self.data.page;
-    const filter = self.data.activeFilter;
+    var page = reset ? 1 : self.data.page;
+    var filter = self.data.activeFilter;
 
     self.setData({
       loading: reset,
@@ -99,24 +103,23 @@ Page({
 
     return api.production.myRepairTasks()
       .then(function (res) {
-        const items = Array.isArray(res) ? res : (res && res.records) || (res && res.list) || [];
+        var items = Array.isArray(res) ? res : (res && res.records) || (res && res.list) || [];
 
-        let processed = items.map(function (item) {
+        var processed = items.map(function (item) {
           return self._processDefectItem(item);
         });
 
         if (filter !== 'all') {
           processed = processed.filter(function (item) {
-            if (filter === 'pending') return item.repairStatus === 'pending';
+            if (filter === 'pending') return item.repairStatus === 'pending' || item.repairStatus === 'pending_repair';
             if (filter === 'repairing') return item.repairStatus === 'repairing';
             if (filter === 'repaired') return item.repairStatus === 'repair_done';
             return true;
           });
         }
 
-        const stats = self._calcStats(items);
-
-        const newList = reset ? processed : self.data.list.concat(processed);
+        var stats = self._calcStats(items);
+        var newList = reset ? processed : self.data.list.concat(processed);
 
         self.setData({
           list: newList,
@@ -140,21 +143,21 @@ Page({
   _processDefectItem: function (item) {
     item.defectCategoryText = DEFECT_CATEGORY_MAP[item.defectCategory] || item.defectCategory || '';
     item.repairStatusText = REPAIR_STATUS_MAP[item.repairStatus] || item.repairStatus || '';
-    item.expanded = false;
 
     if (item.unqualifiedImageUrls) {
       try {
-        const urls = typeof item.unqualifiedImageUrls === 'string'
+        var urls = typeof item.unqualifiedImageUrls === 'string'
           ? JSON.parse(item.unqualifiedImageUrls)
           : item.unqualifiedImageUrls;
-        item.unqualifiedImageUrls = urls.filter(Boolean).map(function (u) {
-          return getAuthedImageUrl(u);
-        });
+        item.coverImage = urls.filter(Boolean).length > 0 ? getAuthedImageUrl(urls[0]) : '';
+        item.imageCount = urls.filter(Boolean).length;
       } catch (_) {
-        item.unqualifiedImageUrls = [];
+        item.coverImage = '';
+        item.imageCount = 0;
       }
     } else {
-      item.unqualifiedImageUrls = [];
+      item.coverImage = '';
+      item.imageCount = 0;
     }
 
     if (item.createTime) {
@@ -165,12 +168,12 @@ Page({
   },
 
   _calcStats: function (items) {
-    let pending = 0;
-    let repairing = 0;
-    let repaired = 0;
-    let completed = 0;
+    var pending = 0;
+    var repairing = 0;
+    var repaired = 0;
+    var completed = 0;
     items.forEach(function (item) {
-      if (item.repairStatus === 'pending') pending++;
+      if (item.repairStatus === 'pending' || item.repairStatus === 'pending_repair') pending++;
       else if (item.repairStatus === 'repairing') repairing++;
       else if (item.repairStatus === 'repair_done') repaired++;
       else if (item.repairStatus === 'scrapped' || item.repairStatus === 'completed') completed++;
@@ -185,19 +188,19 @@ Page({
 
   _formatTime: function (t) {
     if (!t) return '';
-    const d = new Date(t);
+    var d = new Date(t);
     if (isNaN(d.getTime())) return t;
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    const h = d.getHours();
-    const min = d.getMinutes();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    var h = d.getHours();
+    var min = d.getMinutes();
     return m + '/' + day + ' ' + (h < 10 ? '0' + h : h) + ':' + (min < 10 ? '0' + min : min);
   },
 
   onStartRepair: function (e) {
-    const self = this;
-    const index = e.currentTarget.dataset.index;
-    const item = self.data.list[index];
+    var self = this;
+    var index = e.currentTarget.dataset.index;
+    var item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
@@ -207,7 +210,7 @@ Page({
       cancelText: '取消',
       success: function (res) {
         if (!res.confirm) return;
-        const userInfo = getUserInfo() || {};
+        var userInfo = getUserInfo() || {};
         api.production.startBundleRepair(item.bundleId, userInfo.name || userInfo.username || '')
           .then(function () {
             toast.success('已开始返修');
@@ -226,9 +229,9 @@ Page({
   },
 
   onCompleteRepair: function (e) {
-    const self = this;
-    const index = e.currentTarget.dataset.index;
-    const item = self.data.list[index];
+    var self = this;
+    var index = e.currentTarget.dataset.index;
+    var item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
@@ -256,9 +259,9 @@ Page({
   },
 
   onScrap: function (e) {
-    const self = this;
-    const index = e.currentTarget.dataset.index;
-    const item = self.data.list[index];
+    var self = this;
+    var index = e.currentTarget.dataset.index;
+    var item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
@@ -290,16 +293,10 @@ Page({
     wx.switchTab({ url: '/pages/scan/index' });
   },
 
-  onPreviewImage: function (e) {
-    const url = e.currentTarget.dataset.url;
-    const urls = e.currentTarget.dataset.urls;
-    wx.previewImage({ current: url, urls: urls || [url] });
-  },
-
   _bindWsEvents: function () {
     if (this._wsBound) return;
     this._wsBound = true;
-    const self = this;
+    var self = this;
     this._onDataChanged = function () { self.loadDefectList(true); };
     this._onScanSuccess = function () { self.loadDefectList(true); };
     this._onRefreshAll = function () { self.loadDefectList(true); };

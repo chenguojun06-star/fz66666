@@ -9,11 +9,12 @@ import { safePrint } from '@/utils/safePrint';
 import SmallModal from '@/components/common/SmallModal';
 import StyleStageControlBar from './StyleStageControlBar';
 import { message } from '@/utils/antdStatic';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
-const REVIEW_STATUS_OPTIONS = [
-  { label: ' 通过', value: 'PASS' },
-  { label: ' 需修改', value: 'REWORK' },
-  { label: ' 不通过', value: 'REJECT' },
+const REVIEW_STATUS_FALLBACK = [
+  { label: '通过', value: 'PASS' },
+  { label: '需修改', value: 'REWORK' },
+  { label: '不通过', value: 'REJECT' },
 ];
 
 const reviewStatusTag = (status?: string | null) => {
@@ -86,6 +87,7 @@ const StyleProductionTab: React.FC<Props> = ({
   sampleQuantity,
 }) => {
   const navigate = useNavigate();
+  const { options: reviewStatusOptions } = useDictOptions('review_status', REVIEW_STATUS_FALLBACK);
 
   // ---- 样衣审核 Modal ----
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
@@ -386,7 +388,7 @@ const StyleProductionTab: React.FC<Props> = ({
             label="审核结论"
             rules={[{ required: true, message: '请选择审核结论' }]}
           >
-            <Select placeholder="请选择审核结论" options={REVIEW_STATUS_OPTIONS} />
+            <Select placeholder="请选择审核结论" options={reviewStatusOptions} />
           </Form.Item>
           <Form.Item
             name="reviewComment"

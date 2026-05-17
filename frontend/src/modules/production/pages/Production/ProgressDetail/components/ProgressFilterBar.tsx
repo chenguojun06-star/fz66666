@@ -4,6 +4,7 @@ import { AppstoreOutlined, UnorderedListOutlined, ArrowUpOutlined, ArrowDownOutl
 import dayjs from 'dayjs';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import { useDictOptions } from '@/hooks/useDictOptions';
 import type { ProductionQueryParams } from '@/types/production';
 
 type FilterBarBaseProps = {
@@ -17,6 +18,19 @@ type FilterBarBaseProps = {
   setViewMode: (mode: 'list' | 'card') => void;
   dateSortAsc: boolean;
   toggleDateSort: () => void;
+};
+
+const UrgencyLevelFilterSelect: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+}> = ({ value, onChange }) => {
+  const urgencyLevelOptions = useDictOptions('urgency_level', [
+    { label: '普通', value: 'normal' },
+    { label: '急单', value: 'urgent' },
+  ]).options;
+  return (
+    <Select value={value} onChange={onChange} placeholder="紧急程度" allowClear style={{ minWidth: 110 }} options={[{ label: '全部紧急度', value: '' }, ...urgencyLevelOptions]} />
+  );
 };
 
 export const FilterSearchSection: React.FC<FilterBarBaseProps> = ({
@@ -34,7 +48,7 @@ export const FilterSearchSection: React.FC<FilterBarBaseProps> = ({
       statusOptions={statusOptions}
     />
     <Select value={queryParams.factoryType || ''} onChange={(value) => setQueryParams((prev) => ({ ...prev, factoryType: (value || undefined) as ProductionQueryParams['factoryType'], page: 1 }))} placeholder="内外标签" allowClear style={{ minWidth: 110 }} options={factoryTypeOptions} />
-    <Select value={queryParams.urgencyLevel || ''} onChange={(value) => setQueryParams((prev) => ({ ...prev, urgencyLevel: value || undefined, page: 1 }))} placeholder="紧急程度" allowClear style={{ minWidth: 110 }} options={[{ label: '全部紧急度', value: '' }, { label: ' 急单', value: 'urgent' }, { label: '普通', value: 'normal' }]} />
+    <UrgencyLevelFilterSelect value={queryParams.urgencyLevel || ''} onChange={(value) => setQueryParams((prev) => ({ ...prev, urgencyLevel: value || undefined, page: 1 }))} />
   </>
 );
 

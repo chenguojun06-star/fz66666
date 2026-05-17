@@ -4,6 +4,7 @@ import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, RadarChartOut
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import ExportButton from '@/components/common/ExportButton';
 import { useCustomerOptions } from '@/hooks/useCustomerOptions';
+import { useDictOptions } from '@/hooks/useDictOptions';
 import { ProductionQueryParams } from '@/types/production';
 import type { Dayjs } from 'dayjs';
 
@@ -42,6 +43,46 @@ const CustomerFilterSelect: React.FC<{
         { label: '全部客户', value: '' },
         ...customers.map((c) => ({ label: c.companyName, value: c.id })),
       ]}
+    />
+  );
+};
+
+const UrgencyLevelSelect: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+}> = ({ value, onChange }) => {
+  const urgencyLevelOptions = useDictOptions('urgency_level', [
+    { label: '普通', value: 'normal' },
+    { label: '急单', value: 'urgent' },
+  ]).options;
+  return (
+    <Select
+      value={value}
+      onChange={onChange}
+      placeholder="紧急程度"
+      allowClear
+      style={{ minWidth: 110 }}
+      options={[{ label: '全部紧急度', value: '' }, ...urgencyLevelOptions]}
+    />
+  );
+};
+
+const OrderTypeSelect: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+}> = ({ value, onChange }) => {
+  const orderTypeOptions = useDictOptions('order_type', [
+    { label: '首单', value: 'FIRST' },
+    { label: '翻单', value: 'REORDER' },
+  ]).options;
+  return (
+    <Select
+      value={value}
+      onChange={onChange}
+      placeholder="首/翻单"
+      allowClear
+      style={{ minWidth: 110 }}
+      options={[{ label: '全部单型', value: '' }, ...orderTypeOptions]}
     />
   );
 };
@@ -88,29 +129,13 @@ function buildFilterBar(props: ProductionFilterBarProps) {
           style={{ minWidth: 110 }}
           options={factoryTypeOptions}
         />
-        <Select
+        <UrgencyLevelSelect
           value={queryParams.urgencyLevel || ''}
           onChange={(value) => setQueryParams({ ...queryParams, urgencyLevel: value || undefined, page: 1 })}
-          placeholder="紧急程度"
-          allowClear
-          style={{ minWidth: 110 }}
-          options={[
-            { label: '全部紧急度', value: '' },
-            { label: ' 急单', value: 'urgent' },
-            { label: '普通', value: 'normal' },
-          ]}
         />
-        <Select
+        <OrderTypeSelect
           value={queryParams.plateType || ''}
           onChange={(value) => setQueryParams({ ...queryParams, plateType: value || undefined, page: 1 })}
-          placeholder="首/翻单"
-          allowClear
-          style={{ minWidth: 110 }}
-          options={[
-            { label: '全部单型', value: '' },
-            { label: '首单', value: 'FIRST' },
-            { label: '翻单', value: 'REORDER' },
-          ]}
         />
         <CustomerFilterSelect
           value={queryParams.customerId || ''}

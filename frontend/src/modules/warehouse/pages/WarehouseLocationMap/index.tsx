@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Popconfirm } from 'antd';
+import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form } from 'antd';
 import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { warehouseLocationMapApi } from '@/services/warehouse/warehouseLocationMapApi';
@@ -178,19 +178,97 @@ const WarehouseLocationMap: React.FC = () => {
     }
   };
 
-  const handleDeleteArea = async (areaId: string) => {
-    try {
-      await warehouseLocationMapApi.deleteArea(areaId);
-      message.success('删除成功');
-      if (selectedAreaId === areaId) {
-        setSelectedAreaId('');
-        setLocations([]);
-      }
-      loadAreas();
-      loadOverview();
-    } catch {
-      message.error('删除失败，该仓库下可能还有活跃库位');
+  const confirmDeleteArea = (areaId: string, areaName: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    let reasonInput = '';
+    modal.confirm({
+      title: `确定删除仓库「${areaName}」？`,
+      content: (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ color: 'var(--color-danger)', marginBottom: 8 }}>
+            此操作将硬删除该仓库及其下所有空闲库位，删除后不可恢复！
+          </div>
+          <Input.TextArea
+            rows={3}
+            placeholder="请输入删除原因（必填）"
+            onChange={(e) => { reasonInput = e.target.value; }}
+          />
+        </div>
+      ),
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        if (!reasonInput.trim()) {
+          message.error('请输入删除原因');
+          return Promise.reject();
+        }
+        try {
+          await warehouseLocationMapApi.deleteArea(areaId, reasonInput.trim());
+          message.success('仓库删除成功');
+          if (selectedAreaId === areaId) {
+            setSelectedAreaId('');
+            setLocations([]);
+          }
+          loadAreas();
+          loadOverview();
+        } catch (err: any) {
+          const errMsg = err?.response?.data?.message || err?.message || '删除失败';
+          message.error(errMsg);
+        }
+      },
+    });
+  };
+
+  const confirmDeleteLocation = (locationId: string, locationCode: string, usedCapacity: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (usedCapacity > 0) {
+      message.warning('该库位正在使用中，无法删除');
+      return;
     }
+    let reasonInput = '';
+    modal.confirm({
+      title: `确定删除库位「${locationCode}」？`,
+      content: (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ color: 'var(--color-danger)', marginBottom: 8 }}>
+            此操作将硬删除该库位，删除后不可恢复！
+          </div>
+          <Input.TextArea
+            rows={3}
+            placeholder="请输入删除原因（必填）"
+            onChange={(e) => { reasonInput = e.target.value; }}
+          />
+        </div>
+      ),
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        if (!reasonInput.trim()) {
+          message.error('请输入删除原因');
+          return Promise.reject();
+        }
+        try {
+          const res = await warehouseLocationMapApi.deleteLocation(locationId, reasonInput.trim());
+          const code = res?.data?.code;
+          if (code !== undefined && code !== 0 && code !== 200) {
+            message.error(res?.data?.message || '删除失败');
+            return;
+          }
+          message.success(`库位 ${locationCode} 已删除`);
+          if (selectedLocation?.id === locationId) {
+            setDetailModalOpen(false);
+            setSelectedLocation(null);
+          }
+          loadLocations(selectedAreaId);
+          loadOverview();
+        } catch (err: any) {
+          const errMsg = err?.response?.data?.message || err?.message || '删除失败';
+          message.error(errMsg);
+        }
+      },
+    });
   };
 
   const handleCreateArea = async () => {
@@ -350,14 +428,11 @@ const WarehouseLocationMap: React.FC = () => {
                       </div>
                     </div>
                     <div className="wlm-warehouse-actions" onClick={e => e.stopPropagation()}>
-                      <Popconfirm
-                        title="确定删除此仓库？"
-                        onConfirm={() => handleDeleteArea(area.id)}
-                        okText="删除"
-                        cancelText="取消"
-                      >
-                        <DeleteOutlined className="wlm-action-icon" style={{ color: 'var(--color-danger)', marginRight: 6 }} />
-                      </Popconfirm>
+                      <DeleteOutlined
+                        className="wlm-action-icon"
+                        style={{ color: 'var(--color-danger)', marginRight: 6 }}
+                        onClick={(e) => confirmDeleteArea(area.id, area.areaName, e)}
+                      />
                       <Switch
                         size="small"
                         checked={area.status === 'ACTIVE'}
@@ -492,6 +567,10 @@ const WarehouseLocationMap: React.FC = () => {
                             <div className="wlm-location-capacity">
                               {location.capacity ? `${location.usedCapacity}/${location.capacity}` : `${location.usedCapacity}`}
                             </div>
+                            <DeleteOutlined
+                              className="wlm-location-delete-icon"
+                              onClick={(e) => confirmDeleteLocation(location.id, location.locationCode, location.usedCapacity, e)}
+                            />
                           </div>
                         </Tooltip>
                       );

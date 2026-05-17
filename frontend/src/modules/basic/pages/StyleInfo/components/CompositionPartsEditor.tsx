@@ -85,7 +85,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
     emit(partsMap, activeParts, { ...washNoteMap, [partLabel]: note });
   };
 
-  const unactiveParts = dictOptions.map(d => d.label).filter(label => !activeParts.includes(label));
+  const unactiveParts = dictOptions.filter(d => !activeParts.includes(d.label));
   const hasRows = activeParts.length > 0;
 
   return (
@@ -198,12 +198,14 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
               onChange={(v: string) => {
-                addSection(v);
+                const selected = dictOptions.find(d => d.value === v);
+                const partLabel = selected ? selected.label : v;
+                addSection(partLabel);
                 setSelectSearch('');
               }}
               options={[
-                ...unactiveParts.map(label => ({ label, value: label })),
-                ...(selectSearch.trim() && !unactiveParts.includes(selectSearch.trim()) && !activeParts.includes(selectSearch.trim())
+                ...unactiveParts.map(d => ({ label: d.label, value: d.value })),
+                ...(selectSearch.trim() && !unactiveParts.some(d => d.label === selectSearch.trim()) && !activeParts.includes(selectSearch.trim())
                   ? [{ label: `创建 "${selectSearch.trim()}"`, value: selectSearch.trim() }]
                   : []),
               ]}

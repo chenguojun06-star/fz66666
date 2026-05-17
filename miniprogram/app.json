@@ -86,6 +86,11 @@
       "pages": ["index"]
     },
     {
+      "root": "pages/quality-detail",
+      "name": "pkg-quality-detail",
+      "pages": ["index"]
+    },
+    {
         "root": "pages/dashboard",
         "name": "pkg-dashboard",
         "pages": ["index", "process-edit/index"]

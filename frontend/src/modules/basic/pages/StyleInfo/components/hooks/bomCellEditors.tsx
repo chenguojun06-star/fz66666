@@ -5,6 +5,7 @@ import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { materialTypeOptions } from './bomConstants';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 export const parseSizeUsageMap = (value?: string) => {
   try {
@@ -78,6 +79,7 @@ export interface BomEditorContext {
 export function useBomEditorHelpers(ctx: BomEditorContext) {
   const { form, activeSizes } = ctx;
   const { modal } = App.useApp();
+  const { options: dictMaterialTypeOptions } = useDictOptions('material_category', [...materialTypeOptions]);
 
   const canEdit = (record: StyleBom) => !ctx.locked && (ctx.tableEditable || ctx.isEditing(record));
 
@@ -114,7 +116,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
       return (
         <Form.Item name={ctx.rowName(record.id, 'materialType')} style={{ margin: 0 }}>
           <Select
-            options={materialTypeOptions as any}
+            options={dictMaterialTypeOptions as any}
             style={{ width: '100%' }}
           />
         </Form.Item>

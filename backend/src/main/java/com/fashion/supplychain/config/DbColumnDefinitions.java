@@ -302,6 +302,7 @@ public final class DbColumnDefinitions {
         add("t_product_warehousing", "quality_operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '质检操作员姓名'");
         add("t_product_warehousing", "defect_category", "VARCHAR(50) DEFAULT NULL COMMENT '缺陷类别'");
         add("t_product_warehousing", "defect_remark", "VARCHAR(500) DEFAULT NULL COMMENT '缺陷备注'");
+        add("t_product_warehousing", "process_name", "VARCHAR(100) DEFAULT NULL COMMENT '工序名称'");
         add("t_product_warehousing", "unqualified_image_urls", "TEXT DEFAULT NULL COMMENT '不合格图片URL列表'");
         add("t_product_warehousing", "receiver_id", "VARCHAR(64) DEFAULT NULL COMMENT '收货人ID'");
         add("t_product_warehousing", "receiver_name", "VARCHAR(100) DEFAULT NULL COMMENT '收货人姓名'");

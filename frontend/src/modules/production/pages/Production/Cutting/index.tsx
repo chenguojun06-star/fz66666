@@ -30,8 +30,7 @@ import { productionOrderApi } from '@/services/production/productionApi';
 
 import '../../../styles.css';
 
-import {
-  useCuttingTasks,
+import { useCuttingTasks,
   useCuttingBundles,
   useCuttingPrint,
   useCuttingCreateTask,
@@ -40,6 +39,7 @@ import {
 import type { CuttingBundleRow } from './hooks';
 import { CuttingCreateTaskModal, CuttingFreeBundlePanel, CuttingPrintPreviewModal, CuttingRatioPanel, CuttingBomPanel } from './components';
 import { useBundleColumns } from './columns';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -48,6 +48,10 @@ const CuttingManagement: React.FC = () => {
   const location = useLocation();
   const { modalWidth } = useViewport();
   const params = useParams();
+  const { options: factoryLabelOptions } = useDictOptions('factory_label', [
+    { label: '内部工厂', value: 'INTERNAL' },
+    { label: '外发工厂', value: 'EXTERNAL' },
+  ]);
   const routeOrderNo = useMemo(() => {
     const raw = String((params as unknown as any)?.orderNo || '').trim();
     if (!raw) return '';
@@ -287,8 +291,7 @@ const CuttingManagement: React.FC = () => {
                       onChange={(value) => tasks.setTaskQuery(prev => ({ ...prev, factoryType: value as 'INTERNAL' | 'EXTERNAL' | '', page: 1 }))}
                       options={[
                         { label: '全部工厂', value: '' },
-                        { label: '内部工厂', value: 'INTERNAL' },
-                        { label: '外发工厂', value: 'EXTERNAL' },
+                        ...factoryLabelOptions,
                       ]}
                       style={{ width: 132 }}
                       placeholder="工厂类型"

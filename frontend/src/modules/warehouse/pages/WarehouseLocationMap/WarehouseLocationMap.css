@@ -212,6 +212,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+  position: relative;
 }
 
 .wlm-location-card:hover {
@@ -249,6 +250,28 @@
 .wlm-location-capacity {
   font-size: 11px;
   color: var(--color-text-quaternary);
+}
+
+.wlm-location-delete-icon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 11px;
+  color: var(--color-text-quaternary);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  padding: 2px;
+  border-radius: 2px;
+}
+
+.wlm-location-card:hover .wlm-location-delete-icon {
+  opacity: 1;
+}
+
+.wlm-location-delete-icon:hover {
+  color: var(--color-danger);
+  background: var(--color-bg-highlight);
 }
 
 .wlm-location-skus {

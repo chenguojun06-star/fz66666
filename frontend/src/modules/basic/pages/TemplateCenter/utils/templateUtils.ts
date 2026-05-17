@@ -76,15 +76,6 @@ export type ProcessPriceRow = {
 
 export type ProcessPriceTableData = { steps: ProcessPriceRow[] };
 
-export const MAIN_PROGRESS_STAGE_OPTIONS = [
-  { value: '采购', label: '采购' },
-  { value: '裁剪', label: '裁剪' },
-  { value: '车缝', label: '车缝' },
-  { value: '二次工艺', label: '二次工艺' },
-  { value: '尾部', label: '尾部' },
-  { value: '入库', label: '入库' },
-];
-
 export const isSizeTableData = (data: any): data is SizeTableData => {
   if (!data || typeof data !== 'object') return false;
   return Array.isArray(data.sizes) && Array.isArray(data.parts);

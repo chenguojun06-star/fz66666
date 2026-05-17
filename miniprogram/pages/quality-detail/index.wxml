@@ -1,0 +1,111 @@
+<view class="container" wx:if="{{detail}}">
+  <custom-nav title="质检详情" show-back="{{true}}" />
+
+  <view class="detail-card">
+    <view class="card-header">
+      <view class="order-info">
+        <text class="order-no">{{detail.orderNo || '-'}}</text>
+        <text class="quality-status {{detail.qualityStatus === 'unqualified' ? 'status-error' : 'status-success'}}">{{detail.qualityStatusText || '-'}}</text>
+      </view>
+      <text class="warehousing-no" wx:if="{{detail.warehousingNo}}">入库号: {{detail.warehousingNo}}</text>
+    </view>
+
+    <view class="info-grid">
+      <view class="info-item">
+        <text class="info-label">款号</text>
+        <text class="info-value">{{detail.styleNo || '-'}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">款名</text>
+        <text class="info-value">{{detail.styleName || '-'}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">生产方</text>
+        <text class="info-value">{{detail.factoryName || '-'}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">菲号</text>
+        <text class="info-value">{{detail.bundleNo || '-'}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">颜色</text>
+        <text class="info-value">{{detail.color || '-'}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">尺码</text>
+        <text class="info-value">{{detail.size || '-'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="detail-card">
+    <view class="card-title">数量明细</view>
+    <view class="qty-grid">
+      <view class="qty-item">
+        <text class="qty-value">{{detail.cuttingQuantity || 0}}</text>
+        <text class="qty-label">裁剪</text>
+      </view>
+      <view class="qty-item">
+        <text class="qty-value">{{detail.warehousingQuantity || 0}}</text>
+        <text class="qty-label">质检</text>
+      </view>
+      <view class="qty-item">
+        <text class="qty-value qty-success">{{detail.qualifiedQuantity || 0}}</text>
+        <text class="qty-label">合格</text>
+      </view>
+      <view class="qty-item">
+        <text class="qty-value qty-error">{{detail.unqualifiedQuantity || 0}}</text>
+        <text class="qty-label">不合格</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="detail-card">
+    <view class="card-title">质检信息</view>
+    <view class="info-list">
+      <view class="info-row" wx:if="{{detail.scanModeText}}">
+        <text class="info-label">扫码方式</text>
+        <text class="info-value">{{detail.scanModeText}}</text>
+      </view>
+      <view class="info-row" wx:if="{{detail.qualityOperatorName}}">
+        <text class="info-label">质检人</text>
+        <text class="info-value">{{detail.qualityOperatorName}}</text>
+      </view>
+      <view class="info-row" wx:if="{{detail.createTimeText}}">
+        <text class="info-label">质检时间</text>
+        <text class="info-value">{{detail.createTimeText}}</text>
+      </view>
+      <view class="info-row" wx:if="{{detail.processName}}">
+        <text class="info-label">工序</text>
+        <text class="info-value">{{detail.processName}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="detail-card" wx:if="{{detail.defectCategoryText || detail.defectRemark || detail.remark}}">
+    <view class="card-title">质检异常问题</view>
+    <view class="info-list">
+      <view class="info-row" wx:if="{{detail.defectCategoryText}}">
+        <text class="info-label">缺陷类别</text>
+        <text class="info-value error-text">{{detail.defectCategoryText}}</text>
+      </view>
+      <view class="info-row" wx:if="{{detail.defectRemark}}">
+        <text class="info-label">处理方式</text>
+        <text class="info-value">{{detail.defectRemark}}</text>
+      </view>
+      <view class="info-row" wx:if="{{detail.remark}}">
+        <text class="info-label">备注</text>
+        <text class="info-value">{{detail.remark}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="detail-card" wx:if="{{detail.imageList.length > 0}}">
+    <view class="card-title">不良品照片 ({{detail.imageList.length}})</view>
+    <view class="photo-grid">
+      <image wx:for="{{detail.imageList}}" wx:key="*this"
+             class="defect-photo" src="{{item}}" mode="aspectFill"
+             data-url="{{item}}" data-urls="{{detail.imageList}}" bindtap="onPreviewImage" />
+    </view>
+  </view>
+</view>

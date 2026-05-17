@@ -143,17 +143,10 @@ Page({
     }
   },
 
-  onNavBack() {
-    // interceptBack 为 true 时（明细视图）才被调用，只需回到订单列表
-    this.setData({ showOrderList: true, orderNo: '', orderId: '', orderInfo: null });
-  },
-
-  onBackPress() {
-    if (!this.data.showOrderList && this.data.orderNo) {
-      this.setData({ showOrderList: true, orderNo: '', orderId: '', orderInfo: null });
-      return true;
+  onShow() {
+    if (this.data.showOrderList && !this.data.orderListLoading) {
+      this._loadOrderList();
     }
-    return false;
   },
 
   onPullDownRefresh() {
@@ -213,8 +206,9 @@ Page({
     const orderNo = order.orderNo || '';
     const orderId = String(order.id || '');
     if (!orderNo) return;
-    this.setData({ showOrderList: false, orderNo, orderId });
-    this.loadAll(orderNo);
+    wx.navigateTo({
+      url: `/pages/cutting/bundle-detail/index?orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
+    });
   },
 
   /** 点击订单列表中的款式图片放大预览 */

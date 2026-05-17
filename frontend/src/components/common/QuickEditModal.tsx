@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Form, Input, Select, Tag } from 'antd';
 import SmallModal from './SmallModal';
 import { UnifiedDatePicker, dayjs } from './UnifiedDatePicker';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 interface QuickEditModalProps {
   visible: boolean;
@@ -28,6 +29,10 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
   title = '编辑备注和预计出货',
 }) => {
   const [form] = Form.useForm();
+  const urgencyLevelOptions = useDictOptions('urgency_level', [
+    { label: '普通', value: 'normal' },
+    { label: '急单', value: 'urgent' },
+  ]).options;
 
   const { aiRemarks, userRemarks } = useMemo(() => {
     const raw = initialValues?.remarks || initialValues?.remark || '';
@@ -89,10 +94,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
       <Form form={form} layout="vertical" onFinish={handleOk} style={{ marginTop: 16 }}>
         <Form.Item label="紧急程度" name="urgencyLevel">
           <Select
-            options={[
-              { label: '普通', value: 'normal' },
-              { label: '急单', value: 'urgent' },
-            ]}
+            options={urgencyLevelOptions}
             placeholder="请选择紧急程度"
           />
         </Form.Item>

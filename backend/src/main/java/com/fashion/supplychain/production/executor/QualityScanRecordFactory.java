@@ -147,6 +147,10 @@ public class QualityScanRecordFactory {
                 if (hasText(imageUrls)) {
                     w.setUnqualifiedImageUrls(imageUrls);
                 }
+                String processName = TextUtils.safeText(params.get("processName"));
+                if (hasText(processName)) {
+                    w.setProcessName(processName);
+                }
                 String remark = TextUtils.safeText(params.get("remark"));
                 if (hasText(remark)) {
                     w.setRepairRemark(remark);

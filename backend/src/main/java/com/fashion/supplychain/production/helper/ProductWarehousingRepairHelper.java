@@ -289,7 +289,7 @@ public class ProductWarehousingRepairHelper {
         if (tenantId == null) return Collections.emptyList();
 
         QueryWrapper<ProductWarehousing> qualityScanQuery = new QueryWrapper<>();
-        qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "unqualified_quantity", "defect_category", "defect_remark", "unqualified_image_urls", "create_time", "repair_status")
+        qualityScanQuery.select("cutting_bundle_id", "order_id", "order_no", "style_name", "unqualified_quantity", "qualified_quantity", "warehousing_quantity", "cutting_quantity", "defect_category", "defect_remark", "unqualified_image_urls", "create_time", "repair_status", "process_name", "repair_remark", "quality_operator_name", "scan_mode", "warehousing_no", "factory_name", "quality_status")
             .eq("tenant_id", tenantId)
             .eq("warehousing_type", "quality_scan")
             .eq("delete_flag", 0)
@@ -348,6 +348,7 @@ public class ProductWarehousingRepairHelper {
             item.put("color", TextUtils.safeText(bundle.getColor()));
             item.put("size", TextUtils.safeText(bundle.getSize()));
             item.put("styleNo", TextUtils.safeText(bundle.getStyleNo()));
+            item.put("styleName", qs != null ? TextUtils.safeText(qs.get("style_name")) : "");
             item.put("orderId", bundle.getProductionOrderId());
             item.put("orderNo", bundle.getProductionOrderNo());
             int defectQty = qs != null
@@ -355,12 +356,24 @@ public class ProductWarehousingRepairHelper {
                     : (bundle.getQuantity() == null ? 0 : bundle.getQuantity());
             item.put("defectQty", defectQty);
             item.put("unqualifiedQuantity", defectQty);
+            item.put("qualifiedQuantity", qs != null ? parseIntOrDefault(qs.get("qualified_quantity"), 0) : 0);
+            item.put("warehousingQuantity", qs != null ? parseIntOrDefault(qs.get("warehousing_quantity"), 0) : 0);
+            item.put("cuttingQuantity", qs != null ? parseIntOrDefault(qs.get("cutting_quantity"), 0) : (bundle.getQuantity() == null ? 0 : bundle.getQuantity()));
             item.put("defectCategory", qs != null ? TextUtils.safeText(qs.get("defect_category")) : "");
             item.put("defectRemark", qs != null ? TextUtils.safeText(qs.get("defect_remark")) : "");
             item.put("unqualifiedImageUrls", qs != null ? TextUtils.safeText(qs.get("unqualified_image_urls")) : "");
             item.put("processName", qs != null ? TextUtils.safeText(qs.get("process_name")) : "");
             item.put("createTime", qs != null ? qs.get("create_time") : null);
+            item.put("remark", qs != null ? TextUtils.safeText(qs.get("repair_remark")) : "");
+            item.put("qualityOperatorName", qs != null ? TextUtils.safeText(qs.get("quality_operator_name")) : "");
+            item.put("scanMode", qs != null ? TextUtils.safeText(qs.get("scan_mode")) : "");
+            item.put("warehousingNo", qs != null ? TextUtils.safeText(qs.get("warehousing_no")) : "");
+            item.put("factoryName", qs != null ? TextUtils.safeText(qs.get("factory_name")) : "");
+            item.put("qualityStatus", qs != null ? TextUtils.safeText(qs.get("quality_status")) : "");
             String repairStatus = qs != null ? TextUtils.safeText(qs.get("repair_status")) : "";
+            if ("pending_repair".equals(repairStatus)) {
+                repairStatus = "pending";
+            }
             if (!StringUtils.hasText(repairStatus)) {
                 String bundleStatus = bundle.getStatus() == null ? "" : bundle.getStatus().trim();
                 if ("unqualified".equals(bundleStatus)) {

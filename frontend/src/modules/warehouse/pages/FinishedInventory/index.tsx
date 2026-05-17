@@ -17,6 +17,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useFinishedInventoryData } from './hooks/useFinishedInventoryData';
 import { useFinishedInventoryActions } from './hooks/useFinishedInventoryActions';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 const _FinishedInventory: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,6 +30,11 @@ const _FinishedInventory: React.FC = () => {
 
   const { rawDataSource, dataSource, pagedDataSource, totalRecords, loading, smartError, showSmartErrorNotice, searchText, setSearchText, statusValue, setStatusValue, selectedFactoryType, setSelectedFactoryType, factoryTypeOptions, pagination, loadData } = useFinishedInventoryData();
   const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, handleOutbound, handleSKUQtyChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData);
+  const { options: outboundTypeOptions } = useDictOptions('outbound_type', [
+    { label: '销售出库', value: 'sales' },
+    { label: '调拨出库', value: 'transfer' },
+    { label: '报废出库', value: 'scrap' },
+  ]);
 
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory });
   const skuColumns = getSkuColumns({ handleSKUQtyChange });
@@ -58,7 +64,7 @@ const _FinishedInventory: React.FC = () => {
             {outboundModal.data && (
               <>
                 <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={8}><div style={{ color: '#999', fontSize: 12 }}>订单号</div><div style={{ fontWeight: 600 }}>{outboundModal.data.orderNo || '-'}</div></Col><Col span={8}><div style={{ color: '#999', fontSize: 12 }}>款号</div><div style={{ fontWeight: 600 }}>{outboundModal.data.styleNo || '-'}</div></Col><Col span={8}><div style={{ color: '#999', fontSize: 12 }}>款名</div><div style={{ fontWeight: 600 }}>{outboundModal.data.styleName || '-'}</div></Col></Row></Card>
-                <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={12}><div style={{ marginBottom: 8, fontSize: 12, color: '#999' }}>出库类型</div><Select style={{ width: '100%' }} value={outboundType} onChange={(v) => setOutboundType(v)} options={[{ label: '销售出库', value: 'sales' }, { label: '调拨出库', value: 'transfer' }, { label: '报废出库', value: 'scrap' }]} /></Col><Col span={12}><div style={{ marginBottom: 8, fontSize: 12, color: '#999' }}>{outboundType === 'scrap' ? '报废原因' : '备注（选填）'}</div><Input value={outboundReason} onChange={e => setOutboundReason(e.target.value)} placeholder={outboundType === 'scrap' ? '请填写报废原因' : '选填'} status={outboundType === 'scrap' && !outboundReason.trim() ? 'warning' : undefined} /></Col></Row></Card>
+                <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={12}><div style={{ marginBottom: 8, fontSize: 12, color: '#999' }}>出库类型</div><Select style={{ width: '100%' }} value={outboundType} onChange={(v) => setOutboundType(v)} options={outboundTypeOptions} /></Col><Col span={12}><div style={{ marginBottom: 8, fontSize: 12, color: '#999' }}>{outboundType === 'scrap' ? '报废原因' : '备注（选填）'}</div><Input value={outboundReason} onChange={e => setOutboundReason(e.target.value)} placeholder={outboundType === 'scrap' ? '请填写报废原因' : '选填'} status={outboundType === 'scrap' && !outboundReason.trim() ? 'warning' : undefined} /></Col></Row></Card>
                 <div style={{ marginBottom: 8, fontWeight: 600 }}>SKU明细</div>
                 <ResizableTable columns={skuColumns} dataSource={skuDetails} rowKey="sku" pagination={false} />
                 <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}><span>出库总量: {skuTotalOutbound} 件</span><span>出库金额: ¥{skuTotalAmount.toFixed(2)}</span></div>

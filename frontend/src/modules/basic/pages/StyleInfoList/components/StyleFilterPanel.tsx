@@ -1,6 +1,16 @@
 import React from 'react';
 import { Card, Input, Select, Space } from 'antd';
 import { StyleQueryParams } from '@/types/style';
+import { useDictOptions } from '@/hooks/useDictOptions';
+
+const PROGRESS_STAGE_FALLBACK = [
+  { label: '采购', value: '采购' },
+  { label: '裁剪', value: '裁剪' },
+  { label: '二次工艺', value: '二次工艺' },
+  { label: '车缝', value: '车缝' },
+  { label: '尾部', value: '尾部' },
+  { label: '入库', value: '入库' },
+];
 
 interface StyleFilterPanelProps {
   queryParams: Partial<StyleQueryParams>;
@@ -21,14 +31,10 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
   loading: _loading = false,
   extra
 }) => {
+  const { options: progressStageDictOptions } = useDictOptions('progress_stage', PROGRESS_STAGE_FALLBACK);
   const progressNodeOptions = [
     { label: '全部', value: '' },
-    { label: '未开始', value: '未开始' },
-    { label: '纸样开发中', value: '纸样开发中' },
-    { label: '纸样完成', value: '纸样完成' },
-    { label: '样衣制作中', value: '样衣制作中' },
-    { label: '样衣完成', value: '样衣完成' },
-    { label: '开发样报废', value: '开发样报废' },
+    ...progressStageDictOptions,
   ];
 
   return (

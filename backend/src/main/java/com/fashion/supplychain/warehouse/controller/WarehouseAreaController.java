@@ -49,8 +49,8 @@ public class WarehouseAreaController {
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
-        return areaOrchestrator.delete(id);
+    public Result<Void> delete(@PathVariable String id, @RequestParam String reason) {
+        return areaOrchestrator.delete(id, reason);
     }
 
     @PreAuthorize("isAuthenticated()")

@@ -16,6 +16,7 @@ import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } 
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { StyleInfo } from '@/types/style';
 import { useProductList } from './hooks/useProductList';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 const statusMap: Record<string, { label: string; color: string }> = {
   ENABLED: { label: '启用', color: 'green' },
@@ -37,6 +38,8 @@ const ProductInfoPage: React.FC = () => {
   const { isMobile } = useViewport();
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
+  const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
 
   const {
     loading,
@@ -305,7 +308,7 @@ const ProductInfoPage: React.FC = () => {
               style={{ width: 100 }}
               value={queryParams.category || undefined}
               onChange={(v) => setQueryParams((p) => ({ ...p, category: v || '', page: 1 }))}
-              options={CATEGORY_CODE_OPTIONS}
+              options={categoryOptions}
             />
             <Select
               placeholder="季节"
@@ -313,7 +316,7 @@ const ProductInfoPage: React.FC = () => {
               style={{ width: 90 }}
               value={queryParams.season || undefined}
               onChange={(v) => setQueryParams((p) => ({ ...p, season: v || '', page: 1 }))}
-              options={SEASON_CODE_OPTIONS}
+              options={seasonOptions}
             />
           </Space>
         }
@@ -486,7 +489,7 @@ const ProductInfoPage: React.FC = () => {
               <Col xs={24} sm={12} md={8}>
                 <Form.Item name="category" label="品类">
                   <Select placeholder="请选择品类" allowClear showSearch optionFilterProp="label">
-                    {CATEGORY_CODE_OPTIONS.map(opt => (
+                    {categoryOptions.map(opt => (
                       <Select.Option key={opt.value} value={opt.value} label={opt.label}>{opt.label}</Select.Option>
                     ))}
                   </Select>
@@ -497,7 +500,7 @@ const ProductInfoPage: React.FC = () => {
               <Col xs={24} sm={12} md={8}>
                 <Form.Item name="season" label="季节">
                   <Select placeholder="请选择季节" allowClear>
-                    {SEASON_CODE_OPTIONS.map(opt => (
+                    {seasonOptions.map(opt => (
                       <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                     ))}
                   </Select>

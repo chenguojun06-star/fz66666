@@ -4,8 +4,16 @@ import { DeleteOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { toNumberSafe } from '@/utils/api';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
-const PROGRESS_STAGES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+const PROGRESS_STAGE_FALLBACK = [
+  { label: '采购', value: '采购' },
+  { label: '裁剪', value: '裁剪' },
+  { label: '二次工艺', value: '二次工艺' },
+  { label: '车缝', value: '车缝' },
+  { label: '尾部', value: '尾部' },
+  { label: '入库', value: '入库' },
+];
 
 interface StyleProcessRow {
   id: string | number;
@@ -30,6 +38,12 @@ export default function useProcessPriceColumns(
   handleRemoveSize: (size: string) => void,
   handleDelete: (id: string | number) => void,
 ) {
+  const { options: progressStageOptions } = useDictOptions('progress_stage', PROGRESS_STAGE_FALLBACK);
+  const { options: difficultyOptions } = useDictOptions('process_difficulty', [
+    { label: '易', value: 'EASY' },
+    { label: '中', value: 'MEDIUM' },
+    { label: '难', value: 'HARD' },
+  ]);
   return useMemo(() => {
     const editable = editMode;
     const baseColumns = [
@@ -74,7 +88,7 @@ export default function useProcessPriceColumns(
                 value={value || '车缝'}
                 style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'progressStage', nextValue)}
-                options={PROGRESS_STAGES.map((stage) => ({ value: stage, label: stage }))}
+                options={progressStageOptions}
               />
             )
           : (value || '车缝'),
@@ -110,11 +124,7 @@ export default function useProcessPriceColumns(
                 placeholder="选择"
                 style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'difficulty', nextValue)}
-                options={[
-                  { value: '易', label: '易' },
-                  { value: '中', label: '中' },
-                  { value: '难', label: '难' },
-                ]}
+                options={difficultyOptions}
               />
             )
           : (value || '-'),
@@ -222,5 +232,5 @@ export default function useProcessPriceColumns(
     };
 
     return [...baseColumns, ...sizeColumns, actionColumn];
-  }, [editMode, sizes, data, updateField, updateSizePrice, handleRemoveSize, handleDelete]);
+  }, [editMode, sizes, data, updateField, updateSizePrice, handleRemoveSize, handleDelete, progressStageOptions]);
 }

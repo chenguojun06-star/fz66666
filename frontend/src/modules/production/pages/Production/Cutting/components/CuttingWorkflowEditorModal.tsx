@@ -5,6 +5,7 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { productionOrderApi } from '@/services/production/productionApi';
+import { useDictOptions } from '@/hooks/useDictOptions';
 
 type WorkflowRow = {
   _key: string;
@@ -34,6 +35,11 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
   onSaved,
 }) => {
   const { message } = App.useApp();
+  const { options: difficultyOptions } = useDictOptions('process_difficulty', [
+    { label: '易', value: 'EASY' },
+    { label: '中', value: 'MEDIUM' },
+    { label: '难', value: 'HARD' },
+  ]);
   const [orderId, setOrderId] = useState('');
   const [rows, setRows] = useState<WorkflowRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -196,7 +202,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       width: 90,
       render: (v: string, row: WorkflowRow) => (
         <Select value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'difficulty', val || '')}
-          options={[{ value: '易', label: '易' }, { value: '中', label: '中' }, { value: '难', label: '难' }]}
+          options={difficultyOptions}
         />
       ),
     },
