@@ -37,7 +37,7 @@ export const REPAYMENT_STATUS = [
 export const employeeAdvanceApi = {
   list: (params?: Record<string, unknown>) => api.post('/finance/employee-advance/list', params),
   create: (data: Record<string, unknown>) => api.post('/finance/employee-advance', data),
-  approve: (id: string, remark?: string) => api.put(`/finance/employee-advance/${id}/approve`, { remark }),
-  reject: (id: string, remark?: string) => api.put(`/finance/employee-advance/${id}/reject`, { remark }),
-  repay: (id: string, amount: number) => api.put(`/finance/employee-advance/${id}/repay`, { amount }),
+  approve: (id: string, remark?: string) => api.post(`/finance/employee-advance/${id}/stage-action?action=approve`, { remark }),
+  reject: (id: string, remark?: string) => api.post(`/finance/employee-advance/${id}/stage-action?action=reject`, { remark }),
+  repay: (id: string, amount: number) => api.post(`/finance/employee-advance/${id}/stage-action?action=repay`, { amount }),
 };

@@ -1,7 +1,6 @@
 var api = require('../../utils/api');
 var { safeNavigate } = require('../../utils/uiHelper');
-var { isAdminOrSupervisor } = require('../../utils/permission');
-var { isTenantOwner, isFactoryOwner, isTokenExpired } = require('../../utils/storage');
+var { isTokenExpired } = require('../../utils/storage');
 var { eventBus, Events } = require('../../utils/eventBus');
 
 var MONTH_FLOWERS = [
@@ -57,8 +56,14 @@ var MENU_KEY_MAP = {
   smartOps: 'miniprogram.menu.smartOps',
   dashboard: 'miniprogram.menu.dashboard',
   orderCreate: 'miniprogram.menu.orderCreate',
+  production: 'miniprogram.menu.production',
+  quality: 'miniprogram.menu.quality',
   bundleSplit: 'miniprogram.menu.bundleSplit',
   cuttingDetail: 'miniprogram.menu.cuttingDetail',
+  history: 'miniprogram.menu.history',
+  factoryShipment: 'miniprogram.menu.factoryShipment',
+  advance: 'miniprogram.menu.advance',
+  wagePayment: 'miniprogram.menu.wagePayment',
 };
 
 function getGreeting() {
@@ -70,18 +75,15 @@ function getGreeting() {
 
 function buildMenuItems(menuVisibility) {
   var visibility = menuVisibility || {};
-  var canSeeDashboard = isTenantOwner() || isAdminOrSupervisor();
-  var canSeeSmartOps = isTenantOwner();
-  var canCreateOrder = isAdminOrSupervisor() || isFactoryOwner();
   var items = [];
 
-  if (canSeeSmartOps && visibility.smartOps !== false) {
+  if (visibility.smartOps !== false) {
     items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/smart-ops/index', badge: 'AI' });
   }
-  if (canCreateOrder && visibility.orderCreate !== false) {
+  if (visibility.orderCreate !== false) {
     items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' });
   }
-  if (canSeeDashboard && visibility.dashboard !== false) {
+  if (visibility.dashboard !== false) {
     items.push({ id: 'dashboard', name: '生产管理', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' });
   }
   if (visibility.production !== false) {
@@ -97,10 +99,10 @@ function buildMenuItems(menuVisibility) {
     items.push({ id: 'cuttingDetail', name: '裁剪明细', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--blue', route: '/pages/cutting/bundle-detail/index' });
   }
   if (visibility.history !== false) {
-    items.push({ id: 'history', name: '历史记录', iconClass: 'icon-history', circleClass: 'menu-icon-circle--purple', route: '/pages/scan/history/index' });
+    items.push({ id: 'history', name: '扫码历史', iconClass: 'icon-history', circleClass: 'menu-icon-circle--purple', route: '/pages/scan/history/index' });
   }
-  if (visibility.payroll !== false) {
-    items.push({ id: 'payroll', name: '当月工资', iconClass: 'icon-payroll', circleClass: 'menu-icon-circle--teal', route: '/pages/payroll/payroll' });
+  if (visibility.factoryShipment !== false) {
+    items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--blue', route: '/pages/factory/shipment/index' });
   }
 
   return items;

@@ -77,17 +77,23 @@ public class TenantAppOrchestrator {
             for (TenantApp app : apps) {
                 boolean changed = false;
                 if (app.getAppSecret() != null && !app.getAppSecret().isEmpty()) {
-                    try {
-                        aesEncryptor.decrypt(app.getAppSecret());
-                    } catch (Exception e) {
+                    if (looksLikeEncrypted(app.getAppSecret())) {
+                        if (aesEncryptor.tryDecrypt(app.getAppSecret()) == null) {
+                            app.setAppSecret(aesEncryptor.encrypt(app.getAppSecret()));
+                            changed = true;
+                        }
+                    } else {
                         app.setAppSecret(aesEncryptor.encrypt(app.getAppSecret()));
                         changed = true;
                     }
                 }
                 if (app.getCallbackSecret() != null && !app.getCallbackSecret().isEmpty()) {
-                    try {
-                        aesEncryptor.decrypt(app.getCallbackSecret());
-                    } catch (Exception e) {
+                    if (looksLikeEncrypted(app.getCallbackSecret())) {
+                        if (aesEncryptor.tryDecrypt(app.getCallbackSecret()) == null) {
+                            app.setCallbackSecret(aesEncryptor.encrypt(app.getCallbackSecret()));
+                            changed = true;
+                        }
+                    } else {
                         app.setCallbackSecret(aesEncryptor.encrypt(app.getCallbackSecret()));
                         changed = true;
                     }
@@ -103,6 +109,18 @@ public class TenantAppOrchestrator {
         } catch (Exception e) {
             log.error("[TenantApp] 密钥迁移失败: {}", e.getMessage());
         }
+    }
+
+    private boolean looksLikeEncrypted(String value) {
+        if (value.length() < 44) return false;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+                    || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=')) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // ========== 应用管理 ==========

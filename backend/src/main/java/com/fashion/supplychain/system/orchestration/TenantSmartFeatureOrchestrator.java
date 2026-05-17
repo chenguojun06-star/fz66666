@@ -38,9 +38,41 @@ public class TenantSmartFeatureOrchestrator {
             "miniprogram.menu.smartOps",
             "miniprogram.menu.dashboard",
             "miniprogram.menu.orderCreate",
+            "miniprogram.menu.production",
+            "miniprogram.menu.quality",
             "miniprogram.menu.bundleSplit",
-            "miniprogram.menu.cuttingDetail"
+            "miniprogram.menu.cuttingDetail",
+            "miniprogram.menu.history",
+            "miniprogram.menu.factoryShipment",
+            "miniprogram.menu.advance",
+            "miniprogram.menu.wagePayment"
     );
+
+    public static final List<String> MINIPROGRAM_MENU_ROLES = Arrays.asList(
+            "admin",
+            "supervisor",
+            "worker"
+    );
+
+    public static final Map<String, String> MENU_ROLE_LABELS = new LinkedHashMap<>() {{
+        put("admin", "管理员");
+        put("supervisor", "组长/主管");
+        put("worker", "工人");
+    }};
+
+    public static final Map<String, String> MENU_KEY_LABELS = new LinkedHashMap<>() {{
+        put("miniprogram.menu.smartOps", "运营看板");
+        put("miniprogram.menu.dashboard", "生产管理");
+        put("miniprogram.menu.orderCreate", "下单管理");
+        put("miniprogram.menu.production", "质检通知");
+        put("miniprogram.menu.quality", "生产扫码");
+        put("miniprogram.menu.bundleSplit", "菲号单价");
+        put("miniprogram.menu.cuttingDetail", "裁剪明细");
+        put("miniprogram.menu.history", "扫码历史");
+        put("miniprogram.menu.factoryShipment", "外发工厂");
+        put("miniprogram.menu.advance", "员工借支");
+        put("miniprogram.menu.wagePayment", "收付款中心");
+    }};
 
     public static final List<String> ALL_FEATURE_KEYS;
     static {
@@ -125,16 +157,21 @@ public class TenantSmartFeatureOrchestrator {
         if (tenantId == null) {
             return defaultMiniprogramMenuFlags();
         }
+        String role = resolveCurrentUserRole();
         try {
             Map<String, Boolean> flags = defaultMiniprogramMenuFlags();
+            List<String> roleKeys = buildRoleSpecificKeys(role);
             List<TenantSmartFeature> rows = tenantSmartFeatureService.list(
                     new LambdaQueryWrapper<TenantSmartFeature>()
                             .eq(TenantSmartFeature::getTenantId, tenantId)
-                            .in(TenantSmartFeature::getFeatureKey, MINIPROGRAM_MENU_KEYS)
+                            .in(TenantSmartFeature::getFeatureKey, roleKeys)
             );
             for (TenantSmartFeature row : rows) {
                 if (StringUtils.hasText(row.getFeatureKey())) {
-                    flags.put(row.getFeatureKey(), Boolean.TRUE.equals(row.getEnabled()));
+                    String menuKey = extractMenuKeyFromRoleKey(row.getFeatureKey());
+                    if (menuKey != null) {
+                        flags.put(menuKey, Boolean.TRUE.equals(row.getEnabled()));
+                    }
                 }
             }
             return flags;
@@ -142,6 +179,87 @@ public class TenantSmartFeatureOrchestrator {
             log.warn("[TenantSmartFeature] 查询小程序菜单配置失败，返回默认值 tenantId={}", tenantId, e);
             return defaultMiniprogramMenuFlags();
         }
+    }
+
+    public Map<String, Map<String, Boolean>> listMiniprogramMenuFlagsByRole() {
+        Long tenantId = UserContext.tenantId();
+        Map<String, Map<String, Boolean>> result = new LinkedHashMap<>();
+        for (String role : MINIPROGRAM_MENU_ROLES) {
+            result.put(role, defaultMiniprogramMenuFlags());
+        }
+        if (tenantId == null) {
+            return result;
+        }
+        try {
+            List<String> allRoleKeys = new ArrayList<>();
+            for (String role : MINIPROGRAM_MENU_ROLES) {
+                allRoleKeys.addAll(buildRoleSpecificKeys(role));
+            }
+            List<TenantSmartFeature> rows = tenantSmartFeatureService.list(
+                    new LambdaQueryWrapper<TenantSmartFeature>()
+                            .eq(TenantSmartFeature::getTenantId, tenantId)
+                            .in(TenantSmartFeature::getFeatureKey, allRoleKeys)
+            );
+            for (TenantSmartFeature row : rows) {
+                if (!StringUtils.hasText(row.getFeatureKey())) continue;
+                ParsedRoleKey parsed = parseRoleKey(row.getFeatureKey());
+                if (parsed == null) continue;
+                Map<String, Boolean> roleFlags = result.get(parsed.role);
+                if (roleFlags != null) {
+                    roleFlags.put(parsed.menuKey, Boolean.TRUE.equals(row.getEnabled()));
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("[TenantSmartFeature] 查询按角色菜单配置失败 tenantId={}", tenantId, e);
+            return result;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Map<String, Boolean>> saveMiniprogramMenuFlagsByRole(Map<String, Map<String, Boolean>> roleMenus) {
+        TenantAssert.assertTenantContext();
+        assertWritable();
+        Long tenantId = TenantAssert.requireTenantId();
+
+        List<String> allRoleKeys = new ArrayList<>();
+        for (String role : MINIPROGRAM_MENU_ROLES) {
+            allRoleKeys.addAll(buildRoleSpecificKeys(role));
+        }
+
+        List<TenantSmartFeature> existing = tenantSmartFeatureService.list(
+                new LambdaQueryWrapper<TenantSmartFeature>()
+                        .eq(TenantSmartFeature::getTenantId, tenantId)
+                        .in(TenantSmartFeature::getFeatureKey, allRoleKeys)
+        );
+        Map<String, TenantSmartFeature> existingMap = existing.stream()
+                .filter(item -> StringUtils.hasText(item.getFeatureKey()))
+                .collect(Collectors.toMap(TenantSmartFeature::getFeatureKey, item -> item, (a, b) -> a, LinkedHashMap::new));
+
+        List<TenantSmartFeature> updates = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        for (String role : MINIPROGRAM_MENU_ROLES) {
+            Map<String, Boolean> menuFlags = (roleMenus != null && roleMenus.containsKey(role))
+                    ? roleMenus.get(role) : defaultMiniprogramMenuFlags();
+            for (String menuKey : MINIPROGRAM_MENU_KEYS) {
+                String roleKey = buildRoleSpecificKey(menuKey, role);
+                boolean enabled = menuFlags.containsKey(menuKey) ? Boolean.TRUE.equals(menuFlags.get(menuKey)) : true;
+                TenantSmartFeature row = existingMap.get(roleKey);
+                if (row == null) {
+                    row = new TenantSmartFeature();
+                    row.setTenantId(tenantId);
+                    row.setFeatureKey(roleKey);
+                    row.setCreateTime(now);
+                }
+                row.setEnabled(enabled);
+                row.setUpdateTime(now);
+                updates.add(row);
+            }
+        }
+
+        tenantSmartFeatureService.saveOrUpdateBatch(updates);
+        log.info("[TenantSmartFeature] 保存按角色菜单配置 tenantId={} count={}", tenantId, updates.size());
+        return listMiniprogramMenuFlagsByRole();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -159,10 +277,13 @@ public class TenantSmartFeatureOrchestrator {
             });
         }
 
+        String role = resolveCurrentUserRole();
+        List<String> roleKeys = buildRoleSpecificKeys(role);
+
         List<TenantSmartFeature> existing = tenantSmartFeatureService.list(
                 new LambdaQueryWrapper<TenantSmartFeature>()
                         .eq(TenantSmartFeature::getTenantId, tenantId)
-                        .in(TenantSmartFeature::getFeatureKey, MINIPROGRAM_MENU_KEYS)
+                        .in(TenantSmartFeature::getFeatureKey, roleKeys)
         );
         Map<String, TenantSmartFeature> existingMap = existing.stream()
                 .filter(item -> StringUtils.hasText(item.getFeatureKey()))
@@ -171,21 +292,64 @@ public class TenantSmartFeatureOrchestrator {
         List<TenantSmartFeature> updates = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         for (String menuKey : MINIPROGRAM_MENU_KEYS) {
-            TenantSmartFeature row = existingMap.get(menuKey);
+            String roleKey = buildRoleSpecificKey(menuKey, role);
+            boolean enabled = Boolean.TRUE.equals(nextFlags.get(menuKey));
+            TenantSmartFeature row = existingMap.get(roleKey);
             if (row == null) {
                 row = new TenantSmartFeature();
                 row.setTenantId(tenantId);
-                row.setFeatureKey(menuKey);
+                row.setFeatureKey(roleKey);
                 row.setCreateTime(now);
             }
-            row.setEnabled(Boolean.TRUE.equals(nextFlags.get(menuKey)));
+            row.setEnabled(enabled);
             row.setUpdateTime(now);
             updates.add(row);
         }
 
         tenantSmartFeatureService.saveOrUpdateBatch(updates);
-        log.info("[TenantSmartFeature] 保存小程序菜单配置 tenantId={} count={}", tenantId, updates.size());
+        log.info("[TenantSmartFeature] 保存小程序菜单配置 tenantId={} role={} count={}", tenantId, role, updates.size());
         return nextFlags;
+    }
+
+    private String resolveCurrentUserRole() {
+        if (UserContext.isTopAdmin()) return "admin";
+        if (UserContext.isSupervisorOrAbove()) return "supervisor";
+        return "worker";
+    }
+
+    private List<String> buildRoleSpecificKeys(String role) {
+        List<String> keys = new ArrayList<>();
+        for (String menuKey : MINIPROGRAM_MENU_KEYS) {
+            keys.add(buildRoleSpecificKey(menuKey, role));
+        }
+        return keys;
+    }
+
+    private String buildRoleSpecificKey(String menuKey, String role) {
+        return menuKey + ".role." + role;
+    }
+
+    private String extractMenuKeyFromRoleKey(String roleKey) {
+        int idx = roleKey.indexOf(".role.");
+        return idx > 0 ? roleKey.substring(0, idx) : null;
+    }
+
+    private ParsedRoleKey parseRoleKey(String roleKey) {
+        int idx = roleKey.indexOf(".role.");
+        if (idx <= 0) return null;
+        String menuKey = roleKey.substring(0, idx);
+        String role = roleKey.substring(idx + 6);
+        if (!MINIPROGRAM_MENU_KEYS.contains(menuKey) || !MINIPROGRAM_MENU_ROLES.contains(role)) return null;
+        return new ParsedRoleKey(menuKey, role);
+    }
+
+    private static class ParsedRoleKey {
+        final String menuKey;
+        final String role;
+        ParsedRoleKey(String menuKey, String role) {
+            this.menuKey = menuKey;
+            this.role = role;
+        }
     }
 
     private Map<String, Boolean> defaultFeatureFlags() {

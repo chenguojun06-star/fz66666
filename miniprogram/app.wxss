@@ -258,6 +258,7 @@ page {
   padding: 0 24px 20px;
   max-height: 60vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);

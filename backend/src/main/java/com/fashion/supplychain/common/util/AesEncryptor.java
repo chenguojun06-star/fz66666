@@ -68,6 +68,26 @@ public class AesEncryptor {
         }
     }
 
+    public String tryDecrypt(String ciphertext) {
+        if (ciphertext == null || ciphertext.isEmpty()) return null;
+        try {
+            byte[] combined = Base64.getDecoder().decode(ciphertext);
+            if (combined.length < GCM_IV_LENGTH + 16) return null;
+
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            byte[] encrypted = new byte[combined.length - GCM_IV_LENGTH];
+            System.arraycopy(combined, 0, iv, 0, GCM_IV_LENGTH);
+            System.arraycopy(combined, GCM_IV_LENGTH, encrypted, 0, encrypted.length);
+
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public static String maskPhone(String phone) {
         if (phone == null || phone.length() < 7) return phone;
         return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);

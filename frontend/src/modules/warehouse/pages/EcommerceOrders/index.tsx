@@ -69,6 +69,7 @@ const OrdersTab: React.FC = () => {
   const [pageSize, setPageSize] = useState(readPageSize(20));
   const [filterPlatform, setFilterPlatform] = useState('');
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
+  const [filterLinked, setFilterLinked] = useState<boolean | undefined>();
   const [keyword, setKeyword] = useState('');
   const [detail, setDetail] = useState<EcOrder | null>(null);
   const [linkTarget, setLinkTarget] = useState<EcOrder | null>(null);
@@ -107,6 +108,7 @@ const OrdersTab: React.FC = () => {
       const params: Record<string, unknown> = { page, pageSize };
       if (filterPlatform) params.platform = filterPlatform;
       if (filterStatus !== undefined) params.status = filterStatus;
+      if (filterLinked !== undefined) params.productionOrderLinked = filterLinked;
       if (keyword) params.keyword = keyword;
       const res = await api.post<ApiResult>('/ecommerce/orders/list', params);
       const d = (res?.data ?? {}) as Record<string, unknown>;
@@ -117,7 +119,7 @@ const OrdersTab: React.FC = () => {
       fetchStyleImages(records);
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载失败'); }
     finally { setLoading(false); }
-  }, [page, pageSize, filterPlatform, filterStatus, keyword, fetchStyleImages]);
+  }, [page, pageSize, filterPlatform, filterStatus, filterLinked, keyword, fetchStyleImages]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -158,7 +160,10 @@ const OrdersTab: React.FC = () => {
   const pendingShip  = data.filter(d => d.status === 1).length;
   const shipped      = data.filter(d => d.warehouseStatus === 2).length;
   const linked       = data.filter(d => d.productionOrderNo).length;
+  const pendingHandle = data.filter(d => d.status === 1 && !d.productionOrderNo).length;
   const totalRevenue = data.reduce((s, d) => s + (d.payAmount || 0), 0);
+
+  const isFilteringPending = filterLinked === false && filterStatus === 1;
 
   const columns: ColumnsType<EcOrder> = [
     {
@@ -237,7 +242,7 @@ const OrdersTab: React.FC = () => {
       title: '关联生产单', dataIndex: 'productionOrderNo', width: 140,
       render: v => v
         ? <Tag color="blue" icon={<CheckCircleOutlined />}>{v}</Tag>
-        : <Text type="secondary" style={{ fontSize: 13 }}>未关联</Text>,
+        : <Tag color="orange" style={{ cursor: 'pointer' }}>待处理</Tag>,
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,
@@ -279,14 +284,34 @@ const OrdersTab: React.FC = () => {
     <div>
       <Row gutter={12} style={{ marginBottom: 14 }}>
         {[
-          { title: '本页订单', value: total, suffix: '单', color: undefined },
-          { title: '待发货',   value: pendingShip, suffix: '单', color: '#fa8c16' },
-          { title: '已出库',   value: shipped,     suffix: '单', color: '#52c41a' },
-          { title: '已关联排产', value: linked,    suffix: '单', color: '#1677ff' },
+          { title: '本页订单', value: total, suffix: '单', color: undefined, key: 'total' },
+          { title: '待处理',   value: pendingHandle, suffix: '单', color: '#ff4d4f', key: 'pending', alert: true },
+          { title: '待发货',   value: pendingShip, suffix: '单', color: '#fa8c16', key: 'ship' },
+          { title: '已出库',   value: shipped,     suffix: '单', color: '#52c41a', key: 'out' },
+          { title: '已关联排产', value: linked,    suffix: '单', color: '#1677ff', key: 'link' },
         ].map((s, i) => (
-          <Col span={6} key={i}>
-            <Card styles={{ body: { padding: '8px 12px' } }}>
-              <Statistic title={<span style={{ fontSize: 13 }}>{s.title}</span>}
+          <Col span={Math.floor(24 / 5)} key={i}>
+            <Card
+              styles={{ body: { padding: '8px 12px', cursor: s.key === 'pending' ? 'pointer' : undefined } }}
+              style={s.key === 'pending'
+                ? (isFilteringPending
+                    ? { border: '2px solid #ff4d4f', background: 'rgba(255,77,79,0.06)' }
+                    : { border: '1px solid rgba(255,77,79,0.3)', background: 'rgba(255,77,79,0.03)' })
+                : undefined}
+              onClick={s.key === 'pending'
+                ? () => {
+                    if (isFilteringPending) { setFilterLinked(undefined); setFilterStatus(undefined); setPage(1); }
+                    else { setFilterLinked(false); setFilterStatus(1); setPage(1); }
+                  }
+                : undefined}>
+              <Statistic title={
+                <span style={{ fontSize: 13 }}>
+                  {s.key === 'pending' && <Badge status="error" style={{ marginRight: 4 }} />}
+                  {s.title}
+                  {s.key === 'pending' && isFilteringPending && (
+                    <Tag color="red" style={{ marginLeft: 6, fontSize: 10 }}>筛选中</Tag>
+                  )}
+                </span>}
                 value={s.value} suffix={s.suffix}
                 styles={{ content: { fontSize: 22, color: s.color } }} />
             </Card>
@@ -377,7 +402,7 @@ const OrdersTab: React.FC = () => {
               <Descriptions.Item label="关联生产单" span={2}>
                 {detail.productionOrderNo
                   ? <Tag color="blue" icon={<CheckCircleOutlined />}>{detail.productionOrderNo}</Tag>
-                  : <Text type="secondary">未关联（仓库出库后自动回写）</Text>}
+                  : <Tag color="orange">待处理 — 需关联生产单或现货出库</Tag>}
               </Descriptions.Item>
             </Descriptions>
             {(detail.buyerRemark || detail.sellerRemark) && (
@@ -431,7 +456,7 @@ const OrdersTab: React.FC = () => {
           </div>
         )}
         <Alert style={{ marginBottom: 12, fontSize: 12 }} type="success" showIcon
-          title="现货直接出库——出库后订单状态自动更新为【已出库】，并自动生成销售收入流水" />
+          title="出库后自动扣减SKU库存、更新订单状态为【已出库】、生成销售收入流水、回传物流信息到平台" />
         <Form form={outboundForm} layout="vertical">
           <Form.Item name="expressCompany" label="快递公司"
             rules={[{ required: true, message: '请输入快递公司' }]}>
@@ -584,11 +609,11 @@ const EcommerceOrders: React.FC = () => (
       description={
         <Steps style={{ marginTop: 8 }}
           items={[
-            { title: '配置平台',  content: '应用商店填写密钥',          icon: <ShopOutlined style={{ color: '#1677ff' }} /> },
-            { title: '平台推单',  content: '各平台 Webhook 推入本系统',  icon: <ApiOutlined style={{ color: '#fa8c16' }} /> },
-            { title: '关联排产',  content: '订单管理页手动关联生产单',   icon: <ShoppingCartOutlined style={{ color: '#722ed1' }} /> },
-            { title: '仓库出库',  content: '出库自动更新仓库状态+快递', icon: <CarOutlined style={{ color: '#13c2c2' }} /> },
-            { title: '财务核算',  content: 'SKU定价页设置单价/成本看毛利', icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
+            { title: '配置平台',  content: '应用商店填写 AppKey/Secret',    icon: <ShopOutlined style={{ color: '#1677ff' }} /> },
+            { title: '平台推单',  content: 'Webhook 自动接收，自动匹配款号',  icon: <ApiOutlined style={{ color: '#fa8c16' }} /> },
+            { title: '待处理',    content: '未匹配到的点「待处理」卡片筛选处理', icon: <ShoppingCartOutlined style={{ color: '#ff4d4f' }} /> },
+            { title: '关联/出库', content: '关联排产或现货直发→自动扣库存',   icon: <CarOutlined style={{ color: '#13c2c2' }} /> },
+            { title: '自动核算',  content: '出库自动生成收入+回传物流+对账',   icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
           ]}
         />
       }

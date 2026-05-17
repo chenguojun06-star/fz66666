@@ -368,6 +368,10 @@ function getCurrentFactoryId() {
   }
 }
 
+function isFactoryAccount() {
+  return !!getCurrentFactoryId();
+}
+
 /**
  * 按数据范围过滤列表数据
  * 在小程序端进行二次过滤（主过滤由后端 DataPermissionInterceptor 完成）
@@ -455,6 +459,7 @@ module.exports = {
   getDataScope,
   getCurrentUserId,
   getCurrentFactoryId,
+  isFactoryAccount,
   filterByDataScope,
   buildScopedParams,
 };

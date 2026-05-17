@@ -137,51 +137,75 @@ public class PlatformConnectorController {
                 result.put("supportedActions", List.of("拉取订单", "店铺发现", "物流回传"));
             }
             case "TAOBAO", "TMALL" -> {
-                result.put("success", true);
-                result.put("message", "淘宝/天猫对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请在淘宝开放平台设置回调地址"
+                        : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "打开 open.taobao.com → 应用管理 → 获取 AppKey/AppSecret");
                 result.put("supportedActions", List.of("订单接收", "物流回传", "库存同步"));
             }
             case "DOUYIN" -> {
-                result.put("success", true);
-                result.put("message", "抖音小店对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请在抖音开放平台设置回调地址"
+                        : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "打开 open.douyin.com → 应用管理 → 获取 AppKey/AppSecret");
                 result.put("supportedActions", List.of("订单接收", "物流回传"));
             }
             case "PINDUODUO" -> {
-                result.put("success", true);
-                result.put("message", "拼多多对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请在拼多多开放平台设置回调地址"
+                        : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "打开 open.pinduoduo.com → 应用管理 → 获取 client_id/client_secret");
                 result.put("supportedActions", List.of("订单接收", "物流回传"));
             }
             case "JD" -> {
-                result.put("success", true);
-                result.put("message", "京东对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请在京东开放平台设置回调地址"
+                        : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "打开 open.jd.com → 应用管理 → 获取 AppKey/AppSecret");
                 result.put("supportedActions", List.of("订单接收", "物流回传"));
             }
             case "XIAOHONGSHU" -> {
-                result.put("success", true);
-                result.put("message", "小红书对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请在小红书开放平台设置回调地址"
+                        : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "打开 open.xiaohongshu.com → 应用管理 → 获取 AppKey/AppSecret");
                 result.put("supportedActions", List.of("订单接收", "物流回传"));
             }
             case "WECHAT_SHOP" -> {
-                result.put("success", true);
-                result.put("message", "微信小店对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请在微信小店后台设置回调地址"
+                        : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "打开微信小店后台 → 开发设置 → 获取 AppID/AppSecret");
                 result.put("supportedActions", List.of("订单接收", "物流回传"));
             }
             case "SHOPIFY" -> {
-                result.put("success", true);
-                result.put("message", "Shopify对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请在 Shopify 后台设置 Webhook 回调地址"
+                        : "请先填写真实的 API Key 和 API Secret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "打开 Shopify 后台 → 设置 → 应用 → 管理私有应用 → 获取 API 凭证");
                 result.put("supportedActions", List.of("订单接收", "物流回传"));
             }
             case "DONGFANG" -> {
-                result.put("success", true);
-                result.put("message", "东纺纺织对接已就绪");
+                result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
+                result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
+                        ? "凭证已保存，请将回调地址配置到东纺平台"
+                        : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
+                result.put("credentialGuide", "联系东纺纺织获取 API 凭证");
                 result.put("supportedActions", List.of("面料同步", "供应商对接", "采购订单"));
             }
             default -> {

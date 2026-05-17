@@ -1,17 +1,17 @@
-page { background-color: #f5f6fa; }
+page { background-color: var(--color-bg-page); }
 .container { padding-top: env(safe-area-inset-top); min-height: 100vh; }
 
 .search-bar { padding: 0 var(--page-padding-x) 12rpx; }
 .search-box {
   display: flex; align-items: center;
-  background: #fff; border-radius: 22px;
+  background: var(--color-bg-card); border-radius: 22px;
   padding: 9px 14px;
 }
 .search-emoji { font-size: 14px; margin-right: 6px; }
-.search-input { flex: 1; font-size: 14px; color: #222; height: 24px; }
-.search-clear { font-size: 14px; color: #999; padding: 0 4px; }
+.search-input { flex: 1; font-size: 14px; color: var(--color-text-primary); height: 24px; }
+.search-clear { font-size: 14px; color: var(--color-text-tertiary); padding: 0 4px; }
 
-.state-wrap { display: flex; justify-content: center; padding-top: 120px; font-size: 14px; color: #999; }
+.state-wrap { display: flex; justify-content: center; padding-top: 120px; font-size: 14px; color: var(--color-text-tertiary); }
 
 .grid-scroll { height: calc(100vh - env(safe-area-inset-top) - 64px); -webkit-overflow-scrolling: touch; }
 .grid { display: flex; flex-wrap: wrap; padding: 8rpx var(--page-padding-x); box-sizing: border-box; }
@@ -19,35 +19,35 @@ page { background-color: #f5f6fa; }
 .card {
   width: calc(50% - 6rpx);
   margin: 0 12rpx 12rpx 0;
-  background: #fff; border-radius: 10px;
-  overflow: hidden; border: 1px solid #eee;
+  background: var(--color-bg-card); border-radius: 10px;
+  overflow: hidden; border: 1px solid var(--color-border-light);
   box-sizing: border-box;
 }
 .card:nth-child(2n) { margin-right: 0; }
 
 .card-img {
-  width: 100%; height: 130px; background: #f0f2f5; overflow: hidden;
+  width: 100%; height: 130px; background: var(--color-bg-gray); overflow: hidden;
   display: flex; align-items: center; justify-content: center;
 }
 .card-img image { width: 100%; height: 100%; display: block; }
 .card-img-ph {
-  font-size: 15px; font-weight: 700; color: #1677ff;
+  font-size: 15px; font-weight: 700; color: var(--color-primary);
   word-break: break-all; padding: 8px; text-align: center;
 }
 
 .card-body { padding: 8px 10px 10px; display: flex; flex-direction: column; }
 .card-cat {
-  font-size: 10px; color: #1677ff; background: #edf2ff;
+  font-size: 10px; color: var(--color-primary); background: var(--color-primary-bg);
   padding: 1px 7px; border-radius: 8px; display: inline-block; margin-bottom: 4px;
   align-self: flex-start;
 }
 .card-no {
-  font-size: 14px; font-weight: 700; color: #222;
+  font-size: 14px; font-weight: 700; color: var(--color-text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .card-name {
-  font-size: 12px; color: #777; margin-top: 2px;
+  font-size: 12px; color: var(--color-text-secondary); margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.card-oc { font-size: 11px; color: #1677ff; margin-top: 6px; }
-.card-ld { font-size: 10px; color: #bbb; margin-top: 2px; }
+.card-oc { font-size: 11px; color: var(--color-primary); margin-top: 6px; }
+.card-ld { font-size: 10px; color: var(--color-text-tertiary); margin-top: 2px; }

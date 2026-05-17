@@ -50,6 +50,15 @@ const system = {
   saveMiniprogramMenuConfig(menus) {
     return ok('/api/system/tenant-miniprogram-menu', 'PUT', { menus });
   },
+  getMiniprogramMenuRoles() {
+    return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'GET', {});
+  },
+  getMiniprogramMenuMeta() {
+    return ok('/api/system/tenant-miniprogram-menu/menu-meta', 'GET', {});
+  },
+  saveMiniprogramMenuRoleConfig(roleMenus) {
+    return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'PUT', { roleMenus });
+  },
 };
 
 const serial = {

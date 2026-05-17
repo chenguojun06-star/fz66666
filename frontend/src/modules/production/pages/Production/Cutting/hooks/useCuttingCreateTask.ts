@@ -116,6 +116,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createStyleImageUrl, setCreateStyleImageUrl] = useState<string | null>(null);
   const [createCustomerName, setCreateCustomerName] = useState<string>('');
   const [createRemarks, setCreateRemarks] = useState<string>('');
+  const [createUrgencyLevel, setCreateUrgencyLevel] = useState<'urgent' | 'normal'>('normal');
   const [createCategory, setCreateCategory] = useState<string>('');
   const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
   const [dynamicProcessMapping, setDynamicProcessMapping] = useState<Record<string, string>>({});
@@ -346,6 +347,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     setCreateProcessNodes([]);
     setCreateStyleImageUrl(null);
     setCreateCategory('');
+    setCreateUrgencyLevel('normal');
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
     fetchInternalUnitOptions();
@@ -422,6 +424,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         styleImageUrl: String(createStyleImageUrl || '').trim() || undefined,
         customerName: String(createCustomerName || '').trim() || undefined,
         remarks: String(createRemarks || '').trim() || undefined,
+        urgencyLevel: createUrgencyLevel,
         productCategory: normalizeCategoryQuery(createCategory) || undefined,
       });
       if (res.code === 200) {
@@ -462,6 +465,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     createStyleImageUrl, setCreateStyleImageUrl,
     createCustomerName, setCreateCustomerName,
     createRemarks, setCreateRemarks,
+    createUrgencyLevel, setCreateUrgencyLevel,
     createCategory, setCreateCategory,
     categoryOptions: CATEGORY_CODE_OPTIONS,
     selectedFactoryStat,

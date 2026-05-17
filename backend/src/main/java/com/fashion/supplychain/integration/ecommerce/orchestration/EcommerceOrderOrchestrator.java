@@ -11,6 +11,7 @@ import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderServi
 import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -38,6 +39,9 @@ public class EcommerceOrderOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ProductSkuService productSkuService;
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> receiveOrder(String platformCode, Map<String, Object> body) {
@@ -154,6 +158,14 @@ public class EcommerceOrderOrchestrator {
                     .or().like(EcommerceOrder::getBuyerNick, keyword)
                     .or().like(EcommerceOrder::getReceiverName, keyword));
         }
+        Object linkedParam = params.get("productionOrderLinked");
+        if (linkedParam instanceof Boolean) {
+            if ((Boolean) linkedParam) {
+                wrapper.isNotNull(EcommerceOrder::getProductionOrderNo);
+            } else {
+                wrapper.isNull(EcommerceOrder::getProductionOrderNo);
+            }
+        }
         return ecOrderService.page(new Page<>(page, pageSize), wrapper);
     }
 
@@ -181,6 +193,16 @@ public class EcommerceOrderOrchestrator {
         if (order == null) throw new IllegalArgumentException("电商订单不存在或无权操作: " + ecOrderId);
         if (order.getWarehouseStatus() != null && order.getWarehouseStatus() >= 2) {
             throw new IllegalStateException("订单已出库，无需重复操作");
+        }
+        String skuCode = order.getSkuCode();
+        int quantity = order.getQuantity() != null ? order.getQuantity() : 1;
+        if (StringUtils.hasText(skuCode)) {
+            boolean deducted = productSkuService.decreaseStockBySkuCode(skuCode, quantity);
+            if (!deducted) {
+                throw new IllegalStateException(
+                        "库存不足: SKU=" + skuCode + "，请先入库再出库，或检查库存数量");
+            }
+            log.info("[EC现货出库] SKU库存已扣减: skuCode={} quantity={}", skuCode, quantity);
         }
         order.setStatus(2);
         order.setWarehouseStatus(2);

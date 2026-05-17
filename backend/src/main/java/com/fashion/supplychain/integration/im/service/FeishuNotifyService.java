@@ -1,6 +1,10 @@
 package com.fashion.supplychain.integration.im.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.mapper.TenantMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -16,13 +20,11 @@ import java.util.Map;
  * <p>通过飞书自定义机器人 Webhook 将关键生产事件实时推送到飞书群。
  * 适用场景：逾期预警、停滞订单、AI 异常检测、物料告警等。
  *
- * <p>配置方式（application.yml 或环境变量）：
- * <pre>
- * feishu:
- *   notify:
- *     webhook-url: ${FEISHU_WEBHOOK_URL:}
- *     enabled: ${FEISHU_NOTIFY_ENABLED:false}
- * </pre>
+ * <p>配置方式（优先级：租户DB > 环境变量）：
+ * <ol>
+ *   <li>租户在后台「集成中心 → IM通知」粘贴 Webhook URL → 存DB</li>
+ *   <li>全局兜底：FEISHU_WEBHOOK_URL 环境变量</li>
+ * </ol>
  *
  * <p>获取 Webhook：飞书群 → 设置 → 群机器人 → 添加自定义机器人 → 复制 Webhook URL
  *
@@ -40,11 +42,14 @@ public class FeishuNotifyService {
     private static final int CONNECT_TIMEOUT_MS = 3000;
     private static final int READ_TIMEOUT_MS = 5000;
 
-    @Value("${feishu.notify.webhook-url:}")
-    private String webhookUrl;
+    @Autowired(required = false)
+    private TenantMapper tenantMapper;
 
-    @Value("${feishu.notify.enabled:false}")
-    private boolean enabled;
+    @Value("${feishu.notify.webhook-url:}")
+    private String globalWebhookUrl;
+
+    @Value("${feishu.notify.enabled:true}")
+    private boolean globalEnabled;
 
     private final RestTemplate restTemplate;
 
@@ -169,16 +174,34 @@ public class FeishuNotifyService {
     }
 
     private String resolveWebhookUrl(Long tenantId) {
-        if (!enabled) return null;
-        return (webhookUrl != null && !webhookUrl.isBlank()) ? webhookUrl : null;
+        if (tenantId != null && tenantMapper != null) {
+            Tenant tenant = tenantMapper.selectById(tenantId);
+            if (tenant != null && tenant.getFeishuWebhookUrl() != null
+                    && !tenant.getFeishuWebhookUrl().isBlank()) {
+                return tenant.getFeishuWebhookUrl();
+            }
+        }
+        if (!globalEnabled) return null;
+        return (globalWebhookUrl != null && !globalWebhookUrl.isBlank()) ? globalWebhookUrl : null;
     }
 
     public boolean isConfigured() {
-        return enabled && webhookUrl != null && !webhookUrl.isBlank();
+        return globalEnabled && globalWebhookUrl != null && !globalWebhookUrl.isBlank();
+    }
+
+    public boolean isConfiguredForTenant(Long tenantId) {
+        if (tenantId != null && tenantMapper != null) {
+            Tenant tenant = tenantMapper.selectById(tenantId);
+            if (tenant != null && tenant.getFeishuWebhookUrl() != null
+                    && !tenant.getFeishuWebhookUrl().isBlank()) {
+                return true;
+            }
+        }
+        return isConfigured();
     }
 
     private void doPost(Map<String, Object> body, String msgType) {
-        doPostToUrl(webhookUrl, body, msgType);
+        doPostToUrl(globalWebhookUrl, body, msgType);
     }
 
     private void doPostToUrl(String url, Map<String, Object> body, String msgType) {

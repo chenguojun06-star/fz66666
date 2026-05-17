@@ -2,6 +2,8 @@ package com.fashion.supplychain.system.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.integration.im.service.DingtalkNotifyService;
+import com.fashion.supplychain.integration.im.service.FeishuNotifyService;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import com.fashion.supplychain.system.entity.Role;
@@ -40,6 +42,12 @@ public class TenantController {
 
     @Autowired(required = false)
     private RedisService redisService;
+
+    @Autowired(required = false)
+    private FeishuNotifyService feishuNotifyService;
+
+    @Autowired(required = false)
+    private DingtalkNotifyService dingtalkNotifyService;
 
     // ========== 超级管理员：租户管理 ==========
 
@@ -171,7 +179,7 @@ public class TenantController {
     }
 
     /**
-     * 租户主账号修改自己的工厂名称/联系信息/企业微信 Webhook（非超管专用，租户自主管理）
+     * 租户主账号修改自己的工厂名称/联系信息/IM Webhook（非超管专用，租户自主管理）
      */
     @PutMapping("/my/info")
     public Result<Boolean> updateMyTenantInfo(@RequestBody Map<String, String> params) {
@@ -179,8 +187,11 @@ public class TenantController {
         String contactName = params.get("contactName");
         String contactPhone = params.get("contactPhone");
         String wechatWorkWebhookUrl = params.get("wechatWorkWebhookUrl");
+        String feishuWebhookUrl = params.get("feishuWebhookUrl");
+        String dingtalkWebhookUrl = params.get("dingtalkWebhookUrl");
         return Result.success(tenantOrchestrator.updateMyTenantInfo(
-                tenantName, contactName, contactPhone, wechatWorkWebhookUrl));
+                tenantName, contactName, contactPhone,
+                wechatWorkWebhookUrl, feishuWebhookUrl, dingtalkWebhookUrl));
     }
 
     // ========== 租户自助账单与发票 ==========
@@ -569,5 +580,76 @@ public class TenantController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("sentCount", count);
         return Result.success(result);
+    }
+
+    /**
+     * 测试 IM 通知连接（飞书/钉钉/企业微信）
+     * POST /api/system/tenant/test-im-notify
+     * body: { "type": "feishu"|"dingtalk"|"wechat", "webhookUrl": "https://..." }
+     */
+    @PostMapping("/test-im-notify")
+    public Result<Map<String, Object>> testImNotify(@RequestBody Map<String, String> body) {
+        String type = body.getOrDefault("type", "feishu");
+        String webhookUrl = body.get("webhookUrl");
+
+        if (webhookUrl == null || webhookUrl.isBlank()) {
+            return Result.fail("Webhook URL 不能为空");
+        }
+
+        try {
+            String testMsg = String.format("【云裳供应链】测试消息 — 连接成功！\n时间：%s",
+                    java.time.LocalDateTime.now().toString().replace("T", " "));
+
+            if ("dingtalk".equalsIgnoreCase(type)) {
+                sendDingtalkTest(webhookUrl, testMsg);
+            } else if ("wechat".equalsIgnoreCase(type)) {
+                sendWechatTest(webhookUrl, testMsg);
+            } else {
+                sendFeishuTest(webhookUrl, testMsg);
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("ok", true);
+            result.put("message", "测试消息已发送，请查看 IM 群");
+            return Result.success(result);
+        } catch (Exception e) {
+            log.warn("[IM-Test] 测试连接失败 type={}: {}", type, e.getMessage());
+            return Result.fail("连接失败：" + e.getMessage());
+        }
+    }
+
+    private void sendFeishuTest(String url, String text) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("msg_type", "text");
+        Map<String, String> content = new LinkedHashMap<>();
+        content.put("text", text);
+        body.put("content", content);
+        postJson(url, body);
+    }
+
+    private void sendDingtalkTest(String url, String text) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("msgtype", "text");
+        Map<String, String> content = new LinkedHashMap<>();
+        content.put("content", text);
+        body.put("text", content);
+        postJson(url, body);
+    }
+
+    private void sendWechatTest(String url, String text) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("msgtype", "text");
+        Map<String, Object> textObj = new LinkedHashMap<>();
+        textObj.put("content", text);
+        body.put("text", textObj);
+        postJson(url, body);
+    }
+
+    private void postJson(String url, Map<String, Object> body) {
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+        org.springframework.http.HttpEntity<Map<String, Object>> request =
+                new org.springframework.http.HttpEntity<>(body, headers);
+        new org.springframework.web.client.RestTemplate().postForEntity(url, request, String.class);
     }
 }

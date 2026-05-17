@@ -11,6 +11,7 @@ const { system, serial, factory, factoryWorker, tenant } = require('./api-module
 const { intelligence, notice } = require('./api-modules/intelligence');
 const { style, warehouse, material, materialRoll, orderManagement, sampleStock } = require('./api-modules/style-warehouse');
 const { dashboard, wechat, common } = require('./api-modules/common');
+const { employeeAdvance, factoryShipment, wagePayment } = require('./api-modules/finance');
 
 // ── 聚合对象（与拆分前完全一致的接口） ──────────────────────
 const api = {
@@ -31,6 +32,9 @@ const api = {
   common,
   factoryWorker,
   notice,
+  employeeAdvance,
+  factoryShipment,
+  wagePayment,
 };
 
 // ── 导出（保持原有 module.exports + named exports 兼容） ───
@@ -48,6 +52,9 @@ module.exports.factory = factory;
 module.exports.tenant = tenant;
 module.exports.wechat = wechat;
 module.exports.sampleStock = sampleStock;
+module.exports.employeeAdvance = employeeAdvance;
+module.exports.factoryShipment = factoryShipment;
+module.exports.wagePayment = wagePayment;
 
 /* --- 拆分前原始代码已归档至 api-modules/ 各领域文件 --- */
 /* helpers.js       — ok / raw / pickMessage / createBizError / uploadFile */

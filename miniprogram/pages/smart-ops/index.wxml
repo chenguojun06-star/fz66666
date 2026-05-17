@@ -69,16 +69,21 @@
         <text class="card-close" bindtap="closeMenu">✕</text>
       </view>
       <view class="card-body">
-        <view class="order-row" wx:for="{{activeOrders}}" wx:key="orderNo">
-          <view class="order-top">
-            <text class="order-no">{{item.orderNo}}</text>
-            <text class="order-progress">{{item.progress}}%</text>
+        <view class="order-row" wx:for="{{activeOrders}}" wx:key="orderNo" data-index="{{index}}" bindtap="onOrderTap">
+          <view class="order-cover" wx:if="{{item.styleCoverUrl}}" catchtap="onPreviewCover" data-url="{{item.styleCoverUrl}}">
+            <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
           </view>
-          <view class="order-info">
-            <text class="order-style">{{item.styleNo}}</text>
-            <text class="order-factory">{{item.factoryName || '--'}}</text>
-            <text class="order-qty">{{item.orderQuantity}}件</text>
-            <text class="order-date">交期{{item.plannedEndDate}}</text>
+          <view class="order-content">
+            <view class="order-top">
+              <text class="order-no">{{item.orderNo}}</text>
+              <text class="order-progress">{{item.progress}}%</text>
+            </view>
+            <view class="order-info">
+              <text class="order-style">{{item.styleNo}}</text>
+              <text class="order-factory">{{item.factoryName || '--'}}</text>
+              <text class="order-qty">{{item.orderQuantity}}件</text>
+              <text class="order-date">交期{{item.plannedEndDate}}</text>
+            </view>
           </view>
         </view>
         <view wx:if="{{activeOrders.length === 0}}" class="empty-hint">暂无订单</view>
@@ -114,16 +119,21 @@
             <text class="stage-detail-title">{{activeStageLabel}}舱订单</text>
             <text class="card-close" bindtap="closeStage">✕</text>
           </view>
-          <view class="order-row" wx:for="{{activeStageOrders}}" wx:key="orderNo">
-            <view class="order-top">
-              <text class="order-no">{{item.orderNo}}</text>
-              <text class="order-progress">{{item.progress}}%</text>
+          <view class="order-row" wx:for="{{activeStageOrders}}" wx:key="orderNo" data-index="{{index}}" bindtap="onStageOrderTap">
+            <view class="order-cover" wx:if="{{item.styleCoverUrl}}" catchtap="onPreviewCover" data-url="{{item.styleCoverUrl}}">
+              <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
             </view>
-            <view class="order-info">
-              <text class="order-style">{{item.styleNo}}</text>
-              <text class="order-factory">{{item.factoryName || '--'}}</text>
-              <text class="order-qty">{{item.orderQuantity}}件</text>
-              <text class="order-date">交期{{item.plannedEndDate}}</text>
+            <view class="order-content">
+              <view class="order-top">
+                <text class="order-no">{{item.orderNo}}</text>
+                <text class="order-progress">{{item.progress}}%</text>
+              </view>
+              <view class="order-info">
+                <text class="order-style">{{item.styleNo}}</text>
+                <text class="order-factory">{{item.factoryName || '--'}}</text>
+                <text class="order-qty">{{item.orderQuantity}}件</text>
+                <text class="order-date">交期{{item.plannedEndDate}}</text>
+              </view>
             </view>
           </view>
           <view wx:if="{{activeStageOrders.length === 0}}" class="empty-hint">当前阶段暂无在制订单</view>

@@ -189,7 +189,7 @@ public class PlatformNotifyService {
     private void notifyJst(EcPlatformConfig config, EcommerceOrder order) {
         String callbackUrl = config.getCallbackUrl();
         if (!StringUtils.hasText(callbackUrl)) {
-            callbackUrl = "https://open.jushuitan.com/open/logistics/upload";
+            callbackUrl = "https://openapi.jushuitan.com/open/logistic/upload";
         }
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("so_id", order.getPlatformOrderNo());

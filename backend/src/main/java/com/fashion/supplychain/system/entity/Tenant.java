@@ -116,6 +116,14 @@ public class Tenant {
     @TableField("wechat_work_webhook_url")
     private String wechatWorkWebhookUrl;
 
+    /** 飞书群机器人 Webhook 地址 */
+    @TableField("feishu_webhook_url")
+    private String feishuWebhookUrl;
+
+    /** 钉钉群机器人 Webhook 地址 */
+    @TableField("dingtalk_webhook_url")
+    private String dingtalkWebhookUrl;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

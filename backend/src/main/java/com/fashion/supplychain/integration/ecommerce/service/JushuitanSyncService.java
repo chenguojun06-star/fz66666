@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 @ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
 public class JushuitanSyncService {
 
-    private static final String JST_API_BASE = "https://open.jushuitan.com";
-    private static final String JST_ORDER_QUERY = "/open/jushuitan/ordersingle/query";
-    private static final String JST_SHOP_QUERY = "/open/jushuitan/shops/query";
+    private static final String JST_API_BASE = "https://openapi.jushuitan.com";
+    private static final String JST_ORDER_QUERY = "/open/orders/single/query";
+    private static final String JST_SHOP_QUERY = "/open/shops/query";
 
     @Autowired
     private EcPlatformConfigService ecPlatformConfigService;

@@ -12,6 +12,7 @@ interface StyleLinkContextType {
   unregisterModule: (moduleKey: string) => void;
   updateModulePosition: (moduleKey: string, position: { x: number; y: number; width: number; height: number }) => void;
   getLinkedStyles: () => Map<string, StyleLinkData[]>;
+  subscribe: (listener: () => void) => () => void;
 }
 
 const StyleLinkContext = createContext<StyleLinkContextType | null>(null);
@@ -95,12 +96,18 @@ export const StyleLinkProvider: React.FC<StyleLinkProviderProps> = ({ children }
     return linkedOnly;
   }, []);
 
+  const subscribe = useCallback((listener: () => void) => {
+    listenersRef.current.add(listener);
+    return () => { listenersRef.current.delete(listener); };
+  }, []);
+
   const contextValue = useMemo(() => ({
     registerStyle,
     unregisterModule,
     updateModulePosition,
     getLinkedStyles,
-  }), [registerStyle, unregisterModule, updateModulePosition, getLinkedStyles]);
+    subscribe,
+  }), [registerStyle, unregisterModule, updateModulePosition, getLinkedStyles, subscribe]);
 
   return (
     <StyleLinkContext.Provider value={contextValue}>

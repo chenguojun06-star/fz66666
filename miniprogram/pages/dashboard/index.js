@@ -12,8 +12,8 @@
  *   production.listOrders      → 订单列表 + 状态计数
  */
 var api = require('../../utils/api');
-var { transformOrderData } = require('./utils/orderTransform');
-var { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
+var { transformOrderData } = require('../../utils/order/orderTransform');
+var { buildProcessNodesWithRates, calcOrderProgress } = require('../../utils/order/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
 var { eventBus, Events } = require('../../utils/eventBus');
@@ -256,6 +256,14 @@ Page({
     wx.setClipboardData({ data: orderNo, success: function () {
       wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
     }});
+  },
+
+  /* ======== 采购 ======== */
+  onGoProcurement: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var order = this.data.orders.list[idx];
+    if (!order) return;
+    wx.navigateTo({ url: '/pages/procurement/task-detail/index?orderNo=' + encodeURIComponent(order.orderNo || '') + '&styleNo=' + encodeURIComponent(order.styleNo || '') });
   },
 
   /* ======== 查看裁剪明细 ======== */

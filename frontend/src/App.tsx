@@ -323,6 +323,22 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  React.useEffect(() => {
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type !== 'attributes' || m.attributeName !== 'aria-hidden') continue;
+        const el = m.target as HTMLElement;
+        if (el.getAttribute('aria-hidden') !== 'true') continue;
+        const active = document.activeElement;
+        if (active && active instanceof HTMLElement && el.contains(active)) {
+          active.blur();
+        }
+      }
+    });
+    mo.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['aria-hidden'] });
+    return () => mo.disconnect();
+  }, []);
+
   return (
     <ErrorBoundary>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

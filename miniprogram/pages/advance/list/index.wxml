@@ -1,0 +1,148 @@
+<view class="page">
+  <view class="filter-bar">
+    <view class="filter-item">
+      <picker mode="selector" range="{{_STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+        <view class="picker-box">
+          <text>{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+    <view class="filter-item">
+      <picker mode="selector" range="{{_REPAY_OPTIONS}}" range-key="label" bindchange="onRepayFilterChange">
+        <view class="picker-box">
+          <text>{{repayFilter ? REPAY_MAP[repayFilter].text : '全部还款'}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+    <view class="search-row">
+      <input class="search-input" placeholder="搜索员工姓名" value="{{keyword}}" bindinput="onKeywordInput" bindconfirm="onKeywordSearch" />
+    </view>
+  </view>
+
+  <view class="list-section">
+    <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无借支记录" />
+
+    <view class="advance-card" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem">
+      <view class="card-header">
+        <text class="advance-no">{{item.advanceNo || '—'}}</text>
+        <text class="tag {{item.statusCls}}">{{item.statusText}}</text>
+      </view>
+      <view class="card-body">
+        <view class="info-row">
+          <text class="info-label">员工</text>
+          <text class="info-value">{{item.employeeName || '—'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">工厂</text>
+          <text class="info-value">{{item.factoryName || '—'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">金额</text>
+          <text class="info-value amount">¥{{item.amountStr}}</text>
+        </view>
+        <view class="info-row" wx:if="{{item.status === 'approved'}}">
+          <text class="info-label">剩余</text>
+          <text class="info-value remaining">¥{{item.remainingStr}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">还款</text>
+          <text class="tag {{item.repayCls}}" style="font-size:11px;">{{item.repayText}}</text>
+        </view>
+      </view>
+      <view class="card-footer">
+        <text class="time-text">{{item.createTime || ''}}</text>
+      </view>
+    </view>
+
+    <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+      <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+    </view>
+  </view>
+
+  <view class="fab-btn" bindtap="onTapCreate">+</view>
+
+  <view class="action-sheet-mask" wx:if="{{showActionSheet}}" bindtap="onCloseActionSheet"></view>
+  <view class="action-sheet {{showActionSheet ? 'action-sheet-show' : ''}}">
+    <view class="action-sheet-header">
+      <text>{{currentAdvance.advanceNo || '操作'}}</text>
+    </view>
+    <view class="action-sheet-body">
+      <view class="action-item action-approve" wx:if="{{canApprove && currentAdvance.status === 'pending'}}" bindtap="onActionApprove">
+        <text>审批通过</text>
+      </view>
+      <view class="action-item action-reject" wx:if="{{canApprove && currentAdvance.status === 'pending'}}" bindtap="onActionReject">
+        <text>驳回</text>
+      </view>
+      <view class="action-item action-repay" wx:if="{{currentAdvance.status === 'approved' && currentAdvance.repaymentStatus !== 'repaid'}}" bindtap="onActionRepay">
+        <text>还款</text>
+      </view>
+      <view class="action-item action-cancel" bindtap="onCloseActionSheet">
+        <text>取消</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="modal-mask" wx:if="{{showCreateModal}}" bindtap="onCancelCreate"></view>
+  <view class="modal {{showCreateModal ? 'modal-show' : ''}}">
+    <view class="modal-header">
+      <text class="modal-title">申请借支</text>
+      <text class="modal-close" bindtap="onCancelCreate">✕</text>
+    </view>
+    <view class="modal-body">
+      <view class="mf-item">
+        <text class="mf-label mf-required">员工姓名</text>
+        <input class="mf-input" placeholder="请输入员工姓名" value="{{createForm.employeeName}}" data-field="employeeName" bindinput="onCreateFieldInput" />
+      </view>
+      <view class="mf-item">
+        <text class="mf-label mf-required">借支金额</text>
+        <input class="mf-input" type="digit" placeholder="请输入金额" value="{{createForm.amount}}" data-field="amount" bindinput="onCreateFieldInput" />
+      </view>
+      <view class="mf-item">
+        <text class="mf-label mf-required">借支事由</text>
+        <textarea class="mf-textarea" placeholder="请输入借支事由" value="{{createForm.reason}}" data-field="reason" bindinput="onCreateFieldInput" maxlength="200" />
+      </view>
+      <view class="mf-item">
+        <text class="mf-label">关联订单号</text>
+        <input class="mf-input" placeholder="选填" value="{{createForm.orderNo}}" data-field="orderNo" bindinput="onCreateFieldInput" />
+      </view>
+    </view>
+    <view class="modal-footer">
+      <view class="modal-btn cancel" bindtap="onCancelCreate">取消</view>
+      <view class="modal-btn confirm" bindtap="onSubmitCreate">提交</view>
+    </view>
+  </view>
+
+  <view class="modal-mask" wx:if="{{showRepayModal}}" bindtap="onCancelRepay"></view>
+  <view class="modal {{showRepayModal ? 'modal-show' : ''}}">
+    <view class="modal-header">
+      <text class="modal-title">还款</text>
+      <text class="modal-close" bindtap="onCancelRepay">✕</text>
+    </view>
+    <view class="modal-body">
+      <view class="mf-kv-list" wx:if="{{currentAdvance}}">
+        <view class="mf-kv">
+          <text class="mf-kv-key">借支单号</text>
+          <text class="mf-kv-val">{{currentAdvance.advanceNo}}</text>
+        </view>
+        <view class="mf-kv">
+          <text class="mf-kv-key">借支金额</text>
+          <text class="mf-kv-val">¥{{currentAdvance.amountStr}}</text>
+        </view>
+        <view class="mf-kv">
+          <text class="mf-kv-key">剩余金额</text>
+          <text class="mf-kv-val" style="color:var(--color-danger);">¥{{currentAdvance.remainingStr}}</text>
+        </view>
+      </view>
+      <view class="mf-item" style="margin-top:16px;">
+        <text class="mf-label mf-required">还款金额</text>
+        <input class="mf-input" type="digit" placeholder="请输入还款金额" value="{{repayForm.amount}}" bindinput="onRepayAmountInput" />
+      </view>
+    </view>
+    <view class="modal-footer">
+      <view class="modal-btn cancel" bindtap="onCancelRepay">取消</view>
+      <view class="modal-btn confirm" bindtap="onSubmitRepay">确认还款</view>
+    </view>
+  </view>
+</view>

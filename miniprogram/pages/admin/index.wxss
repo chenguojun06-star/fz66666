@@ -218,9 +218,30 @@ page {
 }
 
 .mm-list {
-  flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.mm-scroll {
+  flex: 1;
+  max-height: 55vh;
+}
+
+.mm-role-group {
+  margin-bottom: 12px;
+}
+
+.mm-role-header {
+  padding: 8px 12px;
+  background: var(--color-bg-light);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.mm-role-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .mm-item {

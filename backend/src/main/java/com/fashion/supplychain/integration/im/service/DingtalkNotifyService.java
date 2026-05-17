@@ -1,6 +1,9 @@
 package com.fashion.supplychain.integration.im.service;
 
+import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.mapper.TenantMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -16,13 +19,11 @@ import java.util.Map;
  * <p>通过钉钉自定义机器人 Webhook 将关键生产事件实时推送到钉钉群。
  * 适用场景：逾期预警、停滞订单、AI 异常检测、物料告警等。
  *
- * <p>配置方式（application.yml 或环境变量）：
- * <pre>
- * dingtalk:
- *   notify:
- *     webhook-url: ${DINGTALK_WEBHOOK_URL:}
- *     enabled: ${DINGTALK_NOTIFY_ENABLED:false}
- * </pre>
+ * <p>配置方式（优先级：租户DB > 环境变量）：
+ * <ol>
+ *   <li>租户在后台「集成中心 → IM通知」粘贴 Webhook URL → 存DB</li>
+ *   <li>全局兜底：DINGTALK_WEBHOOK_URL 环境变量</li>
+ * </ol>
  *
  * <p>获取 Webhook：钉钉群 → 群设置 → 智能群助手 → 添加机器人 → 自定义 → 复制 Webhook URL
  *
@@ -41,11 +42,14 @@ public class DingtalkNotifyService {
     private static final int CONNECT_TIMEOUT_MS = 3000;
     private static final int READ_TIMEOUT_MS = 5000;
 
-    @Value("${dingtalk.notify.webhook-url:}")
-    private String webhookUrl;
+    @Autowired(required = false)
+    private TenantMapper tenantMapper;
 
-    @Value("${dingtalk.notify.enabled:false}")
-    private boolean enabled;
+    @Value("${dingtalk.notify.webhook-url:}")
+    private String globalWebhookUrl;
+
+    @Value("${dingtalk.notify.enabled:true}")
+    private boolean globalEnabled;
 
     @Value("${dingtalk.notify.secret:}")
     private String secret;
@@ -149,8 +153,18 @@ public class DingtalkNotifyService {
     }
 
     private String resolveWebhookUrl(Long tenantId) {
-        if (!enabled) return null;
-        String url = (webhookUrl != null && !webhookUrl.isBlank()) ? webhookUrl : null;
+        String url = null;
+        if (tenantId != null && tenantMapper != null) {
+            Tenant tenant = tenantMapper.selectById(tenantId);
+            if (tenant != null && tenant.getDingtalkWebhookUrl() != null
+                    && !tenant.getDingtalkWebhookUrl().isBlank()) {
+                url = tenant.getDingtalkWebhookUrl();
+            }
+        }
+        if (url == null) {
+            if (!globalEnabled) return null;
+            url = (globalWebhookUrl != null && !globalWebhookUrl.isBlank()) ? globalWebhookUrl : null;
+        }
         if (url == null) return null;
         if (secret != null && !secret.isBlank()) {
             url = signUrl(url);
@@ -178,7 +192,18 @@ public class DingtalkNotifyService {
     }
 
     public boolean isConfigured() {
-        return enabled && webhookUrl != null && !webhookUrl.isBlank();
+        return globalEnabled && globalWebhookUrl != null && !globalWebhookUrl.isBlank();
+    }
+
+    public boolean isConfiguredForTenant(Long tenantId) {
+        if (tenantId != null && tenantMapper != null) {
+            Tenant tenant = tenantMapper.selectById(tenantId);
+            if (tenant != null && tenant.getDingtalkWebhookUrl() != null
+                    && !tenant.getDingtalkWebhookUrl().isBlank()) {
+                return true;
+            }
+        }
+        return isConfigured();
     }
 
     private void doPost(Map<String, Object> body, String msgType) {

@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "历史记录",
+  "navigationBarTitleText": "扫码历史",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "scan-record-table": "../../../components/scan-record-table",

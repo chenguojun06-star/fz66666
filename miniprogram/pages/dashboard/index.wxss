@@ -62,7 +62,7 @@
 .stat-lbl {
   display: block;
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   margin-top: 4px;
 }
 .stat-card--purple .stat-val { color: #7c5cfc; }
@@ -130,7 +130,7 @@
 }
 .filter-text {
   font-size: 11px;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   margin-top: 2px;
 }
 .filter-pill--on .filter-num,
@@ -494,6 +494,7 @@
   padding-top: 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.04);
   margin-top: 4px;
+  flex-wrap: wrap;
 }
 .act-btn {
   font-size: 11px;
@@ -507,7 +508,7 @@
   background: rgba(var(--color-primary-rgb), 0.08);
 }
 .act-btn--warn {
-  color: #d48806;
+  color: #ad6800;
   background: rgba(250, 173, 20, 0.12);
 }
 
@@ -516,7 +517,7 @@
   text-align: center;
   padding: 16px 0 24px;
   font-size: 13px;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 .load-tip--end {
   font-size: 11px;

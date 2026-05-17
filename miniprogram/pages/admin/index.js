@@ -1,5 +1,5 @@
 var api = require('../../utils/api');
-var { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner, isSuperAdmin } = require('../../utils/storage');
+var { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner } = require('../../utils/storage');
 var { getBaseUrl } = require('../../config');
 var { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
 var { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
@@ -10,9 +10,21 @@ var i18n = require('../../utils/i18n/index');
 var HOME_MENU_KEY_MAP = {
   smartOps: { fullKey: 'miniprogram.menu.smartOps', label: '运营看板' },
   dashboard: { fullKey: 'miniprogram.menu.dashboard', label: '生产管理' },
-  quality: { fullKey: 'miniprogram.menu.quality', label: '扫码质检' },
+  orderCreate: { fullKey: 'miniprogram.menu.orderCreate', label: '下单管理' },
+  production: { fullKey: 'miniprogram.menu.production', label: '质检通知' },
+  quality: { fullKey: 'miniprogram.menu.quality', label: '生产扫码' },
   bundleSplit: { fullKey: 'miniprogram.menu.bundleSplit', label: '菲号单价' },
   cuttingDetail: { fullKey: 'miniprogram.menu.cuttingDetail', label: '裁剪明细' },
+  history: { fullKey: 'miniprogram.menu.history', label: '扫码历史' },
+  factoryShipment: { fullKey: 'miniprogram.menu.factoryShipment', label: '外发工厂' },
+  advance: { fullKey: 'miniprogram.menu.advance', label: '员工借支' },
+  wagePayment: { fullKey: 'miniprogram.menu.wagePayment', label: '收付款中心' },
+};
+
+var MENU_ROLE_MAP = {
+  admin: '管理员',
+  supervisor: '组长/主管',
+  worker: '工人',
 };
 
 function buildMenuItems(opts) {
@@ -23,6 +35,10 @@ function buildMenuItems(opts) {
 
   items.push({ id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' });
   items.push({ id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' });
+  items.push({ id: 'advance', label: '员工借支', iconClass: 'icon-payroll', url: '/pages/advance/list/index' });
+  if (opts.showWagePayment) {
+    items.push({ id: 'wagePayment', label: '收付款中心', iconClass: 'icon-payroll', url: '/pages/finance/payment/index' });
+  }
 
   if (showInviteSection) {
     items.push({ id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/misc/invite/index' });
@@ -71,6 +87,7 @@ Page({
     }
     var canManage = isAdminOrSupervisor() || isFactoryOwner();
     this._showMenuManage = canManage;
+    this._showWagePayment = isTenantOwner() || isAdminOrSupervisor();
     this.loadUserInfo(canManage);
     this.loadSystemInfo();
     this.setupDataRefreshListener();
@@ -97,6 +114,7 @@ Page({
         showInviteSection: this._showInviteSection || false,
         showApprovalEntry: this.data.showApprovalEntry,
         showMenuManage: this._showMenuManage || false,
+        showWagePayment: this._showWagePayment || false,
       }),
     });
   },
@@ -120,22 +138,40 @@ Page({
 
   openMenuManage: function () {
     var self = this;
-    api.system.getMiniprogramMenuConfig().then(function (resp) {
-      return resp;
-    }).catch(function () {
-      return null;
-    }).then(function (resp) {
-      var flags = (resp && resp.data) || resp || {};
-      var list = [];
-      Object.keys(HOME_MENU_KEY_MAP).forEach(function (shortKey) {
-        var meta = HOME_MENU_KEY_MAP[shortKey];
-        var enabled = true;
-        if (typeof flags[meta.fullKey] === 'boolean') {
-          enabled = flags[meta.fullKey];
-        }
-        list.push({ key: meta.fullKey, shortKey: shortKey, label: meta.label, enabled: enabled });
+    var menuKeys = Object.keys(HOME_MENU_KEY_MAP);
+    var roles = Object.keys(MENU_ROLE_MAP);
+
+    function buildRoleGroups(roleFlags) {
+      var roleGroups = [];
+      roles.forEach(function (role) {
+        var flags = roleFlags[role] || {};
+        var menus = [];
+        menuKeys.forEach(function (shortKey) {
+          var meta = HOME_MENU_KEY_MAP[shortKey];
+          var enabled = true;
+          if (typeof flags[meta.fullKey] === 'boolean') {
+            enabled = flags[meta.fullKey];
+          }
+          menus.push({ key: meta.fullKey, shortKey: shortKey, label: meta.label, enabled: enabled });
+        });
+        roleGroups.push({ role: role, roleLabel: MENU_ROLE_MAP[role], menus: menus });
       });
-      self.setData({ menuManageVisible: true, menuManageList: list });
+      return roleGroups;
+    }
+
+    api.system.getMiniprogramMenuRoles().then(function (resp) {
+      var roleFlags = (resp && resp.data) || resp || {};
+      self.setData({ menuManageVisible: true, menuManageGroups: buildRoleGroups(roleFlags), _useRoleApi: true });
+    }).catch(function () {
+      api.system.getMiniprogramMenuConfig().then(function (resp) {
+        var flags = (resp && resp.data) || resp || {};
+        var roleFlags = {};
+        roles.forEach(function (role) { roleFlags[role] = flags; });
+        self.setData({ menuManageVisible: true, menuManageGroups: buildRoleGroups(roleFlags), _useRoleApi: false });
+      }).catch(function () {
+        var roleGroups = buildRoleGroups({});
+        self.setData({ menuManageVisible: true, menuManageGroups: roleGroups, _useRoleApi: false });
+      });
     });
   },
 
@@ -144,34 +180,52 @@ Page({
   },
 
   onMenuSwitch: function (e) {
-    var shortKey = e.currentTarget.dataset.key;
-    var list = this.data.menuManageList;
-    var idx = -1;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].shortKey === shortKey) { idx = i; break; }
-    }
-    if (idx === -1) return;
-    var path = 'menuManageList[' + idx + '].enabled';
-    this.setData({ [path]: !list[idx].enabled });
+    var roleIdx = e.currentTarget.dataset.roleIdx;
+    var menuIdx = e.currentTarget.dataset.menuIdx;
+    var groups = this.data.menuManageGroups;
+    var path = 'menuManageGroups[' + roleIdx + '].menus[' + menuIdx + '].enabled';
+    var current = groups[roleIdx].menus[menuIdx].enabled;
+    this.setData({ [path]: !current });
   },
 
   saveMenuConfig: function () {
     if (this.data.savingMenuConfig) return;
     var self = this;
-    var list = this.data.menuManageList;
-    var menus = {};
-    list.forEach(function (item) {
-      menus[item.key] = item.enabled;
+    var groups = this.data.menuManageGroups;
+    var roleMenus = {};
+    groups.forEach(function (group) {
+      var menus = {};
+      group.menus.forEach(function (item) {
+        menus[item.key] = item.enabled;
+      });
+      roleMenus[group.role] = menus;
     });
     this.setData({ savingMenuConfig: true });
-    api.system.saveMiniprogramMenuConfig(menus).then(function (resp) {
-      self.setData({ menuManageVisible: false, savingMenuConfig: false });
-      wx.showToast({ title: '菜单配置已保存', icon: 'success' });
-    }).catch(function (err) {
-      console.error('保存菜单配置失败', err);
-      self.setData({ savingMenuConfig: false });
-      wx.showToast({ title: '保存失败', icon: 'none' });
-    });
+
+    if (this.data._useRoleApi) {
+      api.system.saveMiniprogramMenuRoleConfig(roleMenus).then(function () {
+        self.setData({ menuManageVisible: false, savingMenuConfig: false });
+        wx.showToast({ title: '菜单配置已保存', icon: 'success' });
+      }).catch(function (err) {
+        console.error('保存菜单配置失败', err);
+        self.setData({ savingMenuConfig: false });
+        wx.showToast({ title: '保存失败', icon: 'none' });
+      });
+    } else {
+      var flatMenus = {};
+      var adminGroup = groups.find(function (g) { return g.role === 'admin'; });
+      if (adminGroup) {
+        adminGroup.menus.forEach(function (item) { flatMenus[item.key] = item.enabled; });
+      }
+      api.system.saveMiniprogramMenuConfig(flatMenus).then(function () {
+        self.setData({ menuManageVisible: false, savingMenuConfig: false });
+        wx.showToast({ title: '菜单配置已保存', icon: 'success' });
+      }).catch(function (err) {
+        console.error('保存菜单配置失败', err);
+        self.setData({ savingMenuConfig: false });
+        wx.showToast({ title: '保存失败', icon: 'none' });
+      });
+    }
   },
 
   onLanguageSwitchTap: function () {

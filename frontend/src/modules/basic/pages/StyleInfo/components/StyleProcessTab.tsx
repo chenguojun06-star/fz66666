@@ -33,7 +33,12 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     if (!processStartTime) { message.warning('请先点击上方「开始工序单价」按钮再进行编辑'); return; }
     snapshotRef.current = JSON.parse(JSON.stringify(data)) as StyleProcessWithSizePrice[];
     setEditMode(true);
-    data.forEach((row, idx) => { if (row.processName && row.id) setTimeout(() => fetchPriceHintRef.current(row.id!, row.processName, row.standardTime ?? undefined), idx * 150); });
+    const rows = data.filter(row => row.processName && row.id);
+    const BATCH = 5;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      setTimeout(() => batch.forEach(row => fetchPriceHintRef.current(row.id!, row.processName, row.standardTime ?? undefined)), (i / BATCH) * 200);
+    }
   }, [readOnly, editMode, processStartTime, data, message]);
 
   const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly: readOnly ?? false, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh: onRefresh ?? (() => {}), enterEdit });

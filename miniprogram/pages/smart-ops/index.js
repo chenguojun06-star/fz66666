@@ -1,5 +1,6 @@
 var api = require('../../utils/api');
 var { isTenantOwner, isSuperAdmin } = require('../../utils/storage');
+var { getAuthedImageUrl } = require('../../utils/fileUrl');
 
 var REFRESH_INTERVAL = 30;
 
@@ -64,10 +65,12 @@ function detectStage(order) {
 }
 
 function toOrderRow(o) {
+  var coverUrl = '';
+  if (o.styleCover) coverUrl = getAuthedImageUrl(o.styleCover);
   return {
-    orderNo: o.orderNo || '', styleNo: o.styleNo || '', factoryName: o.factoryName || '',
+    id: o.id || '', orderNo: o.orderNo || '', styleNo: o.styleNo || '', factoryName: o.factoryName || '',
     orderQuantity: toNum(o.orderQuantity), plannedEndDate: fmtDate(o.plannedEndDate),
-    progress: calcProgress(o), status: o.status || '',
+    progress: calcProgress(o), status: o.status || '', styleCoverUrl: coverUrl,
   };
 }
 
@@ -148,6 +151,32 @@ Page({
   },
 
   closeStage: function () { this.setData({ activeStage: '', activeStageLabel: '', activeStageOrders: [] }); },
+
+  onOrderTap: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var orders = this.data.activeOrders;
+    if (!orders || !orders[idx]) return;
+    var order = orders[idx];
+    if (order.id) {
+      wx.navigateTo({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) });
+    }
+  },
+
+  onStageOrderTap: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var orders = this.data.activeStageOrders;
+    if (!orders || !orders[idx]) return;
+    var order = orders[idx];
+    if (order.id) {
+      wx.navigateTo({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) });
+    }
+  },
+
+  onPreviewCover: function (e) {
+    var url = e.currentTarget.dataset.url;
+    if (!url) return;
+    wx.previewImage({ current: url, urls: [url] });
+  },
 
   _startTimer: function () {
     var self = this;

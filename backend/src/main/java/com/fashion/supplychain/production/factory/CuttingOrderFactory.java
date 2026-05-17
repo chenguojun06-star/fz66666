@@ -51,6 +51,7 @@ public class CuttingOrderFactory {
         String styleImageUrl = getTrimmedText(body, "styleImageUrl");
         String customerName = getTrimmedText(body, "customerName");
         String remarks = getTrimmedText(body, "remarks");
+        String urgencyLevel = getTrimmedText(body, "urgencyLevel");
         LocalDateTime requestedOrderDate = parseDate(body, "orderDate", false);
         LocalDateTime requestedDeliveryDate = parseDate(body, "deliveryDate", true);
         List<Map<String, Object>> requestedOrderLines = resolveRequestedOrderLines(body);
@@ -96,7 +97,7 @@ public class CuttingOrderFactory {
 
         ProductionOrder order = buildProductionOrder(baseOrderNo, styleNo, resolvedStyleId, resolvedStyleName,
                 requestedOrderLines, totalOrderQuantity, requestedOrderDate, requestedDeliveryDate,
-                progressWorkflowJson, factoryCtx, customerName, remarks);
+                progressWorkflowJson, factoryCtx, customerName, remarks, urgencyLevel);
 
         boolean orderOk = productionOrderService.save(order);
         if (!orderOk) {
@@ -176,7 +177,7 @@ public class CuttingOrderFactory {
             String resolvedStyleName, List<Map<String, Object>> requestedOrderLines, int totalOrderQuantity,
             LocalDateTime requestedOrderDate, LocalDateTime requestedDeliveryDate,
             String progressWorkflowJson, CuttingFactoryContextHelper.FactoryContext factoryCtx,
-            String customerName, String remarks) {
+            String customerName, String remarks, String urgencyLevel) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
         UserContext ctx = UserContext.get();
@@ -221,6 +222,7 @@ public class CuttingOrderFactory {
         if (StringUtils.hasText(remarks)) {
             order.setRemarks(remarks);
         }
+        order.setUrgencyLevel("urgent".equalsIgnoreCase(urgencyLevel) ? "urgent" : "normal");
         return order;
     }
 

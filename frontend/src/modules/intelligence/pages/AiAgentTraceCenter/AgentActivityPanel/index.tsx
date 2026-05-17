@@ -34,18 +34,10 @@ const Workstation: React.FC<{
   agent: AgentInfo;
   selected: boolean;
   onSelect: () => void;
-  tick: number;
-}> = ({ agent, selected, onSelect, tick }) => {
+}> = React.memo(({ agent, selected, onSelect }) => {
   const isWorking = agent.status === 'working';
   const isSleeping = agent.status === 'sleeping';
   const isIdleRecent = agent.status === 'idle_recent';
-
-  const screenContent = useMemo(() => {
-    if (!isWorking || !agent.currentTask) return null;
-    const text = agent.currentTask;
-    const visibleChars = Math.floor((tick % 60) / 2) % (text.length + 3);
-    return text.slice(0, Math.min(visibleChars, text.length));
-  }, [isWorking, agent.currentTask, tick]);
 
   return (
     <div
@@ -57,12 +49,12 @@ const Workstation: React.FC<{
         <div className="ws-desk-top">
           <div className="ws-monitor">
             <div className="ws-monitor-screen">
-              {isWorking && screenContent && (
-                <div className="ws-screen-text">{screenContent}<span className="ws-cursor">|</span></div>
+              {isWorking && agent.currentTask && (
+                <div className="ws-screen-text ws-screen-text--typing">{agent.currentTask}<span className="ws-cursor">|</span></div>
               )}
-              {isWorking && !screenContent && (
+              {isWorking && !agent.currentTask && (
                 <div className="ws-screen-loading">
-                  <div className="ws-loading-bar" style={{ width: `${30 + Math.sin(tick * 0.1) * 20}%` }} />
+                  <div className="ws-loading-bar ws-loading-bar--animate" />
                 </div>
               )}
               {!isWorking && !isSleeping && (
@@ -79,7 +71,7 @@ const Workstation: React.FC<{
           <div className="ws-keyboard" />
           {isWorking && (
             <div className="ws-coffee">
-              <div className="ws-coffee-steam" style={{ animationDelay: `${tick * 0.1}s` }}>~</div>
+              <div className="ws-coffee-steam">~</div>
             </div>
           )}
         </div>
@@ -122,15 +114,14 @@ const Workstation: React.FC<{
       )}
     </div>
   );
-};
+});
 
 const DeptSection: React.FC<{
   deptKey: string;
   agents: AgentInfo[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  tick: number;
-}> = ({ deptKey, agents, selectedId, onSelect, tick }) => {
+}> = ({ deptKey, agents, selectedId, onSelect }) => {
   const cfg = DEPT_CONFIG[deptKey];
   if (!cfg) return null;
   const workingCount = agents.filter((a) => a.status === 'working').length;
@@ -156,7 +147,6 @@ const DeptSection: React.FC<{
               agent={agent}
               selected={selectedId === agent.id}
               onSelect={() => onSelect(agent.id)}
-              tick={tick}
             />
           ))}
         </div>
@@ -248,12 +238,6 @@ const AgentActivityPanel: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deptFilter, setDeptFilter] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => setTick((v) => v + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -315,7 +299,6 @@ const AgentActivityPanel: React.FC = () => {
                 agents={deptAgents}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
-                tick={tick}
               />
             );
           })}

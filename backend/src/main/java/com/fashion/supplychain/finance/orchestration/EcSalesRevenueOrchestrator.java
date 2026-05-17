@@ -74,11 +74,11 @@ public class EcSalesRevenueOrchestrator {
         rev.setDiscount(order.getDiscount());
         rev.setProductionOrderNo(order.getProductionOrderNo());
         rev.setShipTime(LocalDateTime.now());
-        rev.setStatus("pending");
+        rev.setStatus("confirmed");
         rev.setTenantId(order.getTenantId());
 
         ecSalesRevenueService.save(rev);
-        log.info("[EC收入] 出库自动生成流水 revenueNo={} ecOrderNo={} payAmount={}",
+        log.info("[EC收入] 出库自动生成流水并已确认 revenueNo={} ecOrderNo={} payAmount={}",
                 rev.getRevenueNo(), order.getOrderNo(), order.getPayAmount());
     }
 

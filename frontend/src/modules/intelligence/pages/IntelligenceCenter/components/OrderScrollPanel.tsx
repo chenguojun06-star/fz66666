@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Popover } from 'antd';
 import { UpOutlined, DownOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -291,18 +291,27 @@ export const AutoScrollBox: React.FC<{
   const pausedRef = useRef(false);
   const rafRef    = useRef<number>(0);
   const lastTsRef = useRef<number>(0);
-  const lastSHRef = useRef(0);
   const [showClone, setShowClone] = useState(false);
+  const dimsRef   = useRef({ scrollHeight: 0, clientHeight: 0 });
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const el = outerRef.current;
     if (!el) return;
-    const singleH = el.scrollHeight / (showClone ? 2 : 1);
-    if (el.scrollHeight === lastSHRef.current) return;
-    lastSHRef.current = el.scrollHeight;
-    const needed = singleH > el.clientHeight;
-    if (needed !== showClone) setShowClone(needed);
-  });
+    const updateDims = () => {
+      const sh = el.scrollHeight;
+      const ch = el.clientHeight;
+      if (dimsRef.current.scrollHeight !== sh || dimsRef.current.clientHeight !== ch) {
+        dimsRef.current = { scrollHeight: sh, clientHeight: ch };
+        const singleH = sh / (showClone ? 2 : 1);
+        const needed = singleH > ch;
+        if (needed !== showClone) setShowClone(needed);
+      }
+    };
+    updateDims();
+    const ro = new ResizeObserver(updateDims);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [showClone]);
 
   useEffect(() => {
     const el = outerRef.current;
@@ -312,8 +321,9 @@ export const AutoScrollBox: React.FC<{
       const delta = ts - lastTsRef.current;
       lastTsRef.current = ts;
       if (!pausedRef.current) {
-        const halfH = el.scrollHeight / 2;
-        if (halfH > el.clientHeight) {
+        const { scrollHeight, clientHeight } = dimsRef.current;
+        const halfH = scrollHeight / 2;
+        if (halfH > clientHeight) {
           el.scrollTop += speed * delta / 1000;
           if (el.scrollTop >= halfH) el.scrollTop -= halfH;
         }

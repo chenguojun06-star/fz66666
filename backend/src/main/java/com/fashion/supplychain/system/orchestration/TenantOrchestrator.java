@@ -277,7 +277,9 @@ public class TenantOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateMyTenantInfo(String tenantName, String contactName, String contactPhone, String wechatWorkWebhookUrl) {
+    public boolean updateMyTenantInfo(String tenantName, String contactName, String contactPhone,
+                                       String wechatWorkWebhookUrl, String feishuWebhookUrl,
+                                       String dingtalkWebhookUrl) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) throw new AccessDeniedException("超级管理员无需设置工厂信息");
         if (!UserContext.isTenantOwner() && !UserContext.isTopAdmin()) throw new AccessDeniedException("只有工厂主账号或管理员才能修改工厂信息");
@@ -287,6 +289,8 @@ public class TenantOrchestrator {
         if (contactName != null) tenant.setContactName(contactName.trim());
         if (contactPhone != null) tenant.setContactPhone(contactPhone.trim());
         if (wechatWorkWebhookUrl != null) tenant.setWechatWorkWebhookUrl(wechatWorkWebhookUrl.trim());
+        if (feishuWebhookUrl != null) tenant.setFeishuWebhookUrl(feishuWebhookUrl.trim());
+        if (dingtalkWebhookUrl != null) tenant.setDingtalkWebhookUrl(dingtalkWebhookUrl.trim());
         tenant.setUpdateTime(LocalDateTime.now());
         return tenantService.updateById(tenant);
     }

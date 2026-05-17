@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { useStyleLink, StyleLinkData } from '../contexts/StyleLinkContext';
 import './StyleLinkLines.css';
 
@@ -31,16 +31,11 @@ const buildCurvePath = (start: { x: number; y: number }, end: { x: number; y: nu
 
 const StyleLinkLines: React.FC = () => {
   const styleLink = useStyleLink();
-  const [tick, setTick] = useState(0);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     if (!styleLink) return;
-    
-    const interval = setInterval(() => {
-      setTick(t => t + 1);
-    }, 500);
-
-    return () => clearInterval(interval);
+    return styleLink.subscribe(() => setRevision(r => r + 1));
   }, [styleLink]);
 
   const links = useMemo(() => {
@@ -80,7 +75,7 @@ const StyleLinkLines: React.FC = () => {
     });
 
     return result;
-  }, [styleLink, tick]);
+  }, [styleLink, revision]);
 
   if (links.length === 0) return null;
 

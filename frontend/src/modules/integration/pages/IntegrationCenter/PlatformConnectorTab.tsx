@@ -44,20 +44,102 @@ const CREDENTIAL_GUIDES: Record<string, { title: string; steps: { title: string;
     title: '如何获取聚水潭应用凭证？',
     steps: [
       { title: '登录聚水潭开放平台', description: '打开 open.jushuitan.com，使用企业账号登录' },
-      { title: '创建应用', description: '进入「开发者中心」→「应用管理」→「创建应用」，选择"自研ERP对接"，填写应用名称和回调地址（填写本系统的回调地址）' },
-      { title: '获取凭证', description: '应用审核通过后，在应用详情页复制应用标识和密钥' },
-      { title: '填写到本系统', description: '将应用标识和密钥填入下方表单，点击"保存并测试连接"' },
+      { title: '创建应用', description: '进入「开发者中心」→「应用管理」→「创建应用」，选择"自研ERP对接"，填写应用名称和回调地址' },
+      { title: '获取凭证', description: '应用审核通过后，在应用详情页复制应用标识（AppKey）和密钥（AppSecret）' },
+      { title: '填写到本系统', description: '将 AppKey 和 AppSecret 填入下方表单，点击"保存并测试连接"' },
       { title: '授权店铺数据', description: '在聚水潭应用管理中，授权需要同步的店铺。系统会自动发现并拉取这些店铺的订单数据' },
     ],
     docUrl: 'https://open.jushuitan.com',
+  },
+  TAOBAO: {
+    title: '如何获取淘宝应用凭证？',
+    steps: [
+      { title: '登录淘宝开放平台', description: '打开 open.taobao.com，使用淘宝卖家账号登录' },
+      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」，选择"自用型应用"' },
+      { title: '获取 AppKey/AppSecret', description: '创建完成后，在应用详情页复制 AppKey 和 AppSecret' },
+      { title: '填写到本系统', description: '将 AppKey 和 AppSecret 填入下方表单，保存后系统会生成回调地址' },
+      { title: '配置回调', description: '将系统生成的 Webhook 回调地址配置到淘宝应用的"消息服务"中' },
+    ],
+    docUrl: 'https://open.taobao.com',
+  },
+  TMALL: {
+    title: '如何获取天猫应用凭证？',
+    steps: [
+      { title: '登录淘宝开放平台', description: '打开 open.taobao.com（天猫与淘宝共用开放平台）' },
+      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」' },
+      { title: '获取凭证', description: '复制 AppKey 和 AppSecret' },
+      { title: '填写到本系统', description: '将凭证填入下方表单' },
+    ],
+    docUrl: 'https://open.taobao.com',
+  },
+  DOUYIN: {
+    title: '如何获取抖音小店应用凭证？',
+    steps: [
+      { title: '登录抖音开放平台', description: '打开 open.douyin.com，使用抖音商家账号登录' },
+      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」，选择"服务商应用"或"自用型应用"' },
+      { title: '获取 AppKey/AppSecret', description: '创建完成后复制 AppKey 和 AppSecret' },
+      { title: '填写到本系统', description: '将凭证填入下方表单' },
+      { title: '配置回调', description: '将系统生成的 Webhook 地址配置到抖音应用的"消息推送"中' },
+    ],
+    docUrl: 'https://open.douyin.com',
+  },
+  PINDUODUO: {
+    title: '如何获取拼多多应用凭证？',
+    steps: [
+      { title: '登录拼多多开放平台', description: '打开 open.pinduoduo.com，使用商家账号登录' },
+      { title: '创建应用', description: '进入「开发者中心」→「应用管理」→「创建应用」' },
+      { title: '获取 client_id 和 client_secret', description: '创建完成后，将 client_id 作为 AppKey、client_secret 作为 AppSecret' },
+      { title: '填写到本系统', description: '填入下方表单' },
+    ],
+    docUrl: 'https://open.pinduoduo.com',
+  },
+  JD: {
+    title: '如何获取京东应用凭证？',
+    steps: [
+      { title: '登录京东开放平台', description: '打开 open.jd.com，使用商家账号登录' },
+      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」' },
+      { title: '获取 AppKey/AppSecret', description: '创建完成后复制凭证' },
+      { title: '填写到本系统', description: '填入下方表单' },
+    ],
+    docUrl: 'https://open.jd.com',
+  },
+  XIAOHONGSHU: {
+    title: '如何获取小红书应用凭证？',
+    steps: [
+      { title: '登录小红书开放平台', description: '打开 open.xiaohongshu.com' },
+      { title: '创建应用', description: '进入「开发者中心」→「创建应用」' },
+      { title: '获取凭证', description: '复制 AppKey 和 AppSecret' },
+      { title: '填写到本系统', description: '填入下方表单' },
+    ],
+    docUrl: 'https://open.xiaohongshu.com',
+  },
+  WECHAT_SHOP: {
+    title: '如何获取微信小店凭证？',
+    steps: [
+      { title: '登录微信小店后台', description: '打开微信小店管理后台' },
+      { title: '开发设置', description: '进入「设置」→「开发设置」' },
+      { title: '获取 AppID/AppSecret', description: '将 AppID 作为 AppKey、AppSecret 填入下方' },
+      { title: '填写到本系统', description: '填入下方表单' },
+    ],
+    docUrl: 'https://developers.weixin.qq.com',
+  },
+  SHOPIFY: {
+    title: '如何获取 Shopify API 凭证？',
+    steps: [
+      { title: '登录 Shopify 后台', description: '打开你的 Shopify 店铺管理后台' },
+      { title: '创建私有应用', description: '进入「设置」→「应用和销售渠道」→「管理私有应用」→「创建私有应用」' },
+      { title: '获取 API 凭证', description: '将 API Key 作为 AppKey、Password 作为 AppSecret' },
+      { title: '填写到本系统', description: '填入下方表单' },
+      { title: '配置 Webhook', description: '在 Shopify 设置中，将系统生成的 Webhook 地址添加为订单创建回调' },
+    ],
+    docUrl: 'https://shopify.dev',
   },
   DONGFANG: {
     title: '如何获取东纺纺织接口密钥？',
     steps: [
       { title: '联系东纺纺织平台', description: '联系东纺纺织客户经理，申请 API 对接权限' },
-      { title: '获取 API 凭证', description: '平台会下发应用标识和密钥，同时配置数据同步范围（面料/供应商/订单）' },
-      { title: '填写到本系统', description: '将获取到的应用标识和密钥填入下方表单' },
-      { title: '配置回调', description: '将本系统生成的回调地址提供给东纺纺织，完成双向对接' },
+      { title: '获取 API 凭证', description: '平台会下发应用标识和密钥' },
+      { title: '填写到本系统', description: '将获取到的凭证填入下方表单' },
     ],
     docUrl: '',
   },
@@ -88,7 +170,10 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
   const [activePlatform, setActivePlatform] = useState<PlatformMeta | null>(null);
   const [activeStats, setActiveStats] = useState<ShopStats | null>(null);
 
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string; shops?: ShopInfo[]; supportedActions?: string[] } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean; message: string; shops?: ShopInfo[];
+    supportedActions?: string[]; webhookUrl?: string; credentialGuide?: string;
+  } | null>(null);
   const [syncResult, setSyncResult] = useState<{ synced?: number; skipped?: number } | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -357,8 +442,11 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
 
           <Divider style={{ margin: '12px 0' }} />
           <Form form={form} layout="vertical">
+            <Alert type="error" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
+              message="请填写从平台获取的真实凭证"
+              description="AppKey 和 AppSecret 需要在对应平台的开放平台注册应用后获取，不是本系统的登录账号。点击上方「如何获取凭证？」查看教程。" />
             <Form.Item name="appKey" label={<span><KeyOutlined /> 应用标识 (AppKey)</span>} rules={[{ required: true, message: '请输入应用标识' }]} tooltip={`${activePlatform?.name} 开放平台颁发的应用标识`}>
-              <Input placeholder={`请输入 ${activePlatform?.name} 的应用标识`} autoComplete="off" />
+              <Input placeholder={`请输入 ${activePlatform?.name} 的真实 AppKey（非登录账号）`} autoComplete="off" />
             </Form.Item>
             <Form.Item name="appSecret" label={<span><SafetyCertificateOutlined /> 应用密钥 (AppSecret)</span>} rules={[{ required: true, message: '请输入应用密钥' }]} tooltip="密钥加密传输，仅存储不可逆Hash">
               <Input.Password placeholder={`请输入 ${activePlatform?.name} 的应用密钥`} autoComplete="off" />
@@ -379,7 +467,26 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
           footer={<Button onClick={() => setTestModalOpen(false)}>关闭</Button>} width={540} destroyOnHidden>
           {testResult ? (
             <div>
-              <Alert type={testResult.success ? 'success' : 'error'} showIcon title={testResult.success ? '连接成功' : '连接失败'} description={testResult.message} style={{ marginBottom: 16 }} />
+              <Alert type={testResult.success ? 'success' : 'error'} showIcon
+                title={testResult.success ? '连接成功' : '凭证未配置'}
+                description={testResult.message} style={{ marginBottom: 16 }} />
+              {testResult.credentialGuide && (
+                <Alert type="info" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
+                  message="如何获取凭证？"
+                  description={testResult.credentialGuide} />
+              )}
+              {testResult.webhookUrl && (
+                <Alert type="warning" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
+                  message="下一步：配置回调地址"
+                  description={
+                    <div>
+                      <div style={{ marginBottom: 4 }}>请将此地址配置到平台的回调/Webhook设置中：</div>
+                      <code style={{ background: '#f5f5f5', padding: '4px 8px', borderRadius: 4, fontSize: 13, wordBreak: 'break-all' }}>
+                        {window.location.origin}{testResult.webhookUrl}
+                      </code>
+                    </div>
+                  } />
+              )}
               {testResult.success && testResult.supportedActions && (
                 <Descriptions bordered column={2} style={{ marginBottom: 16 }}>
                   <Descriptions.Item label="同步能力" span={2}>

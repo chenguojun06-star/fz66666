@@ -239,6 +239,16 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             style={{ width: 200 }}
             options={createTask.categoryOptions}
           />
+          <span>急单</span>
+          <Select
+            value={createTask.createUrgencyLevel}
+            onChange={(v) => createTask.setCreateUrgencyLevel(v)}
+            style={{ width: 100 }}
+            options={[
+              { label: '普通', value: 'normal' },
+              { label: '急单', value: 'urgent' },
+            ]}
+          />
         </Space>
         <div style={{ marginTop: 8 }}>
           <span style={{ color: 'rgba(0,0,0,0.65)', fontSize: 13 }}>备注</span>
