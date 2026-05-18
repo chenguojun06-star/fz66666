@@ -63,6 +63,59 @@ public class IntelligenceTaskCenterController {
         return Result.success(taskCenterOrchestrator.escalateTask(taskId, reason));
     }
 
+    @PostMapping("/tasks")
+    public Result<Map<String, Object>> createTask(@RequestBody Map<String, Object> taskData) {
+        Map<String, Object> result = taskCenterOrchestrator.createTask(taskData);
+        if (Boolean.FALSE.equals(result.get("success"))) {
+            return Result.fail(String.valueOf(result.get("error")));
+        }
+        return Result.success(result);
+    }
+
+    @PutMapping("/tasks/{taskId}")
+    public Result<Map<String, Object>> updateTask(
+            @PathVariable Long taskId,
+            @RequestBody Map<String, Object> taskData) {
+        Map<String, Object> result = taskCenterOrchestrator.updateTask(taskId, taskData);
+        if (Boolean.FALSE.equals(result.get("success"))) {
+            return Result.fail(String.valueOf(result.get("error")));
+        }
+        return Result.success(result);
+    }
+
+    @DeleteMapping("/tasks/{taskId}")
+    public Result<Map<String, Object>> deleteTask(@PathVariable Long taskId) {
+        Map<String, Object> result = taskCenterOrchestrator.deleteTask(taskId);
+        if (Boolean.FALSE.equals(result.get("success"))) {
+            return Result.fail(String.valueOf(result.get("error")));
+        }
+        return Result.success(result);
+    }
+
+    @PostMapping("/tasks/{taskId}/claim")
+    public Result<Map<String, Object>> claimTask(@PathVariable Long taskId) {
+        Map<String, Object> result = taskCenterOrchestrator.claimTask(taskId);
+        if (Boolean.FALSE.equals(result.get("success"))) {
+            return Result.fail(String.valueOf(result.get("error")));
+        }
+        return Result.success(result);
+    }
+
+    @GetMapping("/my-tasks")
+    public Result<Map<String, Object>> getMyTasks(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String module,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return Result.success(taskCenterOrchestrator.getMyTasks(status, priority, module, page, size));
+    }
+
+    @GetMapping("/task-stats")
+    public Result<Map<String, Object>> getTaskStats() {
+        return Result.success(taskCenterOrchestrator.getTaskStats());
+    }
+
     @GetMapping("/metrics")
     public Result<Map<String, Object>> getMetrics() {
         return Result.success(aiMetricsOrchestrator.getCurrentMetrics());

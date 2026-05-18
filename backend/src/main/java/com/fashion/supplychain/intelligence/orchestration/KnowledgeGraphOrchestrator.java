@@ -386,7 +386,9 @@ public class KnowledgeGraphOrchestrator {
                         REL_MATERIAL_USED_IN_STYLE, 0.9);
                 bc.relationCount++;
             }
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ex) {
+            log.debug("[KnowledgeGraph] material物料ID非数字格式, 跳过物料→款式关系");
+        }
     }
 
     private void buildFactorySpecializationRelations(BuildContext bc) {
@@ -403,7 +405,9 @@ public class KnowledgeGraphOrchestrator {
                     factoryStages.computeIfAbsent(o.getFactoryId(), k -> new HashSet<>())
                             .add(sp.getProgressStage());
                 }
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ex) {
+                log.debug("[KnowledgeGraph] styleId非数字格式, 跳过工厂专长关系");
+            }
         }
 
         Map<String, KgEntity> stageCache = new HashMap<>();
@@ -437,7 +441,9 @@ public class KnowledgeGraphOrchestrator {
                             REL_CUSTOMER_RELATED_STYLE, 0.9);
                     bc.relationCount++;
                 }
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ex) {
+                log.debug("[KnowledgeGraph] styleId非数字格式, 跳过客户款式关系");
+            }
         }
     }
 

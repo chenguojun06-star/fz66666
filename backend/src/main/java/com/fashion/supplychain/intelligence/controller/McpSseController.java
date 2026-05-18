@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * MCP SSE 传输控制器
@@ -69,6 +71,10 @@ public class McpSseController {
     private final McpProtocolService mcpProtocolService;
     private final ObjectMapper objectMapper;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    @Qualifier("taskExecutor")
+    private Executor taskExecutor;
+
     /**
      * SSE 连接端点 — 客户端建立长连接并获取消息推送地址。
      *
@@ -116,7 +122,7 @@ public class McpSseController {
         response.setStatus(HttpServletResponse.SC_ACCEPTED);
 
         // 异步处理，避免阻塞 Tomcat 线程
-        new Thread(() -> processJsonRpc(sessionId, body), "mcp-rpc-" + sessionId.substring(0, 8)).start();
+        taskExecutor.execute(() -> processJsonRpc(sessionId, body));
     }
 
     // ─────────────────────────────────────────────────────────────────────

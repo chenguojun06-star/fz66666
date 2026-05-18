@@ -91,9 +91,10 @@ public class HighRiskAuditHook implements ToolExecutionHook {
             if (isWrite) {
                 try {
                     String taskType = level == ConfirmLevel.HIGH_RISK ? "ACTION" : "NOTIFY";
-                    taskTracker.recordTask(toolName, taskType, resolveTargetType(toolName),
-                            extractSummary(arguments), extractSummary(result),
-                            UserContext.username());
+                    String targetType = resolveTargetType(toolName);
+                    String targetId = extractTargetId(arguments, targetType);
+                    String summary = extractSummary(result != null ? result : arguments);
+                    taskTracker.recordTask(toolName, taskType, targetType, targetId, summary, UserContext.username());
                 } catch (Exception e) {
                     log.debug("[TaskTracker] 记录任务失败: {}", e.getMessage());
                 }
@@ -121,5 +122,33 @@ public class HighRiskAuditHook implements ToolExecutionHook {
     private String extractSummary(String jsonOrText) {
         if (jsonOrText == null || jsonOrText.length() <= 100) return jsonOrText;
         return jsonOrText.substring(0, 100);
+    }
+
+    private String extractTargetId(String arguments, String targetType) {
+        if (arguments == null || arguments.trim().isEmpty()) {
+            return "";
+        }
+        try {
+            // 简单的字符串匹配，查找常见的ID字段
+            String[] idFields = {"orderId", "orderNo", "factoryId", "materialId", "sampleId", "id"};
+            for (String field : idFields) {
+                String pattern = "\"" + field + "\"\\s*:\\s*\"([^\"]+)\"";
+                java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
+                java.util.regex.Matcher m = p.matcher(arguments);
+                if (m.find()) {
+                    return m.group(1);
+                }
+                // 尝试数字形式的ID
+                pattern = "\"" + field + "\"\\s*:\\s*(\\d+)";
+                p = java.util.regex.Pattern.compile(pattern);
+                m = p.matcher(arguments);
+                if (m.find()) {
+                    return m.group(1);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[TaskTracker] 解析targetId失败: {}", e.getMessage());
+        }
+        return "";
     }
 }

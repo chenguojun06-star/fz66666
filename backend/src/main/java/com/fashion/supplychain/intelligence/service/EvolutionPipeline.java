@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.service.SelfEvolutionEngine.Evolutio
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -36,6 +38,10 @@ public class EvolutionPipeline {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    @Qualifier("aiSelfCriticExecutor")
+    private Executor aiSelfCriticExecutor;
 
     @Value("${xiaoyun.evolution.self-play.enabled:true}")
     private boolean selfPlayEnabled;
@@ -78,11 +84,11 @@ public class EvolutionPipeline {
 
     public void triggerEvolution(String reason) {
         log.info("[EvolutionPipeline] 手动触发: {}", reason);
-        new Thread(() -> {
+        aiSelfCriticExecutor.execute(() -> {
             try { runFullCycle(); } catch (Exception e) {
                 log.warn("[EvolutionPipeline] 手动触发失败: {}", e.getMessage());
             }
-        }, "evo-trigger-" + System.currentTimeMillis() % 10000).start();
+        });
     }
 
     private void runFullCycle() {
