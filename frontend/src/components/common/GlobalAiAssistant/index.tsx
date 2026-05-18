@@ -88,6 +88,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
 
   // ── parent-local state ──
   const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => { if (docked) setIsOpen(true); }, [docked]);
   const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
 
   const [panelView, setPanelView] = useState<PanelView>('chat');
@@ -142,6 +143,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
     historyFetchedRef: _historyFetchedRef,
     speak,
     restoreHistory,
+    fetchBriefing,
     handleSend,
     handleSendWithAttachment,
     handleFileSelect,
@@ -228,6 +230,9 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
 
   // ── 历史记录恢复 ──
   useEffect(() => { restoreHistory(); }, [restoreHistory]);
+
+  // ── 打开时自动拉取智能简报 ──
+  useEffect(() => { if (isOpen) fetchBriefing(); }, [isOpen, fetchBriefing]);
 
   // ── 滚动到底部 ──
   useEffect(() => {
@@ -347,7 +352,12 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
     await completeTask(taskId);
   }, [completeTask]);
 
+  const lastOpenFrameRef = useRef(0);
+
   const handleOpenInFrame = useCallback((path: string, label: string) => {
+    const now = Date.now();
+    if (now - lastOpenFrameRef.current < 300) return;
+    lastOpenFrameRef.current = now;
     setFrameTabs(prev => {
       const existing = prev.find(t => t.path === path);
       if (existing) { setActiveFrameId(existing.id); return prev; }
@@ -713,7 +723,8 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
         </div>
       )}
 
-      {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘 */}
+      {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘（docked模式下不渲染） */}
+      {!docked && (
       <div
         className={`${cloudStyles.triggerBtn} ${isActiveDrag ? cloudStyles.triggerDragging : ''} ${isDocked && !isOpen && !isTaskPanelOpen ? cloudStyles.triggerDocked : ''} ${isDocked && triggerPos.edge === 'right' ? cloudStyles.triggerDockedRight : ''}`}
         style={{ left: triggerPos.x, top: triggerPos.y }}
@@ -725,6 +736,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
           <span className={cloudStyles.triggerBadge} onClick={(e) => { e.stopPropagation(); openTaskPanel(); }}>{visiblePendingItems.length}</span>
         )}
       </div>
+      )}
     </>
   );
 };
