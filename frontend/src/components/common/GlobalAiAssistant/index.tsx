@@ -487,7 +487,7 @@ const GlobalAiAssistant: React.FC = () => {
                           : `${item.orderNo}${item.styleNo ? `（${item.styleNo}）` : ''} — ${status}，进度${item.progress}%`
                         }
                       </span>
-                      <span style={{color:'#1890ff',fontSize:13}}>查看 →</span>
+                      <span style={{color:'var(--xiaoyun-primary)',fontSize:13}}>查看 →</span>
                       <button
                         className={msgStyles.pendingDismissBtn}
                         onClick={(e) => dismissPendingItem(item.id || item.orderNo, e)}
@@ -646,7 +646,7 @@ const GlobalAiAssistant: React.FC = () => {
                 title="语音输入（点击后说话）"
                 onClick={handleVoiceInput}
                 disabled={isTyping || isRecording}
-                style={{ color: isRecording ? '#e8686a' : undefined }}
+                style={{ color: isRecording ? 'var(--xiaoyun-danger)' : undefined }}
               >
                 {isRecording ? <LoadingOutlined spin /> : <SoundOutlined />}
                 <span>语音</span>

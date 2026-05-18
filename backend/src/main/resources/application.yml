@@ -451,6 +451,10 @@ xiaoyun:
     tool-animation: ${XIAOYUN_STREAMING_TOOL_ANIMATION:true}
     mood-updates: ${XIAOYUN_STREAMING_MOOD:true}
     time-budget: ${XIAOYUN_STREAMING_TIME_BUDGET:true}
+  # NL 查询缓存（减少 DB 重复查询）
+  cache:
+    enabled: ${XIAOYUN_CACHE_ENABLED:true}
+    ttl-seconds: ${XIAOYUN_CACHE_TTL_SECONDS:60}
 
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:
