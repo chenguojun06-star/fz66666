@@ -16,6 +16,7 @@ import { isDirectCuttingOrder, isOrderTerminal } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
+import SmartActionRecommend from '@/components/common/SmartActionRecommend';
 
 interface Props { order: ProductionOrder; }
 
@@ -575,6 +576,13 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
 
       {/*  智能进度分析 */}
       {progressInsight && renderProgressInsight(progressInsight)}
+
+      {/* 智能操作推荐 */}
+      <SmartActionRecommend
+        order={order}
+        currentStage={firstActive?.stageName || firstActive?.label}
+        isStuck={!!stuckNode}
+      />
 
       {/* 跟单 + 备注 */}
       {(order.merchandiser || (order as any).operationRemark) && (

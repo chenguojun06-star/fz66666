@@ -17,6 +17,7 @@ import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
 import TopStats from '../../components/TopStats';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import QuickActionBar from '@/components/common/QuickActionBar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
@@ -53,7 +54,7 @@ const Dashboard: React.FC = () => {
 
   // 使用自定义 Hook 获取数据
   const {
-    stats: _stats,
+    stats,
     recentActivities,
     hasError,
     errorMessage,
@@ -288,6 +289,11 @@ const Dashboard: React.FC = () => {
               </Button>
             </Space>
           )}
+        />
+
+        <QuickActionBar
+          hasOverdue={(stats?.overdueOrderCount ?? 0) > 0}
+          hasError={hasError}
         />
 
         {/* 顶部4个统计看板 */}

@@ -613,6 +613,28 @@ export const intelligenceApi = {
   getMyPendingTaskSummary: () =>
     api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary', { retry: 0 } as any),
 
+  createTask: (data: Record<string, unknown>) =>
+    api.post<{ code: number; data: Record<string, unknown> }>('/intelligence/task-center/tasks', data),
+
+  updateTask: (taskId: string, data: Record<string, unknown>) =>
+    api.put<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}`, data),
+
+  deleteTask: (taskId: string) =>
+    api.delete<{ code: number }>(`/intelligence/task-center/tasks/${taskId}`),
+
+  claimTask: (taskId: string) =>
+    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/claim`),
+
+  getMyTasks: (status?: string, priority?: string, module?: string, page?: number, size?: number) =>
+    api.get<{ code: number; data: { rows: unknown[]; total: number } }>('/intelligence/task-center/my-tasks', {
+      params: { status, priority, module, page: page ?? 1, size: size ?? 50 }
+    }),
+
+  updateTaskStatus: (taskId: string, status: string, note?: string) =>
+    api.put<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/status`, {
+      status, note: note ?? ''
+    }),
+
   scanOrphanData: () =>
     api.get<{ code: number; data: import('./intelligenceTypes').OrphanDataScanResultDTO }>('/intelligence/orphan-data/scan'),
 

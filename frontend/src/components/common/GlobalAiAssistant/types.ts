@@ -164,3 +164,28 @@ export interface ReportPreviewOrder {
   progress: number;
   plannedEndDate: string | null;
 }
+
+export type PanelView = 'chat' | 'tasks' | 'links';
+
+export type TaskStatus = 'pending' | 'in_progress' | 'accepted' | 'completed' | 'cancelled';
+export type TaskPriority = 'high' | 'medium' | 'low';
+export type TaskModule = 'production' | 'style' | 'warehouse' | 'procurement' | 'quality' | 'finance' | 'system';
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  description: string;
+  module: string;
+  taskType: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  assigneeId?: string;
+  assigneeName?: string;
+  orderNo?: string;
+  styleNo?: string;
+  deepLinkPath?: string;
+  startTime?: string;
+  endTime?: string;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -310,6 +310,64 @@
 }
 
 
+/* ── Traceable advice (light) ── */
+.traceableAdvice {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0, 229, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+.adviceTitle {
+  font-weight: bold;
+  color: #007f8c;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.adviceSummary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+}
+.adviceDetails {
+  margin-top: 8px;
+  padding-left: 20px;
+  color: #333;
+}
+.reasoningItem {
+  margin-bottom: 4px;
+}
+.adviceActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.adviceActionBtn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.adviceActionBtnPrimary {
+  background: rgba(0, 229, 255, 0.08);
+  border-color: rgba(0, 229, 255, 0.25);
+  color: #007f8c;
+}
+.adviceActionBtnPrimary:hover {
+  background: rgba(0, 229, 255, 0.15);
+}
+.adviceActionBtnSecondary {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: transparent;
+  color: #666;
+}
+.adviceActionBtnSecondary:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
 /* ── Dark theme ── */
 :root[data-theme="dark"] .aiBubble {
   background: rgba(255, 255, 255, 0.06);
@@ -353,4 +411,20 @@
 :root[data-theme="dark"] .reasoningItem { color: rgba(255, 255, 255, 0.45); }
 :root[data-theme="dark"] .adviceActions {
   border-top-color: rgba(255, 255, 255, 0.08);
+}
+:root[data-theme="dark"] .adviceActionBtnPrimary {
+  background: rgba(0, 229, 255, 0.1);
+  border-color: rgba(0, 229, 255, 0.25);
+  color: #00e5ff;
+}
+:root[data-theme="dark"] .adviceActionBtnPrimary:hover {
+  background: rgba(0, 229, 255, 0.18);
+}
+:root[data-theme="dark"] .adviceActionBtnSecondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: transparent;
+  color: rgba(255, 255, 255, 0.45);
+}
+:root[data-theme="dark"] .adviceActionBtnSecondary:hover {
+  background: rgba(255, 255, 255, 0.1);
 }

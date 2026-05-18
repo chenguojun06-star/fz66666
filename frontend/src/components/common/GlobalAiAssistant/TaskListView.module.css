@@ -1,0 +1,98 @@
+.container { display: flex; flex-direction: column; height: 100%; }
+
+.toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; flex-shrink: 0;
+  border-bottom: 1px solid var(--xiaoyun-border-card);
+  flex-wrap: wrap;
+}
+
+.searchBox { position: relative; flex: 1; min-width: 140px; }
+.searchIcon { position: absolute; left: 10px; top: 9px; font-size: 12px; color: var(--xiaoyun-text-tertiary); }
+
+.searchInput {
+  width: 100%; height: 32px;
+  border: 1px solid var(--xiaoyun-border-card);
+  border-radius: 16px; padding: 0 12px 0 28px;
+  font-size: 13px; outline: none; background: var(--xiaoyun-bg-card);
+  box-sizing: border-box;
+}
+.searchInput:focus { border-color: var(--xiaoyun-primary-border); }
+
+.createBtn {
+  height: 32px; padding: 0 14px; border-radius: 16px;
+  background: var(--xiaoyun-primary); color: #fff; border: none;
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  white-space: nowrap; transition: all 0.15s; display: flex; align-items: center; gap: 4px;
+}
+.createBtn:hover { background: var(--xiaoyun-primary-hover); }
+
+.filterRow { padding: 8px 16px 0; display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+
+.filterChip {
+  height: 28px; padding: 0 10px; border-radius: 14px;
+  border: 1px solid var(--xiaoyun-border-card);
+  background: var(--xiaoyun-bg-card); cursor: pointer;
+  font-size: 12px; color: var(--xiaoyun-text-secondary);
+  white-space: nowrap; transition: all 0.15s;
+}
+.filterChip:hover { border-color: var(--xiaoyun-primary-border); }
+.filterChipActive { background: var(--xiaoyun-primary); color: #fff; border-color: var(--xiaoyun-primary); }
+
+.listArea { flex: 1; overflow-y: auto; padding: 8px; }
+
+.taskCard {
+  background: var(--xiaoyun-bg-card); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px;
+  border-left: 3px solid var(--xiaoyun-primary);
+  cursor: pointer; transition: all 0.15s;
+}
+.taskCard:hover { box-shadow: 0 2px 8px rgba(0, 83, 204, 0.08); }
+
+.taskCardTop { display: flex; align-items: flex-start; gap: 8px; }
+
+.priorityTag {
+  padding: 1px 8px; border-radius: 10px; font-size: 11px;
+  font-weight: 500; flex-shrink: 0; line-height: 20px;
+}
+
+.moduleTag {
+  padding: 1px 6px; border-radius: 4px; font-size: 11px;
+  color: var(--xiaoyun-text-secondary); background: var(--xiaoyun-bg-page);
+  flex-shrink: 0;
+}
+
+.taskTitle {
+  font-size: 13px; font-weight: 500; color: var(--xiaoyun-text-primary);
+  flex: 1; line-height: 1.4;
+}
+
+.taskCardBottom {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; gap: 8px;
+}
+
+.taskMeta {
+  display: flex; gap: 10px; font-size: 11px;
+  color: var(--xiaoyun-text-tertiary);
+}
+
+.taskActions { display: flex; gap: 6px; }
+
+.actionBtn {
+  height: 26px; padding: 0 10px; border-radius: 13px;
+  border: none; cursor: pointer; font-size: 12px; font-weight: 500;
+  transition: all 0.15s; white-space: nowrap;
+}
+.claimBtn { background: var(--xiaoyun-primary-bg); color: var(--xiaoyun-primary); }
+.claimBtn:hover { background: var(--xiaoyun-primary); color: #fff; }
+.completeBtn { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+.completeBtn:hover { background: #389e0d; color: #fff; }
+.editBtn { background: var(--xiaoyun-bg-page); color: var(--xiaoyun-text-secondary); }
+.editBtn:hover { background: var(--xiaoyun-border-card); }
+
+.emptyState {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 24px; gap: 12px;
+  color: var(--xiaoyun-text-tertiary); font-size: 13px;
+}

@@ -108,3 +108,53 @@ export const isPurchaseDocFile = (file: File) => {
 
 export const shouldAutoInbound = (text: string) => /入库|到货入库|直接入库|自动入库/.test(text);
 export const shouldAutoArrival = (text: string) => /自动收货|自动到货|一键收货|登记到货|收货/.test(text);
+
+export function buildReportInsight(label: string, data: any): string {
+  if (!data) {
+    return `📊 ${label}已生成（数据加载中），下方看板将展示核心指标。`;
+  }
+  const lines: string[] = [];
+  lines.push(`📊 **${label}解读**（${data.rangeLabel || ''} · ${data.scope || '全公司'}）`);
+
+  const kpis: any[] = Array.isArray(data.kpis) ? data.kpis : [];
+  if (kpis.length > 0) {
+    const ups = kpis.filter(k => k.change && k.change.startsWith('+') && k.change !== '+0.0%');
+    const downs = kpis.filter(k => k.change && k.change.startsWith('-'));
+    const highlights: string[] = [];
+    if (ups.length > 0) {
+      const top = ups.sort((a, b) => parseFloat(b.change) - parseFloat(a.change))[0];
+      highlights.push(`「${top.name}」${top.current.toLocaleString()}${top.unit}（环比 ${top.change} ↑）`);
+    }
+    if (downs.length > 0) {
+      const worst = downs.sort((a, b) => parseFloat(a.change) - parseFloat(b.change))[0];
+      highlights.push(`「${worst.name}」${worst.current.toLocaleString()}${worst.unit}（环比 ${worst.change} ↓）`);
+    }
+    if (highlights.length > 0) {
+      lines.push(`📈 核心指标：${highlights.join('；')}。`);
+    }
+  }
+
+  const risk = data.riskSummary || {};
+  const overdue = Number(risk.overdueCount ?? 0);
+  const high = Number(risk.highRiskCount ?? 0);
+  const stagnant = Number(risk.stagnantCount ?? 0);
+  if (overdue + high + stagnant > 0) {
+    const parts: string[] = [];
+    if (overdue > 0) parts.push(`逾期 ${overdue} 单`);
+    if (high > 0) parts.push(`高风险 ${high} 单`);
+    if (stagnant > 0) parts.push(`停滞 ${stagnant} 单`);
+    lines.push(`⚠️ 风险提示：${parts.join('，')}，建议优先跟进。`);
+  } else {
+    lines.push(`✅ 当前无逾期 / 高风险 / 停滞订单，整体平稳。`);
+  }
+
+  const ranking: any[] = Array.isArray(data.factoryRanking) ? data.factoryRanking : [];
+  if (ranking.length > 0) {
+    const top = ranking[0];
+    lines.push(`🏭 产能 TOP1：${top.name || '未命名'}（扫码 ${top.scanCount} 次 / ${top.scanQty} 件）。`);
+  }
+
+  lines.push('');
+  lines.push('下方看板展示完整数据，点击底部按钮可下载 Excel 完整版。');
+  return lines.join('\n');
+}

@@ -1,0 +1,72 @@
+.overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: rgba(0,0,0,0.3); display: flex;
+  align-items: center; justify-content: center;
+}
+
+.panel {
+  width: 440px; max-height: 90%; background: var(--xiaoyun-bg-card);
+  border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  padding: 16px 20px; border-bottom: 1px solid var(--xiaoyun-border-card);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.title { font-size: 15px; font-weight: 600; }
+
+.body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.label { font-size: 12px; color: var(--xiaoyun-text-secondary); font-weight: 500; }
+
+.input {
+  height: 36px; border: 1px solid var(--xiaoyun-border-card);
+  border-radius: 8px; padding: 0 12px; font-size: 13px; outline: none; background: var(--xiaoyun-bg-card);
+}
+.input:focus { border-color: var(--xiaoyun-primary-border); }
+
+.textarea {
+  height: 80px; border: 1px solid var(--xiaoyun-border-card);
+  border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; resize: vertical; background: var(--xiaoyun-bg-card);
+}
+.textarea:focus { border-color: var(--xiaoyun-primary-border); }
+
+.select {
+  height: 36px; border: 1px solid var(--xiaoyun-border-card);
+  border-radius: 8px; padding: 0 10px; font-size: 13px; outline: none;
+  background: var(--xiaoyun-bg-card); cursor: pointer;
+}
+.select:focus { border-color: var(--xiaoyun-primary-border); }
+
+.footer {
+  padding: 14px 20px; border-top: 1px solid var(--xiaoyun-border-card);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+
+.cancelBtn {
+  height: 34px; padding: 0 18px; border-radius: 8px;
+  border: 1px solid var(--xiaoyun-border-card); background: var(--xiaoyun-bg-card);
+  cursor: pointer; font-size: 13px; color: var(--xiaoyun-text-secondary);
+}
+
+.saveBtn {
+  height: 34px; padding: 0 20px; border-radius: 8px;
+  border: none; background: var(--xiaoyun-primary); color: #fff;
+  cursor: pointer; font-size: 13px; font-weight: 500;
+}
+.saveBtn:hover { background: var(--xiaoyun-primary-hover); }
+.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.deleteBtn {
+  height: 34px; padding: 0 16px; border-radius: 8px; margin-right: auto;
+  border: 1px solid #ffa39e; background: #fff1f0; color: #cf1322;
+  cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 4px;
+}
+.deleteBtn:hover { background: #ffa39e; color: #fff; }

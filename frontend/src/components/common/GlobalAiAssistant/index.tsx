@@ -13,10 +13,9 @@ import {
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { App } from 'antd';
-import api from '@/utils/api';
 import { useUser, useAuthState } from '@/utils/AuthContext';
 import { useWebSocket, type WsMessage } from '@/hooks/useWebSocket';
-import XiaoyunCloudAvatar, { CuteCloudTrigger, type XiaoyunCloudMood } from '@/components/common/XiaoyunCloudAvatar';
+import XiaoyunCloudAvatar, { CuteCloudTrigger } from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
 import cloudStyles from './CloudTrigger.module.css';
 import emojiStyles from './EmojiPicker.module.css';
@@ -27,10 +26,18 @@ import { useAiChat } from './useAiChat';
 import { stopAllSpeech } from './speechUtils';
 import { useDragSnap } from './useDragSnap';
 import { usePendingTasks } from './usePendingTasks';
+import { useMoodGreeting } from './useMoodGreeting';
+import { useEmojiPicker } from './useEmojiPicker';
 import MessageBubble from './MessageBubble';
 import SmartBubble from './SmartBubble';
 import TaskAggregationPanel from './TaskAggregationPanel';
-import type { Message } from './types';
+import PendingItemsSection from './PendingItemsSection';
+import TaskListView from './TaskListView';
+import TaskFormModal from './TaskFormModal';
+import QuickLinksPanel from './QuickLinksPanel';
+import { usePanelResize } from './usePanelResize';
+import { useTaskManager } from './useTaskManager';
+import type { Message, PanelView, TaskItem } from './types';
 
 function normalizeTraceableAdvice(payload: unknown): Message['traceableAdvice'] | null {
   if (!payload || typeof payload !== 'object') return null;
@@ -77,18 +84,23 @@ const GlobalAiAssistant: React.FC = () => {
   // ── parent-local state ──
   const [isOpen, setIsOpen] = useState(false);
   const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
-  const [_mood, setMood] = useState<XiaoyunCloudMood>('normal');
-  const [hasFetchedMood, setHasFetchedMood] = useState(false);
+
+  const [panelView, setPanelView] = useState<PanelView>('chat');
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [taskSaving, setTaskSaving] = useState(false);
+  const [recentLinks] = useState<{ label: string; path: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('xiaoyun.recentLinks') || '[]'); } catch { return []; }
+  });
   const { tasks: pendingItems, refresh: refreshPendingTasks } = usePendingTasks();
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
 
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [emojiTab, setEmojiTab] = useState(0);
+  const { size, cycleSize, dimensions, showSidebar, showAuxPanel } = usePanelResize();
+  const { tasks: myTasks, loading: tasksLoading, stats: taskStats, fetchTasks, createTask, updateTask, deleteTask, claimTask, completeTask, startPolling, stopPolling } = useTaskManager();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const emojiPanelRef = useRef<HTMLDivElement>(null);
 
   // ── 拖拽辅助 refs ──
   const hasDragRef = useRef(false);
@@ -121,6 +133,9 @@ const GlobalAiAssistant: React.FC = () => {
     handleShowRecentTraces,
     clearChat,
   } = useAiChat(message);
+
+  const { mood: _mood, hasFetchedMood, setHasFetchedMood } = useMoodGreeting(user, setMessages);
+  const { showEmojiPicker, setShowEmojiPicker, emojiTab, setEmojiTab, emojiPanelRef, handleEmojiSelect } = useEmojiPicker(setInputValue, inputRef as React.RefObject<HTMLInputElement>);
 
   const { subscribe } = useWebSocket({
     userId: user?.id,
@@ -191,55 +206,6 @@ const GlobalAiAssistant: React.FC = () => {
   };
   const visiblePendingItems = pendingItems.filter(item => !dismissedPending.has(item.id));
 
-  // ── mood / greeting ──
-  useEffect(() => {
-    if (hasFetchedMood) return;
-    const fetchStatus = async () => {
-      try {
-        setHasFetchedMood(true);
-        const factoryId = (user as any)?.factoryId;
-        const isManagerLevel = !!(user as any)?.isSuperAdmin || !!(user as any)?.isTenantOwner
-          || ['admin', '管理员', '管理'].some(k => ((user as any)?.role || '').toLowerCase().includes(k));
-        if (!factoryId && !isManagerLevel) return;
-        const res = await api.get('/dashboard/daily-brief', factoryId ? { params: { factoryId } } : undefined);
-        // @ts-ignore
-        const actualData = res?.code === 200 ? res.data : (res?.data || res);
-        if (actualData) {
-          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0 } = actualData;
-          let newMood: XiaoyunCloudMood = 'normal';
-          let greeting = INITIAL_MSG.text;
-          const hour = new Date().getHours();
-          const timeGreet = hour >= 0 && hour < 6 ? '夜深了还在忙呀🌙'
-            : hour >= 6 && hour < 12 ? '早上好☀️'
-            : hour >= 12 && hour < 14 ? '中午好🍱'
-            : hour >= 14 && hour < 18 ? '下午好🌤️'
-            : '晚上好🌸';
-
-          if (overdueOrderCount >= 5 || highRiskOrderCount >= 3) {
-            newMood = 'urgent';
-            greeting = `${timeGreet} 我是小云～有什么需要帮忙的，直接问我就好！`;
-          } else if (overdueOrderCount > 0 || highRiskOrderCount > 0) {
-            newMood = 'curious';
-            greeting = `${timeGreet} 我是小云～订单、生产、仓库的问题都可以问我哦！`;
-          } else if (todayScanCount > 100) {
-            newMood = 'success';
-            greeting = `${timeGreet} 我是小云～今天运行挺稳的，有什么想了解的随时说！`;
-          } else {
-            newMood = 'normal';
-            greeting = `${timeGreet} 我是小云～有什么可以帮你的，尽管问！`;
-          }
-          setMood(newMood);
-          setMessages([{ ...INITIAL_MSG, text: greeting }]);
-        }
-      } catch (err) {
-        console.error('Failed to fetch system mood', err);
-        setMood('normal');
-        setMessages([{ ...INITIAL_MSG, text: '你好呀～我是小云，有什么可以帮你的吗？' }]);
-      }
-    };
-    fetchStatus();
-  }, [hasFetchedMood, setMessages, user]);
-
   // ── 历史记录恢复 ──
   useEffect(() => { restoreHistory(); }, [restoreHistory]);
 
@@ -277,23 +243,6 @@ const GlobalAiAssistant: React.FC = () => {
     }
   };
 
-  // ── 表情面板点击外部关闭 ──
-  useEffect(() => {
-    if (!showEmojiPicker) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (emojiPanelRef.current && !emojiPanelRef.current.contains(e.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showEmojiPicker]);
-
-  const handleEmojiSelect = (emoji: string) => {
-    setInputValue(prev => prev + emoji);
-    inputRef.current?.focus();
-  };
-
   const jumpToIntelligenceCenter = (_query: string) => {
     setIsOpen(false);
     if (window.location.pathname !== '/cockpit') {
@@ -322,7 +271,81 @@ const GlobalAiAssistant: React.FC = () => {
   const backToChat = useCallback(() => {
     setIsTaskPanelOpen(false);
     setIsOpen(true);
+    setPanelView('chat');
   }, []);
+
+  const switchToTasks = useCallback(() => {
+    setPanelView('tasks');
+    fetchTasks();
+    startPolling();
+  }, [fetchTasks, startPolling]);
+
+  const switchToLinks = useCallback(() => {
+    setPanelView('links');
+    stopPolling();
+  }, [stopPolling]);
+
+  const switchToChat = useCallback(() => {
+    setPanelView('chat');
+    stopPolling();
+  }, [stopPolling]);
+
+  const handleTaskCreate = useCallback(() => {
+    setEditingTask(null);
+    setShowTaskForm(true);
+  }, []);
+
+  const handleTaskEdit = useCallback((task: TaskItem) => {
+    setEditingTask(task);
+    setShowTaskForm(true);
+  }, []);
+
+  const handleTaskSave = useCallback(async (data: { title: string; description?: string; priority: string; module: string; orderNo?: string; endTime?: string }) => {
+    setTaskSaving(true);
+    try {
+      if (editingTask?.id) {
+        await updateTask(editingTask.id, data as Record<string, unknown>);
+      } else {
+        await createTask(data);
+      }
+      setShowTaskForm(false);
+      setEditingTask(null);
+    } catch {} finally { setTaskSaving(false); }
+  }, [editingTask, createTask, updateTask]);
+
+  const handleTaskDelete = useCallback(async (taskId: string) => {
+    await deleteTask(taskId);
+    setShowTaskForm(false);
+    setEditingTask(null);
+  }, [deleteTask]);
+
+  const handleTaskClaim = useCallback(async (taskId: string) => {
+    await claimTask(taskId);
+  }, [claimTask]);
+
+  const handleTaskComplete = useCallback(async (taskId: string) => {
+    await completeTask(taskId);
+  }, [completeTask]);
+
+  const trackNavigate = useCallback((label: string, path: string) => {
+    try {
+      const stored: { label: string; path: string }[] = JSON.parse(localStorage.getItem('xiaoyun.recentLinks') || '[]');
+      const updated = [{ label, path }, ...stored.filter(l => l.path !== path)].slice(0, 10);
+      localStorage.setItem('xiaoyun.recentLinks', JSON.stringify(updated));
+    } catch {}
+  }, []);
+
+  const handleQuickNavigate = useCallback((path: string) => {
+    setIsOpen(false);
+    navigate(path);
+    const label = path.split('/').filter(Boolean).join(' > ');
+    trackNavigate(label, path);
+  }, [navigate, trackNavigate]);
+
+  useEffect(() => {
+    if (panelView === 'tasks') startPolling(); else stopPolling();
+    return () => stopPolling();
+  }, [panelView, startPolling, stopPolling]);
 
   const onPurchaseDocAction = useCallback(async (msgId: string, mode: string, card: any) => {
     try {
@@ -382,10 +405,12 @@ const GlobalAiAssistant: React.FC = () => {
     position: 'fixed' as const,
     zIndex: 9998,
     bottom: 16,
+    width: dimensions.width,
+    height: dimensions.height,
     ...(triggerPos.edge === 'left'
       ? { left: 16, transformOrigin: 'bottom left' }
       : { right: 16, transformOrigin: 'bottom right' }),
-  }), [triggerPos.edge]);
+  }), [triggerPos.edge, dimensions.width, dimensions.height]);
 
   // ── JSX ──
   return (
@@ -416,251 +441,179 @@ const GlobalAiAssistant: React.FC = () => {
               <CuteCloudTrigger size={40} active />
             </div>
             <div className={styles.headerText}>
-              <div className={styles.headerTitle}>小云 智能助理</div>
-              <div className={styles.headerSubtitle}>衣智链 · 实时判断与执行协作</div>
+              <div className={styles.headerTitle}>小云 智慧大脑</div>
+              <div className={styles.headerSubtitle}>衣智链 · AI协同工作中枢</div>
             </div>
             <div className={styles.headerActions}>
+              <span className={styles.headerActionBtn} onClick={cycleSize} title={`当前${size === 'small' ? '小框' : size === 'medium' ? '中框' : '大框'}，点击切换`}>
+                {size === 'small' ? '⬜' : size === 'medium' ? '⊞' : '⊟'}
+              </span>
               <UnorderedListOutlined
                 className={styles.headerActionBtn}
-                onClick={() => { setIsOpen(false); openTaskPanel(); }}
-                title="待办任务面板"
+                onClick={switchToTasks}
+                title="任务列表"
               />
               {isMuted ? (
-                <AudioMutedOutlined
-                  className={styles.headerActionBtn}
-                  onClick={() => setIsMuted(false)}
-                  title="取消静音"
-                />
+                <AudioMutedOutlined className={styles.headerActionBtn} onClick={() => setIsMuted(false)} title="取消静音" />
               ) : (
-                <SoundOutlined
-                  className={styles.headerActionBtn}
-                  onClick={() => { setIsMuted(true); stopAllSpeech(); }}
-                  title="静音"
+                <SoundOutlined className={styles.headerActionBtn} onClick={() => { setIsMuted(true); stopAllSpeech(); }} title="静音" />
+              )}
+              <ClearOutlined className={styles.headerActionBtn} onClick={() => { clearChat(); refreshPendingTasks(); setHasFetchedMood(false); }} title="清空对话" />
+              <CloseOutlined className={`${styles.headerActionBtn} ${styles.closeBtnIcon}`} onClick={() => { setIsOpen(false); startIdleSnap(); }} title="关闭" />
+            </div>
+          </div>
+
+          {/* Body: Sidebar + Main + Aux */}
+          <div className={styles.panelBody}>
+            {showSidebar && (
+              <div className={styles.sidebar}>
+                <button className={`${styles.sidebarItem} ${panelView === 'chat' ? styles.sidebarItemActive : ''}`} onClick={switchToChat} title="对话">
+                  💬 <span className={styles.sidebarLabel}>对话</span>
+                </button>
+                <button className={`${styles.sidebarItem} ${panelView === 'tasks' ? styles.sidebarItemActive : ''}`} onClick={switchToTasks} title="任务">
+                  📋 <span className={styles.sidebarLabel}>任务</span>
+                  {taskStats.pending > 0 && <span className={styles.sidebarBadge}>{taskStats.pending}</span>}
+                </button>
+                <button className={`${styles.sidebarItem} ${panelView === 'links' ? styles.sidebarItemActive : ''}`} onClick={switchToLinks} title="快捷入口">
+                  🔗 <span className={styles.sidebarLabel}>入口</span>
+                </button>
+              </div>
+            )}
+
+            <div className={styles.mainContent}>
+              {panelView === 'chat' && (
+                <>
+                  <div className={styles.chatArea} ref={chatAreaRef}>
+                    {messages.length === 1 && (
+                      <PendingItemsSection
+                        items={visiblePendingItems}
+                        onDismiss={dismissPendingItem}
+                        onClosePanel={() => setIsOpen(false)}
+                        onNavigate={onSafeNavigate}
+                        onOpenTaskPanel={switchToTasks}
+                      />
+                    )}
+                    {messages.length === 1 && (
+                      <>
+                        <div className={msgStyles.quickHint}>直接自然语言输入就可以，下面只是常用示例</div>
+                        <div className={msgStyles.suggestionChips}>
+                          {pageSuggestions.map(q => (
+                            <div key={q} className={msgStyles.chip} onClick={() => handleSend(q)}>{q}</div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {messages.map(msg => (
+                      <MessageBubble
+                        key={msg.id} msg={msg} downloadingType={downloadingType}
+                        onSend={handleSend} onDownloadReport={handleDownloadReport}
+                        onActualDownload={handleActualDownload} onShowAgentTrace={handleShowAgentTrace}
+                        onShowRecentTraces={handleShowRecentTraces} onOpenTraceCenter={openTraceCenter}
+                        onFeedback={handleAdvisorFeedback} onJumpToIntelligence={jumpToIntelligenceCenter}
+                        onSafeNavigate={onSafeNavigate} onSpeak={speak}
+                        onPurchaseDocAction={(msgId, mode, card) => onPurchaseDocAction(msgId, mode, card)}
+                        onWizardSubmit={(_msgId, command, params) => {
+                          let p = command;
+                          Object.entries(params).forEach(([_k, v]) => {
+                            if (Array.isArray(v)) p += ' ' + v.join(',');
+                            else if (v !== undefined && v !== null && v !== '') p += ' ' + v;
+                          });
+                          handleSend(p);
+                        }}
+                      />
+                    ))}
+                    {isTyping && (
+                      <div className={`${msgStyles.messageRow} ${msgStyles.rowAi}`}>
+                        <div className={msgStyles.messageAvatar}><XiaoyunCloudAvatar size={28} active loading /></div>
+                        <div className={`${msgStyles.messageBubble} ${msgStyles.bubbleAi}`}>
+                          <div className={msgStyles.typingText}>小云正在处理，请稍等一下…</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.inputArea}>
+                    <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf" onChange={handleFileSelect} />
+                    {attachedFile && (
+                      <div className={styles.attachChip}>
+                        <span>📎 {attachedFile.name}</span>
+                        <button type="button" className={styles.attachChipRemove} onClick={() => setAttachedFile(null)}>×</button>
+                      </div>
+                    )}
+                    <div className={styles.inputRow}>
+                      <button type="button" className={styles.uploadBtn} title="上传文件" onClick={() => fileInputRef.current?.click()} disabled={isTyping || uploadingFile}>
+                        <PaperClipOutlined />
+                      </button>
+                      <button type="button" className={`${styles.uploadBtn} ${styles.traceBtn}`} title="查看AI记录" onClick={() => openTraceCenter()} disabled={isTyping || uploadingFile}>
+                        AI记录
+                      </button>
+                      <div className={emojiStyles.emojiWrapper} ref={emojiPanelRef}>
+                        <button type="button" className={`${styles.uploadBtn} ${showEmojiPicker ? emojiStyles.emojiActive : ''}`} title="表情" onClick={() => setShowEmojiPicker(v => !v)}>
+                          <SmileOutlined />
+                        </button>
+                        {showEmojiPicker && (
+                          <div className={emojiStyles.emojiPanel}>
+                            <div className={emojiStyles.emojiTabs}>
+                              {EMOJI_GROUPS.map((g, i) => (
+                                <button type="button" key={g.label} className={`${emojiStyles.emojiTabBtn} ${emojiTab === i ? emojiStyles.emojiTabActive : ''}`} onClick={() => setEmojiTab(i)}>{g.label}</button>
+                              ))}
+                            </div>
+                            <div className={emojiStyles.emojiGrid}>
+                              {EMOJI_GROUPS[emojiTab].emojis.map((em, i) => (
+                                <button type="button" key={`${em}-${i}`} className={emojiStyles.emojiItem} onClick={() => handleEmojiSelect(em)}>{em}</button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <input ref={inputRef} type="text" className={styles.chatInput} placeholder="直接说需求，也可以上传采购单据让我自动识别、到货或入库" value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown} disabled={isTyping || uploadingFile} />
+                      <button type="button" className={styles.voiceBtn} title="语音输入" onClick={handleVoiceInput} disabled={isTyping || isRecording} style={{ color: isRecording ? 'var(--xiaoyun-danger)' : undefined }}>
+                        {isRecording ? <LoadingOutlined spin /> : <SoundOutlined />}<span>语音</span>
+                      </button>
+                      <button type="button" className={styles.sendBtn} onClick={() => attachedFile ? void handleSendWithAttachment() : void handleSend()} disabled={(!inputValue.trim() && !attachedFile) || isTyping || uploadingFile}>
+                        {uploadingFile ? <LoadingOutlined /> : <SendOutlined />}<span>{uploadingFile ? '处理中' : '发送'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {panelView === 'tasks' && (
+                <TaskListView
+                  tasks={myTasks} loading={tasksLoading}
+                  onClaim={handleTaskClaim} onComplete={handleTaskComplete}
+                  onEdit={handleTaskEdit} onCreate={handleTaskCreate}
                 />
               )}
-              <ClearOutlined
-                className={styles.headerActionBtn}
-                onClick={() => {
-                  clearChat();
-                  refreshPendingTasks();
-                  setHasFetchedMood(false);
-                }}
-                title="清空对话"
-              />
-              <CloseOutlined
-                className={`${styles.headerActionBtn} ${styles.closeBtnIcon}`}
-                onClick={() => { setIsOpen(false); startIdleSnap(); }}
-                title="关闭"
-              />
+
+              {panelView === 'links' && (
+                <QuickLinksPanel onNavigate={handleQuickNavigate} recentLinks={recentLinks} />
+              )}
+
+              {showTaskForm && (
+                <TaskFormModal
+                  task={editingTask} onSave={handleTaskSave}
+                  onDelete={handleTaskDelete}
+                  onCancel={() => { setShowTaskForm(false); setEditingTask(null); }}
+                  saving={taskSaving}
+                />
+              )}
             </div>
-          </div>
 
-          {/* Chat List */}
-          <div className={styles.chatArea} ref={chatAreaRef}>
-            {/* 预警待办 */}
-            {messages.length === 1 && visiblePendingItems.length > 0 && (
-              <div className={msgStyles.pendingItems}>
-                {visiblePendingItems.slice(0, 6).map((item: any) => {
-                  const isPendingTask = !!item.taskType;
-                  const dl = item.daysLeft;
-                  const status = dl !== undefined
-                    ? (dl < 0 ? `已逾期${Math.abs(dl)}天` : dl === 0 ? '今天到期' : `剩${dl}天`)
-                    : (item.categoryLabel || item.taskType || '');
-                  const navPath = isPendingTask && item.deepLinkPath
-                    ? (() => {
-                        let p = item.deepLinkPath;
-                        const params: string[] = [];
-                        if (item.orderNo) params.push(`orderNo=${encodeURIComponent(item.orderNo)}`);
-                        if (item.styleNo) params.push(`styleNo=${encodeURIComponent(item.styleNo)}`);
-                        if (params.length) p += (p.includes('?') ? '&' : '?') + params.join('&');
-                        return p;
-                      })()
-                    : `/production/order-flow?orderNo=${encodeURIComponent(item.orderNo || '')}`;
-                  return (
-                    <div key={item.id || item.orderNo} className={msgStyles.pendingItem} style={{position:'relative'}}
-                      onClick={() => { setIsOpen(false); onSafeNavigate(navPath); }}
-                    >
-                      <span>{item.categoryIcon || '⚠️'}</span>
-                      <span style={{flex:1}}>
-                        {isPendingTask
-                          ? `${item.title}${item.description ? ' — ' + item.description : ''}`
-                          : `${item.orderNo}${item.styleNo ? `（${item.styleNo}）` : ''} — ${status}，进度${item.progress}%`
-                        }
-                      </span>
-                      <span style={{color:'var(--xiaoyun-primary)',fontSize:13}}>查看 →</span>
-                      <button
-                        className={msgStyles.pendingDismissBtn}
-                        onClick={(e) => dismissPendingItem(item.id || item.orderNo, e)}
-                        title="今日不再提醒"
-                      >×</button>
-                    </div>
-                  );
-                })}
-                {visiblePendingItems.length > 6 && (
-                  <div className={msgStyles.pendingMoreBtn} onClick={() => { setIsOpen(false); openTaskPanel(); }}>
-                    还有 {visiblePendingItems.length - 6} 项待办，查看全部 →
-                  </div>
-                )}
-              </div>
-            )}
-            {messages.length === 1 && (
-              <>
-                <div className={msgStyles.quickHint}>
-                  直接自然语言输入就可以，下面只是常用示例
-                </div>
-                <div className={msgStyles.suggestionChips}>
-                  {pageSuggestions.map(q => (
-                    <div key={q} className={msgStyles.chip} onClick={() => handleSend(q)}>
-                      {q}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {messages.map(msg => (
-              <MessageBubble
-                key={msg.id}
-                msg={msg}
-                downloadingType={downloadingType}
-                onSend={handleSend}
-                onDownloadReport={handleDownloadReport}
-                onActualDownload={handleActualDownload}
-                onShowAgentTrace={handleShowAgentTrace}
-                onShowRecentTraces={handleShowRecentTraces}
-                onOpenTraceCenter={openTraceCenter}
-                onFeedback={handleAdvisorFeedback}
-                onJumpToIntelligence={jumpToIntelligenceCenter}
-                onSafeNavigate={onSafeNavigate}
-                onSpeak={speak}
-                onPurchaseDocAction={(msgId, mode, card) => onPurchaseDocAction(msgId, mode, card)}
-                onWizardSubmit={(_msgId, command, params) => {
-                  let p = command;
-                  Object.entries(params).forEach(([_k, v]) => {
-                    if (Array.isArray(v)) p += ' ' + v.join(',');
-                    else if (v !== undefined && v !== null && v !== '') p += ' ' + v;
-                  });
-                  handleSend(p);
-                }}
-              />
-            ))}
-
-            {/* Loading Indicator */}
-            {isTyping && (
-              <div className={`${msgStyles.messageRow} ${msgStyles.rowAi}`}>
-                <div className={msgStyles.messageAvatar}>
-                  <XiaoyunCloudAvatar size={28} active loading />
-                </div>
-                <div className={`${msgStyles.messageBubble} ${msgStyles.bubbleAi}`}>
-                  <div className={msgStyles.typingText}>小云正在处理，请稍等一下…</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input Area */}
-          <div className={styles.inputArea}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              style={{ display: 'none' }}
-              accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf"
-              onChange={handleFileSelect}
-            />
-            {attachedFile && (
-              <div className={styles.attachChip}>
-                <span>📎 {attachedFile.name}</span>
-                <button type="button" className={styles.attachChipRemove} onClick={() => setAttachedFile(null)}>×</button>
-              </div>
-            )}
-            <div className={styles.inputRow}>
-              <button
-                type="button"
-                className={styles.uploadBtn}
-                title="上传文件（Excel/CSV/图片/PDF）"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isTyping || uploadingFile}
-              >
-                <PaperClipOutlined />
-              </button>
-              <button
-                type="button"
-                className={`${styles.uploadBtn} ${styles.traceBtn}`}
-                title="查看AI记录"
-                onClick={() => openTraceCenter()}
-                disabled={isTyping || uploadingFile}
-              >
-                AI记录
-              </button>
-              <div className={emojiStyles.emojiWrapper} ref={emojiPanelRef}>
-                <button
-                  type="button"
-                  className={`${styles.uploadBtn} ${showEmojiPicker ? emojiStyles.emojiActive : ''}`}
-                  title="表情"
-                  onClick={() => setShowEmojiPicker(v => !v)}
-                >
-                  <SmileOutlined />
+            {showAuxPanel && (
+              <div className={styles.auxPanel}>
+                <div className={styles.auxSectionTitle}>任务统计</div>
+                <div className={styles.auxStatItem}><span>全部</span><span className={styles.auxStatValue}>{taskStats.total}</span></div>
+                <div className={styles.auxStatItem}><span>待处理</span><span className={styles.auxStatValue}>{taskStats.pending}</span></div>
+                <div className={styles.auxStatItem}><span>进行中</span><span className={styles.auxStatValue}>{taskStats.inProgress}</span></div>
+                <div className={styles.auxStatItem}><span>已完成</span><span className={styles.auxStatValue}>{taskStats.completed}</span></div>
+                <div className={styles.auxStatItem}><span>紧急</span><span className={styles.auxStatValue} style={{ color: '#cf1322' }}>{taskStats.highPriority}</span></div>
+                <div className={styles.auxSectionTitle} style={{ marginTop: 20 }}>快捷操作</div>
+                <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} style={{ width: '100%', marginTop: 8 }} onClick={handleTaskCreate}>
+                  + 新建任务
                 </button>
-                {showEmojiPicker && (
-                  <div className={emojiStyles.emojiPanel}>
-                    <div className={emojiStyles.emojiTabs}>
-                      {EMOJI_GROUPS.map((g, i) => (
-                        <button
-                          type="button"
-                          key={g.label}
-                          className={`${emojiStyles.emojiTabBtn} ${emojiTab === i ? emojiStyles.emojiTabActive : ''}`}
-                          onClick={() => setEmojiTab(i)}
-                        >
-                          {g.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className={emojiStyles.emojiGrid}>
-                      {EMOJI_GROUPS[emojiTab].emojis.map((em, i) => (
-                        <button
-                          type="button"
-                          key={`${em}-${i}`}
-                          className={emojiStyles.emojiItem}
-                          onClick={() => handleEmojiSelect(em)}
-                        >
-                          {em}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-              <input
-                ref={inputRef}
-                type="text"
-                className={styles.chatInput}
-                placeholder="直接说需求，也可以上传采购单据让我自动识别、到货或入库"
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isTyping || uploadingFile}
-              />
-              <button
-                type="button"
-                className={styles.voiceBtn}
-                title="语音输入（点击后说话）"
-                onClick={handleVoiceInput}
-                disabled={isTyping || isRecording}
-                style={{ color: isRecording ? 'var(--xiaoyun-danger)' : undefined }}
-              >
-                {isRecording ? <LoadingOutlined spin /> : <SoundOutlined />}
-                <span>语音</span>
-              </button>
-              <button
-                type="button"
-                className={styles.sendBtn}
-                onClick={() => attachedFile ? void handleSendWithAttachment() : void handleSend()}
-                disabled={(!inputValue.trim() && !attachedFile) || isTyping || uploadingFile}
-              >
-                {uploadingFile ? <LoadingOutlined /> : <SendOutlined />}
-                <span>{uploadingFile ? '处理中' : '发送'}</span>
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}

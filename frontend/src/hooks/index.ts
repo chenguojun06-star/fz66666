@@ -9,6 +9,7 @@
 export { useModal } from './useModal';
 export { useRequest } from './useRequest';
 export { useTablePagination } from './useTablePagination';
+export { useRecentItems } from './useRecentItems';
 
 export type { RequestOptions, RequestResult } from './useRequest';
 export type { PaginationConfig } from './useTablePagination';

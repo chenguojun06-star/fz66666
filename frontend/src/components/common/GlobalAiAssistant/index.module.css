@@ -16,8 +16,8 @@
 }
 
 .chatPanel {
-  width: 640px;
-  height: 820px;
+  width: var(--xiaoyun-panel-width, 640px);
+  height: var(--xiaoyun-panel-height, 820px);
   background: var(--xiaoyun-bg-card);
   border-radius: 20px;
   box-shadow: 0 12px 32px rgba(0, 83, 204, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -27,6 +27,7 @@
   pointer-events: auto;
   animation: popupBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   border: 1px solid var(--xiaoyun-primary-border);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .panelHeader {
@@ -299,6 +300,110 @@
 .actionBtnPrimary:hover { background: var(--xiaoyun-primary-hover); }
 .actionBtnDanger { background: var(--xiaoyun-danger); color: #fff; }
 .actionBtnDanger:hover { background: #cf1322; }
+
+.panelBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 60px;
+  flex-shrink: 0;
+  background: var(--xiaoyun-bg-page);
+  border-right: 1px solid var(--xiaoyun-border-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+}
+
+.sidebarItem {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--xiaoyun-text-secondary);
+  font-size: 18px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.sidebarItem:hover {
+  background: var(--xiaoyun-primary-bg);
+  color: var(--xiaoyun-primary);
+}
+
+.sidebarItemActive {
+  background: var(--xiaoyun-primary);
+  color: #fff;
+}
+
+.sidebarLabel {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.sidebarBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--xiaoyun-danger);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.auxPanel {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--xiaoyun-bg-page);
+  border-left: 1px solid var(--xiaoyun-border-card);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.auxSectionTitle {
+  font-size: 12px;
+  color: var(--xiaoyun-text-tertiary);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.auxStatItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--xiaoyun-text-primary);
+  border-bottom: 1px solid var(--xiaoyun-border-card);
+}
+
+.auxStatValue {
+  font-weight: 600;
+  color: var(--xiaoyun-primary);
+}
 
 /* ── Dark theme ── */
 :root[data-theme="dark"] .chatPanel {

@@ -2,71 +2,16 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
-import type { HyperAdvisorResponse, ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
+import type { ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import type { AiTraceCardData, PurchaseDocCardData } from './AgentCards';
-import type { Message, FollowUpAction } from './types';
-import { parseAiResponse } from './types';
+import type { Message } from './types';
 import { genSessionId, saveSession, loadSession } from './sessionUtils';
 import { INITIAL_MSG } from './constants';
-import { describeToolName, extractOrderNo, isPurchaseDocFile, shouldAutoInbound, shouldAutoArrival } from './helpers';
+import { extractOrderNo, isPurchaseDocFile, shouldAutoInbound, shouldAutoArrival, buildReportInsight } from './helpers';
 import { speakText } from './speechUtils';
-
-/** 基于 reportPreview 真实数据生成小云的解读文字 */
-function buildReportInsight(label: string, data: any): string {
-  if (!data) {
-    return `📊 ${label}已生成（数据加载中），下方看板将展示核心指标。`;
-  }
-  const lines: string[] = [];
-  lines.push(`📊 **${label}解读**（${data.rangeLabel || ''} · ${data.scope || '全公司'}）`);
-
-  // KPI 同比变化解读
-  const kpis: any[] = Array.isArray(data.kpis) ? data.kpis : [];
-  if (kpis.length > 0) {
-    const ups = kpis.filter(k => k.change && k.change.startsWith('+') && k.change !== '+0.0%');
-    const downs = kpis.filter(k => k.change && k.change.startsWith('-'));
-    const highlights: string[] = [];
-    if (ups.length > 0) {
-      const top = ups.sort((a, b) => parseFloat(b.change) - parseFloat(a.change))[0];
-      highlights.push(`「${top.name}」${top.current.toLocaleString()}${top.unit}（环比 ${top.change} ↑）`);
-    }
-    if (downs.length > 0) {
-      const worst = downs.sort((a, b) => parseFloat(a.change) - parseFloat(b.change))[0];
-      highlights.push(`「${worst.name}」${worst.current.toLocaleString()}${worst.unit}（环比 ${worst.change} ↓）`);
-    }
-    if (highlights.length > 0) {
-      lines.push(`📈 核心指标：${highlights.join('；')}。`);
-    }
-  }
-
-  // 风险解读
-  const risk = data.riskSummary || {};
-  const overdue = Number(risk.overdueCount ?? 0);
-  const high = Number(risk.highRiskCount ?? 0);
-  const stagnant = Number(risk.stagnantCount ?? 0);
-  if (overdue + high + stagnant > 0) {
-    const parts: string[] = [];
-    if (overdue > 0) parts.push(`逾期 ${overdue} 单`);
-    if (high > 0) parts.push(`高风险 ${high} 单`);
-    if (stagnant > 0) parts.push(`停滞 ${stagnant} 单`);
-    lines.push(`⚠️ 风险提示：${parts.join('，')}，建议优先跟进。`);
-  } else {
-    lines.push(`✅ 当前无逾期 / 高风险 / 停滞订单，整体平稳。`);
-  }
-
-  // TOP 工厂
-  const ranking: any[] = Array.isArray(data.factoryRanking) ? data.factoryRanking : [];
-  if (ranking.length > 0) {
-    const top = ranking[0];
-    lines.push(`🏭 产能 TOP1：${top.name || '未命名'}（扫码 ${top.scanCount} 次 / ${top.scanQty} 件）。`);
-  }
-
-  lines.push('');
-  lines.push('下方看板展示完整数据，点击底部按钮可下载 Excel 完整版。');
-  return lines.join('\n');
-}
+import { useAiChatStream } from './useAiChatStream';
 
 export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useApp>['message']) {
   const { user } = useUser();
@@ -83,17 +28,22 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const [isRecording, setIsRecording] = useState(false);
   const [advisorSessionId, setAdvisorSessionId] = useState(loadSession);
 
-  const streamAbortRef = useRef<AbortController | null>(null);
-  const accumulatedTextRef = useRef('');
-  const requestSeqRef = useRef(0);
   const historyFetchedRef = useRef(false);
-  const SSE_INACTIVITY_TIMEOUT_MS = 60_000;
+
+  const speak = useCallback((text: string) => speakText(text, isMuted), [isMuted]);
+
+  const { startStream, abort: abortStream, streamAbortRef } = useAiChatStream({
+    setMessages,
+    setIsTyping,
+    location,
+    advisorSessionId,
+    isSuperAdmin,
+    speak,
+  });
 
   useEffect(() => {
     return () => { streamAbortRef.current?.abort(); };
-  }, []);
-
-  const speak = useCallback((text: string) => speakText(text, isMuted), [isMuted]);
+  }, [streamAbortRef]);
 
   const restoreHistory = useCallback(() => {
     if (historyFetchedRef.current) return;
@@ -108,25 +58,22 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
         }));
         setMessages(prev => prev.length <= 1 ? [INITIAL_MSG, ...restored] : prev);
       })
-      .catch((e) => { console.warn('[AiChat] 历史记录加载失败:', e); });
+      .catch(() => {});
   }, [advisorSessionId]);
 
   const handleAdvisorFeedback = useCallback((msg: Message, score: number) => {
-    // P0: 双路径反馈 —— HyperAdvisor (traceId) 走旧路径；AI Agent (agentCommandId) 走新 PRM 路径
     if (msg.agentCommandId) {
-      // AI Agent 消息: 提交到 PRM 表，score 5=👍→+2，1=👎→-2
-      const prmScore = score >= 4 ? 1 : -1; // API 接受 1/-1，后端转 +2/-2
+      const prmScore = score >= 4 ? 1 : -1;
       intelligenceApi.submitAiMessageFeedback({
         sessionId: advisorSessionId,
         commandId: msg.agentCommandId,
         score: prmScore,
         userQuery: msg.userQuery || '',
         aiContent: msg.text?.substring(0, 200),
-      }).catch((e) => { console.warn('[AiChat] PRM反馈提交失败:', e); });
+      }).catch(() => {});
       return;
     }
     if (!msg.traceId) return;
-    // HyperAdvisor 消息: 走旧路径
     intelligenceApi.hyperAdvisorFeedback({
       sessionId: msg.advisorSessionId || advisorSessionId,
       traceId: msg.traceId,
@@ -134,7 +81,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       advice: msg.text,
       score,
       feedbackText: score >= 4 ? '有帮助' : '待改进',
-    }).catch((e) => { console.warn('[AiChat] 反馈提交失败:', e); });
+    }).catch(() => {});
   }, [advisorSessionId]);
 
   const handleDownloadReport = useCallback(async (type: 'daily' | 'weekly' | 'monthly') => {
@@ -142,10 +89,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     const label = type === 'daily' ? '日报' : type === 'weekly' ? '周报' : '月报';
     setDownloadingType(type);
     try {
-      // 第一步：拉取 JSON 摘要，作为看板内联展示
       const resp = await intelligenceApi.getProfessionalReportPreview(type);
       const previewData = (resp as any)?.data?.data || (resp as any)?.data;
-      // 第二步：基于真实数据生成解读文字（小云对报表的洞察）
       const insightText = buildReportInsight(label, previewData);
       setMessages(prev => [...prev, {
         id: `report-${Date.now()}`,
@@ -164,7 +109,6 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     }
   }, [downloadingType, speak]);
 
-  /** 实际下载 Excel（看板下方按钮触发） */
   const handleActualDownload = useCallback(async (type: 'daily' | 'weekly' | 'monthly') => {
     const label = type === 'daily' ? '日报' : type === 'weekly' ? '周报' : '月报';
     try {
@@ -201,257 +145,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       return;
     }
 
-    if (streamAbortRef.current) {
-      streamAbortRef.current.abort();
-      streamAbortRef.current = null;
-    }
-
-    const currentSeq = ++requestSeqRef.current;
-    setIsTyping(true);
-
-    const aiMsgId = `a-${Date.now()}`;
-    let inactivityTimer: ReturnType<typeof setTimeout> | undefined;
-    let accumulatedText = '';
-    accumulatedTextRef.current = '';
-    let completed = false;
-    let answerReceived = false;
-
-    const finishTyping = () => {
-      if (requestSeqRef.current !== currentSeq) return;
-      setIsTyping(false);
-    };
-
-    const resetInactivityTimer = () => {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(() => {
-        if (requestSeqRef.current === currentSeq) {
-          console.warn('[AiChat] SSE inactivity timeout (no events for 60s), unlocking input');
-          if (!answerReceived && !completed) {
-            setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText || '小云思考时间较长，请稍后再问一次试试 🤔' } : m));
-          }
-          finishTyping();
-        }
-      }, SSE_INACTIVITY_TIMEOUT_MS);
-    };
-
-    try {
-      let streamStarted = false;
-      let toolStatus = '';
-      const pageContext = location.pathname + location.search;
-
-      resetInactivityTimer();
-
-      const ctrl = intelligenceApi.aiAdvisorChatStream(
-        contextualText,
-        pageContext,
-        (event) => {
-          streamStarted = true;
-          resetInactivityTimer();
-          if (event.type === 'thinking') {
-            toolStatus = `小云正在整理思路，准备给你结论…`;
-            setMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
-            });
-          } else if (event.type === 'tool_call') {
-            toolStatus = `小云正在处理：${describeToolName(String(event.data.tool || ''), isSuperAdmin)}…`;
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
-          } else if (event.type === 'tool_result') {
-            toolStatus = event.data.success
-              ? `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 已处理完成，小云继续整理结果…`
-              : `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 这一步没处理成功，小云正在重新组织答案…`;
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
-          } else if (event.type === 'answer_chunk') {
-            const chunk = String(event.data.chunk || '');
-            if (chunk) {
-              accumulatedText += chunk;
-              accumulatedTextRef.current = accumulatedText;
-              setMessages(prev => {
-                const currentText = accumulatedTextRef.current;
-                const existing = prev.find(m => m.id === aiMsgId);
-                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: currentText } : m);
-                return [...prev, { id: aiMsgId, role: 'ai' as const, text: currentText }];
-              });
-            }
-          } else if (event.type === 'answer') {
-            const rawContent = String(event.data.content || '');
-            const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
-            let { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard, reportPreview, reportType: parsedReportType } = parseAiResponse(rawContent);
-            if (!displayText || !displayText.trim()) {
-              displayText = '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
-            }
-            accumulatedText = displayText;
-            accumulatedTextRef.current = displayText;
-            setMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              const msgData = {
-                text: accumulatedText,
-                reportType: reportTypeToDownload || parsedReportType,
-                reportPreview: reportPreview,
-                charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, overdueFactoryCard,
-                agentCommandId: commandId,
-              };
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, ...msgData }];
-            });
-            if (!answerReceived) {
-              answerReceived = true;
-              if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
-              finishTyping();
-            }
-          } else if (event.type === 'follow_up_actions') {
-            const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
-            if (actions.length) {
-              setMessages(prev => {
-                const existing = prev.find(m => m.id === aiMsgId);
-                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, followUpActions: actions } : m);
-                return [...prev, { id: aiMsgId, role: 'ai' as const, text: '', followUpActions: actions }];
-              });
-            }
-          } else if (event.type === 'error') {
-            accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
-            accumulatedTextRef.current = accumulatedText;
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m));
-          }
-        },
-        () => {
-          if (completed) return;
-          completed = true;
-          if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
-          if (!answerReceived) {
-            if (!accumulatedText) {
-              setMessages(prev => prev.map(m => m.id === aiMsgId
-                ? { ...m, text: '小云未返回有效回答，请重试或换个问法 🤔' } : m));
-            }
-            finishTyping();
-          }
-          // auto-speak removed: 用户通过喇叭按钮手动触发，避免与手动点击冲突导致重复朗读
-          const needsRiskAnalysis = /风险|延期|逾期|交期|超期|risk|overdue|delay|模拟|推演|what.?if|预测|forecast/i.test(text);
-          if (needsRiskAnalysis) {
-            intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText).then(resp => {
-              const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
-                ? (resp as any).data : ((resp as any)?.data || resp) as HyperAdvisorResponse;
-              if (!ha) return;
-              setMessages(prev => prev.map(m => m.id === aiMsgId ? {
-                ...m, riskIndicators: ha.riskIndicators, simulation: ha.simulation,
-                needsClarification: ha.needsClarification, traceId: ha.traceId,
-                advisorSessionId: ha.sessionId, userQuery: text,
-              } : m));
-            }).catch((e) => { console.warn('[AiChat] 顾问请求失败:', e); });
-          }
-
-          setMessages(prev => {
-            const msg = prev.find(m => m.id === aiMsgId);
-            if (msg && !msg.overdueFactoryCard && /逾期|延期|超期|overdue/i.test(accumulatedText)) {
-              api.get('/dashboard/overdue-factory-stats').then(res => {
-                const d = (res as any)?.data ?? res;
-                if (d && d.factoryGroups?.length) {
-                  setMessages(prev2 => prev2.map(m2 => m2.id === aiMsgId ? { ...m2, overdueFactoryCard: d } : m2));
-                }
-              }).catch(() => {});
-            }
-            return prev;
-          });
-        },
-        async (err) => {
-          if (completed) return;
-          completed = true;
-          if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
-          console.warn('SSE stream failed, falling back to sync:', err);
-          const isAuthError = typeof err === 'string' && (err.includes('401') || err.includes('登录已过期'));
-          if (isAuthError) {
-            setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: '登录已过期，请重新登录' } : m));
-            finishTyping();
-            return;
-          }
-          if (streamStarted) {
-            setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText || '网络中断，请重试 🌧️' } : m));
-            finishTyping();
-            return;
-          }
-          try {
-            const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
-            const rawAnswer = payload?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
-            const displayAnswer = payload?.displayAnswer || rawAnswer;
-            const commandId = payload?.commandId;
-            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards, overdueFactoryCard: parsedOverdueCard, reportPreview: parsedReportPreview, reportType: parsedReportType } = parseAiResponse(rawAnswer);
-            const cards = payload?.cards || [];
-            const followUpActions = (payload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
-            setMessages(prev => {
-              const existing = prev.find(m => m.id === aiMsgId);
-              const msgData = {
-                text: displayAnswer || displayText, intent: payload?.source,
-                reportType: reportTypeToDownload || parsedReportType, reportPreview: parsedReportPreview, charts,
-                cards: cards.length ? cards : parsedCards,
-                actionCards, quickActions, teamStatusCards, bundleSplitCards,
-                stepWizardCards: parsedStepWizardCards,
-                overdueFactoryCard: parsedOverdueCard,
-                agentCommandId: commandId, followUpActions,
-              };
-              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
-              return [...prev, { id: aiMsgId, role: 'ai' as const, ...msgData }];
-            });
-            // sync fallback 也不自动朗读，统一由用户点击喇叭按钮触发
-          } catch (syncErr) {
-            console.error('Sync fallback also failed:', syncErr);
-            const syncErrMsg = (syncErr as any)?.message || String(syncErr);
-            const isSyncAuthError = syncErrMsg.includes('401') || syncErrMsg.includes('登录已过期') || syncErrMsg.includes('过期');
-            if (isSyncAuthError) {
-              setMessages(prev => prev.map(m => m.id === aiMsgId
-                ? { ...m, text: '登录已过期，请重新登录' } : m));
-              return;
-            }
-            let retryCount = 0;
-            const maxRetries = 2;
-            const retryDelay = [2000, 4000];
-            const attemptRetry = async () => {
-              while (retryCount < maxRetries) {
-                try {
-                  await new Promise(r => setTimeout(r, retryDelay[retryCount]));
-                  retryCount++;
-                  const retryPayload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
-                  const retryAnswer = retryPayload?.answer || '';
-                  if (retryAnswer) {
-                    const retryDisplay = retryPayload?.displayAnswer || retryAnswer;
-                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc, overdueFactoryCard: ofc, reportPreview: rp, reportType: rpt } = parseAiResponse(retryAnswer);
-                    const retryCards = retryPayload?.cards || [];
-                    const retryFollowUp = (retryPayload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
-                    setMessages(prev => prev.map(m => m.id === aiMsgId ? {
-                      ...m, text: retryDisplay || dt, intent: retryPayload?.source,
-                      charts: ch, cards: retryCards.length ? retryCards : pc,
-                      actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc,
-                      stepWizardCards: swc, overdueFactoryCard: ofc,
-                      reportPreview: rp, reportType: rpt,
-                      agentCommandId: retryPayload?.commandId, followUpActions: retryFollowUp,
-                    } : m));
-                    speak(retryDisplay || dt);
-                    return;
-                  }
-                } catch (retryErr) {
-                  console.warn(`Retry attempt ${retryCount} failed:`, retryErr);
-                }
-              }
-              setMessages(prev => prev.map(m => m.id === aiMsgId
-                ? { ...m, text: '当前连不到数据服务，请稍后再试。' } : m));
-            };
-            attemptRetry();
-          } finally {
-            finishTyping();
-          }
-        },
-      );
-      streamAbortRef.current = ctrl;
-    } catch (error) {
-      console.error('AI Query Error:', error);
-      setMessages(prev => [...prev, { id: aiMsgId, role: 'ai', text: '当前连不到数据服务，请稍后再试。' }]);
-      if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
-      finishTyping();
-    }
-  }, [inputValue, isTyping, user, location, advisorSessionId, speak, handleDownloadReport, isSuperAdmin]);
+    startStream(contextualText, text, reportTypeToDownload);
+  }, [inputValue, isTyping, user, startStream, handleDownloadReport]);
 
   const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -582,13 +277,14 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   }, [antdMessage]);
 
   const clearChat = useCallback(() => {
+    abortStream();
     const newId = genSessionId();
     saveSession(newId);
     setAdvisorSessionId(newId);
     setMessages([INITIAL_MSG]);
     setInputValue('');
     historyFetchedRef.current = true;
-  }, []);
+  }, [abortStream]);
 
   return {
     messages, setMessages,

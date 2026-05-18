@@ -206,29 +206,24 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>
           )}
           {msg.traceableAdvice && (
-            <div style={{ marginTop: 12, padding: 12, background: 'rgba(255, 255, 255, 0.05)', borderRadius: 8, border: '1px solid rgba(0, 229, 255, 0.2)' }}>
-              <div style={{ fontWeight: 'bold', color: '#00e5ff', marginBottom: 8, fontSize: 14 }}>{msg.traceableAdvice.title}</div>
+            <div className={msgStyles.traceableAdvice}>
+              <div className={msgStyles.adviceTitle}>{msg.traceableAdvice.title}</div>
               <div style={{ marginBottom: 12 }}>
-                <details style={{ cursor: 'pointer', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                <details className={msgStyles.adviceSummary}>
                   <summary style={{ outline: 'none', userSelect: 'none' }}>🔍 查看评估依据</summary>
-                  <ul style={{ marginTop: 8, paddingLeft: 20, color: 'rgba(255,255,255,0.8)' }}>
+                  <ul className={msgStyles.adviceDetails}>
                     {msg.traceableAdvice.reasoningChain?.map((reason, idx) => (
-                      <li key={idx} style={{ marginBottom: 4 }}>{reason}</li>
+                      <li key={idx} className={msgStyles.reasoningItem}>{reason}</li>
                     ))}
                   </ul>
                 </details>
               </div>
               {msg.traceableAdvice.proposedActions && msg.traceableAdvice.proposedActions.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className={msgStyles.adviceActions}>
                   {msg.traceableAdvice.proposedActions.map((action, idx) => (
                     <Tooltip key={idx} title={action.riskWarning || '点击执行'}>
                       <button
-                        className={styles.actionBtn}
-                        style={{
-                          background: action.actionCommand === 'IGNORE' ? 'rgba(255,255,255,0.1)' : 'rgba(0, 229, 255, 0.1)',
-                          borderColor: action.actionCommand === 'IGNORE' ? 'transparent' : 'rgba(0, 229, 255, 0.3)',
-                          color: action.actionCommand === 'IGNORE' ? 'rgba(255,255,255,0.6)' : '#00e5ff'
-                        }}
+                        className={`${msgStyles.adviceActionBtn} ${action.actionCommand === 'IGNORE' ? msgStyles.adviceActionBtnSecondary : msgStyles.adviceActionBtnPrimary}`}
                         onClick={() => onSend(action.actionCommand === 'IGNORE' ? '我忽略了这条建议。' : `执行操作：${action.label}`)}
                       >{action.label}</button>
                     </Tooltip>

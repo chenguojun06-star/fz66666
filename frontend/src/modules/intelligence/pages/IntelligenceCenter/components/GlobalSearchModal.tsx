@@ -13,7 +13,8 @@ import { Input, Spin, Empty } from 'antd';
 import type { InputRef } from 'antd';
 import {
   SearchOutlined, FileTextOutlined, AppstoreOutlined,
-  UserOutlined, RightOutlined,
+  UserOutlined, RightOutlined, PlusCircleOutlined,
+  ClockCircleOutlined, WarningOutlined, QuestionCircleOutlined, HomeOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -36,6 +37,14 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: '#5a6a7a',
   PAUSED: '#f7a600',
 };
+
+const COMMANDS = [
+  { key: 'create-order', icon: <PlusCircleOutlined />, label: '创建订单', action: 'navigate:/production?openCreate=true' },
+  { key: 'overdue', icon: <ClockCircleOutlined />, label: '查看逾期订单', action: 'navigate:/production?filter=overdue' },
+  { key: 'anomaly', icon: <WarningOutlined />, label: '查看今日异常', action: 'navigate:/production?filter=behind' },
+  { key: 'dashboard', icon: <HomeOutlined />, label: '返回首页', action: 'navigate:/dashboard' },
+  { key: 'help', icon: <QuestionCircleOutlined />, label: '问小云', action: 'ai-help' },
+];
 
 const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
   const navigate = useNavigate();
@@ -78,6 +87,10 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
       setResult(null);
       return;
     }
+    if (q.startsWith('/')) {
+      setResult(null);
+      return;
+    }
     setLoading(true);
     try {
       const resp = await globalSearchApi.search(q.trim());
@@ -90,6 +103,24 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
       setLoading(false);
     }
   }, []);
+
+  const isCommandMode = query.startsWith('/');
+  const filteredCommands = isCommandMode
+    ? COMMANDS.filter(c => {
+        const cmd = query.slice(1).toLowerCase();
+        if (!cmd) return true;
+        return c.label.toLowerCase().includes(cmd) || c.key.toLowerCase().includes(cmd);
+      })
+    : [];
+
+  const executeCommand = (action: string) => {
+    onClose();
+    if (action.startsWith('navigate:')) {
+      navigate(action.slice(9));
+    } else if (action === 'ai-help') {
+      window.dispatchEvent(new CustomEvent('openAiChat', { detail: { query: query.slice(1) || '帮我' } }));
+    }
+  };
 
   const handleChange = (val: string) => {
     setQuery(val);
@@ -106,12 +137,17 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
   const handleKeyNav = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIdx(i => Math.min(i + 1, flatItems.length - 1));
+      const max = isCommandMode ? filteredCommands.length - 1 : flatItems.length - 1;
+      setActiveIdx(i => Math.min(i + 1, max));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIdx(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && flatItems[activeIdx]) {
-      handleSelect(flatItems[activeIdx].type, flatItems[activeIdx].item);
+    } else if (e.key === 'Enter') {
+      if (isCommandMode && filteredCommands[activeIdx]) {
+        executeCommand(filteredCommands[activeIdx].action);
+      } else if (!isCommandMode && flatItems[activeIdx]) {
+        handleSelect(flatItems[activeIdx].type, flatItems[activeIdx].item);
+      }
     }
   };
 
@@ -172,7 +208,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         </div>
 
         {/* 空状态 */}
-        {!query && (
+        {!query && !isCommandMode && (
           <div style={{ padding: '24px 20px', color: '#3a5a7a', fontSize: 12, lineHeight: 1.8 }}>
             <div style={{ marginBottom: 8, color: '#5a7a9a', fontWeight: 600 }}>搜索示例</div>
             {['PO2024001', 'hlq（红领桥 拼音首字母）', '张师傅', '风衣'].map(tip => (
@@ -184,8 +220,36 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
           </div>
         )}
 
+        {/* 命令模式 */}
+        {isCommandMode && (
+          <div style={{ maxHeight: 460, overflowY: 'auto', padding: '6px 0 10px' }}>
+            <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#00e5ff', fontWeight: 600, letterSpacing: 1 }}>
+              快捷命令
+            </div>
+            {filteredCommands.map((cmd, i) => (
+              <div key={cmd.key}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
+                  cursor: 'pointer', transition: 'all 0.12s',
+                  background: i === activeIdx ? 'rgba(0,229,255,0.06)' : 'transparent',
+                  borderLeft: i === activeIdx ? '2px solid #00e5ff' : '2px solid transparent',
+                }}
+                onClick={() => executeCommand(cmd.action)}
+                onMouseEnter={() => setActiveIdx(i)}
+              >
+                <span style={{ color: '#00e5ff', fontSize: 16 }}>{cmd.icon}</span>
+                <span style={{ color: '#e8f4ff', fontWeight: 500, fontSize: 13 }}>{cmd.label}</span>
+                <RightOutlined style={{ color: '#2a4060', fontSize: 12, marginLeft: 'auto' }} />
+              </div>
+            ))}
+            {filteredCommands.length === 0 && (
+              <div style={{ padding: '16px 18px', color: '#5a7a9a', fontSize: 13 }}>无匹配命令</div>
+            )}
+          </div>
+        )}
+
         {/* 结果列表 */}
-        {totalCount === 0 && query && !loading && (
+        {!isCommandMode && totalCount === 0 && query && !loading && (
           <div style={{ padding: '32px 0', textAlign: 'center' }}>
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -210,7 +274,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
           </div>
         )}
 
-        {totalCount > 0 && (
+        {!isCommandMode && totalCount > 0 && (
           <div style={{ maxHeight: 460, overflowY: 'auto', padding: '6px 0 10px' }}>
             {/* 订单 */}
             {(result?.orders.length ?? 0) > 0 && (
