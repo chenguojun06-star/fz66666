@@ -46,12 +46,7 @@ public class ImAiWebhookController {
                                             @RequestHeader(value = "X-Lark-Signature", required = false) String signature,
                                             @RequestHeader(value = "X-Lark-Request-Timestamp", required = false) String timestamp,
                                             @RequestHeader(value = "X-Lark-Request-Nonce", required = false) String nonce) {
-        if (!feishuEnabled) return ResponseEntity.ok(Map.of());
-
-        if (feishuVerificationToken == null || feishuVerificationToken.isBlank()) {
-            log.error("[IM-AI/Feishu] verification-token 未配置，拒绝回调请求（安全策略：未配置验证凭据时禁止处理外部消息）");
-            return ResponseEntity.status(401).body(Map.of("error", "verification not configured"));
-        }
+        if (!feishuEnabled) return ResponseEntity.status(503).body(Map.of("error", "service disabled"));
 
         if (body.contains("\"challenge\"")) {
             try {
@@ -63,6 +58,11 @@ public class ImAiWebhookController {
             } catch (Exception e) {
                 log.warn("[IM-AI/Feishu] challenge parse error: {}", e.getMessage());
             }
+        }
+
+        if (feishuVerificationToken == null || feishuVerificationToken.isBlank()) {
+            log.error("[IM-AI/Feishu] verification-token 未配置，拒绝回调请求（安全策略：未配置验证凭据时禁止处理外部消息）");
+            return ResponseEntity.status(401).body(Map.of("error", "verification not configured"));
         }
 
         if (signature == null || timestamp == null || nonce == null) {
@@ -101,7 +101,7 @@ public class ImAiWebhookController {
             User user = resolveUser("feishu", openId != null ? openId : userId);
             if (user == null) {
                 log.info("[IM-AI/Feishu] user not found: openId={}", openId);
-                return ResponseEntity.ok(Map.of("msg", "请先在系统中绑定飞书账号"));
+                return ResponseEntity.status(404).body(Map.of("msg", "请先在系统中绑定飞书账号"));
             }
 
             UserContext ctx = buildUserContext(user);
@@ -115,7 +115,7 @@ public class ImAiWebhookController {
             }
         } catch (Exception e) {
             log.error("[IM-AI/Feishu] handle error: {}", e.getMessage(), e);
-            return ResponseEntity.ok(Map.of());
+            return ResponseEntity.status(500).body(Map.of("error", "internal error"));
         }
     }
 
@@ -123,7 +123,7 @@ public class ImAiWebhookController {
     public ResponseEntity<?> dingtalkCallback(@RequestBody String body,
                                               @RequestHeader(value = "sign", required = false) String sign,
                                               @RequestHeader(value = "timestamp", required = false) String timestamp) {
-        if (!dingtalkEnabled) return ResponseEntity.ok(Map.of());
+        if (!dingtalkEnabled) return ResponseEntity.status(503).body(Map.of("error", "service disabled"));
 
         if (dingtalkAppSecret == null || dingtalkAppSecret.isBlank()) {
             log.error("[IM-AI/DingTalk] app-secret 未配置，拒绝回调请求（安全策略：未配置验证凭据时禁止处理外部消息）");
@@ -156,7 +156,7 @@ public class ImAiWebhookController {
             User user = resolveUser("dingtalk", staffId != null ? staffId : senderId);
             if (user == null) {
                 log.info("[IM-AI/DingTalk] user not found: staffId={}", staffId);
-                return ResponseEntity.ok(Map.of("msgtype", "text", "text", Map.of("content", "请先在系统中绑定钉钉账号")));
+                return ResponseEntity.status(404).body(Map.of("msgtype", "text", "text", Map.of("content", "请先在系统中绑定钉钉账号")));
             }
 
             UserContext ctx = buildUserContext(user);
@@ -170,7 +170,7 @@ public class ImAiWebhookController {
             }
         } catch (Exception e) {
             log.error("[IM-AI/DingTalk] handle error: {}", e.getMessage(), e);
-            return ResponseEntity.ok(Map.of());
+            return ResponseEntity.status(500).body(Map.of("error", "internal error"));
         }
     }
 
