@@ -56,7 +56,8 @@ public class AgentStateStore {
             cp.setCreatedAt(LocalDateTime.now());
             checkpointMapper.insert(cp);
         } catch (Exception e) {
-            log.warn("[AgentStateStore] saveCheckpoint failed: {}", e.getMessage());
+            log.error("[AgentStateStore] saveCheckpoint failed: sessionId={}, iteration={}, error={}",
+                      sessionId, iteration, e.getMessage(), e);
         }
     }
 

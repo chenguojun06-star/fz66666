@@ -32,7 +32,12 @@ public class AgentCheckpointService {
             checkpoint.setThreadId(truncate(threadId, 128));
             checkpoint.setNodeId(truncate(nodeId, 128));
             checkpoint.setNodeName(truncate(nodeName, 256));
-            checkpoint.setStateJson(objectMapper.writeValueAsString(state));
+            String stateJsonStr = objectMapper.writeValueAsString(state);
+            if (stateJsonStr.length() > 4_000_000) {
+                log.warn("[Checkpoint] stateJson too large ({} chars), truncating for thread={}", stateJsonStr.length(), threadId);
+                stateJsonStr = stateJsonStr.substring(0, 4_000_000);
+            }
+            checkpoint.setStateJson(stateJsonStr);
             checkpoint.setStepIndex(stepIndex);
             checkpoint.setStatus("ACTIVE");
             checkpoint.setCreatedAt(LocalDateTime.now());
@@ -46,7 +51,26 @@ public class AgentCheckpointService {
             checkpointMapper.insert(checkpoint);
             log.debug("[Checkpoint] Saved: thread={}, node={}, step={}", threadId, nodeId, stepIndex);
         } catch (Exception e) {
-            log.warn("[Checkpoint] Save failed: {}", e.getMessage());
+            log.error("[Checkpoint] Save failed: threadId={}, nodeId={}, stepIndex={}, error={}",
+                      threadId, nodeId, stepIndex, e.getMessage(), e);
+            tryInsertMinimal(tenantId, threadId, nodeId, stepIndex);
+        }
+    }
+
+    private void tryInsertMinimal(Long tenantId, String threadId, String nodeId, int stepIndex) {
+        try {
+            AgentCheckpoint minimal = new AgentCheckpoint();
+            minimal.setTenantId(safeTenantId(tenantId));
+            minimal.setThreadId(truncate(threadId, 128));
+            minimal.setNodeId(truncate(nodeId, 128));
+            minimal.setStepIndex(stepIndex);
+            minimal.setStatus("ACTIVE");
+            minimal.setCreatedAt(LocalDateTime.now());
+            checkpointMapper.insert(minimal);
+            log.info("[Checkpoint] Minimal insert succeeded: thread={}, node={}, step={}", threadId, nodeId, stepIndex);
+        } catch (Exception e2) {
+            log.error("[Checkpoint] Minimal insert also failed: threadId={}, nodeId={}, error={}",
+                      threadId, nodeId, e2.getMessage());
         }
     }
 
