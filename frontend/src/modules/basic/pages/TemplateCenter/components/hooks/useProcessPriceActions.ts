@@ -133,7 +133,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     setTemplateId(null);
     setMatchedScope('empty');
     setData([]);
-    setSizes([...DEFAULT_SIZES]);
+    setSizes([...FALLBACK_SIZES]);
     setImageUrls([]);
     resetEditingState();
     try {
@@ -145,7 +145,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
       setTemplateId(payload?.templateId || null);
       setMatchedScope((payload?.matchedScope as MatchedScope) || 'empty');
       setData(rows);
-      setSizes(nextSizes.length ? nextSizes : [...DEFAULT_SIZES]);
+      setSizes(nextSizes.length ? nextSizes : [...FALLBACK_SIZES]);
       setImageUrls(Array.isArray(payload?.content?.images) ? payload.content.images.filter((item: unknown) => String(item || '').trim()) : []);
     } catch {
       message.error('加载工序单价模板失败');
@@ -166,7 +166,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
       setStyleInputVal('');
       setSelectedStyleNo('');
       setData([]);
-      setSizes([...DEFAULT_SIZES]);
+      setSizes([...FALLBACK_SIZES]);
       setImageUrls([]);
       setTemplateId(null);
       setMatchedScope('empty');
@@ -411,7 +411,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
     setStyleInputVal('');
     setSelectedStyleNo('');
     setData([]);
-    setSizes([...DEFAULT_SIZES]);
+    setSizes([...FALLBACK_SIZES]);
     setImageUrls([]);
     resetEditingState();
   }, [resetEditingState]);

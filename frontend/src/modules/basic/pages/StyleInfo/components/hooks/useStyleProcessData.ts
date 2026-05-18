@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { App } from 'antd';
 import { StyleProcess, TemplateLibrary } from '@/types/style';
-import api, { toNumberSafe } from '@/utils/api';
+import api, { toNumberSafe, sortSizeNames } from '@/utils/api';
 import type { SizePrice, StyleProcessWithSizePrice } from '../styleProcessTabUtils';
 
 type UseStyleProcessDataParams = {
@@ -53,12 +53,12 @@ export const useStyleProcessData = ({ styleId, onDataLoaded }: UseStyleProcessDa
             const sizeName = String(item.sizeName || '').trim();
             if (sizeName) { const parts = sizeName.split(/[,，\s]+/).map((s: string) => s.trim()).filter(Boolean); parts.forEach((s: string) => sizeSet.add(s)); }
           });
-          if (sizeSet.size > 0) sizeList = Array.from(sizeSet).sort((a, b) => { const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL']; const ia = order.indexOf(a.toUpperCase()); const ib = order.indexOf(b.toUpperCase()); if (ia >= 0 && ib >= 0) return ia - ib; if (ia >= 0) return -1; if (ib >= 0) return 1; return a.localeCompare(b); });
+          if (sizeSet.size > 0) sizeList = sortSizeNames(Array.from(sizeSet));
         }
         if (sizeList.length === 0 && sizePriceData.length > 0) {
           const savedSizes = new Set<string>();
           sizePriceData.forEach((sp: SizePrice) => { if (sp.size) savedSizes.add(sp.size.trim()); });
-          if (savedSizes.size > 0) sizeList = Array.from(savedSizes).sort((a, b) => { const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL']; const ia = order.indexOf(a); const ib = order.indexOf(b); if (ia >= 0 && ib >= 0) return ia - ib; if (ia >= 0) return -1; if (ib >= 0) return 1; return a.localeCompare(b); });
+          if (savedSizes.size > 0) sizeList = sortSizeNames(Array.from(savedSizes));
         }
         setSizes(sizeList);
         const mergedData: StyleProcessWithSizePrice[] = processData.map((proc) => {

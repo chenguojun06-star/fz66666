@@ -1,5 +1,6 @@
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { toCategoryCn } from '@/utils/styleCategory';
+import { sortSizeNames } from '@/utils/api';
 
 export const buildProductionSheetHtml = (payload: any) => {
   const style = payload?.style || {};
@@ -35,53 +36,8 @@ export const buildProductionSheetHtml = (payload: any) => {
     return raw;
   };
 
-  const collator = new Intl.Collator('zh-Hans-CN');
-  const parseSizeKey = (input: any) => {
-    const raw = String(input ?? '').trim();
-    const upper = raw.toUpperCase();
-    if (!upper || upper === '-') return { rank: 9999, num: 0, raw: upper };
-    if (upper === '均码' || upper === 'ONE SIZE' || upper === 'ONESIZE') return { rank: 55, num: 0, raw: upper };
-
-    if (/^\d+(\.\d+)?$/.test(upper)) {
-      const n = Number.parseFloat(upper);
-      return { rank: 0, num: Number.isFinite(n) ? n : 0, raw: upper };
-    }
-
-    const mNumXL = upper.match(/^(\d+)XL$/);
-    if (mNumXL) {
-      const n = Number.parseInt(mNumXL[1], 10);
-      const rank = 70 + Math.max(0, (Number.isFinite(n) ? n : 1) - 1) * 10;
-      return { rank, num: 0, raw: upper };
-    }
-
-    const mXS = upper.match(/^(X{0,4})S$/);
-    if (mXS) {
-      const len = (mXS[1] || '').length;
-      return { rank: 40 - len * 10, num: 0, raw: upper };
-    }
-
-    if (upper === 'M') return { rank: 50, num: 0, raw: upper };
-
-    const mXL = upper.match(/^(X{1,4})L$/);
-    if (mXL) {
-      const len = (mXL[1] || '').length;
-      return { rank: 60 + len * 10, num: 0, raw: upper };
-    }
-
-    if (upper === 'L') return { rank: 60, num: 0, raw: upper };
-    return { rank: 5000, num: 0, raw: upper };
-  };
-
-  const compareSizeAsc = (a: any, b: any) => {
-    const ka = parseSizeKey(a);
-    const kb = parseSizeKey(b);
-    if (ka.rank !== kb.rank) return ka.rank - kb.rank;
-    if (ka.num !== kb.num) return ka.num - kb.num;
-    return collator.compare(ka.raw, kb.raw);
-  };
-
-  const sizeNames = Array.from(new Set(sizeList.map((s: any) => String(s.sizeName || '').trim()).filter(Boolean)));
-  const sortedSizeNames = [...sizeNames].sort(compareSizeAsc);
+  const sizeNames: string[] = Array.from(new Set(sizeList.map((s: any) => String(s.sizeName || '').trim()).filter(Boolean)));
+  const sortedSizeNames = sortSizeNames(sizeNames);
   const partNames = Array.from(new Set(sizeList.map((s: any) => String(s.partName || '').trim()).filter(Boolean)));
   const sizeCellMap: Record<string, unknown> = {};
   const partMethodMap: Record<string, string> = {};
