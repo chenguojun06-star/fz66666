@@ -28,9 +28,10 @@ interface Props {
   onComplete: (id: string) => void;
   onEdit: (task: TaskItem) => void;
   onCreate: () => void;
+  onOpenInFrame: (path: string, label: string) => void;
 }
 
-const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, onEdit, onCreate }) => {
+const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, onEdit, onCreate, onOpenInFrame }) => {
   const [statusTab, setStatusTab] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -54,6 +55,14 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
     return counts;
   }, [tasks]);
 
+  const handleCardClick = (task: TaskItem) => {
+    if (task.source === 'system' && task.deepLinkPath) {
+      onOpenInFrame(task.deepLinkPath, task.title);
+    } else {
+      onEdit(task);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.toolbar}>
@@ -75,38 +84,50 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
       </div>
 
       <div className={styles.listArea}>
-        {filtered.map(task => (
-          <div key={task.id} className={styles.taskCard} onClick={() => onEdit(task)}>
-            <div className={styles.taskCardTop}>
-              <span className={styles.priorityTag} style={{ color: PRIORITY_CONFIG[task.priority]?.color, background: PRIORITY_CONFIG[task.priority]?.bg }}>
-                {PRIORITY_CONFIG[task.priority]?.label || '一般'}
-              </span>
-              <span className={styles.moduleTag}>{MODULE_LABELS[task.module] || task.module}</span>
-              <span className={styles.taskTitle}>{task.title}</span>
-            </div>
-            <div className={styles.taskCardBottom}>
-              <div className={styles.taskMeta}>
-                {task.orderNo && <span>📦 {task.orderNo}</span>}
-                {task.assigneeName && <span>👤 {task.assigneeName}</span>}
-                {task.endTime && <span>📅 {task.endTime.slice(0, 10)}</span>}
+        {filtered.map(task => {
+          const isSystem = task.source === 'system';
+          return (
+            <div key={task.id}
+              className={`${styles.taskCard} ${isSystem ? styles.taskCardSystem : ''}`}
+              onClick={() => handleCardClick(task)}>
+              <div className={styles.taskCardTop}>
+                <span className={styles.priorityTag} style={{ color: PRIORITY_CONFIG[task.priority]?.color, background: PRIORITY_CONFIG[task.priority]?.bg }}>
+                  {PRIORITY_CONFIG[task.priority]?.label || '一般'}
+                </span>
+                <span className={styles.moduleTag}>{MODULE_LABELS[task.module] || task.module}</span>
+                {isSystem && <span className={styles.sysTag}>系统</span>}
+                <span className={styles.taskTitle}>{task.title}</span>
               </div>
-              <div className={styles.taskActions} onClick={e => e.stopPropagation()}>
-                {task.status === 'pending' && (
-                  <>
-                    <button className={`${styles.actionBtn} ${styles.claimBtn}`} onClick={() => onClaim(task.id)}>领取</button>
-                    <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>
-                  </>
-                )}
-                {task.status === 'in_progress' && (
-                  <>
-                    <button className={`${styles.actionBtn} ${styles.completeBtn}`} onClick={() => onComplete(task.id)}>完成</button>
-                    <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>
-                  </>
-                )}
+              <div className={styles.taskCardBottom}>
+                <div className={styles.taskMeta}>
+                  {task.orderNo && <span>📦 {task.orderNo}</span>}
+                  {task.assigneeName && <span>👤 {task.assigneeName}</span>}
+                  {task.endTime && <span>📅 {task.endTime.slice(0, 10)}</span>}
+                </div>
+                <div className={styles.taskActions} onClick={e => e.stopPropagation()}>
+                  {!isSystem && task.status === 'pending' && (
+                    <>
+                      <button className={`${styles.actionBtn} ${styles.claimBtn}`} onClick={() => onClaim(task.id)}>领取</button>
+                      <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>
+                    </>
+                  )}
+                  {!isSystem && task.status === 'in_progress' && (
+                    <>
+                      <button className={`${styles.actionBtn} ${styles.completeBtn}`} onClick={() => onComplete(task.id)}>完成</button>
+                      <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>
+                    </>
+                  )}
+                  {isSystem && task.deepLinkPath && (
+                    <button className={`${styles.actionBtn} ${styles.claimBtn}`}
+                      onClick={() => onOpenInFrame(task.deepLinkPath!, task.title)}>
+                      打开
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {!loading && filtered.length === 0 && (
           <div className={styles.emptyState}>
             <span style={{ fontSize: 32 }}>📋</span>

@@ -4,13 +4,12 @@ import msgStyles from './MessageBubble.module.css';
 interface PendingItemsSectionProps {
   items: any[];
   onDismiss: (id: string, e: React.MouseEvent) => void;
-  onClosePanel: () => void;
-  onNavigate: (path: string) => void;
-  onOpenTaskPanel: () => void;
+  onOpenInFrame: (path: string, label: string) => void;
+  onOpenTaskList: () => void;
 }
 
 const PendingItemsSection: React.FC<PendingItemsSectionProps> = ({
-  items, onDismiss, onClosePanel, onNavigate, onOpenTaskPanel,
+  items, onDismiss, onOpenInFrame, onOpenTaskList,
 }) => {
   if (items.length === 0) return null;
 
@@ -34,7 +33,7 @@ const PendingItemsSection: React.FC<PendingItemsSectionProps> = ({
           : `/production/order-flow?orderNo=${encodeURIComponent(item.orderNo || '')}`;
         return (
           <div key={item.id || item.orderNo} className={msgStyles.pendingItem} style={{position:'relative'}}
-            onClick={() => { onClosePanel(); onNavigate(navPath); }}
+            onClick={() => onOpenInFrame(navPath, item.title || `${item.taskType} ${item.orderNo}`)}
           >
             <span>{item.categoryIcon || '⚠️'}</span>
             <span style={{flex:1}}>
@@ -53,7 +52,7 @@ const PendingItemsSection: React.FC<PendingItemsSectionProps> = ({
         );
       })}
       {items.length > 6 && (
-        <div className={msgStyles.pendingMoreBtn} onClick={() => { onClosePanel(); onOpenTaskPanel(); }}>
+        <div className={msgStyles.pendingMoreBtn} onClick={onOpenTaskList}>
           还有 {items.length - 6} 项待办，查看全部 →
         </div>
       )}

@@ -39,6 +39,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const auth = useLayoutAuth();
   const { badgeCounts, getVisibleCount, markViewed, viewVersion } = useMenuBadgeCounts();
 
+  const [xiaoyunDocked, setXiaoyunDocked] = useState(false);
+
   const visibleBadgeCounts = useMemo(() => {
     const result: Record<string, number> = {};
     for (const path of Object.keys(badgeCounts)) {
@@ -161,7 +163,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className={`layout${collapsed ? ' layout-collapsed' : ''}`}>
+    <div className={`layout${collapsed ? ' layout-collapsed' : ''}${xiaoyunDocked ? ' layout-xiaoyun-docked' : ''}`}>
       <DailyTodoModal />
       {auth.isFactoryAccount && (
         <FactoryPersonalCenterModal open={factoryModalOpen} onClose={() => setFactoryModalOpen(false)} />
@@ -259,24 +261,32 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           onMenuClick={markViewed}
         />
 
-        <main className="layout-content">
-          <div className="content-wrapper">
-            {showGlobalSmartGuide && globalGuide ? (
-              <div style={{ marginBottom: 12 }}>
-                <SmartGuideBar
-                  stage={globalGuide.stage}
-                  nextStep={globalGuide.nextStep}
-                  hints={globalGuide.hints}
-                  pendingCount={globalGuide.hints.filter((item) => item.level !== 'low').length}
-                />
-              </div>
-            ) : null}
-            {children}
-          </div>
-        </main>
+        <div className="layout-content-row">
+          <main className="layout-content">
+            <div className="content-wrapper">
+              {showGlobalSmartGuide && globalGuide ? (
+                <div style={{ marginBottom: 12 }}>
+                  <SmartGuideBar
+                    stage={globalGuide.stage}
+                    nextStep={globalGuide.nextStep}
+                    hints={globalGuide.hints}
+                    pendingCount={globalGuide.hints.filter((item) => item.level !== 'low').length}
+                  />
+                </div>
+              ) : null}
+              {children}
+            </div>
+          </main>
+
+          {xiaoyunDocked && (
+            <aside className="layout-xiaoyun-panel">
+              <GlobalAiAssistant docked onDockChange={setXiaoyunDocked} />
+            </aside>
+          )}
+        </div>
       </div>
 
-      <GlobalAiAssistant />
+      {!xiaoyunDocked && <GlobalAiAssistant onDockChange={setXiaoyunDocked} />}
     </div>
   );
 };

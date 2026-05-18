@@ -96,3 +96,10 @@
   justify-content: center; padding: 48px 24px; gap: 12px;
   color: var(--xiaoyun-text-tertiary); font-size: 13px;
 }
+
+.taskCardSystem { border-left-color: var(--xiaoyun-text-tertiary); }
+
+.sysTag {
+  padding: 1px 6px; border-radius: 8px; font-size: 10px;
+  background: #e6f7ff; color: #08979c; flex-shrink: 0;
+}

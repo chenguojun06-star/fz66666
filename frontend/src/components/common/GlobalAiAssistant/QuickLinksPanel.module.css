@@ -30,13 +30,3 @@
 .linkDesc { font-size: 11px; color: var(--xiaoyun-text-tertiary); display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .arrowIcon { font-size: 12px; color: var(--xiaoyun-text-tertiary); flex-shrink: 0; }
-
-.recentSection { margin-top: auto; border-top: 1px solid var(--xiaoyun-border-card); padding-top: 12px; }
-
-.recentItem {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: 8px; cursor: pointer;
-  font-size: 12px; color: var(--xiaoyun-text-secondary); transition: all 0.15s;
-}
-.recentItem:hover { background: var(--xiaoyun-primary-bg); color: var(--xiaoyun-primary); }
-.recentDot { width: 6px; height: 6px; border-radius: 50%; background: var(--xiaoyun-text-tertiary); flex-shrink: 0; }

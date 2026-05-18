@@ -165,7 +165,7 @@ export interface ReportPreviewOrder {
   plannedEndDate: string | null;
 }
 
-export type PanelView = 'chat' | 'tasks' | 'links';
+export type PanelView = 'chat' | 'tasks' | 'links' | 'page';
 
 export type TaskStatus = 'pending' | 'in_progress' | 'accepted' | 'completed' | 'cancelled';
 export type TaskPriority = 'high' | 'medium' | 'low';
@@ -184,6 +184,7 @@ export interface TaskItem {
   orderNo?: string;
   styleNo?: string;
   deepLinkPath?: string;
+  source?: 'system' | 'personal';
   startTime?: string;
   endTime?: string;
   createdAt: string;
