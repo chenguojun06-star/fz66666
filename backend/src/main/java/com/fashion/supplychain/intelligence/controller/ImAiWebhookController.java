@@ -12,9 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.crypto.Cipher;
 import javax.crypto.Mac;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.*;
 
 @Slf4j
@@ -46,11 +49,25 @@ public class ImAiWebhookController {
                                             @RequestHeader(value = "X-Lark-Signature", required = false) String signature,
                                             @RequestHeader(value = "X-Lark-Request-Timestamp", required = false) String timestamp,
                                             @RequestHeader(value = "X-Lark-Request-Nonce", required = false) String nonce) {
+        String workingBody = body;
+        if (body.contains("\"encrypt\"") && feishuEncryptKey != null && !feishuEncryptKey.isBlank()) {
+            String encryptValue = extractJsonValue(body, "encrypt");
+            if (encryptValue != null) {
+                try {
+                    workingBody = decryptFeishuBody(encryptValue, feishuEncryptKey);
+                    log.info("[IM-AI/Feishu] decrypted callback body, length={}", workingBody.length());
+                } catch (Exception e) {
+                    log.error("[IM-AI/Feishu] decryption failed: {}", e.getMessage());
+                    return ResponseEntity.status(500).body(Map.of("error", "decryption failed"));
+                }
+            }
+        }
+
         if (!feishuEnabled) return ResponseEntity.status(503).body(Map.of("error", "service disabled"));
 
-        if (body.contains("\"challenge\"")) {
+        if (workingBody.contains("\"challenge\"")) {
             try {
-                String challenge = extractJsonValue(body, "challenge");
+                String challenge = extractJsonValue(workingBody, "challenge");
                 if (challenge != null) {
                     log.info("[IM-AI/Feishu] URL verification challenge received");
                     return ResponseEntity.ok(Map.of("challenge", challenge));
@@ -80,19 +97,19 @@ public class ImAiWebhookController {
         }
 
         try {
-            String eventType = extractJsonValue(body, "type");
+            String eventType = extractJsonValue(workingBody, "type");
             if (!"im.message.receive_v1".equals(eventType)) {
                 return ResponseEntity.ok(Map.of());
             }
 
-            String msgType = extractJsonValue(body, "msg_type");
+            String msgType = extractJsonValue(workingBody, "msg_type");
             if (!"text".equals(msgType)) {
                 return ResponseEntity.ok(Map.of());
             }
 
-            String content = extractJsonValue(body, "text");
-            String userId = extractJsonValue(body, "user_id");
-            String openId = extractJsonValue(body, "open_id");
+            String content = extractJsonValue(workingBody, "text");
+            String userId = extractJsonValue(workingBody, "user_id");
+            String openId = extractJsonValue(workingBody, "open_id");
 
             if (content == null || content.isBlank()) return ResponseEntity.ok(Map.of());
 
@@ -198,6 +215,25 @@ public class ImAiWebhookController {
         ctx.setSuperAdmin(false);
         ctx.setPermissionRange("all");
         return ctx;
+    }
+
+    private String decryptFeishuBody(String encrypt, String key) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] keyBytes = digest.digest(key.getBytes(StandardCharsets.UTF_8));
+            byte[] allBytes = Base64.getDecoder().decode(encrypt);
+            byte[] ivBytes = Arrays.copyOfRange(allBytes, 0, 16);
+            byte[] encrypted = Arrays.copyOfRange(allBytes, 16, allBytes.length);
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "AES");
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, iv);
+            byte[] decrypted = cipher.doFinal(encrypted);
+            return new String(decrypted, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("[IM-AI/Feishu] decrypt body error: {}", e.getMessage());
+            throw new RuntimeException("decrypt failed", e);
+        }
     }
 
     private String extractJsonValue(String json, String key) {
