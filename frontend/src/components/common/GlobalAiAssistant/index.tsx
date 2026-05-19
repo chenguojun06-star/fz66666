@@ -460,20 +460,20 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
 
   // ── 面板定位样式（根据浮标边缘侧计算） ──
   const panelStyle: React.CSSProperties = useMemo(() => {
-    if (docked) {
-      return {
-        width: '100%',
-        height: '100%',
-      };
-    }
     if (isFullscreen) {
       return {
         position: 'fixed' as const,
-        zIndex: 9998,
+        zIndex: 10001,
         top: 0,
         left: 0,
         width: '100vw',
         height: '100vh',
+      };
+    }
+    if (docked) {
+      return {
+        width: '100%',
+        height: '100%',
       };
     }
     return {
