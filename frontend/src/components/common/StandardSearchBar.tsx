@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Button, DatePicker, Input, Select, Space, Radio } from 'antd';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -24,12 +24,13 @@ export interface StandardSearchBarProps {
   onSearch?: () => void;
   showResetButton?: boolean;
   onReset?: () => void;
+  debounceMs?: number;
 }
 
 const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   searchValue,
   onSearchChange,
-  searchPlaceholder = '搜索',
+  searchPlaceholder = '搜索关键词...',
   dateValue,
   onDateChange,
   statusValue = '',
@@ -40,10 +41,50 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   showStatus = true,
   showSearchButton = false,
   onSearch,
-  showResetButton = false,
+  showResetButton = true,
   onReset,
+  debounceMs = 300,
 }) => {
   const [presetValue, setPresetValue] = useState<string>('');
+  const [localSearchValue, setLocalSearchValue] = useState(searchValue ?? '');
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (searchValue !== undefined && searchValue !== localSearchValue) {
+      setLocalSearchValue(searchValue);
+    }
+  }, [searchValue]);
+
+  const debouncedOnChange = useCallback((value: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      onSearchChange(value);
+    }, debounceMs);
+  }, [onSearchChange, debounceMs]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalSearchValue(val);
+    debouncedOnChange(val);
+  };
+
+  const handlePressEnter = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    onSearchChange(localSearchValue);
+    onSearch?.();
+  };
 
   const handlePresetChange = (e: any) => {
     const val = e.target.value;
@@ -74,6 +115,18 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
     if (onDateChange) onDateChange(value as [Dayjs | null, Dayjs | null] | null);
   };
 
+  const hasActiveFilters = localSearchValue || dateValue || statusValue;
+
+  const handleReset = () => {
+    setPresetValue('');
+    setLocalSearchValue('');
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    onSearchChange('');
+    onReset?.();
+  };
+
   return (
     <div className="standard-search-bar">
       <Space size={12} wrap className="standard-search-row">
@@ -81,23 +134,27 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
           <Input
             id="standard-search-keyword"
             name="keyword"
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearchValue}
+            onChange={handleSearchChange}
             placeholder={searchPlaceholder}
             className="standard-search-input"
             allowClear
-            onPressEnter={onSearch}
+            onClear={() => {
+              setLocalSearchValue('');
+              if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+              onSearchChange('');
+            }}
+            onPressEnter={handlePressEnter}
           />
         )}
         {showDate ? (
           <Space size={8}>
             {showDatePresets && (
-              <Radio.Group 
-                value={presetValue} 
-                onChange={handlePresetChange} 
+              <Radio.Group
+                value={presetValue}
+                onChange={handlePresetChange}
                 optionType="button"
                 buttonStyle="solid"
-               
               >
                 <Radio.Button value="today">日</Radio.Button>
                 <Radio.Button value="week">周</Radio.Button>
@@ -120,7 +177,7 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
             onChange={(value) => onStatusChange && onStatusChange(value)}
             options={statusOptions}
             className="standard-search-status"
-            placeholder="状态"
+            placeholder="全部状态"
             allowClear
           />
         ) : null}
@@ -129,18 +186,14 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
             查询
           </Button>
         )}
-        {showResetButton && (
-          <Button onClick={() => {
-            setPresetValue('');
-            onReset && onReset();
-          }}>
-             重置
+        {showResetButton && hasActiveFilters ? (
+          <Button onClick={handleReset}>
+            重置
           </Button>
-        )}
+        ) : null}
       </Space>
     </div>
   );
 };
 
 export default StandardSearchBar;
-

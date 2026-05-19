@@ -13,8 +13,8 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
-  /* 始终预留滚动条空间，防止 antd Modal/Drawer 打开时 body padding-right 变化导致全页抖动 */
   scrollbar-gutter: stable;
+  transition: font-size 0.2s ease;
 }
 
 /* ===== 文字选中 - 品牌蓝 ===== */
@@ -89,25 +89,101 @@ body {
 }
 
 /* ============================================
-   全局输入框 - 统一方形 32px
+   全局输入框 - 统一方形 36px（舒适点击高度）
    ============================================ */
+/* 全局控件统一高度 + line-height — 与按钮同步，消除上下不对齐 */
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-select-selector,
 .ant-picker {
   height: 32px !important;
-  border-radius: 0 !important;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+  line-height: 30px !important;
+  border-radius: 6px !important;
+  vertical-align: middle;
 }
 
-/* 恢复 small/large 尺寸的正确高度（覆盖上面 middle 固定值） */
+/* 内部 input 元素同步 line-height */
+.ant-input-affix-wrapper .ant-input,
+.ant-input-number .ant-input-number-input,
+.ant-picker .ant-picker-input > input,
+.ant-select-selection-item,
+.ant-select-selection-placeholder {
+  line-height: 30px !important;
+}
+
+/* 焦点态增强 */
+.ant-input:focus,
+.ant-input-affix-wrapper:focus-within,
+.ant-select-focused .ant-select-selector,
+.ant-input-number-focused,
+.ant-picker-focused {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.14) !important;
+}
+
+/* hover 态预提示 */
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.ant-input-number:not(.ant-input-number-disabled):hover,
+.ant-picker:not(.ant-picker-disabled):hover {
+  border-color: var(--primary-color) !important;
+  opacity: 0.85;
+}
+
+/* placeholder 统一 */
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder,
+.ant-select-selection-placeholder,
+.ant-picker input::placeholder {
+  color: var(--color-text-tertiary, #9ca3af) !important;
+  font-weight: 400;
+}
+
+/* Space.Compact 消除双边框 + 统一圆角衔接 + 垂直对齐 */
+.ant-space-compact {
+  vertical-align: middle;
+}
+
+.ant-space-compact .ant-space-compact-item {
+  align-self: center;
+}
+
+.ant-space-compact .ant-input-affix-wrapper,
+.ant-space-compact .ant-input-number,
+.ant-space-compact .ant-select-selector,
+.ant-space-compact .ant-picker {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
+  margin-right: -1px;
+  z-index: 1;
+  position: relative;
+  height: 32px !important;
+  line-height: 30px !important;
+}
+
+.ant-space-compact .ant-btn:not(:first-child) {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+  margin-left: 0;
+  z-index: 0;
+}
+
+.ant-space-compact .ant-input-affix-wrapper:hover,
+.ant-space-compact .ant-input-affix-wrapper:focus-within,
+.ant-space-compact .ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.ant-space-compact .ant-select-focused .ant-select-selector {
+  z-index: 2;
+}
+
 .ant-input-affix-wrapper-sm,
-.ant-input-number-sm {
+.ant-input-number-sm,
+.ant-space-compact .ant-input-affix-wrapper-sm,
+.ant-space-compact .ant-input-number-sm {
   height: 24px !important;
 }
-.ant-input-affix-wrapper-lg,
-.ant-input-number-lg {
-  height: 40px !important;
+
+.ant-space-compact .ant-btn.ant-btn-sm {
+  height: 24px !important;
+  line-height: 22px !important;
 }
 
 /* 不要覆盖 ant-input 的默认样式，让 Ant Design 自己处理 */
@@ -125,20 +201,29 @@ body {
 .dashboard-page .ant-input-number,
 .dashboard-page .ant-select-selector,
 .dashboard-page .ant-picker {
-  height: 40px !important;
+  height: 36px !important;
+  line-height: 34px !important;
   border-radius: 6px !important;
 }
 
-/* ============================================
-   登录页例外 - 38px 中等圆角
-   ============================================ */
+.dashboard-page .ant-btn:not(.ant-btn-icon-only):not(.recent-tab-label):not(.recent-tab-close) {
+  height: 36px !important;
+  line-height: 34px !important;
+}
+
 .login-page .ant-input,
 .login-page .ant-input-affix-wrapper,
 .login-page .ant-input-number,
 .login-page .ant-select-selector,
 .login-page .ant-picker {
-  height: 38px !important;
+  height: 36px !important;
+  line-height: 34px !important;
   border-radius: 8px !important;
+}
+
+.login-page .ant-btn:not(.ant-btn-icon-only):not(.recent-tab-label):not(.recent-tab-close) {
+  height: 36px !important;
+  line-height: 34px !important;
 }
 
 /* 生产进度详情弹窗风格对齐“我的订单” */
@@ -169,8 +254,8 @@ body {
 
 /* 颜色规范 */
 :root {
-  /* 主色 */
-  --primary-color: #2D7FF9;
+  /* 主色 — 统一指向 design-system.css 的 --color-primary */
+  --primary-color: var(--color-primary, #2D7FF9);
   --glass-radius: 999px;
   --glass-border-width: 1px;
   --glass-border: rgba(17, 24, 39, 0.14);
@@ -190,8 +275,8 @@ body {
   --neutral-text-lighter: #6b6b6b;
   --app-bg: #FAFAFA;
   --table-header-bg: #eef1f6;
-  --table-row-stripe-bg: #f5f7fb;
-  --table-row-hover-bg: #ebf2ff;
+  --table-row-stripe-bg: #eaedf2;
+  --table-row-hover-bg: #e0e9ff;
   /* 侧边栏 - 纯色深蓝背景（禁止渐变） */
   --sidebar-bg: #0b2d5c; /* @design-system: 纯色深蓝 */
   --sidebar-text: rgba(255, 255, 255, 0.95);
@@ -376,7 +461,7 @@ body {
   --neutral-text-lighter: #6b7280;
   --app-bg: #f5f7fa;
   --table-header-bg: #eaeff6;
-  --table-row-stripe-bg: #f8f9fc;
+  --table-row-stripe-bg: #f2f5f9;
   --table-row-hover-bg: #edf2ff;
   --table-border-color: #e0e4ea;
   /* 侧边栏 - 浅灰底色，与页面主体区分 */
@@ -634,103 +719,11 @@ body {
 
 /* 按钮样式已统一在 button-override.css 中定义，此处不再重复 */
 
-/* 表单样式 */
-.form-item {
-  margin-bottom: var(--spacing-sm);
-}
 
-.form-label {
-  display: inline-block;
-  width: 120px;
-  margin-bottom: var(--spacing-xs);
-  font-size: var(--font-size-base);
-  color: var(--neutral-text);
-}
 
-.form-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: var(--border-width) solid var(--neutral-dark);
-  font-size: var(--font-size-base);
-  color: var(--neutral-text);
-  transition: border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-}
 
-.form-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-}
 
-/* 表格样式 */
-.table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background-color: var(--neutral-white);
-  border: 1px solid var(--neutral-dark);
-  overflow: hidden;
-}
 
-.table th,
-.table td {
-  padding: 12px 14px;
-  text-align: center !important;
-  border-bottom: 1px solid var(--neutral-dark);
-  font-size: var(--font-size-base);
-  vertical-align: middle;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.table th:not(:last-child),
-.table td:not(:last-child) {
-  border-right: 1px solid var(--neutral-dark);
-}
-
-.table th {
-  font-weight: 600;
-  color: var(--neutral-text);
-  background: var(--table-header-bg);
-  height: 44px;
-}
-
-.table tbody tr:nth-child(even) td {
-  background: var(--table-row-stripe-bg);
-}
-
-.table tbody tr:hover td {
-  background: var(--table-row-hover-bg);
-}
-
-.table tr:hover {
-  background-color: var(--neutral-light);
-}
-
-/* 栅格系统 */
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0 -8px;
-}
-
-.col {
-  padding: 0 8px;
-  flex: 1;
-}
-
-.col-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
-.col-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
-.col-3 { flex: 0 0 25%; max-width: 25%; }
-.col-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
-.col-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
-.col-6 { flex: 0 0 50%; max-width: 50%; }
-.col-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
-.col-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
-.col-9 { flex: 0 0 75%; max-width: 75%; }
-.col-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
-.col-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
-.col-12 { flex: 0 0 100%; max-width: 100%; }
 
 .page-header {
   display: flex;
@@ -874,7 +867,7 @@ body {
   padding: 12px 0 0 0;
 }
 
-/* 统一弹窗底部sticky按钮区域样式 */
+/* 统一弹窗底部sticky按钮区域 */
 .modal-sticky-footer {
   position: sticky;
   bottom: 0;
@@ -885,14 +878,47 @@ body {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 12px 0;
+  padding: 14px 0;
   margin-top: 16px;
   margin-left: -24px;
   margin-right: -24px;
   padding-left: 24px;
   padding-right: 24px;
-  background: var(--neutral-white);
-  border-top: 1px solid var(--table-border-color);
+  background: linear-gradient(to top, var(--color-bg-base, #fff) 70%, transparent);
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+/* 大弹窗 (60vw) body 滚动优化 */
+.resizable-modal-lg .ant-modal-body {
+  max-height: calc(82vh - 120px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+}
+
+.resizable-modal-lg .ant-modal-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.resizable-modal-lg .ant-modal-body::-webkit-scrollbar-thumb {
+  background: var(--color-border-antd, #d9d9d9);
+  border-radius: 4px;
+}
+
+.resizable-modal-lg .ant-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 全站表单 label 统一右对齐（当水平布局时） */
+.ant-form-horizontal .ant-form-item-label {
+  text-align: right;
+  padding-right: 12px;
+}
+
+/* 表单 label 垂直布局时不做额外偏移 */
+.ant-form-vertical .ant-form-item-label {
+  text-align: left;
+  padding-bottom: 0;
 }
 
 /* ========================================
@@ -902,7 +928,7 @@ body {
 /* 表格基础样式 */
 .ant-table {
   font-size: var(--table-cell-font-size, var(--font-size-sm));
-  line-height: 1.5;
+  line-height: 1.35;
   transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
@@ -913,17 +939,13 @@ body {
   background: var(--table-header-bg);
   color: var(--neutral-text);
   text-align: center !important;
-  height: var(--table-header-height, 48px);
-  padding: var(--table-header-padding-y, 12px) var(--table-header-padding-x, 8px);
+  height: var(--table-header-height, 40px);
+  padding: var(--table-header-padding-y, 8px) var(--table-header-padding-x, 8px);
   border-bottom: 2px solid var(--table-border-color) !important;
   letter-spacing: 0.02em;
   transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
               padding 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
               height 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
-}
-
-.ant-table-thead > tr > th.ant-table-cell-align-left {
-  text-align: left !important;
 }
 
 .ant-table-thead > tr > th.ant-table-cell-align-right {
@@ -952,14 +974,10 @@ body {
   font-size: var(--table-cell-font-size, var(--font-size-sm));
   font-weight: var(--font-weight-normal);
   text-align: center !important;
-  padding: var(--table-cell-padding-y, 10px) var(--table-cell-padding-x, 8px);
-  line-height: 1.5;
+  padding: var(--table-cell-padding-y, 8px) var(--table-cell-padding-x, 8px) !important;
+  line-height: 1.35;
   transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
               padding 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
-}
-
-.ant-table-tbody > tr > td.ant-table-cell-align-left {
-  text-align: left !important;
 }
 
 .ant-table-tbody > tr > td.ant-table-cell-align-right {
@@ -968,17 +986,17 @@ body {
 
 /* 单元格内容 */
 .ant-table-cell {
-  line-height: 1.5;
+  line-height: 1.35;
   vertical-align: middle;
   white-space: normal;
   word-break: break-word;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   min-width: var(--table-min-col-width, 60px);
 }
 .ant-table-cell-ellipsis {
-  white-space: normal;
-  text-overflow: clip;
-  overflow: visible;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 .ant-table-cell .ant-space,
 .ant-table-cell .ant-space-compact,
@@ -1121,7 +1139,7 @@ body {
 
 .resizable-table .resizable-handle:hover::after,
 .resizable-table .resizable-handle:active::after {
-  background: rgba(45, 127, 249, 0.6);
+  background: color-mix(in srgb, var(--primary-color) 60%, transparent);
   width: 2px;
   right: 2px;
 }
@@ -1158,7 +1176,7 @@ body {
 }
 
 .resizable-table .ant-table-cell {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   word-break: break-word;
   white-space: normal;
 }
@@ -1311,10 +1329,11 @@ body {
 }
 
 .row-actions.ant-space {
-  width: 72px;
   display: inline-flex;
   justify-content: center;
   column-gap: 4px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .ant-table-tbody > tr > td .row-actions {
@@ -1324,8 +1343,8 @@ body {
 /* 图标按钮样式 */
 .row-actions .ant-btn-link.row-actions__btn--icon,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: none;
   background: transparent;
@@ -1344,10 +1363,11 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(45, 127, 249, 0.18);
-  background: rgba(45, 127, 249, 0.08);
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 18%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  border-radius: 6px;
   transition: all 0.2s ease;
 }
 
@@ -1376,8 +1396,8 @@ body {
 
 .row-actions .ant-btn-link.row-actions__btn--icon:not(:disabled):hover::before,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only:not(:disabled):hover::before {
-  border-color: rgba(45, 127, 249, 0.35);
-  background: rgba(45, 127, 249, 0.16);
+  border-color: color-mix(in srgb, var(--primary-color) 35%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 16%, transparent);
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon.row-actions__btn--primary:not(.ant-btn-dangerous) {
@@ -1385,8 +1405,8 @@ body {
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon.row-actions__btn--primary:not(.ant-btn-dangerous)::before {
-  border-color: rgba(45, 127, 249, 0.35);
-  background: rgba(45, 127, 249, 0.18);
+  border-color: color-mix(in srgb, var(--primary-color) 35%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 18%, transparent);
 }
 
 /* 危险操作按钮 */
@@ -1456,6 +1476,36 @@ body {
 .row-actions .ant-btn-link:disabled {
   color: rgba(0, 0, 0, 0.28) !important;
   cursor: not-allowed !important;
+}
+
+/* 表格空状态 */
+.ant-table-wrapper .ant-empty {
+  margin: 48px 0;
+}
+
+.ant-table-wrapper .ant-empty .ant-empty-image {
+  height: 80px;
+  margin-bottom: 12px;
+}
+
+.ant-table-wrapper .ant-empty .ant-empty-description {
+  color: var(--color-text-tertiary, #9ca3af);
+  font-size: 14px;
+}
+
+/* 表格紧凑模式 — 图标按钮也缩到24px */
+.table-action-compact .ant-btn-link.ant-btn-icon-only {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.table-action-compact .ant-btn-link.ant-btn-icon-only::before {
+  width: 20px;
+  height: 20px;
+}
+
+.table-action-compact .row-actions__btn--icon .anticon {
+  font-size: 14px;
 }
 
 /* ========================================
@@ -1916,11 +1966,34 @@ body {
 /* ── 1. 表单标签层次感（500 weight + 稍暗） ── */
 .ant-form-item-label > label {
   font-weight: 500 !important;
-  color: rgba(0, 0, 0, 0.70) !important;
+  color: rgba(0, 0, 0, 0.72) !important;
   letter-spacing: 0.004em;
+  font-size: 14px !important;
 }
 [data-theme="dark"] .ant-form-item-label > label {
   color: rgba(240, 242, 245, 0.80) !important;
+}
+
+/* ── 表单校验错误提示更清晰 ── */
+.ant-form-item-explain-error {
+  font-size: 12px !important;
+  margin-top: 2px !important;
+  padding: 2px 0 !important;
+  color: var(--color-danger) !important;
+}
+
+/* ── 表单项间距更舒适 ── */
+.ant-form-vertical .ant-form-item,
+.ant-form-item:not(.ant-form-item-with-help) {
+  margin-bottom: 16px !important;
+}
+
+/* ── 表单内输入框宽度自适应 ── */
+.ant-form-item .ant-input,
+.ant-form-item .ant-select,
+.ant-form-item .ant-input-number,
+.ant-form-item .ant-picker {
+  width: 100%;
 }
 
 /* ── 2. 统计数字等宽对齐 & 渲染清晰 ── */
@@ -1946,22 +2019,22 @@ body {
   color: rgba(240, 242, 245, 0.55) !important;
 }
 
-/* ── 4. 占位符颜色更柔和（减少认知负荷） ── */
+/* ── 4. 占位符颜色更柔和且可辨识 ── */
 .ant-input::placeholder,
 .ant-input-number-input::placeholder {
-  color: rgba(0, 0, 0, 0.26) !important;
+  color: rgba(0, 0, 0, 0.30) !important;
 }
 .ant-select-selection-placeholder {
-  color: rgba(0, 0, 0, 0.26) !important;
+  color: rgba(0, 0, 0, 0.30) !important;
 }
 .ant-picker-input > input::placeholder {
-  color: rgba(0, 0, 0, 0.26) !important;
+  color: rgba(0, 0, 0, 0.30) !important;
 }
 [data-theme="dark"] .ant-input::placeholder,
 [data-theme="dark"] .ant-input-number-input::placeholder,
 [data-theme="dark"] .ant-select-selection-placeholder,
 [data-theme="dark"] .ant-picker-input > input::placeholder {
-  color: rgba(255, 255, 255, 0.28) !important;
+  color: rgba(255, 255, 255, 0.32) !important;
 }
 
 /* ── 5. 弹窗/卡片内正文行高更舒展 ── */
@@ -1971,13 +2044,23 @@ body {
   line-height: 1.65;
 }
 
-/* ── 6. 空表格提示更低调 ── */
+/* ── 6. 空表格提示更友好 — 带操作引导 ── */
+.ant-table-placeholder {
+  padding: 48px 16px !important;
+}
+.ant-table-placeholder .ant-empty {
+  margin: 0;
+}
+.ant-table-placeholder .ant-empty-image {
+  height: 48px !important;
+}
 .ant-table-placeholder .ant-empty-description {
-  color: rgba(0, 0, 0, 0.32) !important;
-  font-size: 13px;
+  color: rgba(0, 0, 0, 0.35) !important;
+  font-size: 14px !important;
+  margin-top: 8px !important;
 }
 [data-theme="dark"] .ant-table-placeholder .ant-empty-description {
-  color: rgba(255, 255, 255, 0.30) !important;
+  color: rgba(255, 255, 255, 0.32) !important;
 }
 
 /* ── 7. 卡片头部分隔线更细腻 ── */
@@ -2079,41 +2162,52 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   分辨率智能适配系统 — 5档断点，全分辨率舒适显示
-   原则：字号/间距/组件尺寸随屏幕宽度平滑递增
+   分辨率适配 — 3档简洁方案
+   原则：控件保持 32px（Ant Design 默认），大屏只微调字号
+   级联自然工作，不过度使用 !important
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── 第1档：小屏 (≤1366px) 小笔记本/平板 ── */
+/* ── 基准值（所有屏幕生效，媒体查询只做增量调整）── */
+:root {
+  --control-height: 32px;
+  --control-height-lg: 40px;
+  --control-font-size: 14px;
+  --table-header-font-size: 13px;
+  --table-cell-font-size: 13px;
+  --table-cell-padding-x: 8px;
+  --table-cell-padding-y: 6px;
+  --table-header-padding-x: 8px;
+  --table-header-padding-y: 6px;
+  --table-header-height: 36px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+}
+
+.layout-header,
+.layout-main {
+  transition: height 0.2s ease, margin-top 0.2s ease;
+}
+
+/* ── 小屏 (≤1366px)：紧凑模式 ── */
 @media (max-width: 1366px) {
-  :root {
-    --table-header-font-size: 12px;
-    --table-cell-font-size: 12px;
-    --table-cell-padding-x: 5px;
-    --table-cell-padding-y: 6px;
-    --table-header-padding-x: 5px;
-    --table-header-padding-y: 7px;
-    --table-header-height: 36px;
-    --font-size-sm: 12px;
-    --font-size-xs: 11px;
-  }
   html {
     font-size: 13px;
+  }
+  :root {
+    --control-font-size: 13px;
+    --table-header-font-size: 12px;
+    --table-cell-font-size: 12px;
+    --table-cell-padding-x: 6px;
+    --table-cell-padding-y: 4px;
+    --table-header-padding-x: 6px;
+    --table-header-padding-y: 4px;
+    --table-header-height: 32px;
   }
   .layout-header {
     height: 56px;
   }
   .layout-main {
     margin-top: 56px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker {
-    height: 30px !important;
-  }
-  .ant-btn {
-    height: 30px !important;
-    font-size: 12px !important;
   }
   .ant-table-thead > tr > th .ant-table-column-title {
     white-space: normal;
@@ -2123,147 +2217,19 @@ body {
   }
 }
 
-/* ── 第2档：标准 (1367-1600px) 普通笔记本 ── */
-@media (min-width: 1367px) and (max-width: 1600px) {
-  :root {
-    --table-header-font-size: 13px;
-    --table-cell-font-size: 13px;
-    --table-cell-padding-x: 7px;
-    --table-cell-padding-y: 8px;
-    --table-header-padding-x: 8px;
-    --table-header-padding-y: 10px;
-    --table-header-height: 40px;
-  }
-  html {
-    font-size: 14px;
-  }
-  .layout-header {
-    height: 60px;
-  }
-  .layout-main {
-    margin-top: 60px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker {
-    height: 34px !important;
-  }
-  .ant-btn {
-    height: 34px !important;
-    font-size: 13px !important;
-  }
-}
-
-/* ── 第3档：大屏 (1601-1920px) 台式机1080p ── */
-@media (min-width: 1601px) and (max-width: 1920px) {
+/* ── 大屏 (≥1600px)：字号微调，控件不变（避免放大镜效果）── */
+@media (min-width: 1600px) {
   :root {
     --table-header-font-size: 14px;
     --table-cell-font-size: 14px;
-    --table-cell-padding-x: 10px;
-    --table-cell-padding-y: 10px;
-    --table-header-padding-x: 12px;
-    --table-header-padding-y: 12px;
-    --table-header-height: 46px;
-  }
-  html {
-    font-size: 15px;
-  }
-  .layout-header {
-    height: 64px;
-  }
-  .layout-main {
-    margin-top: 64px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker {
-    height: 36px !important;
-  }
-  .ant-btn {
-    height: 36px !important;
-    font-size: 14px !important;
-  }
-  .ant-modal {
-    min-width: min(800px, 90vw) !important;
-  }
-}
-
-/* ── 第4档：宽屏 (1921-2560px) 2K显示器 ── */
-@media (min-width: 1921px) and (max-width: 2560px) {
-  :root {
-    --table-header-font-size: 15px;
-    --table-cell-font-size: 15px;
-    --table-cell-padding-x: 12px;
-    --table-cell-padding-y: 12px;
-    --table-header-padding-x: 14px;
-    --table-header-padding-y: 14px;
-    --table-header-height: 50px;
-  }
-  html {
-    font-size: 16px;
-  }
-  .layout-header {
-    height: 72px;
-  }
-  .layout-main {
-    margin-top: 72px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker {
-    height: 40px !important;
-  }
-  .ant-btn {
-    height: 40px !important;
-    font-size: 15px !important;
-  }
-  .ant-modal {
-    min-width: min(960px, 90vw) !important;
   }
   .smart-alert-panel {
     width: 440px;
   }
-  .container {
-    padding: 0 var(--spacing-lg);
-  }
 }
 
-/* ── 第5档：超宽屏 (≥2561px) 4K+显示器 ── */
-@media (min-width: 2561px) {
-  :root {
-    --table-header-font-size: 17px;
-    --table-cell-font-size: 16px;
-    --table-cell-padding-x: 16px;
-    --table-cell-padding-y: 14px;
-    --table-header-padding-x: 20px;
-    --table-header-padding-y: 16px;
-    --table-header-height: 56px;
-  }
-  html {
-    font-size: 18px;
-  }
-  .layout-header {
-    height: 80px;
-  }
-  .layout-main {
-    margin-top: 80px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker {
-    height: 44px !important;
-  }
-  .ant-btn {
-    height: 44px !important;
-    font-size: 16px !important;
-  }
-  .ant-modal {
-    min-width: min(1100px, 90vw) !important;
-  }
+/* ── 2K+ (≥1921px) ── */
+@media (min-width: 1921px) {
   .smart-alert-panel {
     width: 520px;
   }

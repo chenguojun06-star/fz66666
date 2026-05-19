@@ -174,7 +174,6 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                           storageKey="style-pattern-requirements"
                          
                           pagination={false}
-                          resizableColumns={false}
                           dataSource={lines.map((line, idx) => ({
                             key: idx,
                             content: line

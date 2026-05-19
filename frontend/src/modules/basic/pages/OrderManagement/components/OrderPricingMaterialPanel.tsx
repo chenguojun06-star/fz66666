@@ -57,12 +57,12 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#1f1f1f' }}>单价与面辅料分析</div>
-          <div style={{ marginTop: 4, fontSize: 12, color: '#8c8c8c' }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>单价与面辅料分析</div>
+          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--color-text-secondary)' }}>
             {factoryMode === 'EXTERNAL' ? '成本价格已匹配外发整件单价' : '内部工厂继续使用工序单价'} · 报价参考 {quotationUnitPrice > 0 ? `¥${quotationUnitPrice.toFixed(2)}` : '-'}
           </div>
         </div>
-        <div style={{ fontSize: 12, color: '#8c8c8c' }}>{sizePriceLoading ? '码价读取中...' : `已维护 ${sizePriceCount} 条码价`}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{sizePriceLoading ? '码价读取中...' : `已维护 ${sizePriceCount} 条码价`}</div>
       </div>
       <div
         style={{
@@ -74,7 +74,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
         }}
       >
         <div style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-          <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>单价</div>
+          <div style={{ paddingTop: 6, fontSize: 12, color: 'var(--color-text-secondary)' }}>单价</div>
           <div>
             <Form.Item name="pricingMode" initialValue="PROCESS" style={{ marginBottom: 0 }}>
               <Select
@@ -91,7 +91,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-          <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>锁定价格</div>
+          <div style={{ paddingTop: 6, fontSize: 12, color: 'var(--color-text-secondary)' }}>锁定价格</div>
           <div>
             {watchedPricingMode === 'MANUAL' ? (
               <Form.Item
@@ -102,9 +102,9 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
                 <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入单价" />
               </Form.Item>
             ) : (
-              <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 12, color: '#595959' }}>
+              <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--color-text-secondary)' }}>
                 <span style={{ fontWeight: 600, color: '#1677ff' }}>¥{resolvedOrderUnitPrice.toFixed(2)} / 件</span>
-                {suggestedQuotationUnitPrice > 0 ? <span style={{ marginLeft: 8, color: '#8c8c8c' }}>建议报价 ¥{suggestedQuotationUnitPrice.toFixed(2)}</span> : null}
+                {suggestedQuotationUnitPrice > 0 ? <span style={{ marginLeft: 8, color: 'var(--color-text-secondary)' }}>建议报价 ¥{suggestedQuotationUnitPrice.toFixed(2)}</span> : null}
               </div>
             )}
           </div>
@@ -116,7 +116,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
        
         items={[{
           key: 'analysis',
-          label: <span style={{ fontSize: 12, color: '#8c8c8c' }}>明细分析</span>,
+          label: <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>明细分析</span>,
           children: (
             <div
               style={{
@@ -124,13 +124,13 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
                 gridTemplateColumns: '1fr 1fr 1.2fr',
                 gap: 12,
                 fontSize: 12,
-                color: '#595959',
+                color: 'var(--color-text-secondary)',
                 lineHeight: '20px',
               }}
             >
         <div style={{ padding: 12, borderRadius: 8, border: '1px solid #f0f0f0', background: '#fcfcfd', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontWeight: 600, color: '#1f1f1f' }}>码数与单价</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>码数与单价</div>
             <Tag color={orchestration.pricingStatus}>{orchestration.pricingMode}</Tag>
           </div>
           <div>尺码：{orchestration.sizeLabels.length ? orchestration.sizeLabels.join('、') : '-'}</div>
@@ -139,7 +139,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
         </div>
         <div style={{ padding: 12, borderRadius: 8, border: '1px solid #f0f0f0', background: '#fcfcfd', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontWeight: 600, color: '#1f1f1f' }}>面辅料散剪</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>面辅料散剪</div>
             <Tag color={orchestration.scatterStatus}>{orchestration.scatterMode}</Tag>
           </div>
           <div>{orchestration.fabricFamily} / {orchestration.fabricSubcategory || '常规品类'}</div>
@@ -149,7 +149,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
         </div>
         <div style={{ padding: 12, borderRadius: 8, border: '1px solid #f0f0f0', background: '#fcfcfd', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-            <div style={{ fontWeight: 600, color: '#1f1f1f' }}>面料差异</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>面料差异</div>
             <div style={{ color: orchestration.scatterLevel === 'high' ? '#cf1322' : orchestration.scatterLevel === 'medium' ? '#d48806' : '#389e0d' }}>
               {scatterDecisionText}
             </div>
@@ -158,8 +158,8 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
             {visibleMaterials.slice(0, 2).map((item) => (
               <div key={item.key} style={{ padding: 8, borderRadius: 8, border: '1px solid #f0f0f0', background: '#fff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                  <div style={{ fontWeight: 600, color: '#1f1f1f' }}>{item.categoryLabel}</div>
-                  <div style={{ color: '#8c8c8c' }}>{item.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.categoryLabel}</div>
+                  <div style={{ color: 'var(--color-text-secondary)' }}>{item.label}</div>
                 </div>
                 <div>需求：{item.requiredMeters} 米</div>
                 <div>基准：{item.benchmarkMeters} 米</div>

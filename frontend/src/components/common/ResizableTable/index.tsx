@@ -40,10 +40,6 @@ import {
 
 type ResizableTableProps<T extends object> = TableProps<T> & {
   storageKey?: string;
-  /** @deprecated 无操作，保留仅兼容旧调用 */
-  resizableColumns?: boolean;
-  /** @deprecated 无操作，保留仅兼容旧调用 */
-  autoScrollY?: boolean;
   allowFixedColumns?: boolean;
   reorderableColumns?: boolean;
   stickyFooter?: boolean;
@@ -422,7 +418,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           scroll={mergedScroll as TableProps<T>['scroll']}
           tableLayout={tableLayout || 'fixed'}
           size={responsiveTableSize}
-          style={{ wordBreak: 'break-all' }}
+          style={{}}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />

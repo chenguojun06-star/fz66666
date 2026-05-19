@@ -21,6 +21,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       dataIndex: 'cover',
       key: 'cover',
       width: 72,
+      fixed: 'left' as const,
       render: (_: any, record: StyleInfo) => (
         <StyleCoverThumb styleId={(record as any).id} styleNo={record.styleNo} src={(record as any).cover || null} />
       )
@@ -29,7 +30,8 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
-      width: 140,
+      width: 130,
+      fixed: 'left' as const,
       render: (_: any, record: StyleInfo) => record.styleNo,
     },
     { title: 'SKC', dataIndex: 'skc', key: 'skc', width: 140, render: (v: any) => v || '-' },
@@ -38,14 +40,14 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       title: '品类',
       dataIndex: 'category',
       key: 'category',
-      width: 120,
+      width: 110,
       render: (v: unknown) => toCategoryCn(v),
     },
     {
       title: '季节',
       dataIndex: 'season',
       key: 'season',
-      width: 100,
+      width: 90,
       render: (v: unknown) => toSeasonCn(v),
     },
     {
@@ -58,7 +60,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
     {
       title: '来源',
       key: 'developmentSourceType',
-      width: 150,
+      width: 120,
       render: (_: unknown, record: StyleInfo) => {
         const source = getStyleSourceMeta(record);
         return <Tag color={source.color}>{source.label}</Tag>;
@@ -68,8 +70,12 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       title: '下单次数',
       dataIndex: 'orderCount',
       key: 'orderCount',
-      width: 110,
-      render: (v: unknown) => Number(v) || 0,
+      width: 100,
+      align: 'right' as const,
+      render: (v: unknown) => {
+        const n = Number(v) || 0;
+        return n.toLocaleString('zh-CN');
+      },
     },
     {
       title: '最近下单',

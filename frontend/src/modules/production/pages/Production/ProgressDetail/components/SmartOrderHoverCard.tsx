@@ -581,7 +581,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       <SmartActionRecommend
         order={order}
         currentStage={firstActive?.stageName || firstActive?.label}
-        isStuck={!!stuckNode}
+        isStuck={false}
       />
 
       {/* 跟单 + 备注 */}

@@ -28,10 +28,10 @@ interface Props {
   onComplete: (id: string) => void;
   onEdit: (task: TaskItem) => void;
   onCreate: () => void;
-  onOpenInFrame: (path: string, label: string) => void;
+  onNavigate: (path: string) => void;
 }
 
-const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, onEdit, onCreate, onOpenInFrame }) => {
+const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, onEdit, onCreate, onNavigate }) => {
   const [statusTab, setStatusTab] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -57,7 +57,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
 
   const handleCardClick = (task: TaskItem) => {
     if (task.source === 'system' && task.deepLinkPath) {
-      onOpenInFrame(task.deepLinkPath, task.title);
+      onNavigate(task.deepLinkPath);
     } else {
       onEdit(task);
     }
@@ -119,7 +119,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
                   )}
                   {isSystem && task.deepLinkPath && (
                     <button className={`${styles.actionBtn} ${styles.claimBtn}`}
-                      onClick={() => onOpenInFrame(task.deepLinkPath!, task.title)}>
+                      onClick={() => onNavigate(task.deepLinkPath!)}>
                       打开
                     </button>
                   )}

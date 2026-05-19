@@ -66,7 +66,6 @@ const ProductionSheetPanel: React.FC<Props> = ({
       <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
       <ResizableTable
         rowKey="key" pagination={false}
-        resizableColumns={false}
         dataSource={fixedRows}
         columns={[
           {

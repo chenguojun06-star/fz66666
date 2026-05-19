@@ -11,7 +11,7 @@ const InlineField: React.FC<InlineFieldProps> = ({
 }) => {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr)', gap: 6, alignItems: 'center' }}>
-      <div style={{ fontSize: 14, lineHeight: '22px', color: 'var(--neutral-text)', whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 500, lineHeight: '22px', color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>{label}</div>
       <div style={{ width: 'calc(100% - 20px)' }}>{children}</div>
     </div>
   );

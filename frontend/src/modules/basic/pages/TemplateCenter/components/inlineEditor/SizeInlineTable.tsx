@@ -296,7 +296,6 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
       )}
       <ResizableTable
         bordered
-        autoScrollY={false}
         pagination={false}
         reorderableColumns={false}
         scroll={{ x: compact ? 336 + value.sizes.length * 80 : 'max-content' }}

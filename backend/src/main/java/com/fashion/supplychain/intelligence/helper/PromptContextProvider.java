@@ -56,6 +56,9 @@ public class PromptContextProvider {
     @Autowired(required = false)
     private IntelligenceFeedbackRecordMapper feedbackRecordMapper;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
+
     /**
      * 系统操作指南类查询关键词 — 命中时注入知识库内容到系统提示词，
      * 确保小云即使不调用 tool_knowledge_search 也能回答基础操作问题。
@@ -113,9 +116,9 @@ public class PromptContextProvider {
                 Object headline = summary.get("headline");
                 Object riskLevel = summary.get("overallRiskLevel");
                 if (headline != null) {
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("【实时经营快照】\n");
-                    sb.append(headline).append("\n");
+                StringBuilder sb = new StringBuilder();
+                sb.append("【实时经营快照】（数据更新于 ").append(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).append("，为预计算快照，可能延迟5-10分钟，如需实时数据请调用工具查询最新值）\n");
+                sb.append(headline).append("\n");
                     if (riskLevel != null) {
                         sb.append("整体风险等级：").append(riskLevel).append("\n");
                     }
@@ -240,6 +243,31 @@ public class PromptContextProvider {
             }
         } catch (Exception e) {
             log.debug("[AiAgent-RAG] 混合检索跳过: {}", e.getMessage());
+        }
+
+        // ── 路径3：语义向量检索（Qdrant）── 关键词未命中时降级到语义搜索
+        if (!hasContent && userMessage != null && !userMessage.isBlank() && qdrantService != null) {
+            try {
+                List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> semanticResults =
+                        qdrantService.search(tenantId, userMessage, ragRecallTopK);
+                if (semanticResults != null && !semanticResults.isEmpty()) {
+                    result.append("【语义检索 — 相关文档】\n");
+                    for (int i = 0; i < Math.min(3, semanticResults.size()); i++) {
+                        var sp = semanticResults.get(i);
+                        String content = sp.getPayload() != null
+                                ? (String) sp.getPayload().getOrDefault("content", "")
+                                : "";
+                        if (content.length() > 500) content = content.substring(0, 500) + "…";
+                        result.append(String.format("  %d. [相似度%.2f] %s\n",
+                                i + 1, sp.getScore(),
+                                content.isBlank() ? "（无内容）" : content));
+                    }
+                    result.append("（以上为语义检索结果，判断须以工具查询的实时数据为准）\n\n");
+                    hasContent = true;
+                }
+            } catch (Exception e) {
+                log.debug("[AiAgent-RAG] 语义检索跳过: {}", e.getMessage());
+            }
         }
 
         if (!hasContent) {

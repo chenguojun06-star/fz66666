@@ -8,13 +8,19 @@
 }
 
 .standard-search-input {
-  width: 200px;
+  width: 240px;
+  transition: width 0.2s ease;
+}
+
+.standard-search-input:focus,
+.standard-search-input:focus-within {
+  width: 300px;
 }
 
 .standard-search-date {
-  width: 260px;
+  width: 280px;
 }
 
 .standard-search-status {
-  width: 120px;
+  width: 140px;
 }

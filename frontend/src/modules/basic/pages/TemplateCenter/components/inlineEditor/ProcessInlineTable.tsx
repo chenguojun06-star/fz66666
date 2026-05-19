@@ -418,7 +418,6 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
       <ResizableTable
         storageKey="maintenance-inline-process-editor"
         bordered
-        autoScrollY={false}
         pagination={false}
         reorderableColumns={false}
         scroll={{ x: compact ? (showSizePrices ? 760 + templateSizes.length * 80 : 760) : (showSizePrices ? 960 + templateSizes.length * 95 : 960) }}

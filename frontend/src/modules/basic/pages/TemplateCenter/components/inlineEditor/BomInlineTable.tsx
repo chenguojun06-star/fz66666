@@ -494,7 +494,6 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
       <ResizableTable
         storageKey="maintenance-inline-bom-editor"
         bordered
-        autoScrollY={false}
         pagination={false}
         reorderableColumns={false}
         scroll={{ x: 'max-content' }}

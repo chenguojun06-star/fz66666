@@ -193,7 +193,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           const actionButtons: StageQuickAction[] = (() => {
             if (isScrappedRow(record)) {
               return [
-                { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
+                { key: 'detail', label: '详情', type: 'link' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
                 { key: 'remark', label: '备注', type: 'default' as const, onClick: () => setRemarkTarget({ open: true, styleNo: (record as any).styleNo || '' }) },
               ];
@@ -201,7 +201,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
             if (isStageDoneRow(record)) {
               const items = [
-                { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
+                { key: 'detail', label: '详情', type: 'link' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 hasPushedOrder(record)
                   ? { key: 'order-view', label: '生产订单', type: 'default' as const, onClick: () => navigate(`/production?keyword=${encodeURIComponent((record as any).orderNo || (record as any).styleNo || '')}`) }
                   : { key: 'order-push', label: '资料推送', type: 'default' as const, onClick: () => navigate(`/style-info/${record.id}`) },
@@ -218,7 +218,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             }
 
             return [
-              { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
+              { key: 'detail', label: '详情', type: 'link' as const, onClick: () => navigate(`/style-info/${record.id}`) },
               { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
               { key: 'scrap', label: '报废', type: 'default' as const, danger: true, onClick: () => onScrap(String(record.id!)) },
               { key: 'copy', label: '复制', type: 'default' as const, onClick: () => { setCopySource(record); setCopyModalOpen(true); } },
@@ -266,6 +266,9 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     <div className="style-smart-row__tags">
                       <Tag color={getProgressNodeColor(progressNode)}>{progressNode}</Tag>
                       {maintainedAfterCompletion ? <Tag color="gold">已维护</Tag> : null}
+                      <span className={`style-smart-row__delivery style-smart-row__delivery--${isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone}`}>
+                        {deliveryMeta.label}
+                      </span>
                     </div>
 
                     <Popover
@@ -284,9 +287,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                           {record.styleNo}
                         </button>
                         <div className="style-smart-row__title-name">{record.styleName || '未命名样衣'}</div>
-                        <span className={`style-smart-row__delivery style-smart-row__delivery--${isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone}`}>
-                          {deliveryMeta.label}
-                        </span>
                       </div>
                     </Popover>
 
@@ -342,12 +342,25 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                             <span className="style-smart-stage__core" />
                             <span className="style-smart-stage__check" />
                           </div>
-                          <div className="style-smart-stage__label">{stage.label}</div>
-                          <div className="style-smart-stage__time-combined">
-                            <span className="style-smart-stage__time-start-inline">{stage.startTimeLabel || '--'}</span>
-                            <span className="style-smart-stage__time-sep"> ~ </span>
-                            <span className="style-smart-stage__time-end-inline">{stage.timeLabel || '--'}</span>
+                          <div className="style-smart-stage__label">
+                            {stage.label}
+                            {stage.status === 'done' && stage.timeLabel && stage.timeLabel !== '已完成' ? (
+                              <span className="style-smart-stage__label-time"> {stage.timeLabel}</span>
+                            ) : null}
                           </div>
+                          {stage.status !== 'done' ? (
+                            stage.status === 'active' ? (
+                              <div className="style-smart-stage__time-combined">
+                                <span className="style-smart-stage__time-start-inline">{stage.startTimeLabel || '--'}</span>
+                                <span className="style-smart-stage__time-sep"> ~ </span>
+                                <span className="style-smart-stage__time-end-inline">{stage.timeLabel || '--'}</span>
+                              </div>
+                            ) : (
+                              <div className="style-smart-stage__time-combined">
+                                <span className="style-smart-stage__time-start-inline">待启动</span>
+                              </div>
+                            )
+                          ) : null}
                         </button>
                       ))}
                     </div>

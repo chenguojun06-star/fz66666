@@ -165,7 +165,7 @@ export interface ReportPreviewOrder {
   plannedEndDate: string | null;
 }
 
-export type PanelView = 'chat' | 'tasks' | 'links' | 'page';
+export type PanelView = 'chat' | 'tasks';
 
 export type TaskStatus = 'pending' | 'in_progress' | 'accepted' | 'completed' | 'cancelled';
 export type TaskPriority = 'high' | 'medium' | 'low';

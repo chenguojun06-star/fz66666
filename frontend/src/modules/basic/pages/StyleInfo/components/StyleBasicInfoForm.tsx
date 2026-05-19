@@ -63,6 +63,7 @@ interface StyleBasicInfoFormProps {
   setCommonSizes: (v: string[]) => void;
   commonColors: string[];
   setCommonColors: (v: string[]) => void;
+  onAutoUnlock?: () => void;
 }
 
 /**
@@ -85,6 +86,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   sizeOptions, setSizeOptions, colorOptions, setColorOptions,
   sizeColorMatrixRows, setSizeColorMatrixRows,
   commonSizes, setCommonSizes, commonColors, setCommonColors,
+  onAutoUnlock,
   onColorImageSync,
   onColorImageClear,
   onSkcClick
@@ -344,6 +346,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             setCommonColors={setCommonColors}
             editLocked={editLocked}
             isFieldLocked={isFieldLocked}
+            onAutoUnlock={onAutoUnlock}
           />
         </Col>
       </Row>

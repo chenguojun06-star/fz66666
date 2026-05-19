@@ -464,12 +464,13 @@ public class AiAgentOrchestrator {
 
 
     private boolean isQuickPathEligible(String userMessage) {
-        if (userMessage == null || userMessage.length() > 200) return false;
-        if (XiaoyunPatterns.isComplexTrigger(userMessage)) return false;
-        if (XiaoyunPatterns.isBusinessKeyword(userMessage)) return false;
-        if (XiaoyunPatterns.isGreeting(userMessage)) return true;
-        if (userMessage.length() <= 8) return true;
-        return false;
+        if (userMessage == null || userMessage.length() > 500) return false;
+        XiaoyunPatterns.IntentType intent = XiaoyunPatterns.estimateIntent(userMessage);
+        if (intent == XiaoyunPatterns.IntentType.ACTION_COMMAND) return false;
+        if (intent == XiaoyunPatterns.IntentType.COMPLEX_ANALYSIS) return false;
+        if (intent == XiaoyunPatterns.IntentType.SMALL_TALK) return true;
+        if (intent == XiaoyunPatterns.IntentType.KNOWLEDGE_ASK) return true;
+        return userMessage.length() <= 20;
     }
 
     private boolean tryQuickPath(String userMessage, String pageContext, SseEmitter emitter,
@@ -537,23 +538,25 @@ public class AiAgentOrchestrator {
                 }
             }
 
-            com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult result =
-                    inferenceGateway.chat("ai-advisor", sysPrompt.toString(), userMessage);
+            com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult result;
+            java.util.List<com.fashion.supplychain.intelligence.agent.AiMessage> quickMsgs = java.util.List.of(
+                    com.fashion.supplychain.intelligence.agent.AiMessage.system(sysPrompt.toString()),
+                    com.fashion.supplychain.intelligence.agent.AiMessage.user(userMessage));
+            StringBuilder answerBuf = new StringBuilder();
+            result = inferenceGateway.chatStream("ai-advisor", quickMsgs, java.util.List.of(),
+                    (chunk, done) -> { if (done) return; answerBuf.append(chunk);
+                        try { emitSse(emitter, "answer_chunk", java.util.Map.of("chunk", chunk, "commandId", commandId)); }
+                        catch (Exception e) { log.debug("[QuickPath] chunk发送跳过"); } });
+            String answer = answerBuf.toString();
 
-            if (!result.isSuccess() || result.getContent() == null || result.getContent().isBlank()) {
-                log.info("[QuickPath] 单次调用未产出有效回答: {}", result.getErrorMessage());
+            if (!result.isSuccess() || answer.isBlank()) {
+                log.info("[QuickPath] 快速通道未产出有效回答: {}", result.getErrorMessage());
                 return false;
             }
 
             long elapsed = System.currentTimeMillis() - requestStartAt;
-            if (elapsed > quickPathTimeoutMs) {
-                log.info("[QuickPath] 耗时{}ms超过快速通道上限{}ms，降级到Agent循环", elapsed, quickPathTimeoutMs);
-                return false;
-            }
+            log.info("[QuickPath] 快速通道完成(流式): {}字符, {}ms", answer.length(), elapsed);
 
-            String answer = result.getContent();
-
-            // === 快速通道质量门审查（新增）===
             if (quickPathQualityGate != null) {
                 QuickPathQualityGate.QualityGateResult gateResult = quickPathQualityGate.review(userMessage, answer);
                 if (!gateResult.isPassed()) {
@@ -562,9 +565,6 @@ public class AiAgentOrchestrator {
                 }
             }
 
-            log.info("[QuickPath] 快速通道完成: {}字符, {}ms", answer.length(), elapsed);
-
-            emitSse(emitter, "answer", java.util.Map.of("content", answer, "commandId", commandId));
             emitSse(emitter, "done", java.util.Map.of());
             emitter.complete();
 

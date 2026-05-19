@@ -396,10 +396,18 @@ public class SelfCriticService {
                 || lower.contains("大概") || lower.contains("应该") || lower.contains("估计");
     }
 
+    private static final Pattern DONE_PATTERN = Pattern.compile("(已经|已完成|已入库|已结算|已结束|已出货|已通过)");
+    private static final Pattern NOT_DONE_PATTERN = Pattern.compile("(还没|尚未|还没有|未完成|未入库|未结算|未出货)");
+    private static final Pattern FUTURE_PATTERN = Pattern.compile("(明天|下周|下月|下个月|将来|预计|计划|将要)");
+
     private boolean hasTemporalContradiction(String text) {
-        // 简化检测：如果提到"昨天"但当前不是合理时间（需要更复杂的NLP）
-        // 这里仅做示例性检测
-        return false;
+        if (text == null) return false;
+        boolean hasDone = DONE_PATTERN.matcher(text).find();
+        boolean hasNotDone = NOT_DONE_PATTERN.matcher(text).find();
+        if (hasDone && hasNotDone) return true;
+        boolean hasFuture = FUTURE_PATTERN.matcher(text).find();
+        boolean hasAlready = DONE_PATTERN.matcher(text).find();
+        return hasFuture && hasAlready;
     }
 
     private String truncate(String value, int maxLen) {

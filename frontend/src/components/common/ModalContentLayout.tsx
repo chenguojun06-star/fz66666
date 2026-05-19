@@ -20,13 +20,14 @@ export const ModalHeaderCard: React.FC<HeaderCardProps> = ({ children, isMobile 
     <div
       style={{
         display: 'flex',
-        gap: isMobile ? 10 : 12,
-        padding: isMobile ? 8 : 10,
-        background: 'var(--color-bg-gray)',
-        borderRadius: 12,
-        marginBottom: 10,
+        gap: isMobile ? 10 : 14,
+        padding: isMobile ? 10 : 12,
+        background: 'var(--color-bg-container)',
+        borderRadius: 10,
+        marginBottom: 12,
         maxWidth: '100%',
         overflow: 'hidden',
+        border: '1px solid var(--color-border-light)',
         ...style,
       }}
     >

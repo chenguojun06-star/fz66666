@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.Dict;
 import com.fashion.supplychain.system.service.DictService;
 import java.util.ArrayList;
@@ -87,9 +88,15 @@ public class DictOrchestrator {
             return;
         }
 
-        long count = dictService.count(new LambdaQueryWrapper<Dict>()
+        Long currentTenantId = UserContext.tenantId();
+        LambdaQueryWrapper<Dict> countQuery = new LambdaQueryWrapper<Dict>()
                 .eq(Dict::getDictType, normalizedType)
-                .eq(Dict::getDictLabel, normalizedLabel));
+                .eq(Dict::getDictLabel, normalizedLabel);
+        if (currentTenantId != null) {
+            countQuery.and(w -> w.eq(Dict::getTenantId, currentTenantId)
+                    .or().isNull(Dict::getTenantId));
+        }
+        long count = dictService.count(countQuery);
 
         if (count == 0) {
             Dict dict = new Dict();
@@ -185,11 +192,17 @@ public class DictOrchestrator {
     }
 
     private void validateDuplicate(Dict dict, Long currentId) {
+        Long tenantId = UserContext.tenantId();
+
         LambdaQueryWrapper<Dict> codeQuery = new LambdaQueryWrapper<Dict>()
                 .eq(Dict::getDictType, dict.getDictType())
                 .eq(Dict::getDictCode, dict.getDictCode());
         if (currentId != null) {
             codeQuery.ne(Dict::getId, currentId);
+        }
+        if (tenantId != null) {
+            codeQuery.and(w -> w.eq(Dict::getTenantId, tenantId)
+                    .or().isNull(Dict::getTenantId));
         }
         if (dictService.count(codeQuery) > 0) {
             throw new IllegalArgumentException("同类型下字典编码已存在: " + dict.getDictCode());
@@ -200,6 +213,10 @@ public class DictOrchestrator {
                 .eq(Dict::getDictLabel, dict.getDictLabel());
         if (currentId != null) {
             labelQuery.ne(Dict::getId, currentId);
+        }
+        if (tenantId != null) {
+            labelQuery.and(w -> w.eq(Dict::getTenantId, tenantId)
+                    .or().isNull(Dict::getTenantId));
         }
         if (dictService.count(labelQuery) > 0) {
             throw new IllegalArgumentException("同类型下字典标签已存在: " + dict.getDictLabel());

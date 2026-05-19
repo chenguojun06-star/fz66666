@@ -13,7 +13,6 @@ const OrderLinesTable: React.FC<Props> = ({ rows, loading }) => (
       storageKey="order-lines-warehousing-table"
       rowKey="key" loading={loading}
       pagination={false} dataSource={rows}
-      resizableColumns={false}
       scroll={{ x: 820 }}
       style={{ fontSize: 12 }}
       columns={[

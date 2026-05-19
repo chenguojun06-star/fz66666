@@ -29,6 +29,11 @@ import {
 } from './riskBadgeRenderers';
 import type { StageProgressContext } from './riskBadgeRenderers';
 
+const formatQuantity = (v: unknown): string => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n.toLocaleString('zh-CN') : '0';
+};
+
 export interface UseProductionColumnsProps {
   sortField: string;
   sortOrder: 'asc' | 'desc';
@@ -88,6 +93,7 @@ export function useProductionColumns({
       dataIndex: 'styleCover',
       key: 'styleCover',
       width: 72,
+      fixed: 'left' as const,
       render: (_: any, record: any) => (
         <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
       )
@@ -96,7 +102,8 @@ export function useProductionColumns({
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: 120,
+      width: 160,
+      fixed: 'left' as const,
       render: (v: any, record: ProductionOrder) => {
         const orderNo = safeString(v, '');
         const styleNo = safeString((record as any)?.styleNo, '');
@@ -143,7 +150,8 @@ export function useProductionColumns({
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
-      width: 100,
+      width: 110,
+      fixed: 'left' as const,
     },
     {
       title: 'SKC',
@@ -237,6 +245,7 @@ export function useProductionColumns({
       key: 'orderQuantity',
       width: 100,
       align: 'right' as const,
+      render: (v: unknown) => formatQuantity(v),
     },
     {
       title: '单价',
@@ -246,7 +255,7 @@ export function useProductionColumns({
       render: (_: any, record: any) => {
         const v = Number(record?.factoryUnitPrice);
         return (Number.isFinite(v) && v > 0)
-          ? <span style={{ fontWeight: 500 }}>¥{v.toFixed(2)}</span>
+          ? <span style={{ fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>¥{v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           : <span style={{ color: '#8c8c8c' }}>-</span>;
       },
     },
@@ -385,7 +394,7 @@ export function useProductionColumns({
       key: 'cuttingQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: unknown) => Number(v ?? 0) || 0,
+      render: (v: unknown) => formatQuantity(v),
     },
     {
       title: '扎数',
@@ -393,7 +402,7 @@ export function useProductionColumns({
       key: 'cuttingBundleCount',
       width: 80,
       align: 'right' as const,
-      render: (v: unknown) => Number(v ?? 0) || 0,
+      render: (v: unknown) => formatQuantity(v),
     },
     {
       title: '完成数量',
@@ -401,6 +410,7 @@ export function useProductionColumns({
       key: 'completedQuantity',
       width: 100,
       align: 'right' as const,
+      render: (v: unknown) => formatQuantity(v),
     },
     {
       title: '入库',
@@ -416,7 +426,7 @@ export function useProductionColumns({
       key: 'unqualifiedQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: unknown) => Number(v ?? 0) || 0,
+      render: (v: unknown) => formatQuantity(v),
     },
     {
       title: '返修数',
@@ -424,7 +434,7 @@ export function useProductionColumns({
       key: 'repairQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: unknown) => Number(v ?? 0) || 0,
+      render: (v: unknown) => formatQuantity(v),
     },
     {
       title: '库存',
@@ -432,7 +442,7 @@ export function useProductionColumns({
       key: 'inStockQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: unknown) => Number(v ?? 0) || 0,
+      render: (v: unknown) => formatQuantity(v),
     },
     {
       title: '状态',

@@ -7,6 +7,16 @@ public final class XiaoyunPatterns {
     private XiaoyunPatterns() {
     }
 
+    public enum IntentType {
+        SMALL_TALK,
+        KNOWLEDGE_ASK,
+        SIMPLE_QUERY,
+        COMPLEX_ANALYSIS,
+        ACTION_COMMAND
+    }
+
+    // ── 核心模式 ──────────────────────────────────────────
+
     public static final Pattern GREETING = Pattern.compile(
             "(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|辛苦了|好的|收到|明白|知道了|了解).*"
     );
@@ -23,13 +33,28 @@ public final class XiaoyunPatterns {
             "(?s).*(我是谁|你知道我|我是什么角色|我有什么权限|我的权限|我的角色).*"
     );
 
-    private static final Pattern COMPLEX_TRIGGER_OPERATION = Pattern.compile(
-            "(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作).*"
-    );
+    // ── 意图分类器 ────────────────────────────────────────
 
-    private static final Pattern COMPLEX_TRIGGER_ANALYSIS = Pattern.compile(
-            "(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*"
-    );
+    private static final Pattern KNOWLEDGE_PATTERN = Pattern.compile(
+            "(?s).*(怎么|如何|怎样|教程|指南|流程|步骤|方法|技巧|攻略|说明).*");
+
+    private static final Pattern COMPLEX_OP_PATTERN = Pattern.compile(
+            "(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作).*");
+
+    private static final Pattern COMPLEX_ANALYSIS_PATTERN = Pattern.compile(
+            "(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*");
+
+    public static IntentType estimateIntent(String msg) {
+        if (msg == null) return IntentType.SMALL_TALK;
+        if (isGreeting(msg)) return IntentType.SMALL_TALK;
+        if (COMPLEX_OP_PATTERN.matcher(msg).matches()) return IntentType.ACTION_COMMAND;
+        if (COMPLEX_ANALYSIS_PATTERN.matcher(msg).matches()) return IntentType.COMPLEX_ANALYSIS;
+        if (KNOWLEDGE_PATTERN.matcher(msg).matches() && !isBusinessKeyword(msg))
+            return IntentType.KNOWLEDGE_ASK;
+        return IntentType.SIMPLE_QUERY;
+    }
+
+    // ── 公共判断方法 ──────────────────────────────────────
 
     public static boolean isGreeting(String msg) {
         return msg != null && GREETING.matcher(msg).matches();
@@ -58,8 +83,8 @@ public final class XiaoyunPatterns {
         String trimmed = msg.trim();
         if (trimmed.length() < 25 && isGreeting(trimmed)) return 2;
         if (IDENTITY_QUERY.matcher(trimmed).matches()) return 2;
-        if (COMPLEX_TRIGGER_OPERATION.matcher(trimmed).matches()) return 8;
-        if (COMPLEX_TRIGGER_ANALYSIS.matcher(trimmed).matches()) return 6;
+        if (COMPLEX_OP_PATTERN.matcher(trimmed).matches()) return 8;
+        if (COMPLEX_ANALYSIS_PATTERN.matcher(trimmed).matches()) return 6;
         return 5;
     }
 }

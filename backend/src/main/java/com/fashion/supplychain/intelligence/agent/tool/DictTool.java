@@ -28,7 +28,7 @@ public class DictTool extends AbstractAgentTool {
         properties.put("keyword", stringProp("按标签模糊过滤"));
         properties.put("limit", intProp("列表条数，默认20"));
         return buildToolDef(
-                "数据字典查询：查看字典列表、按类型查询字典项。用户说'数据字典''字典项''选项值''枚举值'时必须调用。全局共享数据，无租户隔离。",
+                "数据字典查询：查看字典列表、按类型查询字典项。用户说'数据字典''字典项''选项值''枚举值'时必须调用。支持租户隔离：租户自建字典仅本租户可见，系统预置字典(tenant_id为空)所有租户共享。",
                 properties, List.of("action"));
     }
 
@@ -58,7 +58,7 @@ public class DictTool extends AbstractAgentTool {
         int limit = optionalInt(args, "limit") != null ? optionalInt(args, "limit") : 20;
 
         LambdaQueryWrapper<Dict> query = new LambdaQueryWrapper<Dict>()
-                .eq(Dict::getStatus, "1")
+                .eq(Dict::getStatus, "ENABLED")
                 .like(StringUtils.hasText(keyword), Dict::getDictLabel, keyword)
                 .orderByAsc(Dict::getDictType)
                 .orderByAsc(Dict::getSort)
@@ -76,7 +76,7 @@ public class DictTool extends AbstractAgentTool {
         String dictType = requireString(args, "dictType");
         List<Dict> items = dictService.lambdaQuery()
                 .eq(Dict::getDictType, dictType)
-                .eq(Dict::getStatus, "1")
+                .eq(Dict::getStatus, "ENABLED")
                 .orderByAsc(Dict::getSort)
                 .last("LIMIT 100")
                 .list();

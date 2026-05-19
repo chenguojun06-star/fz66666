@@ -4,12 +4,12 @@ import msgStyles from './MessageBubble.module.css';
 interface PendingItemsSectionProps {
   items: any[];
   onDismiss: (id: string, e: React.MouseEvent) => void;
-  onOpenInFrame: (path: string, label: string) => void;
+  onNavigate: (path: string) => void;
   onOpenTaskList: () => void;
 }
 
 const PendingItemsSection: React.FC<PendingItemsSectionProps> = ({
-  items, onDismiss, onOpenInFrame, onOpenTaskList,
+  items, onDismiss, onNavigate, onOpenTaskList,
 }) => {
   if (items.length === 0) return null;
 
@@ -33,7 +33,7 @@ const PendingItemsSection: React.FC<PendingItemsSectionProps> = ({
           : `/production/order-flow?orderNo=${encodeURIComponent(item.orderNo || '')}`;
         return (
           <div key={item.id || item.orderNo} className={msgStyles.pendingItem} style={{position:'relative'}}
-            onClick={() => onOpenInFrame(navPath, item.title || `${item.taskType} ${item.orderNo}`)}
+            onClick={() => onNavigate(navPath)}
           >
             <span>{item.categoryIcon || '⚠️'}</span>
             <span style={{flex:1}}>

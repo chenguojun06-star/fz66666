@@ -243,9 +243,12 @@ public class SystemTableMigrator {
                         "dict_type VARCHAR(50) NOT NULL COMMENT '字典类型'," +
                         "sort INT DEFAULT 0 COMMENT '排序'," +
                         "status VARCHAR(20) DEFAULT 'ENABLED' COMMENT '状态：ENABLED-启用，DISABLED-禁用'," +
+                        "tenant_id BIGINT DEFAULT NULL COMMENT '租户ID，NULL表示系统共享'," +
                         "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                         "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
-                        "INDEX idx_dict_type (dict_type)" +
+                        "INDEX idx_dict_type (dict_type)," +
+                        "INDEX idx_dict_tenant_id (tenant_id)," +
+                        "INDEX idx_dict_type_tenant (dict_type, tenant_id)" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典表'");
             }
         }

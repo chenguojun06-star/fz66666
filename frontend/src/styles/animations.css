@@ -266,7 +266,8 @@
 .ant-select-focused .ant-select-selector,
 .ant-input-number-focused,
 .ant-picker-focused {
-  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.14) !important;
+  box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.18) !important;
+  border-color: #2D7FF9 !important;
 }
 
 /* ─── §11. 表单校验失败抖动 ─── */

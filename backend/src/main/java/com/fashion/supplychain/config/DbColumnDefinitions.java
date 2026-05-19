@@ -60,6 +60,7 @@ public final class DbColumnDefinitions {
         add("t_order_remark", "image_urls", "TEXT DEFAULT NULL COMMENT '图片URLs'");
         add("t_ec_platform_config", "callback_url", "VARCHAR(500) DEFAULT NULL COMMENT '回调地址'");
         add("t_ec_platform_config", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_dict", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID，NULL表示系统共享'");
     }
 
     private static void addStyleColumns() {

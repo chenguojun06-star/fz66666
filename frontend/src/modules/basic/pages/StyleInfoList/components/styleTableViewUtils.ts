@@ -200,17 +200,10 @@ export const getDeliveryMeta = (record: StyleRecord, completed = false): { tone:
   }
   if (completed) {
     const completedTime = getStyleCompletedTime(record);
-    const createdTime = record.createTime ? dayjs(record.createTime) : null;
-    const createdLabel = createdTime?.isValid() ? createdTime.format('MM-DD') : '';
     const completedLabel = completedTime?.isValid() ? completedTime.format('MM-DD') : '';
-    const rangeLabel = createdLabel && completedLabel
-      ? `${createdLabel} → ${completedLabel} 已完成`
-      : completedLabel
-        ? `${completedLabel} 已完成`
-        : '已完成';
     return {
       tone: 'success',
-      label: rangeLabel,
+      label: completedLabel ? `${completedLabel} 已完成` : '已完成',
     };
   }
 

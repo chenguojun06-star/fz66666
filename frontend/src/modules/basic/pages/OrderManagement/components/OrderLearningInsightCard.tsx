@@ -57,7 +57,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
             ) : (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>{presented.title}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{presented.title}</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {presented.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
                   </div>

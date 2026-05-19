@@ -349,6 +349,36 @@ public class DataTruthGuard {
         return issues;
     }
 
+    /**
+     * 评估AI回答对工具调用结果的覆盖率——工具返回的数据有多少被AI真正用到了。
+     *
+     * @param aiContent    AI回答文本
+     * @param toolRecords  本轮对话的工具调用记录
+     * @return 0.0-1.0 之间的覆盖率，1.0表示所有工具数据都被引用
+     */
+    public double evaluateToolCoverage(String aiContent,
+                                         java.util.List<com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
+        if (toolRecords == null || toolRecords.isEmpty()) return 1.0;
+        if (aiContent == null || aiContent.isBlank()) return 0.0;
+        int usedCount = 0;
+        for (com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
+            if (rec.toolName == null) continue;
+            String raw = rec.rawResult;
+            if (raw == null || raw.isBlank()) { usedCount++; continue; }
+            String keyInfo = extractKeyInfo(raw);
+            if (keyInfo != null && aiContent.contains(keyInfo)) { usedCount++; }
+        }
+        return (double) usedCount / toolRecords.size();
+    }
+
+    private String extractKeyInfo(String rawResult) {
+        if (rawResult == null || rawResult.length() < 3) return null;
+        if (rawResult.length() <= 30) return rawResult;
+        Matcher m = Pattern.compile("(ORD\\d+|[一-龥]{2,6}(?:工厂|制衣厂|厂)|\\d{4}-\\d{2}-\\d{2})").matcher(rawResult);
+        if (m.find()) return m.group();
+        return rawResult.substring(0, Math.min(30, rawResult.length()));
+    }
+
     // ──────────────────────────────────────────────────────────────
     // L5: 综合验证（新增）
 
