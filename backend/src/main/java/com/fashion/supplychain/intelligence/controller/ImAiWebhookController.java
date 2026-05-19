@@ -1,10 +1,11 @@
 package com.fashion.supplychain.intelligence.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.UserService;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,8 @@ public class ImAiWebhookController {
 
     private final AiAgentOrchestrator aiAgentOrchestrator;
     private final UserService userService;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Value("${ai.im-ai.feishu.enabled:false}")
     private boolean feishuEnabled;
@@ -97,6 +100,9 @@ public class ImAiWebhookController {
         }
 
         try {
+            if (workingBody.contains("\"schema\"") && workingBody.contains("\"2.0\"")) {
+                return handleFeishuV2Event(workingBody);
+            }
             String eventType = extractJsonValue(workingBody, "type");
             if (!"im.message.receive_v1".equals(eventType)) {
                 return ResponseEntity.ok(Map.of());
@@ -233,6 +239,58 @@ public class ImAiWebhookController {
         } catch (Exception e) {
             log.error("[IM-AI/Feishu] decrypt body error: {}", e.getMessage());
             throw new RuntimeException("decrypt failed", e);
+        }
+    }
+
+    private ResponseEntity<?> handleFeishuV2Event(String body) {
+        try {
+            Map<String, Object> root = OBJECT_MAPPER.readValue(body, new TypeReference<Map<String, Object>>() {});
+            Map<String, Object> header = (Map<String, Object>) root.get("header");
+            String eventType = header != null ? (String) header.get("event_type") : null;
+            if (!"im.message.receive_v1".equals(eventType)) {
+                return ResponseEntity.ok(Map.of());
+            }
+
+            Map<String, Object> event = (Map<String, Object>) root.get("event");
+            if (event == null) return ResponseEntity.ok(Map.of());
+
+            Map<String, Object> message = (Map<String, Object>) event.get("message");
+            if (message == null) return ResponseEntity.ok(Map.of());
+
+            String messageType = (String) message.get("message_type");
+            if (!"text".equals(messageType)) return ResponseEntity.ok(Map.of());
+
+            String contentJson = (String) message.get("content");
+            if (contentJson == null || contentJson.isBlank()) return ResponseEntity.ok(Map.of());
+            String content = extractJsonValue(contentJson, "text");
+            if (content == null || content.isBlank()) return ResponseEntity.ok(Map.of());
+
+            Map<String, Object> sender = (Map<String, Object>) event.get("sender");
+            Map<String, Object> senderId = sender != null ? (Map<String, Object>) sender.get("sender_id") : null;
+            String openId = senderId != null ? (String) senderId.get("open_id") : null;
+            String userId = senderId != null ? (String) senderId.get("user_id") : null;
+
+            log.info("[IM-AI/Feishu v2] received from={} content={}", openId != null ? openId : userId,
+                    content.length() > 50 ? content.substring(0, 50) + "..." : content);
+
+            User user = resolveUser("feishu", openId != null ? openId : userId);
+            if (user == null) {
+                log.info("[IM-AI/Feishu v2] user not found: openId={}", openId);
+                return ResponseEntity.status(404).body(Map.of("msg", "请先在系统中绑定飞书账号"));
+            }
+
+            UserContext ctx = buildUserContext(user);
+            UserContext.set(ctx);
+            try {
+                var agentResult = aiAgentOrchestrator.executeAgent(content);
+                String reply = agentResult.getData() != null ? agentResult.getData() : agentResult.getMessage();
+                return ResponseEntity.ok(Map.of("msg", reply != null ? reply : "暂无回复"));
+            } finally {
+                UserContext.clear();
+            }
+        } catch (Exception e) {
+            log.error("[IM-AI/Feishu v2] handle error: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "internal error"));
         }
     }
 
