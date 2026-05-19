@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { TaskItem, TaskStatus } from './types';
 import type { PendingTaskDTO } from '@/services/intelligence/intelligenceTypes/advisor';
@@ -37,6 +37,7 @@ export function useTaskManager() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const initialFetchedRef = useRef(false);
 
   const fetchTasks = useCallback(async (filters?: { status?: string; priority?: string; module?: string }) => {
     setLoading(true);
@@ -69,6 +70,13 @@ export function useTaskManager() {
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!initialFetchedRef.current) {
+      initialFetchedRef.current = true;
+      void fetchTasks();
+    }
+  }, [fetchTasks]);
 
   const createTask = useCallback(async (data: {
     title: string; description?: string; priority?: string; module?: string; orderNo?: string; styleNo?: string; endTime?: string;
