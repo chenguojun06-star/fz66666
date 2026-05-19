@@ -466,6 +466,16 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
         height: '100%',
       };
     }
+    if (isFullscreen) {
+      return {
+        position: 'fixed' as const,
+        zIndex: 9998,
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+      };
+    }
     return {
       position: 'fixed' as const,
       zIndex: 9998,
@@ -476,7 +486,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
         ? { left: 16, transformOrigin: 'bottom left' }
         : { right: 16, transformOrigin: 'bottom right' }),
     };
-  }, [docked, triggerPos.edge, dimensions.width, dimensions.height]);
+  }, [docked, isFullscreen, triggerPos.edge, dimensions.width, dimensions.height]);
 
   // ── JSX ──
   return (
