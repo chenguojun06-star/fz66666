@@ -361,7 +361,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
     setFrameTabs(prev => {
       const existing = prev.find(t => t.path === path);
       if (existing) { setActiveFrameId(existing.id); return prev; }
-      const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const id = `tab-${now}-${Math.random().toString(36).slice(2, 6)}`;
       setActiveFrameId(id);
       return [...prev, { id, path, label }];
     });
