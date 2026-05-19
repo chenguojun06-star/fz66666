@@ -11,7 +11,7 @@ const OverdueRiskCard: React.FC<any> = ({
 }) => {
   const navigate = useNavigate();
   const goToOrder = (orderNo: string) => {
-    navigate(`/production/order?orderNo=${encodeURIComponent(orderNo)}`);
+    navigate(`/production?orderNo=${encodeURIComponent(orderNo)}`);
   };
 
   return (

@@ -118,7 +118,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     if (item.kind === 'order') {
       navigate(`/production?orderNo=${encodeURIComponent(item.data.orderNo)}`);
     } else if (item.kind === 'style') {
-      navigate(`/style?styleNo=${encodeURIComponent(item.data.styleNo)}`);
+      navigate(`/style-info?styleNo=${encodeURIComponent(item.data.styleNo)}`);
     } else if (item.kind === 'worker') {
       navigate(`/system/user?name=${encodeURIComponent(item.data.name)}`);
     }

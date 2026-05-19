@@ -156,9 +156,9 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
     if (type === 'order') {
       navigate(`/production?orderNo=${(item as GlobalSearchOrderItem).orderNo}`);
     } else if (type === 'style') {
-      navigate(`/style?styleNo=${(item as GlobalSearchStyleItem).styleNo ?? ''}`);
+      navigate(`/style-info?styleNo=${(item as GlobalSearchStyleItem).styleNo ?? ''}`);
     } else {
-      navigate('/system/users');
+      navigate('/system/user');
     }
   };
 

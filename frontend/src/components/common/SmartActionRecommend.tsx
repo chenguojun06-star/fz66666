@@ -18,32 +18,33 @@ interface Action {
 
 const getActions = (order: ProductionOrder, stage?: string, stuck?: boolean): Action[] => {
   if (!stage && !stuck) return [];
+  const orderNo = order.orderNo || '';
   if (stuck) {
     return [{
       label: '联系工厂跟进',
       desc: `订单停滞超过3天无扫码`,
-      href: `/production/${order.id}`,
+      href: `/production/progress-detail?orderId=${order.id}&orderNo=${encodeURIComponent(orderNo)}`,
     }];
   }
   if (stage?.includes('车缝')) {
     return [{
       label: '安排质检',
       desc: '车缝接近完成，提前安排质检入仓',
-      href: `/quality?orderId=${order.id}`,
+      href: `/production/progress-detail?orderNo=${encodeURIComponent(orderNo)}&focusNode=${encodeURIComponent('质检')}`,
     }];
   }
   if (stage?.includes('裁剪')) {
     return [{
       label: '查看菲号进度',
       desc: '裁剪完成后确认菲号生成',
-      href: `/production/${order.id}?tab=cutting`,
+      href: `/production/cutting/task/${encodeURIComponent(orderNo)}`,
     }];
   }
   if (stage?.includes('尾部')) {
     return [{
       label: '安排入库',
       desc: '尾部工序完成，准备入库',
-      href: `/warehousing?orderId=${order.id}`,
+      href: `/production/warehousing?orderId=${order.id}`,
     }];
   }
   return [];
