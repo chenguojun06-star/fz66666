@@ -798,6 +798,48 @@
   width: 100%;
 }
 
+.layout-content-row {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.layout-xiaoyun-panel {
+  width: 480px;
+  min-width: 480px;
+  max-width: 480px;
+  height: 100%;
+  border-left: 1px solid var(--color-border, #e8e8e8);
+  background: var(--xiaoyun-bg-card, #ffffff);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.layout.layout-xiaoyun-docked .layout-content {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+@media (max-width: 1200px) {
+  .layout-xiaoyun-panel {
+    width: 380px;
+    min-width: 380px;
+    max-width: 380px;
+  }
+}
+
+@media (max-width: 900px) {
+  .layout-xiaoyun-panel {
+    width: 320px;
+    min-width: 320px;
+    max-width: 320px;
+  }
+}
+
 .layout.layout-collapsed .layout-sidebar {
   width: 64px;
 }

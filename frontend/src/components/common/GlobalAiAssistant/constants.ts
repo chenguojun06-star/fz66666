@@ -11,6 +11,12 @@ export const SUGGESTIONS = [
   '📊 本周周报',
   '📈 本月月报',
   '🏭 查看今日生产进度',
+  '🔍 检测今日异常',
+  '📅 预测订单交期',
+  '🏭 排产建议',
+  '🤝 请采购专家分析',
+  '📦 请物流专家分析',
+  '💰 请成本专家分析',
 ];
 
 export function getPageSuggestions(_pathname: string): string[] {

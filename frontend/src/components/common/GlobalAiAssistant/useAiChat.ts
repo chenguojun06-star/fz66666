@@ -29,6 +29,27 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const [advisorSessionId, setAdvisorSessionId] = useState(loadSession);
 
   const historyFetchedRef = useRef(false);
+  const briefingFetchedRef = useRef(false);
+
+  const fetchBriefing = useCallback(() => {
+    if (briefingFetchedRef.current) return;
+    briefingFetchedRef.current = true;
+    intelligenceApi.detectAnomalies().then(resp => {
+      const data = resp?.data;
+      if (!data || !data.items || data.items.length === 0) return;
+      const critical = data.items.filter((a: any) => a.severity === 'critical');
+      const warning = data.items.filter((a: any) => a.severity === 'warning');
+      if (critical.length === 0 && warning.length === 0) return;
+      const lines: string[] = ['📋 **今日智能简报**'];
+      if (critical.length > 0) lines.push(`🔴 严重异常 ${critical.length} 条：${critical.map((a: any) => a.title + ' - ' + (a.targetName || '')).join('；')}`);
+      if (warning.length > 0) lines.push(`🟡 风险预警 ${warning.length} 条：${warning.map((a: any) => a.title + ' - ' + (a.targetName || '')).join('；')}`);
+      lines.push('可对我说「查看异常详情」或「帮我处理」');
+      setMessages(prev => {
+        if (prev.length > 1 && prev.some(m => m.text.includes('今日智能简报'))) return prev;
+        return [...prev, { id: `briefing-${Date.now()}`, role: 'ai' as const, text: lines.join('\n') }];
+      });
+    }).catch(() => {});
+  }, []);
 
   const speak = useCallback((text: string) => speakText(text, isMuted), [isMuted]);
 
@@ -299,6 +320,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     historyFetchedRef,
     speak,
     restoreHistory,
+    fetchBriefing,
     handleSend,
     handleSendWithAttachment,
     handleFileSelect,
