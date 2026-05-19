@@ -25,6 +25,10 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
   const [remark, setRemark] = useState('');
   const [loading, setLoading] = useState(false);
   const [querying, setQuerying] = useState(false);
+  const [materialName, setMaterialName] = useState('');
+  const [materialType, setMaterialType] = useState('');
+  const [color, setColor] = useState('');
+  const [size, setSize] = useState('');
   const inputRef = useRef<any>(null);
 
   useEffect(() => {
@@ -32,6 +36,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
       setMaterialCode(''); setScanResult(null); setQuantity(1);
       setWarehouseLocation(''); setWarehouseAreaId(''); setSourceType('scan_inbound');
       setOutstockType('scan_outbound'); setRemark('');
+      setMaterialName(''); setMaterialType(''); setColor(''); setSize('');
       setTimeout(() => inputRef.current?.focus?.(), 100);
     }
   }, [open]);
@@ -43,7 +48,14 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
       const res = await materialWarehouseApi.scanQuery(materialCode.trim());
       const data = res.data?.data || res.data;
       setScanResult(data);
-      if (!data.found) message.warning(data.message || '物料不存在');
+      if (data.found) {
+        setMaterialName(data.materialName || '');
+        setMaterialType(data.materialType || '');
+        setColor(data.color || '');
+        setSize(data.size || '');
+      } else {
+        message.info('物料不存在，入库时将自动创建库存记录');
+      }
     } catch (e: any) { message.error(e.message || '查询失败'); setScanResult(null); }
     finally { setQuerying(false); }
   };
@@ -56,7 +68,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
     setLoading(true);
     try {
       if (operationType === 'inbound') {
-        await materialWarehouseApi.scanInbound({ materialCode: materialCode.trim(), quantity, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, sourceType, remark });
+        await materialWarehouseApi.scanInbound({ materialCode: materialCode.trim(), quantity, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, sourceType, remark, materialName: materialName || undefined, materialType: materialType || undefined, color: color || undefined, size: size || undefined });
         message.success('物料扫码入库成功');
       } else {
         await materialWarehouseApi.scanOutbound({ materialCode: materialCode.trim(), quantity, outstockType, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, remark });
@@ -97,6 +109,33 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
               <Descriptions.Item label="锁定量">{scanResult.lockedQuantity}</Descriptions.Item>
               <Descriptions.Item label="单价">¥{scanResult.unitPrice}</Descriptions.Item>
             </Descriptions>
+          </Card>
+        )}
+        {scanResult && !scanResult.found && (
+          <Card style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
+            <div style={{ marginBottom: 8, color: '#faad14', fontWeight: 600 }}> 物料不存在，入库时将自动创建库存记录</div>
+            <Row gutter={12}>
+              <Col span={6}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>物料名称</div>
+                <Input value={materialName} onChange={e => setMaterialName(e.target.value)} placeholder="物料名称" />
+              </Col>
+              <Col span={6}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>物料类型</div>
+                <Select style={{ width: '100%' }} value={materialType || undefined} onChange={v => setMaterialType(v || '')} placeholder="选择类型">
+                  <Select.Option value="面料">面料</Select.Option>
+                  <Select.Option value="里料">里料</Select.Option>
+                  <Select.Option value="辅料">辅料</Select.Option>
+                </Select>
+              </Col>
+              <Col span={6}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>颜色</div>
+                <Input value={color} onChange={e => setColor(e.target.value)} placeholder="颜色" />
+              </Col>
+              <Col span={6}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>规格</div>
+                <Input value={size} onChange={e => setSize(e.target.value)} placeholder="规格" />
+              </Col>
+            </Row>
           </Card>
         )}
         <Row gutter={12}>

@@ -603,6 +603,11 @@ public class FinishedWarehouseOperationOrchestrator {
         params.put("warehouseAreaId", warehouseAreaId);
         params.put("sourceType", sourceType != null ? sourceType : "scan_inbound");
         params.put("remark", remark);
+        params.put("autoCreateSku", true);
+        String[] parts = skuCode.split("-", 3);
+        params.put("styleNo", parts.length >= 1 ? parts[0] : skuCode);
+        params.put("color", parts.length >= 2 ? parts[1] : "默认色");
+        params.put("size", parts.length >= 3 ? parts[2] : "均码");
         return freeInbound(params);
     }
 

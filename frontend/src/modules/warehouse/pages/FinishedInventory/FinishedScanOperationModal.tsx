@@ -25,6 +25,9 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   const [remark, setRemark] = useState('');
   const [loading, setLoading] = useState(false);
   const [querying, setQuerying] = useState(false);
+  const [styleNo, setStyleNo] = useState('');
+  const [color, setColor] = useState('');
+  const [size, setSize] = useState('');
   const inputRef = useRef<any>(null);
 
   useEffect(() => {
@@ -32,6 +35,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
       setScanCode(''); setScanResult(null); setQuantity(1);
       setWarehouseLocation(''); setWarehouseAreaId(''); setSourceType('scan_inbound');
       setOutstockType('scan_outbound'); setRemark('');
+      setStyleNo(''); setColor(''); setSize('');
       setTimeout(() => inputRef.current?.focus?.(), 100);
     }
   }, [open]);
@@ -43,7 +47,16 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
       const res = await finishedWarehouseApi.scanQuery(scanCode.trim());
       const data = res.data?.data || res.data;
       setScanResult(data);
-      if (!data.found) message.warning(data.message || 'SKU不存在');
+      if (data.found) {
+        setStyleNo(data.styleNo || '');
+        setColor(data.color || '');
+        setSize(data.size || '');
+      } else {
+        setStyleNo(data.suggestedStyleNo || '');
+        setColor(data.suggestedColor || '');
+        setSize(data.suggestedSize || '');
+        message.info('SKU不存在，入库时将自动创建款号和SKU');
+      }
     } catch (e: any) { message.error(e.message || '查询失败'); setScanResult(null); }
     finally { setQuerying(false); }
   };
@@ -97,6 +110,25 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
               <Descriptions.Item label="销售价">¥{scanResult.salesPrice}</Descriptions.Item>
               <Descriptions.Item label="成本价">¥{scanResult.costPrice}</Descriptions.Item>
             </Descriptions>
+          </Card>
+        )}
+        {scanResult && !scanResult.found && (
+          <Card style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
+            <div style={{ marginBottom: 8, color: '#faad14', fontWeight: 600 }}> SKU不存在，入库时将自动创建</div>
+            <Row gutter={12}>
+              <Col span={8}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>款号</div>
+                <Input value={styleNo} onChange={e => setStyleNo(e.target.value)} placeholder="款号" />
+              </Col>
+              <Col span={8}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>颜色</div>
+                <Input value={color} onChange={e => setColor(e.target.value)} placeholder="颜色" />
+              </Col>
+              <Col span={8}>
+                <div style={{ marginBottom: 4, fontSize: 12, color: '#999' }}>尺码</div>
+                <Input value={size} onChange={e => setSize(e.target.value)} placeholder="尺码" />
+              </Col>
+            </Row>
           </Card>
         )}
         <Row gutter={12}>

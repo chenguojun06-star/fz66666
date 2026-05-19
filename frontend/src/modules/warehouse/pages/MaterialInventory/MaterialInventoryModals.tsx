@@ -359,7 +359,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
               >
                 <Select placeholder="请选择入库来源">
                   <Option value="external_purchase">采购到货</Option>
-                  <Option value="free_inbound">自由入库</Option>
+                  <Option value="free_inbound">外采入库</Option>
                   <Option value="return_in">退货入库</Option>
                   <Option value="transfer_in">调拨入库</Option>
                   <Option value="other_in">其他入库</Option>

@@ -441,7 +441,13 @@ public class MaterialStockController {
         String warehouseAreaId = (String) params.get("warehouseAreaId");
         String sourceType = (String) params.get("sourceType");
         String remark = (String) params.get("remark");
-        MaterialStock result = materialWarehouseOperationOrchestrator.scanInbound(materialCode, quantity, warehouseLocation, warehouseAreaId, sourceType, remark);
+        String materialName = (String) params.get("materialName");
+        String materialType = (String) params.get("materialType");
+        String color = (String) params.get("color");
+        String size = (String) params.get("size");
+        MaterialStock result = materialWarehouseOperationOrchestrator.scanInbound(
+                materialCode, quantity, warehouseLocation, warehouseAreaId, sourceType, remark,
+                materialName, materialType, color, size);
         return Result.success(result);
     }
 

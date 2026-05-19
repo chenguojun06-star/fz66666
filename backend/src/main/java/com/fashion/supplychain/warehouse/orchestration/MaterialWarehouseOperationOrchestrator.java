@@ -409,7 +409,8 @@ public class MaterialWarehouseOperationOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public MaterialStock scanInbound(String materialCode, int quantity, String warehouseLocation,
-                                      String warehouseAreaId, String sourceType, String remark) {
+                                      String warehouseAreaId, String sourceType, String remark,
+                                      String materialName, String materialType, String color, String size) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         
@@ -420,6 +421,21 @@ public class MaterialWarehouseOperationOrchestrator {
         params.put("warehouseAreaId", warehouseAreaId);
         params.put("sourceType", sourceType != null ? sourceType : "scan_inbound");
         params.put("remark", remark);
+        params.put("autoCreateStock", true);
+        if (materialName != null && !materialName.isBlank()) {
+            params.put("materialName", materialName);
+        } else {
+            params.put("materialName", materialCode);
+        }
+        if (materialType != null && !materialType.isBlank()) {
+            params.put("materialType", materialType);
+        }
+        if (color != null && !color.isBlank()) {
+            params.put("color", color);
+        }
+        if (size != null && !size.isBlank()) {
+            params.put("size", size);
+        }
         freeInbound(params);
         return materialStockService.getOne(
                 new LambdaQueryWrapper<MaterialStock>()
