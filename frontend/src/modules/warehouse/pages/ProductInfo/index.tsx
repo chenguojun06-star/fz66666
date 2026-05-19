@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Form, Input, Select, InputNumber, Row, Col, Tag, App, Drawer, Descriptions, Divider, Space, Popconfirm, Table } from 'antd';
+import { Button, Form, Input, Select, InputNumber, Row, Col, App, Drawer, Descriptions, Divider, Space, Popconfirm, Table } from 'antd';
 import { PlusOutlined, LoginOutlined, PrinterOutlined, EditOutlined, SwapOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageLayout from '@/components/common/PageLayout';
@@ -16,11 +16,6 @@ import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } 
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { StyleInfo } from '@/types/style';
 import { useProductList } from './hooks/useProductList';
-
-const statusMap: Record<string, { label: string; color: string }> = {
-  ENABLED: { label: '启用', color: 'green' },
-  DISABLED: { label: '停用', color: 'red' },
-};
 
 interface SkuRow {
   id: number;
@@ -234,10 +229,11 @@ const ProductInfoPage: React.FC = () => {
       render: (v: unknown) => v != null ? `${v}` : '-',
     },
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 70,
+      title: '状态', dataIndex: 'status', key: 'status', width: 60,
       render: (v: string) => {
-        const cfg = statusMap[v] || { label: v, color: 'default' };
-        return <Tag color={cfg.color}>{cfg.label}</Tag>;
+        if (v === 'ENABLED') return <span style={{ color: '#16a34a', fontWeight: 500 }}>启用</span>;
+        if (v === 'DISABLED') return <span style={{ color: '#9ca3af', fontWeight: 400 }}>停用</span>;
+        return <span style={{ color: '#9ca3af' }}>{v || '-'}</span>;
       },
     },
     {
@@ -255,8 +251,8 @@ const ProductInfoPage: React.FC = () => {
   ];
 
   const skuColumns = [
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: unknown) => v ? <Tag color="blue">{String(v)}</Tag> : '-' },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 70, render: (v: unknown) => v ? <Tag>{String(v)}</Tag> : '-' },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: unknown) => <span style={{ fontWeight: 500 }}>{v ? String(v) : '-'}</span> },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 70, render: (v: unknown) => <span>{v ? String(v) : '-'}</span> },
     { title: 'SKU编码', dataIndex: 'skuCode', key: 'skuCode', width: 180, ellipsis: true },
     { title: '条形码', dataIndex: 'barcode', key: 'barcode', width: 130, ellipsis: true, render: (v: unknown) => String(v ?? '-') },
     {
@@ -291,14 +287,23 @@ const ProductInfoPage: React.FC = () => {
         }
         filterLeft={
           <Space wrap>
-            <Input.Search
+            <Input
               placeholder="搜索款号/款名/SKC"
               allowClear
-              style={{ width: 200 }}
+              style={{ width: 240 }}
               value={queryParams.keyword}
-              onChange={(e) => setQueryParams((p) => ({ ...p, keyword: e.target.value }))}
-              onSearch={() => setQueryParams((p) => ({ ...p, page: 1 }))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setQueryParams((p) => ({ ...p, keyword: v }));
+                if (!v) setQueryParams((p) => ({ ...p, page: 1 }));
+              }}
+              onPressEnter={() => setQueryParams((p) => ({ ...p, page: 1 }))}
             />
+            <Button
+              onClick={() => setQueryParams((p) => ({ ...p, page: 1 }))}
+            >
+              搜索
+            </Button>
             <Select
               placeholder="品类"
               allowClear
@@ -393,9 +398,9 @@ const ProductInfoPage: React.FC = () => {
               <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
               <Descriptions.Item label="面料成分" span={3}>{String(d.fabricComposition ?? '-')}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                <Tag color={(statusMap[d.status || ''] || {}).color || 'default'}>
-                  {(statusMap[d.status || ''] || {}).label || d.status || '-'}
-                </Tag>
+                <span style={{ color: d.status === 'ENABLED' ? '#16a34a' : '#9ca3af', fontWeight: 500 }}>
+                  {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status || '-'}
+                </span>
               </Descriptions.Item>
               <Descriptions.Item label="下单次数">{d.orderCount != null ? `${d.orderCount}次` : '-'}</Descriptions.Item>
               <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
