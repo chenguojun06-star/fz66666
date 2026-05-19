@@ -39,8 +39,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const auth = useLayoutAuth();
   const { badgeCounts, getVisibleCount, markViewed, viewVersion } = useMenuBadgeCounts();
 
-  const [xiaoyunDocked, setXiaoyunDocked] = useState(false);
-
   const visibleBadgeCounts = useMemo(() => {
     const result: Record<string, number> = {};
     for (const path of Object.keys(badgeCounts)) {
@@ -163,7 +161,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className={`layout${collapsed ? ' layout-collapsed' : ''}${xiaoyunDocked ? ' layout-xiaoyun-docked' : ''}`}>
+    <div className={`layout${collapsed ? ' layout-collapsed' : ''}`}>
       <DailyTodoModal />
       {auth.isFactoryAccount && (
         <FactoryPersonalCenterModal open={factoryModalOpen} onClose={() => setFactoryModalOpen(false)} />
@@ -277,16 +275,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               {children}
             </div>
           </main>
-
-          {xiaoyunDocked && (
-            <aside className="layout-xiaoyun-panel">
-              <GlobalAiAssistant docked onDockChange={setXiaoyunDocked} />
-            </aside>
-          )}
         </div>
       </div>
 
-      {!xiaoyunDocked && <GlobalAiAssistant onDockChange={setXiaoyunDocked} />}
+      <GlobalAiAssistant />
     </div>
   );
 };

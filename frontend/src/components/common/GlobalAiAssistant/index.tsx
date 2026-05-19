@@ -34,7 +34,6 @@ import TaskAggregationPanel from './TaskAggregationPanel';
 import PendingItemsSection from './PendingItemsSection';
 import TaskListView from './TaskListView';
 import TaskFormModal from './TaskFormModal';
-import QuickLinksPanel from './QuickLinksPanel';
 import { usePanelResize } from './usePanelResize';
 import { useTaskManager } from './useTaskManager';
 import type { Message, PanelView, TaskItem } from './types';
@@ -67,12 +66,7 @@ function normalizeTraceableAdvice(payload: unknown): Message['traceableAdvice'] 
   };
 }
 
-interface GlobalAiAssistantProps {
-  docked?: boolean;
-  onDockChange?: (docked: boolean) => void;
-}
-
-const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, onDockChange }) => {
+const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
   const { user } = useUser();
   const { isAuthenticated } = useAuthState();
@@ -88,35 +82,21 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
 
   // ── parent-local state ──
   const [isOpen, setIsOpen] = useState(false);
-  useEffect(() => { if (docked) setIsOpen(true); }, [docked]);
   const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
 
   const [panelView, setPanelView] = useState<PanelView>('chat');
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [taskSaving, setTaskSaving] = useState(false);
-  interface FrameTab { id: string; path: string; label: string; }
-  const [frameTabs, setFrameTabs] = useState<FrameTab[]>([]);
-  const [activeFrameId, setActiveFrameId] = useState('');
   const { tasks: pendingItems, refresh: refreshPendingTasks } = usePendingTasks();
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
 
-  const { size, cycleSize, dimensions, showSidebar, showAuxPanel, isFullscreen, toggleFullscreen } = usePanelResize();
-
-  useEffect(() => {
-    if (isFullscreen && onDockChange) {
-      onDockChange(true);
-    }
-  }, [isFullscreen, onDockChange]);
+  const { size, cycleSize, dimensions, showSidebar, showAuxPanel } = usePanelResize();
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
-    if (isFullscreen && onDockChange) {
-      onDockChange(false);
-      toggleFullscreen();
-    }
     startIdleSnap();
-  }, [isFullscreen, onDockChange, toggleFullscreen, startIdleSnap]);
+  }, [startIdleSnap]);
   const { tasks: myTasks, loading: tasksLoading, stats: taskStats, fetchTasks, createTask, updateTask, deleteTask, claimTask, completeTask, startPolling, stopPolling } = useTaskManager();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -305,11 +285,6 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
     startPolling();
   }, [fetchTasks, startPolling]);
 
-  const switchToLinks = useCallback(() => {
-    setPanelView('links');
-    stopPolling();
-  }, [stopPolling]);
-
   const switchToChat = useCallback(() => {
     setPanelView('chat');
     stopPolling();
@@ -352,53 +327,11 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
     await completeTask(taskId);
   }, [completeTask]);
 
-  const lastOpenFrameRef = useRef(0);
-
-  const handleOpenInFrame = useCallback((path: string, label: string) => {
-    const now = Date.now();
-    if (now - lastOpenFrameRef.current < 300) return;
-    lastOpenFrameRef.current = now;
-    setFrameTabs(prev => {
-      const existing = prev.find(t => t.path === path);
-      if (existing) { setActiveFrameId(existing.id); return prev; }
-      const id = `tab-${now}-${Math.random().toString(36).slice(2, 6)}`;
-      setActiveFrameId(id);
-      return [...prev, { id, path, label }];
-    });
-    setPanelView('page');
-  }, []);
-
-  const handleCloseTab = useCallback((tabId: string) => {
-    setFrameTabs(prev => {
-      const idx = prev.findIndex(t => t.id === tabId);
-      const next = prev.filter(t => t.id !== tabId);
-      if (next.length === 0) { setPanelView('links'); setActiveFrameId(''); return []; }
-      if (tabId === activeFrameId) {
-        const newIdx = Math.min(idx, next.length - 1);
-        setActiveFrameId(next[newIdx].id);
-      }
-      return next;
-    });
-  }, [activeFrameId]);
-
-  const handleCloseFrame = useCallback(() => {
-    setFrameTabs([]);
-    setActiveFrameId('');
-    setPanelView('links');
-  }, []);
-
-  const activeTab = frameTabs.find(t => t.id === activeFrameId);
-  const activeFrameContext = activeTab ? { label: activeTab.label, path: activeTab.path } : null;
-
   const sendWithContext = useCallback((text?: string) => {
     const msgText = (text ?? inputValue).trim();
     if (!msgText) return;
-    if (activeFrameContext) {
-      void handleSend(`【当前正在「${activeFrameContext.label}」页面操作】${msgText}`);
-    } else {
-      void handleSend(text);
-    }
-  }, [activeFrameContext, inputValue, handleSend]);
+    void handleSend(text);
+  }, [inputValue, handleSend]);
 
   useEffect(() => {
     if (panelView === 'tasks') startPolling(); else stopPolling();
@@ -460,22 +393,6 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
 
   // ── 面板定位样式（根据浮标边缘侧计算） ──
   const panelStyle: React.CSSProperties = useMemo(() => {
-    if (isFullscreen) {
-      return {
-        position: 'fixed' as const,
-        zIndex: 10001,
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-      };
-    }
-    if (docked) {
-      return {
-        width: '100%',
-        height: '100%',
-      };
-    }
     return {
       position: 'fixed' as const,
       zIndex: 9998,
@@ -486,7 +403,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
         ? { left: 16, transformOrigin: 'bottom left' }
         : { right: 16, transformOrigin: 'bottom right' }),
     };
-  }, [docked, isFullscreen, triggerPos.edge, dimensions.width, dimensions.height]);
+  }, [triggerPos.edge, dimensions.width, dimensions.height]);
 
   // ── JSX ──
   return (
@@ -499,7 +416,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
 
       {/* 待办聚合面板 */}
       {isTaskPanelOpen && (
-        <div className={`${styles.chatPanel} ${isFullscreen ? styles.chatPanelFullscreen : ''}`} style={panelStyle}>
+        <div className={styles.chatPanel} style={panelStyle}>
           <TaskAggregationPanel
             tasks={pendingItems}
             onClose={closeTaskPanel}
@@ -510,7 +427,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
       )}
 
       {isOpen && !isTaskPanelOpen && (
-        <div className={`${styles.chatPanel} ${isFullscreen ? styles.chatPanelFullscreen : ''}`} style={panelStyle}>
+        <div className={styles.chatPanel} style={panelStyle}>
           {/* Header */}
           <div className={styles.panelHeader}>
             <div className={styles.avatarContainer}>
@@ -535,9 +452,6 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
                 <SoundOutlined className={styles.headerActionBtn} onClick={() => { setIsMuted(true); stopAllSpeech(); }} title="静音" />
               )}
               <ClearOutlined className={styles.headerActionBtn} onClick={() => { clearChat(); refreshPendingTasks(); setHasFetchedMood(false); }} title="清空对话" />
-              <span className={styles.headerActionBtn} onClick={toggleFullscreen} title={isFullscreen ? '退出全屏' : '全屏'}>
-                {isFullscreen ? '🗗' : '🗖'}
-              </span>
               <CloseOutlined className={`${styles.headerActionBtn} ${styles.closeBtnIcon}`} onClick={handleClose} title="关闭" />
             </div>
           </div>
@@ -553,19 +467,15 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
                   📋 <span className={styles.sidebarLabel}>任务</span>
                   {taskStats.pending > 0 && <span className={styles.sidebarBadge}>{taskStats.pending}</span>}
                 </button>
-                <button className={`${styles.sidebarItem} ${panelView === 'links' ? styles.sidebarItemActive : ''}`} onClick={switchToLinks} title="快捷入口">
-                  🔗 <span className={styles.sidebarLabel}>入口</span>
-                </button>
               </div>
             )}
 
-            {!showSidebar && panelView !== 'page' && (
+            {!showSidebar && (
               <div className={styles.bottomNav}>
                 <button className={`${styles.bottomNavItem} ${panelView === 'chat' ? styles.bottomNavItemActive : ''}`} onClick={switchToChat}>💬</button>
                 <button className={`${styles.bottomNavItem} ${panelView === 'tasks' ? styles.bottomNavItemActive : ''}`} onClick={switchToTasks}>
                   📋{taskStats.pending > 0 && <span className={styles.bottomNavBadge}>{taskStats.pending}</span>}
                 </button>
-                <button className={`${styles.bottomNavItem} ${panelView === 'links' ? styles.bottomNavItemActive : ''}`} onClick={switchToLinks}>🔗</button>
               </div>
             )}
 
@@ -577,7 +487,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
                       <PendingItemsSection
                         items={visiblePendingItems}
                         onDismiss={dismissPendingItem}
-                        onOpenInFrame={handleOpenInFrame}
+                        onNavigate={onSafeNavigate}
                         onOpenTaskList={switchToTasks}
                       />
                     )}
@@ -619,13 +529,6 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
                       </div>
                     )}
                   </div>
-
-                  {activeFrameContext && (
-                    <div className={styles.contextIndicator}>
-                      <span className={styles.contextIndicatorDot} />
-                      <span>当前在看「{activeFrameContext.label}」，小云知道你的上下文</span>
-                    </div>
-                  )}
 
                   <div className={styles.inputArea}>
                     <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf" onChange={handleFileSelect} />
@@ -678,31 +581,8 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
                   tasks={myTasks} loading={tasksLoading}
                   onClaim={handleTaskClaim} onComplete={handleTaskComplete}
                   onEdit={handleTaskEdit} onCreate={handleTaskCreate}
-                  onOpenInFrame={handleOpenInFrame}
+                  onNavigate={onSafeNavigate}
                 />
-              )}
-
-              {panelView === 'links' && (
-                <QuickLinksPanel onOpenInFrame={handleOpenInFrame} />
-              )}
-
-              {panelView === 'page' && activeTab && (
-                <div className={styles.pageFrameContainer}>
-                  <div className={styles.pageFrameBar}>
-                    <button className={styles.pageFrameBackBtn} onClick={handleCloseFrame} title="返回快捷入口">←</button>
-                    <div className={styles.frameTabs}>
-                      {frameTabs.map(tab => (
-                        <div key={tab.id}
-                          className={`${styles.frameTab} ${tab.id === activeFrameId ? styles.frameTabActive : ''}`}
-                          onClick={() => setActiveFrameId(tab.id)}>
-                          <span className={styles.frameTabLabel}>{tab.label}</span>
-                          <span className={styles.frameTabClose} onClick={(e) => { e.stopPropagation(); handleCloseTab(tab.id); }}>×</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <iframe className={styles.pageFrame} src={activeTab.path} title={activeTab.label} />
-                </div>
               )}
 
               {showTaskForm && (
@@ -733,8 +613,7 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
         </div>
       )}
 
-      {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘（docked模式下不渲染） */}
-      {!docked && (
+      {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘 */}
       <div
         className={`${cloudStyles.triggerBtn} ${isActiveDrag ? cloudStyles.triggerDragging : ''} ${isDocked && !isOpen && !isTaskPanelOpen ? cloudStyles.triggerDocked : ''} ${isDocked && triggerPos.edge === 'right' ? cloudStyles.triggerDockedRight : ''}`}
         style={{ left: triggerPos.x, top: triggerPos.y }}
@@ -746,7 +625,6 @@ const GlobalAiAssistant: React.FC<GlobalAiAssistantProps> = ({ docked = false, o
           <span className={cloudStyles.triggerBadge} onClick={(e) => { e.stopPropagation(); openTaskPanel(); }}>{visiblePendingItems.length}</span>
         )}
       </div>
-      )}
     </>
   );
 };

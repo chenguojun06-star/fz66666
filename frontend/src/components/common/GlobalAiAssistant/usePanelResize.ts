@@ -21,7 +21,6 @@ function loadSavedSize(): PanelSize {
 
 export function usePanelResize() {
   const [size, setSize] = useState<PanelSize>(loadSavedSize);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, size); } catch {}
@@ -34,20 +33,9 @@ export function usePanelResize() {
     });
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen(prev => !prev);
-  }, []);
-
-  useEffect(() => {
-    if (!isFullscreen) return;
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false); };
-    document.addEventListener('keydown', onEsc);
-    return () => document.removeEventListener('keydown', onEsc);
-  }, [isFullscreen]);
-
   const dimensions = SIZE_DIMENSIONS[size];
   const showSidebar = size !== 'small';
   const showAuxPanel = size === 'large';
 
-  return { size, cycleSize, dimensions, showSidebar, showAuxPanel, isFullscreen, toggleFullscreen };
+  return { size, cycleSize, dimensions, showSidebar, showAuxPanel };
 }
