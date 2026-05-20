@@ -301,12 +301,13 @@ const DailyTodoModal: React.FC = () => {
           </Button>
         </div>
       }
-      closable={false}
-      maskClosable={false}
-      keyboard={false}
+      closable={true}
+      maskClosable={true}
+      keyboard={true}
       width="60vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
       centered
+      onCancel={handleClose}
     >
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
