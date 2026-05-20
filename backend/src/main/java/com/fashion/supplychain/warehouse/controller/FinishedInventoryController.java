@@ -154,7 +154,12 @@ public class FinishedInventoryController {
         String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
         String sourceType = (String) params.get("sourceType");
         String remark = (String) params.get("remark");
-        ProductWarehousing result = finishedWarehouseOperationOrchestrator.scanInbound(scanCode, quantity, warehouseLocation, warehouseAreaId, sourceType, remark);
+        String styleNo = (String) params.get("styleNo");
+        String color = (String) params.get("color");
+        String size = (String) params.get("size");
+        ProductWarehousing result = finishedWarehouseOperationOrchestrator.scanInbound(
+                scanCode, quantity, warehouseLocation, warehouseAreaId, sourceType, remark,
+                styleNo, color, size);
         return Result.success(result);
     }
 

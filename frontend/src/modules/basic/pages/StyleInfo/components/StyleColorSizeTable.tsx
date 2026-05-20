@@ -58,7 +58,6 @@ interface StyleColorSizeTableProps {
   // 锁定状态
   editLocked: boolean;
   isFieldLocked: (fieldValue: any) => boolean;
-  onAutoUnlock?: () => void;
 }
 
 /**
@@ -78,8 +77,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   onImageClear,
   commonSizes, commonColors,
   setCommonSizes, setCommonColors,
-  editLocked, isFieldLocked,
-  onAutoUnlock,
+  editLocked, isFieldLocked
 }) => {
   const { message } = App.useApp();
 
@@ -105,15 +103,11 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   );
   const selectedTagStyle: React.CSSProperties = {
     margin: 0,
-    paddingInline: 10,
-    paddingBlock: 2,
-    borderRadius: 4,
-    color: '#1a1a1a',
+    paddingInline: 8,
+    borderRadius: 999,
+    color: '#8c8c8c',
     background: '#f5f5f5',
     borderColor: '#d9d9d9',
-    fontSize: 13,
-    lineHeight: '22px',
-    textAlign: 'center',
   };
 
   const prevColorsRef = useRef<string[]>(selectedColors);
@@ -158,10 +152,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   }, [matrixRows, setQty1, setQty2, setQty3, setQty4, setQty5]);
 
   const addSize = (size: string) => {
-    if (editLocked) {
-      onAutoUnlock?.();
-      return;
-    }
+    if (editLocked) return;
     const value = String(size || '').trim();
     if (!value) return;
     if (selectedSizes.includes(value)) {
@@ -173,10 +164,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   };
 
   const addColor = (color: string) => {
-    if (editLocked) {
-      onAutoUnlock?.();
-      return;
-    }
+    if (editLocked) return;
     const value = String(color || '').trim();
     if (!value) return;
     if (selectedColors.includes(value)) {
@@ -198,10 +186,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   };
 
   const handleAddNewSize = () => {
-    if (editLocked) {
-      onAutoUnlock?.();
-      return;
-    }
     const value = newSize.trim();
     if (!value) return;
     if (!commonSizes.includes(value)) {
@@ -216,10 +200,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   };
 
   const handleAddNewColor = () => {
-    if (editLocked) {
-      onAutoUnlock?.();
-      return;
-    }
     const value = newColor.trim();
     if (!value) return;
     if (!commonColors.includes(value)) {
@@ -261,14 +241,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 
   return (
     <div className="style-color-size-table" style={{ marginBottom: 12 }}>
-      <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontWeight: 600 }}>码数/颜色/数量配置</span>
-        {editLocked && (
-          <Button type="link" size="small" onClick={() => onAutoUnlock?.()} style={{ padding: 0 }}>
-            🔒 点击解锁编辑
-          </Button>
-        )}
-      </div>
+      <div style={{ marginBottom: 10, fontWeight: 600 }}>码数/颜色/数量配置</div>
 
       <div style={{ display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
@@ -287,38 +260,40 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                 {color}
               </Tag>
             ))}
-            <Space.Compact>
-              <DictAutoComplete
-                dictType="color"
-               
-                value={quickColorDraft}
-                onChange={(value) => setQuickColorDraft(String(value || ''))}
-                onSelect={(value) => setQuickColorDraft(String(value || ''))}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    addColor(quickColorDraft);
-                  }
-                }}
-                style={{ width: 96 }}
-                placeholder="新增颜色"
-                disabled={editLocked}
-              />
-              <Button size="small" onClick={() => addColor(quickColorDraft)} disabled={editLocked}>
-                确定
-              </Button>
-            </Space.Compact>
-            {!editLocked && !showColorInput && (
-              <Button size="small" style={{ color: '#2D7FF9', border: '1px dashed #2D7FF9', borderRadius: 4, height: 28, fontSize: 12 }} onClick={() => setShowColorInput(true)}>
-                + 新增颜色
-              </Button>
-            )}
-            {!editLocked && showColorInput && (
+            {!editLocked ? (
               <Space.Compact>
-                <Input size="small" placeholder="新颜色" value={newColor} onChange={(e) => setNewColor(e.target.value)} onPressEnter={handleAddNewColor} style={{ width: 88 }} />
-                <Button size="small" type="primary" onClick={handleAddNewColor}></Button>
-                <Button size="small" onClick={() => { setNewColor(''); setShowColorInput(false); }}></Button>
+                <DictAutoComplete
+                  dictType="color"
+                 
+                  value={quickColorDraft}
+                  onChange={(value) => setQuickColorDraft(String(value || ''))}
+                  onSelect={(value) => setQuickColorDraft(String(value || ''))}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addColor(quickColorDraft);
+                    }
+                  }}
+                  style={{ width: 96 }}
+                  placeholder="新增颜色"
+                />
+                <Button onClick={() => addColor(quickColorDraft)}>
+                  确定
+                </Button>
               </Space.Compact>
+            ) : null}
+            {!editLocked && (
+              !showColorInput ? (
+                <Button type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowColorInput(true)}>
+                  新增颜色
+                </Button>
+              ) : (
+                <Space.Compact>
+                  <Input placeholder="新颜色" value={newColor} onChange={(e) => setNewColor(e.target.value)} onPressEnter={handleAddNewColor} style={{ width: 88 }} />
+                  <Button type="primary" onClick={handleAddNewColor}></Button>
+                  <Button onClick={() => { setNewColor(''); setShowColorInput(false); }}></Button>
+                </Space.Compact>
+              )
             )}
           </div>
         </div>
@@ -339,38 +314,40 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                 {size}
               </Tag>
             ))}
-            <Space.Compact>
-              <DictAutoComplete
-                dictType="size"
-               
-                value={quickSizeDraft}
-                onChange={(value) => setQuickSizeDraft(String(value || ''))}
-                onSelect={(value) => setQuickSizeDraft(String(value || ''))}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    addSize(quickSizeDraft);
-                  }
-                }}
-                style={{ width: 96 }}
-                placeholder="新增码数"
-                disabled={editLocked}
-              />
-              <Button size="small" onClick={() => addSize(quickSizeDraft)} disabled={editLocked}>
-                确定
-              </Button>
-            </Space.Compact>
-            {!editLocked && !showSizeInput && (
-              <Button size="small" style={{ color: '#2D7FF9', border: '1px dashed #2D7FF9', borderRadius: 4, height: 28, fontSize: 12 }} onClick={() => setShowSizeInput(true)}>
-                + 新增码数
-              </Button>
-            )}
-            {!editLocked && showSizeInput && (
+            {!editLocked ? (
               <Space.Compact>
-                <Input size="small" placeholder="新码数" value={newSize} onChange={(e) => setNewSize(e.target.value)} onPressEnter={handleAddNewSize} style={{ width: 88 }} />
-                <Button size="small" type="primary" onClick={handleAddNewSize}></Button>
-                <Button size="small" onClick={() => { setNewSize(''); setShowSizeInput(false); }}></Button>
+                <DictAutoComplete
+                  dictType="size"
+                 
+                  value={quickSizeDraft}
+                  onChange={(value) => setQuickSizeDraft(String(value || ''))}
+                  onSelect={(value) => setQuickSizeDraft(String(value || ''))}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addSize(quickSizeDraft);
+                    }
+                  }}
+                  style={{ width: 96 }}
+                  placeholder="新增码数"
+                />
+                <Button onClick={() => addSize(quickSizeDraft)}>
+                  确定
+                </Button>
               </Space.Compact>
+            ) : null}
+            {!editLocked && (
+              !showSizeInput ? (
+                <Button type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowSizeInput(true)}>
+                  新增码数
+                </Button>
+              ) : (
+                <Space.Compact>
+                  <Input placeholder="新码数" value={newSize} onChange={(e) => setNewSize(e.target.value)} onPressEnter={handleAddNewSize} style={{ width: 88 }} />
+                  <Button type="primary" onClick={handleAddNewSize}></Button>
+                  <Button onClick={() => { setNewSize(''); setShowSizeInput(false); }}></Button>
+                </Space.Compact>
+              )
             )}
           </div>
         </div>

@@ -4,11 +4,13 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } from '@/types/system';
 import api, { type ApiResult } from '@/utils/api';
 import { useModal } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/usePerformance';
-import { App, Card, Form, Tabs } from 'antd';
+import { App, Button, Card, Form, Tabs } from 'antd';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -23,7 +25,7 @@ import CustomerManagementTab from './CustomerManagementTab';
 import SupplierUserManager from './SupplierUserManager';
 import { getFactoryColumns, logColumns } from './factoryListColumns';
 import FactoryFormModal from './components/FactoryFormModal';
-import FactoryFilterBar from './components/FactoryFilterBar';
+import { getDepartmentLabel } from './factoryListHelpers';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -366,14 +368,77 @@ const FactoryList: React.FC = () => {
                       { key: 'OUTSOURCE', label: '外发供应商' },
                     ]}
                   />
-                  <FactoryFilterBar
-                    queryParams={queryParams}
-                    setQueryParams={setQueryParams}
-                    setFactoryCodeInput={setFactoryCodeInput}
-                    setFactoryNameInput={setFactoryNameInput}
-                    departmentOptions={departmentOptions}
-                    activeTab={activeTab}
-                    onCreate={() => openDialog('create')}
+                  <StandardToolbar
+                    left={
+                      <StandardSearchBar
+                        searchValue={factoryNameInput}
+                        onSearchChange={(value) => setFactoryNameInput(value)}
+                        searchPlaceholder="搜索供应商名称"
+                        showDate={false}
+                        showStatus={true}
+                        statusValue={((queryParams as any)?.status || '') as string}
+                        onStatusChange={(value: string) => setQueryParams((prev) => ({ ...prev, status: value || undefined, page: 1 }))}
+                        statusOptions={[
+                          { value: '', label: '全部状态' },
+                          { value: 'active', label: '启用' },
+                          { value: 'inactive', label: '停用' },
+                        ]}
+                        showSearchButton={true}
+                        onSearch={() => setQueryParams((prev) => ({ ...prev, page: 1 }))}
+                        showResetButton={true}
+                        onReset={() => {
+                          setFactoryCodeInput('');
+                          setFactoryNameInput('');
+                          setQueryParams({
+                            page: 1,
+                            pageSize: queryParams.pageSize,
+                            supplierType: activeTab === 'ALL' ? undefined : activeTab,
+                          });
+                        }}
+                        extraFilters={[
+                          {
+                            key: 'factoryCode',
+                            label: '供应商编码',
+                            type: 'text' as const,
+                            placeholder: '供应商编码',
+                            width: 140,
+                          },
+                          {
+                            key: 'factoryType',
+                            label: '内外标签',
+                            type: 'select' as const,
+                            placeholder: '内外标签',
+                            width: 120,
+                            options: [
+                              { value: 'INTERNAL', label: '内部' },
+                              { value: 'EXTERNAL', label: '外部' },
+                            ],
+                          },
+                          {
+                            key: 'parentOrgUnitId',
+                            label: '归属部门',
+                            type: 'select' as const,
+                            placeholder: '归属部门',
+                            width: 180,
+                            options: departmentOptions.map((item) => ({
+                              value: String(item.id || ''),
+                              label: getDepartmentLabel(item),
+                            })),
+                          },
+                        ]}
+                        onFilterChange={(key: string, value: any) => {
+                          if (key === 'factoryCode') setFactoryCodeInput(value || '');
+                          if (key === 'factoryType') setQueryParams((prev) => ({ ...prev, factoryType: value || undefined, page: 1 }));
+                          if (key === 'parentOrgUnitId') setQueryParams((prev) => ({ ...prev, parentOrgUnitId: value || undefined, page: 1 }));
+                        }}
+                        collapsed={true}
+                      />
+                    }
+                    right={
+                      <Button type="primary" onClick={() => openDialog('create')}>
+                        {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
+                      </Button>
+                    }
                   />
                   <ResizableTable<FactoryType>
                     storageKey="system-factory-table"

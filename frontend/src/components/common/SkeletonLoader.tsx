@@ -26,9 +26,9 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     case 'table':
       return (
         <div style={{ padding: 16 }}>
-          <Skeleton active={active} paragraph={{ rows: 1 }} title={{ width: '30%' }} />
+          <Skeleton active={active} paragraph={{ rows: 1 }} />
           {Array.from({ length: rows }).map((_, i) => (
-            <Skeleton key={i} active={active} paragraph={{ rows: 1 }} title={false} style={{ marginTop: 16 }} />
+            <Skeleton key={i} active={active} paragraph={{ rows: 1 }} style={{ marginTop: 12 }} />
           ))}
         </div>
       );
@@ -37,8 +37,8 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       return (
         <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {Array.from({ length: rows }).map((_, i) => (
-            <div key={i} style={{ background: 'var(--color-bg-card)', borderRadius: 8, padding: 16, border: '1px solid var(--color-border-light)' }}>
-              <Skeleton.Image active={active} style={{ width: '100%', height: 120, borderRadius: 6 }} />
+            <div key={i} style={{ background: '#fff', borderRadius: 8, padding: 16 }}>
+              <Skeleton.Image active={active} style={{ width: '100%', height: 120 }} />
               <Skeleton active={active} paragraph={{ rows: 2 }} style={{ marginTop: 12 }} />
             </div>
           ))}
@@ -49,7 +49,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       return (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {Array.from({ length: rows }).map((_, i) => (
-            <Skeleton.Image key={i} active={active} style={{ width: 80, height: 80, borderRadius: 6 }} />
+            <Skeleton.Image key={i} active={active} style={{ width: 80, height: 80, borderRadius: 4 }} />
           ))}
         </div>
       );
@@ -67,7 +67,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               avatar={avatar}
               active={active}
               paragraph={{ rows: 1 }}
-              style={{ marginBottom: 16 }}
+              style={{ marginBottom: 12 }}
             />
           ))}
         </div>

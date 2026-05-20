@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.Dict;
 import com.fashion.supplychain.system.mapper.DictMapper;
 import com.fashion.supplychain.system.service.DictService;
@@ -46,6 +47,11 @@ public class DictServiceImpl extends ServiceImpl<DictMapper, Dict> implements Di
                 .eq(StringUtils.hasText(status), Dict::getStatus, status)
                 .orderByAsc(Dict::getSort)
                 .orderByAsc(Dict::getId);
+        
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId != null) {
+            wrapper.and(w -> w.eq(Dict::getTenantId, currentTenantId).or().isNull(Dict::getTenantId));
+        }
 
         return baseMapper.selectPage(pageInfo, wrapper);
     }

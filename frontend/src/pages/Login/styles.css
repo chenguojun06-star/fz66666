@@ -485,7 +485,7 @@
 
 .modern-login-page .login-form-wrapper .ant-input-affix-wrapper,
 .modern-login-page .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper {
-  height: 36px !important;
+  height: clamp(40px, 3vw, 46px) !important;
   padding: 0 14px !important;
   align-items: center !important;
 }
@@ -516,8 +516,8 @@
 .modern-login-page .login-form-wrapper .ant-input-affix-wrapper > input.ant-input,
 .modern-login-page .login-form-wrapper .ant-input-password input,
 .modern-login-page .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper input {
-  height: 34px !important;
-  line-height: 34px !important;
+  height: clamp(38px, 2.8vw, 44px) !important;
+  line-height: clamp(38px, 2.8vw, 44px) !important;
   padding: 0 !important;
 }
 
@@ -551,7 +551,7 @@
 
 .login-button {
   width: 100%;
-  height: 36px;
+  height: clamp(42px, 3.2vw, 50px);
   margin-top: clamp(8px, 0.8vw, 14px);
   border-radius: 8px;
   font-weight: 700;
@@ -586,7 +586,7 @@
 
 .login-code-button {
   width: 100%;
-  height: 36px;
+  height: clamp(40px, 3vw, 46px);
   border-radius: 8px;
   color: #1f75ea !important;
   border-color: rgba(31, 117, 234, 0.18) !important;

@@ -5,7 +5,7 @@ import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import ResizableModal from '@/components/common/ResizableModal';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import { StyleInfo } from '@/types/style';
-import OrderFactorySelector, { renderFactoryLabel } from './OrderFactorySelector';
+import OrderFactorySelector from './OrderFactorySelector';
 import OrderPricingMaterialPanel from './OrderPricingMaterialPanel';
 import OrderLearningInsightCard from './OrderLearningInsightCard';
 import MultiColorOrderEditor from './MultiColorOrderEditor';
@@ -116,33 +116,25 @@ const OrderCreateModal: React.FC<Props> = (p) => {
             }}
           >
             <Row gutter={16} style={{ marginBottom: 12 }}>
-              <Col xs={12}>
-                <InlineField label={<>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></>}>
-                  <Form.Item name="orderNo" rules={[{ required: true, message: '请输入订单号' }]} style={{ marginBottom: 0 }}>
-                    <Space.Compact style={{ width: '100%' }}>
-                      <Input placeholder="例如:PO20260513143025" />
-                      <Button onClick={generateOrderNo}>自动生成</Button>
-                    </Space.Compact>
-                  </Form.Item>
-                </InlineField>
+              <Col xs={24} sm={12}>
+                <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
+                <Form.Item name="orderNo" rules={[{ required: true, message: '请输入订单号' }]} style={{ marginBottom: 0 }}>
+                  <Space.Compact style={{ width: '100%' }}>
+                    <Input placeholder="例如:PO20260513143025" />
+                    <Button onClick={generateOrderNo}>自动生成</Button>
+                  </Space.Compact>
+                </Form.Item>
               </Col>
-              <Col xs={12}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: 6, alignItems: 'start' }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, lineHeight: '32px' }}>
-                    {renderFactoryLabel(tooltipTheme)}
-                  </div>
-                  <div>
-                    <OrderFactorySelector
-                      factoryMode={factoryMode}
-                      setFactoryMode={setFactoryMode}
-                      form={form}
-                      departments={departments}
-                      factories={factories}
-                      selectedFactoryStat={selectedFactoryStat}
-                      tooltipTheme={tooltipTheme}
-                    />
-                  </div>
-                </div>
+              <Col xs={24} sm={12}>
+                <OrderFactorySelector
+                  factoryMode={factoryMode}
+                  setFactoryMode={setFactoryMode}
+                  form={form}
+                  departments={departments}
+                  factories={factories}
+                  selectedFactoryStat={selectedFactoryStat}
+                  tooltipTheme={tooltipTheme}
+                />
               </Col>
             </Row>
 
@@ -168,13 +160,6 @@ const OrderCreateModal: React.FC<Props> = (p) => {
                   </Tooltip>
                 )}</>}>
                   <Form.Item name="plannedEndDate" rules={[{ required: true, message: '请选择订单交期' }]} style={{ marginBottom: 0 }}>
-                    <UnifiedDatePicker showTime style={{ width: '100%' }} />
-                  </Form.Item>
-                </InlineField>
-              </Col>
-              <Col xs={24} sm={8}>
-                <InlineField label={<>客户交期 <span style={{ color: 'var(--color-danger)' }}>*</span></>}>
-                  <Form.Item name="expectedShipDate" rules={[{ required: true, message: '请选择客户交期' }]} style={{ marginBottom: 0 }}>
                     <UnifiedDatePicker showTime style={{ width: '100%' }} />
                   </Form.Item>
                 </InlineField>
@@ -265,7 +250,7 @@ const OrderCreateModal: React.FC<Props> = (p) => {
             </div>
 
             <div style={{ marginBottom: 12 }}>
-              <div style={{ marginBottom: 8, fontSize: 14, fontWeight: 500 }}> 下单数量</div>
+              <div style={{ marginBottom: 8 }}><span style={{ fontWeight: 600 }}> 下单数量</span></div>
               <MultiColorOrderEditor
                 availableColors={selectableColors}
                 availableSizes={selectableSizes}

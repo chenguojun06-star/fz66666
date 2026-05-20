@@ -32,7 +32,6 @@ interface Props {
   patternAssignee?: string;
   readOnly?: boolean;
   onRefresh: () => void;
-  onNavigateToBasicInfo?: () => void;
   sizeColorConfig?: SizeColorConfigInput;
   sizeAssignee?: string;
   sizeStartTime?: string;
@@ -82,7 +81,6 @@ const StylePatternTab: React.FC<Props> = ({
   patternAssignee,
   readOnly,
   onRefresh,
-  onNavigateToBasicInfo,
   sizeColorConfig,
   sizeAssignee,
   sizeStartTime,
@@ -562,14 +560,7 @@ const StylePatternTab: React.FC<Props> = ({
         }
       >
         {activeSizes.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Text type="secondary">款式未配置码数，请先在基本信息中填写码数配置</Text>
-            {onNavigateToBasicInfo && (
-              <Button type="link" onClick={onNavigateToBasicInfo}>
-                前往基本信息配置 →
-              </Button>
-            )}
-          </div>
+          <Text type="secondary">款式未配置码数，请先在基本信息中填写码数配置</Text>
         ) : (
           <Spin spinning={bomLoading}>
             {bomList.length === 0 && !bomLoading ? (

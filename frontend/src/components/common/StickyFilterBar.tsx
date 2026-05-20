@@ -5,16 +5,7 @@ interface StickyFilterBarProps {
 }
 
 const StickyFilterBar: React.FC<StickyFilterBarProps> = ({ children }) => (
-  <div style={{
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    background: 'var(--color-bg-base)',
-    borderBottom: '1px solid var(--color-border-light)',
-    padding: '8px 0',
-    backdropFilter: 'blur(8px)',
-    WebkitBackdropFilter: 'blur(8px)',
-  }}>
+  <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
     {children}
   </div>
 );

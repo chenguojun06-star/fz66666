@@ -594,7 +594,8 @@ public class FinishedWarehouseOperationOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public ProductWarehousing scanInbound(String scanCode, int quantity, String warehouseLocation,
-                                           String warehouseAreaId, String sourceType, String remark) {
+                                           String warehouseAreaId, String sourceType, String remark,
+                                           String styleNo, String color, String size) {
         String skuCode = resolveSkuCodeFromScan(scanCode);
         Map<String, Object> params = new HashMap<>();
         params.put("skuCode", skuCode);
@@ -604,10 +605,23 @@ public class FinishedWarehouseOperationOrchestrator {
         params.put("sourceType", sourceType != null ? sourceType : "scan_inbound");
         params.put("remark", remark);
         params.put("autoCreateSku", true);
+        // 优先使用用户提供的自定义值，如果没有则从 skuCode 拆分
         String[] parts = skuCode.split("-", 3);
-        params.put("styleNo", parts.length >= 1 ? parts[0] : skuCode);
-        params.put("color", parts.length >= 2 ? parts[1] : "默认色");
-        params.put("size", parts.length >= 3 ? parts[2] : "均码");
+        if (styleNo != null && !styleNo.isBlank()) {
+            params.put("styleNo", styleNo);
+        } else {
+            params.put("styleNo", parts.length >= 1 ? parts[0] : skuCode);
+        }
+        if (color != null && !color.isBlank()) {
+            params.put("color", color);
+        } else {
+            params.put("color", parts.length >= 2 ? parts[1] : "默认色");
+        }
+        if (size != null && !size.isBlank()) {
+            params.put("size", size);
+        } else {
+            params.put("size", parts.length >= 3 ? parts[2] : "均码");
+        }
         return freeInbound(params);
     }
 

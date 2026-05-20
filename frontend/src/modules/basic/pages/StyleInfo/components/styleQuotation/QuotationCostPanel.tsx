@@ -87,30 +87,33 @@ const QuotationCostPanel: React.FC<Props> = ({
             </Col>
           </Row>
 
-          {/* 一行显示：目标利润率 + 预计利润 + 单件成本 + 最终报价（label与值同行） */}
-          <Row gutter={8} align="middle">
+          {/* 一行显示：目标利润率 + 预计利润 + 单件成本 + 最终报价 */}
+          <Row gutter={8}>
             <Col span={6}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>目标利润率</span>
-                <Form.Item name="profitRate" style={{ marginBottom: 0, flex: 1 }}>
-                  <InputNumber<number>
-                    style={{ width: '100%' }}
-                    min={0}
-                    max={100}
-                    precision={1}
-                    formatter={(value) => (value !== undefined && value !== null) ? `${value}%` : ''}
-                    parser={(value) => Number((value ?? '').replace('%', ''))}
-                    disabled={isLocked}
-                  />
-                </Form.Item>
-              </div>
+              <Form.Item
+                label={<span style={{ fontSize: '12px', fontWeight: 600 }}>目标利润率</span>}
+                name="profitRate"
+                style={{ marginBottom: 8 }}
+              >
+                <InputNumber<number>
+                  style={{ width: '100%' }}
+                  min={0}
+                  max={100}
+                  precision={1}
+                  formatter={(value) => (value !== undefined && value !== null) ? `${value}%` : ''}
+                  parser={(value) => Number((value ?? '').replace('%', ''))}
+                  disabled={isLocked}
+                />
+              </Form.Item>
             </Col>
             <Col span={6}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>预计利润</span>
+              <Form.Item
+                label={<span style={{ fontSize: '12px', fontWeight: 600 }}>预计利润</span>}
+                colon={false}
+                style={{ marginBottom: 8 }}
+              >
                 <div
                   style={{
-                    flex: 1,
                     height: 32,
                     display: 'flex',
                     alignItems: 'center',
@@ -127,14 +130,16 @@ const QuotationCostPanel: React.FC<Props> = ({
                     ? `${(totalPrice - totalCost) >= 0 ? '+' : ''}¥${(totalPrice - totalCost).toFixed(2)}`
                     : <span style={{ color: 'var(--neutral-text-secondary)', fontWeight: 400, fontSize: 12 }}>–</span>}
                 </div>
-              </div>
+              </Form.Item>
             </Col>
             <Col span={6}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>单件成本</span>
+              <Form.Item
+                label={<span style={{ fontSize: '12px', fontWeight: 600 }}>单件成本</span>}
+                colon={false}
+                style={{ marginBottom: 8 }}
+              >
                 <div
                   style={{
-                    flex: 1,
                     height: 32,
                     display: 'flex',
                     alignItems: 'center',
@@ -148,14 +153,16 @@ const QuotationCostPanel: React.FC<Props> = ({
                 >
                   ¥{totalCost.toFixed(2)}
                 </div>
-              </div>
+              </Form.Item>
             </Col>
             <Col span={6}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>最终报价</span>
+              <Form.Item
+                label={<span style={{ fontSize: '12px', fontWeight: 600 }}>最终报价</span>}
+                colon={false}
+                style={{ marginBottom: 8 }}
+              >
                 <div
                   style={{
-                    flex: 1,
                     height: 32,
                     display: 'flex',
                     alignItems: 'center',
@@ -170,7 +177,7 @@ const QuotationCostPanel: React.FC<Props> = ({
                 >
                   ¥{totalPrice.toFixed(2)}
                 </div>
-              </div>
+              </Form.Item>
             </Col>
           </Row>
 

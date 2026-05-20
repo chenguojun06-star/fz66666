@@ -1,13 +1,18 @@
 import React from 'react';
 import ResizableModal, { ResizableModalProps } from '@/components/common/ResizableModal';
 
-export type StandardModalSize = 'sm' | 'md' | 'lg' | 'xl';
+/**
+ * 弹窗尺寸规范（项目铁律：30vw/40vw/60vw 三档）
+ * sm = 30vw: 简单表单、确认弹窗
+ * md = 40vw: 普通表单、列表选择（默认）
+ * lg = 60vw: 复杂表单、含表格、多Tab
+ */
+export type StandardModalSize = 'sm' | 'md' | 'lg';
 
-const sizeConfig: Record<StandardModalSize, { widthRatio: number; heightRatio: number; minWidth: number }> = {
-  sm: { widthRatio: 0.5, heightRatio: 0.4, minWidth: 480 },
-  md: { widthRatio: 0.6, heightRatio: 0.5, minWidth: 560 },
-  lg: { widthRatio: 0.8, heightRatio: 0.65, minWidth: 800 },
-  xl: { widthRatio: 0.85, heightRatio: 0.7, minWidth: 900 },
+const sizeConfig: Record<StandardModalSize, { width: string; minWidth: number }> = {
+  sm: { width: '30vw', minWidth: 480 },
+  md: { width: '40vw', minWidth: 640 },
+  lg: { width: '60vw', minWidth: 800 },
 };
 
 export type StandardModalProps = ResizableModalProps & {
@@ -20,23 +25,18 @@ const StandardModal: React.FC<StandardModalProps> = ({
   ...rest
 }) => {
   const cfg = sizeConfig[size];
-  const resolvedWidth = typeof window !== 'undefined'
-    ? Math.round(window.innerWidth * cfg.widthRatio)
-    : 800;
-  const resolvedMinWidth = cfg.minWidth;
-  const resolvedInitialHeight =
-    typeof window !== 'undefined'
-      ? Math.round(window.innerHeight * cfg.heightRatio)
-      : Math.round(800 * cfg.heightRatio);
 
-  const computedMaskClosable = maskClosable ?? (rest.onOk ? false : true);
+  const initialHeight =
+    typeof window !== 'undefined'
+      ? Math.round(window.innerHeight * 0.7)
+      : Math.round(800 * 0.55);
 
   return (
     <ResizableModal
-      width={resolvedWidth}
-      minWidth={resolvedMinWidth}
-      initialHeight={resolvedInitialHeight}
-      maskClosable={computedMaskClosable}
+      width={cfg.width}
+      minWidth={cfg.minWidth}
+      initialHeight={initialHeight}
+      maskClosable={maskClosable ?? (rest.onOk ? false : true)}
       {...rest}
     />
   );

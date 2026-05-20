@@ -30,7 +30,7 @@
   height: auto;
   min-height: 70px;
   max-height: 120px;
-  border-radius: 10px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,7 +42,7 @@
   height: auto;
   max-height: 120px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .ef-thumb-empty {
@@ -113,8 +113,8 @@
 
 .ef-field-value {
   color: var(--color-text-primary);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.08;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -195,7 +195,7 @@
 
 .ef-compact .style-smart-stage__time-combined {
   font-size: 12px;
-  min-height: 28px;
+  min-height: 18px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

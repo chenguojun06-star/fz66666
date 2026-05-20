@@ -97,8 +97,8 @@
 
 .office-floor-3d {
   perspective: 900px;
-  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
-  border-radius: 16px;
+  background: var(--color-bg-subtle);
+  border-radius: 6px;
   padding: 24px;
   min-height: 500px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -113,9 +113,8 @@
 }
 
 .dept-section {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(6px);
-  border-radius: 14px;
+  background: var(--color-bg-card);
+  border-radius: 6px;
   border: 1px solid var(--dept-color, #e2e8f0);
   border-left: 4px solid var(--dept-color, #e2e8f0);
   overflow: hidden;
@@ -595,10 +594,10 @@
 
 .agent-detail {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 6px;
   padding: 16px 20px;
   border: 1.5px solid color-mix(in srgb, var(--agent-color) 20%, #e2e8f0);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .agent-detail-header {

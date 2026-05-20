@@ -33,13 +33,18 @@ public class DictOrchestrator {
         if (!StringUtils.hasText(dictType)) {
             return List.of();
         }
-        return dictService.list(
-            new LambdaQueryWrapper<Dict>()
+        Long currentTenantId = UserContext.tenantId();
+        LambdaQueryWrapper<Dict> wrapper = new LambdaQueryWrapper<Dict>()
                 .eq(Dict::getDictType, dictType.trim().toLowerCase())
                 .eq(Dict::getStatus, "ENABLED")
                 .orderByAsc(Dict::getSort)
-                .orderByAsc(Dict::getId)
-        );
+                .orderByAsc(Dict::getId);
+        
+        if (currentTenantId != null) {
+            wrapper.and(w -> w.eq(Dict::getTenantId, currentTenantId).or().isNull(Dict::getTenantId));
+        }
+        
+        return dictService.list(wrapper);
     }
 
     @Transactional(rollbackFor = Exception.class)

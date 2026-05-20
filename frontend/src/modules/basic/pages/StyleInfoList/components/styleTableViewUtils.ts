@@ -200,10 +200,17 @@ export const getDeliveryMeta = (record: StyleRecord, completed = false): { tone:
   }
   if (completed) {
     const completedTime = getStyleCompletedTime(record);
+    const createdTime = record.createTime ? dayjs(record.createTime) : null;
+    const createdLabel = createdTime?.isValid() ? createdTime.format('MM-DD') : '';
     const completedLabel = completedTime?.isValid() ? completedTime.format('MM-DD') : '';
+    const rangeLabel = createdLabel && completedLabel
+      ? `${createdLabel} → ${completedLabel}`
+      : completedLabel
+        ? completedLabel
+        : '完成';
     return {
       tone: 'success',
-      label: completedLabel ? `${completedLabel} 已完成` : '已完成',
+      label: rangeLabel,
     };
   }
 
@@ -258,7 +265,7 @@ export const isScrappedPatternSnapshot = (snapshot?: PatternProductionSnapshot |
 );
 
 export const resolveStageTag = (stage: SmartStage) => {
-  if (stage.status === 'done') return { color: 'success' as const, text: '已完成' };
+  if (stage.status === 'done') return { color: 'success' as const, text: '完成' };
   if (stage.status === 'active') return { color: 'processing' as const, text: '进行中' };
   if (stage.status === 'scrapped') return { color: 'default' as const, text: '已停止' };
   if (stage.status === 'risk') {

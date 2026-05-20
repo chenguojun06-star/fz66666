@@ -80,7 +80,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
 
   const insight: DecisionInsight = {
     level: isCompleted ? 'success' : daysLeft != null && daysLeft <= 0 ? 'danger' : daysLeft != null && daysLeft <= 3 ? 'warning' : 'info',
-    title: isCompleted ? '样衣链路已完成' : nextStage ? `下一步先做 ${nextStage.label}` : '继续推进当前阶段',
+    title: isCompleted ? '样衣开发完成' : nextStage ? `下一步先做 ${nextStage.label}` : '继续推进当前阶段',
     summary: isCompleted
       ? '当前款式开发节点已走完，可以转入后续样衣或下单动作。'
       : nextStage

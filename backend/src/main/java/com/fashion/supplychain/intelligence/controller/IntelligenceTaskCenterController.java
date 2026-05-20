@@ -122,7 +122,7 @@ public class IntelligenceTaskCenterController {
     }
 
     @PostMapping("/metrics/snapshot")
-    @PreAuthorize("hasRole('super_admin')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public Result<String> generateMetricsSnapshot() {
         aiMetricsOrchestrator.generateSnapshot();
         return Result.success("指标快照已生成");

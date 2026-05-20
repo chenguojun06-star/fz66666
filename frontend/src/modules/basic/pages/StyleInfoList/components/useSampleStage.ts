@@ -111,7 +111,7 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
       return { tag: { color: 'error' as const, text: '已停止' }, helper: '样衣生产已停止', time: sampleCompletedRangeLabel };
     }
     if (isSampleSnapshotCompleted) {
-      return { tag: { color: 'success' as const, text: '已完成' }, helper: '样衣生产已完成', time: sampleCompletedRangeLabel };
+      return { tag: { color: 'success' as const, text: '完成' }, helper: '样衣生产已完成', time: sampleCompletedRangeLabel };
     }
     if (isSampleSnapshotReceived) {
       return {

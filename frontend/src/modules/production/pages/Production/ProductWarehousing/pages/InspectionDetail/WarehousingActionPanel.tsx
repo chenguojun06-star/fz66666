@@ -45,6 +45,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
         <ResizableTable<WarehousingDetailRecord>
           rowKey="id" pagination={false}
           dataSource={pendingRecords}
+          resizableColumns={false}
           scroll={undefined}
           style={{ fontSize: 12 }}
           columns={[

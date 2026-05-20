@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button, DatePicker, Input, Select, Space, Radio } from 'antd';
+import { SearchOutlined, ReloadOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import './StandardSearchBar.css';
@@ -7,6 +8,16 @@ import './StandardSearchBar.css';
 const { RangePicker } = DatePicker;
 
 export type StandardSearchOption = { label: string; value: string };
+
+export interface SearchFilterField {
+  key: string;
+  label: string;
+  type: 'text' | 'select' | 'dateRange' | 'custom';
+  placeholder?: string;
+  options?: StandardSearchOption[];
+  width?: number;
+  render?: () => React.ReactNode;
+}
 
 export interface StandardSearchBarProps {
   searchValue?: string;
@@ -24,13 +35,22 @@ export interface StandardSearchBarProps {
   onSearch?: () => void;
   showResetButton?: boolean;
   onReset?: () => void;
-  debounceMs?: number;
+  extraFilters?: SearchFilterField[];
+  onFilterChange?: (key: string, value: any) => void;
+  collapsed?: boolean;
 }
+
+const DATE_PRESETS: { label: string; value: string }[] = [
+  { label: '今天', value: 'today' },
+  { label: '本周', value: 'week' },
+  { label: '本月', value: 'month' },
+  { label: '本年', value: 'year' },
+];
 
 const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   searchValue,
   onSearchChange,
-  searchPlaceholder = '搜索关键词...',
+  searchPlaceholder = '搜索关键词',
   dateValue,
   onDateChange,
   statusValue = '',
@@ -41,56 +61,20 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   showStatus = true,
   showSearchButton = false,
   onSearch,
-  showResetButton = true,
+  showResetButton = false,
   onReset,
-  debounceMs = 300,
+  extraFilters = [],
+  onFilterChange,
+  collapsed: initialCollapsed = false,
 }) => {
   const [presetValue, setPresetValue] = useState<string>('');
-  const [localSearchValue, setLocalSearchValue] = useState(searchValue ?? '');
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const hasExtraFilters = extraFilters.length > 0;
 
-  useEffect(() => {
-    if (searchValue !== undefined && searchValue !== localSearchValue) {
-      setLocalSearchValue(searchValue);
-    }
-  }, [searchValue]);
-
-  const debouncedOnChange = useCallback((value: string) => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      onSearchChange(value);
-    }, debounceMs);
-  }, [onSearchChange, debounceMs]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setLocalSearchValue(val);
-    debouncedOnChange(val);
-  };
-
-  const handlePressEnter = () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    onSearchChange(localSearchValue);
-    onSearch?.();
-  };
-
-  const handlePresetChange = (e: any) => {
+  const handlePresetChange = useCallback((e: any) => {
     const val = e.target.value;
     setPresetValue(val);
     if (!onDateChange) return;
-
     const today = dayjs();
     switch (val) {
       case 'today':
@@ -108,46 +92,79 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
       default:
         onDateChange(null);
     }
-  };
+  }, [onDateChange]);
 
-  const handleDateChange = (value: any) => {
+  const handleDateChange = useCallback((value: any) => {
     setPresetValue('');
     if (onDateChange) onDateChange(value as [Dayjs | null, Dayjs | null] | null);
-  };
+  }, [onDateChange]);
 
-  const hasActiveFilters = localSearchValue || dateValue || statusValue;
-
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setPresetValue('');
-    setLocalSearchValue('');
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    onSearchChange('');
     onReset?.();
+  }, [onReset]);
+
+  const handleFilterChange = useCallback((key: string, value: any) => {
+    onFilterChange?.(key, value);
+  }, [onFilterChange]);
+
+  const renderExtraFilter = (filter: SearchFilterField) => {
+    switch (filter.type) {
+      case 'text':
+        return (
+          <Input
+            key={filter.key}
+            placeholder={filter.placeholder || filter.label}
+            allowClear
+            style={{ width: filter.width || 160 }}
+            onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+            onPressEnter={onSearch}
+          />
+        );
+      case 'select':
+        return (
+          <Select
+            key={filter.key}
+            placeholder={filter.placeholder || filter.label}
+            allowClear
+            style={{ width: filter.width || 140 }}
+            options={filter.options}
+            onChange={(value) => handleFilterChange(filter.key, value)}
+          />
+        );
+      case 'dateRange':
+        return (
+          <RangePicker
+            key={filter.key}
+            style={{ width: filter.width || 240 }}
+            onChange={(value) => handleFilterChange(filter.key, value)}
+          />
+        );
+      case 'custom':
+        return filter.render ? (
+          <React.Fragment key={filter.key}>{filter.render()}</React.Fragment>
+        ) : null;
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="standard-search-bar">
+    <div className="standard-search-bar-v2">
       <Space size={12} wrap className="standard-search-row">
         {searchValue !== undefined && (
           <Input
-            id="standard-search-keyword"
-            name="keyword"
-            value={localSearchValue}
-            onChange={handleSearchChange}
+            prefix={<SearchOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="standard-search-input"
+            className="standard-search-input-v2"
             allowClear
-            onClear={() => {
-              setLocalSearchValue('');
-              if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-              onSearchChange('');
-            }}
-            onPressEnter={handlePressEnter}
+            onPressEnter={onSearch}
           />
         )}
-        {showDate ? (
+
+        {showDate && (
           <Space size={8}>
             {showDatePresets && (
               <Radio.Group
@@ -155,43 +172,65 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
                 onChange={handlePresetChange}
                 optionType="button"
                 buttonStyle="solid"
+                size="small"
               >
-                <Radio.Button value="today">日</Radio.Button>
-                <Radio.Button value="week">周</Radio.Button>
-                <Radio.Button value="month">月</Radio.Button>
-                <Radio.Button value="year">年</Radio.Button>
+                {DATE_PRESETS.map((p) => (
+                  <Radio.Button key={p.value} value={p.value}>{p.label}</Radio.Button>
+                ))}
               </Radio.Group>
             )}
             <RangePicker
-              id="standard-search-date"
               value={dateValue || null}
               onChange={handleDateChange}
-              className="standard-search-date"
+              className="standard-search-date-v2"
             />
           </Space>
-        ) : null}
-        {showStatus ? (
+        )}
+
+        {showStatus && statusOptions.length > 0 && (
           <Select
-            id="standard-search-status"
-            value={statusValue}
-            onChange={(value) => onStatusChange && onStatusChange(value)}
+            value={statusValue || undefined}
+            onChange={(value) => onStatusChange?.(value || '')}
             options={statusOptions}
-            className="standard-search-status"
+            className="standard-search-status-v2"
             placeholder="全部状态"
             allowClear
           />
-        ) : null}
-        {showSearchButton && (
-          <Button type="primary" onClick={onSearch}>
-            查询
-          </Button>
         )}
-        {showResetButton && hasActiveFilters ? (
-          <Button onClick={handleReset}>
-            重置
-          </Button>
-        ) : null}
+
+        {!collapsed && extraFilters.map(renderExtraFilter)}
+
+        <Space size={8} className="standard-search-actions">
+          {showSearchButton && (
+            <Button type="primary" icon={<SearchOutlined />} onClick={onSearch}>
+              查询
+            </Button>
+          )}
+          {showResetButton && (
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+          )}
+          {hasExtraFilters && (
+            <Button
+              type="link"
+              icon={collapsed ? <DownOutlined /> : <UpOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ padding: '0 4px' }}
+            >
+              {collapsed ? '更多筛选' : '收起'}
+            </Button>
+          )}
+        </Space>
       </Space>
+
+      {hasExtraFilters && collapsed && (
+        <div className="standard-search-extra-filters">
+          <Space size={12} wrap>
+            {extraFilters.map(renderExtraFilter)}
+          </Space>
+        </div>
+      )}
     </div>
   );
 };

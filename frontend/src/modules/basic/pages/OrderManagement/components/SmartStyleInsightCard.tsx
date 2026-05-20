@@ -208,9 +208,9 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #f0f7ff 0%, #fafbff 100%)',
-      border: '1px solid #d6e8ff',
-      borderRadius: 10,
+      background: '#f0f5ff',
+      border: '1px solid var(--color-border)',
+      borderRadius: 6,
       padding: '12px 14px',
       fontSize: 12,
       marginTop: 8,

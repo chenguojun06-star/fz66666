@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.system.entity.Dict;
 import com.fashion.supplychain.system.service.DictService;
@@ -63,6 +64,11 @@ public class DictTool extends AbstractAgentTool {
                 .orderByAsc(Dict::getDictType)
                 .orderByAsc(Dict::getSort)
                 .last("LIMIT " + limit);
+        
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId != null) {
+            query.and(w -> w.eq(Dict::getTenantId, currentTenantId).or().isNull(Dict::getTenantId));
+        }
 
         List<Dict> items = dictService.list(query);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -74,12 +80,18 @@ public class DictTool extends AbstractAgentTool {
 
     private String queryByType(Map<String, Object> args) throws Exception {
         String dictType = requireString(args, "dictType");
-        List<Dict> items = dictService.lambdaQuery()
+        LambdaQueryWrapper<Dict> query = new LambdaQueryWrapper<Dict>()
                 .eq(Dict::getDictType, dictType)
                 .eq(Dict::getStatus, "ENABLED")
                 .orderByAsc(Dict::getSort)
-                .last("LIMIT 100")
-                .list();
+                .last("LIMIT 100");
+        
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId != null) {
+            query.and(w -> w.eq(Dict::getTenantId, currentTenantId).or().isNull(Dict::getTenantId));
+        }
+        
+        List<Dict> items = dictService.list(query);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("summary", "字典类型 " + dictType + " 共 " + items.size() + " 项");

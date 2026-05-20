@@ -1,0 +1,35 @@
+.std-data-page-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.std-data-page-table-wrapper .resizable-table-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.std-data-page-table-wrapper .ant-table-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.std-data-page-table-wrapper .ant-spin-nested-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.std-data-page-table-wrapper .ant-spin-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.std-data-page-table-wrapper .ant-table {
+  flex: 1;
+}

@@ -538,6 +538,9 @@ public class AiAgentOrchestrator {
                 }
             }
 
+            // 发送思考事件，确保前端创建消息
+            emitSse(emitter, "thinking", java.util.Map.of());
+
             com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult result;
             java.util.List<com.fashion.supplychain.intelligence.agent.AiMessage> quickMsgs = java.util.List.of(
                     com.fashion.supplychain.intelligence.agent.AiMessage.system(sysPrompt.toString()),
@@ -565,6 +568,8 @@ public class AiAgentOrchestrator {
                 }
             }
 
+            // 发送最终 answer 事件，确保前端能解析卡片等结构化内容
+            emitSse(emitter, "answer", java.util.Map.of("content", answer, "commandId", commandId));
             emitSse(emitter, "done", java.util.Map.of());
             emitter.complete();
 

@@ -212,7 +212,7 @@ public class DistributedLockService {
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("操作被中断，请重试 [lock:" + key + "]");
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
             log.error("Lock error for key: {}, failing safely instead of executing without lock", key, e);

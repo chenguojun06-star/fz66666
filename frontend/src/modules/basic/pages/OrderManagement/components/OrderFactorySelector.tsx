@@ -3,52 +3,6 @@ import { Form, Segmented, Select, Space, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
 
-export const renderFactoryLabel = (tooltipTheme: {
-  background: string;
-  text: string;
-  border: string;
-  divider: string;
-}) => (
-  <Space size={4}>
-    <span>生产方</span>
-    <Tooltip
-      color={tooltipTheme.background}
-      placement="topLeft"
-      zIndex={2600}
-      getPopupContainer={() => document.body}
-      title={(
-        <div style={{ fontSize: 'var(--font-size-sm)', color: tooltipTheme.text }}>
-          <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>生产方式说明</div>
-          <div style={{ marginBottom: 6 }}>
-            <span style={{ color: 'var(--primary-color-light)' }}>内部工厂：</span>
-            选择内部车间/部门，由内部工序团队完成
-          </div>
-          <div>
-            <span style={{ color: 'var(--error-color-light)' }}>外发加工：</span>
-            选择外发工厂，委托外厂生产
-          </div>
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: 'var(--font-size-xs)', opacity: 0.9 }}>
-            所有数据最终在订单结算数据看板统一查看
-          </div>
-        </div>
-      )}
-      styles={{
-        root: { maxWidth: 420 },
-        body: {
-          background: tooltipTheme.background,
-          color: tooltipTheme.text,
-          border: `1px solid ${tooltipTheme.border}`,
-          whiteSpace: 'normal',
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word',
-        },
-      } as any}
-    >
-      <QuestionCircleOutlined style={{ color: 'var(--primary-color)', cursor: 'help' }} />
-    </Tooltip>
-  </Space>
-);
-
 interface OrderFactorySelectorProps {
   factoryMode: 'INTERNAL' | 'EXTERNAL';
   setFactoryMode: (mode: 'INTERNAL' | 'EXTERNAL') => void;
@@ -74,7 +28,48 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
   tooltipTheme,
 }) => {
   return (
-    <>
+    <Form.Item
+      label={(
+        <Space size={4}>
+          <span>生产方</span>
+          <Tooltip
+            color={tooltipTheme.background}
+            placement="topLeft"
+            zIndex={2600}
+            getPopupContainer={() => document.body}
+            title={(
+              <div style={{ fontSize: 'var(--font-size-sm)', color: tooltipTheme.text }}>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>生产方式说明</div>
+                <div style={{ marginBottom: 6 }}>
+                  <span style={{ color: 'var(--primary-color-light)' }}>内部工厂：</span>
+                  选择内部车间/部门，由内部工序团队完成
+                </div>
+                <div>
+                  <span style={{ color: 'var(--error-color-light)' }}>外发加工：</span>
+                  选择外发工厂，委托外厂生产
+                </div>
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: 'var(--font-size-xs)', opacity: 0.9 }}>
+                  所有数据最终在订单结算数据看板统一查看
+                </div>
+              </div>
+            )}
+            styles={{
+              root: { maxWidth: 420 },
+              body: {
+                background: tooltipTheme.background,
+                color: tooltipTheme.text,
+                border: `1px solid ${tooltipTheme.border}`,
+                whiteSpace: 'normal',
+                overflowWrap: 'anywhere',
+                wordBreak: 'break-word',
+              },
+            } as any}
+          >
+            <QuestionCircleOutlined style={{ color: 'var(--primary-color)', cursor: 'help' }} />
+          </Tooltip>
+        </Space>
+      )}
+    >
       <Segmented
         value={factoryMode}
         onChange={(value) => {
@@ -223,7 +218,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
           )}
         </>
       )}
-    </>
+    </Form.Item>
   );
 };
 

@@ -6,6 +6,8 @@ import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import SmallModal from '@/components/common/SmallModal';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import { message } from '@/utils/antdStatic';
 import { useUserListColumns } from './hooks/useUserListColumns';
 import { useUserListData } from './hooks/useUserListData';
@@ -213,55 +215,60 @@ const UserList: React.FC = () => {
 
             <div className="user-list-panel">
               <Card className="filter-card mb-sm">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
-                  <Space wrap size={12}>
-                    <Input
-                      value={keywordInput}
-                      onChange={(e) => setKeywordInput(e.target.value)}
-                      placeholder="搜索姓名/手机号"
-                      allowClear
-                      style={{ width: 200 }}
-                    />
-                    <Select
-                      value={employmentFilter || undefined}
-                      onChange={(value) => setEmploymentFilter(value || '')}
-                      options={[
-                        { label: '全部', value: '' },
-                        { label: '正式', value: 'normal' },
-                        { label: '试用期', value: 'probation' },
-                        { label: '临时工', value: 'temporary' },
+                <StandardToolbar
+                  left={
+                    <StandardSearchBar
+                      searchValue={keywordInput}
+                      onSearchChange={setKeywordInput}
+                      searchPlaceholder="搜索姓名/手机号"
+                      showDate={false}
+                      showStatus={false}
+                      extraFilters={[
+                        {
+                          key: 'employment',
+                          label: '在职状态',
+                          type: 'select',
+                          width: 130,
+                          options: [
+                            { label: '全部', value: '' },
+                            { label: '正式', value: 'normal' },
+                            { label: '试用期', value: 'probation' },
+                            { label: '临时工', value: 'temporary' },
+                          ],
+                        },
+                        {
+                          key: 'role',
+                          label: '职位',
+                          type: 'select',
+                          width: 150,
+                          options: [
+                            { label: '全部职位', value: '' },
+                            ...roleOptions.map(r => ({
+                              label: r.roleName || '系统角色',
+                              value: String(r.id),
+                            })),
+                          ],
+                        },
                       ]}
-                      placeholder="在职状态"
-                      allowClear
-                      style={{ width: 130 }}
+                      onFilterChange={(key, value) => {
+                        if (key === 'employment') setEmploymentFilter(value || '');
+                        if (key === 'role') setRoleFilter(value || '');
+                      }}
                     />
-                    <Select
-                      value={roleFilter || undefined}
-                      onChange={(value) => setRoleFilter(value || '')}
-                      options={[
-                        { label: '全部职位', value: '' },
-                        ...roleOptions.map(r => ({
-                          label: r.roleName || '系统角色',
-                          value: String(r.id),
-                        })),
-                      ]}
-                      placeholder="职位"
-                      allowClear
-                      loading={roleOptionsLoading}
-                      style={{ width: 150 }}
-                    />
-                  </Space>
-                  {canManageUsers && (
-                    <Space>
-                      <Button icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
-                        邀请员工
-                      </Button>
-                      <Button type="primary" onClick={() => openDialog()}>
-                        新增用户
-                      </Button>
-                    </Space>
-                  )}
-                </div>
+                  }
+                  right={
+                    canManageUsers ? (
+                      <Space>
+                        <Button icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
+                          邀请员工
+                        </Button>
+                        <Button type="primary" onClick={() => openDialog()}>
+                          新增用户
+                        </Button>
+                      </Space>
+                    ) : undefined
+                  }
+                />
               </Card>
 
               <ResizableTable

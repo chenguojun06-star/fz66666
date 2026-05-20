@@ -16,7 +16,6 @@ import { getStyleCardColorText, getStyleCardQuantityText, getStyleCardSizeQuanti
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { getStyleSourceText } from '@/utils/styleSource';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
-import { getDeliveryMeta } from './styleTableViewUtils';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -176,28 +175,16 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       }}
       hoverRender={(record) => <SmartStyleHoverCard record={record as StyleInfo} />}
       titleTags={(record) => {
-        const r = record as StyleInfo;
-        const node = String((r as any).progressNode || '').trim();
-        const allStagesCompleted = isStageDoneRow(r);
-        const deliveryMeta = getDeliveryMeta(r as any, allStagesCompleted);
-        const tagEl = node ? (() => {
-          const color = node === '开发样报废'
-            ? 'error'
-            : /完成/.test(node)
-              ? 'default'
-              : /(制作中|开发中|进行中)/.test(node)
-                ? 'success'
-                : 'processing';
-          return <Tag color={color}>{node}</Tag>;
-        })() : null;
-        return (
-          <>
-            {tagEl}
-            <span className={`style-smart-row__delivery style-smart-row__delivery--${isScrappedRow(r) ? 'scrapped' : deliveryMeta.tone}`}>
-              {deliveryMeta.label}
-            </span>
-          </>
-        );
+        const node = String((record as StyleInfo).progressNode || '').trim();
+        if (!node) return null;
+        const color = node === '开发样报废'
+          ? 'error'
+          : /完成/.test(node)
+            ? 'default'
+            : /(制作中|开发中|进行中)/.test(node)
+              ? 'success'
+              : 'processing';
+        return <Tag color={color}>{node}</Tag>;
       }}
       onCardClick={(record) => navigate(`/style-info/${record.id}`)}
       getCardId={(record) => `style-card-${getStyleDomKey(record as StyleInfo)}`}

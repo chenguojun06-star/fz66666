@@ -437,7 +437,6 @@ const StyleInfoListPage: React.FC = () => {
                   icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
                   onClick={() => setDateSortAsc(v => !v)}
                   title={dateSortAsc ? '按时间升序' : '按时间降序'}
-                  style={{ borderRadius: 14, minWidth: 32, width: 32, padding: 0, fontSize: 13 }}
                 />
                 <Button
                   icon={viewMode === 'smart' ? <AppstoreOutlined /> : <RadarChartOutlined />}

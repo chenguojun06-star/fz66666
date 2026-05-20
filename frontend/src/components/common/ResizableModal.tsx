@@ -113,10 +113,6 @@ export type ResizableModalProps = ModalProps & {
   /** 初始高度 */
   initialHeight?: number;
   contentPadding?: ContentPadding;
-  /** 是否在打开时自动聚焦第一个输入框 */
-  autoFocus?: boolean;
-  /** 是否在有关闭确认（表单脏数据时提示保存） */
-  confirmOnClose?: boolean;
   /** 允许传入额外的自定义属性 */
   [key: string]: any;
 };
@@ -142,8 +138,6 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   title,
   destroyOnClose,
   destroyOnHidden,
-  autoFocus = true,
-  confirmOnClose = false,
   ...rest
 }) => {
   // 模态框尺寸状态
@@ -298,47 +292,17 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       try {
         stopResize();
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     };
   }, [stopResize]);
-
-  // 自动聚焦第一个输入框
-  React.useEffect(() => {
-    if (!open || !autoFocus) return;
-    const timer = setTimeout(() => {
-      const root = document.querySelector('[data-resizable-modal-root]');
-      if (!root) return;
-      const firstInput = root.querySelector(
-        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), .ant-select-selector, .ant-picker'
-      ) as HTMLElement | null;
-      if (firstInput) {
-        firstInput.focus();
-      }
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [open, autoFocus]);
-
-  // 关闭确认处理
-  const handleCancel = React.useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    if (confirmOnClose) {
-      const root = document.querySelector('[data-resizable-modal-root]');
-      if (root) {
-        const hasDirtyInput = root.querySelector(
-          'input:focus, textarea:focus, .ant-select-focused, .ant-picker-focused'
-        );
-        if (hasDirtyInput) {
-          return;
-        }
-      }
-    }
-    onCancel?.(e);
-  }, [confirmOnClose, onCancel]);
 
   return (
     <Modal
       {...rest}
       open={open}
-      onCancel={handleCancel}
+      onCancel={onCancel}
       footer={footer}
       title={title}
       destroyOnHidden={destroyOnHidden ?? destroyOnClose}

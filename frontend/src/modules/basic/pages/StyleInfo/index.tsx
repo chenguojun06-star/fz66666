@@ -189,7 +189,6 @@ const StyleInfoDetailPage: React.FC = () => {
               setCommonSizes={colorSize.setCommonSizes}
               commonColors={colorSize.commonColors}
               setCommonColors={colorSize.setCommonColors}
-              onAutoUnlock={handleUnlock}
             />
           </Form>
         </Card>
@@ -233,7 +232,6 @@ const StyleInfoDetailPage: React.FC = () => {
                     sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
                     linkedSizes={colorSize.matrixSizes}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                    onNavigateToBasicInfo={() => { setActiveTabKey('1'); }}
                   />
                 )
               },

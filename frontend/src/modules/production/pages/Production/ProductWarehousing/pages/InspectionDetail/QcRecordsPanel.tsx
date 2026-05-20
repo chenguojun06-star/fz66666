@@ -53,6 +53,7 @@ const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, h
         storageKey="qc-records-panel-table"
         rowKey="id" pagination={false}
         dataSource={qcRecords}
+        resizableColumns={false}
         scroll={{ x: 1100 }}
         style={{ fontSize: 12 }}
         rowClassName={(record) =>
