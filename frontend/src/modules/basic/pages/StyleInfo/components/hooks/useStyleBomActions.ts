@@ -169,7 +169,7 @@ const useStyleBomActions = ({
               unit: record.unit ?? '',
             }],
           });
-          message.success('申请领取成功，将在「面辅料进销存 → 待出库领料」中显示');
+          message.success('申请领取成功，将在「面辅料出入库 → 待出库领料」中显示');
         } catch (error: unknown) {
           message.error(`申请失败：${error instanceof Error ? error.message : '请求错误'}`);
         }

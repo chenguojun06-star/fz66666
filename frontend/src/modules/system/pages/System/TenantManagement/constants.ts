@@ -36,7 +36,7 @@ export const getFlowDescription = (appType: string): string => {
   const map: Record<string, string> = {
     ORDER_SYNC: '客户ERP下单 → 自动创建生产订单 → 在「生产管理→我的订单」查看',
     QUALITY_FEEDBACK: '质检完成 → Webhook推送质检结果 → 在「生产管理→质检入库」查看',
-    LOGISTICS_SYNC: '出库发货 → Webhook推送物流信息 → 在「仓库管理→成品进销存」查看',
+    LOGISTICS_SYNC: '出库发货 → Webhook推送物流信息 → 在「仓库管理→成品出入库」查看',
     PAYMENT_SYNC: '对账单生成 → 推送给客户 → 客户确认付款 → 在「财务管理→订单结算」查看',
   };
   return map[appType] || '';

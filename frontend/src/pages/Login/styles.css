@@ -396,7 +396,7 @@
 
 /* ---------- Right Pane ---------- */
 .login-right-pane {
-  flex: 0 0 clamp(340px, 38vw, 960px);
+  flex: 0 0 clamp(380px, 40vw, 560px);
   position: relative;
   display: flex;
   align-items: center;
@@ -431,7 +431,7 @@
 .login-form-wrapper {
   position: relative;
   width: 100%;
-  max-width: clamp(300px, 26vw, 420px);
+  max-width: 440px;
   z-index: 1;
 }
 
@@ -653,7 +653,7 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1520px) {
-  .login-right-pane { flex-basis: clamp(320px, 36vw, 860px); }
+  .login-right-pane { flex-basis: clamp(320px, 36vw, 490px); }
 }
 
 @media (max-width: 1280px) {

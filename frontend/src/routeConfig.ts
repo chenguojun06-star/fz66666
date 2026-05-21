@@ -215,7 +215,7 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(ShoppingCartOutlined),
     items: [
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
-      { label: '物料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
+      { label: '物料出入库', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
       { label: '物料新增', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
     ],
   },
@@ -242,7 +242,7 @@ export const menuConfig: MenuSection[] = [
     key: 'warehouse',
     icon: React.createElement(InboxOutlined),
     items: [
-      { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
+      { label: '成品出入库', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
       { label: '成品资料', path: paths.productInfo, icon: React.createElement(ProfileOutlined) },
       { label: '标签打印', path: paths.labelPrint, icon: React.createElement(TagOutlined) },
       { label: '库存盘点', path: paths.inventoryCheck, icon: React.createElement(AuditOutlined) },

@@ -63,7 +63,7 @@ export const tutorialsBasicWarehouse: Tutorial[] = [
       steps: [
         {
           title: '创建出库单',
-          description: '从「成品管理」→「成品进销存」创建出库单，选择订单和出库数量。',
+          description: '从「成品管理」→「成品出入库」创建出库单，选择订单和出库数量。',
           tips: [
             '出库数量不能超过库存数量',
             '可部分出库（分批发货）',

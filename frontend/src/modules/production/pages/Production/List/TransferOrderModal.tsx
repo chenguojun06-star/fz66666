@@ -295,7 +295,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
               ? setTransferFactoryMessage(e.target.value)
               : setTransferMessage(e.target.value)
             }
-            autoSize={{ minRows: 2, maxRows: 4 }} maxLength={200} showCount
+            autoSize={{ minRows: 2 }}
           />
         </div>
       </div>

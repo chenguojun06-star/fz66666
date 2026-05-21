@@ -90,6 +90,8 @@ body {
 
 /* ============================================
    全局输入框 - 统一风格
+   控件高度由 antd ConfigProvider componentSize='small' 统一管控
+   这里只设圆角和过渡动画，不设 height/line-height/padding
    ============================================ */
 .ant-input-affix-wrapper,
 .ant-input-number,
@@ -1394,21 +1396,17 @@ body {
   transition: all 0.2s ease;
 }
 
-/* 操作列文本按钮：小号尺寸 */
+/* 操作列文本按钮：统一小号 */
 .row-actions .ant-btn-link:not(.row-actions__btn--icon) {
-  height: 28px !important;
-  line-height: 26px !important;
   padding: 0 8px !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
 }
 
 /* 表格操作列：紧凑按钮 */
 .table-action-compact .ant-btn:not(.ant-btn-icon-only),
 .table-action-compact .ant-btn-link:not(.ant-btn-icon-only) {
-  height: 24px !important;
-  line-height: 22px !important;
   padding: 0 8px !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon:not(:disabled):hover,
@@ -2148,40 +2146,6 @@ body {
   .layout-main {
     margin-top: 56px;
   }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker,
-  .ant-input,
-  .ant-select,
-  .ant-auto-complete .ant-select-selector,
-  .ant-auto-complete .ant-input {
-    height: 28px !important;
-  }
-  .ant-select-selection-item,
-  .ant-select-selection-placeholder {
-    line-height: 26px !important;
-  }
-  /* 28px 高 → padding=(28-2-22)/2=2px */
-  .ant-input,
-  .ant-input-number .ant-input-number-input,
-  .ant-picker input,
-  .ant-input-affix-wrapper .ant-input,
-  .ant-auto-complete .ant-input {
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
-  }
-  .ant-space-compact .ant-input,
-  .ant-space-compact .ant-select-selector,
-  .ant-space-compact .ant-picker,
-  .ant-space-compact .ant-auto-complete .ant-input,
-  .ant-space-compact .ant-btn {
-    height: 28px !important;
-  }
-  .ant-btn:not(.ant-btn-icon-only) {
-    height: 28px !important;
-    font-size: 12px !important;
-  }
   .ant-table-thead > tr > th .ant-table-column-title {
     white-space: normal;
     word-break: keep-all;
@@ -2210,40 +2174,6 @@ body {
   .layout-main {
     margin-top: 60px;
   }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker,
-  .ant-input,
-  .ant-select,
-  .ant-auto-complete .ant-select-selector,
-  .ant-auto-complete .ant-input {
-    height: 30px !important;
-  }
-  .ant-select-selection-item,
-  .ant-select-selection-placeholder {
-    line-height: 28px !important;
-  }
-  /* 30px 高 → padding=(30-2-22)/2=3px */
-  .ant-input,
-  .ant-input-number .ant-input-number-input,
-  .ant-picker input,
-  .ant-input-affix-wrapper .ant-input,
-  .ant-auto-complete .ant-input {
-    padding-top: 3px !important;
-    padding-bottom: 3px !important;
-  }
-  .ant-space-compact .ant-input,
-  .ant-space-compact .ant-select-selector,
-  .ant-space-compact .ant-picker,
-  .ant-space-compact .ant-auto-complete .ant-input,
-  .ant-space-compact .ant-btn {
-    height: 30px !important;
-  }
-  .ant-btn:not(.ant-btn-icon-only) {
-    height: 30px !important;
-    font-size: 13px !important;
-  }
 }
 
 /* ── 第3档：大屏 (1601-1920px) 台式机1080p ── */
@@ -2258,47 +2188,13 @@ body {
     --table-header-height: 46px;
   }
   html {
-    font-size: 15px;
+    font-size: 14px;
   }
   .layout-header {
     height: 64px;
   }
   .layout-main {
     margin-top: 64px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker,
-  .ant-input,
-  .ant-select,
-  .ant-auto-complete .ant-select-selector,
-  .ant-auto-complete .ant-input {
-    height: 32px !important;
-  }
-  .ant-select-selection-item,
-  .ant-select-selection-placeholder {
-    line-height: 30px !important;
-  }
-  /* 32px 高 → padding=(32-2-22)/2=4px (antd 默认) */
-  .ant-input,
-  .ant-input-number .ant-input-number-input,
-  .ant-picker input,
-  .ant-input-affix-wrapper .ant-input,
-  .ant-auto-complete .ant-input {
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
-  }
-  .ant-space-compact .ant-input,
-  .ant-space-compact .ant-select-selector,
-  .ant-space-compact .ant-picker,
-  .ant-space-compact .ant-auto-complete .ant-input,
-  .ant-space-compact .ant-btn {
-    height: 32px !important;
-  }
-  .ant-btn:not(.ant-btn-icon-only) {
-    height: 32px !important;
-    font-size: 14px !important;
   }
   .ant-modal {
     min-width: min(800px, 90vw) !important;
@@ -2317,47 +2213,13 @@ body {
     --table-header-height: 50px;
   }
   html {
-    font-size: 16px;
+    font-size: 14px;
   }
   .layout-header {
     height: 72px;
   }
   .layout-main {
     margin-top: 72px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker,
-  .ant-input,
-  .ant-select,
-  .ant-auto-complete .ant-select-selector,
-  .ant-auto-complete .ant-input {
-    height: 34px !important;
-  }
-  .ant-select-selection-item,
-  .ant-select-selection-placeholder {
-    line-height: 32px !important;
-  }
-  /* 34px 高 → padding=(34-2-22)/2=5px */
-  .ant-input,
-  .ant-input-number .ant-input-number-input,
-  .ant-picker input,
-  .ant-input-affix-wrapper .ant-input,
-  .ant-auto-complete .ant-input {
-    padding-top: 5px !important;
-    padding-bottom: 5px !important;
-  }
-  .ant-space-compact .ant-input,
-  .ant-space-compact .ant-select-selector,
-  .ant-space-compact .ant-picker,
-  .ant-space-compact .ant-auto-complete .ant-input,
-  .ant-space-compact .ant-btn {
-    height: 34px !important;
-  }
-  .ant-btn:not(.ant-btn-icon-only) {
-    height: 34px !important;
-    font-size: 15px !important;
   }
   .ant-modal {
     min-width: min(960px, 90vw) !important;
@@ -2382,47 +2244,13 @@ body {
     --table-header-height: 56px;
   }
   html {
-    font-size: 18px;
+    font-size: 15px;
   }
   .layout-header {
     height: 80px;
   }
   .layout-main {
     margin-top: 80px;
-  }
-  .ant-input-affix-wrapper,
-  .ant-input-number,
-  .ant-select-selector,
-  .ant-picker,
-  .ant-input,
-  .ant-select,
-  .ant-auto-complete .ant-select-selector,
-  .ant-auto-complete .ant-input {
-    height: 38px !important;
-  }
-  .ant-select-selection-item,
-  .ant-select-selection-placeholder {
-    line-height: 36px !important;
-  }
-  /* 38px 高 → padding=(38-2-22)/2=7px */
-  .ant-input,
-  .ant-input-number .ant-input-number-input,
-  .ant-picker input,
-  .ant-input-affix-wrapper .ant-input,
-  .ant-auto-complete .ant-input {
-    padding-top: 7px !important;
-    padding-bottom: 7px !important;
-  }
-  .ant-space-compact .ant-input,
-  .ant-space-compact .ant-select-selector,
-  .ant-space-compact .ant-picker,
-  .ant-space-compact .ant-auto-complete .ant-input,
-  .ant-space-compact .ant-btn {
-    height: 38px !important;
-  }
-  .ant-btn:not(.ant-btn-icon-only) {
-    height: 38px !important;
-    font-size: 16px !important;
   }
   .ant-modal {
     min-width: min(1100px, 90vw) !important;

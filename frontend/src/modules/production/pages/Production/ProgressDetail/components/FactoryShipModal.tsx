@@ -384,7 +384,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
         )}
 
         <Form.Item label="备注" name="remarks" style={{ marginBottom: 0 }}>
-          <Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} placeholder="选填备注" />
+          <Input.TextArea autoSize={{ minRows: 2 }} placeholder="选填备注" />
         </Form.Item>
       </Form>
     </ResizableModal>

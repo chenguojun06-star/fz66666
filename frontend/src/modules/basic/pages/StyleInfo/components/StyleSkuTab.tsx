@@ -424,7 +424,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         <Form form={rollbackForm} layout="vertical" onFinish={handleRollbackOk}>
           <p style={{ marginBottom: 8, color: 'var(--color-text-secondary, #666)' }}>确定退回当前编辑？所有未保存的修改将被丢弃。</p>
           <Form.Item name="remark" label="退回备注（可选）">
-            <Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} maxLength={200} showCount placeholder="请输入退回备注" autoFocus />
+            <Input.TextArea autoSize={{ minRows: 2 }} placeholder="请输入退回备注" autoFocus />
           </Form.Item>
         </Form>
       </SmallModal>

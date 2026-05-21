@@ -100,7 +100,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
               <Form form={returnPatternForm} layout="vertical">
                 <div style={directFieldLabelStyle}>退回原因</div>
                 <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 10 }}>
-                  <TextArea autoSize={{ minRows: 3, maxRows: 5 }} placeholder="请说明退回原因，将记录到操作日志" />
+                  <TextArea autoSize={{ minRows: 3 }} placeholder="请说明退回原因，将记录到操作日志" />
                 </Form.Item>
               </Form>
               <div style={actionBarStyle}>

@@ -317,7 +317,7 @@ const _MaterialInventory: React.FC = () => {
                     <Badge count={Number(stats.lowStockCount || 0)} />
                   )}
                 </Space>
-                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>物料进销存与预警</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>物料出入库与预警</div>
               </div>
             ),
             children: (
@@ -333,7 +333,7 @@ const _MaterialInventory: React.FC = () => {
 
                 <Card>
                   <div style={{ marginBottom: 16 }}>
-                    <h2 style={{ margin: 0 }}> 物料进销存</h2>
+                    <h2 style={{ margin: 0 }}> 物料出入库</h2>
                   </div>
 
                   <StandardToolbar

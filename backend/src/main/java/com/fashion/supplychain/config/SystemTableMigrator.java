@@ -403,9 +403,9 @@ public class SystemTableMigrator {
         Long warehouseId = ensurePermission("仓库管理", "MENU_WAREHOUSE", 0L, null, "menu", null, null, 45);
         if (warehouseId != null) {
             ensurePermission("仓库仪表盘", "MENU_WAREHOUSE_DASHBOARD", warehouseId, "仓库管理", "menu", "/warehouse/dashboard", null, 46);
-            ensurePermission("物料进销存", "MENU_MATERIAL_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/material", null, 47);
+            ensurePermission("物料出入库", "MENU_MATERIAL_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/material", null, 47);
             ensurePermission("物料新增", "MENU_MATERIAL_DATABASE", warehouseId, "仓库管理", "menu", "/warehouse/material-database", null, 48);
-            ensurePermission("成品进销存", "MENU_FINISHED_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/finished", null, 49);
+            ensurePermission("成品出入库", "MENU_FINISHED_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/finished", null, 49);
             ensurePermission("样衣库存", "MENU_SAMPLE_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/sample", null, 50);
         }
         ensurePermission("选品中心", "MENU_SELECTION", 0L, null, "menu", "/selection", null, 55);

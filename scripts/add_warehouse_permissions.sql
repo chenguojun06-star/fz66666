@@ -10,12 +10,12 @@ FROM t_role WHERE role_code = 'ADMIN'
 ON DUPLICATE KEY UPDATE permission_name = VALUES(permission_name);
 
 INSERT INTO t_role_permission (role_id, permission_code, permission_name, permission_type, create_time)
-SELECT id, 'MENU_MATERIAL_INVENTORY', '面辅料进销存', 'MENU', NOW()
+SELECT id, 'MENU_MATERIAL_INVENTORY', '面辅料出入库', 'MENU', NOW()
 FROM t_role WHERE role_code = 'ADMIN'
 ON DUPLICATE KEY UPDATE permission_name = VALUES(permission_name);
 
 INSERT INTO t_role_permission (role_id, permission_code, permission_name, permission_type, create_time)
-SELECT id, 'MENU_FINISHED_INVENTORY', '成品进销存', 'MENU', NOW()
+SELECT id, 'MENU_FINISHED_INVENTORY', '成品出入库', 'MENU', NOW()
 FROM t_role WHERE role_code = 'ADMIN'
 ON DUPLICATE KEY UPDATE permission_name = VALUES(permission_name);
 

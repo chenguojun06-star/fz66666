@@ -225,7 +225,7 @@ const MaterialDatabasePage: React.FC = () => {
           </Row>
           <Row gutter={[12, 8]}>
             <Col xs={24}>
-              <Form.Item name="remark" label="备注"><Input.TextArea placeholder="请输入备注" autoSize={{ minRows: 2, maxRows: 4 }} /></Form.Item>
+              <Form.Item name="remark" label="备注"><Input.TextArea placeholder="请输入备注" autoSize={{ minRows: 2 }} /></Form.Item>
             </Col>
           </Row>
         </Form>

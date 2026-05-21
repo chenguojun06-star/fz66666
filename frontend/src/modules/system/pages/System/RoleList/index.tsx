@@ -38,7 +38,7 @@ const SIDEBAR_PERM_SECTIONS = [
   ]},
   { title: '物料管理', items: [
     { label: '物料采购', code: permissionCodes.materialPurchase },
-    { label: '物料进销存', code: permissionCodes.materialInventory },
+    { label: '物料出入库', code: permissionCodes.materialInventory },
     { label: '物料新增', code: permissionCodes.materialDatabase },
   ]},
   { title: '生产管理', items: [
@@ -50,7 +50,7 @@ const SIDEBAR_PERM_SECTIONS = [
   ]},
   { title: '供应商管理', items: [{ label: '供应商管理', code: permissionCodes.factory }] },
   { title: '成品管理', items: [
-    { label: '成品进销存', code: permissionCodes.finishedInventory },
+    { label: '成品出入库', code: permissionCodes.finishedInventory },
     { label: '库存盘点', code: permissionCodes.inventoryCheck },
     { label: '电商订单', code: permissionCodes.ecommerceOrders },
   ]},

@@ -581,12 +581,12 @@ const ProductInfoPage: React.FC = () => {
               </Col>
               <Col xs={24} sm={12} md={8}>
                 <Form.Item name="washInstructions" label="洗涤说明">
-                  <Input.TextArea placeholder="请输入洗涤说明" autoSize={{ minRows: 1, maxRows: 3 }} />
+                  <Input.TextArea placeholder="请输入洗涤说明" autoSize={{ minRows: 2 }} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={8}>
                 <Form.Item name="description" label="描述">
-                  <Input.TextArea placeholder="请输入描述" autoSize={{ minRows: 1, maxRows: 3 }} />
+                  <Input.TextArea placeholder="请输入描述" autoSize={{ minRows: 2 }} />
                 </Form.Item>
               </Col>
             </Row>

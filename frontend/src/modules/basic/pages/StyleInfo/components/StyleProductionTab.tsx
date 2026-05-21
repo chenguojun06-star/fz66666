@@ -260,8 +260,8 @@ const StyleProductionTab: React.FC<Props> = ({
 
       {/* ===== 样衣审核区域 ===== */}
       <div style={{
-        border: '1px solid var(--neutral-border, #e8e8e8)',
-        borderRadius: 8,
+        border: '1px solid var(--color-border, #e5e7eb)',
+        borderRadius: 6,
         padding: '12px 16px',
         marginBottom: 16,
         background: sampleReviewStatus === 'PASS'
@@ -270,11 +270,11 @@ const StyleProductionTab: React.FC<Props> = ({
             ? 'rgba(250,173,20,0.05)'
             : sampleReviewStatus === 'REJECT'
               ? 'rgba(255,77,79,0.04)'
-              : 'var(--neutral-bg, #fafafa)',
+              : 'var(--color-bg-card, #fafafa)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sampleReviewStatus ? 8 : 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>样衣审核</span>
+            <span style={{ fontWeight: 600, fontSize: 13, paddingLeft: 10, borderLeft: '3px solid #2D7FF9' }}>样衣审核</span>
             {reviewStatusTag(sampleReviewStatus)}
             {!sampleReviewStatus && !sampleCompleted && !productionCompletedTime && (
               <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
@@ -324,51 +324,66 @@ const StyleProductionTab: React.FC<Props> = ({
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-        <div>
-          <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>生产要求</span>
-          <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
-             提示：相关文件请在"文件管理"标签页统一上传
+      <div style={{
+        border: '1px solid var(--color-border, #e5e7eb)',
+        borderRadius: 6,
+        padding: '16px',
+        marginBottom: 16,
+        background: 'var(--color-bg-card, #fff)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              fontWeight: 600,
+              fontSize: 15,
+              letterSpacing: 0.5,
+              paddingLeft: 10,
+              borderLeft: '3px solid #2D7FF9',
+            }}>生产要求</span>
           </div>
+          <Space size={8} wrap>
+            {!productionReqLocked && (
+              <Button
+                type="primary"
+                loading={productionReqSaving}
+                onClick={onProductionReqSave}
+              >
+                保存生产要求
+              </Button>
+            )}
+            <Button onClick={downloadWorkorder}>
+              下载制单
+            </Button>
+            <Button onClick={printWorkorder}>
+              打印制单
+            </Button>
+            {!productionReqLocked && (
+              <Button onClick={handleOcrOpen}>
+                AI识别工艺单
+              </Button>
+            )}
+          </Space>
         </div>
-        <Space size={8} wrap>
-          {!productionReqLocked && (
-            <Button
-             
-              type="primary"
-              loading={productionReqSaving}
-              onClick={onProductionReqSave}
-            >
-              保存生产要求
-            </Button>
-          )}
-          <Button onClick={downloadWorkorder}>
-            下载制单
-          </Button>
-          <Button onClick={printWorkorder}>
-            打印制单
-          </Button>
-          {!productionReqLocked && (
-            <Button onClick={handleOcrOpen}>
-              AI识别工艺单
-            </Button>
-          )}
-        </Space>
+        <div style={{ color: 'var(--color-text-tertiary, #6b7280)', fontSize: 12, marginBottom: 8 }}>
+          提示：相关文件请在"文件管理"标签页统一上传
+        </div>
+        <Input.TextArea
+          id="productionRequirements"
+          value={allRequirements}
+          onChange={handleTextChange}
+          disabled={productionReqLocked}
+          placeholder="请输入生产要求，每行填写一条内容&#10;例如：&#10;1. 面料预缩水处理&#10;2. 缝制线迹密度12针/3cm&#10;3. 领型对称偏差≤0.3cm"
+          autoSize={{ minRows: 12 }}
+          style={{
+            fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace",
+            fontSize: 14,
+            lineHeight: '2',
+            padding: '14px 16px',
+            borderRadius: 6,
+            minHeight: 320,
+          }}
+        />
       </div>
-      <Input.TextArea
-        id="productionRequirements"
-        value={allRequirements}
-        onChange={handleTextChange}
-        disabled={productionReqLocked}
-        placeholder="请输入生产要求，每行填写一条内容"
-        autoSize={{ minRows: 3 }}
-        style={{
-          marginTop: 8,
-          fontFamily: 'monospace',
-          fontSize: "var(--font-size-base)",
-          lineHeight: '1.8'
-        }}
-      />
 
       {/* 样衣审核 Modal */}
       <SmallModal
@@ -490,8 +505,8 @@ const StyleProductionTab: React.FC<Props> = ({
             <Input.TextArea
               value={ocrText}
               readOnly
-              autoSize={{ minRows: 4, maxRows: 10 }}
-              style={{ marginTop: 12, fontFamily: 'monospace', fontSize: 'var(--font-size-sm)' }}
+              autoSize={{ minRows: 6 }}
+              style={{ marginTop: 12, fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace", fontSize: 14, lineHeight: '1.8', padding: '12px 14px', borderRadius: 6 }}
             />
             <Space style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={handleOcrAppend}>追加到生产要求</Button>

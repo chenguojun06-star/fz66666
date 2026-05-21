@@ -392,7 +392,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
 
       {/* 备注区域 */}
       <Form.Item name="remark" label="备注" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
-        <Input.TextArea id="remark" autoSize={{ minRows: 4, maxRows: 8 }} />
+        <Input.TextArea id="remark" autoSize={{ minRows: 4 }} />
       </Form.Item>
       </Form>
     </>

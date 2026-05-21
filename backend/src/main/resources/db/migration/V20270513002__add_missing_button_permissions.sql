@@ -49,7 +49,7 @@ VALUES
   ('SAMPLE_INVENTORY_RECORD', '借出记录', 'button', 39661, 4);
 
 -- ============================================================
--- 5. 物料进销存 (MENU_MATERIAL_INVENTORY, id=39658)
+-- 5. 物料出入库 (MENU_MATERIAL_INVENTORY, id=39658)
 -- ============================================================
 INSERT IGNORE INTO t_permission (permission_code, permission_name, permission_type, parent_id, sort)
 VALUES
@@ -72,7 +72,7 @@ VALUES
   ('MAT_DB_ENABLE', '停用启用', 'button', 39659, 6);
 
 -- ============================================================
--- 7. 成品进销存 (MENU_FINISHED_INVENTORY, id=39660)
+-- 7. 成品出入库 (MENU_FINISHED_INVENTORY, id=39660)
 -- ============================================================
 INSERT IGNORE INTO t_permission (permission_code, permission_name, permission_type, parent_id, sort)
 VALUES

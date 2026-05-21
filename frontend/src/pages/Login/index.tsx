@@ -415,7 +415,6 @@ const Login: React.FC = () => {
                   onFocus={() => undefined}
                   placeholder={tenantsLoading ? t('common.loading', language) : t('login.companySearchPlaceholder', language)}
                   disabled={submitting || tenantsLoading}
-                  getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
                 >
                   <Input
                     id="login_companySearch"

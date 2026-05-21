@@ -427,7 +427,7 @@ public class TenantAppOrchestrator {
         String[] viewPages = {
             "生产管理 → 我的订单",
             "生产管理 → 质检入库",
-            "仓库管理 → 成品进销存",
+            "仓库管理 → 成品出入库",
             "财务管理 → 订单结算",
             "仓库管理 → 面辅料库存"
         };

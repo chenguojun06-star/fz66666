@@ -47,7 +47,7 @@ public class MaterialPickingController {
 
     /**
      * BOM 申请领取：创建待出库领料单（两步流第一步）
-     * status=pending，不立即扣减库存，等待仓库在「面辅料进销存」页确认出库
+     * status=pending，不立即扣减库存，等待仓库在「面辅料出入库」页确认出库
      */
     @PostMapping("/pending")
     public Result<String> createPending(@RequestBody PickingRequest request) {

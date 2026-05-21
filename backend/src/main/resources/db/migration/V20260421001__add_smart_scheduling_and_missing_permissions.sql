@@ -39,7 +39,7 @@ SELECT '仓库仪表盘', 'MENU_WAREHOUSE_DASHBOARD', 'MENU',
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t_permission WHERE permission_code = 'MENU_WAREHOUSE_DASHBOARD');
 
 INSERT IGNORE INTO t_permission (permission_name, permission_code, permission_type, parent_id, parent_name, path, sort, status)
-SELECT '物料进销存', 'MENU_MATERIAL_INVENTORY', 'MENU',
+SELECT '物料出入库', 'MENU_MATERIAL_INVENTORY', 'MENU',
        COALESCE((SELECT id FROM t_permission WHERE permission_code = 'MENU_WAREHOUSE'), 0),
        '仓库管理', '/warehouse/material', 47, 'ENABLED'
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t_permission WHERE permission_code = 'MENU_MATERIAL_INVENTORY');
@@ -51,7 +51,7 @@ SELECT '物料新增', 'MENU_MATERIAL_DATABASE', 'MENU',
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t_permission WHERE permission_code = 'MENU_MATERIAL_DATABASE');
 
 INSERT IGNORE INTO t_permission (permission_name, permission_code, permission_type, parent_id, parent_name, path, sort, status)
-SELECT '成品进销存', 'MENU_FINISHED_INVENTORY', 'MENU',
+SELECT '成品出入库', 'MENU_FINISHED_INVENTORY', 'MENU',
        COALESCE((SELECT id FROM t_permission WHERE permission_code = 'MENU_WAREHOUSE'), 0),
        '仓库管理', '/warehouse/finished', 49, 'ENABLED'
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t_permission WHERE permission_code = 'MENU_FINISHED_INVENTORY');

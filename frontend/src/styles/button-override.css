@@ -12,18 +12,14 @@
 }
 
 .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
-  height: 24px !important;
   padding: 0 8px !important;
   font-size: 12px !important;
-  line-height: 22px !important;
   border-radius: 6px !important;
 }
 
 .ant-btn.ant-btn-lg:not(.ant-btn-icon-only) {
-  height: 38px !important;
   padding: 0 22px !important;
   font-size: 15px !important;
-  line-height: 36px !important;
   border-radius: 6px !important;
 }
 
@@ -172,21 +168,3 @@
   border-radius: 6px !important;
 }
 
-/* ========== 响应式：大屏按钮加大 ========== */
-@media (min-width: 1921px) {
-  .ant-btn.ant-btn-lg:not(.ant-btn-icon-only) {
-    height: 42px !important;
-    font-size: 16px !important;
-    line-height: 40px !important;
-    padding: 0 28px !important;
-  }
-}
-
-@media (min-width: 2561px) {
-  .ant-btn.ant-btn-lg:not(.ant-btn-icon-only) {
-    height: 46px !important;
-    font-size: 17px !important;
-    line-height: 44px !important;
-    padding: 0 32px !important;
-  }
-}

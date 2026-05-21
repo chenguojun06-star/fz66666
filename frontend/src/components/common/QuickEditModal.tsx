@@ -129,7 +129,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
           rules={[{ max: 500, message: '备注不能超过500字' }]}
         >
           <Input.TextArea
-            autoSize={{ minRows: 3, maxRows: 8 }}
+            autoSize={{ minRows: 3 }}
             placeholder="请输入备注"
             maxLength={500}
             showCount

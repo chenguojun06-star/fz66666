@@ -38,7 +38,7 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
       </div>
 
       <Form.Item name="revisionReason" label="修改原因" rules={[{ required: true, message: '请填写修改原因' }]} style={{ marginTop: 12, marginBottom: 0 }}>
-        <TextArea autoSize={{ minRows: 4, maxRows: 6 }} placeholder="请说明需要修改的原因，例如版型收腰、袖笼调整、领口改窄等。" />
+        <TextArea autoSize={{ minRows: 4 }} placeholder="请说明需要修改的原因，例如版型收腰、袖笼调整、领口改窄等。" />
       </Form.Item>
 
       <div style={{ height: 10 }} />
