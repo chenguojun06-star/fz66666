@@ -125,7 +125,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
         alignItems: 'start',
         gap: 16,
       }}
@@ -174,7 +174,21 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
               <div className="universal-card-body">
                 <div className="universal-card-header">
                   <div className="universal-card-title-row">
-                    <h3 className="universal-card-title">{record[titleField]}</h3>
+                    <h3 className="universal-card-title">
+                    {hoverRender ? (
+                      <Popover
+                        content={hoverRender(record)}
+                        trigger="hover"
+                        placement="rightTop"
+                        mouseEnterDelay={0.3}
+                        overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
+                      >
+                        <span style={{ cursor: 'pointer' }}>{record[titleField]}</span>
+                      </Popover>
+                    ) : (
+                      record[titleField]
+                    )}
+                  </h3>
                     {subtitleField && (
                       <div className="universal-card-subtitle">{record[subtitleField]}</div>
                     )}
@@ -238,6 +252,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                       <Button
                         key={action.key}
                         type="link"
+                        size="small"
                         danger={action.danger}
                         disabled={action.disabled}
                         title={action.title}
@@ -245,11 +260,6 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                           e.stopPropagation();
                           if (action.disabled) return;
                           action.onClick?.(record);
-                        }}
-                        style={{
-                          fontSize: '12px',
-                          padding: '0 6px',
-                          height: 'auto',
                         }}
                       >
                         {action.label}
@@ -274,7 +284,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                       >
                         <Button
                           type="link"
-                          style={{ fontSize: '12px', padding: '0 6px', height: 'auto' }}
+                          size="small"
                           onClick={(e) => e.stopPropagation()}
                         >
                           更多
@@ -291,19 +301,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
 
         return (
           <div key={record.id || index}>
-            {hoverRender ? (() => {
-              const hoverContent = hoverRender(record);
-              return hoverContent ? (
-                <Popover
-                  content={hoverContent}
-                  trigger="hover"
-                  placement="rightTop"
-                  overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
-                >
-                  {cardNode}
-                </Popover>
-              ) : cardNode;
-            })() : cardNode}
+            {cardNode}
           </div>
         );
       })}

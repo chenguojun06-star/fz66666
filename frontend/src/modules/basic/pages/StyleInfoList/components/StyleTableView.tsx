@@ -268,14 +268,14 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       {maintainedAfterCompletion ? <Tag color="gold">已维护</Tag> : null}
                     </div>
 
-                    <Popover
-                      content={<SmartStyleHoverCard record={record} />}
-                      trigger="hover"
-                      placement="rightTop"
-                      mouseEnterDelay={0.3}
-                      overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
-                    >
-                      <div className="style-smart-row__title-wrap">
+                    <div className="style-smart-row__title-wrap">
+                      <Popover
+                        content={<SmartStyleHoverCard record={record} />}
+                        trigger="hover"
+                        placement="rightTop"
+                        mouseEnterDelay={0.3}
+                        overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
+                      >
                         <button
                           type="button"
                           className="style-smart-row__title"
@@ -283,12 +283,12 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         >
                           {record.styleNo}
                         </button>
-                        <div className="style-smart-row__title-name">{record.styleName || '未命名样衣'}</div>
-                        <span className={`style-smart-row__delivery style-smart-row__delivery--${isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone}`}>
-                          {deliveryMeta.label}
-                        </span>
-                      </div>
-                    </Popover>
+                      </Popover>
+                      <div className="style-smart-row__title-name">{record.styleName || '未命名样衣'}</div>
+                      <span className={`style-smart-row__delivery style-smart-row__delivery--${isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone}`}>
+                        {deliveryMeta.label}
+                      </span>
+                    </div>
 
                     <div className="style-smart-row__meta style-smart-row__meta--stacked">
                       {metaItems.map((item) => (
@@ -418,7 +418,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         open={Boolean(selectedStage)}
         title={selectedStage ? `${selectedStage.record.styleNo} · ${selectedStage.stage.label}` : ''}
         onCancel={() => setSelectedStage(null)}
-        width={selectedStage?.stage.key === 'sample' || selectedStage?.stage.key === 'confirm' ? 680 : 760}
+        width="40vw"
         footer={selectedStage ? [
           <Button key="close" onClick={() => setSelectedStage(null)}>
             关闭
