@@ -17,10 +17,10 @@ export interface CardField {
 
 export interface CardProgressConfig {
   calculate: (record: any) => number;
-  getStatus?: (record: any) => 'normal' | 'warning' | 'danger' | 'default';
-  isCompleted?: (record: any) => boolean;
-  show?: boolean;
-  type?: 'capsule' | 'liquid';
+  getStatus?: (record: any) => 'normal' | 'warning' | 'danger' | 'default'; // liquid 类型使用 normal/warning/danger/default
+  isCompleted?: (record: any) => boolean; // 明确指定是否完成
+  show?: boolean; // 是否显示进度条
+  type?: 'capsule' | 'liquid'; // 进度条类型：capsule=胶囊条（默认），liquid=液体波浪条
   minVisiblePercent?: (record: any) => number;
 }
 
@@ -71,13 +71,14 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   progressConfig,
   actions,
   maxInlineActions = 3,
-  coverPlaceholder = '鏆傛棤鍥剧墖',
+  coverPlaceholder = '暂无图片',
   onCardClick,
   hoverRender,
   titleTags,
   getCardId,
   getCardStyle,
 }) => {
+  // 渲染字段值
   const renderFieldValue = (field: CardField, record: any) => {
     const value = record[field.key];
     if (field.render) {
@@ -92,9 +93,10 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     return `${field.prefix || ''}${value}${field.suffix || ''}`;
   };
 
+  // 分组字段（默认每行2个，或使用自定义分组）
   const groupFields = (fields: CardField[]) => {
     if (fieldGroups && fieldGroups.length > 0) {
-      return fieldGroups;
+      return fieldGroups; // 使用自定义分组
     }
     const groups: CardField[][] = [];
     for (let i = 0; i < fields.length; i += 2) {
@@ -104,7 +106,6 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   };
 
   const TERMINAL_STATUSES = new Set(['COMPLETED', 'CLOSED', 'CANCELLED', 'SCRAPPED', 'ARCHIVED']);
-
   const sortedData = [...dataSource].sort((a, b) => {
     const isDone = (r: any) =>
       !!(progressConfig?.isCompleted?.(r)) ||
@@ -130,6 +131,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
       }}
     >
       {sortedData.map((record, index) => {
+        // 计算是否已完成 - 添加防护检查
         const isCompleted = progressConfig && typeof progressConfig.calculate === 'function'
           ? progressConfig.calculate(record) >= 100
           : false;
@@ -137,10 +139,11 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
         const styleId = record?.[styleIdField];
         const styleNo = record?.[styleNoField];
         const hasCoverSource = Boolean(coverSrc || styleId || styleNo);
-
+        // 过滤操作按钮：已完成的订单移除编辑按钮
         const actionButtons = actions?.(record)?.filter(action => {
           if (!action || action.type === 'divider') return false;
-          if (isCompleted && (action.key === 'edit' || action.label === '缂栬緫')) return false;
+          // 已完成订单禁止编辑
+          if (isCompleted && (action.key === 'edit' || action.label === '编辑')) return false;
           return true;
         }) || [];
 
@@ -182,6 +185,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                     </div>
                   )}
                 </div>
+
                 <div className="universal-card-fields">
                   {groupFields(fields).map((group, idx) => (
                     <div className="universal-card-row" key={idx}>
@@ -196,6 +200,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                     </div>
                   ))}
                 </div>
+
                 {progressConfig?.show !== false && progressConfig && typeof progressConfig.calculate === 'function' && (
                   <div className="universal-card-progress-section">
                     {progressConfig.type === 'liquid' ? (
@@ -203,81 +208,82 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         percent={progressConfig.calculate(record)}
                         width="100%"
                         height={14}
-                        status={progressConfig.getStatus?.(record)}
-                        isCompleted={progressConfig.isCompleted?.(record)}
-                        minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
-                      />
-                    ) : (
-                      <div
-                        className={`universal-card-progress-line universal-card-progress-${
-                          progressConfig.getStatus?.(record) || 'default'
-                        }`}
+                      status={progressConfig.getStatus?.(record)}
+                      isCompleted={progressConfig.isCompleted?.(record)}
+                      minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
+                    />
+                  ) : (
+                    <div
+                      className={`universal-card-progress-line universal-card-progress-${
+                        progressConfig.getStatus?.(record) || 'default'
+                      }`}
+                      style={{
+                        width: `${progressConfig.calculate(record) <= 0
+                          ? (progressConfig.minVisiblePercent?.(record) ?? 0)
+                          : Math.max(progressConfig.minVisiblePercent?.(record) ?? 15, progressConfig.calculate(record))}%`,
+                      }}
+                    >
+                      <span className="universal-card-progress-text">
+                        {progressConfig.calculate(record)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {actionButtons.length > 0 && (
+                <div className="universal-card-actions">
+                  <Space size={4}>
+                    {actionButtons.slice(0, maxInlineActions).map((action) => (
+                      <Button
+                        key={action.key}
+                        type="link"
+                        danger={action.danger}
+                        disabled={action.disabled}
+                        title={action.title}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (action.disabled) return;
+                          action.onClick?.(record);
+                        }}
                         style={{
-                          width: `${progressConfig.calculate(record) <= 0
-                            ? (progressConfig.minVisiblePercent?.(record) ?? 0)
-                            : Math.max(progressConfig.minVisiblePercent?.(record) ?? 15, progressConfig.calculate(record))}%`,
+                          fontSize: '12px',
+                          padding: '0 6px',
+                          height: 'auto',
                         }}
                       >
-                        <span className="universal-card-progress-text">
-                          {progressConfig.calculate(record)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {actionButtons.length > 0 && (
-                  <div className="universal-card-actions">
-                    <Space size={4}>
-                      {actionButtons.slice(0, maxInlineActions).map((action) => (
+                        {action.label}
+                      </Button>
+                    ))}
+                    {actionButtons.length > maxInlineActions && (
+                      <Dropdown
+                        trigger={['click']}
+                        menu={{
+                          items: actionButtons.slice(maxInlineActions).map((action) => ({
+                            key: action.key,
+                            label: action.label,
+                            danger: action.danger,
+                            disabled: action.disabled,
+                          })),
+                          onClick: ({ key, domEvent }) => {
+                            domEvent?.stopPropagation?.();
+                            const action = actionButtons.slice(maxInlineActions).find(a => a.key === key);
+                            if (action && !action.disabled) action.onClick?.(record);
+                          },
+                        }}
+                      >
                         <Button
-                          key={action.key}
                           type="link"
-                          danger={action.danger}
-                          disabled={action.disabled}
-                          title={action.title}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (action.disabled) return;
-                            action.onClick?.(record);
-                          }}
-                          style={{
-                            fontSize: '12px',
-                            padding: '0 6px',
-                            height: 'auto',
-                          }}
+                          style={{ fontSize: '12px', padding: '0 6px', height: 'auto' }}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {action.label}
+                          更多
                         </Button>
-                      ))}
-                      {actionButtons.length > maxInlineActions && (
-                        <Dropdown
-                          trigger={['click']}
-                          menu={{
-                            items: actionButtons.slice(maxInlineActions).map((action) => ({
-                              key: action.key,
-                              label: action.label,
-                              danger: action.danger,
-                              disabled: action.disabled,
-                            })),
-                            onClick: ({ key, domEvent }) => {
-                              domEvent?.stopPropagation?.();
-                              const action = actionButtons.slice(maxInlineActions).find(a => a.key === key);
-                              if (action && !action.disabled) action.onClick?.(record);
-                            },
-                          }}
-                        >
-                          <Button
-                            type="link"
-                            style={{ fontSize: '12px', padding: '0 6px', height: 'auto' }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            鏇村
-                          </Button>
-                        </Dropdown>
-                      )}
-                    </Space>
-                  </div>
-                )}
+                      </Dropdown>
+                    )}
+                  </Space>
+                </div>
+              )}
               </div>
             </div>
           </Card>
