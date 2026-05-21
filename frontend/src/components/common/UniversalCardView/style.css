@@ -1,38 +1,43 @@
-/* ===== 通用卡片视图样式 - 全站统一 ===== */
+/* ===== 閫氱敤鍗＄墖瑙嗗浘鏍峰紡 - 鍏ㄧ珯缁熶竴 ===== */
 .universal-card {
   border-radius: 8px;
   transition: all 0.25s ease;
   overflow: hidden;
   cursor: default;
 }
-
 .universal-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
-
 .universal-card .ant-card-body {
-  padding: 8px 10px;
+  padding: 12px;
 }
 
-/* 卡片封面图片 */
+/* 妯悜甯冨眬瀹瑰櫒 */
+.universal-card-layout {
+  display: flex;
+  gap: 12px;
+  min-height: 180px;
+}
+
+/* 宸︿晶灏侀潰鍥剧墖 */
 .universal-card-cover {
+  width: 140px;
+  flex-shrink: 0;
   position: relative;
-  width: 100%;
-  padding-top: 100%;
   background: #f5f5f5;
+  border-radius: 6px;
   overflow: hidden;
+  min-height: 140px;
+  align-self: stretch;
 }
-
-.universal-card-image {
+.universal-card-cover > * {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
 }
-
 .universal-card-cover-placeholder {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -43,13 +48,24 @@
   font-size: 13px;
 }
 
-/* 卡片主体 - 紧凑布局 */
+/* 鍙充晶鍐呭鍖?*/
 .universal-card-body {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  min-width: 0;
+  gap: 4px;
 }
 
+/* 澶撮儴锛氳鍗曞彿 + 娆惧彿 */
+.universal-card-header {
+  flex-shrink: 0;
+}
+.universal-card-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
 .universal-card-title {
   margin: 0;
   font-size: 14px;
@@ -59,8 +75,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
-
 .universal-card-subtitle {
   font-size: 12px;
   color: #999;
@@ -68,6 +85,34 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+.universal-card-tags {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+
+/* 鍙粴鍔ㄥ瓧娈靛尯 - 榧犳爣鎮仠鏃舵敮鎸佷笂涓嬫粴鍔?*/
+.universal-card-fields {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 2px;
+}
+.universal-card-fields::-webkit-scrollbar {
+  width: 4px;
+}
+.universal-card-fields::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+.universal-card-fields::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .universal-card-row {
@@ -76,7 +121,6 @@
   gap: 4px;
   line-height: 1.4;
 }
-
 .universal-card-field {
   display: flex;
   gap: 2px;
@@ -86,7 +130,6 @@
   flex: 1;
   align-items: baseline;
 }
-
 .universal-card-field .field-label {
   color: var(--color-text-tertiary, #999);
   white-space: nowrap;
@@ -96,7 +139,6 @@
   text-overflow: ellipsis;
   max-width: 80px;
 }
-
 .universal-card-field .field-value {
   color: var(--color-text-primary, #333);
   font-weight: 500;
@@ -105,7 +147,14 @@
   font-size: 12px;
 }
 
-/* 胶囊进度条 */
+/* 杩涘害鏉″尯鍩?- 鍥哄畾鍦ㄥ瓧娈靛尯涓嬫柟 */
+.universal-card-progress-section {
+  flex-shrink: 0;
+  margin-top: 4px;
+  animation: progressFadeIn 0.5s ease-out;
+}
+
+/* 鑳跺泭杩涘害鏉?*/
 .universal-card-progress-line {
   height: 14px;
   min-width: 50px;
@@ -120,7 +169,6 @@
   padding: 0 10px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
-
 .universal-card-progress-text {
   font-size: 9px;
   color: rgba(255, 255, 255, 0.95);
@@ -131,7 +179,6 @@
   text-overflow: ellipsis;
   max-width: 100%;
 }
-
 .universal-card-progress-success {
   background: linear-gradient(135deg, #52c41a, #389e0d);
 }
@@ -148,35 +195,47 @@
   color: rgba(0, 0, 0, 0.55);
 }
 
-/* 操作按钮 */
+/* 鎿嶄綔鎸夐挳 */
 .universal-card-actions {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
   margin-top: 4px;
   padding-top: 4px;
   border-top: 1px solid #f0f0f0;
 }
-
 .universal-card-actions .ant-space {
   width: 100%;
   justify-content: center;
 }
-
 .universal-card-actions .ant-btn-link {
   font-size: 12px;
   padding: 0 6px;
   height: auto;
 }
 
-/* 进度条动画 */
+/* 杩涘害鏉″姩鐢?*/
 @keyframes progressFadeIn {
   from { opacity: 0; transform: scaleX(0.9); }
   to { opacity: 1; transform: scaleX(1); }
 }
 
-/* 响应式 */
+/* 鍝嶅簲寮忥細灏忓睆骞曟仮澶嶄笂涓嬪竷灞€ */
 @media (max-width: 768px) {
+  .universal-card-layout {
+    flex-direction: column;
+    min-height: auto;
+  }
+  .universal-card-cover {
+    width: 100%;
+    min-height: auto;
+    height: 160px;
+    align-self: auto;
+  }
+  .universal-card-fields {
+    max-height: 200px;
+  }
   .universal-card-title { font-size: 12px; }
   .universal-card-field { font-size: 12px; }
-  .universal-card .ant-card-body { padding: 6px 8px; }
+  .universal-card .ant-card-body { padding: 8px 10px; }
 }
