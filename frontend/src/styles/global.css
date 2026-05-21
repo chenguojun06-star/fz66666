@@ -99,7 +99,8 @@ body {
 .ant-select,
 .ant-cascader,
 .ant-auto-complete .ant-select-selector,
-.ant-auto-complete .ant-input {
+.ant-auto-complete .ant-input,
+.ant-input-search .ant-input {
   height: 32px !important;
   border-radius: var(--radius-sm, 4px) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
@@ -111,8 +112,9 @@ body {
   line-height: 30px !important;
 }
 
-/* AutoComplete 内部输入框居中 */
-.ant-auto-complete .ant-input {
+/* AutoComplete / Search 内部输入框居中 */
+.ant-auto-complete .ant-input,
+.ant-input-search .ant-input {
   padding-top: 4px !important;
   padding-bottom: 4px !important;
 }
