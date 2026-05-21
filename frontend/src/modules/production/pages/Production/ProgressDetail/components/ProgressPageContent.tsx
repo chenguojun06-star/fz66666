@@ -63,24 +63,24 @@ const STAT_CARDS_CONFIG = [
   {
     key: 'production',
     getItems: (gs: Record<string, number>) => [
-      { label: '生产订单', value: Number(gs.activeOrders ?? gs.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
-      { label: '生产数量', value: Number(gs.activeQuantity ?? gs.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
+      { label: '鐢熶骇璁㈠崟', value: Number(gs.activeOrders ?? gs.totalOrders ?? 0), unit: '涓?, color: 'var(--color-primary)' },
+      { label: '鐢熶骇鏁伴噺', value: Number(gs.activeQuantity ?? gs.totalQuantity ?? 0), unit: '浠?, color: 'var(--color-success)' },
     ],
     activeColor: 'var(--color-primary)',
   },
   {
     key: 'delayed',
     getItems: (gs: Record<string, number>) => [
-      { label: '延期订单', value: gs.delayedOrders, unit: '个', color: 'var(--color-danger)' },
-      { label: '延期数量', value: gs.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
+      { label: '寤舵湡璁㈠崟', value: gs.delayedOrders, unit: '涓?, color: 'var(--color-danger)' },
+      { label: '寤舵湡鏁伴噺', value: gs.delayedQuantity, unit: '浠?, color: 'var(--color-danger)' },
     ],
     activeColor: 'var(--color-danger)',
   },
   {
     key: 'today',
     getItems: (gs: Record<string, number>) => [
-      { label: '今日订单', value: gs.todayOrders, unit: '个', color: 'var(--color-primary)' },
-      { label: '今日数量', value: gs.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
+      { label: '浠婃棩璁㈠崟', value: gs.todayOrders, unit: '涓?, color: 'var(--color-primary)' },
+      { label: '浠婃棩鏁伴噺', value: gs.todayQuantity, unit: '浠?, color: 'var(--color-primary-light)' },
     ],
     activeColor: 'var(--color-primary)',
   },
@@ -103,6 +103,9 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   );
 
   const productionCardFieldGroups = useMemo(() => [
+    [
+      { label: '浜ゆ湡', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+    ],
     ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
       gridKey: 'cardColorSizeGrid',
       getItems: (record) => getOrderCardSizeQuantityItems(record),
@@ -111,8 +114,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
       getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
     }),
     [
-      { label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
-      { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+      { label: '涓嬪崟', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
     ],
     [
       { label: '', key: 'statusTags', render: (_val: any, record: any) => {
@@ -122,10 +124,10 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         return (
           <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             <Tag color={statusColor} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
-            {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
-            {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
+            {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>鎬?/Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>棣栧崟</Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>缈诲崟</Tag>}
+            {remainText && remainText !== '宸插畬鎴? && remainText !== '宸叉姤搴? && remainText !== '宸插叧鍗? && remainText !== '-'
               && <Tag style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
           </div>
         );
@@ -209,7 +211,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
 
   return (
     <PageLayout
-      title="工序跟进"
+      title="宸ュ簭璺熻繘"
       headerContent={
         <PageStatCards
           {...statCardsConfig}
@@ -227,3 +229,4 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
 };
 
 export default ProgressPageContent;
+
