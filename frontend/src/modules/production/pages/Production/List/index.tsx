@@ -65,19 +65,19 @@ const ProductionList: React.FC = () => {
   const location = useLocation();
   const { factoryTypeOptions } = useOrganizationFilterOptions();
 
-  // ===== 鎵撳嵃寮圭獥鐘舵€?=====
+  // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
 
-  // ===== 瑁佸壀璁㈠崟宸ュ簭缂栬緫寮圭獥鐘舵€?=====
+  // ===== 裁剪订单工序编辑弹窗状态 =====
   const [workflowEditorVisible, setWorkflowEditorVisible] = useState(false);
   const [workflowEditorStyleNo, setWorkflowEditorStyleNo] = useState('');
 
-    // ===== Hook 鎻愬彇锛氳繘搴?寮圭獥/鎵撳嵃/鑱氱劍 =====
+    // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
     const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
     const { labelPrintOpen, closeLabelPrint, labelPrintOrder, labelPrintStyle, handlePrintLabel } = useLabelPrint();
 
-  // ===== 鏁版嵁灞?Hook锛堢姸鎬?+ 鏁版嵁鑾峰彇 + Effects锛?=====
+  // ===== 数据层 Hook（状态 + 数据获取 + Effects） =====
   const {
     queryParams, setQueryParams, dateRange, setDateRange,
     sortField, sortOrder, handleSort,
@@ -99,11 +99,11 @@ const ProductionList: React.FC = () => {
     wsRefreshRef,
   } = useProductionListData();
 
-  // ===== 鎻愬彇鐨?Hooks =====
+  // ===== 提取的 Hooks =====
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
   const { globalStats } = useProductionStats(queryParams);
 
-  // 渚濊禆 fetchProductionList 鐨?Hooks
+  // 依赖 fetchProductionList 的 Hooks
   const {
     quickEditSaving, handleQuickEditSave: hookQuickEditSave,
     handleCloseOrder, pendingCloseOrder, closeOrderLoading, confirmCloseOrder, cancelCloseOrder,
@@ -141,20 +141,22 @@ const ProductionList: React.FC = () => {
     renderCompletionTimeTag,
   } = useProgressTracking(productionList);
 
-  // ===== useOrderFocus: 鑱氱劍/婊氬姩/楂樹寒閫昏緫 =====
+  // ===== useOrderFocus: 聚焦/滚动/高亮逻辑 =====
   const { focusedOrderId, pendingScrollOrderId: _pendingScrollOrderId, getOrderDomKey, triggerOrderFocus, clearSmartFocus, scrollToFocusedOrder: _scrollToFocusedOrder } = useOrderFocus(viewMode, sortedProductionList);
   orderFocusRef.current = { triggerOrderFocus, clearSmartFocus };
 
-  // ===== useAnomalyDetection: 寮傚父妫€娴嬫í骞?=====
+  // ===== useAnomalyDetection: 异常检测横幅 =====
   const { anomalyItems, anomalyBannerVisible, setAnomalyBannerVisible, fetchAnomalies, handleAnomalyClick } = useAnomalyDetection({
     productionList, message, navigate, setActiveStatFilter, setShowDelayedOnly, setSmartQueueFilter, setQueryParams, triggerOrderFocus,
   });
 
-  // 棣栨鍔犺浇鍒拌鍗曞悗锛岄潤榛樿Е鍙戝紓甯告娴嬶紙浠呮娴嬩竴娆★紝涓嶉樆濉炰富鍒楄〃锛?  useEffect(() => {
+  // 首次加载到订单后，静默触发异常检测（仅检测一次，不阻塞主列表）
+  useEffect(() => {
     if (productionList.length > 0) void fetchAnomalies();
   }, [productionList.length]);
 
-  // 琛ㄦ牸鍒楁覆鏌撹緟鍔?  const allColumns = useProductionColumns({
+  // 表格列渲染辅助
+  const allColumns = useProductionColumns({
     sortField, sortOrder, handleSort,
     handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder,
     navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
@@ -175,12 +177,14 @@ const ProductionList: React.FC = () => {
     onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole, merchandiser: record.merchandiser }),
   });
 
-  // 鏍规嵁 visibleColumns 杩囨护鍒?  const columns = allColumns.filter(col => {
+  // 根据 visibleColumns 过滤列
+  const columns = allColumns.filter(col => {
     if (col.key === 'action' || col.key === 'orderNo') return true;
     return visibleColumns[col.key as string] !== false;
   });
 
-  // 鐐瑰嚮缁熻鍗＄墖绛涢€?  const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
+  // 点击统计卡片筛选
+  const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
     setActiveStatFilter(type);
     if (type === 'production') {
       setShowDelayedOnly(false);
@@ -197,7 +201,7 @@ const ProductionList: React.FC = () => {
   return (
     <>
         <PageLayout
-          title="璁㈠崟绠＄悊"
+          title="订单管理"
           headerContent={<>
           {showSmartErrorNotice && smartError ? (
             <div style={{ marginBottom: 12 }}>
@@ -218,8 +222,8 @@ const ProductionList: React.FC = () => {
               {
                 key: 'production',
                 items: [
-                  { label: '鐢熶骇璁㈠崟', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '涓?, color: 'var(--color-primary)' },
-                  { label: '鏁伴噺', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '浠?, color: 'var(--color-success)' },
+                  { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
+                  { label: '数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
                 ],
                 onClick: () => handleStatClick('production'),
                 activeColor: 'var(--color-primary)',
@@ -227,8 +231,8 @@ const ProductionList: React.FC = () => {
               {
                 key: 'delayed',
                 items: [
-                  { label: '寤舵湡璁㈠崟', value: globalStats.delayedOrders, unit: '涓?, color: 'var(--color-danger)' },
-                  { label: '鏁伴噺', value: globalStats.delayedQuantity, unit: '浠?, color: 'var(--color-danger)' },
+                  { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
+                  { label: '数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
                 ],
                 onClick: () => handleStatClick('delayed'),
                 activeColor: 'var(--color-danger)',
@@ -236,8 +240,8 @@ const ProductionList: React.FC = () => {
               {
                 key: 'today',
                 items: [
-                  { label: '浠婃棩璁㈠崟', value: globalStats.todayOrders, unit: '涓?, color: 'var(--color-primary)' },
-                  { label: '鏁伴噺', value: globalStats.todayQuantity, unit: '浠?, color: 'var(--color-primary-light)' },
+                  { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
+                  { label: '数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
                 ],
                 onClick: () => handleStatClick('today'),
                 activeColor: 'var(--color-primary)',
@@ -309,7 +313,7 @@ const ProductionList: React.FC = () => {
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
                 total: total,
-                showTotal: (total) => `鍏?${total} 鏉,
+                showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
                 pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                 onChange: (page, pageSize) => {
@@ -329,7 +333,7 @@ const ProductionList: React.FC = () => {
               fields={[]}
               fieldGroups={[
                 [
-                  { label: '浜ゆ湡', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
+                  { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
                 ],
                 ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
                   gridKey: 'cardColorSizeGrid',
@@ -339,7 +343,7 @@ const ProductionList: React.FC = () => {
                   getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
                 }),
                 [
-                  { label: '涓嬪崟', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
+                  { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
                 ],
                 [
                   { label: '', key: 'statusTags', render: (_val: unknown, record: Record<string, unknown>) => {
@@ -349,10 +353,10 @@ const ProductionList: React.FC = () => {
                     return (
                       <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
                         <Tag color={statusColor} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
-                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>鎬?/Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>棣栧崟</Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>缈诲崟</Tag>}
-                        {remainText && remainText !== '宸插畬鎴? && remainText !== '宸叉姤搴? && remainText !== '宸插叧鍗? && remainText !== '-'
+                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+                        {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
                           && <Tag style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
                       </div>
                     );
@@ -382,7 +386,7 @@ const ProductionList: React.FC = () => {
               } : undefined}
               actions={(record: ProductionOrder) => {
                 const frozen = isOrderFrozenByStatus(record);
-                const frozenTitle = '璁㈠崟宸插叧鍗?鎶ュ簾/瀹屾垚锛屾棤娉曟搷浣?;
+                const frozenTitle = '订单已关单/报废/完成，无法操作';
                 const commonActions = buildCommonOrderActions({
                   record, frozen, completed: frozen,
                   canManageOrderLifecycle: !!canManageOrderLifecycle,
@@ -392,18 +396,18 @@ const ProductionList: React.FC = () => {
                   onOpenRemark: (r) => setRemarkTarget({ open: true, orderNo: r.orderNo || '', merchandiser: r.merchandiser }),
                 });
                 return [
-                  { key: 'print', label: '鎵撳嵃', disabled: frozen, title: frozen ? frozenTitle : '鎵撳嵃', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
-                  { key: 'printLabel', label: '鎵撳嵃鏍囩', disabled: frozen, title: frozen ? frozenTitle : '鎵撳嵃鏍囩', onClick: () => void handlePrintLabel(record) },
-                  ...(!isFactoryAccount ? [{ key: 'process', label: '宸ュ簭', disabled: frozen, title: frozen ? frozenTitle : '宸ュ簭', onClick: () => openProcessDetail(record, 'all') }] : []),
-                  ...(isFactoryAccount ? [{ key: 'subProcessRemap', label: '瀛愬伐搴?, disabled: frozen, title: frozen ? frozenTitle : '瀛愬伐搴忓崟浠烽厤缃?, onClick: () => openSubProcessRemap(record) }] : []),
+                  { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
+                  { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
+                  ...(!isFactoryAccount ? [{ key: 'process', label: '工序', disabled: frozen, title: frozen ? frozenTitle : '工序', onClick: () => openProcessDetail(record, 'all') }] : []),
+                  ...(isFactoryAccount ? [{ key: 'subProcessRemap', label: '子工序', disabled: frozen, title: frozen ? frozenTitle : '子工序单价配置', onClick: () => openSubProcessRemap(record) }] : []),
                   ...commonActions,
-                  ...(isFactoryAccount ? [{ key: 'orderFlow', label: '鍏ㄦ祦绋?, title: '鏌ョ湅璁㈠崟鍏ㄦ祦绋嬭褰?, onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) }] : []),
+                  ...(isFactoryAccount ? [{ key: 'orderFlow', label: '全流程', title: '查看订单全流程记录', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) }] : []),
                 ];
               }}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
               titleTags={undefined}
             />
-            {/* 鍗＄墖瑙嗗浘鍒嗛〉鍣?*/}
+            {/* 卡片视图分页器 */}
             <StandardPagination
               current={queryParams.page}
               pageSize={queryParams.pageSize}
@@ -513,4 +517,3 @@ const ProductionList: React.FC = () => {
 };
 
 export default ProductionList;
-
