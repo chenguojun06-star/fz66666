@@ -468,10 +468,7 @@ const AppWrapper: React.FC = () => {
 
   // 根据屏幕宽度动态选择 antd 组件尺寸 — 5档分辨率智能适配
   const resolveComponentSize = (): 'small' | 'middle' | 'large' => {
-    const w = window.innerWidth;
-    if (w <= 1366) return 'small';
-    if (w <= 1920) return 'middle';
-    return 'large';
+    return 'small';
   };
 
   const [componentSize, setComponentSize] = useState<'small' | 'middle' | 'large'>(resolveComponentSize);
