@@ -90,16 +90,49 @@ body {
 
 /* ============================================
    全局输入框 - 统一风格
-   控件高度由 antd ConfigProvider componentSize='small' 统一管控
-   这里只设圆角和过渡动画，不设 height/line-height/padding
+   控件高度由 antd ConfigProvider componentSize='middle' 统一管控
+   覆盖到 30px（比默认 32px 略小，比 small 24px 大）
    ============================================ */
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-select-selector,
 .ant-picker,
-.ant-input {
+.ant-input,
+.ant-select .ant-select-selector,
+.ant-cascader .ant-select-selector,
+.ant-auto-complete .ant-select-selector,
+.ant-auto-complete .ant-input {
+  height: 30px !important;
   border-radius: var(--radius-sm, 4px) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+/* Select 内部文字垂直居中 */
+.ant-select-selection-item,
+.ant-select-selection-placeholder {
+  line-height: 28px !important;
+}
+
+/* AutoComplete / Search 内部输入框居中 */
+.ant-auto-complete .ant-input,
+.ant-input-search .ant-input {
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+}
+
+/* Space.Compact 内所有子元素等高 */
+.ant-space-compact .ant-input,
+.ant-space-compact .ant-select-selector,
+.ant-space-compact .ant-picker,
+.ant-space-compact .ant-auto-complete .ant-input,
+.ant-space-compact .ant-btn {
+  height: 30px !important;
+}
+
+/* 按钮默认高度与输入框对齐 */
+.ant-btn:not(.ant-btn-icon-only) {
+  height: 30px !important;
+  font-size: 13px !important;
 }
 
 /* 恢复 small/large 尺寸的正确高度（覆盖上面 middle 固定值） */
@@ -1364,6 +1397,14 @@ body {
 .table-action-compact .ant-btn-link:not(.ant-btn-icon-only) {
   padding: 0 8px !important;
   font-size: 13px !important;
+}
+
+/* 卡片视图操作按钮：超紧凑 */
+.universal-card-actions .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
+  padding: 0 4px !important;
+  font-size: 11px !important;
+  height: 20px !important;
+  line-height: 20px !important;
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon:not(:disabled):hover,
