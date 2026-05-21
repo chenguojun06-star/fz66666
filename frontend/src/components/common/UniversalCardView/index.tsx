@@ -17,10 +17,10 @@ export interface CardField {
 
 export interface CardProgressConfig {
   calculate: (record: any) => number;
-  getStatus?: (record: any) => 'normal' | 'warning' | 'danger' | 'default'; // liquid 类型使用 normal/warning/danger/default
-  isCompleted?: (record: any) => boolean; // 明确指定是否完成
-  show?: boolean; // 是否显示进度条
-  type?: 'capsule' | 'liquid'; // 进度条类型：capsule=胶囊条（默认），liquid=液体波浪条
+  getStatus?: (record: any) => 'normal' | 'warning' | 'danger' | 'default';
+  isCompleted?: (record: any) => boolean;
+  show?: boolean;
+  type?: 'capsule' | 'liquid';
   minVisiblePercent?: (record: any) => number;
 }
 
@@ -71,14 +71,13 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   progressConfig,
   actions,
   maxInlineActions = 3,
-  coverPlaceholder = '暂无图片',
+  coverPlaceholder = '鏆傛棤鍥剧墖',
   onCardClick,
   hoverRender,
   titleTags,
   getCardId,
   getCardStyle,
 }) => {
-  // 渲染字段值
   const renderFieldValue = (field: CardField, record: any) => {
     const value = record[field.key];
     if (field.render) {
@@ -93,10 +92,9 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     return `${field.prefix || ''}${value}${field.suffix || ''}`;
   };
 
-  // 分组字段（默认每行2个，或使用自定义分组）
   const groupFields = (fields: CardField[]) => {
     if (fieldGroups && fieldGroups.length > 0) {
-      return fieldGroups; // 使用自定义分组
+      return fieldGroups;
     }
     const groups: CardField[][] = [];
     for (let i = 0; i < fields.length; i += 2) {
@@ -106,6 +104,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   };
 
   const TERMINAL_STATUSES = new Set(['COMPLETED', 'CLOSED', 'CANCELLED', 'SCRAPPED', 'ARCHIVED']);
+
   const sortedData = [...dataSource].sort((a, b) => {
     const isDone = (r: any) =>
       !!(progressConfig?.isCompleted?.(r)) ||
@@ -125,13 +124,12 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))',
         alignItems: 'start',
         gap: 16,
       }}
     >
       {sortedData.map((record, index) => {
-        // 计算是否已完成 - 添加防护检查
         const isCompleted = progressConfig && typeof progressConfig.calculate === 'function'
           ? progressConfig.calculate(record) >= 100
           : false;
@@ -139,11 +137,10 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
         const styleId = record?.[styleIdField];
         const styleNo = record?.[styleNoField];
         const hasCoverSource = Boolean(coverSrc || styleId || styleNo);
-        // 过滤操作按钮：已完成的订单移除编辑按钮
+
         const actionButtons = actions?.(record)?.filter(action => {
           if (!action || action.type === 'divider') return false;
-          // 已完成订单禁止编辑
-          if (isCompleted && (action.key === 'edit' || action.label === '编辑')) return false;
+          if (isCompleted && (action.key === 'edit' || action.label === '缂栬緫')) return false;
           return true;
         }) || [];
 
@@ -155,7 +152,8 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
             loading={loading}
             style={getCardStyle?.(record)}
             onClick={() => onCardClick?.(record)}
-            cover={
+          >
+            <div className="universal-card-layout">
               <div className="universal-card-cover">
                 {hasCoverSource ? (
                   <CardCoverSwitcher
@@ -170,127 +168,117 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                   </div>
                 )}
               </div>
-            }
-          >
-            <div className="universal-card-body">
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
-                <h3 className="universal-card-title" style={{ margin: 0, flex: 1, minWidth: 0 }}>
-                  {record[titleField]}
-                </h3>
-                {subtitleField && (
-                  <div className="universal-card-subtitle" style={{ margin: 0, flexShrink: 0 }}>
-                    {record[subtitleField]}
+              <div className="universal-card-body">
+                <div className="universal-card-header">
+                  <div className="universal-card-title-row">
+                    <h3 className="universal-card-title">{record[titleField]}</h3>
+                    {subtitleField && (
+                      <div className="universal-card-subtitle">{record[subtitleField]}</div>
+                    )}
                   </div>
-                )}
-              </div>
-              {titleTags && (
-                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 3 }}>
-                  {titleTags(record)}
-                </div>
-              )}
-
-              {groupFields(fields).map((group, idx) => (
-                <div className="universal-card-row" key={idx}>
-                  {group.map((field) => (
-                    <div className="universal-card-field" key={field.key}>
-                      {field.label ? <span className="field-label">{field.label}:</span> : null}
-                      <div className="field-value">
-                        {renderFieldValue(field, record)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-
-              {progressConfig?.show !== false && progressConfig && typeof progressConfig.calculate === 'function' && (
-                <div
-                  style={{
-                    marginTop: '4px',
-                    marginBottom: '2px',
-                    animation: 'progressFadeIn 0.5s ease-out',
-                  }}
-                >
-                  {progressConfig.type === 'liquid' ? (
-                    <LiquidProgressBar
-                      percent={progressConfig.calculate(record)}
-                      width="100%"
-                      height={10}
-                      status={progressConfig.getStatus?.(record)}
-                      isCompleted={progressConfig.isCompleted?.(record)}
-                      minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
-                    />
-                  ) : (
-                    <div
-                      className={`universal-card-progress-line universal-card-progress-${
-                        progressConfig.getStatus?.(record) || 'default'
-                      }`}
-                      style={{
-                        width: `${progressConfig.calculate(record) <= 0
-                          ? (progressConfig.minVisiblePercent?.(record) ?? 0)
-                          : Math.max(progressConfig.minVisiblePercent?.(record) ?? 15, progressConfig.calculate(record))}%`,
-                      }}
-                    >
-                      <span className="universal-card-progress-text">
-                        {progressConfig.calculate(record)}%
-                      </span>
+                  {titleTags && (
+                    <div className="universal-card-tags">
+                      {titleTags(record)}
                     </div>
                   )}
                 </div>
-              )}
-
-              {actionButtons.length > 0 && (
-                <div className="universal-card-actions">
-                  <Space size={4}>
-                    {actionButtons.slice(0, maxInlineActions).map((action) => (
-                      <Button
-                        key={action.key}
-                        type="link"
-                        danger={action.danger}
-                        disabled={action.disabled}
-                        title={action.title}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (action.disabled) return;
-                          action.onClick?.(record);
-                        }}
-                        style={{
-                          fontSize: '12px',
-                          padding: '0 6px',
-                          height: 'auto',
-                        }}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                    {actionButtons.length > maxInlineActions && (
-                      <Dropdown
-                        trigger={['click']}
-                        menu={{
-                          items: actionButtons.slice(maxInlineActions).map((action) => ({
-                            key: action.key,
-                            label: action.label,
-                            danger: action.danger,
-                            disabled: action.disabled,
-                          })),
-                          onClick: ({ key, domEvent }) => {
-                            domEvent?.stopPropagation?.();
-                            const action = actionButtons.slice(maxInlineActions).find(a => a.key === key);
-                            if (action && !action.disabled) action.onClick?.(record);
-                          },
-                        }}
-                      >
-                        <Button
-                          type="link"
-                          style={{ fontSize: '12px', padding: '0 6px', height: 'auto' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          更多
-                        </Button>
-                      </Dropdown>
-                    )}
-                  </Space>
+                <div className="universal-card-fields">
+                  {groupFields(fields).map((group, idx) => (
+                    <div className="universal-card-row" key={idx}>
+                      {group.map((field) => (
+                        <div className="universal-card-field" key={field.key}>
+                          {field.label ? <span className="field-label">{field.label}:</span> : null}
+                          <div className="field-value">
+                            {renderFieldValue(field, record)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              )}
+                {progressConfig?.show !== false && progressConfig && typeof progressConfig.calculate === 'function' && (
+                  <div className="universal-card-progress-section">
+                    {progressConfig.type === 'liquid' ? (
+                      <LiquidProgressBar
+                        percent={progressConfig.calculate(record)}
+                        width="100%"
+                        height={14}
+                        status={progressConfig.getStatus?.(record)}
+                        isCompleted={progressConfig.isCompleted?.(record)}
+                        minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
+                      />
+                    ) : (
+                      <div
+                        className={`universal-card-progress-line universal-card-progress-${
+                          progressConfig.getStatus?.(record) || 'default'
+                        }`}
+                        style={{
+                          width: `${progressConfig.calculate(record) <= 0
+                            ? (progressConfig.minVisiblePercent?.(record) ?? 0)
+                            : Math.max(progressConfig.minVisiblePercent?.(record) ?? 15, progressConfig.calculate(record))}%`,
+                        }}
+                      >
+                        <span className="universal-card-progress-text">
+                          {progressConfig.calculate(record)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {actionButtons.length > 0 && (
+                  <div className="universal-card-actions">
+                    <Space size={4}>
+                      {actionButtons.slice(0, maxInlineActions).map((action) => (
+                        <Button
+                          key={action.key}
+                          type="link"
+                          danger={action.danger}
+                          disabled={action.disabled}
+                          title={action.title}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (action.disabled) return;
+                            action.onClick?.(record);
+                          }}
+                          style={{
+                            fontSize: '12px',
+                            padding: '0 6px',
+                            height: 'auto',
+                          }}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                      {actionButtons.length > maxInlineActions && (
+                        <Dropdown
+                          trigger={['click']}
+                          menu={{
+                            items: actionButtons.slice(maxInlineActions).map((action) => ({
+                              key: action.key,
+                              label: action.label,
+                              danger: action.danger,
+                              disabled: action.disabled,
+                            })),
+                            onClick: ({ key, domEvent }) => {
+                              domEvent?.stopPropagation?.();
+                              const action = actionButtons.slice(maxInlineActions).find(a => a.key === key);
+                              if (action && !action.disabled) action.onClick?.(record);
+                            },
+                          }}
+                        >
+                          <Button
+                            type="link"
+                            style={{ fontSize: '12px', padding: '0 6px', height: 'auto' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            鏇村
+                          </Button>
+                        </Dropdown>
+                      )}
+                    </Space>
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
         );
