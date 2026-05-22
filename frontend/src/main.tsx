@@ -340,6 +340,8 @@ const AppWrapper: React.FC = () => {
           borderColor: 'rgba(255, 255, 255, 0.06)',
           headerSplitColor: 'rgba(255, 255, 255, 0.04)',
           bodySortBg: 'rgba(107, 163, 255, 0.05)',
+          fontSize: 13,
+          headerFontSize: 14,
           colorBgContainer: '#1a1d24',
           filterDropdownBg: '#1a1d24',
         },
@@ -406,6 +408,8 @@ const AppWrapper: React.FC = () => {
           rowHoverBg: 'rgba(224, 242, 254, 0.3)',
           borderColor: 'rgba(147, 197, 253, 0.3)',
           headerSplitColor: 'rgba(147, 197, 253, 0.2)',
+          fontSize: 13,
+          headerFontSize: 14,
         },
         Card: {
           headerBg: 'rgba(224, 242, 254, 0.3)',
@@ -432,6 +436,8 @@ const AppWrapper: React.FC = () => {
           rowHoverBg: '#edf2ff',
           borderColor: '#e8ecf2',
           headerSplitColor: '#e0e4eb',
+          fontSize: 13,
+          headerFontSize: 14,
         },
         Card: {
           colorBgContainer: '#ffffff',

@@ -7,6 +7,8 @@ import './StandardSearchBar.css';
 
 const { RangePicker } = DatePicker;
 
+const DEBOUNCE_MS = 300;
+
 export type StandardSearchOption = { label: string; value: string };
 
 export interface SearchFilterField {
@@ -183,7 +185,7 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
             placeholder={searchPlaceholder}
             className="standard-search-input-v2"
             allowClear
-            onPressEnter={onSearch}
+            onPressEnter={handlePressEnter}
           />
         )}
 

@@ -1402,7 +1402,15 @@ body {
 /* 操作列文本按钮：统一小号 */
 .row-actions .ant-btn-link:not(.row-actions__btn--icon) {
   padding: 0 8px !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
+}
+
+/* 卡片视图操作按钮：超紧凑 */
+.universal-card-actions .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
+  padding: 0 4px !important;
+  font-size: 11px !important;
+  height: 20px !important;
+  line-height: 20px !important;
 }
 
 .table-action-compact .ant-btn:not(.ant-btn-icon-only),
