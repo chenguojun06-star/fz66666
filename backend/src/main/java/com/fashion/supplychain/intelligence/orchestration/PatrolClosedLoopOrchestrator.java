@@ -6,7 +6,7 @@ import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import com.fashion.supplychain.intelligence.mapper.AiPatrolActionMapper;
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.LocalDate;`nimport java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -123,5 +123,60 @@ public class PatrolClosedLoopOrchestrator {
      */
     public List<Map<String, Object>> aggregateMttr(LocalDateTime since) {
         return actionMapper.aggregateMttrByIssueType(since);
+    }
+
+    public List<AiPatrolAction> listByTarget(Long tenantId, String targetType, String targetId, int limit) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        if (targetType != null && !targetType.isBlank()) w.eq(AiPatrolAction::getTargetType, targetType);
+        if (targetId != null && !targetId.isBlank()) w.eq(AiPatrolAction::getTargetId, targetId);
+        w.in(AiPatrolAction::getStatus, "PENDING", "APPROVED", "AUTO_RUNNING");
+        w.orderByDesc(AiPatrolAction::getId).last("LIMIT " + Math.min(Math.max(limit, 1), 50));
+        return actionMapper.selectList(w);
+    }
+
+    public List<AiPatrolAction> listRecentByTenant(Long tenantId, int limit) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.orderByDesc(AiPatrolAction::getId).last("LIMIT " + Math.min(Math.max(limit, 1), 50));
+        return actionMapper.selectList(w);
+    }
+
+    public List<AiPatrolAction> listPendingAutoExecute() {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        w.eq(AiPatrolAction::getStatus, "PENDING")
+         .eq(AiPatrolAction::getRiskLevel, "AUTO_EXECUTE");
+        return actionMapper.selectList(w);
+    }
+
+    public void markAutoRunning(Long actionId) {
+        AiPatrolAction a = new AiPatrolAction();
+        a.setId(actionId);
+        a.setStatus("AUTO_RUNNING");
+        a.setUpdateTime(LocalDateTime.now());
+        actionMapper.updateById(a);
+    }
+
+    public int countPendingByTenant(Long tenantId) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getStatus, "PENDING");
+        return Math.toIntExact(actionMapper.selectCount(w));
+    }
+
+    public int countAutoExecutedToday(Long tenantId) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getStatus, "AUTO_EXECUTED")
+         .ge(AiPatrolAction::getExecutionTime, LocalDate.now().atStartOfDay());
+        return Math.toIntExact(actionMapper.selectCount(w));
+    }
+
+    public int countHighRiskPending(Long tenantId) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getStatus, "PENDING")
+         .eq(AiPatrolAction::getRiskLevel, "NEED_APPROVAL");
+        return Math.toIntExact(actionMapper.selectCount(w));
     }
 }
