@@ -116,8 +116,28 @@ body {
 /* AutoComplete / Search 内部输入框居中 */
 .ant-auto-complete .ant-input,
 .ant-input-search .ant-input {
+  height: 30px !important;
   padding-top: 3px !important;
   padding-bottom: 3px !important;
+  line-height: 22px !important;
+}
+
+/* Input.Search 包裹层也是 30px */
+.ant-input-search {
+  height: 30px !important;
+}
+
+/* 带前缀/后缀的输入框（包括 Input.Search）包裹层内部对齐 */
+.ant-input-affix-wrapper {
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.ant-input-affix-wrapper .ant-input {
+  height: auto !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1.5715 !important;
 }
 
 /* Space.Compact 内所有子元素等高 */

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Button, DatePicker, Input, Select, Space, Radio } from 'antd';
 import { SearchOutlined, ReloadOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -6,6 +6,8 @@ import type { Dayjs } from 'dayjs';
 import './StandardSearchBar.css';
 
 const { RangePicker } = DatePicker;
+
+const DEBOUNCE_MS = 300;
 
 export type StandardSearchOption = { label: string; value: string };
 
@@ -70,6 +72,42 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   const [presetValue, setPresetValue] = useState<string>('');
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const hasExtraFilters = extraFilters.length > 0;
+
+  const [localSearch, setLocalSearch] = useState(searchValue ?? '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (searchValue !== undefined && searchValue !== localSearch) {
+      setLocalSearch(searchValue);
+    }
+  }, [searchValue]);
+
+  const flushSearch = useCallback((value: string) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    onSearchChange(value);
+  }, [onSearchChange]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setLocalSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onSearchChange(value);
+    }, DEBOUNCE_MS);
+  }, [onSearchChange]);
+
+  const handlePressEnter = useCallback(() => {
+    flushSearch(localSearch);
+    onSearch?.();
+  }, [flushSearch, localSearch, onSearch]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const handlePresetChange = useCallback((e: any) => {
     const val = e.target.value;
@@ -155,12 +193,12 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
         {searchValue !== undefined && (
           <Input
             prefix={<SearchOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             className="standard-search-input-v2"
             allowClear
-            onPressEnter={onSearch}
+            onPressEnter={handlePressEnter}
           />
         )}
 
