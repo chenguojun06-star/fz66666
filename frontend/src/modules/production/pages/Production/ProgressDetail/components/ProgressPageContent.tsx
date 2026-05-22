@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Card, Tag } from 'antd';
+import React, { useEffect, useMemo } from 'react';
+import { Alert, Card, Tag } from 'antd';
 import dayjs from 'dayjs';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -17,6 +17,7 @@ import ProgressRowList from './ProgressRowList';
 import ProgressAlerts from './ProgressAlerts';
 import SmartOrderHoverCard from './SmartOrderHoverCard';
 import { FilterSearchSection, FilterRightSection, EmbeddedFilterBar } from './ProgressFilterBar';
+import { useAiPatrol, RISK_TYPE_LABELS } from '../../List/hooks/useAiPatrol';
 
 type ProgressPageContentProps = {
   embedded?: boolean;
@@ -63,24 +64,24 @@ const STAT_CARDS_CONFIG = [
   {
     key: 'production',
     getItems: (gs: Record<string, number>) => [
-      { label: '生产订单', value: Number(gs.activeOrders ?? gs.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
-      { label: '生产数量', value: Number(gs.activeQuantity ?? gs.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
+      { label: '鐢熶骇璁㈠崟', value: Number(gs.activeOrders ?? gs.totalOrders ?? 0), unit: '涓?, color: 'var(--color-primary)' },
+      { label: '鐢熶骇鏁伴噺', value: Number(gs.activeQuantity ?? gs.totalQuantity ?? 0), unit: '浠?, color: 'var(--color-success)' },
     ],
     activeColor: 'var(--color-primary)',
   },
   {
     key: 'delayed',
     getItems: (gs: Record<string, number>) => [
-      { label: '延期订单', value: gs.delayedOrders, unit: '个', color: 'var(--color-danger)' },
-      { label: '延期数量', value: gs.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
+      { label: '寤舵湡璁㈠崟', value: gs.delayedOrders, unit: '涓?, color: 'var(--color-danger)' },
+      { label: '寤舵湡鏁伴噺', value: gs.delayedQuantity, unit: '浠?, color: 'var(--color-danger)' },
     ],
     activeColor: 'var(--color-danger)',
   },
   {
     key: 'today',
     getItems: (gs: Record<string, number>) => [
-      { label: '今日订单', value: gs.todayOrders, unit: '个', color: 'var(--color-primary)' },
-      { label: '今日数量', value: gs.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
+      { label: '浠婃棩璁㈠崟', value: gs.todayOrders, unit: '涓?, color: 'var(--color-primary)' },
+      { label: '浠婃棩鏁伴噺', value: gs.todayQuantity, unit: '浠?, color: 'var(--color-primary-light)' },
     ],
     activeColor: 'var(--color-primary)',
   },
@@ -97,6 +98,63 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   smartQueueFilter, smartQueueOrders, smartActionItems, setSmartQueueFilter,
   fetchOrders,
 }) => {
+  const { patrolRiskMap, patrolSummary, fetchForOrders, getOrderRisks, hasRisks, getHighestSeverity } = useAiPatrol();
+
+  useEffect(() => {
+    if (sortedOrders.length > 0) {
+      const orderNos = sortedOrders.map(o => o.orderNo).filter(Boolean) as string[];
+      fetchForOrders(orderNos);
+    }
+  }, [sortedOrders.length]);
+
+  const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
+    const risks = getOrderRisks(record.orderNo || '');
+    const severity = getHighestSeverity(record.orderNo || '');
+    if (!severity || risks.length === 0) return null;
+    const label = RISK_TYPE_LABELS[risks[0]?.issueType] || 'AI宸℃';
+    const colorMap: Record<string, string> = { HIGH: 'red', MEDIUM: 'orange', LOW: 'gold' };
+    return (
+      <Tag color={colorMap[severity] || 'orange'} style={{ margin: 0, fontSize: 11, lineHeight: '17px', padding: '0 3px' }}>
+        {label}
+      </Tag>
+    );
+  }, [patrolRiskMap]);
+
+  const mergedTitleTags = useMemo(() => (record: ProductionOrder) => {
+    const base = typeof titleTags === 'function' ? titleTags(record) : null;
+    const patrol = patrolTitleTags(record);
+    if (!base && !patrol) return null;
+    return (
+      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+        {base}
+        {patrol}
+      </div>
+    );
+  }, [titleTags, patrolTitleTags]);
+
+  const patrolAlertBanner = useMemo(() => {
+    const orderNos = sortedOrders.map(o => o.orderNo).filter(Boolean) as string[];
+    const riskyOrders = orderNos.filter(no => hasRisks(no));
+    if (riskyOrders.length === 0) return null;
+    const highCount = riskyOrders.filter(no => getHighestSeverity(no) === 'HIGH').length;
+    const type = highCount > 0 ? 'error' : 'warning';
+    const msg = highCount > 0
+      ? `AI宸℃鍙戠幇 ${riskyOrders.length} 涓鍗曞瓨鍦ㄩ闄╋紝鍏朵腑 ${highCount} 涓负楂橀闄ー
+      : `AI宸℃鍙戠幇 ${riskyOrders.length} 涓鍗曢渶鍏虫敞`;
+    const autoInfo = patrolSummary && patrolSummary.autoExecutedToday > 0
+      ? `锛堜粖鏃I宸茶嚜鍔ㄥ鐞?${patrolSummary.autoExecutedToday} 椤癸級`
+      : '';
+    return (
+      <Alert
+        type={type}
+        showIcon
+        message={`${msg}${autoInfo}`}
+        style={{ marginBottom: 10 }}
+        closable
+      />
+    );
+  }, [sortedOrders, patrolRiskMap, patrolSummary]);
+
   const calcCardProgress = useMemo(() => (record: ProductionOrder): number =>
     calcOrderProgress(record, boardStatsByOrder[String(record.id || '')] ?? null),
     [boardStatsByOrder],
@@ -111,8 +169,8 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
       getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
     }),
     [
-      { label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
-      { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+      { label: '涓嬪崟', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+      { label: '浜ゆ湡', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
     ],
     [
       { label: '', key: 'statusTags', render: (_val: any, record: any) => {
@@ -122,10 +180,10 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         return (
           <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             <Tag color={statusColor} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
-            {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
-            {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
+            {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>鎬?/Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>棣栧崟</Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>缈诲崟</Tag>}
+            {remainText && remainText !== '宸插畬鎴? && remainText !== '宸叉姤搴? && remainText !== '宸插叧鍗? && remainText !== '-'
               && <Tag style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
           </div>
         );
@@ -161,7 +219,10 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   }), [activeStatFilter, globalStats, handleStatClick]);
 
   const alerts = (
-    <ProgressAlerts showSmartErrorNotice={showSmartErrorNotice} smartError={smartError} onFixError={onFixError} bottleneckBannerVisible={bottleneckBannerVisible} bottleneckItems={bottleneckItems} setBottleneckBannerVisible={setBottleneckBannerVisible} bottleneckLoading={bottleneckLoading} />
+    <>
+      {patrolAlertBanner}
+      <ProgressAlerts showSmartErrorNotice={showSmartErrorNotice} smartError={smartError} onFixError={onFixError} bottleneckBannerVisible={bottleneckBannerVisible} bottleneckItems={bottleneckItems} setBottleneckBannerVisible={setBottleneckBannerVisible} bottleneckLoading={bottleneckLoading} />
+    </>
   );
 
   const paginationConfig = {
@@ -182,7 +243,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         fieldGroups={productionCardFieldGroups} progressConfig={productionCardProgressConfig}
         getCardId={showFocus ? (record) => `progress-order-card-${getOrderDomKey(record as ProductionOrder)}` : undefined}
         getCardStyle={showFocus ? (record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? { boxShadow: '0 0 0 2px rgba(24, 144, 255, 0.28), 0 10px 24px rgba(24, 144, 255, 0.18)', transform: 'translateY(-2px)' } : undefined : undefined}
-        actions={cardActions} hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />} titleTags={undefined}
+        actions={cardActions} hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />} titleTags={mergedTitleTags}
       />
       <StandardPagination current={queryParams.page} pageSize={queryParams.pageSize} total={total} wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }} showQuickJumper={false} onChange={(page, pageSize) => { savePageSize(pageSize); setQueryParams((prev) => ({ ...prev, page, pageSize })); }} />
     </>
@@ -209,7 +270,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
 
   return (
     <PageLayout
-      title="工序跟进"
+      title="宸ュ簭璺熻繘"
       headerContent={
         <PageStatCards
           {...statCardsConfig}
