@@ -97,7 +97,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     fontWeight: 600,
     color: '#374151',
     marginBottom: 12,
-    marginLeft: 72,
+    marginLeft: 42,
     paddingLeft: 8,
     lineHeight: '20px',
   };
@@ -105,7 +105,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   return (
     <Row gutter={16} className="square-inputs">
         {/* 左侧：封面图上传 */}
-        <Col xs={24} lg={6}>
+        <Col xs={24} lg={4}>
           <CoverImageUpload
             styleId={currentStyle?.id}
             enabled={Boolean(currentStyle?.id) && !editLocked}
@@ -118,20 +118,20 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           />
         </Col>
 
-        {/* 右侧：表单字段（图片与页面边缘之间） */}
-        <Col xs={24} lg={18} style={{ paddingLeft: '24px' }}>
+        {/* 右侧：表单字段 */}
+        <Col xs={24} lg={20} style={{ paddingLeft: '24px' }}>
           {/* 款号信息区域 */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #2D7FF9' }}>
               款号信息
             </div>
             <Row gutter={[16, 0]}>
-              <Col xs={24} md={6}>
+              <Col xs={24} md={5}>
                 <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
                   <Input id="styleNo" placeholder="请输入款号" disabled={editLocked || Boolean(currentStyle?.id)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={6}>
+              <Col xs={24} md={5}>
                 <Form.Item name="skc" label="SKC" rules={[]}>
                   {currentStyle?.skc && !isNewPage ? (
                     <span
@@ -150,33 +150,33 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   <DictAutoComplete dictType="style_name" placeholder="请输入或选择" disabled={editLocked} style={{ width: '100%' }} id="styleName" />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={6}>
-                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                  <Form.Item name="category" label="品类" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
-                    <Select
-                      id="category"
-                      placeholder="选择"
-                      disabled={isFieldLocked(currentStyle?.category)}
-                      style={{ width: '100%' }}
-                      allowClear
-                      showSearch
-                      optionFilterProp="label"
-                      options={categoryOptions}
-                    />
-                  </Form.Item>
-                  <Form.Item name="season" label="季节" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
-                    <Select
-                      id="season"
-                      placeholder="选择"
-                      disabled={isFieldLocked(currentStyle?.season)}
-                      style={{ width: '100%' }}
-                      allowClear
-                      showSearch
-                      optionFilterProp="label"
-                      options={seasonOptions}
-                    />
-                  </Form.Item>
-                </div>
+              <Col xs={24} md={4}>
+                <Form.Item name="category" label="品类">
+                  <Select
+                    id="category"
+                    placeholder="选择"
+                    disabled={isFieldLocked(currentStyle?.category)}
+                    style={{ width: '100%' }}
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    options={categoryOptions}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={4}>
+                <Form.Item name="season" label="季节">
+                  <Select
+                    id="season"
+                    placeholder="选择"
+                    disabled={isFieldLocked(currentStyle?.season)}
+                    style={{ width: '100%' }}
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    options={seasonOptions}
+                  />
+                </Form.Item>
               </Col>
             </Row>
           </div>
@@ -292,7 +292,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="remark" label="备注">
-                  <Input.TextArea id="remark" rows={1} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />
+                  <Input.TextArea id="remark" rows={2} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />
                 </Form.Item>
               </Col>
             </Row>

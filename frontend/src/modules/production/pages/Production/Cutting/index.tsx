@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { App, Button, Card, Form, Segmented, Select, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
@@ -164,6 +164,7 @@ const CuttingManagement: React.FC = () => {
       bundles.setImportLocked(false);
       bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeOrderNo, user?.id, user?.name]);
 
   useEffect(() => {
@@ -179,6 +180,7 @@ const CuttingManagement: React.FC = () => {
   useEffect(() => {
     const hasQr = bundles.dataSource.some((r) => String(r?.qrCode || '').trim());
     if (hasQr) print.setPrintUnlocked(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bundles.dataSource]);
 
   useEffect(() => {
@@ -187,6 +189,7 @@ const CuttingManagement: React.FC = () => {
     bundles.clearBundleSelection();
     print.setPrintBundles([]);
     print.setPrintPreviewOpen(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTask?.id]);
 
   const handleRollbackActive = (task: CuttingTask) => {
@@ -199,6 +202,11 @@ const CuttingManagement: React.FC = () => {
 
   const columns = useBundleColumns(activeTask);
 
+  const handleReceiveClick = useCallback(() => {
+    if (activeTask) tasks.handleReceiveTask(activeTask);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks.handleReceiveTask, activeTask]);
+
   return (
     <>
         <PageLayout
@@ -209,7 +217,7 @@ const CuttingManagement: React.FC = () => {
                 <Button
                   type="primary"
                   loading={tasks.receiveTaskLoading}
-                  onClick={() => tasks.handleReceiveTask(activeTask)}
+                  onClick={handleReceiveClick}
                 >
                   领取
                 </Button>
@@ -350,7 +358,7 @@ const CuttingManagement: React.FC = () => {
                       return (
                         <Space size={4}>
                           <FactoryTypeTag factoryType={type} />
-                          <span style={{ fontSize: 12 }}>{name}</span>
+                          <span style={{ fontSize: 14 }}>{name}</span>
                         </Space>
                       );
                     },

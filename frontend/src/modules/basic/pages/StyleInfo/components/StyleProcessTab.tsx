@@ -52,6 +52,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     editableMode: editMode && !readOnly, hidePrice, showSizePrices: true, sizes, stageSpanMap, priceHints, priceHintLoading,
     updateField: (id: string | number, field: any, value: any) => updateField(id, field, value, fetchPriceHint),
     updateSizePrice, handleAdd, handleDelete, handleRemoveSize,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [data, editMode, readOnly, sizes, stageSpanMap]);
 
   return (
@@ -81,7 +82,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
             content={
               <div style={{ width: 260 }}>
                 <div style={{ marginBottom: 8, fontWeight: 600, color: '#722ed1' }}> AI 智能 IE 指导价 & 全套工序生成</div>
-                <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。</div>
+                <div style={{ marginBottom: 8, fontSize: 14, color: '#888' }}>选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。</div>
                 <Select style={{ width: '100%', marginBottom: 8 }} placeholder="选择衣服品类（必选）" allowClear showSearch optionFilterProp="label" value={aiCategory} onChange={setAiCategory} options={categoryOptions} />
                 <Button type="primary" block loading={aiLoading} disabled={aiLoading || !aiCategory} style={{ background: 'linear-gradient(135deg, #722ed1, #1677ff)', border: 'none' }} onClick={() => handleAiTemplate(setData)}>{aiLoading ? '生成中…' : ' 一键生成全套工序与指导价'}</Button>
               </div>

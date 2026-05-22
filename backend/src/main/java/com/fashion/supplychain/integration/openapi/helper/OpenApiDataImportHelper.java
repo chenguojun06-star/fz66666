@@ -266,13 +266,18 @@ public class OpenApiDataImportHelper {
 
                     Factory factory = new Factory();
                     factory.setFactoryName(factoryName);
-                    factory.setFactoryCode(OpenApiParseUtils.valueAsString(item.get("factoryCode"), null));
+                    String factoryCode = OpenApiParseUtils.valueAsString(item.get("factoryCode"), null);
+                    factory.setFactoryCode(StringUtils.hasText(factoryCode) ? factoryCode : "F" + System.currentTimeMillis());
                     factory.setContactPerson(OpenApiParseUtils.valueAsString(item.get("contactPerson"), null));
                     factory.setContactPhone(OpenApiParseUtils.valueAsString(item.get("contactPhone"), null));
                     factory.setAddress(OpenApiParseUtils.valueAsString(item.get("address"), null));
                     factory.setBusinessLicense(OpenApiParseUtils.valueAsString(item.get("businessLicense"), null));
                     factory.setStatus("active");
+                    factory.setFactoryType("EXTERNAL");
                     factory.setDeleteFlag(0);
+                    factory.setTotalOrders(0);
+                    factory.setCompletedOrders(0);
+                    factory.setOverdueOrders(0);
                     factory.setCreateTime(LocalDateTime.now());
                     factory.setUpdateTime(LocalDateTime.now());
 

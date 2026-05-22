@@ -302,7 +302,7 @@ const StylePatternTab: React.FC<Props> = ({
         render: (_: unknown, record: PatternMaterialRow) => (
           <div>
             <div>{record.bom.materialName}</div>
-            {record.bom.color && <Text type="secondary" style={{ fontSize: 12 }}>{record.bom.color}</Text>}
+            {record.bom.color && <Text type="secondary" style={{ fontSize: 14 }}>{record.bom.color}</Text>}
           </div>
         ),
       },
@@ -323,7 +323,7 @@ const StylePatternTab: React.FC<Props> = ({
           <span>
             平均值
             <br />
-            <Text type="secondary" style={{ fontSize: 13 }}>(按码均值)</Text>
+            <Text type="secondary" style={{ fontSize: 14 }}>(按码均值)</Text>
           </span>
         ),
         key: 'avgUsage',
@@ -501,7 +501,7 @@ const StylePatternTab: React.FC<Props> = ({
         title={
           <Space>
             <span>各码实际用量</span>
-            <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
+            <Text type="secondary" style={{ fontSize: 14, fontWeight: 400 }}>
               纸样师傅按各码纸样测量填入，下单管理和裁剪管理将依此计算实际面辅料用量，拉链辅料也会自动带入
             </Text>
           </Space>

@@ -14,18 +14,18 @@
 .pie-card-loading, .pie-card-empty { display: flex; align-items: center; justify-content: center; min-height: 200px; background: var(--pie-bg); border: 1px solid var(--pie-border); border-radius: var(--pie-radius); }
 .pie-sidebar { padding: 12px; cursor: grab; }
 .pie-sidebar:active { cursor: grabbing; }
-.pie-sidebar-title { font-size: 13px; font-weight: 600; color: var(--pie-text-muted); }
-.pie-sidebar-total { font-size: 32px; font-weight: 800; color: var(--pie-accent); line-height: 1.1; margin: 4px 0 8px; }
+.pie-sidebar-title { font-size: 14px; font-weight: 600; color: var(--pie-text-muted); }
+.pie-sidebar-total { font-size: 18px; font-weight: 800; color: var(--pie-accent); line-height: 1.1; margin: 4px 0 8px; }
 .pie-sidebar-rows { display: flex; flex-direction: column; gap: 6px; }
-.pie-sidebar-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+.pie-sidebar-row { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #6b7280; }
 .pie-sidebar-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .pie-sidebar-dot--dev { background: #3b82f6; }
 .pie-sidebar-dot--done { background: #10b981; }
 .pie-sidebar-num { margin-left: auto; font-weight: 700; color: var(--pie-text); }
 .pie-sidebar-today { display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; }
 .pie-today-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb; }
-.pie-today-label { font-size: 12px; color: #9ca3af; }
-.pie-today-value { font-size: 16px; font-weight: 700; color: #1f2937; }
+.pie-today-label { font-size: 14px; color: #9ca3af; }
+.pie-today-value { font-size: 13px; font-weight: 700; color: #1f2937; }
 .pie-today-value--success { color: #10b981; }
 .pie-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: calc(12px * var(--pie-scale)); flex-shrink: 0; }
 .pie-card-title { font-size: calc(16px * var(--pie-scale)); font-weight: 700; color: var(--pie-text); }

@@ -155,10 +155,10 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         const stage = record.progressStage || '车缝';
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13 }}>{stage}</Tag>
-            <span style={{ fontSize: 12, color: '#999' }}>{info.count} 个工序</span>
+            <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 14 }}>{stage}</Tag>
+            <span style={{ fontSize: 14, color: '#999' }}>{info.count} 个工序</span>
             {editableMode && (
-              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 12, padding: 0 }}>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 14, padding: 0 }}>
                 添加
               </Button>
             )}
@@ -264,7 +264,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             />
             {/* AI 单价提示卡片 */}
             {loading && (
-              <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                 <LoadingOutlined style={{ fontSize: 12 }} /> 查询历史...
               </span>
             )}
@@ -281,16 +281,16 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
                   }}
                 >
                   <BulbOutlined style={{ fontSize: 13, color: '#2D7FF9' }} />
-                  <span style={{ fontSize: 13, color: '#2D7FF9' }}>
+                  <span style={{ fontSize: 14, color: '#2D7FF9' }}>
                     建议 ¥{Number(hint.suggestedPrice).toFixed(2)}
                   </span>
                   <Tag
                     color="blue"
-                    style={{ fontSize: 12, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
+                    style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
                   >
                     采用
                   </Tag>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                  <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                     均¥{Number(hint.avgPrice).toFixed(2)} · {hint.usageCount}款
                   </span>
                 </div>

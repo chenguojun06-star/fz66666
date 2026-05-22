@@ -244,7 +244,7 @@ const EmployeeAdvancePage: React.FC = () => {
         <div style={{ padding: '0 8px' }}>
           {repayRecord && (
             <Card style={{ marginBottom: 16, background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)' }}>
-              <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>借支信息</div>
+              <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>借支信息</div>
               <div style={{ fontWeight: 500 }}>{repayRecord.employeeName} · {repayRecord.advanceNo}</div>
               <div style={{ marginTop: 4 }}>
                 借支金额：<span style={{ color: 'var(--color-danger)' }}>¥{(repayRecord.amount || 0).toFixed(2)}</span>

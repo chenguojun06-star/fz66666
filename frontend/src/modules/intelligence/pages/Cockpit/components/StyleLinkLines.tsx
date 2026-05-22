@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useStyleLink, StyleLinkData } from '../contexts/StyleLinkContext';
 import './StyleLinkLines.css';
 
@@ -75,6 +75,7 @@ const StyleLinkLines: React.FC = () => {
     });
 
     return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleLink, revision]);
 
   if (links.length === 0) return null;

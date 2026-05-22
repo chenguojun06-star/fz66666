@@ -1,5 +1,6 @@
 import React from 'react';
-import { Row, Col, Tag, Button, Input, Select, Space, Spin, Empty, Popover, Typography, Modal, Form, InputNumber, Tabs, Tooltip } from 'antd';
+import { Row, Col, Tag, Button, Input, Select, Space, Spin, Empty, Popover, Typography, Form, InputNumber, Tabs, Tooltip } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import { PlusOutlined, DeleteOutlined, SendOutlined, ThunderboltOutlined, FireOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import MarketHotItems from './MarketHotItems';
@@ -51,7 +52,7 @@ export default function SelectionCenter() {
             <Select placeholder="全部品类" value={categoryFilter || undefined} onChange={v => setCategoryFilter(v ?? '')} allowClear style={{ width: 120 }}
               options={categories.map(c => ({ value: c, label: c }))} />
           )}
-          <Text type="secondary" style={{ fontSize: 12 }}>共 {filtered.length} 款 · 鼠标悬停查看评分来源、分析依据与审核意见</Text>
+          <Text type="secondary" style={{ fontSize: 14 }}>共 {filtered.length} 款 · 鼠标悬停查看评分来源、分析依据与审核意见</Text>
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>新增候选款</Button>
       </div>
@@ -87,21 +88,21 @@ export default function SelectionCenter() {
                             <img loading="lazy" src={img} alt={item.styleName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', color: '#ccc' }}>
-                              <FireOutlined style={{ fontSize: 36 }} />
-                              <div style={{ fontSize: 13, marginTop: 6 }}>暂无参考图</div>
+                              <FireOutlined style={{ fontSize: 24 }} />
+                              <div style={{ fontSize: 14, marginTop: 6 }}>暂无参考图</div>
                             </div>
                           )}
-                          <div style={{ position: 'absolute', top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 13 }}>{label}</Tag></div>
+                          <div style={{ position: 'absolute', top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 14 }}>{label}</Tag></div>
                           {item.trendScore != null && (
-                            <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(114,46,209,0.88)', borderRadius: 4, padding: '2px 8px', color: '#fff', fontSize: 12, fontWeight: 700 }}>
+                            <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(114,46,209,0.88)', borderRadius: 4, padding: '2px 8px', color: '#fff', fontSize: 14, fontWeight: 700 }}>
                               <ThunderboltOutlined /> {item.trendScore}
                             </div>
                           )}
                         </div>
                         <div style={{ padding: '10px 12px' }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.styleName || '未命名'}</div>
-                          <div style={{ fontSize: 13, color: '#999', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType].filter(Boolean).join(' · ')}</div>
-                          <div style={{ fontSize: 13, color: '#777', marginBottom: 8, minHeight: 18 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.styleName || '未命名'}</div>
+                          <div style={{ fontSize: 14, color: '#999', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType].filter(Boolean).join(' · ')}</div>
+                          <div style={{ fontSize: 14, color: '#777', marginBottom: 8, minHeight: 18 }}>
                             {item.reviewCount ? `已评审 ${item.reviewCount} 次` : '待审核'}{item.avgReviewScore != null ? ` · 平均分 ${item.avgReviewScore}` : ''}
                           </div>
                           <div style={{ marginBottom: 8, minHeight: 22 }}>
@@ -109,22 +110,22 @@ export default function SelectionCenter() {
                             {item.status === 'REJECTED' && <Tag color="red" style={{ margin: 0 }}>未通过</Tag>}
                             {item.status === 'HOLD' && <Tag color="blue" style={{ margin: 0 }}>待定</Tag>}
                             {item.status === 'PENDING' && <Tag color="orange" style={{ margin: 0 }}>待评审</Tag>}
-                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 13 }}>{scoreMeta.label}</Tag>}
+                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 14 }}>{scoreMeta.label}</Tag>}
                           </div>
-                          <div style={{ fontSize: 13, color: '#666', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 14, color: '#666', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
                             {latestReview?.comment || item.rejectReason || item.trendScoreReason || '悬停查看 AI 分析、趋势与价值建议'}
                           </div>
                           <Space size={6} style={{ width: '100%' }}>
                             {(item.status === 'PENDING' || item.status === 'HOLD') && (
-                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 13 }}>审核</Button></Tooltip>
+                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 14 }}>审核</Button></Tooltip>
                             )}
                             {item.status === 'APPROVED' && !item.createdStyleId && (
-                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 13 }}>下版到样衣</Button></Tooltip>
+                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 14 }}>下版到样衣</Button></Tooltip>
                             )}
-                            {item.createdStyleId && <Tag color="green" style={{ fontSize: 13, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
+                            {item.createdStyleId && <Tag color="green" style={{ fontSize: 14, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
                             {canDeleteCandidate(item) && (
                               <Tooltip title={item.status === 'APPROVED' ? '审核通过满 10 天后可手动删除候选款' : '审核不通过可直接删除'}>
-                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 13 }}>删除</Button>
+                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 14 }}>删除</Button>
                               </Tooltip>
                             )}
                           </Space>
@@ -141,7 +142,7 @@ export default function SelectionCenter() {
         )}
       </Spin>
 
-      <Modal title="新增候选款" open={addOpen} onCancel={() => { setAddOpen(false); addForm.resetFields(); }} onOk={handleAddSave} width="40vw" okText="确认添加">
+      <ResizableModal title="新增候选款" open={addOpen} onCancel={() => { setAddOpen(false); addForm.resetFields(); }} onOk={handleAddSave} width="40vw" okText="确认添加">
         <Form form={addForm} layout="vertical" style={{ marginTop: 8 }}>
           <Form.Item name="styleName" label="款式名称" rules={[{ required: true, message: '请填写款式名称' }]}><Input placeholder="如：春季碎花连衣裙" /></Form.Item>
           <Row gutter={12}>
@@ -158,9 +159,9 @@ export default function SelectionCenter() {
           </Row>
           <Form.Item name="remark" label="备注"><Input.TextArea rows={2} /></Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
 
-      <Modal title={reviewTarget ? `审核候选款：${reviewTarget.styleName}` : '审核候选款'} open={reviewOpen}
+      <ResizableModal title={reviewTarget ? `审核候选款：${reviewTarget.styleName}` : '审核候选款'} open={reviewOpen}
         onCancel={() => { setReviewOpen(false); reviewForm.resetFields(); }} onOk={submitReview} confirmLoading={reviewSubmitting} okText="提交审核" width="40vw">
         <Form form={reviewForm} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item name="decision" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
@@ -169,7 +170,7 @@ export default function SelectionCenter() {
           <Form.Item name="score" label="评审分数"><InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="可选，0-100" /></Form.Item>
           <Form.Item name="comment" label="审核意见" rules={[{ required: true, message: '请填写审核意见' }]}><Input.TextArea rows={4} placeholder="填写通过原因、不通过原因或后续建议" /></Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
       </>)}
     </div>
     </>

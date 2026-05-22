@@ -184,7 +184,7 @@ export default function SubProcessRemapModal({
       render: (_: unknown, row: TableRow) => {
         if (!row.entry.enabled || row.subprocess === null) {
           return (
-            <span style={{ color: '#9ca3af', fontSize: 12, paddingLeft: 8 }}>
+            <span style={{ color: '#9ca3af', fontSize: 14, paddingLeft: 8 }}>
               使用系统默认节点 — 开启右侧开关可自定义
             </span>
           );
@@ -192,7 +192,7 @@ export default function SubProcessRemapModal({
         return (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8 }}>
-              <Text style={{ fontSize: 13, color: '#9ca3af', width: 18, flexShrink: 0 }}>
+              <Text style={{ fontSize: 14, color: '#9ca3af', width: 18, flexShrink: 0 }}>
                 {row.subIndex + 1}.
               </Text>
               <Input
@@ -235,7 +235,7 @@ export default function SubProcessRemapModal({
                   style={{ width: 130 }}
                   onChange={v => updateSubProcessUnitPrice(row.parentNode.stageKey, row.subprocess!.id, v ?? undefined)}
                 />
-                <Text style={{ fontSize: 13, color: '#9ca3af' }}>厂方内部参考，不参与结算</Text>
+                <Text style={{ fontSize: 14, color: '#9ca3af' }}>厂方内部参考，不参与结算</Text>
               </div>
             )}
           </>
@@ -258,16 +258,16 @@ export default function SubProcessRemapModal({
       }),
       render: (_: unknown, row: TableRow) => (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-          <Tag style={{ background: ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, margin: 0 }}>
+          <Tag style={{ background: ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, margin: 0 }}>
             {row.parentNode.name}
           </Tag>
-          <span style={{ fontSize: 12, color: '#999' }}>
+          <span style={{ fontSize: 14, color: '#999' }}>
             {row.entry.enabled && row.entry.subProcesses.length > 0
               ? `${row.entry.subProcesses.length} 个子工序`
               : '未启用'}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Text style={{ fontSize: 13, color: row.entry.enabled ? ACTIVE_COLOR : '#9ca3af' }}>
+            <Text style={{ fontSize: 14, color: row.entry.enabled ? ACTIVE_COLOR : '#9ca3af' }}>
               {row.entry.enabled ? '已启用' : '已关闭'}
             </Text>
             <Switch
@@ -279,7 +279,7 @@ export default function SubProcessRemapModal({
           {row.entry.enabled && (
             <Button type="link" icon={<PlusOutlined />}
               onClick={() => addSubProcess(row.parentNode.stageKey)}
-              style={{ fontSize: 12, padding: 0 }}
+              style={{ fontSize: 14, padding: 0 }}
             >
               添加
             </Button>
@@ -310,14 +310,14 @@ export default function SubProcessRemapModal({
     : '子工序配置';
 
   return (
-    <ResizableModal title={title} open={visible} onCancel={onClose} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} destroyOnHidden footer={null}>
+    <ResizableModal title={title} open={visible} onCancel={onClose} width="85vw" initialHeight={Math.round(window.innerHeight * 0.82)} destroyOnHidden footer={null}>
       {/* ══ 顶部操作栏 ══ */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 12, padding: '8px 12px',
         background: '#f0f5ff', border: '1px solid #adc6ff', borderRadius: 6,
       }}>
-        <span style={{ fontSize: 12, color: '#595959' }}>
+        <span style={{ fontSize: 14, color: '#595959' }}>
           开启右侧开关后可自定义子工序，仅影响本订单扫码节点
         </span>
         <div style={{ display: 'flex', gap: 8 }}>

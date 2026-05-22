@@ -161,7 +161,7 @@ export default function useProcessPriceColumns(
           <span>{size}码</span>
           {editable && (
             <DeleteOutlined
-              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 12 }}
+              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 14 }}
               onClick={(event) => {
                 event.stopPropagation();
                 Modal.confirm({
@@ -222,5 +222,6 @@ export default function useProcessPriceColumns(
     };
 
     return [...baseColumns, ...sizeColumns, actionColumn];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, sizes, data, updateField, updateSizePrice, handleRemoveSize, handleDelete]);
 }

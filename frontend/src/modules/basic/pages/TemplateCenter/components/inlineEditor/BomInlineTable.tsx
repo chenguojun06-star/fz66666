@@ -281,7 +281,7 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
       return (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {sizeKeys.map((sizeKey) => (
-            <span key={sizeKey} style={{ fontSize: 12, color: 'var(--color-text-primary)' }}>
+            <span key={sizeKey} style={{ fontSize: 14, color: 'var(--color-text-primary)' }}>
               {sizeKey}:{formatNumber(usageMap[sizeKey] ?? 0, 4)}
             </span>
           ))}
@@ -293,7 +293,7 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {sizeKeys.map((sizeKey) => (
           <div key={sizeKey} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>{sizeKey}</span>
+            <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>{sizeKey}</span>
             <InputNumber
               min={0}
               step={0.01}

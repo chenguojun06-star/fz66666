@@ -1,81 +1,54 @@
 import React from 'react';
-import { Card } from 'antd';
-import ResizableTable from '@/components/common/ResizableTable';
-import type { ColumnsType } from 'antd/es/table';
 import { toNumberSafe } from '@/utils/api';
+import ResizableTable from '@/components/common/ResizableTable';
 
 interface Props {
   secondaryProcessList: any[];
 }
 
-const QuotationSecondarySection: React.FC<Props> = ({
-  secondaryProcessList,
-}) => {
+const QuotationSecondarySection: React.FC<Props> = ({ secondaryProcessList }) => {
   if (secondaryProcessList.length === 0) return null;
 
   const secondaryTotal = secondaryProcessList.reduce(
     (s, i) => s + (Number(i.unitPrice) || 0),
     0,
   );
-  const columns: ColumnsType<any> = [
-    {
-      title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 70, align: 'center',
-      render: (v: unknown, _: any, index: number) => toNumberSafe(v) || index + 1,
-    },
-    {
-      title: '工艺名称', dataIndex: 'processName', key: 'processName', width: 120,
-      render: (v: unknown) => String(v || '').trim() || '-',
-    },
-    {
-      title: '工艺描述', dataIndex: 'description', key: 'description', ellipsis: true,
-      render: (v: unknown) => String(v || '').trim() || '-',
-    },
-    {
-      title: '领取人', dataIndex: 'assignee', key: 'assignee', width: 100,
-      render: (v: unknown) => String(v || '').trim() || '-',
-    },
-    {
-      title: '完成时间', dataIndex: 'completedTime', key: 'completedTime', width: 160,
-      render: (v: unknown) => (v ? String(v) : '-'),
-    },
-    {
-      title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right',
-      render: (v: unknown) => (
-        <span style={{ fontWeight: 600 }}>
-          ¥{toNumberSafe(v).toFixed(2)}
-        </span>
-      ),
-    },
-  ];
 
   return (
-    <Card
-      title={
-        <span style={{ fontSize: '15px', fontWeight: 600 }}>
-          二次工艺
-          <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginLeft: 8 }}>
-            共 {secondaryProcessList.length} 项
-          </span>
+    <div style={{ marginBottom: 16 }}>
+      <div style={{
+        fontSize: 15, fontWeight: 600, padding: '8px 0 6px',
+        borderBottom: '1px solid var(--color-border-light, #f0f0f0)', marginBottom: 12, color: 'var(--color-text-primary, #1a1a1a)',
+      }}>
+        二次工艺
+        <span style={{ fontSize: 12, color: '#666', marginLeft: 8, fontWeight: 400 }}>
+          共 {secondaryProcessList.length} 项
         </span>
-      }
+      </div>
 
-     
-      style={{ marginBottom: 12 }}
-      styles={{ body: { padding: '8px' } }}
-    >
       <ResizableTable
-        storageKey="style-quotation-secondary"
-        size="middle"
-        columns={columns}
-        dataSource={secondaryProcessList}
-        rowKey={(r) => String(r?.id || Math.random())}
+        rowKey={(record: any) => record.id || String(Math.random())}
         pagination={false}
-        scroll={{ x: 960 }}
+        size="small"
+        dataSource={secondaryProcessList}
+        columns={[
+          { title: '序号', width: 60, align: 'center' as const, render: (_: any, __: any, idx: number) => toNumberSafe(secondaryProcessList[idx]?.sortOrder) || idx + 1 },
+          { title: '工艺名称', dataIndex: 'processName', width: 130, render: (v: string) => String(v || '').trim() || '-' },
+          { title: '工艺描述', dataIndex: 'description', width: 200, render: (v: string) => String(v || '').trim() || '-' },
+          { title: '领取人', dataIndex: 'assignee', width: 90, render: (v: string) => String(v || '').trim() || '-' },
+          { title: '完成时间', dataIndex: 'completedTime', width: 160, render: (v: any) => v ? String(v) : '-' },
+          { title: '单价', dataIndex: 'unitPrice', width: 100, align: 'right' as const, render: (_: any, r: any) => <strong>¥{toNumberSafe(r.unitPrice).toFixed(2)}</strong> },
+        ]}
       />
-      <div style={{ textAlign: 'right', padding: '6px 12px', borderTop: '1px solid var(--color-border-secondary)', fontWeight: 600, fontSize: 14, color: 'var(--primary-color)' }}>
+
+      <div style={{
+        display: 'flex', justifyContent: 'flex-end', padding: '6px 10px',
+        border: '1px solid var(--color-border, #e8e8e8)', borderTop: '1px solid var(--color-border, #e8e8e8)',
+        background: '#fafafa', fontWeight: 600, fontSize: 14, color: '#1a1a1a',
+      }}>
         小计：¥{secondaryTotal.toFixed(2)}
       </div>
-    </Card>
+    </div>
   );
 };
 

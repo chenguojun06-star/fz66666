@@ -84,7 +84,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
               <span style={{ fontSize: 28, lineHeight: 1 }}>{f.icon}</span>
               <div>
                 <Text strong>{f.title}</Text>
-                <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 12 }}>{f.desc}</Paragraph>
+                <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 14 }}>{f.desc}</Paragraph>
               </div>
             </div>
           </Card>
@@ -95,7 +95,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
       <Row gutter={24} align="middle">
         <Col span={16}>
           <Text strong>为什么比鼎普便宜5倍？</Text>
-          <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 13 }}>
+          <Paragraph type="secondary" style={{ margin: '4px 0 0', fontSize: 14 }}>
             鼎普 CRM 模块定价 ¥3000+/月，功能复杂适合大企业。本模块专注中小服装工厂核心需求：
             应收款追踪 + 客户门户查单，去掉80%用不上的功能，降到 ¥599/月，90天回本，开通当月即可用起来。
           </Paragraph>
@@ -252,6 +252,7 @@ const CustomerManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.pageSize, debouncedKeyword, statusFilter]);
 
   const fetchStats = useCallback(async () => {
@@ -265,6 +266,7 @@ const CustomerManagement: React.FC = () => {
   useEffect(() => {
     fetchList(1);
     fetchStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = () => {
@@ -313,7 +315,7 @@ const CustomerManagement: React.FC = () => {
   };
 
   const columns: ColumnsType<Customer> = [
-    { title: '客户编号', dataIndex: 'customerNo', width: 130, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+    { title: '客户编号', dataIndex: 'customerNo', width: 130, render: v => <Text code style={{ fontSize: 14 }}>{v}</Text> },
     { title: '公司名称', dataIndex: 'companyName', width: 180, render: (v, r) => (
       <Button type="link" style={{ padding: 0, fontWeight: 600 }} onClick={() => openDrawer(r)}>{v}</Button>
     )},
@@ -355,7 +357,7 @@ const CustomerManagement: React.FC = () => {
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 2 }}>{s.label}</div>
               </div>
             </Card>
           </Col>
@@ -432,7 +434,7 @@ const CustomerManagement: React.FC = () => {
         open={drawerOpen}
         onCancel={() => setDrawerOpen(false)}
         footer={null}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         destroyOnHidden
       >

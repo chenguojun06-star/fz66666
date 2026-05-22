@@ -179,7 +179,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                             try {
                               const map: Record<string, string> = JSON.parse(record.sizeUsageMap);
                               const entries = Object.entries(map);
-                              if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ margin: 0, fontSize: 13, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
+                              if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ margin: 0, fontSize: 14, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
                             } catch { /* ignore */ }
                           }
                           return <span style={{ color: '#999' }}>{record.size || '-'}</span>;
@@ -200,7 +200,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                         { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
                           const m: Record<string, { text: string; color: string }> = { pending: { text: '待采购', color: 'default' }, received: { text: '已领取', color: 'processing' }, partial: { text: '部分到货', color: 'warning' }, partial_arrival: { text: '部分到货', color: 'warning' }, awaiting_confirm: { text: '待确认完成', color: 'cyan' }, completed: { text: '全部到货', color: 'success' }, cancelled: { text: '已取消', color: 'error' }, warehouse_pending: { text: '待仓库出库', color: 'blue' } };
                           const s = m[v] || { text: v || '未知', color: 'default' };
-                          return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 12, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
+                          return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
                         }},
                         { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true, render: (v: any) => v || '-' },
                       ]} pagination={false} bordered scroll={{ x: 'max-content' }} />

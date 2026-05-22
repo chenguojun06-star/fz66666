@@ -101,7 +101,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
         </Form.Item>
         {aiRemarks.length > 0 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 6, fontSize: 13, color: 'var(--color-text-tertiary, #999)' }}>
+            <div style={{ marginBottom: 6, fontSize: 14, color: 'var(--color-text-tertiary, #999)' }}>
               AI巡检记录（不可编辑）
             </div>
             <div style={{
@@ -110,13 +110,13 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
               padding: '8px 12px',
               maxHeight: 120,
               overflowY: 'auto',
-              fontSize: 12,
+              fontSize: 14,
               lineHeight: '20px',
               color: 'var(--color-text-secondary, #666)',
             }}>
               {aiRemarks.map((line, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: i < aiRemarks.length - 1 ? 4 : 0 }}>
-                  <Tag color="orange" style={{ margin: 0, fontSize: 13, lineHeight: '18px', padding: '0 4px', flexShrink: 0 }}>AI</Tag>
+                  <Tag color="orange" style={{ margin: 0, fontSize: 14, lineHeight: '18px', padding: '0 4px', flexShrink: 0 }}>AI</Tag>
                   <span>{line.replace(/^\[AI巡检\]\s*/, '')}</span>
                 </div>
               ))}

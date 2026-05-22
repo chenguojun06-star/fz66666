@@ -63,6 +63,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { streamAbortRef.current?.abort(); };
   }, [streamAbortRef]);
 

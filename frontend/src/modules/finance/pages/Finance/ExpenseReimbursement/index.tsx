@@ -72,7 +72,7 @@ const ExpenseReimbursementPage: React.FC = () => {
         <div>
           <p>报销单号：{record.reimbursementNo}</p>
           <p>申请人：{record.applicantName}</p>
-          <p>金额：<strong style={{ color: 'var(--color-danger)', fontSize: 16 }}>¥{record.amount?.toFixed(2)}</strong></p>
+          <p>金额：<strong style={{ color: 'var(--color-danger)', fontSize: 13 }}>¥{record.amount?.toFixed(2)}</strong></p>
           <p>收款方式：{PAYMENT_METHODS.find(m => m.value === record.paymentMethod)?.label || record.paymentMethod}</p>
           <p>收款账号：{record.paymentAccount}</p>
           <p>收款户名：{record.accountName}</p>

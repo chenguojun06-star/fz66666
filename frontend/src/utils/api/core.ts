@@ -1,21 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 
-let __authRedirectTs = 0;
-const AUTH_REDIRECT_COOLDOWN_MS = 30_000;
-
-function navigateToLogin() {
-  const nowTs = Date.now();
-  if (nowTs - __authRedirectTs > AUTH_REDIRECT_COOLDOWN_MS) {
-    __authRedirectTs = nowTs;
-    const w = window as any;
-    if (typeof w.__appAuthLogoutNavigate === 'function') {
-      w.__appAuthLogoutNavigate();
-    } else {
-      window.location.href = '/login';
-    }
-  }
-}
-
 export type ApiResult<T = unknown> = {
   code: number;
   data: T;

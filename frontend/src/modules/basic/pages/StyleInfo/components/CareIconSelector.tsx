@@ -25,7 +25,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
       {CARE_CATEGORIES.map(cat => (
         <div key={cat.key} style={{ marginBottom: 16 }}>
           <div style={{
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: 600,
             color: 'var(--color-text-secondary, #666)',
             marginBottom: 8,
@@ -74,7 +74,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
                       }}
                     />
                     <span style={{
-                      fontSize: 13,
+                      fontSize: 14,
                       color: isSelected
                         ? 'var(--color-primary, #1677ff)'
                         : 'var(--color-text-tertiary, #8c8c8c)',

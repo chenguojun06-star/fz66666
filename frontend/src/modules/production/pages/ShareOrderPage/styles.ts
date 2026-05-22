@@ -19,7 +19,7 @@ export const heroHeaderStyle: React.CSSProperties = { display: 'flex', alignItem
 export const brandTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: '#0f172a' };
 export const brandSubtitleStyle: React.CSSProperties = { fontSize: 12, color: '#94a3b8', marginTop: 2 };
 export const statusTagStyle: React.CSSProperties = { marginInlineEnd: 0, padding: '6px 14px', borderRadius: 999, fontWeight: 700 };
-export const orderNoStyle: React.CSSProperties = { fontSize: 28, fontWeight: 800, color: '#0f172a', marginBottom: 8 };
+export const orderNoStyle: React.CSSProperties = { fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 };
 
 export const heroOverviewStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '108px minmax(0, 1fr)', gap: 16, alignItems: 'center', marginBottom: 14 };
 export const heroGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 14 };
@@ -39,7 +39,7 @@ export const summaryPanelStyle: React.CSSProperties = {
 };
 
 export const summaryCaptionStyle: React.CSSProperties = { fontSize: 12, color: '#64748b', marginBottom: 8 };
-export const currentStageStyle: React.CSSProperties = { fontSize: 24, fontWeight: 800, color: '#0f172a', marginBottom: 8 };
+export const currentStageStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: '#0f172a', marginBottom: 8 };
 export const summaryTextStyle: React.CSSProperties = { fontSize: 13, color: '#64748b', lineHeight: 1.7 };
 
 export const sizeQtyFooterStyle: React.CSSProperties = {
@@ -68,7 +68,7 @@ export const panelStyle: React.CSSProperties = {
   border: '1px solid rgba(255,255,255,0.78)',
 };
 
-export const panelTitleStyle: React.CSSProperties = { fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 16 };
+export const panelTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 800, color: '#0f172a', marginBottom: 16 };
 export const aiHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' };
 export const xiaoYunLinkStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 };
 

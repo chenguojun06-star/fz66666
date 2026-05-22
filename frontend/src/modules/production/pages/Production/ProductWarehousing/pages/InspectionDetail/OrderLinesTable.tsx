@@ -15,7 +15,7 @@ const OrderLinesTable: React.FC<Props> = ({ rows, loading }) => (
       pagination={false} dataSource={rows}
       resizableColumns={false}
       scroll={{ x: 820 }}
-      style={{ fontSize: 12 }}
+      style={{ fontSize: 14 }}
       columns={[
         { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
         { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },

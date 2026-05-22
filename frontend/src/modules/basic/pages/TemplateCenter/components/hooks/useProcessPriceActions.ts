@@ -171,6 +171,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
       setTemplateId(null);
       setMatchedScope('empty');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleUploadImage = useCallback(async (file: File) => {

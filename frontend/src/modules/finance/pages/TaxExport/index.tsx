@@ -48,7 +48,7 @@ const TaxExport: React.FC = () => {
         content: (
           <div>
             <p style={{ marginBottom: 8 }}>金蝶/用友专用格式需要开通<strong>财税对接模块</strong>（¥499/月）。</p>
-            <p style={{ color: '#888', fontSize: 13 }}>通用标准格式永久免费，适合手工导入任意财务软件。</p>
+            <p style={{ color: '#888', fontSize: 14 }}>通用标准格式永久免费，适合手工导入任意财务软件。</p>
           </div>
         ),
         okText: '前往开通',
@@ -139,12 +139,12 @@ const TaxExport: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <Text strong style={{ color: locked ? '#bbb' : undefined }}>{opt.label}</Text>
                     {opt.free
-                      ? <Tag color="green" style={{ fontSize: 13 }}>免费</Tag>
-                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 13 }}>
+                      ? <Tag color="green" style={{ fontSize: 14 }}>免费</Tag>
+                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 14 }}>
                           {subscribed ? '已解锁' : '付费'}
                         </Tag>}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>{opt.desc}</Text>
+                  <Text type="secondary" style={{ fontSize: 14 }}>{opt.desc}</Text>
                   {selected && <CheckCircleOutlined style={{ position: 'absolute', top: 10, right: 10, color: '#1890ff' }} />}
                 </div>
               </Col>
@@ -174,7 +174,7 @@ const TaxExport: React.FC = () => {
                   <div style={{ fontSize: 32, lineHeight: 1 }}>{type.icon}</div>
                   <div style={{ flex: 1 }}>
                     <Text strong style={{ fontSize: 15, color: type.color }}>{type.title}</Text>
-                    <Paragraph type="secondary" style={{ margin: '4px 0 12px', fontSize: 12 }}>{type.desc}</Paragraph>
+                    <Paragraph type="secondary" style={{ margin: '4px 0 12px', fontSize: 14 }}>{type.desc}</Paragraph>
                     <Button type="primary" icon={<DownloadOutlined />} loading={loading[type.key]}
                       onClick={() => handleExport(type.key)} style={{ background: type.color, borderColor: type.color }}>
                       导出 Excel
@@ -188,7 +188,7 @@ const TaxExport: React.FC = () => {
         <Divider style={{ margin: '20px 0 12px' }} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <FileExcelOutlined style={{ color: '#52c41a', fontSize: 16 }} />
-          <Text type="secondary" style={{ fontSize: 12 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
+          <Text type="secondary" style={{ fontSize: 14 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
         </div>
       </Card>
     </div>

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Modal, Button, Radio, Checkbox } from 'antd';
+import { Button, Radio, Checkbox } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { safePrint } from '@/utils/safePrint';
@@ -143,11 +144,11 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
     };
 
     return (
-        <Modal
+        <ResizableModal
             title="打印工资条"
             open={visible}
             onCancel={onClose}
-            width={800}
+            width="85vw"
             footer={[
                 <Button key="cancel" onClick={onClose}>取消</Button>,
                 <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={selectedWorkerNames.length === 0}>
@@ -162,7 +163,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
                         <Radio.Button value="simple">简版</Radio.Button>
                         <Radio.Button value="detail">明细版</Radio.Button>
                     </Radio.Group>
-                    <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+                    <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
                         {printVersion === 'simple' ? '仅含订单号、订单数量、总价格' : '含完整工序结算明细'}
                     </span>
                 </div>
@@ -215,7 +216,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
                     <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>请先选择需要打印的人员</div>
                 )}
             </div>
-        </Modal>
+        </ResizableModal>
     );
 };
 

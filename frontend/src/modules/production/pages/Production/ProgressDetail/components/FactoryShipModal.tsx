@@ -100,7 +100,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
     <ResizableModal
       open={open}
       title={`工厂发货 — ${orderNo ?? ''}`}
-      width="60vw"
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
       onCancel={onCancel}
       footer={
@@ -133,7 +133,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
         <span>剩余可发：<b style={{ color: '#389e0d' }}>{canShip}</b></span>
         {currentTotal > 0 && (
           <span>本次发货：<b style={{ color: currentTotal > canShip ? '#cf1322' : '#d46b08' }}>{currentTotal}</b>
-            {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 13 }}>超出可发数量</Tag>}
+            {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 14 }}>超出可发数量</Tag>}
           </span>
         )}
       </div>
@@ -141,14 +141,14 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       {/* ── Part 2: 参考表（下单/已发明细）── */}
       {hasMatrix && (
         <>
-          <div style={{ fontWeight: 600, fontSize: 12, color: '#555', marginBottom: 6 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: '#555', marginBottom: 6 }}>
             下单与已发明细参考
             <span style={{ fontWeight: 400, color: '#888', marginLeft: 8 }}>
               （格式：下单数 / <span style={{ color: '#096dd9' }}>已发数</span>）
             </span>
           </div>
           <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-            <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 12 }}>
+            <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 14 }}>
               <thead>
                 <tr style={{ background: '#fafafa' }}>
                   <th style={thStyle}>颜色</th>
@@ -189,20 +189,20 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       {/* ── Part 3: 历史发货记录 ── */}
       {shipHistory.length > 0 && (
         <>
-          <div style={{ fontWeight: 600, fontSize: 12, color: '#555', marginBottom: 6 }}>历史发货记录</div>
+          <div style={{ fontWeight: 600, fontSize: 14, color: '#555', marginBottom: 6 }}>历史发货记录</div>
           <div style={{
             background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 4,
             padding: '6px 10px', marginBottom: 12, maxHeight: 120, overflowY: 'auto',
           }}>
             {shipHistory.map((rec, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 12, borderBottom: i < shipHistory.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 14, borderBottom: i < shipHistory.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
                 <span style={{ color: '#888', minWidth: 80 }}>
                   {rec.shipTime ? dayjs(rec.shipTime).format('MM-DD HH:mm') : '-'}
                 </span>
                 <span><b>{rec.shipQuantity ?? '-'}</b> 件</span>
                 {rec.trackingNo && <span style={{ color: '#555' }}>单号：{rec.trackingNo}</span>}
                 {rec.receiveStatus && (
-                  <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} style={{ fontSize: 13, padding: '0 4px', lineHeight: '16px' }}>
+                  <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px' }}>
                     {rec.receiveStatus === 'received' ? '已收货' : rec.receiveStatus === 'pending' ? '待收货' : rec.receiveStatus}
                   </Tag>
                 )}
@@ -228,7 +228,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
           {hasShipSizes ? (
             /* 矩阵模式：有明确码数 */
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 12 }}>
+              <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: '#fafafa' }}>
                     <th style={{ ...thStyle, minWidth: 90 }}>颜色</th>

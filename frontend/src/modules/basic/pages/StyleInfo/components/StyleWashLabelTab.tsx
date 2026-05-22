@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Input, InputNumber, Modal, Space, Form } from 'antd';
+import { App, Button, Input, InputNumber, Space, Form } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, RollbackOutlined, LockOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import CompositionPartsEditor from './CompositionPartsEditor';
@@ -53,6 +54,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [rollbackOpen, setRollbackOpen] = useState(false);
   const [rollbackForm] = Form.useForm();
+  const [rollbackSubmitting, setRollbackSubmitting] = useState(false);
 
   const [compositionParts, setCompositionParts] = useState(initialParts);
   const [washInstructions, setWashInstructions] = useState(initialWash || '');
@@ -129,10 +131,13 @@ const StyleWashLabelTab: React.FC<Props> = ({
       rollbackForm.setFields([{ name: 'remark', errors: ['请填写退回原因'] }]);
       return;
     }
+    setRollbackSubmitting(true);
     try {
       await api.put(`/style/info/rollback-remark/${styleId}`, { remark });
     } catch {
       message.warning('退回备注保存失败，但编辑已退回');
+    } finally {
+      setRollbackSubmitting(false);
     }
     setIsEditing(false);
     setCompositionParts(initialParts);
@@ -262,7 +267,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
               <LockOutlined style={{ color: 'var(--color-text-quaternary, #bfbfbf)' }} />
             )}
             <span style={{
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 600,
               color: isEditing ? 'var(--color-primary, #1677ff)' : 'var(--color-text-tertiary, #8c8c8c)',
             }}>
@@ -313,7 +318,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
 
         <div style={{ marginBottom: 20, opacity: isEditing ? 1 : 0.6, pointerEvents: isEditing ? 'auto' : 'none' }}>
           <div style={sectionTitleStyle}>面料成分 / 洗涤说明</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)', marginBottom: 8 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', marginBottom: 8 }}>
             每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出
           </div>
           <CompositionPartsEditor
@@ -333,7 +338,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
             style={{ resize: 'none' }}
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 12, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
             全局洗涤说明会显示在所有部位成分下方；如果某部位已单独填写洗涤说明，则优先使用部位说明
           </div>
         </div>
@@ -347,14 +352,14 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
             maxLength={64}
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 12, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
             U编码是品质追溯的唯一标识，打印U码标签时会自动使用此编码
           </div>
         </div>
 
         <div style={{ marginBottom: 20, opacity: isEditing ? 1 : 0.6, pointerEvents: isEditing ? 'auto' : 'none' }}>
           <div style={sectionTitleStyle}>洗涤护理图标</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)', marginBottom: 12 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', marginBottom: 12 }}>
             点击图标选择/取消，每个类别可选择多个图标；选中的图标将显示在洗水唛底部
           </div>
           <CareIconSelector
@@ -372,13 +377,13 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
           borderTop: '1px solid var(--color-border-light, #f0f0f0)',
         }}>
           <Space>
-            <span style={{ color: '#555', fontSize: 13 }}>预览纸张宽</span>
+            <span style={{ color: '#555', fontSize: 14 }}>预览纸张宽</span>
             <InputNumber
               min={20} max={200} value={previewW}
               onChange={v => setPreviewW(v ?? 30)}
               suffix="mm" style={{ width: 110 }}
             />
-            <span style={{ color: '#555', fontSize: 13 }}>高</span>
+            <span style={{ color: '#555', fontSize: 14 }}>高</span>
             <InputNumber
               min={30} max={400} value={previewH}
               onChange={v => setPreviewH(v ?? 80)}
@@ -401,7 +406,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
           <EyeOutlined style={{ marginRight: 6 }} />
           洗水唛预览
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-quaternary, #bfbfbf)', marginBottom: 8 }}>
+        <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginBottom: 8 }}>
           实时预览打印效果，修改左侧内容后自动更新
         </div>
         <WashLabelPreview
@@ -417,13 +422,14 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
       </div>
 
       {/* 退回编辑确认弹窗 */}
-      <Modal
+      <ResizableModal
         title="退回编辑"
         open={rollbackOpen}
         onOk={() => void handleRollbackOk()}
         onCancel={() => { setRollbackOpen(false); rollbackForm.resetFields(); }}
         okText="确认退回"
         cancelText="取消"
+        confirmLoading={rollbackSubmitting}
       >
         <div style={{ marginBottom: 12, color: 'var(--color-text-secondary, #666)' }}>
           退回编辑将放弃所有未保存的修改，请填写退回原因：
@@ -433,7 +439,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
             <Input.TextArea rows={3} placeholder="请输入退回原因" maxLength={200} showCount />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

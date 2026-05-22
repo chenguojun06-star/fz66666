@@ -261,6 +261,7 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
       return;
     }
     fetchDeliverySuggestion(selectedFactoryStat.factoryName, totalOrderQuantity);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFactoryStat?.factoryName, totalOrderQuantity]);
 
   const resetIntelligence = useCallback(() => {

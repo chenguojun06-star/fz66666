@@ -61,6 +61,7 @@ const IntelligenceCenter: React.FC = () => {
     if (q) {
       setSearchParams({}, { replace: true });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -301,7 +302,7 @@ const IntelligenceCenter: React.FC = () => {
                           : { g: 'D', c: '#e03030' };
                         return (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 12 }}>{grd.g}</b>
+                            <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 14 }}>{grd.g}</b>
                             {w.trend === 'UP' ? '' : w.trend === 'DOWN' ? '' : ''}
                           </span>
                         );
@@ -326,7 +327,7 @@ const IntelligenceCenter: React.FC = () => {
               <LiveDot size={7} color="#00e5ff" />
               工厂工序卡点
               <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
-              <span style={{ fontSize: 12, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
+              <span style={{ fontSize: 14, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
               <CollapseChevron panelKey="bottleneck" collapsed={!!collapsedPanels['bottleneck']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['bottleneck'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
@@ -356,7 +357,7 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-shortage-name">{item.materialName}</span>
                   <span className="c-shortage-qty">缺&nbsp;{item.shortageQuantity}&nbsp;{item.unit}</span>
                   <span style={{
-                    marginLeft: 'auto', fontSize: 12, flexShrink: 0, fontWeight: 600,
+                    marginLeft: 'auto', fontSize: 14, flexShrink: 0, fontWeight: 600,
                     color: item.riskLevel === 'HIGH' ? '#e03030' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
                   }}>
                     {item.riskLevel === 'HIGH' ? ' 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
@@ -414,7 +415,7 @@ const IntelligenceCenter: React.FC = () => {
                     </React.Fragment>
                   ))}
                 </div>}
-                {isLowEnd && <div style={{ fontSize: 12, color: '#7aaec8', padding: '8px 0' }}>
+                {isLowEnd && <div style={{ fontSize: 14, color: '#7aaec8', padding: '8px 0' }}>
                   共 {heatmap.totalDefects} 个缺陷，涉及 {(heatmap.processes || []).length} 个工序、{(heatmap.factories || []).length} 个工厂
                 </div>}
               </>
@@ -448,10 +449,10 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-heal-detail">{item.detail}</span>
                   <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
                     {item.autoFixed
-                      ? <Tag style={{ fontSize: 13, background: '#1677ff22', color: '#4096ff', borderColor: '#4096ff55' }}>已自修</Tag>
+                      ? <Tag style={{ fontSize: 14, background: '#1677ff22', color: '#4096ff', borderColor: '#4096ff55' }}>已自修</Tag>
                       : item.status !== 'OK'
-                        ? <Tag style={{ fontSize: 13, background: '#d4880622', color: '#d48806', borderColor: '#d4880655' }}>需处理</Tag>
-                        : <Tag style={{ fontSize: 13, background: '#52c41a22', color: '#73d13d', borderColor: '#73d13d55' }}>正常</Tag>
+                        ? <Tag style={{ fontSize: 14, background: '#d4880622', color: '#d48806', borderColor: '#d4880655' }}>需处理</Tag>
+                        : <Tag style={{ fontSize: 14, background: '#52c41a22', color: '#73d13d', borderColor: '#73d13d55' }}>正常</Tag>
                     }
                   </span>
                 </div>
@@ -465,13 +466,13 @@ const IntelligenceCenter: React.FC = () => {
                   style={{
                     background: 'linear-gradient(135deg, #1677ff, #4096ff)', color: '#fff',
                     border: 'none', borderRadius: 6, padding: '5px 16px', cursor: repairing ? 'wait' : 'pointer',
-                    fontSize: 12, fontWeight: 600, opacity: repairing ? 0.6 : 1,
+                    fontSize: 14, fontWeight: 600, opacity: repairing ? 0.6 : 1,
                   }}
                 >
                   {repairing ? '修复中…' : ' 一键修复'}
                 </button>
                 {repairResult && (
-                  <span style={{ fontSize: 13, color: repairResult.needManual < 0 ? '#ff7875' : '#73d13d' }}>
+                  <span style={{ fontSize: 14, color: repairResult.needManual < 0 ? '#ff7875' : '#73d13d' }}>
                     {repairResult.needManual < 0 ? '修复失败' : `已修复 ${repairResult.autoFixed} 项，${repairResult.needManual} 项需人工`}
                   </span>
                 )}
@@ -510,7 +511,7 @@ const IntelligenceCenter: React.FC = () => {
           <>
             <div style={{ padding: '0 24px 4px' }}>
               <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('graphmas')}>
-                <span style={{ fontSize: 13, color: '#c084fc', fontWeight: 600 }}> 多代理图分析（Graph MAS）</span>
+                <span style={{ fontSize: 14, color: '#c084fc', fontWeight: 600 }}> 多代理图分析（Graph MAS）</span>
                 <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(192,132,252,0.15)', color: '#c084fc' }}>
                   Plan · Act · Reflect v4.0
                 </span>
@@ -527,7 +528,7 @@ const IntelligenceCenter: React.FC = () => {
 
             <div style={{ padding: '0 24px 4px' }}>
               <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('abtest')}>
-                <span style={{ fontSize: 13, color: '#38bdf8', fontWeight: 600 }}> A/B 测试统计</span>
+                <span style={{ fontSize: 14, color: '#38bdf8', fontWeight: 600 }}> A/B 测试统计</span>
                 <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
                   Scene Comparison
                 </span>

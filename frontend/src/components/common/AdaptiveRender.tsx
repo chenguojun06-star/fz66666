@@ -52,7 +52,7 @@ export const LazyHeavy: React.FC<LazyHeavyProps> = ({ loader, props = {}, fallba
   const LazyComponent = useMemo(() => React.lazy(loader), [loader]);
 
   if (TIER_PRIORITY[tier] < TIER_PRIORITY[minTier]) {
-    return <>{fallback ?? <div style={{ padding: 16, color: '#888', fontSize: 13 }}>该功能需要更高性能的设备支持</div>}</>;
+    return <>{fallback ?? <div style={{ padding: 16, color: '#888', fontSize: 14 }}>该功能需要更高性能的设备支持</div>}</>;
   }
 
   return (

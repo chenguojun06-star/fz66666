@@ -13,7 +13,7 @@
 
 .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
   padding: 0 8px !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   border-radius: 6px !important;
 }
 
@@ -24,7 +24,7 @@
 }
 
 /* ========== 主按钮 - 实心蓝色 ========== */
-.ant-btn-primary {
+.ant-btn-primary:not(.ant-btn-background-ghost) {
   background: var(--color-primary, #2D7FF9) !important;
   border: 1px solid var(--color-primary, #2D7FF9) !important;
   color: #fff !important;
@@ -32,20 +32,20 @@
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.ant-btn-primary:hover {
+.ant-btn-primary:not(.ant-btn-background-ghost):hover {
   background: var(--color-primary-dark, #1a6ae5) !important;
   border-color: var(--color-primary-dark, #1a6ae5) !important;
   color: #fff !important;
   box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3) !important;
 }
 
-.ant-btn-primary:active {
+.ant-btn-primary:not(.ant-btn-background-ghost):active {
   box-shadow: 0 1px 2px rgba(45, 127, 249, 0.15) !important;
 }
 
-.ant-btn-primary:disabled,
-.ant-btn-primary.ant-btn-disabled,
-.ant-btn-primary[disabled] {
+.ant-btn-primary:disabled:not(.ant-btn-background-ghost),
+.ant-btn-primary.ant-btn-disabled:not(.ant-btn-background-ghost),
+.ant-btn-primary[disabled]:not(.ant-btn-background-ghost) {
   background: var(--color-bg-disabled, #d9d9d9) !important;
   border-color: var(--color-bg-disabled, #d9d9d9) !important;
   color: rgba(0, 0, 0, 0.25) !important;

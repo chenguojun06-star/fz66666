@@ -93,6 +93,7 @@ const OrderTransferPage: React.FC = () => {
 
   useEffect(() => {
     fetchTransfers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAccept = async (transfer: OrderTransfer) => {

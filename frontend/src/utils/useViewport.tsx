@@ -30,7 +30,7 @@ export const useViewport = (options: ViewportOptions = {}) => {
     const tablet = width >= mobileMax && width < tabletMax;
     const is4KScreen = width >= largeMax;
     const lowRes = width < 1280;
-    const modal = mobile ? '96vw' : is4KScreen ? '50vw' : '60vw';
+    const modal = mobile ? '96vw' : is4KScreen ? '50vw' : '85vw';
     const scrollY = mobile ? 260 : is4KScreen ? 600 : 420;
     return { isMobile: mobile, isTablet: tablet, is4K: is4KScreen, isLowRes: lowRes, modalWidth: modal, tableScrollY: scrollY };
   }, [mobileMax, tabletMax, largeMax, width]);

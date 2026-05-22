@@ -1,10 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { Form, Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, Alert, Switch, App, Table, Divider } from 'antd';
+import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
+import ResizableTable from '@/components/common/ResizableTable';
 import { InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
-import { warehouseAreaApi } from '../../../../services/warehouse/warehouseAreaApi';
 import { safePrint } from '@/utils/safePrint';
 
 interface FreeInboundModalProps {
@@ -34,7 +34,7 @@ interface InboundItem {
 }
 
 const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSuccess }) => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [skuInput, setSkuInput] = useState('');
   const [querying, setQuerying] = useState(false);
@@ -42,7 +42,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const [autoCreate, setAutoCreate] = useState(false);
   const [showCreateFields, setShowCreateFields] = useState(false);
   const [selectedAreaId, setSelectedAreaId] = useState<string | undefined>(undefined);
-  const [quickCreating, setQuickCreating] = useState(false);
+  const [_quickCreating, _setQuickCreating] = useState(false);
   const [items, setItems] = useState<InboundItem[]>([]);
 
 
@@ -132,7 +132,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
     message.success('已添加到入库列表');
   };
 
-  const handleQuickCreateArea = async () => {
+  const _handleQuickCreateArea = async () => {
     message.info('请前往「库位地图」页面创建新仓库');
   };
 
@@ -271,7 +271,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
     >
       <Space vertical style={{ width: '100%' }} size={16}>
         <div>
-          <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>添加SKU</div>
+          <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>添加SKU</div>
           <Space.Compact style={{ width: '100%' }}>
             <Input value={skuInput} onChange={e => setSkuInput(e.target.value)} placeholder="输入SKU编码（款号-颜色-尺码），回车添加" onPressEnter={handleAddSku} size="large" allowClear />
             <Button type="primary" size="large" icon={<PlusOutlined />} loading={querying} onClick={handleAddSku}>添加</Button>
@@ -305,7 +305,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
 
         {items.length > 0 && (
           <>
-            <Table columns={columns} dataSource={items} rowKey="key" pagination={false} size="small" />
+            <ResizableTable columns={columns} dataSource={items} rowKey="key" pagination={false} size="small" />
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-bg-highlight)', borderRadius: 6 }}>
               <span>共 <b>{items.length}</b> 个SKU</span>
               <span>合计 <b>{items.reduce((s, i) => s + i.quantity, 0)}</b> 件</span>

@@ -187,17 +187,17 @@
 }
 
 .recent-tab-label.ant-btn {
-  height: auto !important;
-  padding: 1px 4px !important;
-  border-radius: 3px !important;
+  height: 32px !important;
+  padding: 0 12px !important;
+  border-radius: 6px !important;
   min-width: 0 !important;
   font-size: 14px !important;
-  line-height: 1.4 !important;
+  line-height: 32px !important;
 }
 
 .recent-tab-label.ant-btn.ant-btn-text {
-  height: auto !important;
-  padding: 1px 4px !important;
+  height: 32px !important;
+  padding: 0 12px !important;
   min-width: 0 !important;
 }
 
@@ -210,17 +210,18 @@
 }
 
 .recent-tab-close.ant-btn {
-  width: 16px !important;
-  height: 16px !important;
+  width: 20px !important;
+  height: 20px !important;
   padding: 0 !important;
-  border-radius: 3px !important;
-  font-size: 9px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
   min-width: 0 !important;
+  margin-right: 4px !important;
 }
 
 .recent-tab-close.ant-btn.ant-btn-text {
-  width: 16px !important;
-  height: 16px !important;
+  width: 20px !important;
+  height: 20px !important;
   padding: 0 !important;
   min-width: 0 !important;
 }
@@ -310,7 +311,7 @@
   margin-top: auto;
   padding: 10px 14px 14px;
   text-align: center;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.38);
   border-top: 1px solid rgba(255, 255, 255, 0.07);
@@ -865,7 +866,7 @@
   border-radius: 20px;
   background: rgba(45, 127, 249, 0.04);
   color: #1a5fb4;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
@@ -913,7 +914,7 @@
   opacity: 0.85;
 }
 .smart-alert-btn-main {
-  font-size: 12px;
+  font-size: 14px;
   color: #111;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -973,12 +974,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #1e1b4b;
 }
 .sap-date {
-  font-size: 13px;
+  font-size: 14px;
   color: #9ca3af;
   font-weight: 400;
 }
@@ -1008,7 +1009,7 @@
   justify-content: center;
   gap: 8px;
   color: #888;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* ── 数字统计行 ── */
@@ -1037,7 +1038,7 @@
   line-height: 1;
 }
 .sap-stat-label {
-  font-size: 12px;
+  font-size: 14px;
   color: #9ca3af;
   white-space: nowrap;
 }
@@ -1048,7 +1049,7 @@
   border-bottom: 1px solid #f3f4f6;
 }
 .sap-section-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
@@ -1077,8 +1078,8 @@
   justify-content: space-between;
   margin-bottom: 6px;
 }
-.sap-priority-no  { font-size: 12px; font-weight: 600; color: #1a5fb4; }
-.sap-priority-factory { font-size: 13px; color: #9ca3af; }
+.sap-priority-no  { font-size: 14px; font-weight: 600; color: #1a5fb4; }
+.sap-priority-factory { font-size: 14px; color: #9ca3af; }
 .sap-priority-bar-wrap {
   display: flex;
   align-items: center;
@@ -1099,7 +1100,7 @@
 }
 .sap-priority-pct {
   position: relative;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: #1a5fb4;
   margin-left: auto;
@@ -1107,7 +1108,7 @@
 }
 .sap-priority-days {
   position: relative;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   z-index: 1;
 }
@@ -1129,8 +1130,8 @@
   background: #ef4444;
   flex-shrink: 0;
 }
-.sap-event-title { font-size: 12px; color: #374151; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sap-event-time  { font-size: 12px; color: #d1d5db; white-space: nowrap; }
+.sap-event-title { font-size: 14px; color: #374151; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sap-event-time  { font-size: 14px; color: #d1d5db; white-space: nowrap; }
 .sap-event-dismiss-btn {
   flex-shrink: 0;
   width: 18px; height: 18px;
@@ -1154,7 +1155,7 @@
 }
 .sap-notice-row:hover { filter: brightness(0.97); }
 .sap-notice-read-btn {
-  flex-shrink: 0; font-size: 12px; padding: 1px 5px; cursor: pointer;
+  flex-shrink: 0; font-size: 14px; padding: 1px 5px; cursor: pointer;
   background: #fff; border: 1px solid #ffa940; border-radius: 4px; color: #d46b08;
 }
 .sap-notice-dismiss-btn {
@@ -1171,7 +1172,7 @@
 
 /* 智能建议 */
 .sap-suggestion {
-  font-size: 12px;
+  font-size: 14px;
   color: #4b5563;
   line-height: 1.6;
   padding: 1px 0;
@@ -1183,7 +1184,7 @@
   background: #fafafe;
 }
 .sap-ai-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #2D7FF9;
   margin-bottom: 6px;
@@ -1194,7 +1195,7 @@
   background: #ede9fe;
   border-radius: 8px;
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: 14px;
   color: #2e1065;
   line-height: 1.65;
   margin-bottom: 8px;
@@ -1204,7 +1205,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   color: #6b7895;
   margin-bottom: 8px;
 }
@@ -1262,7 +1263,7 @@
   max-width: 88%;
   padding: 6px 9px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   word-break: break-word;
 }
@@ -1289,7 +1290,7 @@
   border: 1px solid rgba(45, 127, 249, 0.35);
   background: rgba(45, 127, 249, 0.04);
   color: #2D7FF9;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;

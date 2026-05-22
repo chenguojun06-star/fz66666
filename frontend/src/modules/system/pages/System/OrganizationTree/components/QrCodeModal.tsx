@@ -41,7 +41,7 @@ const QrCodeModal: React.FC<QrCodeModalProps> = ({ open, unit, tenantCode, onClo
           size={220}
           style={{ margin: '0 auto' }}
         />
-        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 16, fontSize: 13 }}>
+        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 16, fontSize: 14 }}>
           外发工厂工人扫码注册，自动归属到「{unit?.unitName}」
         </Typography.Text>
         <div style={{ marginTop: 12 }}>

@@ -55,7 +55,7 @@ const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, h
         dataSource={qcRecords}
         resizableColumns={false}
         scroll={{ x: 1100 }}
-        style={{ fontSize: 12 }}
+        style={{ fontSize: 14 }}
         rowClassName={(record) =>
           highlightWhNo && record.warehousingNo === highlightWhNo ? 'ant-table-row-selected' : ''
         }

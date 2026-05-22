@@ -8,23 +8,19 @@ import {
   SettingOutlined, ThunderboltOutlined, SyncOutlined, CheckCircleOutlined,
   WarningOutlined, CloseCircleOutlined, CloudOutlined, KeyOutlined,
   SafetyCertificateOutlined, LinkOutlined, SearchOutlined, ReloadOutlined,
-  EyeOutlined, CarOutlined, DollarOutlined, EditOutlined, SaveOutlined,
-  NumberOutlined, RiseOutlined, ApiOutlined, SendOutlined,
+  EyeOutlined, CarOutlined, ApiOutlined, SendOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
-import ResizableModal from '@/components/common/ResizableModal';
-import ModalContentLayout, { ModalFieldRow, ModalHeaderCard } from '@/components/common/ModalContentLayout';
 import ExpressOrderModal from '../../components/ExpressOrderModal';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { usePlatformConnector, type ShopStats } from '../../../integration/pages/IntegrationCenter/usePlatformConnector';
-import { PLATFORM_LIST, SYNC_MODE_LABELS, type PlatformMeta } from '../../../integration/pages/IntegrationCenter/PlatformConnectorConstants';
+import { PLATFORM_LIST, SYNC_MODE_LABELS } from '../../../integration/pages/IntegrationCenter/PlatformConnectorConstants';
 import api, { type ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { paths } from '@/routeConfig';
 import { readPageSize } from '@/utils/pageSizeStore';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 const IconMap: Record<string, React.ReactNode> = {
   cloud: <CloudOutlined />, shop: <ShopOutlined />,
@@ -34,13 +30,6 @@ const IconMap: Record<string, React.ReactNode> = {
 };
 const renderIcon = (iconName: string): React.ReactNode => IconMap[iconName] || <ApiOutlined />;
 
-const PLATFORM_MAP: Record<string, { name: string; color: string }> = {
-  TAOBAO: { name: '淘宝', color: 'orange' }, TMALL: { name: '天猫', color: 'red' },
-  JD: { name: '京东', color: 'volcano' }, DOUYIN: { name: '抖音', color: 'default' },
-  PINDUODUO: { name: '拼多多', color: 'red' }, XIAOHONGSHU: { name: '小红书', color: 'magenta' },
-  WECHAT_SHOP: { name: '视频号', color: 'green' }, SHOPIFY: { name: 'Shopify', color: 'purple' },
-  JST: { name: '聚水潭', color: 'orange' }, DONGFANG: { name: '东纺纺织', color: 'green' },
-};
 const STATUS_MAP: Record<number, { label: string; color: string }> = {
   0: { label: '待付款', color: 'default' }, 1: { label: '待发货', color: 'orange' },
   2: { label: '已发货', color: 'blue' }, 3: { label: '已完成', color: 'green' },
@@ -118,15 +107,13 @@ const PlatformDetail: React.FC = () => {
   const [orderPageSize, setOrderPageSize] = useState(readPageSize(20));
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
   const [keyword, setKeyword] = useState('');
-  const [detail, setDetail] = useState<EcOrder | null>(null);
+  const [_detail, setDetail] = useState<EcOrder | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [linkTarget, setLinkTarget] = useState<EcOrder | null>(null);
-  const [linkForm] = Form.useForm();
-  const [linking, setLinking] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [outboundTarget, setOutboundTarget] = useState<EcOrder | null>(null);
-  const [outboundForm] = Form.useForm();
-  const [outbounding, setOutbounding] = useState(false);
   const [expressOrderTarget, setExpressOrderTarget] = useState<EcOrder | null>(null);
-  const [expressModalOpen, setExpressModalOpen] = useState(false);
+const [expressModalOpen, setExpressModalOpen] = useState(false);
 
   const [configForm] = Form.useForm();
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -199,34 +186,6 @@ const PlatformDetail: React.FC = () => {
     } catch { /* handled in hook */ }
   };
 
-  const handleLink = async () => {
-    if (!linkTarget) return;
-    try {
-      const v = await linkForm.validateFields();
-      setLinking(true);
-      await api.post(`/ecommerce/orders/${linkTarget.id}/link`, { productionOrderNo: v.productionOrderNo });
-      message.success('关联成功');
-      setLinkTarget(null);
-      loadOrders();
-    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '关联失败'); }
-    finally { setLinking(false); }
-  };
-
-  const handleDirectOutbound = async () => {
-    if (!outboundTarget) return;
-    try {
-      const v = await outboundForm.validateFields();
-      setOutbounding(true);
-      await api.post(`/ecommerce/orders/${outboundTarget.id}/direct-outbound`, {
-        trackingNo: v.trackingNo, expressCompany: v.expressCompany,
-      });
-      message.success('出库成功');
-      setOutboundTarget(null);
-      loadOrders();
-    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '出库失败'); }
-    finally { setOutbounding(false); }
-  };
-
   if (!platform) {
     return <Empty description="平台不存在" />;
   }
@@ -239,7 +198,7 @@ const PlatformDetail: React.FC = () => {
       render: (v, r) => (
         <div>
           <div style={{ fontWeight: 600 }}>{v || r.orderNo}</div>
-          {v && <div style={{ fontSize: 12, color: '#888' }}>内部 {r.orderNo}</div>}
+          {v && <div style={{ fontSize: 14, color: '#888' }}>内部 {r.orderNo}</div>}
         </div>
       ),
     },
@@ -255,8 +214,8 @@ const PlatformDetail: React.FC = () => {
       render: (_: unknown, r: EcOrder) => (
         <div>
           <div>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div style={{ fontSize: 13, color: '#52c41a' }}>SKU {r.skuCode}</div>}
-          <div style={{ fontSize: 13, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
+          {r.skuCode && <div style={{ fontSize: 14, color: '#52c41a' }}>SKU {r.skuCode}</div>}
+          <div style={{ fontSize: 14, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
@@ -265,7 +224,7 @@ const PlatformDetail: React.FC = () => {
       render: (_: unknown, r: EcOrder) => (
         <div>
           <div style={{ color: '#fa8c16', fontWeight: 600 }}>¥{r.payAmount ?? '-'}</div>
-          {r.freight ? <div style={{ fontSize: 12, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
+          {r.freight ? <div style={{ fontSize: 14, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
     },
@@ -283,7 +242,7 @@ const PlatformDetail: React.FC = () => {
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,
-      render: (v, r) => v ? <div><div style={{ fontSize: 12, color: '#888' }}>{r.expressCompany}</div><div>{v}</div></div> : <Text type="secondary">-</Text>,
+      render: (v, r) => v ? <div><div style={{ fontSize: 14, color: '#888' }}>{r.expressCompany}</div><div>{v}</div></div> : <Text type="secondary">-</Text>,
     },
     {
       title: '下单时间', dataIndex: 'createTime', width: 110,
@@ -317,7 +276,7 @@ const PlatformDetail: React.FC = () => {
             ].map((s, i) => (
               <Col span={6} key={i}>
                 <Card styles={{ body: { padding: '8px 12px' } }}>
-                  <Statistic title={<span style={{ fontSize: 13 }}>{s.title}</span>} value={s.value} suffix={s.suffix} styles={{ content: { fontSize: 20, color: s.color } }} />
+                  <Statistic title={<span style={{ fontSize: 14 }}>{s.title}</span>} value={s.value} suffix={s.suffix} styles={{ content: { fontSize: 20, color: s.color } }} />
                 </Card>
               </Col>
             ))}
@@ -348,7 +307,7 @@ const PlatformDetail: React.FC = () => {
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: '#1677ff' }}>📦 链路一：成品仓（有生产单）</div>
-                    <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8 }}>
+                    <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
                       订单 → SKU匹配款号 → <Tag color="blue">关联生产单</Tag> → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
                     <div style={{ marginTop: 6 }}><Tag color="blue">备货中 {stats?.preparing ?? 0}</Tag></div>
@@ -357,7 +316,7 @@ const PlatformDetail: React.FC = () => {
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid #b7eb8f', background: '#f6ffed' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: '#52c41a' }}>🛒 链路二：电商仓（现货发货）</div>
-                    <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8 }}>
+                    <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
                       订单 → <Tag color="orange">待拣货</Tag> → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                     </div>
                     <div style={{ marginTop: 6 }}>
@@ -480,9 +439,9 @@ const PlatformDetail: React.FC = () => {
           </div>
           <div style={{ marginLeft: 'auto' }}>
             {configured ? (
-              <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 13, padding: '2px 12px' }}>已连接</Tag>
+              <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 14, padding: '2px 12px' }}>已连接</Tag>
             ) : (
-              <Tag icon={<CloseCircleOutlined />} color="default" style={{ fontSize: 13, padding: '2px 12px' }}>未配置</Tag>
+              <Tag icon={<CloseCircleOutlined />} color="default" style={{ fontSize: 14, padding: '2px 12px' }}>未配置</Tag>
             )}
           </div>
         </div>

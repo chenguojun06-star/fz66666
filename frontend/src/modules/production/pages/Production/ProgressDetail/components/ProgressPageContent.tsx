@@ -123,12 +123,12 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
         return (
           <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Tag color={statusColor} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
-            {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+            <Tag color={statusColor} style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
+            {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
             {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
-              && <Tag style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
+              && <Tag style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
           </div>
         );
       }},

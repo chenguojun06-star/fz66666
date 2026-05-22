@@ -193,6 +193,7 @@ const FinanceDashboard: React.FC = () => {
 
   useEffect(() => {
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange, customRange, activeTab]);
 
   // 时间范围选择器

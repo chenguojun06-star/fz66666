@@ -48,7 +48,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
       open={open}
       onCancel={handleClose}
       footer={null}
-      width={360}
+      width="30vw"
       title="成员资料"
       centered
     >
@@ -66,7 +66,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
                 <Tag icon={<CrownFilled />} color="gold" style={{ marginLeft: 8 }}>老板</Tag>
               )}
             </div>
-            <div style={{ color: 'var(--neutral-text-tertiary, #999)', fontSize: 13, marginTop: 4 }}>@{user.username}</div>
+            <div style={{ color: 'var(--neutral-text-tertiary, #999)', fontSize: 14, marginTop: 4 }}>@{user.username}</div>
           </div>
           <Descriptions column={1}>
             <Descriptions.Item label="手机">{user.phone || '—'}</Descriptions.Item>

@@ -50,7 +50,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--neutral-text-tertiary, #999);
   margin-right: 2px;
 }
@@ -65,7 +65,7 @@
 }
 
 .tree-node-name {
-  font-size: 13px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

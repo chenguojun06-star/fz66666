@@ -51,7 +51,7 @@ const ProductionSheetPanel: React.FC<Props> = ({
           border: '1px solid var(--neutral-border, #e8e8e8)',
           borderRadius: 6,
           background: 'var(--neutral-bg, #fafafa)',
-          fontSize: 12,
+          fontSize: 14,
           lineHeight: '20px',
         }}>
           <div style={{ marginBottom: 4, fontWeight: 600 }}>样衣审核</div>

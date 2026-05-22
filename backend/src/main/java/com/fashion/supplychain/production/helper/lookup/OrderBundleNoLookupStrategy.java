@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
-@Order(3)
+@Order(2)
 @Slf4j
 public class OrderBundleNoLookupStrategy implements BundleLookupStrategy {
 

@@ -100,7 +100,7 @@ const OrderCuttingChart: React.FC = () => {
       data: ['下单数量', '裁剪数量'],
       top: 5,
       textStyle: {
-        fontSize: 13,
+        fontSize: 14,
         color: '#666',
       },
     },
@@ -122,7 +122,7 @@ const OrderCuttingChart: React.FC = () => {
       },
       axisLabel: {
         color: '#999',
-        fontSize: 12,
+        fontSize: 14,
       },
     },
     yAxis: {
@@ -135,7 +135,7 @@ const OrderCuttingChart: React.FC = () => {
       },
       axisLabel: {
         color: '#999',
-        fontSize: 12,
+        fontSize: 14,
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {

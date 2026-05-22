@@ -193,7 +193,7 @@ const MaterialOutboundPrintModal: React.FC<MaterialOutboundPrintModalProps> = ({
         <Empty description="暂无可打印的出库单数据" />
       ) : (
         <div style={{ padding: '8px 0' }}>
-          <div style={{ textAlign: 'center', fontSize: 24, fontWeight: 700, marginBottom: 20 }}>面辅料出库单</div>
+          <div style={{ textAlign: 'center', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>面辅料出库单</div>
           <div
             style={{
               display: 'grid',

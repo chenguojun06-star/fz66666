@@ -1,7 +1,6 @@
 import React from 'react';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ProductWarehousing as WarehousingType } from '@/types/production';
-import { useViewport } from '@/utils/useViewport';
 import { useWarehousingForm } from './hooks/useWarehousingForm';
 import WarehousingDetailForm from './components/WarehousingDetailForm';
 import WarehousingFormFields from './components/WarehousingFormFields';
@@ -24,8 +23,7 @@ const WarehousingModal: React.FC<WarehousingModalProps> = ({
   openPreview,
   defaultOrderNo,
 }) => {
-  const { modalWidth } = useViewport();
-  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
+  const modalInitialHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.82) : 800;
 
   const hook = useWarehousingForm(visible, currentWarehousing, onCancel, onSuccess, defaultOrderNo);
   const { form } = hook;
@@ -38,7 +36,7 @@ const WarehousingModal: React.FC<WarehousingModalProps> = ({
       open={visible}
       onCancel={onCancel}
       footer={null}
-      width={modalWidth}
+      width="85vw"
       initialHeight={modalInitialHeight}
       tableDensity="auto"
       contentShiftX={12}

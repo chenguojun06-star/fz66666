@@ -302,7 +302,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   if (isCompleted) return null;
 
   return (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 12, lineHeight: 1.5, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 11, lineHeight: 1.5, boxSizing: 'border-box' }}>
 
       {/* 顶部：款号 + 款名 + EC单号 */}
       {(order.styleNo || order.ecOrderNo) && (
@@ -312,20 +312,20 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         }}>
           {order.styleNo && (
             <span style={{
-              fontSize: 13, color: '#555', background: '#f5f5f5',
+              fontSize: 11, color: '#555', background: '#f5f5f5',
               padding: '1px 7px', borderRadius: 10, fontWeight: 600,
             }}>
               款号 {order.styleNo}
             </span>
           )}
           {order.styleName && (
-            <span style={{ fontSize: 13, color: '#888', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, color: '#888', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {order.styleName}
             </span>
           )}
           {order.ecOrderNo && (
             <span style={{
-              fontSize: 13, color: '#1677ff', background: '#e6f4ff',
+              fontSize: 11, color: '#1677ff', background: '#e6f4ff',
               padding: '1px 7px', borderRadius: 10, fontWeight: 600,
             }}>
               {order.ecPlatform ? `${order.ecPlatform} ` : ''}{order.ecOrderNo}
@@ -339,12 +339,12 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: 8,
       }}>
-        <span style={{ color: '#555', fontWeight: 600, fontSize: 13 }}>
+        <span style={{ color: '#555', fontWeight: 600, fontSize: 11 }}>
           {order.factoryName || '工序进度'}
         </span>
         {deadline && (
           <span style={{
-            fontSize: 13, fontWeight: 700, color: deadline.color,
+            fontSize: 11, fontWeight: 700, color: deadline.color,
             background: deadline.color + '18', padding: '2px 8px', borderRadius: 10,
           }}>
             {deadline.text}
@@ -356,7 +356,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       {predictHint && (
         <div style={{
           padding: '3px 10px', background: '#f0f5ff', borderRadius: 6,
-          marginBottom: 8, fontSize: 13, color: '#1677ff',
+          marginBottom: 8, fontSize: 11, color: '#1677ff',
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <span></span>
@@ -370,7 +370,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       {risk && (
         <div style={{
           padding: '4px 10px', background: risk.bg, borderRadius: 6,
-          marginBottom: 8, fontSize: 13, color: risk.color, fontWeight: 700,
+          marginBottom: 8, fontSize: 11, color: risk.color, fontWeight: 700,
         }}>
           {risk.text}
           {speed > 0 && total > 0 && daysLeft !== null && daysLeft >= 0 && (
@@ -385,7 +385,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       {(order.unqualifiedQuantity ?? 0) > 0 && (
         <div style={{
           padding: '3px 10px', background: '#fff2f0', borderRadius: 6,
-          marginBottom: 8, fontSize: 13, color: '#ff4d4f', fontWeight: 700,
+          marginBottom: 8, fontSize: 11, color: '#ff4d4f', fontWeight: 700,
           display: 'flex', alignItems: 'center', gap: 5,
         }}>
           <span></span>
@@ -397,11 +397,11 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       {(order.deliverySlaStatus || (order as any).cpk) && (
         <div style={{
           padding: '4px 10px', background: '#f0f5ff', borderRadius: 6,
-          marginBottom: 8, fontSize: 13, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
+          marginBottom: 8, fontSize: 11, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
         }}>
           {order.deliverySlaStatus && (
             <span style={{
-              padding: '1px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
               background: order.deliverySlaStatus === 'completed' ? '#f6ffed' :
                          order.deliverySlaStatus === 'on_track' ? '#e6f4ff' :
                          order.deliverySlaStatus === 'at_risk' ? '#fff7e6' : '#fff2f0',
@@ -417,7 +417,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           )}
           {(order as any).cpk != null && (
             <span style={{
-              padding: '1px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
               background: (order as any).cpk >= 1.33 ? '#f6ffed' : (order as any).cpk >= 1.0 ? '#fff7e6' : '#fff2f0',
               color: (order as any).cpk >= 1.33 ? '#389e0d' : (order as any).cpk >= 1.0 ? '#fa8c16' : '#ff4d4f',
             }}>
@@ -432,7 +432,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         <div style={{
           padding: '3px 10px', borderRadius: 6, marginBottom: 8,
           background: todayTask.color + '14',
-          display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+          display: 'flex', alignItems: 'center', gap: 6, fontSize: 11,
         }}>
           <span></span>
           <span style={{ fontWeight: 700, color: todayTask.color }}>
@@ -442,7 +442,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           <span style={{
             background: todayTask.color + '28',
             color: todayTask.color,
-            padding: '0 5px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+            padding: '0 5px', borderRadius: 8, fontSize: 11, fontWeight: 600,
           }}>
             {todayTask.label}
           </span>
@@ -467,7 +467,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
               <React.Fragment key={s.label}>
                 {showGroupHeader && (
                   <div style={{
-                    fontSize: 12, color: '#888', fontWeight: 600,
+                    fontSize: 11, color: '#888', fontWeight: 600,
                     marginTop: idx > 0 ? 6 : 0, marginBottom: 2,
                     display: 'flex', alignItems: 'center', gap: 4,
                   }}>
@@ -479,13 +479,13 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                 <div style={{ paddingLeft: isSubProcess ? 10 : 0, marginBottom: 6 }}>
                   {/* 第一行：图标 + 工序名 + 进度条(60px) + 百分比 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 12, flexShrink: 0, fontSize: 12, textAlign: 'center', color: '#1677ff' }}>▶</span>
-                    <span style={{ minWidth: 40, maxWidth: 56, flexShrink: 0, fontWeight: 600, color: '#1677ff', fontSize: 13 }}>{s.label}</span>
+                    <span style={{ width: 12, flexShrink: 0, fontSize: 11, textAlign: 'center', color: '#1677ff' }}>▶</span>
+                    <span style={{ minWidth: 40, maxWidth: 56, flexShrink: 0, fontWeight: 600, color: '#1677ff', fontSize: 11 }}>{s.label}</span>
                     {/* 瓶颈标记：当前工序与 progressInsight 检测到的瓶颈匹配 */}
                     {progressInsight?.bottleneck?.stage === s.label && (
                       <span style={{
                         background: '#fff2f0', color: '#ff4d4f',
-                        borderRadius: 8, padding: '0 5px', fontSize: 12, fontWeight: 700,
+                        borderRadius: 8, padding: '0 5px', fontSize: 11, fontWeight: 700,
                       }}>瓶颈</span>
                     )}
                     <div style={{ width: 60, flexShrink: 0, height: 4, background: '#f0f5ff', borderRadius: 2, overflow: 'hidden' }}>
@@ -494,17 +494,17 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                         borderRadius: 2, background: '#1677ff',
                       }} />
                     </div>
-                    <span style={{ flexShrink: 0, fontSize: 13, color: '#1677ff', fontWeight: 700, minWidth: 34, textAlign: 'right' }}>
+                    <span style={{ flexShrink: 0, fontSize: 11, color: '#1677ff', fontWeight: 700, minWidth: 34, textAlign: 'right' }}>
                       {s.pct}%
                     </span>
                   </div>
                   {/* 第二行：件数 + 操作人数 + 人均产能 + 最近扫码时间 + 预计完成日 */}
-                  <div style={{ paddingLeft: 17, fontSize: 12, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ paddingLeft: 17, fontSize: 11, color: '#aaa', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ color: '#888' }}>{s.qty}/{total}件</span>
                     {s.workerCount > 0 && (
                       <span style={{
                         color: '#1677ff', background: '#e6f4ff',
-                        padding: '0px 5px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        padding: '0px 5px', borderRadius: 8, fontSize: 11, fontWeight: 600,
                       }}>
                          {s.workerCount}人
                       </span>
@@ -530,7 +530,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           display: 'flex', alignItems: 'center', gap: 6,
           borderTop: '1px dashed #e8e8e8', margin: '2px 0 6px',
         }}>
-          <span style={{ fontSize: 12, color: '#bbb', paddingTop: 3, whiteSpace: 'nowrap' }}>预测</span>
+          <span style={{ fontSize: 11, color: '#bbb', paddingTop: 3, whiteSpace: 'nowrap' }}>预测</span>
         </div>
       )}
 
@@ -545,10 +545,10 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
             return (
               <div key={s.label} style={{ marginBottom: 7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 14, fontSize: 13, textAlign: 'center', flexShrink: 0, color: '#d9d9d9' }}>○</span>
+                  <span style={{ width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0, color: '#d9d9d9' }}>○</span>
                   <span style={{ width: 26, flexShrink: 0, fontWeight: 400, color: '#bbb' }}>{s.label}</span>
                   <div style={{ flex: 1, height: 5, background: '#f5f5f5', borderRadius: 3 }} />
-                  <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 13, color: '#bbb' }}>
+                  <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 11, color: '#bbb' }}>
                     约 {predictDate}
                   </span>
                 </div>
@@ -557,7 +557,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           })}
         </div>
       ) : !hasScan && (
-        <div style={{ color: '#bbb', fontSize: 13, textAlign: 'center', padding: '8px 0' }}>
+        <div style={{ color: '#bbb', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
           {prog > 0 ? `整体进度 ${prog}%，工序数据加载中…` : '待开工'}
         </div>
       )}
@@ -566,7 +566,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       {stuckNode && (
         <div style={{
           marginTop: 6, padding: '3px 8px', background: '#fff7e6',
-          borderRadius: 5, fontSize: 13, color: '#d46b08',
+          borderRadius: 5, fontSize: 11, color: '#d46b08',
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
           <span>⏸</span>
@@ -608,4 +608,4 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   );
 };
 
-export default SmartOrderHoverCard;
+export default React.memo(SmartOrderHoverCard);

@@ -134,7 +134,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
 
                   <Divider style={{ margin: '8px 0' }} />
 
-                  <div style={{ fontSize: 12, color: '#666' }}>
+                  <div style={{ fontSize: 14, color: '#666' }}>
                     <div style={{ marginBottom: 4 }}>
                       <strong>回调地址：</strong>
                       <Tooltip title={webhookUrl}>
@@ -151,7 +151,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                     {ch.mode !== 'LIVE' && hint && (
                       <div style={{ marginTop: 8 }}>
                         <strong>填写到配置文件：</strong>
-                        <Tooltip title={<pre style={{ fontSize: 13 }}>{hint}</pre>} placement="bottom">
+                        <Tooltip title={<pre style={{ fontSize: 14 }}>{hint}</pre>} placement="bottom">
                           <Button type="link" icon={<QuestionCircleOutlined />}
                             style={{ padding: '0 4px' }}>查看配置项</Button>
                         </Tooltip>

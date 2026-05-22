@@ -204,6 +204,7 @@ const ProfileInfoTab: React.FC = () => {
                 }).catch(() => {});
             }
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -575,7 +576,7 @@ const ProfileInfoTab: React.FC = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                                 <TeamOutlined style={{ color: 'var(--primary-color)' }} />
                                 <span style={{ fontWeight: 600, fontSize: 15 }}>工厂信息</span>
-                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>（如需修改请联系管理员）</Typography.Text>
+                                <Typography.Text type="secondary" style={{ fontSize: 14 }}>（如需修改请联系管理员）</Typography.Text>
                             </div>
                             <Form form={tenantForm} layout="vertical" requiredMark={false}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
@@ -603,7 +604,7 @@ const ProfileInfoTab: React.FC = () => {
                                     </Form.Item>
                                 </div>
                             </Form>
-                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
                                 工厂码：<Typography.Text code copyable>{tenantInfo.tenantCode}</Typography.Text>（不可修改）
                             </Typography.Text>
                         </div>

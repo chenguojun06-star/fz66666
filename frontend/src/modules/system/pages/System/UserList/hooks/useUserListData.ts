@@ -189,6 +189,7 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     fetchPendingUserCount();
     const interval = setInterval(() => { fetchPendingUserCount(); }, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryParams, currentUserId]);
 
   useSync(
@@ -244,6 +245,7 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     }
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchRoleOptions(); }, []);
 
   // ---- 权限管理 ----
@@ -288,6 +290,7 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     const rid = String(selectedRoleId || '').trim();
     if (!rid) { setPermTree([]); setPermCheckedIds(new Set()); return; }
     loadPermTreeAndChecked(rid);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRoleId, userModal.visible]);
 
   // ---- 表单 & 弹窗控制 ----

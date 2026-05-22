@@ -25,7 +25,7 @@ const sectionStyle = {
 
 const labelStyle = {
   color: 'var(--color-text-secondary)',
-  fontSize: 12,
+  fontSize: 14,
 } as const;
 
 const StyleBomSizeColorSummary: React.FC<StyleBomSizeColorSummaryProps> = ({ sizes, colors }) => {

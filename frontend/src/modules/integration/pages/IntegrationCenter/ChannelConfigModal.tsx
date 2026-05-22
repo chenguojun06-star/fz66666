@@ -183,7 +183,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
                 <span>
                   {field.icon}&nbsp;{field.label}
                   {field.isSecret && configData?.hasConfig && configData?.[`has${field.key.charAt(0).toUpperCase() + field.key.slice(1)}`] && (
-                    <span style={{ color: '#52c41a', marginLeft: 8, fontSize: 12 }}> 已配置</span>
+                    <span style={{ color: '#52c41a', marginLeft: 8, fontSize: 14 }}> 已配置</span>
                   )}
                 </span>
               }

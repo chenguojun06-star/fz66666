@@ -67,10 +67,10 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 标题行 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <XiaoyunCloudAvatar size={16} active />
-        <Text strong style={{ fontSize: 13, color: '#1677ff' }}>AI质检助手</Text>
+        <Text strong style={{ fontSize: 14, color: '#1677ff' }}>AI质检助手</Text>
         {loading && <Spin style={{ marginLeft: 4 }} />}
         {data && data.historicalVerdict && (
-          <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 13 }}>
+          <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 14 }}>
             {verdictLabel[data.historicalVerdict]}
             {data.historicalDefectRate != null && ` ${(data.historicalDefectRate * 100).toFixed(1)}%`}
           </Tag>
@@ -87,7 +87,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           type="warning"
           showIcon
           icon={<WarningOutlined />}
-          style={{ marginBottom: 8, padding: '4px 10px', fontSize: 12 }}
+          style={{ marginBottom: 8, padding: '4px 10px', fontSize: 14 }}
           banner
         />
       )}
@@ -98,7 +98,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           title="该订单历史次品率偏高，请加强本次质检力度"
           type="error"
           showIcon
-          style={{ marginBottom: 8, padding: '4px 10px', fontSize: 12 }}
+          style={{ marginBottom: 8, padding: '4px 10px', fontSize: 14 }}
           banner
         />
       )}
@@ -106,14 +106,14 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 质检要点 */}
       {data && data.checkpoints && data.checkpoints.length > 0 && (
         <div style={{ marginBottom: suggestion ? 8 : 0 }}>
-          <Text type="secondary" style={{ fontSize: 13 }}>质检要点：</Text>
+          <Text type="secondary" style={{ fontSize: 14 }}>质检要点：</Text>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
             {data.checkpoints.map((point, idx) => {
               const isRed = point.startsWith('🔴');
               const isYellow = point.startsWith('🟡');
               return (
                 <div key={idx} style={{
-                  padding: '4px 8px', fontSize: 13,
+                  padding: '4px 8px', fontSize: 14,
                   background: isRed ? '#fff1f0' : isYellow ? '#fffbe6' : '#f0f7ff',
                   borderLeft: `3px solid ${isRed ? '#ff4d4f' : isYellow ? '#faad14' : '#1677ff'}`,
                   borderRadius: '0 4px 4px 0', color: '#333',
@@ -130,7 +130,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           <div style={{ marginTop: 8, padding: '8px 10px', background: '#fffbe6', borderRadius: 4, border: '1px solid #ffe58f' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <CheckCircleOutlined style={{ color: '#faad14', marginTop: 2, flexShrink: 0 }} />
-              <Text style={{ fontSize: 12, flex: 1 }}>{suggestion}</Text>
+              <Text style={{ fontSize: 14, flex: 1 }}>{suggestion}</Text>
               <Button
                 type="primary"
                
@@ -143,7 +143,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           </div>
         ) : (
           !loading && data && (
-            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 4 }}>
+            <Text type="secondary" style={{ fontSize: 14, display: 'block', marginTop: 4 }}>
               暂无该次品类别的处理建议
             </Text>
           )

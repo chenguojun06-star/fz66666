@@ -36,13 +36,13 @@
   border-radius: 999px;
   background: rgba(45, 127, 249, 0.08);
   color: var(--primary-color);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .maintenance-center__toolbar-hint {
   color: var(--neutral-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -110,7 +110,7 @@
 .maintenance-card__info-label {
   flex-shrink: 0;
   color: #8c95a6;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -120,7 +120,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--color-text-primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
   text-overflow: ellipsis;
@@ -129,7 +129,7 @@
 
 .maintenance-card__info-value--time {
   font-weight: 500;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--neutral-text-secondary, #8c95a6);
 }
 
@@ -139,7 +139,7 @@
   border-radius: 999px;
   background: #fff3e0;
   color: #ad6800;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.6;
   white-space: nowrap;
@@ -182,7 +182,7 @@
   border-radius: 8px;
   background: #fff;
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -246,15 +246,15 @@
   }
 
   .maintenance-card__info-label {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .maintenance-card__info-value {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .maintenance-overlay-btn {
-    font-size: 12px;
+    font-size: 14px;
     padding: 6px 4px;
   }
 }

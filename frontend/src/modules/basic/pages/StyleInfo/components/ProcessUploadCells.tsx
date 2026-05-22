@@ -61,7 +61,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
           ))}
         </Image.PreviewGroup>
       )}
-      {imgs.length > 2 && <span style={{ fontSize: 12, color: '#999' }}>+{imgs.length - 2}</span>}
+      {imgs.length > 2 && <span style={{ fontSize: 14, color: '#999' }}>+{imgs.length - 2}</span>}
       {!readOnly && record.id && (
         <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
           <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
@@ -111,12 +111,12 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
-      {files.length === 0 && <div style={{ color: '#999', fontSize: 12, padding: '4px 0' }}>暂无附件</div>}
+      {files.length === 0 && <div style={{ color: '#999', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
       {files.map((f, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
           <PaperClipOutlined style={{ color: '#1677ff', flexShrink: 0, fontSize: 12 }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
-            href="#" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, cursor: 'pointer' }}>
+            href="#" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, cursor: 'pointer' }}>
             {f.name}
           </a>
         </div>
@@ -138,8 +138,8 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
       <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
         onClick={(e) => e.stopPropagation()}>
-        <PaperClipOutlined style={{ fontSize: 14, color: files.length > 0 ? '#1677ff' : '#bbb' }} />
-        {files.length > 0 && <span style={{ fontSize: 12, color: '#1677ff' }}>{files.length}</span>}
+        <PaperClipOutlined style={{ fontSize: 12, color: files.length > 0 ? '#1677ff' : '#bbb' }} />
+        {files.length > 0 && <span style={{ fontSize: 14, color: '#1677ff' }}>{files.length}</span>}
       </div>
     </Popover>
   );
@@ -193,7 +193,7 @@ export const NewRowImageUpload: React.FC<{
           ))}
         </Image.PreviewGroup>
       )}
-      {value.length > 2 && <span style={{ fontSize: 12, color: '#999' }}>+{value.length - 2}</span>}
+      {value.length > 2 && <span style={{ fontSize: 14, color: '#999' }}>+{value.length - 2}</span>}
       <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
         <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
           onClick={() => fileInputRef.current?.click()} />
@@ -234,12 +234,12 @@ export const NewRowAttachmentUpload: React.FC<{
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
-      {value.length === 0 && <div style={{ color: '#999', fontSize: 12, padding: '4px 0' }}>暂无附件</div>}
+      {value.length === 0 && <div style={{ color: '#999', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
       {value.map((f, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
           <PaperClipOutlined style={{ color: '#1677ff', flexShrink: 0, fontSize: 12 }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
-            href="#" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, cursor: 'pointer' }}>
+            href="#" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, cursor: 'pointer' }}>
             {f.name}
           </a>
         </div>
@@ -259,8 +259,8 @@ export const NewRowAttachmentUpload: React.FC<{
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
       <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
         onClick={(e) => e.stopPropagation()}>
-        <PaperClipOutlined style={{ fontSize: 14, color: value.length > 0 ? '#1677ff' : '#bbb' }} />
-        {value.length > 0 && <span style={{ fontSize: 12, color: '#1677ff' }}>{value.length}</span>}
+        <PaperClipOutlined style={{ fontSize: 12, color: value.length > 0 ? '#1677ff' : '#bbb' }} />
+        {value.length > 0 && <span style={{ fontSize: 14, color: '#1677ff' }}>{value.length}</span>}
       </div>
     </Popover>
   );

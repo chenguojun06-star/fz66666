@@ -99,7 +99,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
 
           <Card title="出库流转信息">
             <Form form={outboundForm} layout="vertical">
-              <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 12 }}>
+              <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 14 }}>
                 生产订单/样衣开发领料形成的待出库单会自动带出订单、款号、工厂、内外部和用料场景；这里只是给单独出库补完整业务信息。
               </div>
               <Row gutter={12}>

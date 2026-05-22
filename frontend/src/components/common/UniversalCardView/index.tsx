@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, Button, Space, Popover, Dropdown } from 'antd';
-import type { MenuProps } from 'antd';
 import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
@@ -221,7 +220,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                       <LiquidProgressBar
                         percent={progressConfig.calculate(record)}
                         width="100%"
-                        height={14}
+                        height={10}
                       status={progressConfig.getStatus?.(record)}
                       isCompleted={progressConfig.isCompleted?.(record)}
                       minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}

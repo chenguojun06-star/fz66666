@@ -471,7 +471,7 @@
   margin-bottom: clamp(14px, 1.4vw, 22px);
 }
 
-.login-company-selected { color: #6a84ca; font-size: 13px; }
+.login-company-selected { color: #6a84ca; font-size: 14px; }
 
 .login-form-wrapper .ant-input-affix-wrapper,
 .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper,

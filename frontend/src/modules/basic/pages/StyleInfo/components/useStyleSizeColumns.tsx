@@ -96,7 +96,7 @@ export function useStyleSizeColumns({
                     {editableMode && (
                       <DeleteOutlined
                         onClick={() => setChunkImageUrls(record.chunkRowKeys, imgs.filter((_, ii) => ii !== i))}
-                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', padding: 2, fontSize: 12, cursor: 'pointer' }}
+                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', padding: 2, fontSize: 14, cursor: 'pointer' }}
                       />
                     )}
                   </div>
@@ -268,7 +268,7 @@ export function useStyleSizeColumns({
           }).join('；');
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 13, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
               {editableMode ? (
                 <Button onClick={() => openGradingConfig(record)}>
                   配置跳码区
@@ -371,5 +371,6 @@ export function useStyleSizeColumns({
     // readOnly/只读模式下隐藏操作列（无任何可操作按钮，空列无意义）
     const filteredRight = editableMode ? right : right.filter(col => col.key !== 'operation');
     return [...left, ...sizeCols, ...filteredRight];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, readOnly, sizeColumns, displayRows, groupNameOptions, rows]);
 }

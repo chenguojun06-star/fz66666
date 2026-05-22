@@ -15,7 +15,7 @@
 }
 
 .icon {
-  font-size: 22px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
@@ -31,7 +31,7 @@
 }
 
 .desc {
-  font-size: 12px;
+  font-size: 14px;
   color: #8c8c8c;
   margin-top: 2px;
 }
@@ -51,7 +51,7 @@
   padding: 4px 10px;
   border-radius: 20px;
   background: #f5f5f5;
-  font-size: 12px;
+  font-size: 14px;
   color: #8c8c8c;
   transition: all 0.25s ease;
   white-space: nowrap;
@@ -75,7 +75,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 14px;
   background: #d9d9d9;
   color: #fff;
   flex-shrink: 0;
@@ -90,7 +90,7 @@
 }
 
 .stepLabel {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .stepContent {
@@ -98,7 +98,7 @@
 }
 
 .stepDesc {
-  font-size: 13px;
+  font-size: 14px;
   color: #595959;
   margin-bottom: 12px;
   padding: 8px 10px;
@@ -113,7 +113,7 @@
 
 .fieldLabel {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #333;
   margin-bottom: 6px;
@@ -158,17 +158,17 @@
 }
 
 .optIcon {
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .optLabel {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #333;
 }
 
 .optDesc {
-  font-size: 13px;
+  font-size: 14px;
   color: #8c8c8c;
 }
 
@@ -177,7 +177,7 @@
   top: 4px;
   right: 6px;
   color: #1677ff;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -186,7 +186,7 @@
   padding: 8px 12px;
   border: 1.5px solid #e8e8e8;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   color: #333;
   outline: none;
   transition: border-color 0.2s;
@@ -213,7 +213,7 @@
   border-radius: 8px;
   background: #fff;
   color: #595959;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -229,7 +229,7 @@
   border-radius: 8px;
   background: #1677ff;
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -246,7 +246,7 @@
 
 .successIcon {
   text-align: center;
-  font-size: 32px;
+  font-size: 18px;
   margin: 12px 0 8px;
 }
 

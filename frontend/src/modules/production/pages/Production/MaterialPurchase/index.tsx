@@ -22,7 +22,7 @@ import api from '@/utils/api';
 const MaterialPurchase: React.FC = () => {
   const {
     contextHolder,
-    user, isMobile, modalWidth, isSupervisorOrAbove,
+    user, isMobile, isSupervisorOrAbove,
     purchaseList, loading, total,
     queryParams, setQueryParams,
     sortField, sortOrder, handleSort,
@@ -39,7 +39,7 @@ const MaterialPurchase: React.FC = () => {
     visible, dialogMode, currentPurchase,
     previewList, previewOrderId,
     form, materialDatabaseForm,
-    submitLoading, modalInitialHeight,
+    submitLoading,
     detailOrder, detailOrderLines, detailPurchases, detailLoading, detailSizePairs,
     detailFrozen,
     returnConfirmModal, returnConfirmForm, returnConfirmSubmitting,
@@ -79,7 +79,7 @@ const MaterialPurchase: React.FC = () => {
           <p>物料：<strong>{record.materialName || record.materialCode}</strong> {record.color ? `(${record.color})` : ''}</p>
           <p>需求数量：<strong>{record.purchaseQuantity}</strong></p>
           <p>仓库领取数量：<strong style={{ color: 'var(--color-primary)' }}>{pickQty}</strong></p>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>领取后将创建出库单，等待仓库确认出库</p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>领取后将创建出库单，等待仓库确认出库</p>
         </div>
       ),
       okText: '确认领取',
@@ -227,8 +227,6 @@ const MaterialPurchase: React.FC = () => {
           visible={visible}
           dialogMode={dialogMode}
           onCancel={closeDialog}
-          modalWidth={modalWidth as any}
-          modalInitialHeight={modalInitialHeight}
           isMobile={isMobile}
           submitLoading={submitLoading}
           currentPurchase={currentPurchase}
@@ -283,7 +281,7 @@ const MaterialPurchase: React.FC = () => {
           title="回料确认 / 追加回料"
           okText="提交回料"
           cancelText="取消"
-          width={isMobile ? '96vw' : '60vw'}
+          width={isMobile ? '96vw' : '85vw'}
           centered
           onCancel={() => {
             returnConfirmModal.close();
@@ -534,7 +532,7 @@ const MaterialPurchase: React.FC = () => {
           okText="确认退回"
           cancelText="取消"
           okButtonProps={{ danger: true, type: 'default', loading: returnResetSubmitting }}
-          width={isMobile ? '96vw' : 520}
+          width={isMobile ? '96vw' : '30vw'}
           onCancel={() => {
             returnResetModal.close();
             returnResetForm.resetFields();

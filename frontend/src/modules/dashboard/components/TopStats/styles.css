@@ -54,7 +54,7 @@
 }
 
 .stat-icon {
-  font-size: 20px;
+  font-size: 15px;
   flex-shrink: 0;
   color: var(--neutral-text-secondary, #8c8c8c);
 }
@@ -92,13 +92,13 @@
 }
 
 .stat-tag-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--neutral-text-light, #8c8c8c);
 }
 
 .stat-tag-value {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--neutral-text, #434343);
 }

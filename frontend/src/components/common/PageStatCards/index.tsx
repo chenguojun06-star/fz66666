@@ -71,11 +71,11 @@ const toneColorMap: Record<HintTone, string> = {
 };
 
 // ===== 样式常量（改这里，所有页面同步生效） =====
-const TAG_PADDING = '3px 10px';
-const TAG_BORDER_RADIUS = '4px';
-const TAG_GAP = '8px';
-const CONTAINER_MB = '8px';
-const TAG_FONT_SIZE = '12px';
+const TAG_PADDING = '7px 16px';
+const TAG_BORDER_RADIUS = '6px';
+const TAG_GAP = '10px';
+const CONTAINER_MB = '10px';
+const TAG_FONT_SIZE = '14px';
 const VALUE_FONT_WEIGHT = 700;
 const LABEL_COLOR = 'var(--text-secondary)';
 const BORDER_COLOR = 'var(--border-color)';
@@ -163,14 +163,14 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
             {itemList.map((item, idx) => (
               <React.Fragment key={idx}>
                 {idx > 0 && (
-                  <span style={{ color: LABEL_COLOR, fontSize: 13, margin: '0 1px' }}>·</span>
+                  <span style={{ color: LABEL_COLOR, fontSize: 14, margin: '0 1px' }}>·</span>
                 )}
-                <span style={{ color: LABEL_COLOR, fontSize: 13 }}>{item.label}</span>
+                <span style={{ color: LABEL_COLOR, fontSize: 14 }}>{item.label}</span>
                 <span style={{ fontWeight: VALUE_FONT_WEIGHT, color: item.color || 'var(--text-primary)' }}>
                   {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
                 </span>
                 {item.unit && (
-                  <span style={{ color: LABEL_COLOR, fontSize: 13 }}>{item.unit}</span>
+                  <span style={{ color: LABEL_COLOR, fontSize: 14 }}>{item.unit}</span>
                 )}
               </React.Fragment>
             ))}

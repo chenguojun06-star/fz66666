@@ -10,12 +10,17 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -63,13 +68,37 @@ public class StyleBomPurchaseHelper {
         log.info("样衣采购参数: styleId={}, 颜色={}, 尺码={}, 款式总件数={}",
                 styleId, parseResult.colorStr, parseResult.sizeStr, parseResult.styleTotalQty);
 
+        List<String> orderColors = parseResult.colorList;
+        boolean orderHasMultipleColors = orderColors.size() > 1;
+
         int createdCount = 0;
         for (StyleBom bom : bomList) {
             try {
-                MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult);
-                if (purchase == null) continue;
-                materialPurchaseService.save(purchase);
-                createdCount++;
+                String bomColorRaw = bom.getColor() == null ? "" : bom.getColor().trim();
+                List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColorRaw);
+                Set<String> bomColorSet = bomColorOpts.isEmpty() ? null : new HashSet<>(bomColorOpts);
+
+                if (!orderHasMultipleColors) {
+                    String displayColor = bomColorRaw.isEmpty() ? parseResult.colorStr : bomColorRaw;
+                    MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult,
+                            displayColor, parseResult.sizeStr);
+                    if (purchase == null) continue;
+                    materialPurchaseService.save(purchase);
+                    createdCount++;
+                } else {
+                    Set<String> targetColors = bomColorSet != null ? bomColorSet : new HashSet<>(orderColors);
+                    for (String orderColor : orderColors) {
+                        String normalizedOrderColor = MaterialPurchaseHelper.normalizeMatchKey(orderColor);
+                        boolean matches = targetColors.stream()
+                                .anyMatch(bc -> MaterialPurchaseHelper.normalizeMatchKey(bc).equals(normalizedOrderColor));
+                        if (!matches) continue;
+                        MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult,
+                                orderColor, parseResult.sizeStr);
+                        if (purchase == null) continue;
+                        materialPurchaseService.save(purchase);
+                        createdCount++;
+                    }
+                }
             } catch (Exception e) {
                 log.error("Failed to create material purchase for bom: bomId={}", bom.getId(), e);
             }
@@ -106,7 +135,7 @@ public class StyleBomPurchaseHelper {
         }
     }
 
-    private record SizeColorParseResult(String colorStr, String sizeStr, int styleTotalQty) {}
+    private record SizeColorParseResult(String colorStr, List<String> colorList, String sizeStr, int styleTotalQty) {}
 
     private SizeColorParseResult parseSizeColorConfig(StyleInfo styleInfo) {
         String colorStr = null;
@@ -168,11 +197,19 @@ public class StyleBomPurchaseHelper {
             log.warn("款式颜色尺码数量配置未设置，采购数量将按BOM单件用量计算: styleId={}", styleInfo.getId());
         }
 
-        return new SizeColorParseResult(colorStr, sizeStr, styleTotalQty);
+        List<String> colorList = new ArrayList<>();
+        if (colorStr != null && !colorStr.isEmpty()) {
+            for (String c : colorStr.split("[,/，、]+")) {
+                String trimmed = c.trim();
+                if (!trimmed.isEmpty()) colorList.add(trimmed);
+            }
+        }
+
+        return new SizeColorParseResult(colorStr, colorList, sizeStr, styleTotalQty);
     }
 
     private MaterialPurchase buildPurchaseFromBom(StyleBom bom, StyleInfo styleInfo,
-            SizeColorParseResult parseResult) {
+            SizeColorParseResult parseResult, String purchaseColor, String purchaseSize) {
         BigDecimal usageAmount = bom.getDevUsageAmount() != null ? bom.getDevUsageAmount()
                 : (bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO);
         BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
@@ -212,11 +249,11 @@ public class StyleBomPurchaseHelper {
         purchase.setStyleName(styleInfo.getStyleName());
         purchase.setStyleCover(styleInfo.getCover());
 
-        if (parseResult.colorStr != null && !parseResult.colorStr.isEmpty()) {
-            purchase.setColor(parseResult.colorStr);
+        if (purchaseColor != null && !purchaseColor.isEmpty()) {
+            purchase.setColor(purchaseColor);
         }
-        if (parseResult.sizeStr != null && !parseResult.sizeStr.isEmpty()) {
-            purchase.setSize(parseResult.sizeStr);
+        if (purchaseSize != null && !purchaseSize.isEmpty()) {
+            purchase.setSize(purchaseSize);
         }
 
         purchase.setSourceType("sample");

@@ -47,7 +47,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
                         percent={v ?? 0}
                        
                         strokeColor={v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff4d4f'}
-                        format={() => <span style={{ fontSize: 13 }}>{v}</span>}
+                        format={() => <span style={{ fontSize: 14 }}>{v}</span>}
                         style={{ flex: 1, minWidth: 80 }}
                     />
                 </div>
@@ -70,7 +70,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
             title: '近7天', dataIndex: 'trend', key: 'trend', width: 70, align: 'center' as const,
             render: (v: string) => {
                 const t = TREND_ICON[v] ?? TREND_ICON.flat;
-                return <span style={{ color: t.color, fontWeight: 700, fontSize: 16 }}>{t.icon}</span>;
+                return <span style={{ color: t.color, fontWeight: 700, fontSize: 13 }}>{t.icon}</span>;
             },
         },
     ];

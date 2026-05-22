@@ -85,7 +85,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
     { title: '渠道', dataIndex: 'channel', width: 100,
       render: (v: string) => <Tag color={CHANNEL_COLOR[v] || 'default'}>{CHANNEL_NAME[v] || v}</Tag> },
     { title: '关联订单', dataIndex: 'relatedOrderId', width: 150,
-      render: (v: string | null) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v || '-'}</span> },
+      render: (v: string | null) => <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v || '-'}</span> },
     { title: '验签', dataIndex: 'verified', width: 70,
       render: (v: boolean) => <Tag color={v ? 'success' : 'error'}>{v ? '通过' : '失败'}</Tag> },
     { title: '处理结果', dataIndex: 'processed', width: 80,
@@ -152,12 +152,12 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
         open={rawBodyModal.open}
         onCancel={() => setRawBodyModal({ open: false, content: '' })}
         footer={null}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
       >
         <pre style={{
           maxHeight: '60vh', overflow: 'auto', background: '#1e1e1e', color: '#d4d4d4',
-          padding: 16, borderRadius: 8, fontSize: 12, fontFamily: 'monospace',
+          padding: 16, borderRadius: 8, fontSize: 14, fontFamily: 'monospace',
         }}>
           {formatRawBody(rawBodyModal.content)}
         </pre>

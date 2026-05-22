@@ -191,7 +191,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         <div style={{ display: 'flex', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid rgba(0,229,255,0.12)' }}>
           {loading
             ? <Spin style={{ marginRight: 12 }} />
-            : <SearchOutlined style={{ color: '#00e5ff', fontSize: 18, marginRight: 12 }} />
+            : <SearchOutlined style={{ color: '#00e5ff', fontSize: 14, marginRight: 12 }} />
           }
           <Input
             ref={inputRef}
@@ -201,15 +201,15 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             onChange={e => handleChange(e.target.value)}
             style={{
               flex: 1, background: 'transparent', color: '#e8f4ff',
-              fontSize: 16, padding: 0,
+              fontSize: 13, padding: 0,
             }}
           />
-          <span style={{ fontSize: 13, color: '#3a5a7a', letterSpacing: 0.5, flexShrink: 0 }}>ESC 关闭</span>
+          <span style={{ fontSize: 14, color: '#3a5a7a', letterSpacing: 0.5, flexShrink: 0 }}>ESC 关闭</span>
         </div>
 
         {/* 空状态 */}
         {!query && !isCommandMode && (
-          <div style={{ padding: '24px 20px', color: '#3a5a7a', fontSize: 12, lineHeight: 1.8 }}>
+          <div style={{ padding: '24px 20px', color: '#3a5a7a', fontSize: 14, lineHeight: 1.8 }}>
             <div style={{ marginBottom: 8, color: '#5a7a9a', fontWeight: 600 }}>搜索示例</div>
             {['PO2024001', 'hlq（红领桥 拼音首字母）', '张师傅', '风衣'].map(tip => (
               <div key={tip} style={{ display: 'inline-block', margin: '3px 4px', padding: '2px 10px', borderRadius: 20, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.12)', cursor: 'pointer', color: '#7aaec8' }}
@@ -223,7 +223,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         {/* 命令模式 */}
         {isCommandMode && (
           <div style={{ maxHeight: 460, overflowY: 'auto', padding: '6px 0 10px' }}>
-            <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#00e5ff', fontWeight: 600, letterSpacing: 1 }}>
+            <div style={{ padding: '6px 18px 4px', fontSize: 14, color: '#00e5ff', fontWeight: 600, letterSpacing: 1 }}>
               快捷命令
             </div>
             {filteredCommands.map((cmd, i) => (
@@ -237,13 +237,13 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                 onClick={() => executeCommand(cmd.action)}
                 onMouseEnter={() => setActiveIdx(i)}
               >
-                <span style={{ color: '#00e5ff', fontSize: 16 }}>{cmd.icon}</span>
-                <span style={{ color: '#e8f4ff', fontWeight: 500, fontSize: 13 }}>{cmd.label}</span>
+                <span style={{ color: '#00e5ff', fontSize: 13 }}>{cmd.icon}</span>
+                <span style={{ color: '#e8f4ff', fontWeight: 500, fontSize: 14 }}>{cmd.label}</span>
                 <RightOutlined style={{ color: '#2a4060', fontSize: 12, marginLeft: 'auto' }} />
               </div>
             ))}
             {filteredCommands.length === 0 && (
-              <div style={{ padding: '16px 18px', color: '#5a7a9a', fontSize: 13 }}>无匹配命令</div>
+              <div style={{ padding: '16px 18px', color: '#5a7a9a', fontSize: 14 }}>无匹配命令</div>
             )}
           </div>
         )}
@@ -260,7 +260,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                 marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '8px 20px', borderRadius: 20, cursor: 'pointer',
                 background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.25)',
-                color: '#00e5ff', fontSize: 13, fontWeight: 500, transition: 'all 0.2s',
+                color: '#00e5ff', fontSize: 14, fontWeight: 500, transition: 'all 0.2s',
               }}
               onClick={() => {
                 onClose();
@@ -279,7 +279,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             {/* 订单 */}
             {(result?.orders.length ?? 0) > 0 && (
               <section>
-                <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
+                <div style={{ padding: '6px 18px 4px', fontSize: 14, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
                   <FileTextOutlined style={{ marginRight: 5 }} />生产订单
                 </div>
                 {result!.orders.map(o => {
@@ -295,18 +295,18 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('order', o)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <span style={{ color: '#00e5ff', fontWeight: 600, fontSize: 13, minWidth: 120 }}>{o.orderNo}</span>
-                      <span style={{ flex: 1, fontSize: 12, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: '#00e5ff', fontWeight: 600, fontSize: 14, minWidth: 120 }}>{o.orderNo}</span>
+                      <span style={{ flex: 1, fontSize: 14, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {o.styleName || o.styleNo}
                       </span>
-                      <span style={{ fontSize: 13, color: '#5a7a9a', flexShrink: 0 }}>{o.factoryName}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 6px', borderRadius: 4, flexShrink: 0,
+                      <span style={{ fontSize: 14, color: '#5a7a9a', flexShrink: 0 }}>{o.factoryName}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, padding: '1px 6px', borderRadius: 4, flexShrink: 0,
                         color: STATUS_COLOR[o.status] ?? '#7aaec8',
                         border: `1px solid ${(STATUS_COLOR[o.status] ?? '#7aaec8')}44`,
                         background: `${(STATUS_COLOR[o.status] ?? '#7aaec8')}11`
                       }}>{o.statusLabel}</span>
                       {o.progress != null && (
-                        <span style={{ fontSize: 12, color: '#3a6080', flexShrink: 0 }}>{o.progress}%</span>
+                        <span style={{ fontSize: 14, color: '#3a6080', flexShrink: 0 }}>{o.progress}%</span>
                       )}
                       <RightOutlined style={{ color: '#2a4060', fontSize: 12, flexShrink: 0 }} />
                     </div>
@@ -318,7 +318,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             {/* 款式 */}
             {(result?.styles.length ?? 0) > 0 && (
               <section style={{ marginTop: 4 }}>
-                <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
+                <div style={{ padding: '6px 18px 4px', fontSize: 14, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
                   <AppstoreOutlined style={{ marginRight: 5 }} />款式
                 </div>
                 {result!.styles.map(s => {
@@ -334,9 +334,9 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('style', s)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: 13, minWidth: 100 }}>{s.styleNo}</span>
-                      <span style={{ flex: 1, fontSize: 12, color: '#b0c4de' }}>{s.styleName}</span>
-                      {s.category && <span style={{ fontSize: 12, color: '#5a7a9a', flexShrink: 0 }}>{s.category}</span>}
+                      <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: 14, minWidth: 100 }}>{s.styleNo}</span>
+                      <span style={{ flex: 1, fontSize: 14, color: '#b0c4de' }}>{s.styleName}</span>
+                      {s.category && <span style={{ fontSize: 14, color: '#5a7a9a', flexShrink: 0 }}>{s.category}</span>}
                       <RightOutlined style={{ color: '#2a4060', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
@@ -347,7 +347,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             {/* 工人 */}
             {(result?.workers.length ?? 0) > 0 && (
               <section style={{ marginTop: 4 }}>
-                <div style={{ padding: '6px 18px 4px', fontSize: 13, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
+                <div style={{ padding: '6px 18px 4px', fontSize: 14, color: '#3a6080', fontWeight: 600, letterSpacing: 1 }}>
                   <UserOutlined style={{ marginRight: 5 }} />工人 / 员工
                 </div>
                 {result!.workers.map(w => {
@@ -363,10 +363,10 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('worker', w)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <UserOutlined style={{ color: '#39ff14', fontSize: 14 }} />
-                      <span style={{ color: '#e8f4ff', fontWeight: 600, fontSize: 13, minWidth: 72 }}>{w.name}</span>
-                      <span style={{ fontSize: 13, color: '#5a7a9a', flex: 1 }}>{w.factoryName}</span>
-                      {w.role && <span style={{ fontSize: 12, color: '#3a6080' }}>{w.role}</span>}
+                      <UserOutlined style={{ color: '#39ff14', fontSize: 12 }} />
+                      <span style={{ color: '#e8f4ff', fontWeight: 600, fontSize: 14, minWidth: 72 }}>{w.name}</span>
+                      <span style={{ fontSize: 14, color: '#5a7a9a', flex: 1 }}>{w.factoryName}</span>
+                      {w.role && <span style={{ fontSize: 14, color: '#3a6080' }}>{w.role}</span>}
                       <RightOutlined style={{ color: '#2a4060', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
@@ -377,7 +377,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         )}
 
         {/* 底部提示 */}
-        <div style={{ padding: '8px 18px', borderTop: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 16, fontSize: 12, color: '#2a4060' }}>
+        <div style={{ padding: '8px 18px', borderTop: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 16, fontSize: 14, color: '#2a4060' }}>
           <span>↑↓ 导航</span>
           <span>↵ 跳转</span>
           <span>Esc 关闭</span>

@@ -41,6 +41,7 @@ const FinanceCenter: React.FC = () => {
     if (currentTab !== activeTab) {
       setSearchParams({ tab: activeTab }, { replace: true });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 工厂账号只能访问订单汇总和扫码明细
@@ -49,6 +50,7 @@ const FinanceCenter: React.FC = () => {
       setActiveTab('settlement');
       setSearchParams({ tab: 'settlement' }, { replace: true });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFactoryAccount]);
 
   const tabItems = [

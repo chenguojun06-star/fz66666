@@ -78,12 +78,17 @@ public class FactoryExcelImporter {
 
                 Factory factory = new Factory();
                 factory.setFactoryName(factoryName);
-                factory.setFactoryCode(importHelper.safe(item.get("供应商编码")));
+                String factoryCode = importHelper.safe(item.get("供应商编码"));
+                factory.setFactoryCode(StringUtils.hasText(factoryCode) ? factoryCode : "F" + System.currentTimeMillis());
                 factory.setContactPerson(importHelper.safe(item.get("联系人")));
                 factory.setContactPhone(importHelper.safe(item.get("联系电话")));
                 factory.setAddress(importHelper.safe(item.get("地址")));
                 factory.setStatus("active");
+                factory.setFactoryType("EXTERNAL");
                 factory.setDeleteFlag(0);
+                factory.setTotalOrders(0);
+                factory.setCompletedOrders(0);
+                factory.setOverdueOrders(0);
                 factory.setCreateTime(LocalDateTime.now());
                 factory.setUpdateTime(LocalDateTime.now());
 

@@ -97,7 +97,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
             <div style={{
               display: 'flex', gap: 8, padding: '2px 0 4px',
               borderBottom: '1px solid #f0f0f0',
-              color: '#999', fontSize: 12,
+              color: '#999', fontSize: 14,
             }}>
               <div style={{ width: 72, flexShrink: 0 }}>品类</div>
               <div style={{ flex: '1 1 160px' }}>成分</div>
@@ -116,7 +116,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
               >
                 {/* 品类 */}
                 <div style={{ width: 72, flexShrink: 0, paddingTop: 3 }}>
-                  <Tag color="blue" style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+                  <Tag color="blue" style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
                     {partLabel}
                   </Tag>
                 </div>
@@ -142,7 +142,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                     </Space>
                   ))}
                   {!(partsMap[partLabel]?.length) && disabled && (
-                    <span style={{ color: '#bbb', fontSize: 12 }}>（未设置）</span>
+                    <span style={{ color: '#bbb', fontSize: 14 }}>（未设置）</span>
                   )}
                   {!disabled && (
                     <Button
@@ -212,7 +212,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
         )}
 
         {!hasRows && disabled && (
-          <span style={{ color: '#bbb', fontSize: 12 }}>（未设置成分）</span>
+          <span style={{ color: '#bbb', fontSize: 14 }}>（未设置成分）</span>
         )}
       </div>
     </Spin>

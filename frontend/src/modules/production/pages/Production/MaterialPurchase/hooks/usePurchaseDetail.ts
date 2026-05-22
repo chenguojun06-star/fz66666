@@ -146,6 +146,7 @@ export function usePurchaseDetail({ currentPurchase, visible, dialogMode }: UseP
         setDetailLoading(false);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPurchase?.orderNo, currentPurchase?.styleNo, currentPurchase?.id, dialogMode, visible, loadDetailByOrderNo, loadDetailByStyleNo]);
 
   return {

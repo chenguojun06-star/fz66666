@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Form, Input, Modal, Popconfirm, Space, Tag } from 'antd';
+import { App, Button, Form, Input, Popconfirm, Space, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import ResizableModal from '@/components/common/ResizableModal';
 import type { SupplierUserItem } from '@/services/system/supplierUserApi';
 import supplierUserApi from '@/services/system/supplierUserApi';
 import { formatDateTime } from '@/utils/datetime';
@@ -165,12 +166,12 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
 
   return (
     <>
-      <Modal
+      <ResizableModal
         open={open}
         title={`供应商账号管理 - ${supplierName}`}
         onCancel={onClose}
         footer={null}
-        width={900}
+        width="85vw"
         destroyOnHidden
       >
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -187,9 +188,9 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
          
           scroll={{ x: 900 }}
         />
-      </Modal>
+      </ResizableModal>
 
-      <Modal
+      <ResizableModal
         open={createOpen}
         title="新增供应商账号"
         onCancel={() => { setCreateOpen(false); createForm.resetFields(); }}
@@ -218,7 +219,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
             <Input placeholder="供应商联系电话" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
     </>
   );
 };

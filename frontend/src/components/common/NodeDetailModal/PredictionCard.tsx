@@ -24,7 +24,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
       borderRadius: 6,
       padding: '8px 12px',
       marginBottom: 8,
-      fontSize: 13,
+      fontSize: 14,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 16 }}></span>
@@ -45,7 +45,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
               </span>
             )}
             {prediction.reasons && prediction.reasons.length > 0 && (
-              <span style={{ color: '#666', fontSize: 12, marginLeft: 4 }}>
+              <span style={{ color: '#666', fontSize: 14, marginLeft: 4 }}>
                 · {prediction.reasons[0]}
               </span>
             )}

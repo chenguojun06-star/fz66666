@@ -77,14 +77,14 @@ const LogisticsRecordsTab: React.FC<Props> = ({ active }) => {
     { title: '下单时间', dataIndex: 'createdTime', width: 160,
       render: (v: string) => formatDateTimeSecond(v) },
     { title: '系统订单号', dataIndex: 'orderId', width: 150,
-      render: (v: string) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v}</span> },
+      render: (v: string) => <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v}</span> },
     { title: '物流公司', dataIndex: 'companyName', width: 100,
       render: (v: string, r: LogisticsRecord) => (
         <Tag color="geekblue">{v || r.companyCode}</Tag>
       ) },
     { title: '运单号', dataIndex: 'trackingNumber', width: 160,
       render: (v: string | null) => v
-        ? <Tooltip title={v}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v}</span></Tooltip>
+        ? <Tooltip title={v}><span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v}</span></Tooltip>
         : <span style={{ color: '#999' }}>-</span> },
     { title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => {

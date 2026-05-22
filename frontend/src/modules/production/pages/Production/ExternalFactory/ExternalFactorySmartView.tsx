@@ -80,7 +80,6 @@ interface Props {
   onPageChange: (page: number, pageSize: number) => void;
   handleCloseOrder?: (record: ProductionOrder) => void;
   handleScrapOrder?: (record: ProductionOrder) => void;
-  handleTransferOrder?: (record: ProductionOrder) => void;
   openProcessDetail?: (record: ProductionOrder, type: string) => void;
   syncProcessFromTemplate?: (record: ProductionOrder) => void;
   setPrintModalVisible?: (v: boolean) => void;
@@ -105,7 +104,7 @@ interface Props {
 
 const ExternalFactorySmartView: React.FC<Props> = ({
   data, loading, total, pageSize, currentPage, onPageChange,
-  handleCloseOrder, handleScrapOrder, handleTransferOrder,
+  handleCloseOrder, handleScrapOrder,
   openProcessDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
   quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
@@ -146,7 +145,6 @@ const ExternalFactorySmartView: React.FC<Props> = ({
         fmtTime={fmtTime}
         handleCloseOrder={handleCloseOrder}
         handleScrapOrder={handleScrapOrder}
-        handleTransferOrder={handleTransferOrder}
         openProcessDetail={openProcessDetail}
         syncProcessFromTemplate={syncProcessFromTemplate}
         setPrintModalVisible={setPrintModalVisible}
@@ -162,7 +160,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
         openNodeDetail={openNodeDetail}
       />
     );
-  }, [rows, handleCloseOrder, handleScrapOrder, handleTransferOrder,
+  }, [rows, handleCloseOrder, handleScrapOrder,
     openProcessDetail, syncProcessFromTemplate, setPrintModalVisible,
     setPrintingRecord, quickEditModal, handleShareOrder, onOpenRemark,
     handlePrintLabel, canManageOrderLifecycle, isSupervisorOrAbove,

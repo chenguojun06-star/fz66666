@@ -318,10 +318,12 @@ const StyleBomTab: React.FC<Props> = ({
   useEffect(() => {
     fetchBom();
     fetchCurrentStyleNo();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleId]);
 
   useEffect(() => {
     fetchBomTemplates('');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

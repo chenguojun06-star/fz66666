@@ -100,10 +100,10 @@ const PayableTab: React.FC = () => {
         if (r.status === 'PAID') return <Text type="secondary">{v}</Text>;
         const days = getRemainDays(v);
         if (days === null) return <span>{v}</span>;
-        if (days < 0) return <span>{v} <Tag color="red" style={{ fontSize: 13 }}>逾期{Math.abs(days)}天</Tag></span>;
-        if (days === 0) return <span>{v} <Tag color="orange" style={{ fontSize: 13 }}>今日到期</Tag></span>;
-        if (days <= 3) return <span>{v} <Tag color="gold" style={{ fontSize: 13 }}>剩{days}天</Tag></span>;
-        return <span>{v} <Text type="secondary" style={{ fontSize: 13 }}>({days}天后)</Text></span>;
+        if (days < 0) return <span>{v} <Tag color="red" style={{ fontSize: 14 }}>逾期{Math.abs(days)}天</Tag></span>;
+        if (days === 0) return <span>{v} <Tag color="orange" style={{ fontSize: 14 }}>今日到期</Tag></span>;
+        if (days <= 3) return <span>{v} <Tag color="gold" style={{ fontSize: 14 }}>剩{days}天</Tag></span>;
+        return <span>{v} <Text type="secondary" style={{ fontSize: 14 }}>({days}天后)</Text></span>;
       },
     },
     {
@@ -139,7 +139,7 @@ const PayableTab: React.FC = () => {
       `}</style>
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={6}><Card><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: '#fa8c16' } }} /></Card></Col>
-        <Col xs={24} sm={6}><Card><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: '#f5222d' } }} suffix={stats.overdueCount ? <span style={{ fontSize: 12, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: '#f5222d' } }} suffix={stats.overdueCount ? <span style={{ fontSize: 14, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
         <Col xs={24} sm={6}><Card><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
         <Col xs={24} sm={6}><Card><Statistic title="本月新增(笔)" value={stats.newThisMonth || 0} /></Card></Col>
       </Row>

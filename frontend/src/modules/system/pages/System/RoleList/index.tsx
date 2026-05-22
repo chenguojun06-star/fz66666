@@ -187,6 +187,7 @@ const RoleList: React.FC = () => {
       reportSmartError('角色列表加载失败', getErrorMessage(error, '网络异常'), 'SYSTEM_ROLE_LIST_EXCEPTION');
       message.error(getErrorMessage(error, '获取角色列表失败'));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message, showSmartErrorNotice]);
 
   useEffect(() => { fetchRoles(); }, [fetchRoles]);
@@ -217,6 +218,7 @@ const RoleList: React.FC = () => {
       setPermTree([]);
       setCheckedPermIds(new Set());
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRole?.id]);
 
   const permCodeMap = useMemo(() => {
@@ -356,6 +358,7 @@ const RoleList: React.FC = () => {
         }
       },
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRole, modal, message]);
 
   const handleSaveRoleName = useCallback(async () => {
@@ -465,7 +468,7 @@ const RoleList: React.FC = () => {
                       {getRoleIcon(role.roleName || '')}
                     </span>
                     <span className="role-list-item-name">{role.roleName}</span>
-                    <Tag color={role.status === 'active' ? 'green' : 'red'} style={{ fontSize: 12, marginLeft: 4 }}>
+                    <Tag color={role.status === 'active' ? 'green' : 'red'} style={{ fontSize: 14, marginLeft: 4 }}>
                       {role.status === 'active' ? '启用' : '停用'}
                     </Tag>
                   </div>
@@ -557,10 +560,10 @@ const RoleList: React.FC = () => {
                                   }}
                                 >{item.label}</Checkbox>
                               ) : (
-                                <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--color-text-secondary, #666)' }}>{item.label}</span>
+                                <span style={{ fontWeight: 500, fontSize: 14, color: 'var(--color-text-secondary, #666)' }}>{item.label}</span>
                               )}
                               {isShared && (
-                                <span style={{ fontSize: 12, color: 'var(--color-text-quaternary, #999)', marginLeft: 4 }}>
+                                <span style={{ fontSize: 14, color: 'var(--color-text-quaternary, #999)', marginLeft: 4 }}>
                                   （权限同「{item.sharedWith}」）
                                 </span>
                               )}

@@ -49,12 +49,12 @@ const ShareOrderPage: React.FC = () => {
   const totalQuantityText = `${data.orderQuantity ?? 0} 件`;
   const completedSummaryText = `已完成 ${data.completedQuantity ?? 0} / ${data.orderQuantity ?? 0} 件`;
   const displayColorText = Array.from(new Set(colorSizeQuantities.map((item) => String(item.color || '').trim()).filter(Boolean))).join(' / ') || (String(data.color || '').trim() || '—');
-  const infoLabelStyle: React.CSSProperties = { color: '#64748b', fontSize: 12 };
-  const infoValueStyle: React.CSSProperties = { color: '#0f172a', fontSize: 13, fontWeight: 700 };
+  const infoLabelStyle: React.CSSProperties = { color: '#64748b', fontSize: 14 };
+  const infoValueStyle: React.CSSProperties = { color: '#0f172a', fontSize: 14, fontWeight: 700 };
   const shareMatrixItems = createOrderColorSizeMatrixInfoItems({
     items: colorSizeQuantities.map((item) => ({ color: String(item.color || '').trim(), size: String(item.size || '').trim(), quantity: Number(item.quantity ?? 0) })),
     fallbackColor: displayColorText, fallbackSize: String(data.size || '').trim(), fallbackQuantity: data.orderQuantity ?? 0,
-    totalLabel: '总数', totalSuffix: '件', columnMinWidth: 28, gap: 10, fontSize: 13, labelStyle: infoLabelStyle, valueStyle: infoValueStyle,
+    totalLabel: '总数', totalSuffix: '件', columnMinWidth: 28, gap: 10, fontSize: 14, labelStyle: infoLabelStyle, valueStyle: infoValueStyle,
   });
 
   return (
@@ -67,7 +67,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
           <div style={S.heroOverviewStyle}>
             <div style={S.styleCoverCardStyle}>
-              {styleCoverUrl ? <img loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 12, color: '#94a3b8' }}>暂无款式图</div></div>}
+              {styleCoverUrl ? <img loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 14, color: '#94a3b8' }}>暂无款式图</div></div>}
             </div>
             <div>
               <div style={S.orderNoStyle}>{data.orderNo}</div>
@@ -114,9 +114,9 @@ const ShareOrderPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <XiaoyunMascotLink riskTone={riskTone} />
                   <div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>{riskTone.label}</div>
-                    <div style={{ fontSize: 13, color: '#64748b' }}>{deliveryDiffText}</div>
-                    <div style={S.aiSupportTextStyle}>数据由 衣智链 · 实时智能化平台提供支持</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{riskTone.label}</div>
+                    <div style={{ fontSize: 14, color: '#64748b' }}>{deliveryDiffText}</div>
+                    <div style={S.aiSupportTextStyle}>数据由 云裳智链 · 实时智能化平台提供支持</div>
                   </div>
                 </div>
                 <div style={S.confidenceStyle}>{aiPrediction?.confidence ?? 0}% 置信度</div>
@@ -135,14 +135,14 @@ const ShareOrderPage: React.FC = () => {
                   return (
                     <div key={stage.stageName} style={{ ...S.stageCardStyle, borderColor: active ? tone.color : 'rgba(148, 163, 184, 0.18)', boxShadow: active ? `0 10px 24px ${tone.shadow}` : 'none' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
                           <span style={{ color: tone.color }}>{stageIconMap[stage.stageName] || <DeploymentUnitOutlined />}</span><span>{stage.stageName}</span>
                         </div>
-                        <Tag color={tone.tagColor} style={{ marginInlineEnd: 0, paddingInline: 6, lineHeight: '16px', fontSize: 12 }}>{tone.label}</Tag>
+                        <Tag color={tone.tagColor} style={{ marginInlineEnd: 0, paddingInline: 6, lineHeight: '16px', fontSize: 14 }}>{tone.label}</Tag>
                       </div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: tone.color, marginBottom: 4, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `当前节点 · 总进度 ${progress}%` : tone.label}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: tone.color, marginBottom: 4, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `当前节点 · 总进度 ${progress}%` : tone.label}</div>
                       <Progress percent={Math.max(0, Math.min(100, stage.rate ?? 0))} showInfo={false} strokeColor={tone.color} trailColor="rgba(148, 163, 184, 0.18)" />
-                      <div style={{ marginTop: 4, fontSize: 12, color: '#64748b', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
+                      <div style={{ marginTop: 4, fontSize: 14, color: '#64748b', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
                     </div>
                   );
                 }) : <div style={S.emptyPanelStyle}>暂未同步到节点数据</div>}
@@ -151,7 +151,7 @@ const ShareOrderPage: React.FC = () => {
             {data.remarks && (
               <div style={S.panelStyle}>
                 <div style={S.panelTitleStyle}>订单备注</div>
-                <div style={S.remarkCardStyle}><MessageOutlined style={{ color: '#3b82f6', fontSize: 16, marginTop: 2 }} /><div style={S.remarkTextStyle}>{data.remarks}</div></div>
+                <div style={S.remarkCardStyle}><MessageOutlined style={{ color: '#3b82f6', fontSize: 13, marginTop: 2 }} /><div style={S.remarkTextStyle}>{data.remarks}</div></div>
               </div>
             )}
           </div>
@@ -173,8 +173,8 @@ const ShareOrderPage: React.FC = () => {
                     <div style={S.timelineDotStyle} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{scan.processName || '生产更新'}</div>
-                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{scan.quantity != null ? `完成 ${scan.quantity} 件` : '有新的进展记录'}</div>
-                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{formatDateTime(scan.scanTime)}</div>
+                      <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>{scan.quantity != null ? `完成 ${scan.quantity} 件` : '有新的进展记录'}</div>
+                      <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 2 }}>{formatDateTime(scan.scanTime)}</div>
                     </div>
                   </div>
                 )) : <div style={S.emptyPanelStyle}>暂无最新扫码动态</div>}
@@ -183,7 +183,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
         </div>
         <div style={S.bottomBrandLineStyle}>
-          <span>2026衣智链</span>
+          <span>2026云裳智链</span>
           <span>仅展示客户可见的工序跟进信息</span>
           {expiresAtText !== '—' && <span>链接有效至 {expiresAtText}</span>}
         </div>

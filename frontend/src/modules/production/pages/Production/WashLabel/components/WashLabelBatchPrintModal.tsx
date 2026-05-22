@@ -12,7 +12,7 @@ import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
-import { parseCareIconCodes, getCareIconSvgs, CARE_ICONS } from '@/utils/careIcons';
+import { parseCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
 
 export interface WashLabelItem {
   orderNo: string;
@@ -70,21 +70,6 @@ function _circSvg(inner: string): string {
 }
 const _CARE_X = '<line x1="5" y1="5" x2="15" y2="15" stroke="#000" stroke-width="1.5"/><line x1="15" y1="5" x2="5" y2="15" stroke="#000" stroke-width="1.5"/>';
 const _numTxt = (n: string) => `<text x="10" y="17" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,serif" font-weight="bold">${n}</text>`;
-const CARE_SVGS: Record<string, string> = {
-  wash_W30: _tubSvg(_numTxt('30°')), wash_W40: _tubSvg(_numTxt('40°')),
-  wash_W60: _tubSvg(_numTxt('60°')), wash_W95: _tubSvg(_numTxt('95°')),
-  wash_HAND: _tubSvg('<path d="M7,17 L7,12 L9.5,12 L9.5,10.5 L12,10.5 L12,12 L14,12 L14,15 Q14,17 12,17 Z" fill="none" stroke="#000" stroke-width="1"/>'),
-  wash_NO: _tubSvg('<line x1="5" y1="10" x2="15" y2="17" stroke="#000" stroke-width="1.5"/><line x1="15" y1="10" x2="5" y2="17" stroke="#000" stroke-width="1.5"/>'),
-  bleach_ANY: _triSvg(''),
-  bleach_NON_CHL: _triSvg('<line x1="7" y1="18" x2="11" y2="10" stroke="#000" stroke-width="1.5"/>'),
-  bleach_NO: _triSvg(_CARE_X),
-  dry_NORMAL: _sqSvg('<circle cx="10" cy="10" r="5" fill="none" stroke="#000" stroke-width="1.2"/>'),
-  dry_LOW: _sqSvg('<circle cx="10" cy="10" r="5" fill="none" stroke="#000" stroke-width="1.2"/><circle cx="10" cy="10" r="1.5" fill="#000"/>'),
-  dry_NO: _sqSvg(_CARE_X),
-  iron_LOW: _ironSvg(1), iron_MED: _ironSvg(2), iron_HIGH: _ironSvg(3), iron_NO: _ironSvg(0, true),
-  dryclean_YES: _circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,serif" font-style="italic">A</text>'),
-  dryclean_NO: _circSvg(_CARE_X),
-};
 function buildCareIconsHtml(item: WashLabelItem): string {
   const explicitCodes = parseCareIconCodes(item.careIconCodes);
   let codes: string[] = explicitCodes.length > 0 ? explicitCodes : [];
@@ -325,7 +310,7 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
                 style={{ width: 110 }}
               />
             </Space>
-            <div style={{ fontSize: 12, color: '#999', marginTop: 6 }}>
+            <div style={{ fontSize: 14, color: '#999', marginTop: 6 }}>
               上下各一条虚线分割，内容距分割线 1.5cm
             </div>
           </div>
@@ -347,7 +332,7 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
 
         {/* 待打印订单预览列表 */}
         <div>
-          <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 13 }}>
+          <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 14 }}>
             待打印订单（{items.length} 条）
           </div>
           <div style={{ maxHeight: 200, overflowY: 'auto' }}>
@@ -357,11 +342,11 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
                 style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}
               >
                 <Tag color="blue" style={{ minWidth: 100, textAlign: 'center' }}>{it.orderNo}</Tag>
-                <span style={{ fontSize: 12, color: '#666' }}>
+                <span style={{ fontSize: 14, color: '#666' }}>
                   {it.styleNo}{it.color ? ' / ' + it.color : ''}{it.size ? ' / ' + it.size : ''}
                 </span>
                 {labelType === 'ucode' && it.uCode && (
-                  <Tag style={{ fontSize: 13, color: '#888' }}>U: {it.uCode}</Tag>
+                  <Tag style={{ fontSize: 14, color: '#888' }}>U: {it.uCode}</Tag>
                 )}
               </div>
             ))}

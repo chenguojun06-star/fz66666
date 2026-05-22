@@ -133,7 +133,7 @@ const ShareOutstockPage: React.FC = () => {
                 出货追踪
               </div>
               <div style={brandSubtitleStyle}>
-                {data.companyName || '衣智链'} · 智能供应链平台
+                {data.companyName || '云裳智链'} · 智能供应链平台
               </div>
             </div>
             <Tag color="blue" style={statusTagStyle}>
@@ -212,7 +212,7 @@ const ShareOutstockPage: React.FC = () => {
                       <td style={tdStyle}>{item.orderNo || '—'}</td>
                       <td style={tdStyle}>
                         <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.styleNo || '—'}</div>
-                        {item.styleName && <div style={{ fontSize: 13, color: '#94a3b8' }}>{item.styleName}</div>}
+                        {item.styleName && <div style={{ fontSize: 14, color: '#94a3b8' }}>{item.styleName}</div>}
                       </td>
                       <td style={tdStyle}>{item.color} / {item.size}</td>
                       <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{item.outstockQuantity}</td>
@@ -225,14 +225,14 @@ const ShareOutstockPage: React.FC = () => {
                       <td style={tdStyle}>
                         {item.expressCompany || item.trackingNo ? (
                           <div>
-                            {item.expressCompany && <div style={{ fontSize: 12 }}>{item.expressCompany}</div>}
-                            {item.trackingNo && <div style={{ fontSize: 13, color: '#64748b' }}>{item.trackingNo}</div>}
+                            {item.expressCompany && <div style={{ fontSize: 14 }}>{item.expressCompany}</div>}
+                            {item.trackingNo && <div style={{ fontSize: 14, color: '#64748b' }}>{item.trackingNo}</div>}
                           </div>
                         ) : '—'}
                       </td>
                       <td style={tdStyle}>{formatDateTime(item.outstockTime)}</td>
                       <td style={tdStyle}>
-                        <span style={{ color: pay.color, fontWeight: 600, fontSize: 12 }}>● {pay.text}</span>
+                        <span style={{ color: pay.color, fontWeight: 600, fontSize: 14 }}>● {pay.text}</span>
                       </td>
                     </tr>
                   );
@@ -244,7 +244,7 @@ const ShareOutstockPage: React.FC = () => {
           {/* Total Row */}
           <div style={totalRowStyle}>
             <span>合计</span>
-            <span style={{ fontWeight: 700, fontSize: 18 }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>
               {data.totalQuantity ?? 0} 件
               {data.totalAmount != null && (
                 <span style={{ marginLeft: 16, color: '#10b981' }}>¥{Number(data.totalAmount).toFixed(2)}</span>
@@ -256,7 +256,7 @@ const ShareOutstockPage: React.FC = () => {
         {/* Footer */}
         <div style={bottomBrandLineStyle}>
           <a href={PLATFORM_URL} target="_blank" rel="noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>
-            2026 衣智链
+            2026 云裳智链
           </a>
           <span>仅展示客户可见的出货信息</span>
           {expiresAtText !== '—' && <span>链接有效至 {expiresAtText}</span>}
@@ -273,16 +273,16 @@ export default ShareOutstockPage;
 const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
     <span style={{ color: '#3b82f6', fontSize: 14 }}>{icon}</span>
-    <span style={{ color: '#94a3b8', fontSize: 12, minWidth: 32 }}>{label}</span>
+    <span style={{ color: '#94a3b8', fontSize: 14, minWidth: 32 }}>{label}</span>
     <span style={{ color: '#0f172a', fontSize: 14, fontWeight: 600 }}>{value}</span>
   </div>
 );
 
 const SummaryCard: React.FC<{ icon: React.ReactNode; label: string; value: string; color: string }> = ({ icon, label, value, color }) => (
   <div style={summaryCardStyle}>
-    <span style={{ color, fontSize: 20, marginBottom: 4 }}>{icon}</span>
-    <div style={{ fontSize: 13, color: '#94a3b8' }}>{label}</div>
-    <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{value}</div>
+    <span style={{ color, fontSize: 15, marginBottom: 4 }}>{icon}</span>
+    <div style={{ fontSize: 14, color: '#94a3b8' }}>{label}</div>
+    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{value}</div>
   </div>
 );
 
@@ -329,13 +329,13 @@ const heroHeaderStyle: React.CSSProperties = {
 };
 
 const brandTitleStyle: React.CSSProperties = {
-  fontSize: 16,
+  fontSize: 13,
   fontWeight: 700,
   color: '#0f172a',
 };
 
 const brandSubtitleStyle: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: 14,
   color: '#94a3b8',
   marginTop: 2,
 };
@@ -356,7 +356,7 @@ const customerCardStyle: React.CSSProperties = {
 };
 
 const customerTitleStyle: React.CSSProperties = {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 700,
   color: '#0f172a',
   marginBottom: 10,
@@ -411,7 +411,7 @@ const tableWrapperStyle: React.CSSProperties = {
 const tableStyle: React.CSSProperties = {
   width: '100%',
   borderCollapse: 'collapse',
-  fontSize: 13,
+  fontSize: 14,
   minWidth: 900,
 };
 
@@ -420,7 +420,7 @@ const thStyle: React.CSSProperties = {
   padding: '10px 12px',
   fontWeight: 600,
   color: '#64748b',
-  fontSize: 12,
+  fontSize: 14,
   borderBottom: '2px solid rgba(148,163,184,0.18)',
   whiteSpace: 'nowrap',
 };
@@ -452,7 +452,7 @@ const bottomBrandLineStyle: React.CSSProperties = {
   justifyContent: 'center',
   gap: 16,
   flexWrap: 'wrap',
-  fontSize: 12,
+  fontSize: 14,
   color: '#94a3b8',
   padding: '16px 0',
 };

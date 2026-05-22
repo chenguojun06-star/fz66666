@@ -82,6 +82,7 @@ export const useWarehousingForm = (
     } else {
       void apiHook.initCreateForm(defaultOrderNo, orderOptions);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, currentWarehousing]);
 
   // Load repair stats for blocked bundles that are missing from the cache
@@ -106,6 +107,7 @@ export const useWarehousingForm = (
       if (!cancelled) await apiHook.fetchBundleRepairStatsBatch(oid, missing);
     })();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bundles, bundleRepairRemainingByQr, currentWarehousing, watchedOrderId]);
 
   const handleOrderChange = async (value: any, option: any) => {

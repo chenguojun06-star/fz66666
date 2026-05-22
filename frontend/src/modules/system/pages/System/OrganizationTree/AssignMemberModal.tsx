@@ -71,10 +71,10 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
                       style={{ backgroundColor: alreadyIn ? '#ccc' : '#1677ff', flexShrink: 0 }} />
                     <div>
                       <div style={{ fontWeight: 500 }}>{r.name || r.username}</div>
-                      <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+                      <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>
                         {r.username}
                         {!alreadyIn && r.orgUnitId && (
-                          <Tag color="orange" style={{ marginLeft: 6, fontSize: 13 }}>
+                          <Tag color="orange" style={{ marginLeft: 6, fontSize: 14 }}>
                             已在: {unitNameMap[String(r.orgUnitId)] || '其他组织'}
                           </Tag>
                         )}
@@ -88,7 +88,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
             {
               title: '状态', width: 72,
               render: (_: unknown, r: User) => currentNodeMemberIds.has(String(r.id))
-                ? <Tag color="success" style={{ fontSize: 13 }}>已添加</Tag>
+                ? <Tag color="success" style={{ fontSize: 14 }}>已添加</Tag>
                 : null,
             },
           ]}
@@ -98,7 +98,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0',
       }}>
-        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 13 }}>
+        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
           {batchSelectedIds.length > 0 ? `已勾选 ${batchSelectedIds.length} 人` : '勾选后批量添加'}
         </span>
         <Space>

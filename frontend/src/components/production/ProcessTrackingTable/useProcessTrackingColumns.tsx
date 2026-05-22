@@ -25,7 +25,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       width: 70,
       fixed: 'left' as const,
       render: (v: number) => (
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937' }}>{v}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: '#1f2937' }}>{v}</span>
       ),
     },
     {
@@ -34,7 +34,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       key: 'processName',
       width: 100,
       render: (v: string, record: any) => (
-        <span style={{ fontSize: 12, fontWeight: 500 }}>{formatProcessDisplayName(record.processCode, v)}</span>
+        <span style={{ fontSize: 14, fontWeight: 500 }}>{formatProcessDisplayName(record.processCode, v)}</span>
       ),
     },
     {
@@ -42,14 +42,14 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       dataIndex: 'color',
       key: 'color',
       width: 80,
-      render: (v: string) => <span style={{ fontSize: 12 }}>{v || '-'}</span>,
+      render: (v: string) => <span style={{ fontSize: 14 }}>{v || '-'}</span>,
     },
     {
       title: '尺码',
       dataIndex: 'size',
       key: 'size',
       width: 70,
-      render: (v: string) => <span style={{ fontSize: 12 }}>{v || '-'}</span>,
+      render: (v: string) => <span style={{ fontSize: 14 }}>{v || '-'}</span>,
     },
     {
       title: '数量',
@@ -57,7 +57,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       key: 'quantity',
       width: 70,
       align: 'right' as const,
-      render: (v: number) => <span style={{ fontSize: 12, fontWeight: 600 }}>{v || 0}</span>,
+      render: (v: number) => <span style={{ fontSize: 14, fontWeight: 600 }}>{v || 0}</span>,
     },
     {
       title: '单价',
@@ -66,7 +66,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       width: 80,
       align: 'right' as const,
       render: (price: number) => (
-        <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>
+        <span style={{ fontSize: 14, color: '#dc2626', fontWeight: 600 }}>
           {price ? `¥${Number(price).toFixed(2)}` : '-'}
         </span>
       ),
@@ -83,7 +83,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
           reset: { color: 'var(--color-danger)', label: '已重置' },
         };
         const cfg = sm[status] || { color: '#d9d9d9', label: '未知' };
-        return <Tag color={cfg.color} style={{ fontSize: 13, margin: 0 }}>{cfg.label}</Tag>;
+        return <Tag color={cfg.color} style={{ fontSize: 14, margin: 0 }}>{cfg.label}</Tag>;
       },
     },
     {
@@ -92,7 +92,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       key: 'scanTime',
       width: 140,
       render: (time: string) => (
-        <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{time ? formatDateTime(time) : '-'}</span>
+        <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{time ? formatDateTime(time) : '-'}</span>
       ),
     },
     {
@@ -100,7 +100,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       dataIndex: 'operatorName',
       key: 'operatorName',
       width: 90,
-      render: (v: string) => <span style={{ fontSize: 12 }}>{v || '-'}</span>,
+      render: (v: string) => <span style={{ fontSize: 14 }}>{v || '-'}</span>,
     },
     {
       title: '结算金额',
@@ -109,7 +109,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       width: 100,
       align: 'right' as const,
       render: (amount: number) => (
-        <span style={{ fontSize: 12, color: 'var(--color-success)', fontWeight: 600 }}>
+        <span style={{ fontSize: 14, color: 'var(--color-success)', fontWeight: 600 }}>
           {amount ? `¥${Number(amount).toFixed(2)}` : '-'}
         </span>
       ),

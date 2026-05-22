@@ -98,7 +98,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         width: 160,
         render: (_: unknown, r: PayableItem) => (
           <Space size={4}>
-            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 13, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
+            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 14, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
             <span style={{ fontWeight: 500 }}>{r.payeeName}</span>
           </Space>
         ),
@@ -152,7 +152,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         render: (v: string, record: PayableItem) => {
           const count = record.billCount;
           if (count && count > 1) {
-            return <span>{v} <Tag color="blue" style={{ marginLeft: 4, fontSize: 13 }}>{count}笔合并</Tag></span>;
+            return <span>{v} <Tag color="blue" style={{ marginLeft: 4, fontSize: 14 }}>{count}笔合并</Tag></span>;
           }
           return v || '-';
         },
@@ -193,6 +193,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         },
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [openPayModal, handleRejectPayable, openAccountModal],
   );
 
@@ -224,7 +225,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         width: 140,
         render: (_: unknown, r: WagePayment) => (
           <Space size={4}>
-            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 13, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
+            <Tag color={r.payeeType === 'WORKER' ? 'blue' : 'green'} style={{ fontSize: 14, margin: 0 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
             <span>{r.payeeName}</span>
           </Space>
         ),

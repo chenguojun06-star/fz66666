@@ -44,7 +44,7 @@ class SyncManager {
     const { taskId, fetchFn, interval = 30000, maxErrors = 3 } = config;
 
     if (!taskId || !fetchFn) {
-      console.error('[同步管理器] taskId 和 fetchFn 是必需的');
+      logger.error('[同步管理器] taskId 和 fetchFn 是必需的');
       return false;
     }
 
@@ -80,7 +80,7 @@ class SyncManager {
       }
     }, normalizedInterval);
 
-    logger.debug(`[同步管理器] 任务 ${taskId} 已启动，间隔 ${normalizedInterval}ms`);
+    logger.trace(`[同步管理器] 任务 ${taskId} 已启动，间隔 ${normalizedInterval}ms`);
 
     return true;
   }
@@ -97,7 +97,7 @@ class SyncManager {
     }
 
     this.tasks.delete(taskId);
-    logger.debug(`[同步管理器] 任务 ${taskId} 已停止`);
+    logger.trace(`[同步管理器] 任务 ${taskId} 已停止`);
 
     return true;
   }
@@ -107,7 +107,7 @@ class SyncManager {
     if (!task) return false;
 
     task.isPaused = true;
-    logger.debug(`[同步管理器] 任务 ${taskId} 已暂停`);
+    logger.trace(`[同步管理器] 任务 ${taskId} 已暂停`);
     return true;
   }
 
@@ -116,7 +116,7 @@ class SyncManager {
     if (!task) return false;
 
     task.isPaused = false;
-    logger.debug(`[同步管理器] 任务 ${taskId} 已恢复`);
+    logger.trace(`[同步管理器] 任务 ${taskId} 已恢复`);
 
     if (!task.isExecuting) {
       this.executeSync(task);
@@ -157,14 +157,14 @@ class SyncManager {
 
       if (task.lastData !== null && compareData) {
         if (newHash === task.lastDataHash) {
-          logger.debug(`[实时同步] 任务 ${taskId} 数据无变化(hash)`);
+          logger.trace(`[实时同步] 任务 ${taskId} 数据无变化(hash)`);
         } else {
           const hasChanges = compareData(task.lastData, newData);
           if (hasChanges) {
             logger.debug(`[实时同步] 任务 ${taskId} 检测到数据变化`);
             onDataChange?.(newData, task.lastData);
           } else {
-            logger.debug(`[实时同步] 任务 ${taskId} 数据无变化`);
+            logger.trace(`[实时同步] 任务 ${taskId} 数据无变化`);
           }
         }
       } else {
@@ -189,11 +189,11 @@ class SyncManager {
         return;
       }
 
-      console.error(`[实时同步] 任务 ${taskId} 失败 (${task.errorCount}/${maxErrors})`, err);
+      logger.error(`[实时同步] 任务 ${taskId} 失败 (${task.errorCount}/${maxErrors})`, err);
       onError?.(errorObj);
 
       if (task.errorCount >= maxErrors) {
-        console.error(`[实时同步] 任务 ${taskId} 失败次数过多，自动停止`);
+        logger.error(`[实时同步] 任务 ${taskId} 失败次数过多，自动停止`);
         this.stopSync(taskId);
       }
     } finally {
@@ -218,10 +218,10 @@ class SyncManager {
       this.tasks.forEach((task, taskId) => {
         if (task.config.pauseOnHidden !== false) {
           if (isHidden) {
-            logger.debug(`[同步管理器] 页面隐藏，暂停任务 ${taskId}`);
+            logger.trace(`[同步管理器] 页面隐藏，暂停任务 ${taskId}`);
             this.pauseSync(taskId);
           } else {
-            logger.debug(`[同步管理器] 页面可见，恢复任务 ${taskId}`);
+            logger.trace(`[同步管理器] 页面可见，恢复任务 ${taskId}`);
             this.resumeSync(taskId);
           }
         }
@@ -234,7 +234,7 @@ class SyncManager {
   private setupUserLogoutListener(): void {
     if (typeof window === 'undefined') return;
     window.addEventListener('user-logout', () => {
-      logger.debug('[同步管理器] 检测到用户登出，停止所有同步任务');
+      logger.trace('[同步管理器] 检测到用户登出，停止所有同步任务');
       this.stopAll();
     });
   }

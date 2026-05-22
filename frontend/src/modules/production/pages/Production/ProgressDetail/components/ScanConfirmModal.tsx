@@ -44,7 +44,7 @@ const ScanConfirmModal: React.FC<ScanConfirmModalProps> = ({
       </Button>,
     ]}
   >
-    <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 13 }}>
+    <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
       {remain > 10
         ? `确认时间充裕（${remain}秒），请核对信息后领取`
         : remain > 0

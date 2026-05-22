@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Spin, Empty, Modal, Tag, Image } from 'antd';
+import { App, Button, Spin, Empty, Tag, Image } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { HistoryOutlined, DeleteOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
 import type { OrderImage, OrderImageSnapshot } from '@/services/system/remarkApi';
@@ -147,12 +148,12 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
         )}
       </Spin>
 
-      <Modal
+      <ResizableModal
         title="图片更新历史"
         open={historyOpen}
         onCancel={() => setHistoryOpen(false)}
         footer={null}
-        width={600}
+        width="40vw"
       >
         {snapshots.length === 0 ? (
           <Empty description="暂无更新记录" />
@@ -169,14 +170,14 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
                       <Tag color={typeInfo.color}>{typeInfo.text}</Tag>
                       <span style={{ marginLeft: 8 }}>{s.operatorName || '系统'}</span>
                     </span>
-                    <span style={{ color: '#999', fontSize: 12 }}>
+                    <span style={{ color: '#999', fontSize: 14 }}>
                       {s.createTime ? s.createTime.replace('T', ' ').substring(0, 16) : ''}
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 16 }}>
                     {beforeUrls.length > 0 && (
                       <div>
-                        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>变更前</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>变更前</div>
                         <div style={{ display: 'flex', gap: 4 }}>
                           {beforeUrls.map((url, idx) => (
                             <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
@@ -186,7 +187,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
                     )}
                     {afterUrls.length > 0 && (
                       <div>
-                        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>变更后</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>变更后</div>
                         <div style={{ display: 'flex', gap: 4 }}>
                           {afterUrls.map((url, idx) => (
                             <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
@@ -200,7 +201,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
             })}
           </div>
         )}
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

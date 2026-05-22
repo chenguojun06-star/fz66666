@@ -90,6 +90,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
       remark: '',
     });
     void loadIssues();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadIssues, maxIssueQuantity, open]);
 
   const handleCreate = async () => {

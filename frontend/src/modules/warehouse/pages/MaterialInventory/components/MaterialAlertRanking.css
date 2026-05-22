@@ -19,7 +19,7 @@
 }
 
 .ranking-icon {
-  font-size: 16px;
+  font-size: 13px;
   color: #faad14;
 }
 
@@ -33,7 +33,7 @@
 .ranking-stats {
   display: flex;
   gap: 12px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--neutral-text-light, #8c8c8c);
 }
 
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   color: #fff;
   flex-shrink: 0;
@@ -109,7 +109,7 @@
 }
 
 .style-no {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--neutral-text, #262626);
   white-space: nowrap;
@@ -118,7 +118,7 @@
 }
 
 .ranking-info .ant-tag {
-  font-size: 12px;
+  font-size: 14px;
   padding: 0 3px;
   line-height: 14px;
   width: fit-content;
@@ -128,7 +128,7 @@
   grid-column: 1 / -1;
   text-align: center;
   color: var(--neutral-text-light, #8c8c8c);
-  font-size: 12px;
+  font-size: 14px;
   padding: 24px;
 }
 
@@ -138,7 +138,7 @@
 }
 
 .ranking-tooltip {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .ranking-tooltip .tooltip-title {
@@ -158,7 +158,7 @@
 }
 
 .ranking-tooltip .tooltip-item .anticon {
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.8;
 }
 
@@ -166,7 +166,7 @@
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255,255,255,0.2);
-  font-size: 12px;
+  font-size: 14px;
   color: #52c41a;
   display: flex;
   align-items: center;
@@ -187,7 +187,7 @@
 
   .ranking-stats {
     gap: 8px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .ranking-stats span:nth-child(3) {
@@ -195,7 +195,7 @@
   }
 
   .style-no {
-    font-size: 13px;
+    font-size: 14px;
     position: relative;
     z-index: 1;
   }
@@ -214,7 +214,7 @@
 }
 
 .ranking-tag {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 14px;
   padding: 0 3px;
 }

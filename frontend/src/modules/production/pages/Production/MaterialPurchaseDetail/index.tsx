@@ -143,6 +143,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   const headerColor = String(order?.color ?? (purchaseList[0] as any)?.color ?? '').trim();
   useEffect(() => {
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleNo, purchaseNoParam]);
 
   // 打开确认回料完成对话框

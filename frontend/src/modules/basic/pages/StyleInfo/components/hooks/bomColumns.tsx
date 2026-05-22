@@ -267,7 +267,7 @@ export function useBomColumns({
                 return (
                   <span style={{ color: '#8c8c8c' }}>
                     {liveDisplay != null ? liveDisplay : '-'}
-                    {hasPatternData && <span style={{ fontSize: 12, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
+                    {hasPatternData && <span style={{ fontSize: 14, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
                   </span>
                 );
               }}
@@ -287,7 +287,7 @@ export function useBomColumns({
           const isHigh = displayValue > avg;
           return (
             <span title={`同类面料平均用量 ${avg.toFixed(2)}，偏差 ${pct}%`}
-              style={{ marginLeft: 6, color: '#fa8c16', cursor: 'help', fontSize: 12 }}>
+              style={{ marginLeft: 6, color: '#fa8c16', cursor: 'help', fontSize: 14 }}>
               {isHigh ? `+${pct}%` : `-${pct}%`}
             </span>
           );

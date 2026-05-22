@@ -13,7 +13,6 @@ interface BuildCommonOrderActionsParams {
   onQuickEdit?: (record: ProductionOrder) => void;
   handleCloseOrder?: (record: ProductionOrder) => void;
   handleScrapOrder?: (record: ProductionOrder) => void;
-  handleTransferOrder?: (record: ProductionOrder) => void;
   handleCopyOrder?: (record: ProductionOrder) => void;
   handleShareOrder?: (record: ProductionOrder) => void;
   onOpenRemark?: OpenRemarkHandler;
@@ -28,7 +27,6 @@ export function buildCommonOrderActions({
   onQuickEdit,
   handleCloseOrder,
   handleScrapOrder,
-  handleTransferOrder,
   handleCopyOrder,
   handleShareOrder,
   onOpenRemark,
@@ -54,13 +52,6 @@ export function buildCommonOrderActions({
         danger: true,
         disabled: completed,
         onClick: () => handleScrapOrder(record),
-      }] : []),
-      ...(handleTransferOrder ? [{
-        key: 'transfer',
-        label: '转单',
-        title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
-        disabled: frozen,
-        onClick: () => handleTransferOrder(record),
       }] : []),
       ...(handleCopyOrder ? [{
         key: 'copy',

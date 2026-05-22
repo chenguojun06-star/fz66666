@@ -56,6 +56,7 @@ export const useMaterialReconData = () => {
       setLoading(false);
       setQueryLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryParams, dateRange]);
 
   useEffect(() => { fetchList(); }, [fetchList]);

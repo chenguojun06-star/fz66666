@@ -173,7 +173,7 @@ function ImageUploadBox({
     color: MUTED_COLOR,
     padding: 0,
     cursor: 'pointer',
-    fontSize: 13,
+    fontSize: 14,
   }), []);
 
   return (
@@ -207,7 +207,7 @@ function ImageUploadBox({
           ) : (
             <div style={placeholderStyle}>
               <div style={{ fontSize: 20, color: LIGHT_GRAY, lineHeight: 1 }}>+</div>
-              <div style={{ fontSize: 12, color: MUTED_COLOR, marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 14, color: MUTED_COLOR, marginTop: 2 }}>{label}</div>
             </div>
           )}
         </div>

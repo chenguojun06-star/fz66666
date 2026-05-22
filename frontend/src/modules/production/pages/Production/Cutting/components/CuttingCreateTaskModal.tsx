@@ -125,7 +125,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
     <ResizableModal
       open={createTask.createTaskOpen}
       title="无资料下单"
-      width="70vw"
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
       centered
       onCancel={() => createTask.setCreateTaskOpen(false)}
@@ -251,7 +251,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           />
         </Space>
         <div style={{ marginTop: 8 }}>
-          <span style={{ color: 'rgba(0,0,0,0.65)', fontSize: 13 }}>备注</span>
+          <span style={{ color: 'rgba(0,0,0,0.65)', fontSize: 14 }}>备注</span>
           <Input.TextArea
             value={createTask.createRemarks}
             onChange={(e) => createTask.setCreateRemarks(e.target.value)}
@@ -266,7 +266,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
         <div style={{ display: 'flex', gap: 16, marginTop: 12, alignItems: 'flex-start' }}>
           {/* 左：款式图上传（支持点击/拖拽/粘贴） */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ color: 'rgba(0,0,0,0.65)', marginBottom: 6, fontSize: 13 }}>款式图</div>
+            <div style={{ color: 'rgba(0,0,0,0.65)', marginBottom: 6, fontSize: 14 }}>款式图</div>
             <ImageUploadBox
               value={createTask.createStyleImageUrl}
               onChange={(url) => createTask.setCreateStyleImageUrl(url)}
@@ -287,13 +287,13 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
 
             {/* ── 快速批量录入：颜色+码数 → 生成明细行 ───────────────── */}
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '6px 0', marginBottom: 8, borderBottom: '1px dashed #e8e8e8' }}>
-              <span style={{ fontSize: 12, color: '#555', flexShrink: 0 }}>颜色</span>
+              <span style={{ fontSize: 14, color: '#555', flexShrink: 0 }}>颜色</span>
               {matrixColors.map((c) => (
                 <Tag
                   key={c}
                   closable
                   color="blue"
-                  style={{ fontSize: 12, margin: 0 }}
+                  style={{ fontSize: 14, margin: 0 }}
                   onClose={() => setMatrixColors((prev) => prev.filter((x) => x !== c))}
                 >{c}</Tag>
               ))}
@@ -306,13 +306,13 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 onPressEnter={addMatrixColor}
                 suffix={<PlusOutlined style={{ cursor: 'pointer', color: '#1677ff' }} onClick={addMatrixColor} />}
               />
-              <span style={{ fontSize: 12, color: '#555', flexShrink: 0, marginLeft: 8 }}>码数</span>
+              <span style={{ fontSize: 14, color: '#555', flexShrink: 0, marginLeft: 8 }}>码数</span>
               {matrixSizes.map((s) => (
                 <Tag
                   key={s}
                   closable
                   color="blue"
-                  style={{ fontSize: 12, margin: 0 }}
+                  style={{ fontSize: 14, margin: 0 }}
                   onClose={() => setMatrixSizes((prev) => prev.filter((x) => x !== s))}
                 >{s}</Tag>
               ))}
@@ -428,14 +428,14 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       >
         <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={cardStyle}>
-            <span style={{ fontSize: 12, color: '#8c8c8c' }}>工序单价（总计）</span>
+            <span style={{ fontSize: 14, color: '#8c8c8c' }}>工序单价（总计）</span>
             <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>¥{totalCost.toFixed(2)}</span>
-            <span style={{ fontSize: 12, color: '#bfbfbf', marginLeft: 'auto' }}>{createTask.createProcessNodes.length} 道工序</span>
+            <span style={{ fontSize: 14, color: '#bfbfbf', marginLeft: 'auto' }}>{createTask.createProcessNodes.length} 道工序</span>
           </div>
         </div>
 
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 + uniqueSizes.length * 90 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 900 + uniqueSizes.length * 90 }}>
             <colgroup>
               <col style={{ width: 50 }} />
               <col style={{ width: 80 }} />
@@ -499,16 +499,16 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13 }}>
+                          <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 14 }}>
                             {spanInfo.stage}
                           </Tag>
-                          <span style={{ fontSize: 12, color: '#999' }}>{spanInfo.count} 个工序</span>
+                          <span style={{ fontSize: 14, color: '#999' }}>{spanInfo.count} 个工序</span>
                           <Button
                             type="link"
                            
                             icon={<PlusOutlined />}
                             onClick={() => handleAddToStage(spanInfo.stage)}
-                            style={{ fontSize: 12, padding: 0 }}
+                            style={{ fontSize: 14, padding: 0 }}
                           >
                             添加
                           </Button>
@@ -621,7 +621,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       background: 'var(--color-bg-container, #fafafa)',
       border: '1px solid var(--color-border, #e8e8e8)',
       borderRadius: 6,
-      fontSize: 12,
+      fontSize: 14,
       lineHeight: '20px',
       color: 'var(--color-text-secondary, #888)',
     }}
@@ -631,9 +631,9 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
         <span style={{ fontWeight: 600, color: stat.matchScore >= 70 ? '#52c41a' : stat.matchScore >= 40 ? '#fa8c16' : '#ff4d4f' }}>
           推荐指数 {stat.matchScore}分
         </span>
-        {stat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #b7eb8f' }}>推荐</span>}
-        {stat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffd591' }}>配置产能</span>}
-        {stat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffa39e' }}>无产能数据</span>}
+        {stat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #b7eb8f' }}>推荐</span>}
+        {stat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
+        {stat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
       </div>
     )}
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

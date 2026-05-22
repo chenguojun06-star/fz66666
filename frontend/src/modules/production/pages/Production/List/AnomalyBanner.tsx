@@ -27,7 +27,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
         closable
         onClose={onClose}
         title={
-          <span style={{ fontWeight: 600, fontSize: 13 }}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>
              智能异常检测：发现 {items.length} 条异常
           </span>
         }
@@ -41,7 +41,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
                   type="button"
                   onClick={() => onItemClick(item)}
                   style={{
-                    fontSize: 12,
+                    fontSize: 14,
                     color: 'var(--text-secondary)',
                     display: 'flex',
                     gap: 8,
@@ -70,7 +70,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
               );
             })}
             {items.length > 5 && (
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>…还有 {items.length - 5} 条，建议继续按异常项逐条处理</div>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>…还有 {items.length - 5} 条，建议继续按异常项逐条处理</div>
             )}
           </div>
         }

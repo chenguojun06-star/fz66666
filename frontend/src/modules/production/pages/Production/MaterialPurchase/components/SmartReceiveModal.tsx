@@ -41,7 +41,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       title={<Space><ShopOutlined /><span>智能领取 - {orderNo}</span></Space>}
       open={open}
       onCancel={onCancel}
-      width="60vw"
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.6)}
       footer={[
         <Button key="close" onClick={onCancel}>关闭</Button>,
@@ -86,7 +86,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           <Divider style={{ margin: '12px 0' }} />
           <div style={{ marginBottom: 8 }}>
             <span style={{ fontWeight: 600, fontSize: 14 }}> 出库单记录</span>
-            {isSupervisorOrAbove && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>（主管以上可撤销）</span>}
+            {isSupervisorOrAbove && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>（主管以上可撤销）</span>}
           </div>
           <ResizableTable
             storageKey="smart-receive-picking" dataSource={pickingRecords} columns={pickingColumns}

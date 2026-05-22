@@ -16,7 +16,6 @@ import LogisticsRecordsTab from '../../../integration/pages/IntegrationCenter/Lo
 import CallbackLogsTab from '../../../integration/pages/IntegrationCenter/CallbackLogsTab';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { paths } from '@/routeConfig';
-import { message } from '@/utils/antdStatic';
 
 const { Text, Paragraph } = Typography;
 
@@ -116,15 +115,15 @@ const EcommerceCenter: React.FC = () => {
         {isConfigured && statsData ? (
           <Row gutter={8}>
             <Col span={8}>
-              <div style={{ fontSize: 13, color: '#888', marginBottom: 2 }}>今日订单</div>
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>今日订单</div>
               <Text strong style={{ color: '#1677ff', fontSize: 20 }}>{statsData.todayOrders}</Text>
             </Col>
             <Col span={8}>
-              <div style={{ fontSize: 13, color: '#888', marginBottom: 2 }}>今日销售</div>
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>今日销售</div>
               <Text strong style={{ color: '#52c41a', fontSize: 20 }}>¥{parseFloat(statsData.todaySales).toFixed(0)}</Text>
             </Col>
             <Col span={8}>
-              <div style={{ fontSize: 13, color: '#888', marginBottom: 2 }}>待发货</div>
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>待发货</div>
               <Text strong style={{ color: statsData.pendingShip > 0 ? '#fa8c16' : '#999', fontSize: 20 }}>{statsData.pendingShip}</Text>
             </Col>
           </Row>

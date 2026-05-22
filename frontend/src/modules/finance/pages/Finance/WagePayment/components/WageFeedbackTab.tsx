@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Tag, Button, Space, Input, Modal, message, Card, Row, Col, Statistic } from 'antd';
+import { Tag, Button, Space, Input, message, Card, Row, Col, Statistic } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined, CloseCircleOutlined, MessageOutlined } from '@ant-design/icons';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
@@ -22,6 +23,7 @@ const WageFeedbackTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [resolveModal, setResolveModal] = useState<{ id: string; action: string } | null>(null);
   const [resolveRemark, setResolveRemark] = useState('');
+  const [resolveSubmitting, setResolveSubmitting] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -45,6 +47,7 @@ const WageFeedbackTab: React.FC = () => {
 
   const handleResolve = async () => {
     if (!resolveModal) return;
+    setResolveSubmitting(true);
     try {
       await wagePaymentApi.resolveFeedback(resolveModal.id, resolveModal.action, resolveRemark);
       message.success(resolveModal.action === 'RESOLVED' ? '已解决' : '已驳回');
@@ -53,6 +56,8 @@ const WageFeedbackTab: React.FC = () => {
       loadData();
     } catch {
       message.error('操作失败');
+    } finally {
+      setResolveSubmitting(false);
     }
   };
 
@@ -79,7 +84,7 @@ const WageFeedbackTab: React.FC = () => {
       render: (v: string, r: any) => v ? (
         <div>
           <div>{v}</div>
-          {r.resolverName && <div style={{ fontSize: 12, color: '#999' }}>处理人: {r.resolverName}</div>}
+          {r.resolverName && <div style={{ fontSize: 14, color: '#999' }}>处理人: {r.resolverName}</div>}
         </div>
       ) : '-',
     },
@@ -129,12 +134,13 @@ const WageFeedbackTab: React.FC = () => {
         scroll={{ x: 900 }}
       />
 
-      <Modal
+      <ResizableModal
         title={resolveModal?.action === 'RESOLVED' ? '确认解决' : '确认驳回'}
         open={!!resolveModal}
         onOk={handleResolve}
         onCancel={() => setResolveModal(null)}
         okText="确认"
+        confirmLoading={resolveSubmitting}
       >
         <Input.TextArea
           placeholder="处理备注（可选）"
@@ -143,7 +149,7 @@ const WageFeedbackTab: React.FC = () => {
           rows={3}
           maxLength={500}
         />
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

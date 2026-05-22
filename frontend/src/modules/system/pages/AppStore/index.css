@@ -10,7 +10,7 @@
 }
 
 .app-store-container .page-header h2 {
-  font-size: 28px;
+  font-size: 16px;
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary);
@@ -44,7 +44,7 @@
 }
 
 .app-icon {
-  font-size: 32px;
+  font-size: 18px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.08));
 }
 
@@ -62,7 +62,7 @@
 
 .desc-text {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   margin-bottom: 12px;
   line-height: 1.6;
 }
@@ -74,7 +74,7 @@
 }
 
 .price-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-tertiary);
   margin-right: 8px;
 }
@@ -86,7 +86,7 @@
 }
 
 .price-unit {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-tertiary);
   margin-left: 4px;
 }
@@ -148,20 +148,20 @@
 }
 
 .price-amount {
-  font-size: 28px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--primary-color);
   margin-bottom: 4px;
 }
 
 .price-period {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-tertiary);
 }
 
 .price-save {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 14px;
   color: #52c41a;
   font-weight: 600;
 }
@@ -175,7 +175,7 @@
   border: 1px solid #b7eb8f;
   border-radius: 12px;
   color: #52c41a;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
 }
@@ -188,7 +188,7 @@
 
 .trial-note {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: 14px;
   color: #52c41a;
   font-weight: 500;
 }
@@ -204,7 +204,7 @@
   }
 
   .app-icon {
-    font-size: 28px;
+    font-size: 16px;
   }
 
   .price-card {

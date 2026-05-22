@@ -50,7 +50,7 @@ const InoutRecommendBanner: React.FC<Props> = ({ pendingCount, noStockCount, par
   return (
     <div style={{
       padding: '6px 12px', background: '#f0f5ff', borderRadius: 6,
-      marginBottom: 12, fontSize: 12, color: '#1677ff',
+      marginBottom: 12, fontSize: 14, color: '#1677ff',
       display: 'flex', alignItems: 'center', gap: 8,
     }}>
       <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>

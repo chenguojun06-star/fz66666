@@ -68,7 +68,7 @@ const MyModulesTab: React.FC = () => {
         <Text type="secondary">
           当前已开通 {CORE_MODULES.length} 个核心模块{addons.length > 0 ? `、${activeAddonCount} 个增值模块` : ''}
         </Text>
-        <a onClick={fetchAddons} style={{ fontSize: 13 }}><SyncOutlined /> 刷新</a>
+        <a onClick={fetchAddons} style={{ fontSize: 14 }}><SyncOutlined /> 刷新</a>
       </div>
 
       {overview && (
@@ -116,9 +116,9 @@ const MyModulesTab: React.FC = () => {
                     <Text strong style={{ fontSize: 15 }}>{m.name}</Text>
                     <Tag color="success" icon={<CheckCircleOutlined />}>随套餐开通</Tag>
                   </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>{m.desc}</Text>
+                  <Text type="secondary" style={{ fontSize: 14 }}>{m.desc}</Text>
                   <div style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                       套餐费用：{formatPlanFee(overview)}
                     </Text>
                   </div>
@@ -160,24 +160,24 @@ const MyModulesTab: React.FC = () => {
                           <Tag color={sc.color} icon={sc.icon}>{sc.label}</Tag>
                         </div>
                           <div style={{ marginBottom: 6 }}>
-                            <Text strong style={{ color: 'var(--primary-color)', fontSize: 13 }}>
+                            <Text strong style={{ color: 'var(--primary-color)', fontSize: 14 }}>
                               {formatSubscriptionPrice(app)}
                             </Text>
                           </div>
                         <Space size={4} wrap>
                           <Tag>{SUB_TYPE_LABELS[app.subscriptionType] || app.subscriptionType}</Tag>
                           {app.startTime && (
-                            <Text type="secondary" style={{ fontSize: 13 }}>
+                            <Text type="secondary" style={{ fontSize: 14 }}>
                               {dayjs(app.startTime).format('YYYY-MM-DD')} 开通
                             </Text>
                           )}
                           {daysLeft !== null && daysLeft >= 0 && (
-                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} style={{ fontSize: 13 }}>
+                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} style={{ fontSize: 14 }}>
                               · 剩余 {daysLeft} 天
                             </Text>
                           )}
                           {daysLeft === null && !app.endTime && (
-                            <Text type="success" style={{ fontSize: 13 }}>· 永久有效</Text>
+                            <Text type="success" style={{ fontSize: 14 }}>· 永久有效</Text>
                           )}
                         </Space>
                       </div>

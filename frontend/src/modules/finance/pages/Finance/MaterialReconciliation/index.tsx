@@ -101,12 +101,12 @@ const MaterialReconciliation: React.FC = () => {
         {showSmartErrorNotice && (
           <Card style={{ marginBottom: 12, background: '#f0f5ff', border: '1px solid #adc6ff' }} styles={{ body: { padding: '8px 12px' } }}
             extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} style={{ padding: 0 }}>{financeAudit ? '重新分析' : ' AI分析'}</Button>}
-            title={<span style={{ fontSize: 13, color: '#1677ff' }}> 智能财务审核助手</span>}
+            title={<span style={{ fontSize: 14, color: '#1677ff' }}> 智能财务审核助手</span>}
           >
             {!financeAudit ? (
-              <span style={{ fontSize: 12, color: '#8c8c8c' }}>点击「AI分析」自动检测对账差异并给出审核建议</span>
+              <span style={{ fontSize: 14, color: '#8c8c8c' }}>点击「AI分析」自动检测对账差异并给出审核建议</span>
             ) : (
-              <div style={{ fontSize: 12 }}>
+              <div style={{ fontSize: 14 }}>
                 <div style={{ marginBottom: 4 }}>
                   <Tag color={financeAudit.overallRisk === 'HIGH' ? 'red' : financeAudit.overallRisk === 'MEDIUM' ? 'orange' : 'green'}>
                     整体风险：{financeAudit.overallRisk === 'HIGH' ? '高' : financeAudit.overallRisk === 'MEDIUM' ? '中' : '低'}
@@ -178,7 +178,7 @@ const MaterialReconciliation: React.FC = () => {
         okText="保存" cancelText="取消"
         footer={reconModalData ? null : undefined}
         okButtonProps={{ loading: submitLoading }}
-        width="60vw" initialHeight={400}
+        width="85vw" initialHeight={400}
         minWidth={320} scaleWithViewport
       >
         <MaterialReconModalContent currentRecon={reconModalData} onSubmit={handleSubmit} onSave={(saveFn) => { saveFormRef.current = saveFn; }} />

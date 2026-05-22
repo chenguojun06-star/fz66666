@@ -7,7 +7,7 @@ import type { ProductionOrder } from '@/types/production';
 import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { safePrint } from '@/utils/safePrint';
-import { parseCareIconCodes, getCareIconSvgs, CARE_ICONS } from '@/utils/careIcons';
+import { parseCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
 
 type PaperSize = '30x80' | '40x60' | '50x80' | '60x90';
 
@@ -31,41 +31,6 @@ interface StyleData {
 }
 interface Props { open: boolean; onCancel: () => void; order: ProductionOrder | null; }
 
-// ─── ISO 3758 洗护图标 SVG（内联，打印安全）─────────────────────────────────
-function tubSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><path d="M2,9 L2,17 Q2,19 4,19 L16,19 Q18,19 18,17 L18,9 Z" fill="none" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/><line x1="1" y1="9" x2="19" y2="9" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-function triSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><polygon points="10,2 19,18 1,18" fill="none" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-function sqSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="16" fill="none" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-function ironSvg(dots: number, cross = false): string {
-  const ds = Array.from({ length: dots }, (_, i) => `<circle cx="${7 + i * 3.5}" cy="13" r="1" fill="#000"/>`).join('');
-  const cx = cross ? '<line x1="5" y1="9" x2="17" y2="16" stroke="#000" stroke-width="1.5"/><line x1="17" y1="9" x2="5" y2="16" stroke="#000" stroke-width="1.5"/>' : '';
-  return `<svg viewBox="0 0 24 20" width="26" height="22" xmlns="http://www.w3.org/2000/svg"><path d="M2,17 L20,17 L22,11 C20,7 15,7 10,7 L5,7 Q3,7 2,10 Z" fill="none" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/>${ds}${cx}</svg>`;
-}
-function circSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" fill="none" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-const _X = '<line x1="5" y1="5" x2="15" y2="15" stroke="#000" stroke-width="1.5"/><line x1="15" y1="5" x2="5" y2="15" stroke="#000" stroke-width="1.5"/>';
-const numTxt = (n: string) => `<text x="10" y="17" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,serif" font-weight="bold">${n}</text>`;
-const CARE_SVGS: Record<string, string> = {
-  wash_W30: tubSvg(numTxt('30°')), wash_W40: tubSvg(numTxt('40°')),
-  wash_W60: tubSvg(numTxt('60°')), wash_W95: tubSvg(numTxt('95°')),
-  wash_HAND: tubSvg('<path d="M7,17 L7,12 L9.5,12 L9.5,10.5 L12,10.5 L12,12 L14,12 L14,15 Q14,17 12,17 Z" fill="none" stroke="#000" stroke-width="1"/>'),
-  wash_NO: tubSvg('<line x1="5" y1="10" x2="15" y2="17" stroke="#000" stroke-width="1.5"/><line x1="15" y1="10" x2="5" y2="17" stroke="#000" stroke-width="1.5"/>'),
-  bleach_ANY: triSvg(''),
-  bleach_NON_CHL: triSvg('<line x1="7" y1="18" x2="11" y2="10" stroke="#000" stroke-width="1.5"/>'),
-  bleach_NO: triSvg(_X),
-  dry_NORMAL: sqSvg('<circle cx="10" cy="10" r="5" fill="none" stroke="#000" stroke-width="1.2"/>'),
-  dry_LOW: sqSvg('<circle cx="10" cy="10" r="5" fill="none" stroke="#000" stroke-width="1.2"/><circle cx="10" cy="10" r="1.5" fill="#000"/>'),
-  dry_NO: sqSvg(_X),
-  iron_LOW: ironSvg(1), iron_MED: ironSvg(2), iron_HIGH: ironSvg(3), iron_NO: ironSvg(0, true),
-  dryclean_YES: circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,serif" font-style="italic">A</text>'),
-  dryclean_NO: circSvg(_X),
-};
 function buildCareIconsHtml(s: StyleData): string {
   const explicitCodes = parseCareIconCodes(s.careIconCodes);
   let codes: string[] = explicitCodes.length > 0 ? explicitCodes : [];
@@ -225,28 +190,28 @@ html,body{width:${w}mm;min-height:${h}mm;font-family:'Microsoft YaHei','微软�
         )}
         {order && (
           <div style={{ background: '#f8f9fa', borderRadius: 6, padding: '10px 14px', marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 4 }}>款式信息</div>
-            <div style={{ fontSize: 13 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#666', marginBottom: 4 }}>款式信息</div>
+            <div style={{ fontSize: 14 }}>
               款号：{order.styleNo || '-'}&nbsp;&nbsp;
               颜色：{colorSummary}
             </div>
             {buildWashLabelSections(styleData.fabricCompositionParts, styleData.fabricComposition).map(section => (
-              <div key={section.key} style={{ fontSize: 12, color: '#555', marginTop: 4 }}>
+              <div key={section.key} style={{ fontSize: 14, color: '#555', marginTop: 4 }}>
                 {section.key !== 'other' ? <b>{section.label}:</b> : null} {section.items.join(' / ')}
               </div>
             ))}
             {styleData.washInstructions && (
-              <div style={{ fontSize: 12, color: '#555', marginTop: 2 }}>洗涤：{styleData.washInstructions}</div>
+              <div style={{ fontSize: 14, color: '#555', marginTop: 2 }}>洗涤：{styleData.washInstructions}</div>
             )}
           </div>
         )}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>纸张规格</div>
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>纸张规格</div>
           <Radio.Group id="washLabelPaperSize" value={paperSize} onChange={e => setPaperSize(e.target.value as PaperSize)}>
             {PAPER_OPTS.map(p => <Radio key={p.value} value={p.value}>{p.label}</Radio>)}
           </Radio.Group>
         </div>
-        <div style={{ fontSize: 12, color: '#999', marginBottom: 16 }}>
+        <div style={{ fontSize: 14, color: '#999', marginBottom: 16 }}>
           提示：建议使用专用标签打印机，或A4纸打印后裁剪。
         </div>
       </Spin>

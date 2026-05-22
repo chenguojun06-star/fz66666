@@ -110,7 +110,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                 background: 'var(--color-bg-container, #fafafa)',
                 border: '1px solid var(--color-border, #e8e8e8)',
                 borderRadius: 6,
-                fontSize: 12,
+                fontSize: 14,
                 lineHeight: '20px',
                 color: 'var(--color-text-secondary, #888)',
               }}
@@ -120,9 +120,9 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                   <span style={{ fontWeight: 600, color: selectedFactoryStat.matchScore >= 70 ? '#52c41a' : selectedFactoryStat.matchScore >= 40 ? '#fa8c16' : '#ff4d4f' }}>
                     推荐指数 {selectedFactoryStat.matchScore}分
                   </span>
-                  {selectedFactoryStat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #b7eb8f' }}>推荐</span>}
-                  {selectedFactoryStat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffd591' }}>配置产能</span>}
-                  {selectedFactoryStat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffa39e' }}>无产能数据</span>}
+                  {selectedFactoryStat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #b7eb8f' }}>推荐</span>}
+                  {selectedFactoryStat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
+                  {selectedFactoryStat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
                 </div>
               )}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -173,7 +173,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                 background: 'var(--color-bg-container, #fafafa)',
                 border: '1px solid var(--color-border, #e8e8e8)',
                 borderRadius: 6,
-                fontSize: 12,
+                fontSize: 14,
                 lineHeight: '20px',
                 color: 'var(--color-text-secondary, #888)',
               }}
@@ -183,9 +183,9 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                   <span style={{ fontWeight: 600, color: selectedFactoryStat.matchScore >= 70 ? '#52c41a' : selectedFactoryStat.matchScore >= 40 ? '#fa8c16' : '#ff4d4f' }}>
                     推荐指数 {selectedFactoryStat.matchScore}分
                   </span>
-                  {selectedFactoryStat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #b7eb8f' }}>推荐</span>}
-                  {selectedFactoryStat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffd591' }}>配置产能</span>}
-                  {selectedFactoryStat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 13, border: '1px solid #ffa39e' }}>无产能数据</span>}
+                  {selectedFactoryStat.matchScore >= 70 && <span style={{ background: '#f6ffed', color: '#52c41a', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #b7eb8f' }}>推荐</span>}
+                  {selectedFactoryStat.capacitySource === 'configured' && <span style={{ background: '#fff7e6', color: '#fa8c16', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffd591' }}>配置产能</span>}
+                  {selectedFactoryStat.capacitySource === 'none' && <span style={{ background: '#fff1f0', color: '#ff4d4f', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid #ffa39e' }}>无产能数据</span>}
                 </div>
               )}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

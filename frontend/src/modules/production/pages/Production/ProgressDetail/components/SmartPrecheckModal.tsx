@@ -51,10 +51,10 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
       </Text>
     </div>
     {issue.reason && (
-      <div style={{ color: '#595959', fontSize: 12, lineHeight: '18px' }}>{issue.reason}</div>
+      <div style={{ color: '#595959', fontSize: 14, lineHeight: '18px' }}>{issue.reason}</div>
     )}
     {issue.suggestion && (
-      <div style={{ color: '#096dd9', fontSize: 12, marginTop: 4 }}>
+      <div style={{ color: '#096dd9', fontSize: 14, marginTop: 4 }}>
         <BulbOutlined style={{ marginRight: 4 }} />
         {issue.suggestion}
       </div>
@@ -76,7 +76,7 @@ const ModalContent: React.FC<{ data: PrecheckData; isHigh: boolean }> = ({ data,
       {suggestions.length > 0 && (
         <>
           {issues.length > 0 && <Divider style={{ margin: '4px 0' }} />}
-          <div style={{ color: '#8c8c8c', fontSize: 12, lineHeight: '18px' }}>
+          <div style={{ color: '#8c8c8c', fontSize: 14, lineHeight: '18px' }}>
             <BulbOutlined style={{ marginRight: 4, color: '#faad14' }} />
             <Text type="secondary">智能建议：</Text>
             {suggestions.join('；')}

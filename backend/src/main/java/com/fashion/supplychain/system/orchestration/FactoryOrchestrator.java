@@ -102,8 +102,11 @@ public class FactoryOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
-        if (factory == null) {
-            throw new IllegalArgumentException("参数不能为空");
+        if (!StringUtils.hasText(factory.getFactoryName())) {
+            throw new IllegalArgumentException("供应商名称不能为空");
+        }
+        if (!StringUtils.hasText(factory.getFactoryCode())) {
+            factory.setFactoryCode("F" + System.currentTimeMillis());
         }
         LocalDateTime now = LocalDateTime.now();
         factory.setCreateTime(now);

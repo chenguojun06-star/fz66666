@@ -242,7 +242,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       title="扫码出库"
       open={open}
       onCancel={handleClose}
-      width="60vw" maskClosable={false}
+      width="85vw" maskClosable={false}
       footer={
         <Space>
           <Typography.Text type="secondary">
@@ -286,7 +286,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         </Button>
       </Space.Compact>
 
-      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 12 }}>
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>
         二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 SKU、颜色、码数、当前库存，再填写本次要出库的数量。
       </Typography.Text>
 

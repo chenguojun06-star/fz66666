@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Button, Input, Modal } from 'antd';
+import { Button, Input } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 import type { ApiResult } from '@/utils/api';
@@ -83,7 +84,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
   }, [closeShareModal, message]);
 
   const shareOrderDialog = (
-    <Modal
+    <ResizableModal
       title=" 客户订单追踪链接"
       open={shareModal.open}
       onCancel={closeShareModal}
@@ -105,14 +106,14 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
             </Button>,
           ]
       }
-      width={540}
+      width="40vw"
       destroyOnHidden
     >
       {shareModal.loading ? (
         <div style={{ padding: '24px 0', textAlign: 'center', color: '#666' }}>正在生成分享链接…</div>
       ) : (
         <div>
-          <p style={{ marginBottom: 8, color: '#555', fontSize: 13 }}>
+          <p style={{ marginBottom: 8, color: '#555', fontSize: 14 }}>
             发送以下链接给客户，客户无需登录即可实时查看订单工序跟进（30天有效）：
           </p>
           <Input.TextArea
@@ -120,11 +121,11 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
             value={shareModal.shareUrl}
             autoSize={{ minRows: 2 }}
             readOnly
-            style={{ fontSize: 12, background: '#f5f5f5', cursor: 'text' }}
+            style={{ fontSize: 14, background: '#f5f5f5', cursor: 'text' }}
           />
         </div>
       )}
-    </Modal>
+    </ResizableModal>
   );
 
   return {

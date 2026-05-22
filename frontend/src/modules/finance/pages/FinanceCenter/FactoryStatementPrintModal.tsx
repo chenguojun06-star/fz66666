@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Modal, Button, Spin, message, Radio, Checkbox } from 'antd';
+import { Button, Spin, message, Radio, Checkbox } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
@@ -85,6 +86,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
             setSelectedFactoryIds(factoryData.map(f => f.factoryId));
             fetchOrderDetails();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible, factoryData]);
 
     const fetchOrderDetails = async () => {
@@ -214,11 +216,11 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
     };
 
     return (
-        <Modal
+        <ResizableModal
             title="打印工厂加工费对账单"
             open={visible}
             onCancel={onClose}
-            width={900}
+            width="85vw"
             footer={[
                 <Button key="cancel" onClick={onClose}>取消</Button>,
                 <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint} loading={loading} disabled={loading || selectedFactoryIds.length === 0}>
@@ -234,7 +236,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                             <Radio.Button value="simple">简版</Radio.Button>
                             <Radio.Button value="detail">明细版</Radio.Button>
                         </Radio.Group>
-                        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+                        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
                             {printVersion === 'simple' ? '仅含订单号、订单数量、总价格' : '含完整结算明细信息'}
                         </span>
                     </div>
@@ -295,7 +297,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                     )}
                 </div>
             </Spin>
-        </Modal>
+        </ResizableModal>
     );
 };
 

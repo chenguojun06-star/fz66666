@@ -48,9 +48,9 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
         const tooltipContent = scorecardLoading ? (
           <span style={{ color: 'rgba(255,255,255,0.6)' }}>加载中...</span>
         ) : score ? (
-          <div style={{ fontSize: 12, lineHeight: 1.8, minWidth: 160 }}>
+          <div style={{ fontSize: 14, lineHeight: 1.8, minWidth: 160 }}>
             <div style={{ marginBottom: 4 }}>
-              <Tag color={tierColorMap[score.tier] ?? '#888'} style={{ fontWeight: 700, fontSize: 12 }}>
+              <Tag color={tierColorMap[score.tier] ?? '#888'} style={{ fontWeight: 700, fontSize: 14 }}>
                 {score.tier}级
               </Tag>
               <span style={{ color: tierColorMap[score.tier] ?? '#ccc', fontWeight: 600 }}>

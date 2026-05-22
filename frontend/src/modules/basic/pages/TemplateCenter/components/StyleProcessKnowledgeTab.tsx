@@ -167,7 +167,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       width: 80,
       render: (v) =>
         v ? (
-          <Tag color={STAGE_COLOR[v] || 'default'} style={{ fontSize: 13 }}>
+          <Tag color={STAGE_COLOR[v] || 'default'} style={{ fontSize: 14 }}>
             {v}
           </Tag>
         ) : (
@@ -328,7 +328,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
           onChange: (page, size) => onPageChange(page, size),
         }}
         footer={() => (
-           <span style={{ color: '#999', fontSize: 12 }}>
+           <span style={{ color: '#999', fontSize: 14 }}>
              数据实时聚合自所有款式工序表，点击行左侧展开查看最近 5 款历史记录。AI 建议价 = 最近 3 条权重 ×2 的加权均价，这里作为工序库持续为开发、生产与财务联动提供基线。
            </span>
         )}

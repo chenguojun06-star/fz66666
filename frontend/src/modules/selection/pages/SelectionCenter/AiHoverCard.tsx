@@ -30,7 +30,7 @@ const AiHoverCard: React.FC<{
           marginBottom: 10, padding: '8px 10px',
           background: latestReview.decision === 'APPROVE' ? '#f6ffed' : '#fff2f0',
           border: `1px solid ${latestReview.decision === 'APPROVE' ? '#b7eb8f' : '#ffccc7'}`,
-          borderRadius: 6, fontSize: 12,
+          borderRadius: 6, fontSize: 14,
         }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
             审核意见{latestReview.reviewerName ? ` · ${latestReview.reviewerName}` : ''}
@@ -44,9 +44,9 @@ const AiHoverCard: React.FC<{
           <div style={{ marginBottom: 4 }}>
             <Space size={4}>
               <ThunderboltOutlined style={{ color: '#722ed1' }} />
-              <Text type="secondary" style={{ fontSize: 12 }}>趋势评分</Text>
+              <Text type="secondary" style={{ fontSize: 14 }}>趋势评分</Text>
               <Tooltip title={scoreMeta.title}>
-                <Tag color={scoreMeta.color} style={{ margin: 0, fontSize: 12 }}>{scoreMeta.label}</Tag>
+                <Tag color={scoreMeta.color} style={{ margin: 0, fontSize: 14 }}>{scoreMeta.label}</Tag>
               </Tooltip>
               <Text strong style={{
                 color: record.trendScore! >= 75 ? '#52c41a' : record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f',
@@ -62,13 +62,13 @@ const AiHoverCard: React.FC<{
             style={{ marginBottom: 8 }}
           />
           {record.trendScoreReason && (
-            <Paragraph style={{ fontSize: 13, color: '#555', marginBottom: 8, lineHeight: 1.5 }}>
+            <Paragraph style={{ fontSize: 14, color: '#555', marginBottom: 8, lineHeight: 1.5 }}>
               {record.trendScoreReason.slice(0, 150)}{record.trendScoreReason.length > 150 ? '…' : ''}
             </Paragraph>
           )}
         </>
       ) : (
-        <div style={{ textAlign: 'center', padding: '12px 0 8px', color: '#888', fontSize: 12 }}>
+        <div style={{ textAlign: 'center', padding: '12px 0 8px', color: '#888', fontSize: 14 }}>
           {aiLoading ? '正在生成 AI 分析...' : '悬停后自动分析趋势、价值与决策建议'}
         </div>
       )}
@@ -78,28 +78,28 @@ const AiHoverCard: React.FC<{
       <Row gutter={[8, 6]}>
         {record.costEstimate != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 13 }}>成本估算</Text>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>¥{record.costEstimate}</div>
+            <Text type="secondary" style={{ fontSize: 14 }}>成本估算</Text>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>¥{record.costEstimate}</div>
           </Col>
         )}
         {record.targetPrice != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 13 }}>目标报价</Text>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#52c41a' }}>¥{record.targetPrice}</div>
+            <Text type="secondary" style={{ fontSize: 14 }}>目标报价</Text>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#52c41a' }}>¥{record.targetPrice}</div>
           </Col>
         )}
         {record.profitEstimate != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 13 }}>预估利润率</Text>
-            <div style={{ fontSize: 13, fontWeight: 600, color: record.profitEstimate >= 30 ? '#52c41a' : '#fa8c16' }}>
+            <Text type="secondary" style={{ fontSize: 14 }}>预估利润率</Text>
+            <div style={{ fontSize: 14, fontWeight: 600, color: record.profitEstimate >= 30 ? '#52c41a' : '#fa8c16' }}>
               {record.profitEstimate}%
             </div>
           </Col>
         )}
         {record.targetQty != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 13 }}>预计下单</Text>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{record.targetQty} 件</div>
+            <Text type="secondary" style={{ fontSize: 14 }}>预计下单</Text>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{record.targetQty} 件</div>
           </Col>
         )}
       </Row>
@@ -109,7 +109,7 @@ const AiHoverCard: React.FC<{
           const tags: string[] = JSON.parse(record.seasonTags);
           return tags.length > 0 ? (
             <div style={{ marginTop: 8 }}>
-              {tags.map(t => <Tag key={t} style={{ fontSize: 13, marginBottom: 2 }}>{t}</Tag>)}
+              {tags.map(t => <Tag key={t} style={{ fontSize: 14, marginBottom: 2 }}>{t}</Tag>)}
             </div>
           ) : null;
         } catch { return null; }

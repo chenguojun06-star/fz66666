@@ -32,21 +32,21 @@ const directCardStyle = {
 const directStackStyle = { display: 'grid', gap: 10 } as const;
 
 const directTitleStyle = {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--color-text-primary)',
   lineHeight: 1.2,
 } as const;
 
 const directMetaStyle = {
-  fontSize: 12,
+  fontSize: 14,
   color: 'var(--neutral-text-secondary)',
   lineHeight: 1.4,
 } as const;
 
 const directFieldLabelStyle = {
   marginBottom: 4,
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--neutral-text-secondary)',
 } as const;
@@ -81,7 +81,7 @@ const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
   const { message } = App.useApp();
   const { user } = useUser();
   const { width: vpWidth } = useViewport();
-  const modalWidth = vpWidth > 1600 ? '60vw' : '60vw';
+  const modalWidth = vpWidth > 1600 ? '85vw' : '85vw';
 
   const [queryForm] = Form.useForm();
   const [directRollbackForm] = Form.useForm();
@@ -296,7 +296,7 @@ const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
       title: '图片', dataIndex: 'styleCoverUrl', key: 'styleCoverUrl', width: 72, align: 'center' as const,
       render: (url: string) => url
         ? <Image src={getFullAuthedFileUrl(url)} width={48} style={{ height: 'auto', display: 'block', borderRadius: 4 }} preview={false} />
-        : <div style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 13 }}>无图</div>,
+        : <div style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无图</div>,
     },
     { title: '名称', dataIndex: 'templateName', key: 'templateName', width: 220, render: (v) => String(v || '-') },
     { title: '类型', dataIndex: 'templateType', key: 'templateType', width: 90,

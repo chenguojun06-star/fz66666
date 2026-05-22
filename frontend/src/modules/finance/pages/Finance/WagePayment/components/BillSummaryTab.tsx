@@ -59,6 +59,7 @@ const BillSummaryTab: React.FC = () => {
     } catch {
       msg.warning('账单统计加载失败，数据可能不完整');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.billType]);
 
   useEffect(() => { fetchBills(); }, [fetchBills]);
@@ -191,15 +192,15 @@ const BillSummaryTab: React.FC = () => {
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         <Card style={{ flex: 1 }}>
           <Statistic title="待确认" value={stats.pendingAmount ?? 0} prefix="¥" precision={2}
-            suffix={<span style={{ fontSize: 12, color: '#999' }}>{stats.pendingCount ?? 0}笔</span>} />
+            suffix={<span style={{ fontSize: 14, color: '#999' }}>{stats.pendingCount ?? 0}笔</span>} />
         </Card>
         <Card style={{ flex: 1 }}>
           <Statistic title="已确认" value={stats.confirmedAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: '#1677ff' } }}
-            suffix={<span style={{ fontSize: 12, color: '#999' }}>{stats.confirmedCount ?? 0}笔</span>} />
+            suffix={<span style={{ fontSize: 14, color: '#999' }}>{stats.confirmedCount ?? 0}笔</span>} />
         </Card>
         <Card style={{ flex: 1 }}>
           <Statistic title="已结清" value={stats.settledAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: '#52c41a' } }}
-            suffix={<span style={{ fontSize: 12, color: '#999' }}>{stats.settledCount ?? 0}笔</span>} />
+            suffix={<span style={{ fontSize: 14, color: '#999' }}>{stats.settledCount ?? 0}笔</span>} />
         </Card>
       </div>
 

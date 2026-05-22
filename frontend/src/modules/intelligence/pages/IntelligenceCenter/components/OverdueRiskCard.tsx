@@ -20,10 +20,10 @@ const OverdueRiskCard: React.FC<any> = ({
       <LiveDot size={8} color={overdueRisk.overdue.length > 0 ? '#e8686a' : '#f7a600'} />
       <span style={{ fontWeight: 700 }}>逾期 &amp; 延期风险订单</span>
       {overdueRisk.overdue.length > 0 && (
-        <span style={{ background: '#e8686a', color: '#fff', fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '1px 7px', marginLeft: 2 }}>逾期 {overdueRisk.overdue.length} 单</span>
+        <span style={{ background: '#e8686a', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px', marginLeft: 2 }}>逾期 {overdueRisk.overdue.length} 单</span>
       )}
       {overdueRisk.highRisk.length > 0 && (
-        <span style={{ background: '#f7a600', color: '#fff', fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '1px 7px' }}>高风险 {overdueRisk.highRisk.length} 单</span>
+        <span style={{ background: '#f7a600', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px' }}>高风险 {overdueRisk.highRisk.length} 单</span>
       )}
       <span onClick={() => toggleCollapse('overdueRisk')} style={{ cursor: 'pointer' }}><CollapseChevron panelKey="overdueRisk" collapsed={!!collapsedPanels['overdueRisk']} /></span>
     </div>

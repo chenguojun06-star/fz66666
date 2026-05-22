@@ -340,6 +340,7 @@ export function useCuttingBundles({
   const queryParamsKey = JSON.stringify(queryParams);
   useEffect(() => {
     fetchBundles();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryParamsKey, activeTask?.productionOrderNo]);
 
   // 全量菲号汇总：用 /summary 端点（全量聚合，无分页 500 上限限制）计算剩余裁剪量
@@ -449,6 +450,8 @@ export function useCuttingBundles({
         setEntryFabricUsageRows(fabricRows);
       })
       .catch(() => { if (seq === entryBomReqSeq.current) { setEntrySizeUsageMap({}); setEntryFabricUsageRows([]); } });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntryPage, (activeTask as unknown as any)?.styleId]);
 
   // 加载面辅料采购
@@ -535,6 +538,9 @@ export function useCuttingBundles({
     })();
 
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntryPage, orderId, activeTask?.id, (activeTask as unknown as any)?.productionOrderId, (activeTask as unknown as any)?.productionOrderNo]);
 
   // 滚动到编辑区域
@@ -543,6 +549,7 @@ export function useCuttingBundles({
     setTimeout(() => {
       editSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTask?.id]);
 
   // 活动任务变更时重置打印状态

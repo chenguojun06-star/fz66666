@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
-import { Button, Input, Modal, Popover, Space, Spin, Tooltip } from 'antd';
+import { Button, Input, Popover, Space, Spin, Tooltip } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import {
   CloudSyncOutlined,
   DeleteOutlined,
@@ -80,7 +81,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         }}
         style={{ width: 280 }}
       />
-      <span style={{ color: 'var(--color-text-3)', fontSize: 12 }}>
+      <span style={{ color: 'var(--color-text-3)', fontSize: 14 }}>
         {matchedScope === 'style' ? '✅ 已匹配款号模板' : matchedScope === 'order' ? '📋 从订单工序数据加载' : '未匹配，将创建新模板'}
       </span>
     </div>
@@ -209,11 +210,11 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
   );
 
   return (
-    <Modal
+    <ResizableModal
       title="工序单价配置"
       open={open}
       onCancel={handleCancel}
-      width="90vw"
+      width="85vw"
       style={{ top: 20 }}
       footer={null}
       destroyOnHidden
@@ -231,7 +232,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         scroll={{ x: 'max-content', y: 'calc(100vh - 380px)' }}
         pagination={false}
       />
-    </Modal>
+    </ResizableModal>
   );
 });
 

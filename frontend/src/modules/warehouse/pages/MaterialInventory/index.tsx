@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Card,
@@ -67,6 +67,41 @@ const _MaterialInventory: React.FC = () => {
   const pickupData = useMaterialPickupData();
   const pickupPageSize = pickupData.pagination.pagination.pageSize;
   const pickupCurrent = pickupData.pagination.pagination.current;
+
+  const pickupKeywordRef = useRef<ReturnType<typeof setTimeout>>();
+  React.useEffect(() => {
+    return () => {
+      if (pickupKeywordRef.current) clearTimeout(pickupKeywordRef.current);
+    };
+  }, []);
+
+  const handlePickupKeywordChange = useCallback((v: string) => {
+    pickupData.setKeyword(v);
+    if (pickupKeywordRef.current) clearTimeout(pickupKeywordRef.current);
+    pickupKeywordRef.current = setTimeout(() => {
+      void pickupData.fetchData();
+    }, 300);
+  }, [pickupData]);
+
+  const handlePickupStatusChange = useCallback((v: string | undefined) => {
+    pickupData.setStatusFilter(v ?? '');
+    void pickupData.fetchData();
+  }, [pickupData]);
+
+  const handlePickupTypeChange = useCallback((v: string | undefined) => {
+    pickupData.setPickupType(v ?? undefined);
+    void pickupData.fetchData();
+  }, [pickupData]);
+
+  const handleUsageTypeChange = useCallback((v: string | undefined) => {
+    pickupData.setUsageType(v ?? undefined);
+    void pickupData.fetchData();
+  }, [pickupData]);
+
+  const handlePickupDateRangeChange = useCallback((dates: [Dayjs, Dayjs] | null) => {
+    pickupData.setDateRange(dates);
+    void pickupData.fetchData();
+  }, [pickupData]);
 
   const [pickModalOpen, setPickModalOpen] = React.useState(false);
   const [pickTarget, setPickTarget] = React.useState<any>(null);
@@ -268,7 +303,7 @@ const _MaterialInventory: React.FC = () => {
       ) : null}
 
       <div style={{ marginBottom: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 18 }}>数据概览</h2>
+        <h2 style={{ margin: 0, fontSize: 14 }}>数据概览</h2>
       </div>
       <PageStatCards
         activeKey={selectedType || 'all'}
@@ -317,7 +352,7 @@ const _MaterialInventory: React.FC = () => {
                     <Badge count={Number(stats.lowStockCount || 0)} />
                   )}
                 </Space>
-                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>物料出入库与预警</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>物料出入库与预警</div>
               </div>
             ),
             children: (
@@ -393,14 +428,14 @@ const _MaterialInventory: React.FC = () => {
                   领取记录
                   <Badge count={pickupData.pendingPickupCount || 0} />
                 </Space>
-                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
               </div>
             ),
             children: (
               <Card>
                 <div style={{ marginBottom: 16 }}>
                   <h2 style={{ margin: 0 }}>领料记录</h2>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 4 }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginTop: 4 }}>
                     流程：采购侧领取 → 仓库确认出库 → 审核通过（外发工厂自动扣款/内部工厂平账）→ 打印出库单
                   </div>
                 </div>
@@ -412,7 +447,7 @@ const _MaterialInventory: React.FC = () => {
                         allowClear
                         style={{ width: 220 }}
                         value={pickupData.keyword}
-                        onChange={(e) => { pickupData.setKeyword(e.target.value); void pickupData.fetchData(); }}
+                        onChange={(e) => handlePickupKeywordChange(e.target.value)}
                         onPressEnter={() => pickupData.fetchData()}
                       />
                       <Select
@@ -420,7 +455,7 @@ const _MaterialInventory: React.FC = () => {
                         allowClear
                         style={{ width: 120 }}
                         value={pickupData.statusFilter || undefined}
-                        onChange={(v) => { pickupData.setStatusFilter(v ?? ''); void pickupData.fetchData(); }}
+                        onChange={handlePickupStatusChange}
                       >
                         <Option value="">全部状态</Option>
                         <Option value="pending">待出库</Option>
@@ -432,7 +467,7 @@ const _MaterialInventory: React.FC = () => {
                         allowClear
                         style={{ width: 120 }}
                         value={pickupData.pickupType || undefined}
-                        onChange={(v) => { pickupData.setPickupType(v ?? undefined); void pickupData.fetchData(); }}
+                        onChange={handlePickupTypeChange}
                       >
                         <Option value="INTERNAL">内部</Option>
                         <Option value="EXTERNAL">外部</Option>
@@ -442,7 +477,7 @@ const _MaterialInventory: React.FC = () => {
                         allowClear
                         style={{ width: 120 }}
                         value={pickupData.usageType || undefined}
-                        onChange={(v) => { pickupData.setUsageType(v ?? undefined); void pickupData.fetchData(); }}
+                        onChange={handleUsageTypeChange}
                       >
                         <Option value="BULK">大货用料</Option>
                         <Option value="SAMPLE">样衣用料</Option>
@@ -451,7 +486,7 @@ const _MaterialInventory: React.FC = () => {
                       <DatePicker.RangePicker
                         placeholder={['开始日期', '结束日期']}
                         value={pickupData.dateRange}
-                        onChange={(dates) => { pickupData.setDateRange(dates as [Dayjs, Dayjs] | null); void pickupData.fetchData(); }}
+                        onChange={handlePickupDateRangeChange}
                         style={{ width: 240 }}
                       />
                     </Space>

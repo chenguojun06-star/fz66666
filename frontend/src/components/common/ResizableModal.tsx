@@ -150,7 +150,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     const safeMinWidth = Math.min(minWidth, viewportMaxWidth);
     const safeMinHeight = Math.min(minHeight, viewportMaxHeight);
     const initWidth = resolved ?? Math.round(viewportWidth * 0.6);
-    const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : 720);
+    const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : Math.round(viewportHeight * 0.82));
     return {
       width: clamp(initWidth, safeMinWidth, viewportMaxWidth),
       height: clamp(initHeight, safeMinHeight, viewportMaxHeight),
@@ -253,7 +253,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     // 根据视口大小动态计算初始尺寸
     const defaultWidthRatio = viewportWidth < 768 ? 0.96 : viewportWidth < 1024 ? 0.7 : 0.6;
     const initWidth = resolved ?? Math.round(viewportWidth * defaultWidthRatio);
-    const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : Math.min(720, viewportHeight * 0.8));
+    const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : Math.round(viewportHeight * 0.82));
 
     setSize({
       width: clamp(initWidth, safeMinWidth, viewportMaxWidth),

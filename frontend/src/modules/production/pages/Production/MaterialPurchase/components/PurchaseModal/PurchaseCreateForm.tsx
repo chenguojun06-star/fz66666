@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip } from 'antd';
 
 
@@ -6,16 +6,20 @@ import api from '@/utils/api';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
-import { message } from '@/utils/antdStatic';
 import { formatReferenceKilograms } from '../../utils';
 
 const { Option } = Select;
 
 interface PurchaseCreateFormProps {
   form: any;
+  orderColors?: string[];
 }
 
-const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
+const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form, orderColors }) => {
+  const colorOptions = useMemo(() => {
+    if (!orderColors || orderColors.length <= 1) return null;
+    return orderColors.filter(Boolean).map(c => ({ label: c, value: c }));
+  }, [orderColors]);
   const watchedUnitPrice = Form.useWatch('unitPrice', form);
   const watchedArrivedQuantity = Form.useWatch('arrivedQuantity', form);
   const watchedStyleCover = Form.useWatch('styleCover', form);
@@ -234,8 +238,12 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
 
       <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
-          <Form.Item name="color" label="颜色">
-            <Input id="color" placeholder="输入颜色" />
+          <Form.Item name="color" label="颜色" rules={colorOptions && colorOptions.length > 1 ? [{ required: true, message: '多颜色订单必须选择颜色' }] : undefined}>
+            {colorOptions && colorOptions.length > 1 ? (
+              <Select id="color" placeholder="选择颜色" options={colorOptions} allowClear />
+            ) : (
+              <Input id="color" placeholder="输入颜色" />
+            )}
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>

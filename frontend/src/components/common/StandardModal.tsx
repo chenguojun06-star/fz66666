@@ -12,7 +12,7 @@ export type StandardModalSize = 'sm' | 'md' | 'lg';
 const sizeConfig: Record<StandardModalSize, { width: string; minWidth: number }> = {
   sm: { width: '30vw', minWidth: 480 },
   md: { width: '40vw', minWidth: 640 },
-  lg: { width: '60vw', minWidth: 800 },
+  lg: { width: '85vw', minWidth: 800 },
 };
 
 export type StandardModalProps = ResizableModalProps & {

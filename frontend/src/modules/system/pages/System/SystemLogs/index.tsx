@@ -163,7 +163,7 @@ const SystemLogs: React.FC = () => {
             backgroundColor: '#f5f5f5',
             padding: 12,
             fontFamily: 'monospace',
-            fontSize: 12
+            fontSize: 14
           }}>
             <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {detailsText}

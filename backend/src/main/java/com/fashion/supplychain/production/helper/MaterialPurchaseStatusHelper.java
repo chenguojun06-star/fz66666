@@ -152,8 +152,16 @@ public class MaterialPurchaseStatusHelper {
             String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
             String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
             String receiver = rname != null && !rname.isEmpty() ? rname : rid;
+            String toName = receiver;
+            if (StringUtils.hasText(updated.getOrderId())) {
+                com.fashion.supplychain.production.entity.ProductionOrder order = productionOrderService.getById(updated.getOrderId());
+                if (order != null && StringUtils.hasText(order.getMerchandiser())) {
+                    toName = order.getMerchandiser();
+                }
+            }
             com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
             notice.setTenantId(tenantId);
+            notice.setToName(toName);
             notice.setFromName(receiver);
             notice.setOrderNo(orderNo);
             notice.setTitle("📦 采购已领取 — " + materialName);

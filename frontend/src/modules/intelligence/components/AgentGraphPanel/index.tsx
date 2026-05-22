@@ -63,7 +63,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
               <div style={{
                 padding: '6px 14px',
                 borderRadius: 8,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 border: `1.5px solid ${done ? color : active ? color : 'rgba(255,255,255,0.15)'}`,
                 background: done ? `${color}22` : active ? `${color}11` : 'transparent',
@@ -85,7 +85,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
         <>
           <div style={{ width: 32, height: 2, background: '#f97316' }} />
           <div style={{
-            padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+            padding: '6px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600,
             border: '1.5px solid #f97316', background: '#f9731622', color: '#f97316',
             whiteSpace: 'nowrap',
           }}> 重路由 </div>
@@ -109,10 +109,10 @@ const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ resul
           background: 'rgba(0,0,0,0.18)', borderRadius: 6, padding: '8px 10px',
           border: '1px solid rgba(255,255,255,0.06)',
         }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
             {nameMap[key] ?? key}
           </div>
-          <div style={{ fontSize: 13, color: '#bbb', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 14, color: '#bbb', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
             {(val?.length ?? 0) > 300 ? val.slice(0, 300) + '…' : val}
           </div>
         </div>
@@ -124,6 +124,7 @@ const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ resul
 /* ── 历史表格 ──────────────────────────────────────── */
 const HistoryTable: React.FC = () => {
   const { history, historyLoading, loadHistory, submitFeedback } = useAgentGraphStore();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadHistory(); }, []);
   const columns = [
     { title: '时间', dataIndex: 'createTime', width: 140, render: (v: string) => v?.replace('T', ' ').slice(0, 16) },
@@ -137,7 +138,7 @@ const HistoryTable: React.FC = () => {
       render: (v: number, row: any) => (
         <Rate
           count={5} value={v ?? 0}
-          style={{ fontSize: 13 }}
+          style={{ fontSize: 14 }}
           onChange={(val) => submitFeedback(row.id, val).then(loadHistory).catch(console.error)}
         />
       ),
@@ -230,7 +231,7 @@ const AgentGraphPanel: React.FC = () => {
           {streaming && nodeEvents.length === 0 && (
             <div style={{ textAlign: 'center', padding: '20px 0', color: '#a78bfa' }}>
               <Spin />
-              <span style={{ marginLeft: 8, fontSize: 12 }}>
+              <span style={{ marginLeft: 8, fontSize: 14 }}>
                 AI 多代理图推理中… DigitalTwin → Supervisor → Specialist → Reflect
               </span>
             </div>
@@ -259,24 +260,24 @@ const AgentGraphPanel: React.FC = () => {
                 <BranchesOutlined style={{ color: '#a78bfa' }} />
                 <RouteTag route={result.route} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, color: '#888', marginBottom: 2 }}>置信度</div>
+                  <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>置信度</div>
                   <Progress
                     percent={result.confidenceScore}
                     strokeColor={confColor(result.confidenceScore)}
                    
                     style={{ marginBottom: 0 }}
-                    format={v => <span style={{ fontSize: 13, color: confColor(v!) }}>{v} 分</span>}
+                    format={v => <span style={{ fontSize: 14, color: confColor(v!) }}>{v} 分</span>}
                   />
                 </div>
-                <span style={{ fontSize: 13, color: '#666' }}>{result.latencyMs} ms</span>
+                <span style={{ fontSize: 14, color: '#666' }}>{result.latencyMs} ms</span>
               </div>
 
               {/* 节点轨迹 */}
               {result.nodeTrace && result.nodeTrace.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, color: '#888', marginRight: 6 }}>执行路径:</span>
+                  <span style={{ fontSize: 14, color: '#888', marginRight: 6 }}>执行路径:</span>
                   {result.nodeTrace.map((n, i) => (
-                    <Tag key={i} style={{ fontSize: 12 }}>{n}</Tag>
+                    <Tag key={i} style={{ fontSize: 14 }}>{n}</Tag>
                   ))}
                 </div>
               )}
@@ -289,10 +290,10 @@ const AgentGraphPanel: React.FC = () => {
               {/* 分析摘要 */}
               {result.contextSummary && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 13, color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
                     <XiaoyunCloudAvatar size={16} active />分析结果
                   </div>
-                  <div style={{ fontSize: 12, color: '#d4d4d4', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 14, color: '#d4d4d4', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
                     {result.contextSummary}
                   </div>
                 </div>
@@ -301,10 +302,10 @@ const AgentGraphPanel: React.FC = () => {
               {/* 优化建议 */}
               {result.optimizationSuggestion && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 13, color: '#34d399', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, color: '#34d399', fontWeight: 600, marginBottom: 4 }}>
                      AI 优化建议
                   </div>
-                  <div style={{ fontSize: 12, color: '#d4d4d4', lineHeight: 1.65 }}>
+                  <div style={{ fontSize: 14, color: '#d4d4d4', lineHeight: 1.65 }}>
                     {result.optimizationSuggestion}
                   </div>
                 </div>
@@ -313,11 +314,11 @@ const AgentGraphPanel: React.FC = () => {
               {/* 自我反思 */}
               {result.reflection && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 13, color: '#faad14', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, color: '#faad14', fontWeight: 600, marginBottom: 4 }}>
                      自我反思（置信评估）
                   </div>
                   <div style={{
-                    fontSize: 13, color: '#8b8b8b', fontFamily: 'monospace',
+                    fontSize: 14, color: '#8b8b8b', fontFamily: 'monospace',
                     background: 'rgba(0,0,0,0.22)',
                     padding: '6px 8px', borderRadius: 4, lineHeight: 1.5, whiteSpace: 'pre-wrap',
                   }}>
@@ -329,7 +330,7 @@ const AgentGraphPanel: React.FC = () => {
               {/* 反馈评分 */}
               {result.executionId && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 13, color: '#888' }}>结果评分:</span>
+                  <span style={{ fontSize: 14, color: '#888' }}>结果评分:</span>
                   <Rate
                     count={5}
                     style={{ fontSize: 14 }}

@@ -88,14 +88,14 @@ const StyleQuotePopover: React.FC<{
   const content = loading ? (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><Spin /></div>
   ) : !data ? (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, color: '#8c8c8c', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, color: '#8c8c8c', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
       暂无历史数据
     </div>
   ) : (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
       {/* 标题 */}
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
-         报价参考 <span style={{ fontSize: 12, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
+         报价参考 <span style={{ fontSize: 14, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
       </div>
 
       {/* 成本分解 */}
@@ -104,8 +104,8 @@ const StyleQuotePopover: React.FC<{
           background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4,
           padding: '8px 10px', marginBottom: 8,
         }}>
-          <div style={{ fontSize: 12, color: '#52c41a', fontWeight: 600, marginBottom: 4 }}>成本拆解</div>
-          <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+          <div style={{ fontSize: 14, color: '#52c41a', fontWeight: 600, marginBottom: 4 }}>成本拆解</div>
+          <div style={{ display: 'flex', gap: 16, fontSize: 14 }}>
             <span>面料 <b>{fmt(data.materialCost)}</b></span>
             <span>工序 <b>{fmt(data.processCost)}</b></span>
             <span>合计 <b style={{ color: '#52c41a' }}>{fmt(data.totalCost)}</b></span>
@@ -120,14 +120,14 @@ const StyleQuotePopover: React.FC<{
           padding: '8px 10px', marginBottom: 8,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
-          <span style={{ fontSize: 12, color: '#fa8c16', fontWeight: 600 }}>建议报价</span>
+          <span style={{ fontSize: 14, color: '#fa8c16', fontWeight: 600 }}>建议报价</span>
           <span style={{ fontSize: 18, fontWeight: 700, color: '#fa8c16' }}>{fmt(data.suggestedPrice)}</span>
         </div>
       )}
 
       {/* 现有报价引用 */}
       {data.currentQuotation != null && data.currentQuotation > 0 && (
-        <div style={{ fontSize: 12, color: '#595959', marginBottom: 6 }}>
+        <div style={{ fontSize: 14, color: '#595959', marginBottom: 6 }}>
            现有报价单价：<b>{fmt(data.currentQuotation)}</b>
         </div>
       )}
@@ -135,20 +135,20 @@ const StyleQuotePopover: React.FC<{
       {/* 历史订单 */}
       {(data.recentOrders?.length ?? 0) > 0 && (
         <>
-          <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
+          <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 4 }}>
              最近 {data.historicalOrderCount} 个订单（共 {data.historicalTotalQuantity} 件）
           </div>
           <div style={{ maxHeight: 120, overflowY: 'auto' }}>
             {data.recentOrders.slice(0, 5).map((o, i) => {
               const st = statusMap[o.status] || { text: o.status, color: '#d9d9d9' };
               return (
-                <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '2px 0', fontSize: 12 }}>
+                <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '2px 0', fontSize: 14 }}>
                   <span style={{ fontWeight: 500, width: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {o.orderNo}
                   </span>
                   <span>{o.quantity}件</span>
                   <span style={{ color: '#fa8c16' }}>{fmt(o.unitPrice)}</span>
-                  <Tag color={st.color} style={{ fontSize: 12, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
+                  <Tag color={st.color} style={{ fontSize: 14, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                     {st.text}
                   </Tag>
                 </div>

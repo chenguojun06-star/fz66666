@@ -22,7 +22,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 13px;
   flex-shrink: 0;
 }
 
@@ -284,7 +284,7 @@
   color: #8c8c8c;
   cursor: pointer;
   padding: 4px;
-  font-size: 16px;
+  font-size: 13px;
   margin-left: 8px;
 }
 .speechBtn:hover {
@@ -326,7 +326,7 @@
 }
 .adviceSummary {
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
 }
 .adviceDetails {
@@ -346,7 +346,7 @@
 .adviceActionBtn {
   padding: 4px 12px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s;

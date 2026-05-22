@@ -152,7 +152,7 @@ const DataCenter: React.FC = () => {
         }
       >
         {returnDescRecord?.descriptionReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 13 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnDescRecord.descriptionReturnComment}（{returnDescRecord.descriptionReturnBy}）
           </div>
         )}
@@ -175,7 +175,7 @@ const DataCenter: React.FC = () => {
         }
       >
         {returnPatternRecord?.patternRevReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 13 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
           </div>
         )}
@@ -229,7 +229,7 @@ const DataCenter: React.FC = () => {
         title={`款式详情 - ${detailRecord?.styleNo || ''}`}
         onCancel={() => { setDetailModalVisible(false); }}
         footer={<Space><Button onClick={() => { setDetailModalVisible(false); }}>关闭</Button></Space>}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
       >
         {detailRecord && (
@@ -255,7 +255,7 @@ const DataCenter: React.FC = () => {
                 </div>
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontWeight: 600, marginBottom: 8 }}>生产要求：</div>
-                  <div style={{ background: 'var(--color-bg-container)', padding: 12, maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap', fontSize: 13 }}>
+                  <div style={{ background: 'var(--color-bg-container)', padding: 12, maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap', fontSize: 14 }}>
                     {detailRecord.description || '暂无生产要求'}
                   </div>
                 </div>

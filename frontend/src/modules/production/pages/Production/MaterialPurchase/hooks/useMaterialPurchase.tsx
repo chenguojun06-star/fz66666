@@ -18,7 +18,7 @@ export function useMaterialPurchase() {
   const message = messageApi;
   const location = useLocation();
   const { user } = useUser();
-  const { isMobile, modalWidth } = useViewport();
+  const { isMobile } = useViewport();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   // ── 共享状态：弹窗开关 / 当前行 / 模式 ──────────────────────────
@@ -43,8 +43,6 @@ export function useMaterialPurchase() {
 
   // 批量领取 loading（传给 usePurchaseActions）
   const [batchSubmitLoading, setBatchSubmitLoading] = useState(false);
-
-  const modalInitialHeight = useMemo(() => Math.round(window.innerHeight * 0.85), []);
 
   // ── 子 Hook 组合 ─────────────────────────────────────────────────
   const list = usePurchaseList({
@@ -105,6 +103,7 @@ export function useMaterialPurchase() {
     const orderNo = String(rec?.orderNo || '').trim();
     if (!orderNo || orderNo === '-') return false;
     return list.isOrderFrozenForRecord(rec);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail.detailOrder, currentPurchase, list.isOrderFrozenForRecord]);
   const submitLoading = dialog.submitLoading || batchSubmitLoading;
   const reloadCurrentDetail = useCallback(async () => {
@@ -124,7 +123,7 @@ export function useMaterialPurchase() {
 
   return {
     contextHolder, message,
-    user, isMobile, modalWidth, isSupervisorOrAbove,
+    user, isMobile, isSupervisorOrAbove,
     activeTabKey,
     purchaseList: list.purchaseList,
     loading: list.loading,
@@ -153,7 +152,7 @@ export function useMaterialPurchase() {
     previewOrderId: dialog.previewOrderId,
     form: dialog.form,
     materialDatabaseForm: db.materialDatabaseForm,
-    submitLoading, modalInitialHeight,
+    submitLoading,
     detailOrder: detail.detailOrder,
     detailOrderLines: detail.detailOrderLines,
     detailPurchases: detail.detailPurchases,

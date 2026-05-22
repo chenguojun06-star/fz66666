@@ -103,7 +103,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
 
   if (!entryOrderLines?.length) {
     return (
-      <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--neutral-text-light, #8c8c8c)', fontSize: 13 }}>
+      <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--neutral-text-light, #8c8c8c)', fontSize: 14 }}>
         订单明细中无颜色/尺码数据，请先在订单中维护颜色尺码信息
       </div>
     );
@@ -126,7 +126,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
 
       {rows.length > 0 && (
         <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#fafafa', borderBottom: '2px solid #f0f0f0' }}>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, width: 30 }}>#</th>
@@ -171,7 +171,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                       />
                     </td>
                     <td style={{ padding: '6px 12px', textAlign: 'center' }}>
-                      <Text style={{ color: orderQty > 0 ? '#1677ff' : '#ccc', fontWeight: orderQty > 0 ? 500 : 400, fontSize: 13 }}>
+                      <Text style={{ color: orderQty > 0 ? '#1677ff' : '#ccc', fontWeight: orderQty > 0 ? 500 : 400, fontSize: 14 }}>
                         {orderQty > 0 ? orderQty : '-'}
                       </Text>
                     </td>
@@ -189,7 +189,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                           onChange={(v) => updateRow(row.key, 'quantity', v ?? 0)}
                         />
                         {overOrder && (
-                          <Tag color="error" style={{ margin: 0, fontSize: 13, lineHeight: '20px' }}>超</Tag>
+                          <Tag color="error" style={{ margin: 0, fontSize: 14, lineHeight: '20px' }}>超</Tag>
                         )}
                       </Space>
                     </td>

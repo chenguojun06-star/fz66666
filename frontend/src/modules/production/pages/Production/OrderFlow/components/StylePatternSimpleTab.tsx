@@ -45,6 +45,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   useEffect(() => {
     fetchAllPatternFiles();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleId]);
 
   const fetchProductionReq = async () => {
@@ -62,6 +63,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   useEffect(() => {
     fetchProductionReq();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleId]);
 
   const handleRefresh = () => {
@@ -130,7 +132,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                             {item.bizType === 'pattern' && <Tag color="green">原始纸样</Tag>}
                             {item.bizType === 'pattern_grading' && <Tag color="purple">放码纸样</Tag>}
                           </Space>
-                          <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>
+                          <div style={{ fontSize: 14, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>
                             {`上传者: ${item.uploader || '-'} | 上传时间: ${item.createTime || '-'}`}
                           </div>
                         </div>

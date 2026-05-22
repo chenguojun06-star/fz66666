@@ -79,6 +79,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
     if (materialModalOpen) {
       handleSearchMaterial();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [materialModalOpen, materialPage, materialPageSize]);
 
   const columns = [
@@ -398,7 +399,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
             )}
           </Space>
         ) : isBundled ? (
-          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>裁剪已完成，不可修改</span>
+          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>裁剪已完成，不可修改</span>
         ) : null
       }
     >
@@ -494,7 +495,7 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
     open={open}
     onCancel={onClose}
     footer={null}
-    width="60vw"
+    width="85vw"
     destroyOnHidden
   >
     <Tabs

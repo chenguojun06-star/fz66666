@@ -121,6 +121,7 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
       };
     }
     return { tag: { color: 'default' as const, text: '未开始' }, helper: '尚未领取样衣生产', time: '待领取' };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSampleSnapshotCompleted, isSampleSnapshotReceived, sampleCompletedTimeLabel, sampleCompletedRangeLabel, sampleReceiveTimeLabel, sampleReceiverLabel, sampleSnapshot, selectedStage, selectedStageRecordScrapped]);
 
   // --- callbacks ---

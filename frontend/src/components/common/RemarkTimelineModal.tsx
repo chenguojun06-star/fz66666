@@ -236,7 +236,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                             <Tag style={{ marginLeft: 8 }}>{r.authorRole}</Tag>
                           )}
                         </span>
-                        <span style={{ color: '#999', fontSize: 12 }}>
+                        <span style={{ color: '#999', fontSize: 14 }}>
                           {r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}
                         </span>
                       </div>

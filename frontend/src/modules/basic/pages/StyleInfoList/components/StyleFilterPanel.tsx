@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Input, Select, Space } from 'antd';
 import { StyleQueryParams } from '@/types/style';
+
+const DEBOUNCE_MS = 300;
 
 interface StyleFilterPanelProps {
   queryParams: Partial<StyleQueryParams>;
@@ -12,7 +14,7 @@ interface StyleFilterPanelProps {
 
 /**
  * 款式信息筛选面板
- * 包含款号、款名搜索
+ * 包含款号、款名搜索（300ms 防抖）
  */
 const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
   queryParams,
@@ -21,6 +23,28 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
   loading: _loading = false,
   extra
 }) => {
+  const [localStyleNo, setLocalStyleNo] = useState(queryParams.styleNo || '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestParamsRef = useRef(queryParams);
+
+  useEffect(() => {
+    latestParamsRef.current = queryParams;
+  }, [queryParams]);
+
+  useEffect(() => {
+    const ext = queryParams.styleNo || '';
+    if (ext !== localStyleNo) setLocalStyleNo(ext);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryParams.styleNo]);
+
+  const flushStyleNo = (value: string) => {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    onQueryChange({ ...latestParamsRef.current, styleNo: value || undefined });
+  };
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
   const progressNodeOptions = [
     { label: '全部', value: '' },
     { label: '未开始', value: '未开始' },
@@ -37,13 +61,25 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
         {/* 左侧：搜索条件 */}
         <Space className="style-filter-inline" size={12} wrap>
           <Input
-            value={queryParams.styleNo || ''}
+            value={localStyleNo}
             onChange={(e) => {
               const value = e.target.value;
-              onQueryChange({ ...queryParams, styleNo: value });
-              if (!value) onSearch(); // 清空时自动刷新
+              setLocalStyleNo(value);
+              if (!value) {
+                flushStyleNo('');
+                onSearch();
+                return;
+              }
+              if (debounceRef.current) clearTimeout(debounceRef.current);
+              debounceRef.current = setTimeout(() => {
+                onQueryChange({ ...latestParamsRef.current, styleNo: value || undefined });
+                onSearch();
+              }, DEBOUNCE_MS);
             }}
-            onPressEnter={onSearch}
+            onPressEnter={() => {
+              flushStyleNo(localStyleNo);
+              onSearch();
+            }}
             placeholder="搜索款号/款名"
             allowClear
             style={{ width: 220 }}

@@ -93,11 +93,11 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   }, [flatData, selectedRowKeys, handleBatchComplete, orderStatus]);
 
   return (
-    <div style={{ fontSize: 12 }}>
+    <div style={{ fontSize: 14 }}>
       <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {filterType && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
               当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
             </span>
           )}
@@ -122,16 +122,16 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
           )}
         </div>
         <Space separator={'·'}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
             菲号: <strong>{stats.bundles}</strong> 个
           </span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
             工序: <strong>{stats.total}</strong> 条
           </span>
-          <span style={{ fontSize: 12, color: 'var(--color-success)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-success)' }}>
             已扫: <strong>{stats.scanned}</strong> 条
           </span>
-          <span style={{ fontSize: 12, color: 'var(--color-success)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-success)' }}>
             金额: <strong>{`¥${stats.totalAmount.toFixed(2)}`}</strong>
           </span>
         </Space>

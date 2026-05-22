@@ -87,6 +87,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
     } finally {
       setOrderLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFactoryId]);
 
   // 打开发货弹窗
@@ -112,6 +113,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
     } finally {
       setShippableLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shipForm]);
 
   // 提交发货
@@ -327,10 +329,10 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
           expandedRowRender: (record) => {
             const details = expandedDetails[record.id!] || [];
             const isLoading = expandedLoading[record.id!];
-            if (isLoading) return <span style={{ color: '#999', fontSize: 12 }}>加载中...</span>;
-            if (details.length === 0) return <span style={{ color: '#999', fontSize: 12 }}>无明细</span>;
+            if (isLoading) return <span style={{ color: '#999', fontSize: 14 }}>加载中...</span>;
+            if (details.length === 0) return <span style={{ color: '#999', fontSize: 14 }}>无明细</span>;
             return (
-              <table style={{ fontSize: 12, borderCollapse: 'collapse' as const }}>
+              <table style={{ fontSize: 14, borderCollapse: 'collapse' as const }}>
                 <thead><tr>
                   <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>颜色</th>
                   <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>尺码</th>
@@ -486,7 +488,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
         onCancel={() => setReceiveModalOpen(false)}
         onOk={handleReceiveConfirm}
         confirmLoading={receiveLoading}
-        width={420}
+        width="30vw"
       >
         {receiveRecord && (
           <div style={{ padding: '8px 0' }}>
@@ -507,7 +509,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
                 style={{ width: '100%' }}
                 suffix="件"
               />
-              <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>
+              <div style={{ marginTop: 4, fontSize: 14, color: '#999' }}>
                 默认等于发货数量，如实际到货数量不同请修改
               </div>
             </div>

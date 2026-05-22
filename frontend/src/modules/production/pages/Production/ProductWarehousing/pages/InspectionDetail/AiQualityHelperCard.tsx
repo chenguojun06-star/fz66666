@@ -21,7 +21,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
           <span style={{ fontWeight: 600, color: '#1677ff' }}>智能质检助手</span>
           {aiSuggestion?.historicalDefectRate !== undefined && (
             <span style={{
-              fontSize: 13, fontWeight: 400, padding: '1px 7px',
+              fontSize: 14, fontWeight: 400, padding: '1px 7px',
               borderRadius: 10, background:
                 aiSuggestion.historicalDefectRate > 0.05 ? '#fff1f0'
                   : aiSuggestion.historicalDefectRate > 0.02 ? '#fff7e6' : '#f6ffed',
@@ -36,7 +36,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
       loading={aiLoading}
     >
       {!aiSuggestion && !aiLoading && (
-        <div style={{ color: '#aaa', textAlign: 'center', padding: '16px 0', fontSize: 12 }}>
+        <div style={{ color: '#aaa', textAlign: 'center', padding: '16px 0', fontSize: 14 }}>
           <div style={{ fontSize: 20, marginBottom: 6 }}></div>
           AI正在分析订单数据，请稍后…
         </div>
@@ -75,10 +75,10 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
               <div style={{ fontWeight: 600, color: '#333', marginTop: 12, marginBottom: 8, fontSize: 14 }}>
                 缺陷处理建议
                 {actualDefectSet.size === 0 && (
-                  <span style={{ fontWeight: 400, fontSize: 12, color: '#aaa', marginLeft: 6 }}>（本批暂无次品）</span>
+                  <span style={{ fontWeight: 400, fontSize: 14, color: '#aaa', marginLeft: 6 }}>（本批暂无次品）</span>
                 )}
                 {actualDefectSet.size > 0 && (
-                  <span style={{ fontWeight: 400, fontSize: 12, color: '#f5222d', marginLeft: 6 }}> 本批已发现 {actualDefectSet.size} 类缺陷</span>
+                  <span style={{ fontWeight: 400, fontSize: 14, color: '#f5222d', marginLeft: 6 }}> 本批已发现 {actualDefectSet.size} 类缺陷</span>
                 )}
               </div>
               {Object.entries(aiSuggestion.defectSuggestions)
@@ -94,13 +94,13 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         {isActual && (
-                          <span style={{ background: '#ff4d4f', color: '#fff', fontSize: 13, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
+                          <span style={{ background: '#ff4d4f', color: '#fff', fontSize: 14, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
                         )}
-                        <span style={{ fontWeight: 600, color: isActual ? '#cf1322' : '#595959', fontSize: 13 }}>
+                        <span style={{ fontWeight: 600, color: isActual ? '#cf1322' : '#595959', fontSize: 14 }}>
                           {getDefectCategoryLabel(defect)}
                         </span>
                       </div>
-                      <div style={{ color: '#555', fontSize: 13, lineHeight: 1.6 }}>{advice}</div>
+                      <div style={{ color: '#555', fontSize: 14, lineHeight: 1.6 }}>{advice}</div>
                     </div>
                   );
                 })}

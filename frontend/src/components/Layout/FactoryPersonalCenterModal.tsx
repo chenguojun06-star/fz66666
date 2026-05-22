@@ -291,7 +291,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
               label: <span><QuestionCircleOutlined style={{ marginRight: 4 }} />使用教程</span>,
               children: (
                 <div style={{ padding: '4px 0' }}>
-                  <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>点击展开各功能操作说明：</div>
+                  <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>点击展开各功能操作说明：</div>
                   <Collapse
                    
                     ghost

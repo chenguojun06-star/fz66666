@@ -140,6 +140,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
         };
       });
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColors, selectedSizes]);
 
   useEffect(() => {
@@ -356,11 +357,11 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
             <tbody>
               <tr>
-                <td style={{ width: 120, padding: '8px 10px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 12 }}>颜色 / 尺码</td>
+                <td style={{ width: 120, padding: '8px 10px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14 }}>颜色 / 尺码</td>
                 {selectedSizes.map((size) => (
-                  <td key={size} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 12 }}>{size}</td>
+                  <td key={size} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{size}</td>
                 ))}
-                <td style={{ width: 72, padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 12 }}>小计</td>
+                <td style={{ width: 72, padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>小计</td>
               </tr>
               {matrixRows.map((row, rowIndex) => {
                 const rowTotal = row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0);
@@ -396,7 +397,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                             }
                           }}
                         />
-                        <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 13, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
+                        <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 14, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
                       </div>
                     </td>
                     {selectedSizes.map((_, columnIndex) => (
@@ -413,16 +414,16 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                         />
                       </td>
                     ))}
-                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', textAlign: 'center', fontWeight: 600, fontSize: 12 }}>{rowTotal}</td>
+                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{rowTotal}</td>
                   </tr>
                 );
               })}
               <tr>
-                <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', fontWeight: 700, fontSize: 12 }}>合计</td>
+                <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', fontWeight: 700, fontSize: 14 }}>合计</td>
                 {sizeColumnTotals.map((total, index) => (
-                  <td key={index} style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 12 }}>{total}</td>
+                  <td key={index} style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{total}</td>
                 ))}
-                <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 12 }}>{matrixTotal}</td>
+                <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{matrixTotal}</td>
               </tr>
             </tbody>
           </table>

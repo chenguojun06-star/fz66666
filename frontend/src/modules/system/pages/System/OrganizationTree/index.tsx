@@ -161,6 +161,7 @@ const OrganizationTreePage: React.FC = () => {
       }
     };
     void loadRoles();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.tenantId]);
 
   const {
@@ -465,7 +466,7 @@ const OrganizationTreePage: React.FC = () => {
           <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, #1677ff)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
           {selectedUnit?.managerUserId && String(r.id) === String(selectedUnit.managerUserId) && (
-            <Tag color="blue" style={{ fontSize: 12 }}>负责人</Tag>
+            <Tag color="blue" style={{ fontSize: 14 }}>负责人</Tag>
           )}
         </Space>
       ),
@@ -643,11 +644,11 @@ const OrganizationTreePage: React.FC = () => {
                   <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>
                       {selectedUnit?.unitName} · 成员列表
-                      <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
+                      <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
                         共 {displayedMembers.length} 人
                       </span>
                       {selectedUnit?.managerUserName && (
-                        <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ marginLeft: 8, fontSize: 13 }}>
+                        <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ marginLeft: 8, fontSize: 14 }}>
                           审批人: {selectedUnit.managerUserName}
                         </Tag>
                       )}
@@ -846,7 +847,7 @@ const OrganizationTreePage: React.FC = () => {
         onOk={handleUserSubmit}
         okText="保存"
         cancelText="取消"
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.7)}
         confirmLoading={userSubmitLoading}
       >
@@ -1002,11 +1003,11 @@ const OrganizationTreePage: React.FC = () => {
           ) : inviteQr.qrBase64 ? (
             <>
               <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px' }} />
-              <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 13 }}>
+              <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 14 }}>
                 员工用微信扫码后，输入系统账号密码即可完成绑定
               </div>
               {inviteQr.expiresAt && (
-                <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 12, marginTop: 8 }}>
+                <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 14, marginTop: 8 }}>
                   有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
                 </div>
               )}

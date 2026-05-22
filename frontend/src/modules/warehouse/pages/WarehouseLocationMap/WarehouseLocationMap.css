@@ -28,12 +28,12 @@
 }
 
 .wlm-sidebar-icon {
-  font-size: 18px;
+  font-size: 14px;
   color: var(--color-primary);
 }
 
 .wlm-sidebar-title {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text-primary);
   flex: 1;
@@ -46,7 +46,7 @@
 }
 
 .wlm-action-icon {
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
@@ -103,7 +103,7 @@
 .wlm-warehouse-meta {
   display: flex;
   gap: 12px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
 }
 
@@ -137,7 +137,7 @@
 }
 
 .wlm-header-subtitle {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
 }
 
@@ -234,7 +234,7 @@
 }
 
 .wlm-location-qty {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
@@ -243,12 +243,12 @@
 }
 
 .wlm-empty-text {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-quaternary);
 }
 
 .wlm-location-capacity {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-quaternary);
 }
 
@@ -256,7 +256,7 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-quaternary);
   cursor: pointer;
   opacity: 0;
@@ -295,7 +295,7 @@
 }
 
 .wlm-detail-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   margin-bottom: 4px;
 }
@@ -319,7 +319,7 @@
   padding: 10px 12px;
   background: var(--color-bg-container);
   border-bottom: 1px solid var(--color-border-light);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -336,7 +336,7 @@
   gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--color-border-light);
-  font-size: 13px;
+  font-size: 14px;
   align-items: center;
   transition: background 0.15s ease;
 }

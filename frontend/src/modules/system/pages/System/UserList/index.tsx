@@ -151,6 +151,7 @@ const UserList: React.FC = () => {
     params.roleId = roleFilter || undefined;
     params.orgUnitId = selectedDeptId || undefined;
     setQueryParams(prev => ({ ...prev, ...params, page: 1 }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedKeyword, employmentFilter, roleFilter, selectedDeptId]);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
@@ -437,11 +438,11 @@ const UserList: React.FC = () => {
             ) : inviteQr.qrBase64 ? (
               <>
                 <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px' }} />
-                <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 13 }}>
+                <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 14 }}>
                   员工用微信扫码后，输入系统账号密码即可完成绑定
                 </div>
                 {inviteQr.expiresAt && (
-                  <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 12, marginTop: 8 }}>
+                  <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 14, marginTop: 8 }}>
                     有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
                   </div>
                 )}

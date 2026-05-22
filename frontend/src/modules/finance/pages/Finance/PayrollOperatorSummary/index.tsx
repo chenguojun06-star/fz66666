@@ -124,12 +124,12 @@ const PayrollOperatorSummary: React.FC = () => {
             render: (_text: string, record: any) => (
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
+                        <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
                         <span>{record.factoryName || '-'}</span>
                     </div>
                     {(record.orgPath || record.parentOrgUnitName) &&
                      (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
-                        <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+                        <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
                             {record.orgPath || record.parentOrgUnitName}
                         </div>
                     ) : null}
@@ -144,7 +144,7 @@ const PayrollOperatorSummary: React.FC = () => {
             render: (status: string) => {
                 const info = statusMap[status] || { text: '未知', color: 'var(--neutral-text-secondary)' };
                 return (
-                    <span style={{ padding: '2px 8px', fontSize: 12, backgroundColor: `${info.color}15`, color: info.color, fontWeight: 500 }}>
+                    <span style={{ padding: '2px 8px', fontSize: 14, backgroundColor: `${info.color}15`, color: info.color, fontWeight: 500 }}>
                         {info.text}
                     </span>
                 );
@@ -283,6 +283,7 @@ const PayrollOperatorSummary: React.FC = () => {
         sortField: summarySortField, sortOrder: summarySortOrder, handleSort: handleSummarySort,
         toNumberOrZero, toMoneyText, summaryRows, totalAmount, handleRejectOperator, handleFinalPush,
         handleRecordPayment, handleAddDeduction,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [summarySortField, summarySortOrder, handleSummarySort, toMoneyText, summaryRows, totalAmount, handleRejectOperator, handleFinalPush, handleRecordPayment, handleAddDeduction]);
 
     const columns = useMemo(() => getDetailColumns({
@@ -290,6 +291,7 @@ const PayrollOperatorSummary: React.FC = () => {
         toNumberOrZero, toMoneyText, auditedDetailKeys,
         isDetailAudited: (record: any) => isDetailAudited(record, auditedDetailKeys),
         handleAuditDetail,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [detailSortField, detailSortOrder, handleDetailSort, toMoneyText, auditedDetailKeys, handleAuditDetail]);
 
     return (
@@ -448,7 +450,7 @@ const PayrollOperatorSummary: React.FC = () => {
             >
                 <Form form={paymentForm} layout="vertical">
                     <Form.Item label="剩余未付金额" style={{ color: 'var(--neutral-text-secondary)' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--color-danger)', fontSize: 16 }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-danger)', fontSize: 13 }}>
                             ¥{toNumberOrZero(activeRecord?.remainingAmount).toFixed(2)}
                         </span>
                     </Form.Item>

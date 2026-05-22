@@ -35,13 +35,13 @@ export function getSettlementColumns(
       render: (_text, record) => (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-            {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+            {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+            {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
             <span>{record.factoryName || '-'}</span>
           </div>
           {(record.orgPath || record.parentOrgUnitName) &&
            (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
-            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
               {record.orgPath || record.parentOrgUnitName}
             </div>
           ) : null}

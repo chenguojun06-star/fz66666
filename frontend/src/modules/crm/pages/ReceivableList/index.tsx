@@ -314,6 +314,7 @@ const ReceivableList: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedKeyword, pagination.pageSize, debouncedSourceBizNo, sourceBizType, statusFilter]);
 
   const fetchStats = useCallback(async () => {
@@ -394,7 +395,7 @@ const ReceivableList: React.FC = () => {
       width: 160,
       render: (v, record) => (
         <Button type="link" style={{ padding: 0 }} onClick={() => openReceivableDetail(record)}>
-          <Text code style={{ fontSize: 12 }}>{v}</Text>
+          <Text code style={{ fontSize: 14 }}>{v}</Text>
         </Button>
       ),
     },

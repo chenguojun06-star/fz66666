@@ -95,13 +95,23 @@ public class SecurityConfig implements WebMvcConfigurer {
                 )
                 .authorizeHttpRequests(authz -> SecurityConfigHelper.configure(authz));
 
-        // 未认证请求（token 缺失 / 过期）统一返回 401 JSON，前端拦截器据此跳转登录页
-        // 有 token 但权限不足（403 Forbidden / AccessDeniedException）不在此处处理，保持默认 403
-        http.exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
-            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            res.setContentType("application/json;charset=UTF-8");
-            res.getWriter().write("{\"code\":401,\"message\":\"token已过期，请重新登录\"}");
-        }));
+        http.exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, e) -> {
+                    if (res.isCommitted()) {
+                        return;
+                    }
+                    res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"code\":401,\"message\":\"token已过期，请重新登录\"}");
+                })
+                .accessDeniedHandler((req, res, e) -> {
+                    if (res.isCommitted()) {
+                        return;
+                    }
+                    res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"code\":403,\"message\":\"权限不足，无法访问该资源\"}");
+                }));
 
         http.addFilterBefore(new TokenAuthFilter(authTokenService, permissionEngine, stringRedisTemplate), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new RequestIdFilter(), TokenAuthFilter.class);
@@ -241,7 +251,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             if (host != null && host.contains("tcloudbase.com")) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"code\": 403, \"msg\": \"Forbidden: Please use official domain\"}");
+                response.getWriter().write("{\"code\": 403, \"message\": \"Forbidden: Please use official domain\"}");
                 return false;
             }
             return true;

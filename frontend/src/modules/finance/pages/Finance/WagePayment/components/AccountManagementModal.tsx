@@ -77,7 +77,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
           }
         >
           <Space>
-            <span style={{ fontSize: 20 }}>{accountTypeIconMap[acc.accountType]}</span>
+            <span style={{ fontSize: 15 }}>{accountTypeIconMap[acc.accountType]}</span>
             <div>
               <div style={{ fontWeight: 500 }}>
                 {ACCOUNT_TYPE_OPTIONS.find(o => o.value === acc.accountType)?.label}

@@ -6,7 +6,6 @@ import StandardSearchBar, {
   type StandardSearchOption,
 } from '../StandardSearchBar';
 import ResizableTable from '../ResizableTable';
-import StandardPagination from '../StandardPagination';
 import type { ColumnsType } from 'antd/es/table';
 import type { TablePaginationConfig } from 'antd';
 import './StandardDataPage.css';

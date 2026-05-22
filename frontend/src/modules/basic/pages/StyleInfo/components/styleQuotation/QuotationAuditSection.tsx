@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Tag, Input, Space, Button, Popconfirm, Descriptions } from 'antd';
+import { Tag, Input, Space, Button, Popconfirm, Descriptions } from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -36,15 +36,18 @@ const QuotationAuditSection: React.FC<Props> = ({
   };
 
   return (
-    <Card
-      title={<span style={{ fontSize: '15px', fontWeight: 600 }}>报价审核</span>}
-      extra={statusTag()}
-     
-      style={{ marginTop: 4 }}
-      styles={{ body: { padding: '16px' } }}
-    >
+    <div style={{ marginBottom: 16 }}>
+      <div style={{
+        fontSize: 15, fontWeight: 600, padding: '8px 0 6px',
+        borderBottom: '1px solid var(--color-border-light, #f0f0f0)', marginBottom: 12, color: 'var(--color-text-primary, #1a1a1a)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <span>报价审核</span>
+        {statusTag()}
+      </div>
+
       {auditStatus === 0 ? (
-        <Space orientation="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%', marginTop: 8 }}>
           <Input.TextArea
             id="auditRemark"
             value={auditRemark}
@@ -78,7 +81,7 @@ const QuotationAuditSection: React.FC<Props> = ({
           </Space>
         </Space>
       ) : (
-        <Descriptions bordered column={2}>
+        <Descriptions bordered column={2} style={{ marginTop: 8 }}>
           <Descriptions.Item label="审核结论">{statusTag()}</Descriptions.Item>
           <Descriptions.Item label="审核人">{quotation?.auditorName || '-'}</Descriptions.Item>
           <Descriptions.Item label="审核时间">{quotation?.auditTime || '-'}</Descriptions.Item>
@@ -87,7 +90,7 @@ const QuotationAuditSection: React.FC<Props> = ({
           </Descriptions.Item>
         </Descriptions>
       )}
-    </Card>
+    </div>
   );
 };
 

@@ -377,10 +377,10 @@ const Login: React.FC = () => {
           <div className="login-form-card">
             <div className="login-header">
               <Title level={2} className="login-title">
-                衣智链
+                云裳智链
               </Title>
               <div className="login-subtitle">
-                衣智链｜多端协同智能提醒平台
+                云裳智链｜多端协同智能提醒平台
               </div>
             </div>
             <Form
@@ -533,7 +533,7 @@ const Login: React.FC = () => {
               </Form.Item>
             </Form>
             <div className="login-footer">© {year} {t('login.brand', language)}</div>
-            <div className="login-footer" style={{ marginTop: 2, fontSize: 13 }}>
+            <div className="login-footer" style={{ marginTop: 2, fontSize: 14 }}>
               部署版本：{buildCommit} · 构建时间：{buildTimeText}
             </div>
             <div className="login-footer login-filing">

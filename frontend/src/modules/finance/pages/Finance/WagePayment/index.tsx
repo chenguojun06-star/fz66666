@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
 import AccountManagementModal from './components/AccountManagementModal';
@@ -23,7 +23,6 @@ import {
   CheckCircleOutlined,
   DollarOutlined,
   SearchOutlined,
-  UploadOutlined,
   PayCircleOutlined,
   AccountBookOutlined,
   DownloadOutlined,
@@ -84,6 +83,11 @@ const PaymentCenterPage: React.FC = () => {
 
   const { detailOpen, setDetailOpen, detailRecord, setDetailRecord } = useWagePayment();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleOpenPayModal = useCallback(() => pay.openPayModal(), [pay.openPayModal]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleClearSelectedPayableKeys = useCallback(() => data.setSelectedPayableKeys([]), [data.setSelectedPayableKeys]);
+
   const [amountDetailOpen, setAmountDetailOpen] = React.useState(false);
   const [amountDetailTarget, setAmountDetailTarget] = React.useState<any>(null);
 
@@ -129,11 +133,11 @@ const PaymentCenterPage: React.FC = () => {
                 <PayCircleOutlined style={{ marginRight: 8 }} />
                 收付款中心
               </h2>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
                 集中管理账单汇总、待收付款、员工工资、工厂对账的收付款操作
               </span>
             </div>
-            <Button type="primary" icon={<DollarOutlined />} onClick={() => pay.openPayModal()}>
+            <Button type="primary" icon={<DollarOutlined />} onClick={handleOpenPayModal}>
               手动发起支付
             </Button>
           </div>
@@ -175,20 +179,20 @@ const PaymentCenterPage: React.FC = () => {
                       border: '1px solid var(--color-border-light)'
                     }}>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>待收付款总额</div>
-                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#cf1322' }}>¥ {Number(data.pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>待收付款总额</div>
+                        <div style={{ fontSize: 16, fontWeight: 'bold', color: '#cf1322' }}>¥ {Number(data.pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>工厂对账</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.reconCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>工厂对账</div>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.reconCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>费用报销</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.reimbCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>费用报销</div>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.reimbCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>员工工资</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.payrollCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>员工工资</div>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.payrollCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
                       </div>
                     </div>
 
@@ -256,9 +260,9 @@ const PaymentCenterPage: React.FC = () => {
                             >
                               批量付款
                             </Button>
-                            <Button onClick={() => data.setSelectedPayableKeys([])}>
-                              清空选择
-                            </Button>
+                            <Button onClick={handleClearSelectedPayableKeys}>
+              清空选择
+            </Button>
                           </>
                         )}
                       </Space>
@@ -308,20 +312,20 @@ const PaymentCenterPage: React.FC = () => {
                       border: '1px solid var(--color-border-light)'
                     }}>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>支付总额</div>
-                        <div style={{ fontSize: 24, fontWeight: 'bold', color: 'var(--color-text-primary)' }}>¥ {Number(data.paymentStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>支付总额</div>
+                        <div style={{ fontSize: 16, fontWeight: 'bold', color: 'var(--color-text-primary)' }}>¥ {Number(data.paymentStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>已付金额</div>
-                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#389e0d' }}>¥ {Number(data.paymentStats.successAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>已付金额</div>
+                        <div style={{ fontSize: 16, fontWeight: 'bold', color: '#389e0d' }}>¥ {Number(data.paymentStats.successAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>总笔数</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.paymentStats.total || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>总笔数</div>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.paymentStats.total || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 4 }}>成功</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: '#389e0d' }}>{data.paymentStats.successCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>成功</div>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: '#389e0d' }}>{data.paymentStats.successCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
                       </div>
                     </div>
 
@@ -475,7 +479,7 @@ const PaymentCenterPage: React.FC = () => {
                         {pay.payeeOptions.map(p => (
                           <Select.Option key={p.id} value={p.id}>
                             <span>{p.name}</span>
-                            <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8, fontSize: 12 }}>[{p.label}]{p.phone ? ` ${p.phone}` : ''}</span>
+                            <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8, fontSize: 14 }}>[{p.label}]{p.phone ? ` ${p.phone}` : ''}</span>
                           </Select.Option>
                         ))}
                       </Select>
@@ -514,7 +518,7 @@ const PaymentCenterPage: React.FC = () => {
                         transition: 'all 0.2s',
                       }}
                     >
-                      <div style={{ fontSize: 24, marginBottom: 4 }}>{methodIconMap[opt.value]}</div>
+                      <div style={{ fontSize: 16, marginBottom: 4 }}>{methodIconMap[opt.value]}</div>
                       <div style={{ fontWeight: 500 }}>{opt.label}</div>
                     </div>
                   ))}
@@ -726,7 +730,7 @@ const PaymentCenterPage: React.FC = () => {
         open={amountDetailOpen}
         onCancel={() => { setAmountDetailOpen(false); setAmountDetailTarget(null); }}
         footer={null}
-        width={600}
+        width="40vw"
       >
         {amountDetailTarget && (
           <Descriptions column={2} bordered>

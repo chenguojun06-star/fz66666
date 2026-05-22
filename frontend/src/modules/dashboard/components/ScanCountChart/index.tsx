@@ -100,7 +100,7 @@ const ScanCountChart: React.FC = () => {
       data: ['扫菲次数', '扫菲数量'],
       top: 5,
       textStyle: {
-        fontSize: 13,
+        fontSize: 14,
         color: '#666',
       },
     },
@@ -122,7 +122,7 @@ const ScanCountChart: React.FC = () => {
       },
       axisLabel: {
         color: '#999',
-        fontSize: 12,
+        fontSize: 14,
       },
     },
     yAxis: {
@@ -135,7 +135,7 @@ const ScanCountChart: React.FC = () => {
       },
       axisLabel: {
         color: '#999',
-        fontSize: 12,
+        fontSize: 14,
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {

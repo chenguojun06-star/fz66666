@@ -82,8 +82,8 @@ export function getMainColumns(handlers: {
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, lineHeight: 1.5, textAlign: 'left' }}>
           <StyleNoForecastHover styleNo={record.styleNo} />
-          <div style={{ fontSize: 13, color: 'var(--neutral-text)', fontWeight: 500 }}>{record.styleName || '-'}</div>
-          <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+          <div style={{ fontSize: 14, color: 'var(--neutral-text)', fontWeight: 500 }}>{record.styleName || '-'}</div>
+          <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>
             工厂: {record.factoryName || '-'}
           </div>
         </div>
@@ -158,7 +158,7 @@ export function getMainColumns(handlers: {
       title: '入库',
       width: 190,
       render: (_, record) => (
-        <div style={{ fontSize: 13, lineHeight: 2, color: 'var(--neutral-text)' }}>
+        <div style={{ fontSize: 14, lineHeight: 2, color: 'var(--neutral-text)' }}>
           <div>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</div>
           <div>数量: <strong style={{ color: 'var(--color-success)' }}>{record.lastInboundQty ?? '-'}</strong> 件</div>
           <div>操作人: <strong>{record.lastInboundBy || '-'}</strong></div>
@@ -170,7 +170,7 @@ export function getMainColumns(handlers: {
       title: '出库',
       width: 190,
       render: (_, record) => (
-        <div style={{ fontSize: 13, lineHeight: 2, color: 'var(--neutral-text)' }}>
+        <div style={{ fontSize: 14, lineHeight: 2, color: 'var(--neutral-text)' }}>
           <div>{record.lastOutboundDate ? String(record.lastOutboundDate).slice(0, 16).replace('T', ' ') : '-'}</div>
           <div>单号: <strong style={{ color: 'var(--primary-color)' }}>{record.lastOutstockNo || '-'}</strong></div>
           <div>出库人: <strong>{record.lastOutboundBy || '-'}</strong></div>
@@ -231,7 +231,7 @@ function StyleNoForecastHover({ styleNo }: { styleNo: string }) {
         loading ? (
           '加载中...'
         ) : forecast ? (
-          <div style={{ fontSize: 12, lineHeight: 1.8, minWidth: 160 }}>
+          <div style={{ fontSize: 14, lineHeight: 1.8, minWidth: 160 }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>销量预测（{forecast.horizonMonths}个月）</div>
             <div>预测: <b>{forecast.predictedQty}</b> 件</div>
             <div>乐观: {forecast.optimistic} / 悲观: {forecast.pessimistic}</div>

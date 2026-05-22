@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Button, Input, Typography, Spin } from 'antd';
+import { Button, Input, Typography, Spin } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 
 interface ShareLinkModalProps {
   open: boolean;
@@ -10,11 +11,11 @@ interface ShareLinkModalProps {
 }
 
 const ShareLinkModal: React.FC<ShareLinkModalProps> = ({ open, onClose, shareUrl, shareLoading, onCopy }) => (
-  <Modal
+  <ResizableModal
     title="客户出货追踪链接"
     open={open}
     onCancel={onClose}
-    width={480}
+    width="30vw"
     footer={[
       <Button key="copy" type="primary" disabled={!shareUrl} onClick={onCopy}>复制链接</Button>,
       <Button key="close" onClick={onClose}>关闭</Button>,
@@ -32,7 +33,7 @@ const ShareLinkModal: React.FC<ShareLinkModalProps> = ({ open, onClose, shareUrl
         <Input.TextArea id="shareUrl" value={shareUrl} readOnly autoSize={{ minRows: 2, maxRows: 4 }} />
       </>
     )}
-  </Modal>
+  </ResizableModal>
 );
 
 export default ShareLinkModal;

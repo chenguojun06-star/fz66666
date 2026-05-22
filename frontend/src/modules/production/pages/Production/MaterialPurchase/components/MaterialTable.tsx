@@ -167,10 +167,10 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         if (!name) return '-';
         return (
           <Space size={4}>
-            {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-            {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-            <span style={{ fontSize: 12 }}>{name}</span>
-            {bizType && <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>}
+            {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
+            {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+            <span style={{ fontSize: 14 }}>{name}</span>
+            {bizType && <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>}
           </Space>
         );
       },
@@ -389,9 +389,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         }
         const daysLeft = Math.ceil((new Date(v).getTime() - Date.now()) / 86400000);
         const riskTag = isNaN(daysLeft) ? null
-          : daysLeft < 0 ? <Tag color="red" style={{ fontSize: 12, marginLeft: 4, lineHeight: '16px' }}>已延误{Math.abs(daysLeft)}天</Tag>
-          : daysLeft <= 3 ? <Tag color="orange" style={{ fontSize: 12, marginLeft: 4, lineHeight: '16px' }}>仅剩{daysLeft}天</Tag>
-          : daysLeft <= 7 ? <Tag color="gold" style={{ fontSize: 12, marginLeft: 4, lineHeight: '16px' }}>需关注</Tag>
+          : daysLeft < 0 ? <Tag color="red" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>已延误{Math.abs(daysLeft)}天</Tag>
+          : daysLeft <= 3 ? <Tag color="orange" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>仅剩{daysLeft}天</Tag>
+          : daysLeft <= 7 ? <Tag color="gold" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>需关注</Tag>
           : null;
         return <span>{dateStr}{riskTag}</span>;
       },
@@ -511,7 +511,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       description={cancelTarget ? (
         <div>
           <p style={{ marginBottom: 8 }}>确定撤回「{cancelTarget.materialName || cancelTarget.materialCode}」的采购记录？</p>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 4 }}>领取人：{cancelTarget.receiverName || '-'}，到货数量：{formatMaterialQuantityWithUnit(cancelTarget.arrivedQuantity || 0, cancelTarget.unit)}</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 4 }}>领取人：{cancelTarget.receiverName || '-'}，到货数量：{formatMaterialQuantityWithUnit(cancelTarget.arrivedQuantity || 0, cancelTarget.unit)}</p>
         </div>
       ) : null}
       fieldLabel="撤回原因"
@@ -544,7 +544,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         } catch { message.error('入库失败'); }
         finally { setArrivalLoading(false); }
       }}>
-        <p style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 12 }}>
+        <p style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 14 }}>
           采购 {arrivalTarget?.purchaseQuantity || '-'}{arrivalTarget?.unit ? ' ' + arrivalTarget.unit : ''}，已到 {arrivalTarget?.arrivedQuantity || 0}，待到 {arrivalTarget ? Math.max(0.01, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 0}
         </p>
         <Form.Item name="arrivedQuantity" label="到货数量" rules={[{ required: true, message: '请输入到货数量' }]}>

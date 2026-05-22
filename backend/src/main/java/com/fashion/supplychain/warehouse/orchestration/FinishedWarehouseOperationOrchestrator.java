@@ -39,6 +39,7 @@ public class FinishedWarehouseOperationOrchestrator {
     private final StyleInfoService styleInfoService;
     private final WarehouseAreaService warehouseAreaService;
     private final StockChangeLogService stockChangeLogService;
+    private final WarehouseLocationOrchestrator warehouseLocationOrchestrator;
     private final ObjectMapper objectMapper;
 
     private static final Set<String> VALID_SOURCE_TYPES = Set.of(
@@ -159,6 +160,8 @@ public class FinishedWarehouseOperationOrchestrator {
 
         logStockChange("INBOUND", sku, beforeQty, quantity, afterQty, w.getWarehousingNo(),
                 sourceType, effectivePrice, totalAmount, traceId, userId, username, tenantId);
+
+        warehouseLocationOrchestrator.incrementUsedCapacity(warehouseLocation, "FINISHED", 1);
 
         log.info("[成品入库] skuCode={} +{} 来源={} 金额={} traceId={}", skuCode, quantity, sourceType, totalAmount, traceId);
         return w;
@@ -587,6 +590,8 @@ public class FinishedWarehouseOperationOrchestrator {
         logStockChange("OUTSTOCK", sku, beforeQty, -quantity, afterQty, o.getOutstockNo(),
                 outstockType, sku.getSalesPrice(), o.getTotalAmount(), traceId,
                 UserContext.userId(), UserContext.username(), tenantId);
+
+        warehouseLocationOrchestrator.incrementUsedCapacity(warehouseLocation, "FINISHED", -1);
 
         log.info("[成品出库] skuCode={} -{} 类型={} traceId={}", skuCode, quantity, outstockType, traceId);
         return o;

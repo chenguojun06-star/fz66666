@@ -56,13 +56,13 @@ export const ClarificationCard: React.FC<{ missingInfo?: string[]; onAsk?: (ques
           <button
             key={idx}
             className={sharedStyles.actionBtn}
-            style={{ fontSize: 12, padding: '2px 10px' }}
+            style={{ fontSize: 14, padding: '2px 10px' }}
             onClick={() => onAsk?.(info)}
           >{info}</button>
         ))}
       </div>
     ) : (
-      <div style={{ marginTop: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+      <div style={{ marginTop: 6, fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
         请提供：订单号 / 款号 / 工厂名 / 时间范围 等
       </div>
     )}

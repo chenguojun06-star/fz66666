@@ -81,9 +81,7 @@ export default defineConfig({
     // 注意：不要设置 host 字段，否则 Vite 会把 WebSocket 地址硬编码为固定 IP，
     // 导致内网 IP 访问时动态模块 import() 收到 text/html 而非 JS 文件
     hmr: {
-      protocol: 'ws',
       port: 5173,
-      clientPort: 5173
     },
 
     proxy: {

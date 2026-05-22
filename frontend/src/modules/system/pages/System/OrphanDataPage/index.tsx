@@ -113,7 +113,7 @@ const OrphanDataPage: React.FC = () => {
       }
     },
     { title: '孤立原因', dataIndex: 'orphanReason', key: 'orphanReason', width: 120,
-      render: (v: string) => <span style={{ color: '#fa8c16', fontSize: 12 }}>{v}</span> },
+      render: (v: string) => <span style={{ color: '#fa8c16', fontSize: 14 }}>{v}</span> },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160,
       render: (v: string) => v ? new Date(v).toLocaleString('zh-CN') : '-' },
   ];

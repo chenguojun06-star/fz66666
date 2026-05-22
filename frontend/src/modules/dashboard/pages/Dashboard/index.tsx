@@ -53,6 +53,7 @@ const Dashboard: React.FC = () => {
 
   // 使用自定义 Hook 获取数据
   const {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     stats,
     recentActivities,
     hasError,
@@ -265,7 +266,7 @@ const Dashboard: React.FC = () => {
                 optionRender={(opt: any) => (
                   <div>
                     <div style={{ fontWeight: 500 }}>{opt.label}</div>
-                    <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>{opt.desc}</div>
+                    <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>{opt.desc}</div>
                   </div>
                 )}
               />

@@ -82,12 +82,12 @@ const IntegrationOverviewTab: React.FC = () => {
                     {mod.connected ? ' 已对接' : '未对接'}
                   </Tag>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
                   <div>活跃应用: <strong>{mod.activeApps}</strong> 个</div>
                   <div>累计调用: <strong>{(mod.totalCalls || 0).toLocaleString()}</strong> 次</div>
                   {mod.lastCallTime && <div>最后调用: {mod.lastCallTime}</div>}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 12, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 12, lineHeight: 1.6 }}>
                   {getFlowDescription(mod.appType)}
                 </div>
                 <Button
@@ -95,7 +95,7 @@ const IntegrationOverviewTab: React.FC = () => {
                  
                   icon={<EyeOutlined />}
                   onClick={() => navigate(mod.viewPath)}
-                  style={{ padding: 0, fontSize: 12 }}
+                  style={{ padding: 0, fontSize: 14 }}
                 >
                   查看数据：{mod.viewPage}
                 </Button>
@@ -116,14 +116,14 @@ const IntegrationOverviewTab: React.FC = () => {
                     {cfg.icon} {mod.appTypeName}
                   </div>
                   {endpoints.map((ep, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: 8, padding: '2px 0', fontSize: 12 }}>
+                    <div key={idx} style={{ display: 'flex', gap: 8, padding: '2px 0', fontSize: 14 }}>
                       {ep.method !== '-' ? (
-                        <Tag color="blue" style={{ fontSize: 13, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag>
+                        <Tag color="blue" style={{ fontSize: 14, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag>
                       ) : (
-                        <Tag color="green" style={{ fontSize: 13, minWidth: 44, textAlign: 'center' }}>PUSH</Tag>
+                        <Tag color="green" style={{ fontSize: 14, minWidth: 44, textAlign: 'center' }}>PUSH</Tag>
                       )}
-                      <Text code style={{ fontSize: 13 }}>{ep.path}</Text>
-                      <Text type="secondary" style={{ fontSize: 13 }}>{ep.desc}</Text>
+                      <Text code style={{ fontSize: 14 }}>{ep.path}</Text>
+                      <Text type="secondary" style={{ fontSize: 14 }}>{ep.desc}</Text>
                     </div>
                   ))}
                 </div>
@@ -136,7 +136,7 @@ const IntegrationOverviewTab: React.FC = () => {
            
             title=" 最近 API 调用"
             style={{ minHeight: 360 }}
-            extra={<Text type="secondary" style={{ fontSize: 12 }}>最新10条</Text>}
+            extra={<Text type="secondary" style={{ fontSize: 14 }}>最新10条</Text>}
           >
             {allLogs.length === 0 ? (
               <Empty description="暂无调用记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -146,18 +146,18 @@ const IntegrationOverviewTab: React.FC = () => {
                   key: idx,
                   color: log.result === 'SUCCESS' ? 'green' : 'red',
                   children: (
-                    <div style={{ fontSize: 12 }}>
+                    <div style={{ fontSize: 14 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <Tag color={log.direction === 'INBOUND' ? 'blue' : 'green'} style={{ fontSize: 12 }}>
+                        <Tag color={log.direction === 'INBOUND' ? 'blue' : 'green'} style={{ fontSize: 14 }}>
                           {log.direction === 'INBOUND' ? '入站' : '出站'}
                         </Tag>
-                        <Tag style={{ fontSize: 12 }}>{log.httpMethod}</Tag>
-                        <Text code style={{ fontSize: 12 }}>{log.requestPath}</Text>
-                        <Tag color={log.result === 'SUCCESS' ? 'green' : 'red'} style={{ fontSize: 12 }}>
+                        <Tag style={{ fontSize: 14 }}>{log.httpMethod}</Tag>
+                        <Text code style={{ fontSize: 14 }}>{log.requestPath}</Text>
+                        <Tag color={log.result === 'SUCCESS' ? 'green' : 'red'} style={{ fontSize: 14 }}>
                           {log.responseCode} {log.costMs}ms
                         </Tag>
                       </div>
-                      <Text type="secondary" style={{ fontSize: 13 }}>{log.createTime}</Text>
+                      <Text type="secondary" style={{ fontSize: 14 }}>{log.createTime}</Text>
                     </div>
                   ),
                 }))}

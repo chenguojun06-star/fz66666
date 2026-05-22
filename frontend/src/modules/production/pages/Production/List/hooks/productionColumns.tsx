@@ -35,7 +35,6 @@ export interface UseProductionColumnsProps {
   handleSort: (field: string, order: 'asc' | 'desc') => void;
   handleCloseOrder: (record: ProductionOrder) => void;
   handleScrapOrder: (record: ProductionOrder) => void;
-  handleTransferOrder: (record: ProductionOrder) => void;
   handleCopyOrder?: (record: ProductionOrder) => void;
   navigate: NavigateFunction;
   openProcessDetail: (record: ProductionOrder, type: string) => void;
@@ -61,7 +60,7 @@ export interface UseProductionColumnsProps {
 
 export function useProductionColumns({
   sortField, sortOrder, handleSort,
-  handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder,
+  handleCloseOrder, handleScrapOrder, handleCopyOrder,
   navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
@@ -122,18 +121,18 @@ export function useProductionColumns({
             </a>
             </Popover>
             {(record as any).urgencyLevel === 'urgent' && (
-              <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
+              <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'FIRST' && (
-              <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
+              <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
-              <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
+              <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
             )}
             {(record as any).orderBizType && (() => {
               const bizType = String((record as any).orderBizType);
               const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
-              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 3px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>;
+              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>;
             })()}
           </div>
         );
@@ -206,7 +205,7 @@ export function useProductionColumns({
               onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
             />
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
             )}
           </Space>
         );
@@ -304,7 +303,7 @@ export function useProductionColumns({
               style={{ cursor: 'default', padding: '4px', opacity: 0.8 }}
               onClick={(e) => { e.stopPropagation(); }}
             >
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
                 无采购
               </div>
               <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
@@ -447,7 +446,7 @@ export function useProductionColumns({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Tag color={color} style={{ margin: 0 }}>{text}</Tag>
-              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{progress}%</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{progress}%</span>
             </div>
             {renderStagnantBadge(stagnantDays)}
           </div>
@@ -465,13 +464,13 @@ export function useProductionColumns({
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 12 }}>{dateStr}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color }}>{text}</span>
-            {record.isQuickResponse && <Tag color="volcano" style={{ fontSize: 12, lineHeight: '16px', padding: '0 4px', margin: 0 }}>快反</Tag>}
+            <span style={{ fontSize: 11 }}>{dateStr}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
+            {record.isQuickResponse && <Tag color="volcano" style={{ fontSize: 11, lineHeight: '16px', padding: '0 4px', margin: 0 }}>快反</Tag>}
             {renderSlaStatus(record)}
             {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
               <span style={{
-                fontSize: 12, fontWeight: 500,
+                fontSize: 11, fontWeight: 500,
                 color: 'var(--color-text-secondary)',
               }}>
                 AI {dayjs(aiRisk.predictedEndDate).format('M/D')}
@@ -544,7 +543,6 @@ export function useProductionColumns({
                 onQuickEdit: (r) => quickEditModal.open(r),
                 handleCloseOrder,
                 handleScrapOrder,
-                handleTransferOrder,
                 handleCopyOrder,
                 handleShareOrder,
                 onOpenRemark,

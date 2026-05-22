@@ -7,29 +7,37 @@
   height: 100%;
 }
 
-/* ── 行高压低 ── */
+/* ── 行高锁定 + body 上下滑动 ── */
 .ef-compact .style-smart-row {
-  padding: 10px 14px;
-  gap: 14px;
-  grid-template-columns: 130px minmax(0, 1fr) auto;
+  padding: 8px;
+  gap: 10px;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
   border-radius: 6px;
-  overflow: visible;
+  overflow: hidden;
+  max-height: 200px;
+}
+
+.ef-compact .style-smart-row__body {
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .ef-compact .style-smart-row__cover {
   min-height: unset;
+  max-height: 200px;
   height: auto;
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
+  overflow: hidden;
 }
 
 .ef-compact .style-smart-row__thumb {
-  width: 130px;
+  width: 100px;
   height: auto;
-  min-height: 70px;
-  max-height: 120px;
+  min-height: 50px;
+  max-height: 80px;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -40,7 +48,7 @@
 .ef-compact .style-smart-row__thumb img {
   width: 100%;
   height: auto;
-  max-height: 120px;
+  max-height: 80px;
   object-fit: contain;
   border-radius: 4px;
 }
@@ -48,7 +56,7 @@
 .ef-thumb-empty {
   background: #f5f5f5;
   color: #aaa;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* ── 图片下方区域：标签 + 日期 ── */
@@ -69,7 +77,7 @@
 
 .ef-delivery-badge {
   display: inline-block;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1;
   padding: 2px 5px;
   border-radius: 4px;
@@ -88,37 +96,48 @@
   align-items: center;
 }
 
-/* ── 身份信息区 ── */
+/* ── 身份信息区：紧凑内联 ── */
+.ef-compact .style-smart-row__identity {
+  gap: 3px;
+}
+
 .ef-info-fields {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 6px 12px;
 }
 
 .ef-field-row {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  gap: 5px;
-  line-height: 1.08;
+  gap: 3px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .ef-field-label {
   color: var(--color-text-tertiary);
   flex-shrink: 0;
-  min-width: 28px;
-  text-align-last: justify;
-  font-size: 12px;
-  line-height: 1.08;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .ef-field-value {
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  line-height: 1.08;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 140px;
+}
+
+.ef-field-row .ant-tag {
+  margin-inline-end: 0;
+  font-size: 11px;
+  line-height: 14px;
+  padding: 0 4px;
 }
 
 .ef-order-no {
@@ -144,7 +163,7 @@
   display: inline-block;
   min-width: 36px;
   text-align: center;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.5;
   color: #333;
   font-weight: 500;
@@ -164,38 +183,39 @@
 
 /* ── 时间轴：线条只在节点球之间 ── */
 .ef-compact .style-smart-row__timeline-shell {
-  padding: 0 0 40px;
-  overflow: visible;
+  padding: 0 0 30px;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .ef-compact .style-smart-stage {
-  padding-top: 60px;
+  padding-top: 45px;
 }
 
 .ef-compact .style-smart-row__timeline-track,
 .ef-compact .style-smart-row__timeline-progress {
-  top: 82px;
+  top: 72px;
   left: calc(100% / var(--ef-stage-count) / 2);
   right: calc(100% / var(--ef-stage-count) / 2);
   width: auto;
 }
 
 .ef-compact .style-smart-stage__time {
-  font-size: 12px;
-  min-height: 16px;
+  font-size: 11px;
+  min-height: 11px;
   color: #10b981;
   font-weight: 600;
 }
 
 .ef-compact .style-smart-stage__time-start {
-  font-size: 12px;
-  min-height: 16px;
+  font-size: 11px;
+  min-height: 11px;
   color: #6b7280;
 }
 
 .ef-compact .style-smart-stage__time-combined {
-  font-size: 12px;
-  min-height: 18px;
+  font-size: 11px;
+  min-height: 11px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -203,12 +223,12 @@
 }
 
 .ef-compact .style-smart-stage__node {
-  width: 44px;
-  height: 44px;
+  width: 54px;
+  height: 54px;
 }
 
 .ef-compact .style-smart-stage__label {
-  font-size: 13px;
+  font-size: 11px;
 }
 
 /* ─── 操作按钮区：悬停卡片时才显示 ─── */
@@ -231,20 +251,21 @@
   align-items: flex-end;
   justify-content: space-between;
   align-self: stretch;
-  min-width: 80px;
+  min-width: 70px;
+  gap: 4px;
 }
 
 /* 进度 — 右下角，百分比+进度条一行 */
 .ef-compact .style-smart-row__overview {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   justify-content: flex-end;
 }
 
 .ef-compact .style-smart-row__overview-value {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #555;
   white-space: nowrap;
@@ -252,8 +273,8 @@
 }
 
 .ef-compact .style-smart-row__overview .ant-progress {
-  flex: 0 0 60px;
-  width: 60px;
+  flex: 0 0 50px;
+  width: 50px;
 }
 
 /* ── 外发工厂 Tabs flex 布局：让 Virtuoso 自适应填充可用高度 ── */

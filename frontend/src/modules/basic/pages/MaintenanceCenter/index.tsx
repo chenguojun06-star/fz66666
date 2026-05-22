@@ -356,7 +356,7 @@ const MaintenanceCenter: React.FC = () => {
         title={panelType ? `${panelTitleMap[panelType]} — ${activeStyleNo}` : ''}
         open={!!panelType}
         onCancel={handlePanelClose}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={null}
         destroyOnHidden

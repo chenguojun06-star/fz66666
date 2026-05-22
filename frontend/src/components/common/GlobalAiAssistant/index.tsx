@@ -21,7 +21,7 @@ import cloudStyles from './CloudTrigger.module.css';
 import emojiStyles from './EmojiPicker.module.css';
 import msgStyles from './MessageBubble.module.css';
 import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
-import { INITIAL_MSG, EMOJI_GROUPS, getPageSuggestions } from './constants';
+import { EMOJI_GROUPS, getPageSuggestions } from './constants';
 import { useAiChat } from './useAiChat';
 import { stopAllSpeech } from './speechUtils';
 import { useDragSnap } from './useDragSnap';
@@ -136,7 +136,7 @@ const GlobalAiAssistant: React.FC = () => {
     clearChat,
   } = useAiChat(message);
 
-  const { mood: _mood, hasFetchedMood, setHasFetchedMood } = useMoodGreeting(user, setMessages);
+  const { mood: _mood, hasFetchedMood: _hasFetchedMood, setHasFetchedMood } = useMoodGreeting(user, setMessages);
   const { showEmojiPicker, setShowEmojiPicker, emojiTab, setEmojiTab, emojiPanelRef, handleEmojiSelect } = useEmojiPicker(setInputValue, inputRef as React.RefObject<HTMLInputElement>);
 
   const { subscribe } = useWebSocket({
@@ -435,7 +435,7 @@ const GlobalAiAssistant: React.FC = () => {
             </div>
             <div className={styles.headerText}>
               <div className={styles.headerTitle}>小云 智慧大脑</div>
-              <div className={styles.headerSubtitle}>衣智链 · AI协同工作中枢</div>
+              <div className={styles.headerSubtitle}>云裳智链 · AI协同工作中枢</div>
             </div>
             <div className={styles.headerActions}>
               <span className={styles.headerActionBtn} onClick={cycleSize} title={`当前${size === 'small' ? '小框' : size === 'medium' ? '中框' : '大框'}，点击切换`}>

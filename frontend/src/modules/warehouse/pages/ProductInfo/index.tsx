@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Form, Input, Select, InputNumber, Row, Col, App, Drawer, Descriptions, Divider, Space, Popconfirm, Table } from 'antd';
 import { PlusOutlined, LoginOutlined, PrinterOutlined, EditOutlined, SwapOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -13,7 +13,6 @@ import { useViewport } from '@/utils/useViewport';
 import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
 import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { StyleInfo } from '@/types/style';
 import { useProductList } from './hooks/useProductList';
 
@@ -53,7 +52,25 @@ const ProductInfoPage: React.FC = () => {
   const [drawerRecord, setDrawerRecord] = useState<StyleInfo | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [skuList, setSkuList] = useState<SkuRow[]>([]);
-  const [skuLoading, setSkuLoading] = useState(false);
+  const [skuLoading, _setSkuLoading] = useState(false);
+
+  const [localKeyword, setLocalKeyword] = useState(queryParams.keyword || '');
+  const keywordDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => {
+      if (keywordDebounceRef.current) clearTimeout(keywordDebounceRef.current);
+    };
+  }, []);
+
+  const handleKeywordChange = useCallback((v: string) => {
+    setLocalKeyword(v);
+    if (keywordDebounceRef.current) clearTimeout(keywordDebounceRef.current);
+    keywordDebounceRef.current = setTimeout(() => {
+      setQueryParams((p) => ({ ...p, keyword: v }));
+      if (!v) setQueryParams((p) => ({ ...p, page: 1 }));
+    }, 300);
+  }, [setQueryParams]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
@@ -291,12 +308,8 @@ const ProductInfoPage: React.FC = () => {
               placeholder="搜索款号/款名/SKC"
               allowClear
               style={{ width: 240 }}
-              value={queryParams.keyword}
-              onChange={(e) => {
-                const v = e.target.value;
-                setQueryParams((p) => ({ ...p, keyword: v }));
-                if (!v) setQueryParams((p) => ({ ...p, page: 1 }));
-              }}
+              value={localKeyword}
+              onChange={(e) => handleKeywordChange(e.target.value)}
               onPressEnter={() => setQueryParams((p) => ({ ...p, page: 1 }))}
             />
             <Button
@@ -353,7 +366,7 @@ const ProductInfoPage: React.FC = () => {
         title={d ? `${d.styleNo} — ${d.styleName}` : '成品详情'}
         open={drawerOpen}
         onClose={() => { setDrawerOpen(false); setDrawerRecord(null); setSkuList([]); }}
-        width={860}
+        width="85vw"
         loading={drawerLoading}
         extra={
           d ? (
@@ -406,7 +419,7 @@ const ProductInfoPage: React.FC = () => {
               <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
             </Descriptions>
 
-            <Divider style={{ fontSize: 13, marginTop: 20 }}>SKU 规格明细</Divider>
+            <Divider style={{ fontSize: 14, marginTop: 20 }}>SKU 规格明细</Divider>
             {skuLoading ? (
               <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-tertiary)' }}>加载中...</div>
             ) : skuList.length > 0 ? (
@@ -425,7 +438,7 @@ const ProductInfoPage: React.FC = () => {
               </div>
             )}
 
-            <Divider style={{ fontSize: 13, marginTop: 20 }}>吊牌信息</Divider>
+            <Divider style={{ fontSize: 14, marginTop: 20 }}>吊牌信息</Divider>
             <Descriptions column={3} size="small" bordered>
               <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
               <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>
@@ -472,7 +485,7 @@ const ProductInfoPage: React.FC = () => {
                   throw new Error((res as any).message || '上传失败');
                 }}
               />
-              <div style={{ flex: 1, color: 'var(--color-text-tertiary)', fontSize: 12, paddingTop: 4 }}>
+              <div style={{ flex: 1, color: 'var(--color-text-tertiary)', fontSize: 14, paddingTop: 4 }}>
                 <div>点击上传成品图片</div>
                 <div style={{ marginTop: 4 }}>支持 JPG/PNG，最大 5MB</div>
               </div>

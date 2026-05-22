@@ -137,6 +137,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
 
   useEffect(() => {
     setInvoiceUrls(parseInvoiceUrls((currentPurchase as any)?.invoiceUrls));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPurchase?.id]);
 
   const loadDocs = useCallback(async () => {
@@ -497,7 +498,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                     style={{ objectFit: 'cover', borderRadius: 4 }}
                     preview={{ mask: '预览' }}
                   />
-                  <div style={{ marginTop: 6, fontSize: 12, color: '#555' }}>
+                  <div style={{ marginTop: 6, fontSize: 14, color: '#555' }}>
                     <Tooltip title={doc.uploaderName}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {doc.uploaderName || '未知'}
@@ -546,7 +547,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           disabled={!currentPurchase?.id}
         />
         {invoiceUrls.length === 0 && !invoiceUploading && (
-          <div style={{ color: '#bbb', fontSize: 13, textAlign: 'center', padding: '4px 0 0' }}>
+          <div style={{ color: '#bbb', fontSize: 14, textAlign: 'center', padding: '4px 0 0' }}>
             暂无发票/单据，支持拖拽、粘贴或点击上传
           </div>
         )}

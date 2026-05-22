@@ -24,6 +24,8 @@ export const useStyleSizeData = (
   const combinedSizeIdsRef = useRef<Array<string | number>>([]);
 
   const { message } = App.useApp();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes.join(',')]);
 
   const fetchSizeTemplates = async (sourceStyleNo?: string) => {

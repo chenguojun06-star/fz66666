@@ -67,10 +67,10 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
           >
             <div style={{ fontSize: 28, marginBottom: 6 }}>{tpl.icon}</div>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>{tpl.label}</div>
-            <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', marginBottom: 10 }}>
+            <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', marginBottom: 10 }}>
               {tpl.desc}
             </div>
-            <div style={{ fontSize: 12 }}>
+            <div style={{ fontSize: 14 }}>
               {tpl.children.map((c) => (
                 <Tag key={c} style={{ marginBottom: 4 }}>{c}</Tag>
               ))}
@@ -112,7 +112,7 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
       )}
 
       {tplModal.type && (
-        <div style={{ background: '#f8f9fa', borderRadius: 6, padding: '12px 16px', fontSize: 13 }}>
+        <div style={{ background: '#f8f9fa', borderRadius: 6, padding: '12px 16px', fontSize: 14 }}>
           <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
             创建预览
           </div>

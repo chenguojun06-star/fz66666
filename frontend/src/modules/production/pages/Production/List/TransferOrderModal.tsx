@@ -92,7 +92,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
       confirmLoading={transferSubmitting}
       okText={transferType === 'factory' ? '确认转工厂' : '确认转人员'}
       cancelText="取消"
-      width="60vw"
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
       destroyOnHidden
     >
@@ -240,7 +240,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
               </span>
             </div>
             <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: 'var(--color-bg-layout)' }}>
                     <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 500 }}>工序名称</th>

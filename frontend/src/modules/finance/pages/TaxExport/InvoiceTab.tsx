@@ -210,7 +210,7 @@ const InvoiceTab: React.FC = () => {
           <ModalFieldRow label="税额(自动计算)">
             <div style={{ lineHeight: '32px', color: '#595959' }}>
               {calcTaxAmount.toFixed(2)} 元
-              <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>(未税金额 × 税率)</Text>
+              <Text type="secondary" style={{ fontSize: 14, marginLeft: 8 }}>(未税金额 × 税率)</Text>
             </div>
           </ModalFieldRow>
           <ModalFieldRow label="价税合计">

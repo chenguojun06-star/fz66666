@@ -125,6 +125,18 @@
 - 修改已有文件新增代码后总行数超过上限 → 必须先拆分再合入
 - 单方法超过 25 行 → 必须解释为什么不拆分
 
+### 9. 全局表格样式严禁擅自修改 — P0 强制
+
+> **核心思想：表格字体、行高、padding 属于全局视觉规范，一人改全站变。未经明确要求不得动。**
+
+- ❌ **禁止**未经用户明确要求修改 `global.css` / `design-system.css` 中的表格 CSS 变量：
+  `--table-cell-padding-y`、`--table-cell-padding-x`、`--table-header-padding-y`、
+  `--table-header-font-size`、`--table-cell-font-size`、`--table-header-height`、
+  `--table-row-height`、`--table-condensed-row-height` 等
+- ❌ **禁止**基于审美主观判断擅自调整全站表格排版
+- ✅ 仅在用户明确说"表格行高太高/太低/字体太大/太小"等指令时才可修改
+- ⚠️ 表格样式问题 → 先确认是哪个页面/组件 → 只改该页面/组件的局部样式，不碰全局变量
+
 ---
 
 ## ✅ 强制规范

@@ -29,21 +29,21 @@ const directCardStyle = {
 const directStackStyle = { display: 'grid', gap: 10 } as const;
 
 const directTitleStyle = {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--color-text-primary)',
   lineHeight: 1.2,
 } as const;
 
 const directMetaStyle = {
-  fontSize: 12,
+  fontSize: 14,
   color: 'var(--neutral-text-secondary)',
   lineHeight: 1.4,
 } as const;
 
 const directFieldLabelStyle = {
   marginBottom: 4,
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--neutral-text-secondary)',
 } as const;
@@ -114,6 +114,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
     } catch { /* silent */ }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchStyles = async () => {
     setLoading(true);
     try {
@@ -124,6 +125,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
     finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const openEditModal = (record: StyleInfo) => {
     setEditingRecord(record);
     editForm.setFieldsValue({ description: (record as any).description || '' });
@@ -171,6 +173,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
     a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const downloadProductionSheet = async (style: StyleInfo) => {
     try {
       const res = await api.get<{ code: number; data: any }>('/data-center/production-sheet', { params: { styleNo: style.styleNo } });
@@ -352,7 +355,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
         onCancel={() => { setReturnDescVisible(false); returnDescForm.resetFields(); }}
         footer={<Space><Button onClick={() => { setReturnDescVisible(false); returnDescForm.resetFields(); }}>取消</Button><Button danger loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button></Space>}>
         {returnDescRecord?.descriptionReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 13 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnDescRecord.descriptionReturnComment}（{(returnDescRecord as any).descriptionReturnBy}）
           </div>
         )}
@@ -364,7 +367,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
       </SmallModal>
 
       {/* 详情弹窗 */}
-      <ResizableModal open={detailModalVisible} title={`款式详情 - ${detailRecord?.styleNo || ''}`} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)}
+      <ResizableModal open={detailModalVisible} title={`款式详情 - ${detailRecord?.styleNo || ''}`} width="85vw" initialHeight={Math.round(window.innerHeight * 0.82)}
         onCancel={() => setDetailModalVisible(false)} footer={<Button onClick={() => setDetailModalVisible(false)}>关闭</Button>}>
         {detailRecord && (
           <div>

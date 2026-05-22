@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form } from 'antd';
-import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { warehouseLocationMapApi } from '@/services/warehouse/warehouseLocationMapApi';
 import './WarehouseLocationMap.css';
@@ -469,7 +469,7 @@ const WarehouseLocationMap: React.FC = () => {
                         title="总库位"
                         value={areaOverview?.totalLocations || locations.length}
                         suffix="个"
-                        styles={{ content: { color: 'var(--color-primary)', fontSize: 20, fontWeight: 600 } }}
+                        styles={{ content: { color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 } }}
                         loading={overviewLoading}
                       />
                     </Col>
@@ -478,7 +478,7 @@ const WarehouseLocationMap: React.FC = () => {
                         title="已使用"
                         value={areaOverview?.usedLocations || locations.filter(l => l.usedCapacity > 0).length}
                         suffix="个"
-                        styles={{ content: { color: 'var(--color-success)', fontSize: 20, fontWeight: 600 } }}
+                        styles={{ content: { color: 'var(--color-success)', fontSize: 15, fontWeight: 600 } }}
                         loading={overviewLoading}
                       />
                     </Col>
@@ -595,7 +595,7 @@ const WarehouseLocationMap: React.FC = () => {
         open={createAreaModalOpen}
         onCancel={() => { setCreateAreaModalOpen(false); createAreaForm.resetFields(); }}
         title="新建仓库"
-        width={450}
+        width="30vw"
         onOk={handleCreateArea}
         okText="创建"
       >
@@ -616,7 +616,7 @@ const WarehouseLocationMap: React.FC = () => {
         open={createLocationModalOpen}
         onCancel={() => { setCreateLocationModalOpen(false); createLocationForm.resetFields(); }}
         title={`新增库位 - ${selectedArea?.areaName || ''}`}
-        width={450}
+        width="30vw"
         onOk={handleCreateLocation}
         okText="创建"
       >
@@ -646,7 +646,7 @@ const WarehouseLocationMap: React.FC = () => {
         open={batchInitModalOpen}
         onCancel={() => { setBatchInitModalOpen(false); batchInitForm.resetFields(); }}
         title={`批量初始化库位 - ${selectedArea?.areaName || ''}`}
-        width={500}
+        width="30vw"
         onOk={handleBatchInit}
         okText="开始初始化"
       >
@@ -672,7 +672,7 @@ const WarehouseLocationMap: React.FC = () => {
                 </Form.Item>
               </Col>
             </Row>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
               将生成 {selectedArea?.areaName || ''} 下的库位，编码格式：库区-货架-层-位（如 A-01-1-1）
             </div>
           </Form>
@@ -684,7 +684,7 @@ const WarehouseLocationMap: React.FC = () => {
         open={detailModalOpen}
         onCancel={() => setDetailModalOpen(false)}
         title={selectedLocation ? `库位 ${selectedLocation.locationCode} - 库存详情` : '库存详情'}
-        width={700}
+        width="40vw"
         footer={null}
       >
         {selectedLocation && (
@@ -734,7 +734,7 @@ const WarehouseLocationMap: React.FC = () => {
                         <div className="wlm-detail-td">
                           <Tag>{sku.size || '-'}</Tag>
                         </div>
-                        <div className="wlm-detail-td" style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                        <div className="wlm-detail-td" style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                           {sku.skuCode}
                         </div>
                         <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>

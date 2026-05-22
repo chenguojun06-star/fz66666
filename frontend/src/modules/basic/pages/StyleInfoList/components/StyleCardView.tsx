@@ -8,7 +8,7 @@ import SmartStyleHoverCard from './SmartStyleHoverCard';
 import StyleCopyModal from './StyleCopyModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { StyleInfo } from '@/types/style';
-import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
+import { toCategoryCn } from '@/utils/styleCategory';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
@@ -36,7 +36,7 @@ interface StyleCardViewProps {
  * 款式信息卡片视图
  * 操作与表格视图完全一致：
  * - 已完成(样衣完成)：详情 + 下单 + 维护(主管+)
- * - 开发中：详情 + 纸样开发 + 样衣生产 + 打印 + 报废
+ * - 开发中：详情 + 纸样 + 生产制单 + 打印 + 报废
  */
 const StyleCardView: React.FC<StyleCardViewProps> = ({
   data,
@@ -186,7 +186,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
               : 'processing';
         return <Tag color={color}>{node}</Tag>;
       }}
-      onCardClick={(record) => navigate(`/style-info/${record.id}`)}
+      onCardClick={undefined}
       getCardId={(record) => `style-card-${getStyleDomKey(record as StyleInfo)}`}
       getCardStyle={(record) => getStyleDomKey(record as StyleInfo) === focusedStyleId ? {
         boxShadow: '0 0 0 2px rgba(250, 173, 20, 0.35), 0 10px 24px rgba(250, 173, 20, 0.18)',
@@ -222,12 +222,12 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
           {
             key: 'pattern',
-            label: '纸样开发',
+            label: '纸样',
             onClick: () => navigate(`/style-info/${r.id}?tab=7&section=files`),
           },
           {
             key: 'sample',
-            label: '样衣生产',
+            label: '生产制单',
             onClick: () => navigate(`/style-info/${r.id}?tab=8`),
           },
           { key: 'print', label: '打印', onClick: () => onPrint(r) },
@@ -272,4 +272,4 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   );
 };
 
-export default StyleCardView;
+export default React.memo(StyleCardView);

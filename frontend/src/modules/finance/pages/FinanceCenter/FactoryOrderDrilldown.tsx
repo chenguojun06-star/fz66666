@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Tag, Descriptions, App, Empty } from 'antd';
+import { Tag, Descriptions, App, Empty } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { toMoney } from './chartConfigs';
@@ -59,6 +60,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
     if (open && orderNos.length > 0) {
       fetchOrderDetails();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, orderNos]);
 
   const fetchOrderDetails = async () => {
@@ -108,11 +110,11 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
   ];
 
   return (
-    <Modal
+    <ResizableModal
       title={`${factoryName} — 订单明细`}
       open={open}
       onCancel={onClose}
-      width="90vw"
+      width="85vw"
       footer={null}
       destroyOnHidden
     >
@@ -187,7 +189,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
       ) : (
         !loading && <Empty description="暂无订单明细" />
       )}
-    </Modal>
+    </ResizableModal>
   );
 };
 

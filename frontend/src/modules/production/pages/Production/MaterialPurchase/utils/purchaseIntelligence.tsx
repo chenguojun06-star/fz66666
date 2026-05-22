@@ -180,12 +180,12 @@ const VERDICT_LABEL = { good: '可开工', warn: '需关注', critical: '阻塞�
 /** 渲染智能分析 Tooltip 内容 */
 export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string): React.ReactNode {
   return (
-    <div style={{ fontSize: 12, maxWidth: 360, lineHeight: 1.7, color: '#333' }}>
+    <div style={{ fontSize: 14, maxWidth: 360, lineHeight: 1.7, color: '#333' }}>
       {/* 标题 + 状态 */}
       <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
         <span> 智能采购分析</span>
         <span style={{
-          fontSize: 12, padding: '1px 6px', borderRadius: 4,
+          fontSize: 14, padding: '1px 6px', borderRadius: 4,
           background: VERDICT_COLOR[insight.verdict], color: '#fff',
         }}>{VERDICT_LABEL[insight.verdict]}</span>
       </div>

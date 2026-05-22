@@ -41,7 +41,7 @@ const RoleTemplateTab: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+      <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 14 }}>
         角色模板是预设的权限方案，为新租户创建员工时从模板中选择角色。共 {templates.length} 个模板。
       </div>
       <ResizableTable

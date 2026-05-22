@@ -5,9 +5,10 @@
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Card, Row, Col, Statistic, Tag, Button, Form, Input, Modal,
+  Card, Row, Col, Statistic, Tag, Button, Form, Input,
   Descriptions, Progress, Empty, Typography, App, Alert, Space, Tooltip,
 } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import {
   FileTextOutlined, BellOutlined, AppstoreOutlined, SyncOutlined,
   CreditCardOutlined, CopyOutlined,
@@ -78,6 +79,8 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
   const [invoiceInfoForm] = Form.useForm();
   const [payModalVisible, setPayModalVisible] = useState(false);
   const [payingBill, setPayingBill] = useState<any>(null);
+  const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
+  const [invoiceInfoSubmitting, setInvoiceInfoSubmitting] = useState(false);
 
   /** 30天内即将到期（含已过期）的应用，用于顶部提醒 */
   const expiringApps = useMemo(() =>
@@ -127,6 +130,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
   };
 
   const handleSubmitInvoice = async () => {
+    setInvoiceSubmitting(true);
     try {
       const values = await invoiceForm.validateFields();
       await tenantService.requestInvoice(currentBill.id, values);
@@ -136,6 +140,8 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) return;
       message.error(err instanceof Error ? err.message : '申请失败');
+    } finally {
+      setInvoiceSubmitting(false);
     }
   };
 
@@ -161,6 +167,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
   };
 
   const handleSaveInvoiceInfo = async () => {
+    setInvoiceInfoSubmitting(true);
     try {
       const values = await invoiceInfoForm.validateFields();
       await tenantService.updateMyInvoiceInfo(values);
@@ -170,6 +177,8 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) return;
       message.error(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setInvoiceInfoSubmitting(false);
     }
   };
 
@@ -411,7 +420,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
       </Card>
 
       {/* 快捷付款弹窗 */}
-      <Modal
+      <ResizableModal
         title={<Space><CreditCardOutlined />立即付款</Space>}
         open={payModalVisible}
         onCancel={() => setPayModalVisible(false)}
@@ -468,22 +477,23 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
                   </Space>
                 </Descriptions.Item>
               </Descriptions>
-              <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbe6', borderRadius: 6, fontSize: 13, color: '#ad6800' }}>
+              <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbe6', borderRadius: 6, fontSize: 14, color: '#ad6800' }}>
                  请联系管理员获取收款账号/收款码，并在转账备注中填写账单编号。
               </div>
             </Card>
           </div>
         )}
-      </Modal>
+      </ResizableModal>
 
       {/* 申请开票弹窗 */}
-      <Modal
+      <ResizableModal
         title="申请发票"
         open={invoiceModalVisible}
         onOk={handleSubmitInvoice}
         onCancel={() => setInvoiceModalVisible(false)}
         okText="提交申请"
         width="40vw"
+        confirmLoading={invoiceSubmitting}
       >
         {currentBill && (
           <Descriptions column={2} style={{ marginBottom: 16 }}>
@@ -511,16 +521,17 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
             <Input placeholder="选填" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
 
       {/* 维护默认开票信息弹窗 */}
-      <Modal
+      <ResizableModal
         title="默认开票信息"
         open={invoiceInfoModalVisible}
         onOk={handleSaveInvoiceInfo}
         onCancel={() => setInvoiceInfoModalVisible(false)}
         okText="保存"
         width="40vw"
+        confirmLoading={invoiceInfoSubmitting}
       >
         <div style={{ marginBottom: 12, color: 'var(--text-secondary)' }}>
           设置后，每次申请发票时会自动填充以下信息
@@ -545,7 +556,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
             <Input placeholder="公司电话" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

@@ -266,6 +266,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   useEffect(() => {
     if (isEntryPage) return;
     fetchTasks();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntryPage, taskQuery]);
 
   useEffect(() => {

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
-@Order(2)
+@Order(3)
 @Slf4j
 public class OrderColorSizeLookupStrategy implements BundleLookupStrategy {
 
@@ -27,6 +27,12 @@ public class OrderColorSizeLookupStrategy implements BundleLookupStrategy {
         if (!StringUtils.hasText(context.getOrderNo())
                 || !StringUtils.hasText(context.getColor())
                 || !StringUtils.hasText(context.getSize())) {
+            return null;
+        }
+
+        if (context.getBundleNo() != null && context.getBundleNo() > 0) {
+            log.debug("[BundleLookup] {}跳过: bundleNo已提供({}), 应由精确策略处理",
+                    getStrategyName(), context.getBundleNo());
             return null;
         }
 

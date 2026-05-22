@@ -59,6 +59,7 @@ const PaymentDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboard(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalPaid = stats?.totalPaid ?? 0;

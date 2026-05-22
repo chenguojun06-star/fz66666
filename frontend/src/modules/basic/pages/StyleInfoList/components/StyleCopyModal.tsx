@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { App, Form, Input, Modal } from 'antd';
+import { App, Form, Input } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { StyleInfo } from '@/types/style';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 
@@ -36,7 +37,7 @@ const StyleCopyModal: React.FC<StyleCopyModalProps> = ({ open, onCancel, copySou
   };
 
   return (
-    <Modal
+    <ResizableModal
       title="复制款式"
       open={open}
       onCancel={() => { onCancel(); copyForm.resetFields(); }}
@@ -47,7 +48,7 @@ const StyleCopyModal: React.FC<StyleCopyModalProps> = ({ open, onCancel, copySou
       destroyOnHidden
     >
       {copySource && (
-        <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
+        <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>
           源款式：{copySource.styleNo}（{(copySource as any).color || '无颜色'}）
         </div>
       )}
@@ -62,7 +63,7 @@ const StyleCopyModal: React.FC<StyleCopyModalProps> = ({ open, onCancel, copySou
           <Input placeholder="可选" />
         </Form.Item>
       </Form>
-    </Modal>
+    </ResizableModal>
   );
 };
 

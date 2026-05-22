@@ -77,6 +77,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       // 忽略错误
       setImages([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleId, currentIndex]);
 
   useEffect(() => {
@@ -204,7 +205,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <img loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: '#fff', fontSize: 12, fontWeight: 600 }}>
+            <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: '#fff', fontSize: 14, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
           </div>
@@ -243,7 +244,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <LeftOutlined style={{ color: '#fff', fontSize: 14 }} />
+              <LeftOutlined style={{ color: '#fff', fontSize: 12 }} />
             </div>
             <div
               onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex >= displayImages.length - 1 ? 0 : currentIndex + 1); }}
@@ -256,7 +257,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <RightOutlined style={{ color: '#fff', fontSize: 14 }} />
+              <RightOutlined style={{ color: '#fff', fontSize: 12 }} />
             </div>
           </>
         )}

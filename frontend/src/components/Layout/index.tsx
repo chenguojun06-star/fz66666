@@ -46,6 +46,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       if (visible > 0) result[path] = visible;
     }
     return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [badgeCounts, getVisibleCount, viewVersion]);
 
   const backgroundLocation = (location.state as any)?.backgroundLocation;
@@ -211,7 +212,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="header-user">
             <SmartAlertBell />
             {auth.isFactoryAccount && (
-              <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 12 }}>
+              <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 14 }}>
                  {auth.factoryName || '外发工厂'}
               </Tag>
             )}

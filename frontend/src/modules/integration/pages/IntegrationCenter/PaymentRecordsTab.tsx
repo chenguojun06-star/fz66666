@@ -75,7 +75,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
     { title: '发起时间', dataIndex: 'createdTime', width: 160,
       render: (v: string) => formatDateTimeSecond(v) },
     { title: '系统订单号', dataIndex: 'orderId', width: 160,
-      render: (v: string) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v}</span> },
+      render: (v: string) => <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v}</span> },
     { title: '渠道', dataIndex: 'channel', width: 90,
       render: (v: string) => <Tag color="blue">{CHANNEL_MAP[v] || v}</Tag> },
     { title: '金额（元）', dataIndex: 'amount', width: 100,
@@ -89,7 +89,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
       } },
     { title: '第三方流水号', dataIndex: 'thirdPartyOrderId', width: 200,
       render: (v: string | null) => v
-        ? <Tooltip title={v}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.substring(0, 20)}...</span></Tooltip>
+        ? <Tooltip title={v}><span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v.substring(0, 20)}...</span></Tooltip>
         : '-' },
     { title: '支付时间', dataIndex: 'paidTime', width: 160,
       render: (v: string | null) => v ? formatDateTimeSecond(v) : '-' },

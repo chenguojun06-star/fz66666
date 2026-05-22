@@ -262,20 +262,20 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   const renderItemPopover = (item: ShoppingItem, analysis = aiAnalysis) => {
     const insight = buildMarketInsight(item, analysis);
     return (
-      <div style={{ width: SMART_CARD_CONTENT_WIDTH, maxWidth: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
+      <div style={{ width: SMART_CARD_CONTENT_WIDTH, maxWidth: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
         <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 6 }}>市场判断</div>
         <DecisionInsightCard compact insight={insight} />
         {analysis && analysis.avgPrice > 0 && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#595959', lineHeight: 1.6 }}>
+          <div style={{ marginTop: 8, fontSize: 14, color: '#595959', lineHeight: 1.6 }}>
             价格区间：¥{analysis.minPrice.toFixed(0)} ~ ¥{analysis.maxPrice.toFixed(0)}（均价 ¥{analysis.avgPrice.toFixed(0)}）
           </div>
         )}
-        <div style={{ marginTop: 6, fontSize: 13, color: '#595959', lineHeight: 1.6 }}>
+        <div style={{ marginTop: 6, fontSize: 14, color: '#595959', lineHeight: 1.6 }}>
           竞品数量：{analysis?.total || 0} 款在售
           {analysis?.sources?.length ? ` · 渠道覆盖 ${analysis.sources.slice(0, 5).join('、')}` : ''}
         </div>
         {item.rating != null && item.rating > 0 && (
-          <div style={{ marginTop: 6 }}><Text type="secondary">评分：</Text><Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 12 }} /><span style={{ marginLeft: 4, fontSize: 13 }}>({item.reviews ?? 0}条)</span></div>
+          <div style={{ marginTop: 6 }}><Text type="secondary">评分：</Text><Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 14 }} /><span style={{ marginLeft: 4, fontSize: 14 }}>({item.reviews ?? 0}条)</span></div>
         )}
       </div>
     );
@@ -306,9 +306,9 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
           <Space size={6}>
             <FireOutlined style={{ color: '#fa8c16' }} />
             <Text strong style={{ fontSize: 14 }}>今日热榜</Text>
-            {dailyHot?.date && <Text type="secondary" style={{ fontSize: 13 }}>（{dailyHot.date} 数据）</Text>}
-            {dailyHot?.cached && <Tag color="green" style={{ fontSize: 12 }}>已缓存</Tag>}
-            {dailyHot?.sources?.length ? <Tag color="blue" style={{ fontSize: 12 }}>多渠道 {dailyHot.sources.length} 源</Tag> : null}
+            {dailyHot?.date && <Text type="secondary" style={{ fontSize: 14 }}>（{dailyHot.date} 数据）</Text>}
+            {dailyHot?.cached && <Tag color="green" style={{ fontSize: 14 }}>已缓存</Tag>}
+            {dailyHot?.sources?.length ? <Tag color="blue" style={{ fontSize: 14 }}>多渠道 {dailyHot.sources.length} 源</Tag> : null}
           </Space>
           <Space size={8}>
             {sourceOptions.map(option => (
@@ -345,17 +345,17 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                                 <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                               </div>
                             )
-                            : <div style={{ height: 80, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 12 }}>暂无图片</div>}
+                            : <div style={{ height: 80, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>}
                           <div style={{ padding: '8px 10px' }}>
-                            <Tooltip title={item.title}><div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{item.title}</div></Tooltip>
+                            <Tooltip title={item.title}><div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{item.title}</div></Tooltip>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                               {item.price && <Text strong style={{ fontSize: 14, color: '#ff4d4f' }}>{item.price}</Text>}
-                              {item.sourceLabel && <Tag color="blue" style={{ fontSize: 12, margin: 0 }}>{item.sourceLabel}</Tag>}
+                              {item.sourceLabel && <Tag color="blue" style={{ fontSize: 14, margin: 0 }}>{item.sourceLabel}</Tag>}
                             </div>
-                            {item.rankScore != null && <Text type="secondary" style={{ fontSize: 12 }}>权重 {item.rankScore}</Text>}
+                            {item.rankScore != null && <Text type="secondary" style={{ fontSize: 14 }}>权重 {item.rankScore}</Text>}
                             <Space size={4}>
-                              <Button icon={<PlusOutlined />} onClick={() => handleAdd(item, i + 1000)} loading={addLoading[i + 1000]} style={{ fontSize: 13 }}>加入选品</Button>
-                              <Button type="primary" icon={<SendOutlined />} onClick={() => handleDeploy(item, i + 2000)} loading={deployLoading[i + 2000]} style={{ fontSize: 13 }}>下版</Button>
+                              <Button icon={<PlusOutlined />} onClick={() => handleAdd(item, i + 1000)} loading={addLoading[i + 1000]} style={{ fontSize: 14 }}>加入选品</Button>
+                              <Button type="primary" icon={<SendOutlined />} onClick={() => handleDeploy(item, i + 2000)} loading={deployLoading[i + 2000]} style={{ fontSize: 14 }}>下版</Button>
                             </Space>
                           </div>
                         </div>
@@ -367,7 +367,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
             />
           ) : (
             !dailyHotLoading && !refreshing && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" style={{ fontSize: 14 }}>
                 {dailyHot?.serpApiEnabled === false
                   ? 'SerpApi 未配置，热榜暂不可用'
                   : '点击「加载热榜」获取今日市场热门商品数据'}
@@ -396,9 +396,9 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
 
       {/* 热门关键词 */}
       <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <Text type="secondary" style={{ fontSize: 12 }}>热门搜索：</Text>
+        <Text type="secondary" style={{ fontSize: 14 }}>热门搜索：</Text>
         {HOT_KEYWORDS.map(kw => (
-          <Tag key={kw} style={{ cursor: 'pointer', borderRadius: 12, fontSize: 12 }} onClick={() => doSearch(kw)}>{kw}</Tag>
+          <Tag key={kw} style={{ cursor: 'pointer', borderRadius: 12, fontSize: 14 }} onClick={() => doSearch(kw)}>{kw}</Tag>
         ))}
       </div>
 
@@ -421,11 +421,11 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                 <div key={`${section.keyword}-${sectionIndex}`}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <GoogleOutlined style={{ color: '#4285f4' }} />
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 14 }}>
                       「{section.keyword}」共 {filterProductsBySource(section.items || []).length || 0} 件真实商品
                       {section.sourceCount ? <> · 覆盖 {section.sourceCount} 个外部渠道</> : null}
                       {section.trendScore >= 0 && (
-                        <> · Google 趋势热度 <Tag color={section.trendScore >= 70 ? 'red' : section.trendScore >= 40 ? 'orange' : 'default'} style={{ fontSize: 12, marginLeft: 4 }}>{section.trendScore}/100</Tag></>
+                        <> · Google 趋势热度 <Tag color={section.trendScore >= 70 ? 'red' : section.trendScore >= 40 ? 'orange' : 'default'} style={{ fontSize: 14, marginLeft: 4 }}>{section.trendScore}/100</Tag></>
                       )}
                     </Text>
                   </div>
@@ -448,28 +448,28 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                         <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                       </div>
                     ) : (
-                      <div style={{ height: 100, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13 }}>暂无图片</div>
+                      <div style={{ height: 100, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>
                     )}
                     {/* 内容区 */}
                     <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <Tooltip title={item.title}>
-                        <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                        <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
                       </Tooltip>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              {item.price && <Text strong style={{ fontSize: 16, color: '#ff4d4f' }}>{item.price}</Text>}
-                        {item.sourceLabel && <Tag color="blue" style={{ fontSize: 12, margin: 0 }}>{item.sourceLabel}</Tag>}
+                              {item.price && <Text strong style={{ fontSize: 13, color: '#ff4d4f' }}>{item.price}</Text>}
+                        {item.sourceLabel && <Tag color="blue" style={{ fontSize: 14, margin: 0 }}>{item.sourceLabel}</Tag>}
                       </div>
-                      {item.rankScore != null && <Text type="secondary" style={{ fontSize: 12 }}>榜单权重 {item.rankScore}</Text>}
+                      {item.rankScore != null && <Text type="secondary" style={{ fontSize: 14 }}>榜单权重 {item.rankScore}</Text>}
                       {item.rating != null && item.rating > 0 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 13 }} />
-                          {item.reviews != null && <Text type="secondary" style={{ fontSize: 12 }}>({item.reviews})</Text>}
+                          <Rate disabled defaultValue={item.rating} allowHalf style={{ fontSize: 14 }} />
+                          {item.reviews != null && <Text type="secondary" style={{ fontSize: 14 }}>({item.reviews})</Text>}
                         </div>
                       )}
-                      {item.delivery && <Text type="secondary" style={{ fontSize: 12 }}>{item.delivery}</Text>}
+                      {item.delivery && <Text type="secondary" style={{ fontSize: 14 }}>{item.delivery}</Text>}
                       <Space style={{ marginTop: 'auto', paddingTop: 6 }} size={6}>
-                        <Button icon={<PlusOutlined />} loading={addLoading[sectionIndex * 10000 + idx]} onClick={() => handleAdd(item, sectionIndex * 10000 + idx)} style={{ fontSize: 13 }}>加入选品</Button>
-                        <Button type="primary" icon={<SendOutlined />} loading={deployLoading[sectionIndex * 10000 + idx]} onClick={() => handleDeploy(item, sectionIndex * 10000 + idx)} style={{ fontSize: 13 }}>一键下版</Button>
+                        <Button icon={<PlusOutlined />} loading={addLoading[sectionIndex * 10000 + idx]} onClick={() => handleAdd(item, sectionIndex * 10000 + idx)} style={{ fontSize: 14 }}>加入选品</Button>
+                        <Button type="primary" icon={<SendOutlined />} loading={deployLoading[sectionIndex * 10000 + idx]} onClick={() => handleDeploy(item, sectionIndex * 10000 + idx)} style={{ fontSize: 14 }}>一键下版</Button>
                       </Space>
                     </div>
                   </div>
@@ -489,12 +489,12 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                 result && result.items?.length === 0 ? (
                   <div>
                     <p style={{ margin: '8px 0', fontSize: 14 }}>未搜索到「{lastKeyword}」的相关商品</p>
-                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>请换一个关键词，或稍后重试</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: 14 }}>请换一个关键词，或稍后重试</p>
                   </div>
                 ) : (
                   <div>
                     <p style={{ margin: '8px 0', fontSize: 14 }}>输入关键词，搜索多渠道真实市场数据</p>
-                    <p style={{ margin: 0, color: '#999', fontSize: 12 }}>数据来源：Google Shopping / Amazon / eBay / Walmart，结果按渠道权重、评分和评论量排序</p>
+                    <p style={{ margin: 0, color: '#999', fontSize: 14 }}>数据来源：Google Shopping / Amazon / eBay / Walmart，结果按渠道权重、评分和评论量排序</p>
                   </div>
                 )
               }

@@ -116,6 +116,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       const ranks: FactoryRank[] = res?.data?.rankings ?? res?.rankings ?? [];
       setLeaderboard(ranks.slice(0, 6));
     } catch { message.warning('绩效榜加载失败'); } finally { setLbLoading(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { void fetchLeaderboard(); }, [fetchLeaderboard]);
@@ -165,6 +166,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message, onAuditNosChange, onAuditNosChange]);
 
   /** 加载已推送到收付款中心的工厂ID（防重复推送） */
@@ -179,6 +181,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     } catch {
       message.warning('推送状态查询失败，部分按钮状态可能不准确');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -331,13 +334,13 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
               <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
               {record.factoryType === 'INTERNAL' && (
                 <Tooltip title="内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
-                  <Tag color="orange" style={{ margin: 0, fontSize: 13 }}>内部</Tag>
+                  <Tag color="orange" style={{ margin: 0, fontSize: 14 }}>内部</Tag>
                 </Tooltip>
               )}
-              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 13 }}>外部</Tag>}
+              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14 }}>外部</Tag>}
             </Space>
             {record.orgPath || record.parentOrgUnitName ? (
-              <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12, marginTop: 4 }}>
+              <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14, marginTop: 4 }}>
                 {record.orgPath || record.parentOrgUnitName}
               </div>
             ) : null}
@@ -510,33 +513,33 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       {/* 汇总卡片 */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#999' }}>工厂数</div>
-          <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--primary-color)' }}>
+          <div style={{ fontSize: 14, color: '#999' }}>工厂数</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary-color)' }}>
             {filteredData.length}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#999' }}>订单总数</div>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>
+          <div style={{ fontSize: 14, color: '#999' }}>订单总数</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>
             {summary.totalOrders}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#999' }}>入库总量</div>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>
+          <div style={{ fontSize: 14, color: '#999' }}>入库总量</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>
             {summary.totalWarehoused.toLocaleString()}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#999' }}>总金额</div>
-          <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--primary-color)' }}>
+          <div style={{ fontSize: 14, color: '#999' }}>总金额</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary-color)' }}>
             ¥{toMoney(summary.totalAmount)}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#999' }}>总利润</div>
+          <div style={{ fontSize: 14, color: '#999' }}>总利润</div>
           <div style={{
-            fontSize: 20,
+            fontSize: 15,
             fontWeight: 600,
             color: summary.totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
           }}>
@@ -552,7 +555,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           style={{ marginBottom: 12 }}
           loading={lbLoading}
           title={
-            <span style={{ fontSize: 13, fontWeight: 600 }}> 工厂绩效榜</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}> 工厂绩效榜</span>
           }
           extra={
             <Button type="link" onClick={() => setLbCollapsed(!lbCollapsed)} style={{ padding: 0 }}>
@@ -572,12 +575,12 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
                     border: '1px solid var(--border-color, #e8e8e8)',
                     minWidth: 190,
                   }}>
-                    <span style={{ fontSize: 16 }}>{r.medal || `#${r.rank}`}</span>
-                    <span style={{ fontWeight: 600, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13 }}>{r.medal || `#${r.rank}`}</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {r.factoryName}
                     </span>
                     <Tooltip title={`质量${r.qualityScore} · 速度${r.speedScore} · 交期${r.deliveryScore} · 成本${r.costScore}`}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: scoreColor }}>{r.totalScore}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: scoreColor }}>{r.totalScore}</span>
                     </Tooltip>
                   </div>
                 );

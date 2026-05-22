@@ -176,7 +176,7 @@ const WorkerPayrollAuditPopover: React.FC<{
   const insight = useMemo(() => buildWorkerInsight(record, analysis), [record, analysis]);
 
   const content = (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontWeight: 600, fontSize: 14 }}> 工资审核</span>
         <Tag color={riskTagColor[analysis.risk]}>{suggestionLabel[analysis.suggestion]}</Tag>
@@ -186,7 +186,7 @@ const WorkerPayrollAuditPopover: React.FC<{
       {analysis.breakdown.length > 0 && (
         <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: '#fafafa', borderRadius: 6 }}>
           {analysis.breakdown.slice(0, 6).map((b, i) => (
-            <span key={i} style={{ whiteSpace: 'nowrap', color: '#595959', fontSize: 12 }}>
+            <span key={i} style={{ whiteSpace: 'nowrap', color: '#595959', fontSize: 14 }}>
               <span style={{ color: '#8c8c8c' }}>{b.label}：</span>
               <span style={{ fontWeight: 500 }}>{b.value}</span>
             </span>

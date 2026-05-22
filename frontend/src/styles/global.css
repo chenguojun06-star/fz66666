@@ -9,7 +9,7 @@
 
 /* 强制锁定根元素字体大小，防止浏览器自动缩放或rem计算异常 */
 html {
-  font-size: 14px;
+  font-size: 13px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
@@ -72,7 +72,7 @@ body {
   text-rendering: optimizeLegibility;
   background-color: var(--app-bg);
   color: var(--neutral-text);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -89,63 +89,67 @@ body {
 }
 
 /* ============================================
-   全局输入框 - 统一风格
-   控件高度由 antd ConfigProvider componentSize='small' 统一管控
-   这里只设圆角和过渡动画，不设 height/line-height/padding
+   全局控件高度 — 行业标准 ERP 规范
+   所有控件统一高度：输入框/选择器/按钮/搜索框
+   由媒体查询驱动：
+     ≤1366px → 28px（小屏）
+     1367-1920px → 32px（标准屏）
+     ≥1921px → 32px（大屏）
    ============================================ */
+
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-select-selector,
 .ant-picker,
 .ant-input,
-.ant-select,
-.ant-cascader,
+.ant-select .ant-select-selector,
+.ant-cascader .ant-select-selector,
 .ant-auto-complete .ant-select-selector,
 .ant-auto-complete .ant-input,
-.ant-input-search .ant-input {
-  height: 32px !important;
+.ant-input-search {
+  height: var(--control-height, 32px) !important;
   border-radius: var(--radius-sm, 4px) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
 
-/* Select 内部文字垂直居中 */
 .ant-select-selection-item,
 .ant-select-selection-placeholder {
-  line-height: 30px !important;
+  line-height: calc(var(--control-height, 32px) - 2px) !important;
 }
 
-/* AutoComplete / Search 内部输入框居中 */
-.ant-auto-complete .ant-input,
 .ant-input-search .ant-input {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  height: var(--control-height, 32px) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: calc(var(--control-height, 32px) - 2px) !important;
 }
 
-/* 输入框文字垂直居中 — line-height 匹配 antd 默认 1.5715×14px=22px */
-.ant-input,
-.ant-input-number .ant-input-number-input,
-.ant-picker input,
+.ant-input-affix-wrapper {
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
 .ant-input-affix-wrapper .ant-input {
-  line-height: 22px !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  height: var(--control-height, 32px) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: calc(var(--control-height, 32px) - 2px) !important;
 }
 
-/* Space.Compact 内所有子元素等高 */
 .ant-space-compact .ant-input,
 .ant-space-compact .ant-select-selector,
 .ant-space-compact .ant-picker,
 .ant-space-compact .ant-auto-complete .ant-input,
-.ant-space-compact .ant-btn {
-  height: 32px !important;
+.ant-space-compact .ant-btn,
+.ant-space-compact .ant-input-search,
+.ant-space-compact .ant-input-search .ant-input {
+  height: var(--control-height, 32px) !important;
 }
 
-/* 按钮默认高度与输入框对齐 — 必须同特异性覆盖 button-override.css */
 .ant-btn:not(.ant-btn-icon-only) {
-  height: 32px !important;
+  height: var(--control-height, 32px) !important;
+  font-size: 13px !important;
 }
-
-/* 恢复 small/large 尺寸的正确高度（覆盖上面 middle 固定值） */
 .ant-input-affix-wrapper-sm,
 .ant-input-number-sm {
   height: 24px !important;
@@ -155,34 +159,21 @@ body {
   height: 40px !important;
 }
 
-/* 不要覆盖 ant-input 的默认样式，让 Ant Design 自己处理 */
-
-/* ============================================
-   按钮 - 统一胶囊形
-   ============================================ */
-/* 按钮样式已迁移到 button-override.css，这里不再重复定义 */
-
-/* ============================================
-   首页例外 - 40px 圆角矩形
-   ============================================ */
 .dashboard-page .ant-input,
 .dashboard-page .ant-input-affix-wrapper,
 .dashboard-page .ant-input-number,
 .dashboard-page .ant-select-selector,
 .dashboard-page .ant-picker {
-  height: 40px !important;
+  height: var(--control-height, 32px) !important;
   border-radius: 6px !important;
 }
 
-/* ============================================
-   登录页例外 - 38px 中等圆角
-   ============================================ */
 .login-page .ant-input,
 .login-page .ant-input-affix-wrapper,
 .login-page .ant-input-number,
 .login-page .ant-select-selector,
 .login-page .ant-picker {
-  height: 38px !important;
+  height: var(--control-height, 32px) !important;
   border-radius: 8px !important;
 }
 
@@ -268,22 +259,22 @@ body {
   --spacing-sm: 16px;
   --spacing-md: 24px;
   --spacing-lg: 32px;
-  /* 字体大小 - 三级布局规范 */
-  /* 上级（标题/重点）：大字号，用于页面标题、弹窗标题、KPI数值 */
-  --font-size-title: 18px;
-  --font-size-subtitle: 16px;
-  --font-size-lg: 16px;
-  --font-size-xl: 18px;
-  /* 中级（正文/内容）：标准字号，用于表格、表单、按钮、正文 */
-  --font-size-base: 14px;
-  --font-size-md: 15px;
-  /* 下级（辅助/备注）：小字号，用于标签、提示、时间戳、角标 */
-  --font-size-sm: 13px;
-  --font-size-xs: 12px;
-  --font-size-xxs: 11px;
+  /* 字体大小 - 三级层级规范 */
+  /* 一级（标题/重点）：页面标题、弹窗标题、KPI数值 */
+  --font-size-title: 15px;
+  --font-size-subtitle: 14px;
+  --font-size-lg: 14px;
+  --font-size-xl: 15px;
+  /* 二级（正文/内容）：表格、表单、按钮、正文 */
+  --font-size-base: 13px;
+  --font-size-md: 13px;
+  /* 三级（辅助/备注）：标签、提示、时间戳、角标 */
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+  --font-size-xxs: 10px;
   /* 特殊：大屏KPI等 */
-  --font-size-xxl: 20px;
-  --font-size-display: 24px;
+  --font-size-xxl: 16px;
+  --font-size-display: 18px;
 
   /* 字体族 */
   --font-family-base: 'PingFang SC', 'Microsoft YaHei', 'Heiti SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
@@ -294,6 +285,18 @@ body {
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+
+  --kpi-value-size: 16px;
+  --kpi-value-weight: 700;
+  --kpi-label-size: 12px;
+  --kpi-change-size: 12px;
+
+  --card-header-bg: #fafafa;
+  --card-header-padding: 12px 16px;
+  --card-title-indicator: 3px solid #2D7FF9;
+
+  --radius-sm: 4px;
+  --radius-base: 6px;
 
   /* 表格专用颜色 */
   --table-border-color: rgba(0, 0, 0, 0.06);
@@ -787,7 +790,7 @@ body {
 }
 
 .page-title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.3;
   margin: 0;
@@ -825,7 +828,7 @@ body {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
   margin: 0;
@@ -1047,12 +1050,12 @@ body {
 }
 
 .cutting-active-task-tags {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
 .cutting-active-task-tags .ant-tag {
-  font-size: 15px;
+  font-size: 13px;
   padding: 4px 12px;
 }
 /* 表格容器样式 */
@@ -1241,7 +1244,7 @@ body {
   }
 
   .resizable-table .ant-table-tbody > tr > td .ant-btn-link {
-    font-size: 13px;
+    font-size: 14px;
     padding: 0 4px;
   }
 
@@ -1252,7 +1255,7 @@ body {
 
   .resizable-table-shell .ant-pagination {
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .resizable-table-shell .ant-pagination .ant-pagination-item,
@@ -1261,7 +1264,7 @@ body {
     min-width: 28px;
     height: 28px;
     line-height: 28px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .resizable-table-shell .ant-pagination .ant-pagination-options {
@@ -1272,7 +1275,7 @@ body {
 /* ── 平板端表格适配 ── */
 @media (max-width: 1024px) and (min-width: 769px) {
   .resizable-table .ant-table-tbody > tr > td .ant-tag {
-    font-size: 13px;
+    font-size: 12px;
     padding: 1px 6px;
   }
 
@@ -1399,14 +1402,21 @@ body {
 /* 操作列文本按钮：统一小号 */
 .row-actions .ant-btn-link:not(.row-actions__btn--icon) {
   padding: 0 8px !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
 }
 
-/* 表格操作列：紧凑按钮 */
 .table-action-compact .ant-btn:not(.ant-btn-icon-only),
 .table-action-compact .ant-btn-link:not(.ant-btn-icon-only) {
   padding: 0 8px !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
+}
+
+/* 卡片视图操作按钮：超紧凑 */
+.universal-card-actions .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
+  padding: 0 4px !important;
+  font-size: 14px !important;
+  height: 20px !important;
+  line-height: 20px !important;
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon:not(:disabled):hover,
@@ -1464,7 +1474,7 @@ body {
 }
 
 .row-actions__btn--icon .anticon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* 图标按钮禁用状态 */
@@ -1666,7 +1676,7 @@ body {
 }
 
 .cutting-qr-print-grid--screen .cutting-qr-label-text {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.2;
 }
 
@@ -1829,7 +1839,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #ff4d4f;
   background: rgba(255, 77, 79, 0.08);
@@ -2061,7 +2071,7 @@ body {
 
 /* ── 12. 面包屑字号微调 ── */
 .ant-breadcrumb {
-  font-size: 13px;
+  font-size: 12px;
   opacity: 0.80;
 }
 
@@ -2127,18 +2137,19 @@ body {
 /* ── 第1档：小屏 (≤1366px) 小笔记本/平板 ── */
 @media (max-width: 1366px) {
   :root {
-    --table-header-font-size: 13px;
+    --control-height: 28px;
+    --table-header-font-size: 12px;
     --table-cell-font-size: 12px;
     --table-cell-padding-x: 5px;
-    --table-cell-padding-y: 6px;
+    --table-cell-padding-y: 4px;
     --table-header-padding-x: 5px;
-    --table-header-padding-y: 7px;
-    --table-header-height: 36px;
+    --table-header-padding-y: 5px;
+    --table-header-height: 30px;
     --font-size-sm: 12px;
     --font-size-xs: 11px;
   }
   html {
-    font-size: 13px;
+    font-size: 12px;
   }
   .layout-header {
     height: 56px;
@@ -2157,16 +2168,17 @@ body {
 /* ── 第2档：标准 (1367-1600px) 普通笔记本 ── */
 @media (min-width: 1367px) and (max-width: 1600px) {
   :root {
-    --table-header-font-size: 13px;
+    --control-height: 32px;
+    --table-header-font-size: 12px;
     --table-cell-font-size: 12px;
     --table-cell-padding-x: 7px;
-    --table-cell-padding-y: 8px;
+    --table-cell-padding-y: 5px;
     --table-header-padding-x: 8px;
-    --table-header-padding-y: 10px;
-    --table-header-height: 40px;
+    --table-header-padding-y: 6px;
+    --table-header-height: 32px;
   }
   html {
-    font-size: 14px;
+    font-size: 13px;
   }
   .layout-header {
     height: 60px;
@@ -2179,16 +2191,17 @@ body {
 /* ── 第3档：大屏 (1601-1920px) 台式机1080p ── */
 @media (min-width: 1601px) and (max-width: 1920px) {
   :root {
-    --table-header-font-size: 14px;
-    --table-cell-font-size: 13px;
+    --control-height: 32px;
+    --table-header-font-size: 12px;
+    --table-cell-font-size: 12px;
     --table-cell-padding-x: 10px;
-    --table-cell-padding-y: 10px;
+    --table-cell-padding-y: 6px;
     --table-header-padding-x: 12px;
-    --table-header-padding-y: 12px;
-    --table-header-height: 46px;
+    --table-header-padding-y: 7px;
+    --table-header-height: 36px;
   }
   html {
-    font-size: 14px;
+    font-size: 13px;
   }
   .layout-header {
     height: 64px;
@@ -2204,16 +2217,17 @@ body {
 /* ── 第4档：宽屏 (1921-2560px) 2K显示器 ── */
 @media (min-width: 1921px) and (max-width: 2560px) {
   :root {
-    --table-header-font-size: 15px;
-    --table-cell-font-size: 14px;
+    --control-height: 32px;
+    --table-header-font-size: 12px;
+    --table-cell-font-size: 12px;
     --table-cell-padding-x: 12px;
-    --table-cell-padding-y: 12px;
+    --table-cell-padding-y: 7px;
     --table-header-padding-x: 14px;
-    --table-header-padding-y: 14px;
-    --table-header-height: 50px;
+    --table-header-padding-y: 8px;
+    --table-header-height: 40px;
   }
   html {
-    font-size: 14px;
+    font-size: 13px;
   }
   .layout-header {
     height: 72px;
@@ -2235,16 +2249,17 @@ body {
 /* ── 第5档：超宽屏 (≥2561px) 4K+显示器 ── */
 @media (min-width: 2561px) {
   :root {
-    --table-header-font-size: 17px;
-    --table-cell-font-size: 15px;
+    --control-height: 32px;
+    --table-header-font-size: 13px;
+    --table-cell-font-size: 12px;
     --table-cell-padding-x: 16px;
-    --table-cell-padding-y: 14px;
+    --table-cell-padding-y: 8px;
     --table-header-padding-x: 20px;
-    --table-header-padding-y: 16px;
-    --table-header-height: 56px;
+    --table-header-padding-y: 10px;
+    --table-header-height: 42px;
   }
   html {
-    font-size: 15px;
+    font-size: 14px;
   }
   .layout-header {
     height: 80px;
@@ -2353,4 +2368,91 @@ body {
 /* Tabs card 类型圆角 */
 .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
   border-radius: var(--radius-base, 6px) var(--radius-base, 6px) 0 0 !important;
+}
+
+/* ============================================
+   行业标准 ERP 视觉增强
+   ============================================ */
+
+.ant-card-head {
+  background: var(--card-header-bg, #fafafa);
+  border-bottom: 1px solid #f0f0f0;
+  padding: var(--card-header-padding, 12px 16px);
+  min-height: 44px;
+}
+.ant-card-head-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--color-text-primary, #1a1a1a);
+}
+.ant-card-head-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  background: #2D7FF9;
+  border-radius: 2px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.ant-progress-bg {
+  border-radius: 4px !important;
+}
+.ant-progress-inner {
+  border-radius: 4px !important;
+  background: #f0f0f0;
+}
+
+.ant-statistic-content-value {
+  font-size: var(--kpi-value-size, 16px) !important;
+  font-weight: var(--kpi-value-weight, 700) !important;
+  line-height: 1.2 !important;
+}
+.ant-statistic-content-prefix,
+.ant-statistic-content-suffix {
+  font-size: var(--kpi-label-size, 12px) !important;
+}
+.ant-statistic-title {
+  font-size: var(--kpi-label-size, 12px) !important;
+  color: #6b7280 !important;
+  margin-bottom: 4px !important;
+}
+
+.ant-descriptions-item-label {
+  font-size: 12px !important;
+  color: #6b7280 !important;
+}
+.ant-descriptions-item-content {
+  font-size: 12px !important;
+  color: #1a1a1a !important;
+}
+
+.ant-tag {
+  height: 22px !important;
+  line-height: 20px !important;
+  font-size: 10px !important;
+  padding: 0 6px !important;
+  border-radius: 4px !important;
+}
+
+.ant-table-cell .ant-btn-sm {
+  height: 24px !important;
+  font-size: 12px !important;
+  padding: 0 8px !important;
+}
+
+.ant-form-item-label > label {
+  font-size: 12px !important;
+  color: #4a4a4a !important;
+  font-weight: 500 !important;
+}
+
+.ant-typography h4 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+.ant-typography h5 {
+  font-size: 13px !important;
+  font-weight: 600 !important;
 }

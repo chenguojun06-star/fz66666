@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Modal, Tag, Space, Drawer, Spin, Empty, Alert } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -425,7 +426,7 @@ export default function AiExecutionPanel() {
       </Drawer>
 
       {/* ===== 执行结果模态框 ===== */}
-      <Modal
+      <ResizableModal
         title={executeResult?.success ? ' 执行成功' : ' 执行失败'}
         open={showResult}
         onOk={() => setShowResult(false)}
@@ -478,7 +479,7 @@ export default function AiExecutionPanel() {
             />
           )}
         </div>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 }

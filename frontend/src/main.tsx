@@ -91,11 +91,11 @@ import { useAppLanguage } from './i18n/useAppLanguage';
 import XiaoyunSpinIndicator from './components/common/XiaoyunSpinIndicator';
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
-import './styles/design-system.css'; // 设计系统
-import './styles/dark-theme-global.css'; // 深色主题全局覆盖
-import './styles/button-override.css'; // 按钮统一样式
-import './styles/animations.css'; // 全局动效：Chrome 146 scroll-driven + View Transitions
-import './components/common/GlobalAiAssistant/xiaoyun-tokens.css'; // AI小云设计令牌
+import './styles/design-system.css';
+import './styles/dark-theme-global.css';
+import './styles/button-override.css';
+import './styles/animations.css';
+import './components/common/GlobalAiAssistant/xiaoyun-tokens.css';
 
 const themeStorageKey = 'app.theme';
 const fallbackTheme = 'white';
@@ -457,6 +457,7 @@ const AppWrapper: React.FC = () => {
 
   // useMemo 确保只有 currentTheme 真正变化时才重建主题对象，
   // 防止每次父组件渲染时 ConfigProvider 收到新引用而触发全量 CSS-in-JS 重算（全屏闪烁根因）
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const themeConfig = useMemo(() => getThemeConfig(), [currentTheme]);
 
   const resolveAntdLocale = (lang: AppLanguage) => {
@@ -468,7 +469,7 @@ const AppWrapper: React.FC = () => {
 
   // 根据屏幕宽度动态选择 antd 组件尺寸 — 5档分辨率智能适配
   const resolveComponentSize = (): 'small' | 'middle' | 'large' => {
-    return 'small';
+    return 'middle';
   };
 
   const [componentSize, setComponentSize] = useState<'small' | 'middle' | 'large'>(resolveComponentSize);

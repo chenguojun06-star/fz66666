@@ -177,8 +177,8 @@ const OrdersTab: React.FC = () => {
       title: '订单号', dataIndex: 'platformOrderNo', width: 160,
       render: (v, r) => (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600 }}>{v || r.orderNo}</div>
-          {v && <div style={{ fontSize: 13, color: '#888' }}>内部 {r.orderNo}</div>}
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{v || r.orderNo}</div>
+          {v && <div style={{ fontSize: 14, color: '#888' }}>内部 {r.orderNo}</div>}
         </div>
       ),
     },
@@ -187,7 +187,7 @@ const OrdersTab: React.FC = () => {
       render: (_: unknown, r: EcOrder) => {
         const styleNo = (r.skuCode || '').split('-')[0];
         return styleNo
-          ? <Text strong style={{ fontSize: 12, fontFamily: 'monospace' }}>{styleNo}</Text>
+          ? <Text strong style={{ fontSize: 14, fontFamily: 'monospace' }}>{styleNo}</Text>
           : <Text type="secondary">-</Text>;
       },
     },
@@ -206,7 +206,7 @@ const OrdersTab: React.FC = () => {
           : <div style={{
               width: 44, height: 44, background: '#f5f5f5', borderRadius: 4,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22, color: '#bbb',
+              fontSize: 16, color: '#bbb',
             }}></div>;
       },
     },
@@ -214,9 +214,9 @@ const OrdersTab: React.FC = () => {
       title: '商品 / 买家', width: 190,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          <div style={{ fontSize: 12 }}>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div style={{ fontSize: 13, color: '#52c41a' }}>SKU {r.skuCode}</div>}
-          <div style={{ fontSize: 13, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
+          <div style={{ fontSize: 14 }}>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
+          {r.skuCode && <div style={{ fontSize: 14, color: '#52c41a' }}>SKU {r.skuCode}</div>}
+          <div style={{ fontSize: 14, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
@@ -224,9 +224,9 @@ const OrdersTab: React.FC = () => {
       title: '金额', width: 130,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          {r.unitPrice ? <div style={{ fontSize: 13, color: '#888' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
+          {r.unitPrice ? <div style={{ fontSize: 14, color: '#888' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
           <div style={{ color: '#fa8c16', fontWeight: 600 }}>实付 ¥{r.payAmount ?? '-'}</div>
-          {r.freight ? <div style={{ fontSize: 12, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
+          {r.freight ? <div style={{ fontSize: 14, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
     },
@@ -248,14 +248,14 @@ const OrdersTab: React.FC = () => {
       title: '快递', dataIndex: 'trackingNo', width: 130,
       render: (v, r) => v
         ? <div>
-            <div style={{ fontSize: 13, color: '#888' }}>{r.expressCompany}</div>
-            <div style={{ fontSize: 12 }}>{v}</div>
+            <div style={{ fontSize: 14, color: '#888' }}>{r.expressCompany}</div>
+            <div style={{ fontSize: 14 }}>{v}</div>
           </div>
         : <Text type="secondary">-</Text>,
     },
     {
       title: '下单时间', dataIndex: 'createTime', width: 100,
-      render: v => <span style={{ fontSize: 13 }}>{v?.slice(0, 16)}</span>,
+      render: v => <span style={{ fontSize: 14 }}>{v?.slice(0, 16)}</span>,
     },
     {
       title: '操作', width: 130, fixed: 'right',
@@ -305,7 +305,7 @@ const OrdersTab: React.FC = () => {
                   }
                 : undefined}>
               <Statistic title={
-                <span style={{ fontSize: 13 }}>
+                <span style={{ fontSize: 14 }}>
                   {s.key === 'pending' && <Badge status="error" style={{ marginRight: 4 }} />}
                   {s.title}
                   {s.key === 'pending' && isFilteringPending && (
@@ -313,15 +313,15 @@ const OrdersTab: React.FC = () => {
                   )}
                 </span>}
                 value={s.value} suffix={s.suffix}
-                styles={{ content: { fontSize: 22, color: s.color } }} />
+                styles={{ content: { fontSize: 16, color: s.color } }} />
             </Card>
           </Col>
         ))}
       </Row>
       <Card style={{ marginBottom: 8, background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
         styles={{ body: { padding: '8px 14px' } }}>
-        <span style={{ fontSize: 12, color: '#888' }}>本页实付合计：</span>
-        <span style={{ fontSize: 20, fontWeight: 700, color: '#eb2f96' }}>¥{totalRevenue.toFixed(2)}</span>
+        <span style={{ fontSize: 14, color: '#888' }}>本页实付合计：</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#eb2f96' }}>¥{totalRevenue.toFixed(2)}</span>
       </Card>
 
       <Card style={{ marginBottom: 10 }}>
@@ -427,15 +427,15 @@ const OrdersTab: React.FC = () => {
 
       <ResizableModal title={<><LinkOutlined /> 关联生产订单</>}
         open={!!linkTarget} onCancel={() => setLinkTarget(null)}
-        onOk={handleLink} confirmLoading={linking} okText="确认关联" width="60vw" maskClosable={false}>
+        onOk={handleLink} confirmLoading={linking} okText="确认关联" width="85vw" maskClosable={false}>
         {linkTarget && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 14 }}>
             <div>平台订单: <b>{linkTarget.platformOrderNo}</b></div>
             <div>商品: {linkTarget.productName} × {linkTarget.quantity}</div>
             <div>实付: ¥{linkTarget.payAmount} &nbsp;|&nbsp; 买家: {linkTarget.buyerNick || linkTarget.receiverName}</div>
           </div>
         )}
-        <Alert style={{ marginBottom: 12, fontSize: 12 }} type="info" showIcon
+        <Alert style={{ marginBottom: 12, fontSize: 14 }} type="info" showIcon
           title="关联后，该生产订单从仓库出库时将自动更新此电商订单为【已出库】并写入快递单号" />
         <Form form={linkForm} layout="vertical">
           <Form.Item name="productionOrderNo" label="生产订单号"
@@ -447,15 +447,15 @@ const OrdersTab: React.FC = () => {
 
       <ResizableModal title={<><CarOutlined /> 现货直接出库</>}
         open={!!outboundTarget} onCancel={() => setOutboundTarget(null)}
-        onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width="60vw" maskClosable={false}>
+        onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width="85vw" maskClosable={false}>
         {outboundTarget && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 14 }}>
             <div>平台订单: <b>{outboundTarget.platformOrderNo || outboundTarget.orderNo}</b></div>
             <div>商品: {outboundTarget.productName} × {outboundTarget.quantity}</div>
             <div>收件人: {outboundTarget.receiverName} &nbsp;{outboundTarget.receiverPhone}</div>
           </div>
         )}
-        <Alert style={{ marginBottom: 12, fontSize: 12 }} type="success" showIcon
+        <Alert style={{ marginBottom: 12, fontSize: 14 }} type="success" showIcon
           title="出库后自动扣减SKU库存、更新订单状态为【已出库】、生成销售收入流水、回传物流信息到平台" />
         <Form form={outboundForm} layout="vertical">
           <Form.Item name="expressCompany" label="快递公司"
@@ -522,7 +522,7 @@ const PricingTab: React.FC = () => {
     { title: '尺码',   dataIndex: 'size',    width: 70 },
     {
       title: 'SKU编码', dataIndex: 'skuCode', width: 190,
-      render: v => <Text style={{ fontSize: 13, color: '#52c41a' }}>{v}</Text>,
+      render: v => <Text style={{ fontSize: 14, color: '#52c41a' }}>{v}</Text>,
     },
     {
       title: '库存', dataIndex: 'stockQuantity', width: 70,
@@ -573,7 +573,7 @@ const PricingTab: React.FC = () => {
 
   return (
     <div>
-      <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
+      <Alert style={{ marginBottom: 14, fontSize: 14 }} type="info" showIcon
         title="此处的【单价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
       <Card style={{ marginBottom: 10 }}>
         <Space>
@@ -604,7 +604,7 @@ const PricingTab: React.FC = () => {
 const EcommerceOrders: React.FC = () => (
   <>
   <div style={{ padding: 20 }}>
-    <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
+    <Alert style={{ marginBottom: 14, fontSize: 14 }} type="info" showIcon
       title="电商对接全流程"
       description={
         <Steps style={{ marginTop: 8 }}

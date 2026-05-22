@@ -99,6 +99,7 @@ export function useStyleSizeDerived({
         cells: nextCells,
       };
     })));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, linkedSizeColumns]);
 
   return { displayRows, groupNameOptions };

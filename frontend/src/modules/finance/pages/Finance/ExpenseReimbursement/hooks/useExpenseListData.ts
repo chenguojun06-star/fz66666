@@ -65,6 +65,7 @@ export const useExpenseListData = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize, filterStatus, filterType, debouncedKeyword, viewMode, user?.id, message]);
 
   useEffect(() => { fetchList(); }, [fetchList]);

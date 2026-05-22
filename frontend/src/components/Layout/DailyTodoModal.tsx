@@ -104,10 +104,10 @@ const MetricCard: React.FC<{
     flex: 1, minWidth: 0, padding: '12px 14px', borderRadius: 8,
     background: bg, textAlign: 'center',
   }}>
-    <div style={{ fontSize: 22, fontWeight: 700, color, lineHeight: 1.2 }}>
+    <div style={{ fontSize: 16, fontWeight: 700, color, lineHeight: 1.2 }}>
       {Number(value) || 0}{suffix}
     </div>
-    <div style={{ fontSize: 12, color: '#595959', marginTop: 4 }}>{label}</div>
+    <div style={{ fontSize: 14, color: '#595959', marginTop: 4 }}>{label}</div>
   </div>
 );
 
@@ -130,22 +130,22 @@ const DecisionCardRow: React.FC<{
         </Tag>
         <span style={{ fontWeight: 600, fontSize: 14, color: '#141414' }}>{card.title}</span>
         {card.confidence > 0 && (
-          <span style={{ fontSize: 13, color: '#8c8c8c', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 14, color: '#8c8c8c', marginLeft: 'auto' }}>
             置信度 {card.confidence}%
           </span>
         )}
       </div>
-      <div style={{ fontSize: 13, color: '#262626', lineHeight: 1.6, marginBottom: 6 }}>
+      <div style={{ fontSize: 14, color: '#262626', lineHeight: 1.6, marginBottom: 6 }}>
         {card.summary}
       </div>
       {card.painPoint && (
-        <div style={{ fontSize: 12, color: accentColor, marginBottom: 6 }}>
+        <div style={{ fontSize: 14, color: accentColor, marginBottom: 6 }}>
           <BulbOutlined style={{ marginRight: 4 }} />
           建议：{card.painPoint}
         </div>
       )}
       {card.evidence?.length > 0 && (
-        <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6 }}>
+        <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 6 }}>
           {card.evidence.slice(0, 6).map((e, i) => (
             <div key={i} style={{ marginBottom: 2 }}>· {e}</div>
           ))}
@@ -156,7 +156,7 @@ const DecisionCardRow: React.FC<{
           onClick={() => onNav(card.actionPath)}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 13, color: 'var(--primary-color)', cursor: 'pointer',
+            fontSize: 14, color: 'var(--primary-color)', cursor: 'pointer',
             fontWeight: 500,
           }}
         >
@@ -179,21 +179,21 @@ function buildTrendOption(trend: TrendPoint[]) {
       trigger: 'axis' as const,
       backgroundColor: 'rgba(255,255,255,0.96)',
       borderColor: '#e8e8e8',
-      textStyle: { fontSize: 12, color: '#333' },
+      textStyle: { fontSize: 14, color: '#333' },
     },
     legend: {
       data: ['扫码次数', '入库单数', '下单数'],
-      bottom: 0, textStyle: { fontSize: 13 }, itemWidth: 16, itemHeight: 8,
+      bottom: 0, textStyle: { fontSize: 14 }, itemWidth: 16, itemHeight: 8,
     },
     grid: { left: 36, right: 16, top: 10, bottom: 32, containLabel: false },
     xAxis: {
       type: 'category' as const, data: dates, boundaryGap: false,
       axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { fontSize: 13, color: '#8c8c8c' },
+      axisLabel: { fontSize: 14, color: '#8c8c8c' },
     },
     yAxis: {
       type: 'value' as const, splitLine: { lineStyle: { color: '#f5f5f5' } },
-      axisLabel: { fontSize: 13, color: '#8c8c8c' },
+      axisLabel: { fontSize: 14, color: '#8c8c8c' },
     },
     series: [
       {
@@ -241,7 +241,7 @@ function TrendArrow({ trend }: { trend: TrendPoint[] }) {
   if (pct === 0) return null;
   const up = pct > 0;
   return (
-    <span style={{ fontSize: 12, color: up ? '#52c41a' : '#ff4d4f', marginLeft: 6 }}>
+    <span style={{ fontSize: 14, color: up ? '#52c41a' : '#ff4d4f', marginLeft: 6 }}>
       {up ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(pct)}%
     </span>
   );
@@ -304,7 +304,7 @@ const DailyTodoModal: React.FC = () => {
       closable={true}
       maskClosable={true}
       keyboard={true}
-      width="60vw"
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
       centered
       onCancel={handleClose}
@@ -321,20 +321,20 @@ const DailyTodoModal: React.FC = () => {
             marginBottom: 16,
           }}>
             <div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: '#141414' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#141414' }}>
                 ☀️ 早上好，今日生产运营简报
               </div>
-              <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>
+              <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 2 }}>
                 {brief.date} · 数据已实时同步
                 {brief.suggestionsSource === 'ai' && (
-                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 13 }}>
+                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 14 }}>
                     <RobotOutlined /> AI 增强
                   </Tag>
                 )}
               </div>
             </div>
             {health && (
-              <Tag color={health.tagColor} style={{ fontSize: 13, padding: '2px 12px' }}>
+              <Tag color={health.tagColor} style={{ fontSize: 14, padding: '2px 12px' }}>
                 {health.label}
               </Tag>
             )}
@@ -367,7 +367,7 @@ const DailyTodoModal: React.FC = () => {
               marginBottom: 16, border: '1px solid #f0f0f0',
             }}>
               <div style={{
-                fontSize: 13, fontWeight: 600, color: '#262626', marginBottom: 8,
+                fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 8,
                 display: 'flex', alignItems: 'center',
               }}>
                 📈 近7日生产趋势
@@ -390,7 +390,7 @@ const DailyTodoModal: React.FC = () => {
           {/* ── 决策卡片：问题 + 方案 + 行动 ── */}
           {cards.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#262626', marginBottom: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 8 }}>
                 🎯 今日需要解决的问题
               </div>
               {cards.map((card, i) => (
@@ -402,7 +402,7 @@ const DailyTodoModal: React.FC = () => {
           {/* ── 无决策卡片时的兜底摘要 ── */}
           {cards.length === 0 && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#262626', marginBottom: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 8 }}>
                 🎯 今日重点关注
               </div>
               {(Number(brief.overdueOrderCount) || 0) > 0 && (
@@ -423,7 +423,7 @@ const DailyTodoModal: React.FC = () => {
                (Number(brief.highRiskOrderCount) || 0) === 0 && (
                 <div style={{
                   padding: '12px 14px', borderRadius: 8, background: '#f6ffed',
-                  border: '1px solid #b7eb8f', fontSize: 13, color: '#389e0d',
+                  border: '1px solid #b7eb8f', fontSize: 14, color: '#389e0d',
                 }}>
                   ✅ 当前订单健康度良好，保持日常巡检，重点关注新开单进度
                 </div>
@@ -438,14 +438,14 @@ const DailyTodoModal: React.FC = () => {
               border: '1px solid #d3adf7', marginBottom: 4,
             }}>
               <div style={{
-                fontSize: 13, fontWeight: 600, color: '#531dab', marginBottom: 6,
+                fontSize: 14, fontWeight: 600, color: '#531dab', marginBottom: 6,
                 display: 'flex', alignItems: 'center', gap: 6,
               }}>
                 <RobotOutlined /> 智能运营建议
               </div>
               {suggestions.map((s, i) => (
                 <div key={i} style={{
-                  fontSize: 13, color: '#262626', lineHeight: 1.7,
+                  fontSize: 14, color: '#262626', lineHeight: 1.7,
                   paddingLeft: 12, position: 'relative',
                 }}>
                   <span style={{
@@ -483,8 +483,8 @@ const ActionRow: React.FC<{
     onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = '#f0f5ff')}
     onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = '#fafafa')}
   >
-    <span style={{ fontSize: 16, color }}>{icon}</span>
-    <span style={{ flex: 1, fontSize: 13, color: '#262626' }}>{title}</span>
+    <span style={{ fontSize: 13, color }}>{icon}</span>
+    <span style={{ flex: 1, fontSize: 14, color: '#262626' }}>{title}</span>
     <RightOutlined style={{ fontSize: 13, color: '#bfbfbf' }} />
   </div>
 );

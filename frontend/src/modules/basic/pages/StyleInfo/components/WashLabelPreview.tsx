@@ -161,7 +161,7 @@ const WashLabelPreview: React.FC<Props> = ({
           {sections.map(section => (
             <div key={section.key} style={{ marginBottom: 16 }}>
               <div style={{
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 color: 'var(--color-primary, #1677ff)',
                 marginBottom: 6,
@@ -199,7 +199,7 @@ const WashLabelPreview: React.FC<Props> = ({
           />
           <div style={{
             marginLeft: 16,
-            fontSize: 12,
+            fontSize: 14,
             color: 'var(--color-text-tertiary, #8c8c8c)',
             lineHeight: 1.8,
             alignSelf: 'center',
@@ -213,7 +213,7 @@ const WashLabelPreview: React.FC<Props> = ({
       {isMultiPart && (
         <div style={{
           marginTop: 8,
-          fontSize: 12,
+          fontSize: 14,
           color: 'var(--color-text-tertiary, #8c8c8c)',
           lineHeight: 1.8,
         }}>

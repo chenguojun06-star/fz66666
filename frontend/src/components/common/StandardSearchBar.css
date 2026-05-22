@@ -6,6 +6,24 @@
 
 .standard-search-row {
   width: 100%;
+  align-items: stretch !important;
+}
+
+.standard-search-row .ant-input-affix-wrapper,
+.standard-search-row .ant-select-selector,
+.standard-search-row .ant-picker,
+.standard-search-row .ant-btn:not(.ant-btn-icon-only) {
+  height: var(--control-height, 32px) !important;
+}
+
+.standard-search-row .ant-input-affix-wrapper .ant-input {
+  height: var(--control-height, 32px) !important;
+  line-height: calc(var(--control-height, 32px) - 2px) !important;
+}
+
+.standard-search-row .ant-select-selection-item,
+.standard-search-row .ant-select-selection-placeholder {
+  line-height: calc(var(--control-height, 32px) - 2px) !important;
 }
 
 .standard-search-input-v2 {

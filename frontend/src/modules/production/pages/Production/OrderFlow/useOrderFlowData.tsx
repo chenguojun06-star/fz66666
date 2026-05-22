@@ -105,6 +105,7 @@ export function useOrderFlowData() {
 
   useEffect(() => {
     fetchFlow();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.orderId]);
 
   useEffect(() => {
@@ -280,7 +281,7 @@ export function useOrderFlowData() {
         const color = hours > 336 ? '#cf1322' : hours > 168 ? '#fa8c16' : '#595959';
         return React.createElement(
           'span',
-          { style: { color, fontSize: 12, fontWeight: hours > 168 ? 600 : 400 } },
+          { style: { color, fontSize: 14, fontWeight: hours > 168 ? 600 : 400 } },
           record.status === 'in_progress' ? `⏳${label}` : label,
         );
       },
@@ -325,6 +326,8 @@ export function useOrderFlowData() {
         warehousingQuantity,
       };
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order, data?.warehousings, data?.cuttingBundles, (data as any)?.styleQuotation]);
 
   const orderLineColumns: ColumnsType<OrderLine> = [

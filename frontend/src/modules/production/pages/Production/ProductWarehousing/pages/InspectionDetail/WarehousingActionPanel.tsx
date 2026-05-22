@@ -47,7 +47,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           dataSource={pendingRecords}
           resizableColumns={false}
           scroll={undefined}
-          style={{ fontSize: 12 }}
+          style={{ fontSize: 14 }}
           columns={[
             { title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 110 },
             {

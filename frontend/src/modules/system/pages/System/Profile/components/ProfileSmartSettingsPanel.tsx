@@ -163,14 +163,14 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
       >
         <MessageOutlined style={{ color: 'var(--primary-color)' }} />
         <span style={{ fontWeight: 600, fontSize: 15 }}>智能开关</span>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        <Typography.Text type="secondary" style={{ fontSize: 14 }}>
           （当前已开启 {enabledCount}/{SMART_FEATURE_KEYS.length}）
         </Typography.Text>
         <DownOutlined style={{ marginLeft: 'auto', fontSize: 13, transition: 'transform 0.2s', transform: smartFlagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
       </div>
       {!smartFlagsCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
         <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 14 }}>
             开关已升级为按租户持久化保存，同租户成员读取同一套配置。
           </Typography.Text>
           <Space>
@@ -195,8 +195,8 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.title}</div>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{meta.title}</div>
+                <Typography.Text type="secondary" style={{ fontSize: 14 }}>
                   {meta.desc}
                 </Typography.Text>
               </div>
@@ -209,7 +209,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
           );
         })}
         {!canManageSmartFlags && (
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 14 }}>
             当前账号仅可查看租户智能开关，修改需使用租户管理员账号。
           </Typography.Text>
         )}
@@ -219,14 +219,14 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <TeamOutlined style={{ color: 'var(--primary-color)' }} />
           <span style={{ fontWeight: 600, fontSize: 15 }}>智能经营偏好</span>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 14 }}>
             （决定 AI 更偏交期、利润还是回款）
           </Typography.Text>
         </div>
         <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
           <Spin spinning={loadingSmartProfile || savingSmartProfile}>
             <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 14 }}>
                 未手工配置时，系统会根据订单延期、异常扫码和结算节奏自动学习一套偏好。
               </Typography.Text>
               <Space>
@@ -262,23 +262,23 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #eef1f4' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>当前生效</div>
-                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>当前生效</div>
+                <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block' }}>
                   {smartProfile?.manualConfigured ? '已手工保存，款式智能卡与预警逻辑将优先采用这套偏好。' : '当前直接使用系统学习建议，还没有人工覆盖。'}
                 </Typography.Text>
                 {smartProfile?.updateTime && (
-                  <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block', marginTop: 6 }}>
                     最近保存：{smartProfile.updateTime}
                   </Typography.Text>
                 )}
               </div>
               <div style={{ padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #eef1f4' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>系统学习建议</div>
-                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>系统学习建议</div>
+                <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block' }}>
                   目标：{smartProfile?.learnedProfile?.primaryGoalLabel || '-'}；交期预警 {smartProfile?.learnedProfile?.deliveryWarningDays ?? '-'} 天；异常阈值 {smartProfile?.learnedProfile?.anomalyWarningCount ?? '-'} 次；利润安全线 {smartProfile?.learnedProfile?.lowMarginThreshold ?? '-'}%
                 </Typography.Text>
                 {smartProfile?.learnedProfile?.topRiskFactoryName && (
-                  <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block', marginTop: 6 }}>
                     风险工厂：{smartProfile.learnedProfile.topRiskFactoryName}，{smartProfile.learnedProfile.topRiskFactoryReason}
                   </Typography.Text>
                 )}
@@ -286,7 +286,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             </div>
 
             {!canManageSmartFlags && (
-              <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 12 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block', marginTop: 12 }}>
                 当前账号仅可查看租户智能经营偏好，修改需使用租户管理员账号。
               </Typography.Text>
             )}
@@ -301,14 +301,14 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
         >
           <MobileOutlined style={{ color: 'var(--primary-color)' }} />
           <span style={{ fontWeight: 600, fontSize: 15 }}>小程序菜单管理</span>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 14 }}>
             （当前已显示 {miniprogramMenuEnabledCount}/{MINIPROGRAM_MENU_KEYS.length}）
           </Typography.Text>
           <DownOutlined style={{ marginLeft: 'auto', fontSize: 13, transition: 'transform 0.2s', transform: miniprogramMenuCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
         </div>
         {!miniprogramMenuCollapsed && <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
           <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
               控制小程序「我的」页面各菜单入口的显示与隐藏，关闭后该租户下所有用户均不可见。
             </Typography.Text>
             <Space>
@@ -333,8 +333,8 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.title}</div>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{meta.title}</div>
+                  <Typography.Text type="secondary" style={{ fontSize: 14 }}>
                     {meta.desc}
                   </Typography.Text>
                 </div>
@@ -347,7 +347,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             );
           })}
           {!canManageSmartFlags && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
               当前账号仅可查看小程序菜单配置，修改需使用租户管理员账号。
             </Typography.Text>
           )}

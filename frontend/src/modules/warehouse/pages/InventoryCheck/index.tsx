@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Table, Tag, Space, Modal, Form, InputNumber, Select, Input, App, Statistic, Row, Col, Descriptions, Popconfirm, Tooltip, Steps, Empty, Alert, Image } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import { PlusOutlined, AuditOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { inventoryCheckApi } from '../../../../services/warehouse/inventoryCheckApi';
 import ResizableTable from '../../../../components/common/ResizableTable';
@@ -37,6 +38,8 @@ const InventoryCheck: React.FC = () => {
   const [currentItems, setCurrentItems] = useState<any[]>([]);
   const [fillModalVisible, setFillModalVisible] = useState(false);
   const [createForm] = Form.useForm();
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [fillSubmitting, setFillSubmitting] = useState(false);
   const [filterType, setFilterType] = useState<string | undefined>();
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
 
@@ -61,6 +64,7 @@ const InventoryCheck: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize, filterType, filterStatus]);
 
   const fetchSummary = useCallback(async () => {
@@ -74,6 +78,7 @@ const InventoryCheck: React.FC = () => {
   useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
   const handleCreate = async () => {
+    setCreateSubmitting(true);
     try {
       const values = await createForm.validateFields();
       await inventoryCheckApi.create(values);
@@ -84,6 +89,8 @@ const InventoryCheck: React.FC = () => {
       fetchSummary();
     } catch (e: any) {
       if (e.message) message.error(e.message);
+    } finally {
+      setCreateSubmitting(false);
     }
   };
 
@@ -112,6 +119,7 @@ const InventoryCheck: React.FC = () => {
   };
 
   const handleFillActual = async () => {
+    setFillSubmitting(true);
     try {
       const items = currentItems
         .filter(it => it.actualQuantity !== undefined && it.actualQuantity !== null)
@@ -126,6 +134,8 @@ const InventoryCheck: React.FC = () => {
       fetchList();
     } catch (e: any) {
       message.error(e.message || '保存失败');
+    } finally {
+      setFillSubmitting(false);
     }
   };
 
@@ -157,7 +167,7 @@ const InventoryCheck: React.FC = () => {
 
   const imageColumn = {
     title: '图片', dataIndex: 'imageUrl', key: 'imageUrl', width: 60,
-    render: (v: string) => v ? <Image src={v} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 12 }}>无</div>,
+    render: (v: string) => v ? <Image src={v} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无</div>,
   };
 
   const styleNoColumn = {
@@ -318,7 +328,7 @@ const InventoryCheck: React.FC = () => {
         />
       </Card>
 
-      <Modal title="新建盘点单" open={createModalVisible} onOk={handleCreate} onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }} width={480} maskClosable={false}>
+      <ResizableModal title="新建盘点单" open={createModalVisible} onOk={handleCreate} onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }} width="30vw" maskClosable={false} confirmLoading={createSubmitting}>
         <Form form={createForm} layout="vertical">
           <Form.Item name="checkType" label="盘点类型" rules={[{ required: true, message: '请选择盘点类型' }]}>
             <Select placeholder="选择盘点类型">
@@ -337,7 +347,7 @@ const InventoryCheck: React.FC = () => {
             <Input.TextArea rows={2} placeholder="盘点备注" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
 
       <StandardModal title={`盘点详情 - ${currentCheck?.checkNo || ''}`} open={detailModalVisible} onCancel={() => setDetailModalVisible(false)} size="lg" footer={null}>
         {currentCheck && (
@@ -358,7 +368,7 @@ const InventoryCheck: React.FC = () => {
         )}
       </StandardModal>
 
-      <StandardModal title={`填写实盘数量 - ${currentCheck?.checkNo || ''}`} open={fillModalVisible} onOk={handleFillActual} onCancel={() => setFillModalVisible(false)} size="lg">
+      <StandardModal title={`填写实盘数量 - ${currentCheck?.checkNo || ''}`} open={fillModalVisible} onOk={handleFillActual} onCancel={() => setFillModalVisible(false)} size="lg" confirmLoading={fillSubmitting}>
         <Table rowKey="id" size="small" columns={itemColumns} dataSource={currentItems} pagination={false} scroll={{ y: 400 }} />
       </StandardModal>
 
@@ -367,7 +377,7 @@ const InventoryCheck: React.FC = () => {
         open={guideVisible}
         onCancel={() => setGuideVisible(false)}
         footer={<Button onClick={() => setGuideVisible(false)}>知道了</Button>}
-        width={640}
+        width="40vw"
       >
         <Steps orientation="vertical" current={-1} items={[
           {

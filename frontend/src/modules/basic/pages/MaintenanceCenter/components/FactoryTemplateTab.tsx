@@ -124,6 +124,7 @@ const FactoryTemplateTab: React.FC = () => {
     setViewOpen(true);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleDelete = (row: TemplateLibrary) => {
     modal.confirm({
       title: '确认删除',
@@ -142,6 +143,7 @@ const FactoryTemplateTab: React.FC = () => {
     });
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleLock = async (row: TemplateLibrary) => {
     try {
       await api.post(`/template-library/${row.id}/lock`);
@@ -152,6 +154,7 @@ const FactoryTemplateTab: React.FC = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRollback = async (row: TemplateLibrary) => {
     try {
       await api.post(`/template-library/${row.id}/rollback`, { reason: '工厂模板退回编辑' });
@@ -330,7 +333,7 @@ const FactoryTemplateTab: React.FC = () => {
       <ResizableModal
         title={editingRow?.id ? `编辑模板 — ${editingRow.templateName || ''}` : `创建${typeLabel(createType)}`}
         open={editOpen}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         onCancel={() => { setEditOpen(false); setEditingRow(null); }}
         footer={null}
@@ -352,7 +355,7 @@ const FactoryTemplateTab: React.FC = () => {
       <ResizableModal
         title={`查看模板 — ${viewingRow?.templateName || ''}`}
         open={viewOpen}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         onCancel={() => { setViewOpen(false); setViewingRow(null); }}
         footer={null}

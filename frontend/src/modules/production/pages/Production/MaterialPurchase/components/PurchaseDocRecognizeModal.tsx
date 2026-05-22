@@ -215,7 +215,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
 
           {result && (
             <>
-              <div style={{ color: '#666', fontSize: 13 }}>
+              <div style={{ color: '#666', fontSize: 14 }}>
                 共识别 <strong>{recognizedCount}</strong> 项，
                 已匹配采购记录 <strong>{matchedCount}</strong> 项（可编辑数量后点击应用）
               </div>

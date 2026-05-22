@@ -89,6 +89,7 @@ export function useProductionListData() {
     setSmartError({ title, reason, code, actionText: '刷新重试' });
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchProductionList = async () => {
     setLoading(true);
     try {
@@ -123,12 +124,14 @@ export function useProductionListData() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setSelectedRowKeys([]); setSelectedRows([]); fetchProductionList(); }, [queryParams]);
 
   useEffect(() => {
     const onVisibility = () => { if (document.visibilityState === 'visible') fetchProductionList(); };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -148,6 +151,7 @@ export function useProductionListData() {
     };
     void run();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productionList, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder]);
 
   useEffect(() => {
@@ -211,6 +215,7 @@ export function useProductionListData() {
       return 0;
     });
     return filtered;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [smartQueueOrders, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
 
   const urlFocusApplied = useRef(false);

@@ -23,7 +23,7 @@ const FlowCard: React.FC<{ icon: React.ReactNode; title: string; desc: string; c
       <span style={{ color, fontSize: 20 }}>{icon}</span>
       <Text strong>{title}</Text>
     </div>
-    <Text type="secondary" style={{ fontSize: 13 }}>{desc}</Text>
+    <Text type="secondary" style={{ fontSize: 14 }}>{desc}</Text>
   </Card>
 );
 
@@ -46,7 +46,7 @@ const IntegrationGuideTab: React.FC = () => (
       </Row>
       <Divider />
       <Title level={5}>数据流向说明</Title>
-      <div style={{ background: '#f6f8fa', padding: 20, borderRadius: 8, fontFamily: 'monospace', fontSize: 13, lineHeight: 2, overflow: 'auto' }}>
+      <div style={{ background: '#f6f8fa', padding: 20, borderRadius: 8, fontFamily: 'monospace', fontSize: 14, lineHeight: 2, overflow: 'auto' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '4px 12px', alignItems: 'center', maxWidth: 700 }}>
           <Text strong>客户ERP系统</Text><Text type="secondary">──推送订单──→</Text><Text strong>本系统（创建生产订单）</Text>
           <Text strong>本系统（质检完成）</Text><Text type="secondary">──Webhook──→</Text><Text strong>客户系统（接收质检结果）</Text>

@@ -85,8 +85,8 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
         <span style={{ color: '#ad6800', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <BulbOutlined /> AI报价建议
         </span>
-        <span style={{ color: '#8c8c8c', fontSize: 12 }}>分析对象：{subjectText}</span>
-        <span style={{ marginLeft: 'auto', color: '#ad6800', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ color: '#8c8c8c', fontSize: 14 }}>分析对象：{subjectText}</span>
+        <span style={{ marginLeft: 'auto', color: '#ad6800', fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}>
           {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 12 }} /> : <RightOutlined style={{ fontSize: 12 }} />}
         </span>
       </div>
@@ -106,11 +106,11 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           </div>
 
           {!effectiveStyleNo ? (
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>当前款号为空，暂无法生成报价建议</div>
+            <div style={{ fontSize: 14, color: '#8c8c8c' }}>当前款号为空，暂无法生成报价建议</div>
           ) : loading ? (
             <div style={{ padding: '12px 0', textAlign: 'center' }}><Spin /></div>
           ) : error ? (
-            <div style={{ fontSize: 12, color: '#cf1322' }}>{error}</div>
+            <div style={{ fontSize: 14, color: '#cf1322' }}>{error}</div>
           ) : data ? (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginBottom: 10 }}>
@@ -129,13 +129,13 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                       background: item.highlight ? 'rgba(250,173,20,0.08)' : 'rgba(255,255,255,0.55)',
                     }}
                   >
-                    <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>{item.label}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: item.highlight ? '#d48806' : '#262626' }}>{item.value}</div>
+                    <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 4 }}>{item.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? '#d48806' : '#262626' }}>{item.value}</div>
                   </div>
                 ))}
               </div>
 
-              <div style={{ fontSize: 12, color: '#595959', lineHeight: 1.7, marginBottom: 10 }}>
+              <div style={{ fontSize: 14, color: '#595959', lineHeight: 1.7, marginBottom: 10 }}>
                 <div>历史接单：{data.historicalOrderCount || 0} 单 / {data.historicalTotalQuantity || 0} 件</div>
                 <div>建议说明：{data.suggestion || 'AI已结合历史报价、物料成本和工序成本给出建议'}</div>
               </div>

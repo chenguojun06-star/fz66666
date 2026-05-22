@@ -19,21 +19,21 @@ const directCardStyle = {
 const directStackStyle = { display: 'grid', gap: 10 } as const;
 
 const directTitleStyle = {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--color-text-primary)',
   lineHeight: 1.2,
 } as const;
 
 const directMetaStyle = {
-  fontSize: 12,
+  fontSize: 14,
   color: 'var(--neutral-text-secondary)',
   lineHeight: 1.4,
 } as const;
 
 const directFieldLabelStyle = {
   marginBottom: 4,
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--neutral-text-secondary)',
 } as const;

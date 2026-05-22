@@ -284,6 +284,7 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     loadData(params);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, []);
 
   return {

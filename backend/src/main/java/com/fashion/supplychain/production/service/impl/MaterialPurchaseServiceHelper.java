@@ -296,30 +296,50 @@ public class MaterialPurchaseServiceHelper {
 
     private Map<String, MaterialPurchase> aggregateBomToPurchases(List<StyleBom> bomList, List<OrderLine> lines,
             Set<String> orderColorSet, Set<String> orderSizeSet, ProductionOrder order) {
-        Map<String, MaterialPurchase> grouped = new HashMap<>();
+        Map<String, MaterialPurchase> grouped = new LinkedHashMap<>();
+        boolean orderHasMultipleColors = orderColorSet.size() > 1;
+
         for (StyleBom bom : bomList) {
             if (bom == null) continue;
-            String bomColor = bom.getColor() == null ? "" : bom.getColor().trim();
-            String bomSize = bom.getSize() == null ? "" : bom.getSize().trim();
-            List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColor);
+            String bomColorRaw = bom.getColor() == null ? "" : bom.getColor().trim();
+            String bomSizeRaw = bom.getSize() == null ? "" : bom.getSize().trim();
+            List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColorRaw);
             Set<String> bomColorSet = bomColorOpts.isEmpty() ? null : new HashSet<>(bomColorOpts);
-            List<String> bomSizeOpts = MaterialPurchaseHelper.splitOptions(bomSize);
+            List<String> bomSizeOpts = MaterialPurchaseHelper.splitOptions(bomSizeRaw);
             Set<String> bomSizeSet = bomSizeOpts.isEmpty() ? null : new HashSet<>(bomSizeOpts);
-            bomColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
-            bomSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
+            Set<String> matchColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
+            Set<String> effectiveSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
 
             Map<String, BigDecimal> sizeUsageMapParsed = parseSizeUsageMap(bom.getSizeUsageMap());
-            BigDecimal totalRequired = computeBomRequiredQuantity(bom, lines, bomColorSet, bomSizeSet, sizeUsageMapParsed);
-            if (totalRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            String key = buildGroupingKey(bom, bomColor, bomSize);
-            MaterialPurchase agg = grouped.get(key);
-            if (agg == null) {
-                grouped.put(key, createPurchaseFromBom(bom, bomColor, bomSize, totalRequired, order));
+            if (!orderHasMultipleColors) {
+                BigDecimal totalRequired = computeBomRequiredQuantity(bom, lines, matchColorSet, effectiveSizeSet, sizeUsageMapParsed);
+                if (totalRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
+                String displayColor = bomColorRaw.isEmpty() ? (matchColorSet == null ? "" : String.join(",", matchColorSet)) : bomColorRaw;
+                String key = buildGroupingKey(bom, displayColor, bomSizeRaw);
+                MaterialPurchase agg = grouped.get(key);
+                if (agg == null) {
+                    grouped.put(key, createPurchaseFromBom(bom, displayColor, bomSizeRaw, totalRequired, order));
+                } else {
+                    agg.setPurchaseQuantity((agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(totalRequired));
+                    agg.setTotalAmount(BigDecimal.ZERO);
+                }
             } else {
-                BigDecimal nextQty = (agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(totalRequired);
-                agg.setPurchaseQuantity(nextQty);
-                agg.setTotalAmount(BigDecimal.ZERO);
+                Set<String> targetColors = matchColorSet != null ? matchColorSet : orderColorSet;
+                for (String orderColor : targetColors) {
+                    Set<String> singleColorSet = new HashSet<>();
+                    singleColorSet.add(orderColor);
+                    BigDecimal colorRequired = computeBomRequiredQuantity(bom, lines, singleColorSet, effectiveSizeSet, sizeUsageMapParsed);
+                    if (colorRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
+                    String key = buildGroupingKey(bom, orderColor, bomSizeRaw);
+                    MaterialPurchase agg = grouped.get(key);
+                    if (agg == null) {
+                        grouped.put(key, createPurchaseFromBom(bom, orderColor, bomSizeRaw, colorRequired, order));
+                    } else {
+                        agg.setPurchaseQuantity((agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(colorRequired));
+                        agg.setTotalAmount(BigDecimal.ZERO);
+                    }
+                }
             }
         }
         return grouped;
@@ -339,8 +359,9 @@ public class MaterialPurchaseServiceHelper {
                 int qty = l.quantity == null ? 0 : l.quantity;
                 if (qty <= 0) continue;
                 hasMatchedLine = true;
-                BigDecimal usage = sizeUsageMapParsed.getOrDefault(ls,
-                        bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount());
+                BigDecimal fromMap = sizeUsageMapParsed.get(ls);
+                BigDecimal usage = (fromMap != null && fromMap.compareTo(BigDecimal.ZERO) > 0) ? fromMap
+                        : (bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount());
                 BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
                 BigDecimal lossMultiplier = BigDecimal.ONE.add(
                         lossRate.divide(new BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP));

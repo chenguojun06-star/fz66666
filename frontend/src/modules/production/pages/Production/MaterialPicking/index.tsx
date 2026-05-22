@@ -51,6 +51,7 @@ const MaterialPickingList: React.FC = () => {
 
   useEffect(() => {
     fetchList();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const columns = [

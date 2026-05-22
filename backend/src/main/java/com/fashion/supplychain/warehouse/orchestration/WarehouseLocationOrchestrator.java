@@ -93,6 +93,19 @@ public class WarehouseLocationOrchestrator {
                 .eq(StringUtils.isNotBlank(areaId), WarehouseLocation::getAreaId, areaId)
                 .orderByAsc(WarehouseLocation::getLocationCode)
                 .last("LIMIT 5000"));
+
+        for (WarehouseLocation loc : list) {
+            long actualCount = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getTenantId, tenantId)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .and(w -> w.eq(ProductWarehousing::getWarehouse, loc.getLocationCode())
+                            .or().eq(ProductWarehousing::getWarehouse, loc.getLocationName())));
+            int actual = (int) actualCount;
+            if (loc.getUsedCapacity() == null || loc.getUsedCapacity() != actual) {
+                loc.setUsedCapacity(actual);
+            }
+        }
+
         return Result.success(list);
     }
 
@@ -304,30 +317,69 @@ public class WarehouseLocationOrchestrator {
         result.put("capacity", location.getCapacity());
         result.put("usedCapacity", location.getUsedCapacity());
 
+        long actualCount = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
+                .eq(ProductWarehousing::getTenantId, tenantId)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
+                        .or().eq(ProductWarehousing::getWarehouse, location.getLocationName())));
+        result.put("actualUsedCapacity", actualCount);
+
         List<Map<String, Object>> items = new ArrayList<>();
 
         if ("FINISHED".equals(location.getWarehouseType())) {
-            List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
-                    .eq(ProductSku::getTenantId, tenantId)
-                    .eq(ProductSku::getStatus, "ENABLED")
-                    .gt(ProductSku::getStockQuantity, 0));
-            for (ProductSku sku : skus) {
-                long warehousedInLocation = productWarehousingMapper.selectCount(
-                        new LambdaQueryWrapper<ProductWarehousing>()
-                                .eq(ProductWarehousing::getTenantId, tenantId)
-                                .eq(ProductWarehousing::getWarehouse, locationCode)
-                                .eq(ProductWarehousing::getSkuCode, sku.getSkuCode())
-                                .eq(ProductWarehousing::getDeleteFlag, 0));
-                if (warehousedInLocation > 0) {
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("skuCode", sku.getSkuCode());
-                    item.put("styleNo", sku.getStyleNo());
-                    item.put("color", sku.getColor());
-                    item.put("size", sku.getSize());
-                    item.put("stockQuantity", sku.getStockQuantity());
-                    item.put("salesPrice", sku.getSalesPrice());
-                    items.add(item);
+            List<ProductWarehousing> records = productWarehousingMapper.selectList(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getTenantId, tenantId)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
+                                    .or().eq(ProductWarehousing::getWarehouse, location.getLocationName())));
+
+            Map<String, List<ProductWarehousing>> byKey = new LinkedHashMap<>();
+            for (ProductWarehousing r : records) {
+                String key = StringUtils.isNotBlank(r.getSkuCode()) ? r.getSkuCode() : r.getStyleNo();
+                if (StringUtils.isBlank(key)) continue;
+                byKey.computeIfAbsent(key, k -> new ArrayList<>()).add(r);
+            }
+
+            for (Map.Entry<String, List<ProductWarehousing>> entry : byKey.entrySet()) {
+                String key = entry.getKey();
+                List<ProductWarehousing> recs = entry.getValue();
+                int totalQty = recs.stream().mapToInt(r -> r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0).sum();
+
+                ProductSku matchedSku = null;
+                if (StringUtils.isNotBlank(recs.get(0).getSkuCode())) {
+                    matchedSku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
+                            .eq(ProductSku::getTenantId, tenantId)
+                            .eq(ProductSku::getSkuCode, key)
+                            .last("LIMIT 1"));
                 }
+                if (matchedSku == null && StringUtils.isNotBlank(recs.get(0).getStyleNo())) {
+                    matchedSku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
+                            .eq(ProductSku::getTenantId, tenantId)
+                            .eq(ProductSku::getStyleNo, key)
+                            .eq(ProductSku::getStatus, "ENABLED")
+                            .last("LIMIT 1"));
+                }
+
+                Map<String, Object> item = new LinkedHashMap<>();
+                if (matchedSku != null) {
+                    item.put("skuCode", matchedSku.getSkuCode());
+                    item.put("styleNo", matchedSku.getStyleNo());
+                    item.put("color", matchedSku.getColor());
+                    item.put("size", matchedSku.getSize());
+                    item.put("stockQuantity", matchedSku.getStockQuantity());
+                    item.put("salesPrice", matchedSku.getSalesPrice());
+                } else {
+                    item.put("skuCode", recs.get(0).getSkuCode());
+                    item.put("styleNo", recs.get(0).getStyleNo());
+                    item.put("color", null);
+                    item.put("size", null);
+                    item.put("stockQuantity", totalQty);
+                    item.put("salesPrice", null);
+                }
+                item.put("warehousedCount", recs.size());
+                item.put("warehousedQty", totalQty);
+                items.add(item);
             }
         }
 
@@ -356,18 +408,25 @@ public class WarehouseLocationOrchestrator {
                     .eq(WarehouseLocation::getStatus, "ACTIVE")
                     .eq(WarehouseLocation::getDeleteFlag, 0));
 
-            long usedLocations = locationService.count(new LambdaQueryWrapper<WarehouseLocation>()
+            List<WarehouseLocation> allLocs = locationService.list(new LambdaQueryWrapper<WarehouseLocation>()
                     .eq(WarehouseLocation::getTenantId, tenantId)
                     .eq(WarehouseLocation::getWarehouseType, type)
-                    .gt(WarehouseLocation::getUsedCapacity, 0)
-                    .eq(WarehouseLocation::getDeleteFlag, 0));
+                    .eq(WarehouseLocation::getDeleteFlag, 0)
+                    .select(WarehouseLocation::getId, WarehouseLocation::getLocationCode,
+                            WarehouseLocation::getLocationName, WarehouseLocation::getZoneName,
+                            WarehouseLocation::getUsedCapacity));
 
-            List<String> zones = locationService.list(new LambdaQueryWrapper<WarehouseLocation>()
-                            .eq(WarehouseLocation::getTenantId, tenantId)
-                            .eq(WarehouseLocation::getWarehouseType, type)
-                            .eq(WarehouseLocation::getDeleteFlag, 0)
-                            .select(WarehouseLocation::getZoneName))
-                    .stream()
+            long usedLocations = 0;
+            for (WarehouseLocation loc : allLocs) {
+                long actualCount = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getTenantId, tenantId)
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+                        .and(w -> w.eq(ProductWarehousing::getWarehouse, loc.getLocationCode())
+                                .or().eq(ProductWarehousing::getWarehouse, loc.getLocationName())));
+                if (actualCount > 0) usedLocations++;
+            }
+
+            List<String> zones = allLocs.stream()
                     .map(WarehouseLocation::getZoneName)
                     .filter(StringUtils::isNotBlank)
                     .distinct()
@@ -384,6 +443,48 @@ public class WarehouseLocationOrchestrator {
             overview.put(type, typeInfo);
         }
         return Result.success(overview);
+    }
+
+    public void incrementUsedCapacity(String locationCode, String warehouseType, int delta) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null || StringUtils.isBlank(locationCode) || delta == 0) return;
+
+        WarehouseLocation loc = locationService.getOne(new LambdaQueryWrapper<WarehouseLocation>()
+                .eq(WarehouseLocation::getTenantId, tenantId)
+                .eq(WarehouseLocation::getLocationCode, locationCode)
+                .eq(WarehouseLocation::getDeleteFlag, 0)
+                .eq(StringUtils.isNotBlank(warehouseType), WarehouseLocation::getWarehouseType, warehouseType)
+                .last("LIMIT 1"));
+        if (loc == null) return;
+
+        int current = loc.getUsedCapacity() != null ? loc.getUsedCapacity() : 0;
+        int updated = Math.max(0, current + delta);
+        loc.setUsedCapacity(updated);
+        loc.setUpdateTime(LocalDateTime.now());
+        locationService.updateById(loc);
+    }
+
+    public int recalculateUsedCapacity(String locationCode, String warehouseType) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null || StringUtils.isBlank(locationCode)) return 0;
+
+        long count = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
+                .eq(ProductWarehousing::getTenantId, tenantId)
+                .eq(ProductWarehousing::getWarehouse, locationCode)
+                .eq(ProductWarehousing::getDeleteFlag, 0));
+
+        WarehouseLocation loc = locationService.getOne(new LambdaQueryWrapper<WarehouseLocation>()
+                .eq(WarehouseLocation::getTenantId, tenantId)
+                .eq(WarehouseLocation::getLocationCode, locationCode)
+                .eq(WarehouseLocation::getDeleteFlag, 0)
+                .eq(StringUtils.isNotBlank(warehouseType), WarehouseLocation::getWarehouseType, warehouseType)
+                .last("LIMIT 1"));
+        if (loc != null) {
+            loc.setUsedCapacity((int) count);
+            loc.setUpdateTime(LocalDateTime.now());
+            locationService.updateById(loc);
+        }
+        return (int) count;
     }
 
     private Long parseLongSafe(String s) {

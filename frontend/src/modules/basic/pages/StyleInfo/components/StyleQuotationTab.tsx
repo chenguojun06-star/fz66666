@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Form, Row, Col, App, Modal, Input } from 'antd';
+import { Form, Row, Col, App, Input } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
 import api from '@/utils/api';
 import { useUser, isAdmin } from '@/utils/AuthContext';
@@ -57,6 +58,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   const [form] = Form.useForm();
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [unlockRemark, setUnlockRemark] = useState('');
+  const [unlockSubmitting, setUnlockSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [_loading, setLoading] = useState(false);
   const [quotation, setQuotation] = useState<StyleQuotation | null>(null);
   const [bomList, setBomList] = useState<StyleBom[]>([]);
@@ -115,7 +118,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
       if (bomResult.code === 200) {
         bomData = (bomResult.data || []) as StyleBom[];
         const bomColorInfo = calcBomCostByColor(bomData);
-        bomCost = bomColorInfo.avgCost;
+        bomCost = calcBomCost(bomData);
         setBomList(bomData);
         setBomColorCosts(bomColorInfo);
       }
@@ -209,6 +212,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   };
 
   const handleSave = async () => {
+    setSaving(true);
     try {
       const values = await form.validateFields();
       const data = { ...(quotation || {}), ...values, styleId, isLocked: 1 };
@@ -223,6 +227,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
       }
     } catch {
       message.error('保存失败');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -239,6 +245,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
       message.warning('请填写解锁备注');
       return;
     }
+    setUnlockSubmitting(true);
     try {
       const res = (await api.post('/style/quotation/unlock', {
         styleId: Number(styleId),
@@ -254,6 +261,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
       }
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '解锁失败');
+    } finally {
+      setUnlockSubmitting(false);
     }
   };
 
@@ -290,13 +299,14 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
           款号：{styleNo}
         </div>
       )}
-      <Modal
+      <ResizableModal
         title="解锁报价单"
         open={unlockModalOpen}
         onOk={handleUnlockConfirm}
         onCancel={() => { setUnlockModalOpen(false); setUnlockRemark(''); }}
         okText="确认解锁"
         cancelText="取消"
+        confirmLoading={unlockSubmitting}
       >
         <div style={{ marginBottom: 8 }}>解锁原因/备注（必填）：</div>
         <Input.TextArea
@@ -306,7 +316,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
           rows={3}
           placeholder="请填写解锁原因..."
         />
-      </Modal>
+      </ResizableModal>
       <Row gutter={16} align="top">
         <Col span={24}>
           <QuotationBomSection
@@ -334,6 +344,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
             onSave={handleSave}
             onUnlock={handleUnlockClick}
             onValuesChange={calculateTotal}
+            saving={saving}
           />
           <QuotationAuditSection
             isLocked={effectiveLocked}

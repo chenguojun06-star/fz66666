@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button, Dropdown } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -12,8 +12,6 @@ interface PurchaseModalProps {
   visible: boolean;
   dialogMode: 'view' | 'create' | 'preview';
   onCancel: () => void;
-  modalWidth: number;
-  modalInitialHeight: number;
   isMobile: boolean;
   submitLoading: boolean;
 
@@ -58,8 +56,6 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   visible,
   dialogMode,
   onCancel,
-  modalWidth,
-  modalInitialHeight,
   isMobile,
   submitLoading,
   currentPurchase,
@@ -94,6 +90,15 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onWarehousePick,
 }) => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
+
+  const orderColors = useMemo(() => {
+    const colors = new Set<string>();
+    (detailOrderLines || []).forEach(line => {
+      const c = String(line?.color || '').trim();
+      if (c && c !== '-') colors.add(c);
+    });
+    return Array.from(colors);
+  }, [detailOrderLines]);
 
   const getFooter = () => {
     if (dialogMode === 'view') {
@@ -188,8 +193,8 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       title={dialogMode === 'preview' ? '采购清单预览' : dialogMode === 'create' ? '新增采购单' : '采购单详情'}
       open={visible}
       onCancel={onCancel}
-      width={modalWidth}
-      initialHeight={modalInitialHeight}
+      width="85vw"
+      initialHeight={Math.round(window.innerHeight * 0.82)}
       minWidth={isMobile ? 320 : 520}
       scaleWithViewport
       tableDensity={isMobile ? 'dense' : 'auto'}
@@ -222,7 +227,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           onWarehousePick={onWarehousePick}
         />
       ) : (
-        <PurchaseCreateForm form={form} />
+        <PurchaseCreateForm form={form} orderColors={orderColors} />
       )}
     </ResizableModal>
   );

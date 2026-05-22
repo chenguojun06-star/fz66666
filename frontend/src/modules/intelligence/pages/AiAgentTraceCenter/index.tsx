@@ -175,7 +175,7 @@ const AiAgentTraceCenter: React.FC = () => {
     <>
       <PageLayout
         title="AI 执行记录中心"
-        headerContent={<div style={{ color: '#8c8c8c', fontSize: 13 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>}
+        headerContent={<div style={{ color: '#8c8c8c', fontSize: 14 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>}
         titleExtra={
           <Space>
             <Button onClick={() => navigate(paths.cockpit)}>返回智能运营中心</Button>
@@ -244,7 +244,7 @@ const AiAgentTraceCenter: React.FC = () => {
                     仅看失败
                   </Button>
                   <Button type="primary" onClick={() => void fetchRecent()}>查询</Button>
-                      <span style={{ color: '#8c8c8c', fontSize: 12 }}>共 {filteredRows.length} 条请求</span>
+                      <span style={{ color: '#8c8c8c', fontSize: 14 }}>共 {filteredRows.length} 条请求</span>
                     </Space>
                   </Card>
 

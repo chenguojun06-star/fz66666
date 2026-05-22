@@ -88,7 +88,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
       open={open}
       title="报销单审批"
       onCancel={onClose}
-      width="60vw"
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
       centered
       footer={<Button onClick={onClose}>关闭</Button>}
@@ -107,7 +107,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
                   <Image src={getFullAuthedFileUrl(detailDocList[selectedDocIndex]?.imageUrl)} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }} preview={{ mask: '点击查看原图' }} />
                 </Image.PreviewGroup>
               </div>
-              <div style={{ flexShrink: 0, fontSize: 12, color: '#aaa', textAlign: 'center', padding: '6px 0 4px' }}>
+              <div style={{ flexShrink: 0, fontSize: 14, color: '#aaa', textAlign: 'center', padding: '6px 0 4px' }}>
                 第 {selectedDocIndex + 1} 张 / 共 {detailDocList.length} 张
               </div>
               {detailDocList.length > 1 && (
@@ -129,7 +129,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
           <ModalFieldRow><ModalField label="申请人" value={record.applicantName || '-'} /><ModalField label="费用类型" value={typeLabel(record.expenseType)} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="事由" value={record.title || '-'} /></ModalFieldRow>
           <ModalFieldRow>
-            <ModalField label="金额" value={<span style={{ color: 'var(--color-danger)', fontSize: 18, fontWeight: 600 }}>¥{record.amount?.toFixed(2)}</span>} />
+            <ModalField label="金额" value={<span style={{ color: 'var(--color-danger)', fontSize: 14, fontWeight: 600 }}>¥{record.amount?.toFixed(2)}</span>} />
             <ModalField label="费用日期" value={record.expenseDate || '-'} />
           </ModalFieldRow>
           {record.description && <ModalFieldRow><ModalField label="详细说明" value={record.description} /></ModalFieldRow>}
@@ -175,7 +175,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
               )}
               {record.applicantId === Number(user?.id) && !isSupervisorOrAbove(user) && (
                 <div style={{ margin: '16px 0 8px' }}>
-                  <Alert type="info" showIcon title="等待审批" description={<><>您提交的报销单需由其他人审批。</><br /><span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>审批人请切换至「全部报销」标签页查看并操作。</span></>} />
+                  <Alert type="info" showIcon title="等待审批" description={<><>您提交的报销单需由其他人审批。</><br /><span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>审批人请切换至「全部报销」标签页查看并操作。</span></>} />
                 </div>
               )}
             </>

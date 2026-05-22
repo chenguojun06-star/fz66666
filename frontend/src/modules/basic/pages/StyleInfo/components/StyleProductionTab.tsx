@@ -274,7 +274,7 @@ const StyleProductionTab: React.FC<Props> = ({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sampleReviewStatus ? 8 : 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 13, paddingLeft: 10, borderLeft: '3px solid #2D7FF9' }}>样衣审核</span>
+            <span style={{ fontWeight: 600, fontSize: 14, paddingLeft: 10, borderLeft: '3px solid #2D7FF9' }}>样衣审核</span>
             {reviewStatusTag(sampleReviewStatus)}
             {!sampleReviewStatus && !sampleCompleted && !productionCompletedTime && (
               <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
@@ -364,7 +364,7 @@ const StyleProductionTab: React.FC<Props> = ({
             )}
           </Space>
         </div>
-        <div style={{ color: 'var(--color-text-tertiary, #6b7280)', fontSize: 12, marginBottom: 8 }}>
+        <div style={{ color: 'var(--color-text-tertiary, #6b7280)', fontSize: 14, marginBottom: 8 }}>
           提示：相关文件请在"文件管理"标签页统一上传
         </div>
         <Input.TextArea
@@ -423,7 +423,7 @@ const StyleProductionTab: React.FC<Props> = ({
         open={ocrModalOpen}
         onCancel={() => setOcrModalOpen(false)}
         footer={null}
-        width={480}
+        width="30vw"
       >
         <input
           ref={ocrFileInputRef}

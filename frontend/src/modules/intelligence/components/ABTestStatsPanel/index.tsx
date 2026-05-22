@@ -44,7 +44,7 @@ const ABTestStatsPanel: React.FC = () => {
   return (
     <Spin spinning={loading}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 12, color: '#888' }}>按场景对比近 {days} 天数据</span>
+        <span style={{ fontSize: 14, color: '#888' }}>按场景对比近 {days} 天数据</span>
         <Select id="abTestDays" value={days} onChange={setDays} style={{ width: 100 }}
                 options={[{ value: 7, label: '7 天' }, { value: 14, label: '14 天' }, { value: 30, label: '30 天' }]} />
       </div>
@@ -62,10 +62,10 @@ const ABTestStatsPanel: React.FC = () => {
                 background: '#1a1a2e', borderRadius: 8, padding: '12px 14px',
                 border: (isBestLatency || isBestFeedback) ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.06)',
               }}>
-                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#e0e0e0' }}>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: '#e0e0e0' }}>
                   {SCENE_LABELS[r.scene] || r.scene}
-                  {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 13, color: '#4ade80' }}></span></Tooltip>}
-                  {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 13, color: '#facc15' }}></span></Tooltip>}
+                  {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 14, color: '#4ade80' }}></span></Tooltip>}
+                  {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 14, color: '#facc15' }}></span></Tooltip>}
                 </div>
                 <Metric label="执行次数" value={r.totalRuns} />
                 <Metric label="成功率" value={`${successRate}%`} color={successRate >= 90 ? '#4ade80' : successRate >= 70 ? '#facc15' : '#f87171'} />
@@ -83,7 +83,7 @@ const ABTestStatsPanel: React.FC = () => {
 
 function Metric({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, lineHeight: '22px' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, lineHeight: '22px' }}>
       <span style={{ color: '#888' }}>{label}</span>
       <span style={{ color: color ?? '#d4d4d8', fontWeight: 500 }}>{value}</span>
     </div>

@@ -78,7 +78,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
           color: gaugeColor,
           offsetCenter: [0, '28%'],
         },
-        title: { fontSize: 13, color: '#8c8c8c', offsetCenter: [0, '48%'] },
+        title: { fontSize: 14, color: '#8c8c8c', offsetCenter: [0, '48%'] },
         data: [{ value: val, name: chart.subtitle ?? '' }],
       }],
     };
@@ -91,7 +91,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     }));
     option = {
       tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      legend: { orient: 'vertical', right: 4, top: 'middle', textStyle: { fontSize: 12 }, itemWidth: 10, itemHeight: 10 },
+      legend: { orient: 'vertical', right: 4, top: 'middle', textStyle: { fontSize: 14 }, itemWidth: 10, itemHeight: 10 },
       series: [{
         type: 'pie',
         radius: ['42%', '68%'],
@@ -103,7 +103,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
           formatter: () => `{val|${chart.highlight}}\n{subval|${chart.unit ?? ''}}`,
           rich: {
             val: { fontSize: 18, fontWeight: 'bold', color: '#262626', lineHeight: 24 },
-            subval: { fontSize: 13, color: '#8c8c8c', lineHeight: 18 },
+            subval: { fontSize: 14, color: '#8c8c8c', lineHeight: 18 },
           },
         } : { show: false },
         data: ringData,
@@ -119,7 +119,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     }));
     option = {
       tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      legend: { orient: 'vertical', right: 4, top: 'middle', textStyle: { fontSize: 12 }, itemWidth: 10, itemHeight: 10 },
+      legend: { orient: 'vertical', right: 4, top: 'middle', textStyle: { fontSize: 14 }, itemWidth: 10, itemHeight: 10 },
       series: [{
         type: 'pie',
         radius: ['40%', '68%'],
@@ -137,14 +137,14 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     option = {
       tooltip: { trigger: 'item' },
       legend: (chart.series ?? []).length > 1
-        ? { top: 0, textStyle: { fontSize: 12 }, itemWidth: 10, itemHeight: 10, data: (chart.series ?? []).map(s => s.name) }
+        ? { top: 0, textStyle: { fontSize: 14 }, itemWidth: 10, itemHeight: 10, data: (chart.series ?? []).map(s => s.name) }
         : undefined,
       radar: {
         indicator: indicators,
         radius: '55%',
         center: ['50%', (chart.series ?? []).length > 1 ? '58%' : '52%'],
         splitArea: { areaStyle: { color: ['#fff', '#f5f7ff'] } },
-        axisName: { fontSize: 12, color: '#595959' },
+        axisName: { fontSize: 14, color: '#595959' },
       },
       series: [{
         type: 'radar',
@@ -173,7 +173,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         left: '8%',
         width: '84%',
         gap: 3,
-        label: { show: true, position: 'inside', fontSize: 13, formatter: `{b}: {c}${chart.unit ?? ''}` },
+        label: { show: true, position: 'inside', fontSize: 14, formatter: `{b}: {c}${chart.unit ?? ''}` },
         itemStyle: { borderWidth: 0 },
         data: funnelData,
         color: colors,
@@ -186,17 +186,17 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     option = {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
       legend: hasMultiSeries
-        ? { top: 0, textStyle: { fontSize: 12 }, itemWidth: 10, itemHeight: 10, data: (chart.series ?? []).map(s => s.name) }
+        ? { top: 0, textStyle: { fontSize: 14 }, itemWidth: 10, itemHeight: 10, data: (chart.series ?? []).map(s => s.name) }
         : undefined,
       grid: { top: hasMultiSeries ? 36 : 12, right: 60, bottom: 20, left: 80 },
-      xAxis: { type: 'value', axisLabel: { fontSize: 12 }, splitLine: { lineStyle: { type: 'dashed' as const } } },
-      yAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 12, width: 72, overflow: 'truncate' as const } },
+      xAxis: { type: 'value', axisLabel: { fontSize: 14 }, splitLine: { lineStyle: { type: 'dashed' as const } } },
+      yAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 14, width: 72, overflow: 'truncate' as const } },
       series: (chart.series ?? []).map((s, si) => ({
         name: s.name,
         type: 'bar',
         data: s.data,
         barMaxWidth: 16,
-        label: { show: true, position: 'right', fontSize: 12, formatter: `{c}${chart.unit ?? ''}` },
+        label: { show: true, position: 'right', fontSize: 14, formatter: `{c}${chart.unit ?? ''}` },
         itemStyle: { color: colors[si % colors.length], borderRadius: [0, 4, 4, 0] },
       })),
     };
@@ -206,10 +206,10 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     option = {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
       grid: { top: 28, right: 10, bottom: 28, left: 40 },
-      xAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 12 } },
+      xAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 14 } },
       yAxis: {
         type: 'value',
-        axisLabel: { fontSize: 12, formatter: `{value}${chart.unit ?? ''}` },
+        axisLabel: { fontSize: 14, formatter: `{value}${chart.unit ?? ''}` },
         splitLine: { lineStyle: { type: 'dashed' as const } },
       },
       series: [
@@ -228,7 +228,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
             };
           }),
           label: (chart.series?.length ?? 1) === 1
-            ? { show: true, position: 'top', fontSize: 12, formatter: `{c}${chart.unit ?? ''}` }
+            ? { show: true, position: 'top', fontSize: 14, formatter: `{c}${chart.unit ?? ''}` }
             : undefined,
         })),
         ...(chart.target !== undefined ? [{
@@ -265,8 +265,8 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         },
       },
       grid: { top: 28, right: 10, bottom: 28, left: 46 },
-      xAxis: { type: 'category', data: xData, axisLabel: { fontSize: 12 } },
-      yAxis: { type: 'value', axisLabel: { fontSize: 12, formatter: `{value}${chart.unit ?? ''}` }, splitLine: { lineStyle: { type: 'dashed' as const } } },
+      xAxis: { type: 'category', data: xData, axisLabel: { fontSize: 14 } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 14, formatter: `{value}${chart.unit ?? ''}` }, splitLine: { lineStyle: { type: 'dashed' as const } } },
       series: [
         { type: 'bar', name: '辅助', stack: 'total', itemStyle: { color: 'transparent', borderColor: 'transparent' }, data: placeholders },
         { type: 'bar', name: '增加', stack: 'total', itemStyle: { color: '#52c41a', borderRadius: [4, 4, 0, 0] }, data: positives, label: { show: true, position: 'top', fontSize: 9, formatter: `{c}${chart.unit ?? ''}` } },
@@ -279,12 +279,12 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     const hasLegend = (chart.series ?? []).length > 1;
     option = {
       tooltip: { trigger: 'axis' },
-      legend: hasLegend ? { top: 0, textStyle: { fontSize: 12 }, itemWidth: 10, itemHeight: 10 } : undefined,
+      legend: hasLegend ? { top: 0, textStyle: { fontSize: 14 }, itemWidth: 10, itemHeight: 10 } : undefined,
       grid: { top: hasLegend ? 32 : 20, right: 10, bottom: 28, left: 40 },
-      xAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 12 } },
+      xAxis: { type: 'category', data: chart.xAxis, axisLabel: { fontSize: 14 } },
       yAxis: {
         type: 'value',
-        axisLabel: { fontSize: 12, formatter: `{value}${chart.unit ?? ''}` },
+        axisLabel: { fontSize: 14, formatter: `{value}${chart.unit ?? ''}` },
         splitLine: { lineStyle: { type: 'dashed' as const } },
       },
       color: colors,

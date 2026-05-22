@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Button, DatePicker, Input, Select, Space, Radio } from 'antd';
 import { SearchOutlined, ReloadOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -70,6 +70,29 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   const [presetValue, setPresetValue] = useState<string>('');
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const hasExtraFilters = extraFilters.length > 0;
+
+  const [localSearchValue, setLocalSearchValue] = useState<string>(searchValue ?? '');
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (searchValue !== undefined) {
+      setLocalSearchValue(searchValue);
+    }
+  }, [searchValue]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, []);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setLocalSearchValue(value);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      onSearchChange(value);
+    }, 300);
+  }, [onSearchChange]);
 
   const handlePresetChange = useCallback((e: any) => {
     const val = e.target.value;
@@ -155,8 +178,8 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
         {searchValue !== undefined && (
           <Input
             prefix={<SearchOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearchValue}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             className="standard-search-input-v2"
             allowClear

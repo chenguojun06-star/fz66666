@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { App, Card, Checkbox, Form, Input, Modal, Tabs } from 'antd';
+import { App, Card, Checkbox, Form, Input, Tabs } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import PageLayout from '@/components/common/PageLayout';
 import { useStyleDetail } from './hooks/useStyleDetail';
 import { useStyleFormActions } from './hooks/useStyleFormActions';
@@ -39,7 +40,9 @@ const StyleInfoDetailPage: React.FC = () => {
     currentStyle,
     setCurrentStyle,
     form,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     activeTabKey,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     setActiveTabKey,
     editLocked,
     setEditLocked,
@@ -51,6 +54,7 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const [bomAreaTabKey, setBomAreaTabKey] = useState('bom');
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -99,7 +103,7 @@ const StyleInfoDetailPage: React.FC = () => {
   };
 
   const handleSkcClick = () => {
-    setActiveTabKey('10');
+    setBomAreaTabKey('sku');
   };
 
   if (!isDetailPage && !isNewPage) {
@@ -135,7 +139,7 @@ const StyleInfoDetailPage: React.FC = () => {
             />
           }
         >
-          <Form layout="horizontal" form={form} labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+          <Form layout="horizontal" form={form} labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
             <StyleBasicInfoForm
               _form={form}
               currentStyle={currentStyle}
@@ -193,16 +197,14 @@ const StyleInfoDetailPage: React.FC = () => {
           </Form>
         </Card>
 
-        <Card style={{ marginTop: 24 }}>
+        <div style={{ marginTop: 24 }}>
           <Tabs
-            activeKey={activeTabKey}
-            onChange={setActiveTabKey}
+            activeKey={bomAreaTabKey}
+            onChange={setBomAreaTabKey}
+            size="small"
             items={[
-              {
-                key: '2',
-                label: 'BOM清单',
-                disabled: !currentStyle?.id,
-                children: (
+              { key: 'bom', label: 'BOM清单', children: (
+                <div>
                   <StyleBomTab
                     styleId={currentStyle?.id ?? ''}
                     sizeColorConfig={colorSize.sizeColorConfig}
@@ -212,162 +214,121 @@ const StyleInfoDetailPage: React.FC = () => {
                     bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
-                )
-              },
-              {
-                key: '5',
-                label: '纸样开发',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StylePatternTab
-                    styleId={currentStyle?.id ?? ''}
-                    sizeColorConfig={colorSize.sizeColorConfig}
-                    readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
-                    patternAssignee={(currentStyle as any)?.patternAssignee}
-                    patternStartTime={(currentStyle as any)?.patternStartTime}
-                    patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
-                    patternStatus={currentStyle?.patternStatus}
-                    sizeAssignee={(currentStyle as any)?.sizeAssignee}
-                    sizeStartTime={(currentStyle as any)?.sizeStartTime}
-                    sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
-                    linkedSizes={colorSize.matrixSizes}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                )
-              },
-              {
-                key: '8',
-                label: '生产制单',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleProductionTab
-                    styleId={currentStyle?.id ?? ''}
-                    styleNo={currentStyle?.styleNo ?? ''}
-                    productionReqRows={production.productionReqRows}
-                    productionReqRowCount={production.productionReqRowCount}
-                    productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
-                    productionReqEditable={production.productionReqEditable}
-                    productionReqSaving={production.productionSaving}
-                    productionReqRollbackSaving={production.productionRollbackSaving}
-                    onProductionReqChange={production.updateProductionReqRow}
-                    onProductionReqSave={production.handleSaveProduction}
-                    onProductionReqReset={production.resetProductionReqFromCurrent}
-                    onProductionReqRollback={production.handleRollbackProductionReq}
-                    productionReqCanRollback
-                    productionAssignee={(currentStyle as any)?.productionAssignee}
-                    productionStartTime={(currentStyle as any)?.productionStartTime}
-                    productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                    sampleCompleted={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
-                    sampleReviewStatus={(currentStyle as any)?.sampleReviewStatus}
-                    sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
-                    sampleReviewer={(currentStyle as any)?.sampleReviewer}
-                    sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
-                    completedTime={(currentStyle as any)?.completedTime}
-                    styleName={(currentStyle as any)?.styleName}
-                    color={(currentStyle as any)?.color}
-                    size={(currentStyle as any)?.size}
-                    sampleQuantity={(currentStyle as any)?.sampleQuantity}
-                  />
-                )
-              },
-              {
-                key: '9',
-                label: '二次工艺',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleSecondaryProcessTab
-                    styleId={currentStyle?.id ?? ''}
-                    styleNo={currentStyle?.styleNo ?? ''}
-                    readOnly={Boolean((currentStyle as any)?.secondaryCompletedTime)}
-                    secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
-                    secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
-                    secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
-                    sampleQuantity={(currentStyle as any)?.sampleQuantity}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                )
-              },
-              {
-                key: '7',
-                label: '工序单价',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleProcessTab
-                    styleId={currentStyle?.id ?? ''}
-                    styleNo={currentStyle?.styleNo ?? ''}
-                    readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
-                    processAssignee={(currentStyle as any)?.processAssignee}
-                    processStartTime={(currentStyle as any)?.processStartTime}
-                    processCompletedTime={(currentStyle as any)?.processCompletedTime}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                )
-              },
-              {
-                key: '3',
-                label: '报价单',
-                disabled: !currentStyle?.id,
-                children: <StyleQuotationTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} totalQty={colorSize.totalMatrixQty} />
-              },
-              {
-                key: '4',
-                label: '附件文件',
-                disabled: !currentStyle?.id,
-                children: <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
-              },
-              {
-                key: '10',
-                label: 'SKU管理',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleSkuTab
-                    styleId={String(currentStyle?.id ?? '')}
-                    styleNo={currentStyle?.styleNo ?? ''}
-                    skc={(currentStyle as any)?.skc}
-                    skuMode={(currentStyle as any)?.skuMode}
-                    onModeChange={() => { void fetchDetail(styleIdParam!); }}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                )
-              },
-              {
-                key: '12',
-                label: '洗水唛',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleWashLabelTab
-                    styleId={String(currentStyle?.id ?? '')}
-                    styleNo={currentStyle?.styleNo ?? ''}
-                    styleName={(currentStyle as any)?.styleName}
-                    fabricCompositionParts={(currentStyle as any)?.fabricCompositionParts}
-                    fabricComposition={(currentStyle as any)?.fabricComposition}
-                    washInstructions={(currentStyle as any)?.washInstructions}
-                    uCode={(currentStyle as any)?.uCode}
-                    washTempCode={(currentStyle as any)?.washTempCode}
-                    bleachCode={(currentStyle as any)?.bleachCode}
-                    tumbleDryCode={(currentStyle as any)?.tumbleDryCode}
-                    ironCode={(currentStyle as any)?.ironCode}
-                    dryCleanCode={(currentStyle as any)?.dryCleanCode}
-                    careIconCodes={(currentStyle as any)?.careIconCodes}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                )
-              },
-              {
-                key: '11',
-                label: '裁剪信息',
-                disabled: !currentStyle?.styleNo,
-                children: (
-                  <StyleCuttingInfoTab styleNo={currentStyle?.styleNo ?? ''} />
-                )
-              }
+                  <Card title="纸样开发" id="section-pattern" style={{ marginTop: 16 }}>
+                    <StylePatternTab
+                      styleId={currentStyle?.id ?? ''}
+                      sizeColorConfig={colorSize.sizeColorConfig}
+                      readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
+                      patternAssignee={(currentStyle as any)?.patternAssignee}
+                      patternStartTime={(currentStyle as any)?.patternStartTime}
+                      patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
+                      patternStatus={currentStyle?.patternStatus}
+                      sizeAssignee={(currentStyle as any)?.sizeAssignee}
+                      sizeStartTime={(currentStyle as any)?.sizeStartTime}
+                      sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
+                      linkedSizes={colorSize.matrixSizes}
+                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                    />
+                  </Card>
+                  <Card title="生产制单" id="section-production" style={{ marginTop: 16 }}>
+                    <StyleProductionTab
+                      styleId={currentStyle?.id ?? ''}
+                      styleNo={currentStyle?.styleNo ?? ''}
+                      productionReqRows={production.productionReqRows}
+                      productionReqRowCount={production.productionReqRowCount}
+                      productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
+                      productionReqEditable={production.productionReqEditable}
+                      productionReqSaving={production.productionSaving}
+                      productionReqRollbackSaving={production.productionRollbackSaving}
+                      onProductionReqChange={production.updateProductionReqRow}
+                      onProductionReqSave={production.handleSaveProduction}
+                      onProductionReqReset={production.resetProductionReqFromCurrent}
+                      onProductionReqRollback={production.handleRollbackProductionReq}
+                      productionReqCanRollback
+                      productionAssignee={(currentStyle as any)?.productionAssignee}
+                      productionStartTime={(currentStyle as any)?.productionStartTime}
+                      productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
+                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                      sampleCompleted={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
+                      sampleReviewStatus={(currentStyle as any)?.sampleReviewStatus}
+                      sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
+                      sampleReviewer={(currentStyle as any)?.sampleReviewer}
+                      sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
+                      completedTime={(currentStyle as any)?.completedTime}
+                      styleName={(currentStyle as any)?.styleName}
+                      color={(currentStyle as any)?.color}
+                      size={(currentStyle as any)?.size}
+                      sampleQuantity={(currentStyle as any)?.sampleQuantity}
+                    />
+                  </Card>
+                  <Card title="二次工艺" id="section-secondary" style={{ marginTop: 16 }}>
+                    <StyleSecondaryProcessTab
+                      styleId={currentStyle?.id ?? ''}
+                      styleNo={currentStyle?.styleNo ?? ''}
+                      readOnly={Boolean((currentStyle as any)?.secondaryCompletedTime)}
+                      secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
+                      secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
+                      secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
+                      sampleQuantity={(currentStyle as any)?.sampleQuantity}
+                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                    />
+                  </Card>
+                  <Card title="工序单价" id="section-process" style={{ marginTop: 16 }}>
+                    <StyleProcessTab
+                      styleId={currentStyle?.id ?? ''}
+                      styleNo={currentStyle?.styleNo ?? ''}
+                      readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
+                      processAssignee={(currentStyle as any)?.processAssignee}
+                      processStartTime={(currentStyle as any)?.processStartTime}
+                      processCompletedTime={(currentStyle as any)?.processCompletedTime}
+                      onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                    />
+                  </Card>
+                </div>
+              )},
+              { key: 'quotation', label: '报价单', children: (
+                <StyleQuotationTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} totalQty={colorSize.totalMatrixQty} />
+              )},
+              { key: 'attachment', label: '附件文件', children: (
+                <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
+              )},
+              { key: 'sku', label: 'SKU管理', children: (
+                <StyleSkuTab
+                  styleId={String(currentStyle?.id ?? '')}
+                  styleNo={currentStyle?.styleNo ?? ''}
+                  skc={(currentStyle as any)?.skc}
+                  skuMode={(currentStyle as any)?.skuMode}
+                  onModeChange={() => { void fetchDetail(styleIdParam!); }}
+                  onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                />
+              )},
+              { key: 'washlabel', label: '洗水唛', children: (
+                <StyleWashLabelTab
+                  styleId={String(currentStyle?.id ?? '')}
+                  styleNo={currentStyle?.styleNo ?? ''}
+                  styleName={(currentStyle as any)?.styleName}
+                  fabricCompositionParts={(currentStyle as any)?.fabricCompositionParts}
+                  fabricComposition={(currentStyle as any)?.fabricComposition}
+                  washInstructions={(currentStyle as any)?.washInstructions}
+                  uCode={(currentStyle as any)?.uCode}
+                  washTempCode={(currentStyle as any)?.washTempCode}
+                  bleachCode={(currentStyle as any)?.bleachCode}
+                  tumbleDryCode={(currentStyle as any)?.tumbleDryCode}
+                  ironCode={(currentStyle as any)?.ironCode}
+                  dryCleanCode={(currentStyle as any)?.dryCleanCode}
+                  careIconCodes={(currentStyle as any)?.careIconCodes}
+                  onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                />
+              )},
+              { key: 'cutting', label: '裁剪信息', children: (
+                <StyleCuttingInfoTab styleNo={currentStyle?.styleNo ?? ''} />
+              )},
             ]}
           />
-        </Card>
-      </PageLayout>
+          </div>
+        </PageLayout>
 
-      <Modal
+      <ResizableModal
         title="推送到下单管理"
         open={pushOrder.pushToOrderModalVisible}
         onOk={pushOrder.submitPushToOrder}
@@ -406,7 +367,7 @@ const StyleInfoDetailPage: React.FC = () => {
             <Input.TextArea rows={3} placeholder="选填：推送备注" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
 
     </>
   );

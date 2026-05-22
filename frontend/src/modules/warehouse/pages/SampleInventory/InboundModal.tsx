@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Form, Input, Select, Row, Col, Image, Tag, Alert } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
@@ -346,7 +345,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
       onCancel={onCancel}
       onOk={handleOk}
       confirmLoading={loading}
-      width="60vw" maskClosable={false}
+      width="85vw" maskClosable={false}
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       {showSmartErrorNotice && smartError ? (
@@ -374,7 +373,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
                     style={{ objectFit: 'cover', borderRadius: 8 }}
                   />
                 ) : (
-                  <div style={{ width: 96, height: 96, borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                  <div style={{ width: 96, height: 96, borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
                     暂无图片
                   </div>
                 )}
@@ -382,23 +381,23 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Row gutter={[12, 8]}>
                   <Col span={8}>
-                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>款号</div>
+                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>款号</div>
                     <div>{styleSnapshot.styleNo || '-'}</div>
                   </Col>
                   <Col span={8}>
-                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>款式名称</div>
+                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>款式名称</div>
                     <div>{styleSnapshot.styleName || '-'}</div>
                   </Col>
                   <Col span={8}>
-                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>纸样号</div>
+                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>纸样号</div>
                     <div>{styleSnapshot.patternNo || '-'}</div>
                   </Col>
                   <Col span={8}>
-                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>样衣完成时间</div>
+                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>样衣完成时间</div>
                     <div>{styleSnapshot.sampleCompletedTime || '-'}</div>
                   </Col>
                   <Col span={16}>
-                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12, marginBottom: 4 }}>开发颜色 / 尺码</div>
+                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14, marginBottom: 4 }}>开发颜色 / 尺码</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {(styleSnapshot.colors.length ? styleSnapshot.colors : ['无颜色配置']).map((item) => (
                         <Tag key={`color-${item}`}>{item}</Tag>

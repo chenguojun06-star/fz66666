@@ -184,7 +184,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
     return (
       <div style={{ padding: '12px 0', textAlign: 'center' }}>
         <Spin />
-        <span style={{ marginLeft: 8, fontSize: 12, color: '#8c8c8c' }}>
+        <span style={{ marginLeft: 8, fontSize: 14, color: '#8c8c8c' }}>
           正在分析历史数据…
         </span>
       </div>
@@ -195,7 +195,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
     return (
       <div style={{
         background: '#fafafa', borderRadius: 8, padding: '10px 14px',
-        fontSize: 12, color: '#bbb', display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 14, color: '#bbb', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span></span>
         <span>该款暂无历史订单数据</span>
@@ -212,11 +212,11 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       border: '1px solid var(--color-border)',
       borderRadius: 6,
       padding: '12px 14px',
-      fontSize: 12,
+      fontSize: 14,
       marginTop: 8,
     }}>
       <div onClick={() => setCollapsed(!collapsed)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: collapsed ? 0 : 8, cursor: 'pointer' }}>
-        <span style={{ fontWeight: 700, fontSize: 13, color: '#1677ff' }}>
+        <span style={{ fontWeight: 700, fontSize: 14, color: '#1677ff' }}>
           {styleNo} 下单分析
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -224,7 +224,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
             type="link"
             icon={<ReloadOutlined style={{ fontSize: 13 }} />}
             onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
-            style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 13 }}
+            style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 14 }}
           >
             刷新
           </Button>
@@ -241,7 +241,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <WarningOutlined style={{ color: isFactoryHighRisk ? '#ff4d4f' : '#faad14' }} />
-          <span style={{ color: isFactoryHighRisk ? '#cf1322' : '#874d00', fontSize: 12, flex: 1 }}>
+          <span style={{ color: isFactoryHighRisk ? '#cf1322' : '#874d00', fontSize: 14, flex: 1 }}>
             {isFactoryHighRisk
               ? `${factoryName} 当前接单紧张：${overdueCount > 0 ? `${overdueCount} 单逾期` : ''}${atRiskCount > 0 ? `、${atRiskCount} 单高风险` : ''}，建议提前沟通排期`
               : `${factoryName} 在产 ${factoryTotalOrders} 单${atRiskCount > 0 ? `，其中 ${atRiskCount} 单偏慢` : ''}，排产较满`}
@@ -253,17 +253,17 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         {metricItems.map((item) => (
           <div key={item.label} style={{ background: '#fff', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 17, fontWeight: 700, color: item.color }}>{item.value}</span>
-              <span style={{ fontSize: 13, color: '#8c8c8c' }}>{item.suffix}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
+              <span style={{ fontSize: 14, color: '#8c8c8c' }}>{item.suffix}</span>
             </div>
-            <div style={{ color: '#8c8c8c', fontSize: 13 }}>{item.label}</div>
+            <div style={{ color: '#8c8c8c', fontSize: 14 }}>{item.label}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
         {quickTags.map((text) => (
-          <Tag key={text} style={{ fontSize: 13, color: '#667085', background: '#f8fafc', border: '1px solid #e5e7eb', marginInlineEnd: 0 }}>
+          <Tag key={text} style={{ fontSize: 14, color: '#667085', background: '#f8fafc', border: '1px solid #e5e7eb', marginInlineEnd: 0 }}>
             {text}
           </Tag>
         ))}
@@ -276,7 +276,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           onClick={() => setAiAdviceVisible(true)}
           type="primary"
           ghost
-          style={{ fontSize: 12 }}
+          style={{ fontSize: 14 }}
         >
           AI 下单建议
         </Button>
@@ -287,14 +287,14 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           padding: '10px 12px', marginTop: 4,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontWeight: 600, fontSize: 12, color: '#1677ff' }}>
+            <span style={{ fontWeight: 600, fontSize: 14, color: '#1677ff' }}>
               <XiaoyunCloudAvatar size={16} active /> AI 下单建议
             </span>
             <Space size={8}>
               <Button
                 type="link"
                 onClick={() => setAiAdviceVisible(false)}
-                style={{ padding: 0, height: 'auto', fontSize: 13 }}
+                style={{ padding: 0, height: 'auto', fontSize: 14 }}
               >
                 关闭
               </Button>
@@ -302,7 +302,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           </div>
           <div style={{ display: 'grid', gap: 6 }}>
             {aiAdviceItems.map((item) => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12, lineHeight: '18px' }}>
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, lineHeight: '18px' }}>
                 <span style={{ color: '#6b7280' }}>{item.label}</span>
                 <span style={{ fontWeight: 600, color: '#1f2937', textAlign: 'right' }}>{item.value}</span>
               </div>

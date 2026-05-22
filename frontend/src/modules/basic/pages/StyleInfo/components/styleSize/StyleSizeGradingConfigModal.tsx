@@ -94,7 +94,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
       title={gradingTargetRowKey === 'batch' ? `批量配置跳码区 (${selectedRowCount}个部位)` : '配置跳码区'}
       onCancel={onCancel}
       footer={null}
-      width="80vw"
+      width="85vw"
       minWidth={800}
       initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.65 : 520}
       minHeight={420}
@@ -133,7 +133,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
             保存并带出
           </Button>
         </div>
-        <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.7 }}>
+        <div style={{ color: '#64748b', fontSize: 14, lineHeight: 1.7 }}>
           样版码为基准码，跳码值相对于样版码递增/递减。点击"添加列"可增加多组"码数+跳码"配置。
         </div>
         {gradingDraftZones.map((zone, zoneIndex) => {
@@ -173,7 +173,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                 </Tooltip>
               </div>
               <div style={{ overflowX: 'auto' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: 0, background: '#f1f5f9', fontWeight: 600, fontSize: 12, alignItems: 'center', minWidth: 'fit-content' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: 0, background: '#f1f5f9', fontWeight: 600, fontSize: 14, alignItems: 'center', minWidth: 'fit-content' }}>
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>操作</div>
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>部位</div>
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>码数(前)</div>
@@ -223,7 +223,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                         <Tag
                           key={`front-${zone.key}-${size}`}
                           color={checked ? 'default' : 'default'}
-                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 13, background: checked ? '#e2e8f0' : undefined }}
+                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 14, background: checked ? '#e2e8f0' : undefined }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
                             if (item.key !== zone.key) return item;
                             const nextSizes = (item.frontSizes || []).includes(size)
@@ -255,7 +255,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                         <Tag
                           key={`back-${zone.key}-${size}`}
                           color={checked ? 'default' : 'default'}
-                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 13, background: checked ? '#e2e8f0' : undefined }}
+                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 14, background: checked ? '#e2e8f0' : undefined }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
                             if (item.key !== zone.key) return item;
                             const nextSizes = (item.backSizes || []).includes(size)
@@ -289,7 +289,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                             <Tag
                               key={`dynamic-${zone.key}-${col.key}-${size}`}
                               color={checked ? 'default' : 'default'}
-                              style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 13, background: checked ? '#e2e8f0' : undefined }}
+                              style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 14, background: checked ? '#e2e8f0' : undefined }}
                               onClick={() => toggleSizeInColumn(zone.key, col.key, size)}
                             >
                               {size}

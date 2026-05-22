@@ -34,7 +34,7 @@ const AppManagementTab: React.FC = () => {
         return (
           <div>
             <div style={{ fontWeight: 600 }}>{cfg?.icon} {name}</div>
-            <Text type="secondary" style={{ fontSize: 12 }}>{cfg?.label || record.appType}</Text>
+            <Text type="secondary" style={{ fontSize: 14 }}>{cfg?.label || record.appType}</Text>
           </div>
         );
       },
@@ -43,7 +43,7 @@ const AppManagementTab: React.FC = () => {
       title: 'AppKey', dataIndex: 'appKey', width: 200,
       render: (key: string) => (
         <Space>
-          <Text code style={{ fontSize: 12 }}>{key}</Text>
+          <Text code style={{ fontSize: 14 }}>{key}</Text>
           <Tooltip title="复制"><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(key)} /></Tooltip>
         </Space>
       ),
@@ -54,7 +54,7 @@ const AppManagementTab: React.FC = () => {
         const hasUrl = !!(record.callbackUrl || record.externalApiUrl);
         return (
           <Tooltip title={hasUrl ? '已配置接口地址' : '未配置接口地址，点击操作列编辑'}>
-            <Tag color={hasUrl ? 'success' : 'warning'} style={{ fontSize: 13 }}>
+            <Tag color={hasUrl ? 'success' : 'warning'} style={{ fontSize: 14 }}>
               {hasUrl ? ' 已配置' : ' 待配置'}
             </Tag>
           </Tooltip>
@@ -68,7 +68,7 @@ const AppManagementTab: React.FC = () => {
           return (
             <Space size={4}>
               <Input value={editingUrlValue} onChange={e => setEditingUrlValue(e.target.value)}
-                placeholder="https://..." style={{ width: 150, fontSize: 13 }} />
+                placeholder="https://..." style={{ width: 150, fontSize: 14 }} />
               <SaveOutlined style={{ cursor: 'pointer', color: 'var(--color-success)' }} onClick={handleSaveUrl} />
               <CloseOutlined style={{ cursor: 'pointer', color: 'var(--color-danger)' }} onClick={cancelEditUrl} />
             </Space>
@@ -77,9 +77,9 @@ const AppManagementTab: React.FC = () => {
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {record.callbackUrl ? (
-              <Text style={{ fontSize: 13 }} ellipsis={{ tooltip: record.callbackUrl }}>{record.callbackUrl}</Text>
+              <Text style={{ fontSize: 14 }} ellipsis={{ tooltip: record.callbackUrl }}>{record.callbackUrl}</Text>
             ) : (
-              <Text type="secondary" style={{ fontSize: 13 }}>未配置</Text>
+              <Text type="secondary" style={{ fontSize: 14 }}>未配置</Text>
             )}
             <EditOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: 13, flexShrink: 0 }}
               onClick={() => startEditUrl(record, 'callbackUrl')} />
@@ -188,7 +188,7 @@ const AppManagementTab: React.FC = () => {
         open={detailModal.visible}
         title={`应用详情 - ${selectedApp?.appName || ''}`}
         onCancel={() => { detailModal.close(); setNewSecret(null); }}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={
           <Space>
@@ -238,7 +238,7 @@ const AppManagementTab: React.FC = () => {
                     value={detailEditCallbackUrl}
                     onChange={e => setDetailEditCallbackUrl(e.target.value)}
                     placeholder="https://your-domain.com/webhook（我们主动推送数据到此地址）"
-                    style={{ fontSize: 12 }}
+                    style={{ fontSize: 14 }}
                   />
                 </Space.Compact>
               </Descriptions.Item>
@@ -248,7 +248,7 @@ const AppManagementTab: React.FC = () => {
                     value={detailEditExternalApiUrl}
                     onChange={e => setDetailEditExternalApiUrl(e.target.value)}
                     placeholder="https://your-domain.com/api（系统主动调用客户系统时使用）"
-                    style={{ fontSize: 12 }}
+                    style={{ fontSize: 14 }}
                   />
                 </Space.Compact>
               </Descriptions.Item>
@@ -261,7 +261,7 @@ const AppManagementTab: React.FC = () => {
                 <div style={{ fontWeight: 600, marginBottom: 8 }}> 接入示例</div>
                 <pre style={{
                   background: 'var(--color-bg-base)', color: 'var(--color-text-secondary)', padding: 16, borderRadius: 8,
-                  fontSize: 13, lineHeight: 1.5, overflow: 'auto', maxHeight: 300,
+                  fontSize: 14, lineHeight: 1.5, overflow: 'auto', maxHeight: 300,
                 }}>
                   {selectedApp.exampleSnippet}
                 </pre>
@@ -275,7 +275,7 @@ const AppManagementTab: React.FC = () => {
         open={logModal.visible}
         title={`调用日志 - ${selectedApp?.appName || ''}`}
         onCancel={logModal.close}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={<Button onClick={logModal.close}>关闭</Button>}
       >

@@ -290,7 +290,7 @@ const PartnerManagement: React.FC = () => {
                     <div className="partner-member-header">
                       <div style={{ fontWeight: 600, fontSize: 15 }}>
                         {selectedUnit?.unitName} · 成员列表
-                        <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
+                        <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
                           共 {displayedMembers.length} 人
                         </span>
                       </div>

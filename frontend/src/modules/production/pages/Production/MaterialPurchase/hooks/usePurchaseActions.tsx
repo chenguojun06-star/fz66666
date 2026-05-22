@@ -126,6 +126,7 @@ export function usePurchaseActions({
         returnQuantity: Number(t.returnQuantity || 0) || (Number(t.arrivedQuantity || 0) || Number(t.purchaseQuantity || 0) || 0),
       })),
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returnConfirmModal.visible, returnConfirmDataKey]);
 
   // returnReset form init
@@ -255,7 +256,7 @@ export function usePurchaseActions({
             <p>需求数量：<strong>{record.purchaseQuantity}</strong></p>
             <p>仓库库存：<strong>{availableStock}</strong></p>
             <p>仓库领取数量：<strong style={{ color: 'var(--color-primary)' }}>{pickQty}</strong></p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>领取后将创建出库单，等待仓库确认出库</p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>领取后将创建出库单，等待仓库确认出库</p>
           </div>
         ),
         okText: '确认领取',
@@ -296,7 +297,7 @@ export function usePurchaseActions({
           content: (
             <div>
               <p style={{ marginBottom: 8 }}>当天有 <strong>{mergeableCount}</strong> 条相同面辅料（<strong>{materialInfo}</strong>）的待采购任务，是否合并采购？</p>
-              <div style={{ maxHeight: 200, overflow: 'auto', background: 'var(--color-bg-subtle)', padding: '8px 12px', borderRadius: 4, fontSize: 13 }}>
+              <div style={{ maxHeight: 200, overflow: 'auto', background: 'var(--color-bg-subtle)', padding: '8px 12px', borderRadius: 4, fontSize: 14 }}>
                 {mergeableItems.map((item, i) => (
                   <div key={item.id} style={{ marginBottom: 4, borderBottom: i < mergeableItems.length - 1 ? '1px solid #e8e8e8' : 'none', paddingBottom: 4 }}>
                     <span style={{ color: 'var(--color-text-secondary)' }}>{item.orderNo || item.styleNo || '-'}</span>{' '}

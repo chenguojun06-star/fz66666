@@ -108,7 +108,7 @@
 }
 
 .cockpit-stage-title {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--bi-text-primary);
   letter-spacing: -0.02em;
@@ -134,7 +134,7 @@
 }
 
 .cockpit-stage-empty-title {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--bi-text-secondary);
 }

@@ -55,6 +55,7 @@ export function useAccountModal({ msg, reportSmartError, showSmartErrorNotice, s
     } else {
       setQrFileList([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountDetailOpen, accountForm, editingAccount]);
 
   const loadAccounts = async (ownerType: string, ownerId: string) => {

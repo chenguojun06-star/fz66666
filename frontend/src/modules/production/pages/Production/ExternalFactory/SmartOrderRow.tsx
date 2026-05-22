@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Popover, Progress, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import StageNode from './StageNode';
 import type { SmartStage, DeliveryTone } from './types';
 import type { OrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
-import { StyleCoverThumb } from '@/components/StyleAssets';
+import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import { ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 
@@ -27,7 +27,6 @@ interface SmartOrderRowProps {
   fmtTime: (t?: string) => string;
   handleCloseOrder?: (record: ProductionOrder) => void;
   handleScrapOrder?: (record: ProductionOrder) => void;
-  handleTransferOrder?: (record: ProductionOrder) => void;
   openProcessDetail?: (record: ProductionOrder, type: string) => void;
   syncProcessFromTemplate?: (record: ProductionOrder) => void;
   setPrintModalVisible?: (v: boolean) => void;
@@ -53,7 +52,7 @@ interface SmartOrderRowProps {
 const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   record, deliveryMeta, stages, overallProgress, statusInfo, sizeMatrix, totalQty,
   STAGE_MIN_SLOT_WIDTH, fmtTime,
-  handleCloseOrder, handleScrapOrder, handleTransferOrder,
+  handleCloseOrder, handleScrapOrder,
   openProcessDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
   quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
@@ -68,15 +67,73 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   const shipDate = (record as any).expectedShipDate || record.plannedEndDate;
   const factoryTag = <FactoryTypeTag factoryType={record.factoryType} style={{ marginLeft: 4 }} />;
 
+  const formatGap = (ms: number): string => {
+    if (ms <= 0) return '';
+    const totalMinutes = Math.floor(ms / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const mins = totalMinutes % 60;
+    if (days > 0) return `${days}天${hours}时`;
+    if (hours > 0) return `${hours}时${mins}分`;
+    if (mins > 0) return `${mins}分`;
+    return '';
+  };
+
+  const getStageGap = (stageKey: string): string => {
+    let prevEnd: string | undefined;
+    let currStart: string | undefined;
+    switch (stageKey) {
+      case 'procurement':
+        prevEnd = record.createTime;
+        currStart = record.procurementStartTime;
+        break;
+      case 'cutting':
+        prevEnd = record.procurementEndTime;
+        currStart = record.cuttingStartTime;
+        break;
+      case 'secondary':
+        prevEnd = record.cuttingEndTime;
+        currStart = record.secondaryProcessStartTime;
+        break;
+      case 'sewing':
+      case 'carSewing':
+        prevEnd = record.secondaryProcessEndTime || record.cuttingEndTime;
+        currStart = record.carSewingStartTime;
+        break;
+      case 'tail':
+        prevEnd = record.carSewingEndTime;
+        currStart = record.ironingStartTime;
+        break;
+      case 'warehousing':
+        prevEnd = record.ironingEndTime;
+        currStart = record.warehousingStartTime;
+        break;
+    }
+    if (!prevEnd || !currStart) return '';
+    const ms = dayjs(currStart).diff(dayjs(prevEnd));
+    return formatGap(ms);
+  };
+
+  const stagesWithGaps = useMemo(() => {
+    return stages.map(stage => {
+      const gapLabel = getStageGap(stage.key);
+      if (!gapLabel) return stage;
+      const prefix = `\u23F1 ${gapLabel}`;
+      return {
+        ...stage,
+        helper: prefix + (stage.helper ? ' · ' + stage.helper : ''),
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stages, record]);
+
   return (
     <div className={`style-smart-row style-smart-row--${deliveryMeta.tone}`}>
       <div className="style-smart-row__cover">
-        <StyleCoverThumb
+        <CardCoverSwitcher
           styleId={record.styleId}
           styleNo={record.styleNo}
           src={record.styleCover || null}
-          size="fill"
-          borderRadius={8}
         />
         <div className="ef-cover-below">
           <div className="ef-date-stack" />
@@ -113,21 +170,21 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                 <span className="ef-field-label">客户</span>
                 <span className="ef-field-value">{record.company || '-'}</span>
               </div>
+              <div className="ef-field-row">
+                <span className="ef-field-label">总数</span>
+                <span className="ef-field-value" style={{ fontWeight: 700 }}>{totalQty}件</span>
+              </div>
+              <div className="ef-field-row">
+                <span className="ef-field-label">交期</span>
+                <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
+              </div>
             </div>
-            <div className="ef-field-row" style={{ marginTop: 4 }}>
-              <span className="ef-field-label">总数</span>
-              <span className="ef-field-value" style={{ fontWeight: 700 }}>{totalQty}件</span>
-            </div>
-            <div className="ef-field-row">
-              <span className="ef-field-label">交期</span>
-              <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 2, alignItems: 'center' }}>
-              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
-              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 13, fontWeight: 600 }}>
+            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 14, fontWeight: 600 }}>
                 {deliveryMeta.label}
               </span>
             </div>
@@ -165,7 +222,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                   </div>
                 </div>
               </Popover>
-              {stages.map(stage => (
+              {stagesWithGaps.map(stage => (
                 <StageNode key={stage.key} stage={stage} record={record} totalQty={totalQty} openNodeDetail={openNodeDetail} />
               ))}
             </div>
@@ -217,7 +274,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               canManageOrderLifecycle: !!canManageOrderLifecycle,
               isSupervisorOrAbove: !!isSupervisorOrAbove,
               onQuickEdit: quickEditModal ? (r) => quickEditModal.open(r) : undefined,
-              handleCloseOrder, handleScrapOrder, handleTransferOrder, handleShareOrder, onOpenRemark,
+              handleCloseOrder, handleScrapOrder, handleShareOrder, onOpenRemark,
             }),
             ...(isFactoryAccount ? [{
               key: 'orderFlow',

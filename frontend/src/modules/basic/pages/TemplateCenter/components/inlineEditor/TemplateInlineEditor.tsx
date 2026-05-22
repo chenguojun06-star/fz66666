@@ -183,7 +183,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
         content: (
           <div>
             <p style={{ marginBottom: 12 }}>保存工序单价后，系统会同步更新未完成订单的工序单价。</p>
-            <p style={{ margin: 0, fontSize: 13, color: '#8c8c8c' }}>通常 1 到 3 秒内完成。</p>
+            <p style={{ margin: 0, fontSize: 14, color: '#8c8c8c' }}>通常 1 到 3 秒内完成。</p>
           </div>
         ),
         okText: '确认保存',
@@ -202,7 +202,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
         content: (
           <div>
             <p style={{ marginBottom: 8 }}>是否同步到该款号已有的未完成生产订单？</p>
-            <p style={{ margin: 0, color: '#8c8c8c', fontSize: 12 }}>款号：{styleNo}</p>
+            <p style={{ margin: 0, color: '#8c8c8c', fontSize: 14 }}>款号：{styleNo}</p>
           </div>
         ),
         okText: '保存并同步',
@@ -407,14 +407,14 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
 
   const metaTextStyle = {
     color: 'var(--neutral-text-secondary)',
-    fontSize: 12,
+    fontSize: 14,
     lineHeight: 1.2,
   } as const;
 
   const compactFieldLabelStyle = {
     marginBottom: 4,
     color: 'var(--neutral-text-secondary)',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 600,
     lineHeight: 1.2,
   } as const;
@@ -452,7 +452,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
 
       <Form form={form} layout="vertical">
         {readOnly && !compact && showTemplateMetaShell ? (
-          <div style={{ marginBottom: 12, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+          <div style={{ marginBottom: 12, color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
             当前为只读预览，退回后可直接在此页面编辑。
           </div>
         ) : null}

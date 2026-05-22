@@ -74,11 +74,11 @@ const DefectTracePopover: React.FC<{
   const content = loading ? (
     <div style={{ width: 280, textAlign: 'center', padding: 16 }}><Spin /></div>
   ) : !data || data.totalDefects === 0 ? (
-    <div style={{ width: 260, fontSize: 13, color: '#8c8c8c', textAlign: 'center', padding: 12 }}>
+    <div style={{ width: 260, fontSize: 14, color: '#8c8c8c', textAlign: 'center', padding: 12 }}>
        该订单暂无次品记录
     </div>
   ) : (
-    <div style={{ width: 300, fontSize: 13 }}>
+    <div style={{ width: 300, fontSize: 14 }}>
       {/* 标题 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontWeight: 600, fontSize: 14 }}> 次品溯源</span>
@@ -88,7 +88,7 @@ const DefectTracePopover: React.FC<{
       </div>
 
       {/* 总览 */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 12, color: '#595959' }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 14, color: '#595959' }}>
         <span>次品 <b style={{ color: '#ff4d4f' }}>{data.totalDefects}</b> 次</span>
         <span>总扫码 <b>{data.totalScans}</b> 次</span>
       </div>
@@ -96,7 +96,7 @@ const DefectTracePopover: React.FC<{
       {/* 工人缺陷明细 */}
       {(data.workers?.length ?? 0) > 0 && (
         <>
-          <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}> 工人缺陷明细</div>
+          <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 4 }}> 工人缺陷明细</div>
           {data.workers.slice(0, 5).map((w, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '3px 0', gap: 6 }}>
               <span style={{ width: 56, flexShrink: 0, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -105,10 +105,10 @@ const DefectTracePopover: React.FC<{
               <span style={{ color: riskColor[w.riskLevel], fontWeight: 500, flexShrink: 0 }}>
                 {w.defectCount}次
               </span>
-              <span style={{ color: '#8c8c8c', fontSize: 13 }}>
+              <span style={{ color: '#8c8c8c', fontSize: 14 }}>
                 ({w.defectRate}%)
               </span>
-              <Tag color={riskColor[w.riskLevel]} style={{ fontSize: 12, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
+              <Tag color={riskColor[w.riskLevel]} style={{ fontSize: 14, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                 {riskLabel[w.riskLevel]}
               </Tag>
             </div>
@@ -119,9 +119,9 @@ const DefectTracePopover: React.FC<{
       {/* 高频缺陷工序 */}
       {(data.hotProcesses?.length ?? 0) > 0 && (
         <>
-          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}> 高频缺陷工序</div>
+          <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}> 高频缺陷工序</div>
           {data.hotProcesses.map((p, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, padding: '2px 0', fontSize: 12 }}>
+            <div key={i} style={{ display: 'flex', gap: 8, padding: '2px 0', fontSize: 14 }}>
               <span style={{ fontWeight: 500 }}>{p.processName}</span>
               <span style={{ color: '#ff4d4f' }}>{p.defectCount}次</span>
               <span style={{ color: '#8c8c8c' }}>({p.defectRate}%)</span>
@@ -133,7 +133,7 @@ const DefectTracePopover: React.FC<{
       {/* 7天趋势（简化为mini sparkline数字） */}
       {(data.trend?.length ?? 0) > 0 && data.trend.some(t => t.defectCount > 0) && (
         <>
-          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}> 近7天趋势</div>
+          <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}> 近7天趋势</div>
           <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end' }}>
             {data.trend.map((t, i) => {
               const maxDefect = Math.max(...data.trend.map(d => d.defectCount), 1);
@@ -160,7 +160,7 @@ const DefectTracePopover: React.FC<{
         </>
       )}
 
-      <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 6, paddingTop: 6, color: '#8c8c8c', fontSize: 12 }}>
+      <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 6, paddingTop: 6, color: '#8c8c8c', fontSize: 14 }}>
          悬停进度球查看次品溯源，点击查看扫码明细
       </div>
     </div>

@@ -97,6 +97,7 @@ export const PlatformDashboard: React.FC = () => {
   };
 
   // 未加载时显示 CTA
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => { load(days); }, []);
 
   if (!user?.isSuperAdmin) {

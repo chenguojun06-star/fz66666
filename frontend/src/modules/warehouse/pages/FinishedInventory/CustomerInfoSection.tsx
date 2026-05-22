@@ -60,12 +60,12 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
 
   return (
     <Card style={{ background: '#f0f5ff', border: '1px solid #adc6ff' }}>
-      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#1d39c4' }}>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#1d39c4' }}>
         👤 客户信息 —— 出库发送给哪个客户
       </div>
       <Row gutter={12}>
         <Col span={8}>
-          <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}><span style={{ color: '#ff4d4f' }}>*</span> 客户名称</div>
+          <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}><span style={{ color: '#ff4d4f' }}>*</span> 客户名称</div>
           <Input
            
             placeholder="必填：输入客户/公司名称"
@@ -75,7 +75,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           />
         </Col>
         <Col span={8}>
-          <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>联系电话</div>
+          <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}>联系电话</div>
           <Input
            
             placeholder="输入联系电话"
@@ -84,7 +84,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           />
         </Col>
         <Col span={8}>
-          <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>收货地址</div>
+          <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}>收货地址</div>
           <Input
            
             placeholder="输入收货地址"

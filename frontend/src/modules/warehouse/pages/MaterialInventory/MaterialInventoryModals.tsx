@@ -11,7 +11,6 @@ import {
   Col,
   InputNumber,
 } from 'antd';
-import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import {
   ScanOutlined,
@@ -36,7 +35,7 @@ interface MaterialInventoryModalsProps {
 const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
   inventoryData,
 }) => {
-  const { selectOptions: materialWarehouseOptions, areas: materialAreas } = useWarehouseAreaOptions('MATERIAL');
+  const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
   const [materialSelectedAreaId, setMaterialSelectedAreaId] = useState<string>('');
   const { selectOptions: materialLocationOptions, loading: materialLocationLoading } = useWarehouseLocationByArea('MATERIAL', materialSelectedAreaId);
   const {

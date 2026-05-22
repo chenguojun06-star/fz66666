@@ -47,8 +47,8 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
   });
 
   // Viewport logic replacement
-  const detailPopupWidth = typeof window !== 'undefined' ? window.innerWidth * 0.9 : 1000;
-  const detailPopupInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
+  const detailPopupWidth = "85vw";
+  const detailPopupInitialHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.82) : 800;
 
   // Derive styleId/styleNo for production sheet and size chart tabs
   const styleId = orderDetail?.styleId || entryWarehousing?.styleId;
@@ -192,7 +192,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                 dataSource={orderLineWarehousingRows}
                 sticky
                 scroll={{ x: 1040 }}
-                style={{ fontSize: 12 }}
+                style={{ fontSize: 14 }}
                 columns={[
                   { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
                   { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 130, ellipsis: true },
@@ -320,7 +320,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                             border: '1px solid var(--neutral-border, #e8e8e8)',
                             borderRadius: 6,
                             background: 'var(--neutral-bg, #fafafa)',
-                            fontSize: 12,
+                            fontSize: 14,
                             lineHeight: '20px',
                           }}>
                             <div style={{ marginBottom: 4, fontWeight: 600 }}>样衣审核</div>
@@ -337,7 +337,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                           storageKey="independent-detail-requirements"
                           rowKey="key" pagination={false}
                           dataSource={fixedRows}
-                          style={{ fontSize: 12 }}
+                          style={{ fontSize: 14 }}
                           columns={[
                             { title: '序号', dataIndex: 'seq', key: 'seq', width: 60, align: 'center' as const },
                             {

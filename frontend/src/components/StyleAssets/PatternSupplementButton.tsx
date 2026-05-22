@@ -221,7 +221,7 @@ const PatternSupplementButton: React.FC<{
       <ResizableModal
         open={open}
         title={`补充纸样（${styleNo || styleId || ''}）`}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.7)}
         onCancel={() => setOpen(false)}
         footer={

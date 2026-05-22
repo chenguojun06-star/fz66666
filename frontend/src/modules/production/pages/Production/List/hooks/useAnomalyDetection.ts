@@ -95,6 +95,7 @@ export function useAnomalyDetection({
       keyword: targetOrderNo || prev.keyword,
     }));
     triggerOrderFocus(targetOrder);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message, navigate, resolveAnomalyTargetOrder, triggerOrderFocus]);
 
   return {

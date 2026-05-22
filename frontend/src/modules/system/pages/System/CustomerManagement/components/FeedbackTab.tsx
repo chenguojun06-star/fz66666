@@ -233,8 +233,8 @@ const FeedbackTab: React.FC = () => {
       >
         {replyModal.data && (
           <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{replyModal.data.title}</div>
-            <div style={{ fontSize: 12, color: '#666', whiteSpace: 'pre-wrap' }}>{replyModal.data.content}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{replyModal.data.title}</div>
+            <div style={{ fontSize: 14, color: '#666', whiteSpace: 'pre-wrap' }}>{replyModal.data.content}</div>
           </div>
         )}
         <Form form={replyForm} layout="vertical">

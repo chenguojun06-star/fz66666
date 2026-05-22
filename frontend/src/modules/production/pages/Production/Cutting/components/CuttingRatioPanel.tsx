@@ -235,7 +235,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           padding: '24px 0',
           textAlign: 'center',
           color: 'var(--neutral-text-light, #8c8c8c)',
-          fontSize: 13,
+          fontSize: 14,
         }}>
           订单明细中无颜色/尺码数据，请先在订单中维护颜色尺码信息，或手动录入后生成菲号
         </div>
@@ -288,7 +288,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       </Space>
 
       {fabricUsageRows && fabricUsageRows.length > 1 && (
-        <div style={{ marginBottom: 12, padding: '6px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 6, fontSize: 12 }}>
+        <div style={{ marginBottom: 12, padding: '6px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 6, fontSize: 14 }}>
           <div style={{ fontWeight: 500, marginBottom: 4, color: '#333' }}>面料用量参考</div>
           {fabricUsageRows.map((row, idx) => {
             const sizes = Object.entries(row.sizeUsageMap);

@@ -163,7 +163,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
         onCancel={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}
         footer={<Space><Button onClick={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}>取消</Button><Button danger loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button></Space>}>
         {returnPatternRecord?.patternRevReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 13 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
           </div>
         )}

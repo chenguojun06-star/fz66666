@@ -30,9 +30,9 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.22)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.1)')}
       >
-        <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日下单</div>
-        <div style={{ color: '#f7a600', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}<span style={{ color: '#f7c44a', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span></div>
-        <div style={{ color: '#f7c44a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOrderQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 13, marginLeft: 2 }}>件</span></div>
+        <div style={{ color: '#b8d4e8', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日下单</div>
+        <div style={{ color: '#f7a600', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOrderCount}<span style={{ color: '#f7c44a', fontSize: 14, fontWeight: 600, marginLeft: 2 }}>单</span></div>
+        <div style={{ color: '#f7c44a', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOrderQuantity.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>件</span></div>
       </div>
       <div
         onClick={() => navigate('/production/warehousing')}
@@ -40,9 +40,9 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.18)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(57,255,20,0.08)')}
       >
-        <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日入库</div>
+        <div style={{ color: '#b8d4e8', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日入库</div>
         <div style={{ color: '#39ff14', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayInboundQuantity.toLocaleString()}<span style={{ color: '#7ddd5a', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
-        <div style={{ color: '#7ddd5a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayInboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 13, marginLeft: 2 }}>单</span></div>
+        <div style={{ color: '#7ddd5a', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayInboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>单</span></div>
       </div>
       <div
         onClick={() => navigate('/warehouse/finished')}
@@ -50,9 +50,9 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.18)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
       >
-        <div style={{ color: '#b8d4e8', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日出库</div>
+        <div style={{ color: '#b8d4e8', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>今日出库</div>
         <div style={{ color: '#00e5ff', fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>{todayBrief.todayOutboundQuantity.toLocaleString()}<span style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 700, marginLeft: 2 }}>件</span></div>
-        <div style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOutboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 13, marginLeft: 2 }}>单</span></div>
+        <div style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{todayBrief.todayOutboundCount.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>单</span></div>
       </div>
     </div>
 
@@ -64,11 +64,11 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(224,48,48,0.25)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(224,48,48,0.12)')}
       >
-        <div style={{ color: '#ff6b6b', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>已逾期</div>
+        <div style={{ color: '#ff6b6b', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>已逾期</div>
         <div style={{ color: '#e03030', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
-          {overdueRisk.overdue.length}<span style={{ color: '#ff8080', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span>
+          {overdueRisk.overdue.length}<span style={{ color: '#ff8080', fontSize: 14, fontWeight: 600, marginLeft: 2 }}>单</span>
         </div>
-        <div style={{ color: '#ff8080', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{orderStats.overdueQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 13, marginLeft: 2 }}>件</span></div>
+        <div style={{ color: '#ff8080', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{orderStats.overdueQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>件</span></div>
       </div>
       <div
         onClick={() => navigate('/production')}
@@ -76,11 +76,11 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.25)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,166,0,0.12)')}
       >
-        <div style={{ color: '#f7a600', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>高风险</div>
+        <div style={{ color: '#f7a600', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>高风险</div>
         <div style={{ color: '#f7a600', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
-          {overdueRisk.highRisk.length}<span style={{ color: '#f7c44a', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span>
+          {overdueRisk.highRisk.length}<span style={{ color: '#f7c44a', fontSize: 14, fontWeight: 600, marginLeft: 2 }}>单</span>
         </div>
-        <div style={{ color: '#f7c44a', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{orderStats.highRiskQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 13, marginLeft: 2 }}>件</span></div>
+        <div style={{ color: '#f7c44a', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{orderStats.highRiskQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>件</span></div>
       </div>
       <div
         onClick={() => navigate('/production')}
@@ -88,24 +88,24 @@ const ProductionOrdersCard: React.FC<any> = ({
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,180,255,0.18)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,180,255,0.08)')}
       >
-        <div style={{ color: '#7dacc4', fontSize: 12, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>关注中</div>
+        <div style={{ color: '#7dacc4', fontSize: 14, fontWeight: 600, marginBottom: 3, letterSpacing: 1 }}>关注中</div>
         <div style={{ color: '#00b4ff', fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
-          {overdueRisk.watch.length}<span style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 600, marginLeft: 2 }}>单</span>
+          {overdueRisk.watch.length}<span style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 600, marginLeft: 2 }}>单</span>
         </div>
-        <div style={{ color: '#5ad4e8', fontSize: 13, fontWeight: 700, marginTop: 4 }}>{orderStats.watchQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 13, marginLeft: 2 }}>件</span></div>
+        <div style={{ color: '#5ad4e8', fontSize: 14, fontWeight: 700, marginTop: 4 }}>{orderStats.watchQty.toLocaleString()}<span style={{ color: '#9ab8cc', fontSize: 14, marginLeft: 2 }}>件</span></div>
       </div>
     </div>
 
     {/* 逾期订单明细（最多3条） */}
     {overdueRisk.overdue.length > 0 && (
       <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
-        <div style={{ color: '#7dacc4', fontSize: 12, marginBottom: 5 }}>逾期订单明细</div>
+        <div style={{ color: '#7dacc4', fontSize: 14, marginBottom: 5 }}>逾期订单明细</div>
         {overdueRisk.overdue.slice(0, 3).map((o: any) => {
           const d = o.plannedEndDate
             ? Math.abs(Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000))
             : 0;
           return (
-            <div key={String(o.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, marginBottom: 3, gap: 4 }}>
+            <div key={String(o.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, marginBottom: 3, gap: 4 }}>
               <span style={{ color: '#e0e0e0', flex: '0 0 auto', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.orderNo}</span>
               <span style={{ color: '#7dacc4', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>{o.factoryName ?? '—'}</span>
               <span style={{ color: '#e03030', flex: '0 0 auto', whiteSpace: 'nowrap' }}>逾{d}天·{(Number(o.orderQuantity)||0).toLocaleString()}件</span>
@@ -113,7 +113,7 @@ const ProductionOrdersCard: React.FC<any> = ({
           );
         })}
         {overdueRisk.overdue.length > 3 && (
-          <div style={{ color: '#5c9ab8', fontSize: 12, textAlign: 'right' }}>还有 {overdueRisk.overdue.length - 3} 单…</div>
+          <div style={{ color: '#5c9ab8', fontSize: 14, textAlign: 'right' }}>还有 {overdueRisk.overdue.length - 3} 单…</div>
         )}
       </div>
     )}
@@ -125,4 +125,4 @@ const ProductionOrdersCard: React.FC<any> = ({
   </div>
 );
 
-export default ProductionOrdersCard;
+export default React.memo(ProductionOrdersCard);

@@ -65,7 +65,7 @@
 }
 
 .kpiValue {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   color: #1890ff;
   line-height: 1.2;
@@ -174,7 +174,7 @@
 }
 
 .riskValue {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   color: #fa8c16;
 }

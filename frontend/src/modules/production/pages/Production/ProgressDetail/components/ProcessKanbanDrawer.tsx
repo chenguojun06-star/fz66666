@@ -68,12 +68,12 @@ const RemarkTimelineContent: React.FC<{ targetType: string; targetNo: string; ca
               <div key={r.id} style={{ padding: '8px 10px', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                   <span>
-                    <strong style={{ fontSize: 13 }}>{r.authorName || '匿名'}</strong>
-                    {r.authorRole && <Tag style={{ marginLeft: 6, fontSize: 13 }}>{r.authorRole}</Tag>}
+                    <strong style={{ fontSize: 14 }}>{r.authorName || '匿名'}</strong>
+                    {r.authorRole && <Tag style={{ marginLeft: 6, fontSize: 14 }}>{r.authorRole}</Tag>}
                   </span>
-                  <span style={{ color: '#999', fontSize: 13 }}>{r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}</span>
+                  <span style={{ color: '#999', fontSize: 14 }}>{r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}</span>
                 </div>
-                <div style={{ fontSize: 13, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{r.content}</div>
+                <div style={{ fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{r.content}</div>
               </div>
             ))}
           </div>
@@ -507,7 +507,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
             />
-            <span style={{ color: '#999', fontSize: 12 }}>
+            <span style={{ color: '#999', fontSize: 14 }}>
               {scannedRecords.length} 已扫码 | {pendingQc.length} 待质检
             </span>
           </Space>
@@ -582,7 +582,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                       <Space>
                         <Tag color={STAGE_COLORS[g.stage] || undefined}>{g.stage}</Tag>
                         <span style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</span>
-                        <span style={{ color: '#999', fontSize: 12 }}>{g.records.length} 条菲号</span>
+                        <span style={{ color: '#999', fontSize: 14 }}>{g.records.length} 条菲号</span>
                       </Space>
                       {qcFilter === 'pending' && selectableInGroup.length > 0 && (
                         <Checkbox
@@ -622,7 +622,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                                 {r.color && <Tag>{r.color}</Tag>}
                                 {r.size && <Tag>{r.size}</Tag>}
                               </div>
-                              <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
+                              <div style={{ fontSize: 14, color: '#999', marginTop: 2 }}>
                                 {r.quantity}件{r.unitPrice ? ` × ¥${r.unitPrice}` : ''}{r.operatorName ? ` | ${r.operatorName}` : ''}
                               </div>
                               {isUnqualified && (
@@ -636,7 +636,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                                   {r.repairStatus === 'pending' && <Tag color="warning">待返修</Tag>}
                                   {r.repairStatus === 'repairing' && <Tag color="processing">返修中</Tag>}
                                   {r.repairStatus === 'repair_done' && <Tag color="cyan">待复检</Tag>}
-                                  {r.qualityOperatorName && <span style={{ fontSize: 13, color: '#999' }}>质检: {r.qualityOperatorName}</span>}
+                                  {r.qualityOperatorName && <span style={{ fontSize: 14, color: '#999' }}>质检: {r.qualityOperatorName}</span>}
                                 </div>
                               )}
                             </div>
@@ -699,7 +699,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             style={{ minWidth: 220, flex: '0 0 auto' }}
           >
             <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || '#1890ff'} style={{ marginBottom: 8 }} />
-            <div style={{ fontSize: 12, color: '#666' }}>
+            <div style={{ fontSize: 14, color: '#666' }}>
               <div>总记录: {stage.totalRecords}</div>
               <div style={{ color: '#52c41a' }}>已完成: {stage.scannedRecords}</div>
               <div style={{ color: '#ff4d4f' }}>待完成: {stage.pendingRecords}</div>
@@ -707,7 +707,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             {stage.processBreakdown && Object.keys(stage.processBreakdown).length > 0 && (
               <div style={{ marginTop: 8, borderTop: '1px solid #f0f0f0', paddingTop: 8 }}>
                 {Object.entries(stage.processBreakdown).map(([name, count]) => (
-                  <Tag key={name} style={{ marginBottom: 4, fontSize: 13 }}>{name}: {count}</Tag>
+                  <Tag key={name} style={{ marginBottom: 4, fontSize: 14 }}>{name}: {count}</Tag>
                 ))}
               </div>
             )}
@@ -723,7 +723,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         <Space>
           <SafetyCertificateOutlined />
           <span>工序质检看板</span>
-          {orderNo && <Tag color="blue" style={{ fontSize: 13 }}>{orderNo}</Tag>}
+          {orderNo && <Tag color="blue" style={{ fontSize: 14 }}>{orderNo}</Tag>}
         </Space>
       }
       placement="right" size="large" open={visible} onClose={onClose}

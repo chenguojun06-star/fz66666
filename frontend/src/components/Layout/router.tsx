@@ -216,7 +216,9 @@ export function useRecentPages(
         targetScrollLeft = tabRight - containerWidth + 10;
       }
       if (targetScrollLeft !== currentScrollLeft) {
-        container.scrollLeft = targetScrollLeft;
+        requestAnimationFrame(() => {
+          container.scrollLeft = targetScrollLeft;
+        });
       }
     });
   }, [effectiveFullPath]);

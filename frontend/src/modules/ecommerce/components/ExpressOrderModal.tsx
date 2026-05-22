@@ -136,7 +136,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
   };
 
   const selectedCompany = Form.useWatch('expressCompany', form);
-  const selectedWeight = Form.useWatch('weight', form);
+  const _selectedWeight = Form.useWatch('weight', form);
   const companyShort = EXPRESS_COMPANIES.find(c => c.code === selectedCompany)?.short || 'SF';
   const currentFee = feeMap[companyShort] ?? null;
 
@@ -196,7 +196,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
                     children: (
                       <div>
                         <div style={{ fontWeight: 500 }}>{t.status}</div>
-                        <div style={{ color: '#999', fontSize: 12 }}>{t.time}</div>
+                        <div style={{ color: '#999', fontSize: 14 }}>{t.time}</div>
                         <div>{t.desc}</div>
                       </div>
                     ),

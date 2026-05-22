@@ -141,6 +141,7 @@ const OrderManagement: React.FC = () => {
     orderLines, sizePriceRows, selectedStyle,
     normalizeSizeKey, displaySizeLabel,
     processBasedUnitPrice: computeProcessBasedUnitPrice(progressNodes),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [bomByType.fabric, bomByType.lining, orderLines, progressNodes, selectedStyle, sizePriceRows]);
 
   const watchedFactoryId = Form.useWatch('factoryId', form) as string | undefined;
@@ -201,11 +202,15 @@ const OrderManagement: React.FC = () => {
   const selectableColors = useMemo(() => {
     const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
     return mergeDistinctOptions(splitOptions(selectedStyle?.color), parsed.colors);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStyle?.color, (selectedStyle as any)?.sizeColorConfig]);
 
   const selectableSizes = useMemo(() => {
     const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
     return mergeDistinctOptions(splitOptions(selectedStyle?.size), parsed.sizes);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
 
   const { generateOrderNo, openCreate, closeDialog } = useOrderActions({

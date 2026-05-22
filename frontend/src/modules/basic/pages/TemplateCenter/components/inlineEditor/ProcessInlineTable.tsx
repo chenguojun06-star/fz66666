@@ -301,8 +301,8 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
       <div style={compact ? { display: 'grid', gap: 8, marginBottom: 8 } : { marginBottom: 12, padding: '10px 12px', background: '#f9f9f9', borderRadius: 8 }}>
         {allowProcessPriceImages && (!readOnly || imageUrls.length > 0) ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: compact ? 0 : 12 }}>
-            {compact ? <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>参考图</span> : null}
-            {!compact ? <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6, width: '100%' }}>款号参考图</div> : null}
+            {compact ? <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>参考图</span> : null}
+            {!compact ? <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6, width: '100%' }}>款号参考图</div> : null}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {imageUrls.map((url) => (
                 <div key={url} style={{ position: 'relative', width: compact ? 44 : 52, height: compact ? 44 : 52 }}>
@@ -386,14 +386,14 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
             </Checkbox>
           )}
           {!compact && showSizePrices ? (
-            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
               各尺码单价不同时使用，默认沿用工价。
             </span>
           ) : null}
         </div>
         {showSizePrices ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>尺码</span>
+            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>尺码</span>
             {templateSizes.map((size) => (
               <Tag key={size} closable={!readOnly} onClose={() => onRemoveSize(size)} style={{ marginInlineEnd: 0 }}>
                 {size}

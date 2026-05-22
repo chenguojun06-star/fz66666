@@ -284,7 +284,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               </Button>
             </div>
             {labelItems.length > 0 && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#8c6d1f' }}>
+              <div style={{ marginTop: 8, fontSize: 14, color: '#8c6d1f' }}>
                 检测到 {[...new Set(labelItems.map(i => i.color))].length} 颜色
                 {[...new Set(labelItems.map(i => i.size).filter(Boolean))].length > 0
                   ? ` × ${[...new Set(labelItems.map(i => i.size).filter(Boolean))].length} 码数`
@@ -325,7 +325,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   {/* 颜色×码数×数量矩阵 */}
                   {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
                     <div style={{ marginTop: 12, overflowX: 'auto' }}>
-                      <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 300 }}>
+                      <table style={{ borderCollapse: 'collapse', fontSize: 14, minWidth: 300 }}>
                         <thead>
                           <tr>
                             <th style={{ border: '1px solid #d9d9d9', padding: '6px 10px', background: '#fafafa', fontWeight: 600 }}>颜色/尺码</th>
@@ -399,13 +399,13 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                 {(reviewLabel || sampleReviewComment || sampleReviewer || sampleReviewTime) && (
                   <div style={{ marginBottom: 10, border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 6 }}>
                     <div style={{ marginBottom: 6, fontWeight: 600 }}>样衣审核</div>
-                    <div style={{ fontSize: 12, lineHeight: '20px' }}>
+                    <div style={{ fontSize: 14, lineHeight: '20px' }}>
                       <span>审核状态：{reviewLabel || '-'}</span>
                       <span style={{ marginLeft: 16 }}>审核人：{sampleReviewer || '-'}</span>
                       <span style={{ marginLeft: 16 }}>审核时间：{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</span>
                     </div>
                     {sampleReviewComment && (
-                      <div style={{ marginTop: 4, fontSize: 12, whiteSpace: 'pre-wrap' }}>审核评语：{sampleReviewComment}</div>
+                      <div style={{ marginTop: 4, fontSize: 14, whiteSpace: 'pre-wrap' }}>审核评语：{sampleReviewComment}</div>
                     )}
                   </div>
                 )}
@@ -551,7 +551,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                                     <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} />
                                   ))}
                                 </div>
-                              : <span style={{ color: '#ccc', fontSize: 13 }}>无图</span>
+                              : <span style={{ color: '#ccc', fontSize: 14 }}>无图</span>
                             }
                           </td>
                         )}

@@ -34,7 +34,7 @@ function RiskBadge({ level }: { level: string }) {
     low:      { color: '#52c41a', label: '正常' },
   };
   const { color, label } = map[level] || map.low;
-  return <span style={{ color, fontSize: 12, fontWeight: 600 }}>{label}</span>;
+  return <span style={{ color, fontSize: 14, fontWeight: 600 }}>{label}</span>;
 }
 
 /* ─── 主组件 ─────────────────────────────────────────── */
@@ -179,7 +179,7 @@ export default function IntelligenceScreen() {
                 notify.items.slice(0, 6).map((n: any, i: number) => (
                   <div key={i} className="screen-notify-row">
                     <RiskBadge level={n.level || 'low'} />
-                    <span style={{ marginLeft: 8, fontSize: 13, color: '#ddd' }}>{n.message}</span>
+                    <span style={{ marginLeft: 8, fontSize: 14, color: '#ddd' }}>{n.message}</span>
                   </div>
                 ))
               ) : (
@@ -191,8 +191,8 @@ export default function IntelligenceScreen() {
                   <div className="screen-panel-title" style={{ marginTop: 24 }}> 物料缺口</div>
                   {shortage.items.slice(0, 5).map((m: any, i: number) => (
                     <div key={i} className="screen-notify-row">
-                      <span style={{ color: '#fa8c16', fontSize: 12 }}>缺</span>
-                      <span style={{ marginLeft: 6, fontSize: 13, color: '#ddd' }}>
+                      <span style={{ color: '#fa8c16', fontSize: 14 }}>缺</span>
+                      <span style={{ marginLeft: 6, fontSize: 14, color: '#ddd' }}>
                         {m.materialName} · 缺 {m.shortageQty}{m.unit}
                       </span>
                     </div>

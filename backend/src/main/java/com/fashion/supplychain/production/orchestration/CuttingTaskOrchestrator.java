@@ -321,8 +321,16 @@ public class CuttingTaskOrchestrator {
             Long tenantId = updated.getTenantId();
             String orderNo = updated.getProductionOrderNo() != null ? updated.getProductionOrderNo() : "";
             String receiver = updated.getReceiverName() != null ? updated.getReceiverName() : "未知";
+            String toName = receiver;
+            if (StringUtils.hasText(updated.getProductionOrderId())) {
+                ProductionOrder order = productionOrderService.getById(updated.getProductionOrderId().trim());
+                if (order != null && StringUtils.hasText(order.getMerchandiser())) {
+                    toName = order.getMerchandiser();
+                }
+            }
             com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
             notice.setTenantId(tenantId);
+            notice.setToName(toName);
             notice.setFromName(receiver);
             notice.setOrderNo(orderNo);
             notice.setTitle("✂️ 裁剪任务已领取 — " + orderNo);

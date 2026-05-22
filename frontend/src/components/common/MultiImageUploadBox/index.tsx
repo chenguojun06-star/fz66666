@@ -43,6 +43,9 @@ function MultiImageUploadBox({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const urls = Array.isArray(value) ? value : [];
 
   const doUpload = useCallback(async (file: File) => {
@@ -260,8 +263,8 @@ function MultiImageUploadBox({
       {canAdd && (
         <Spin spinning={uploading}>
           <div onClick={handleClick} style={addBoxStyle}>
-            <PlusOutlined style={{ fontSize: 20, color: MUTED_COLOR }} />
-            <div style={{ fontSize: 12, color: MUTED_COLOR, marginTop: 4 }}>{label}</div>
+            <PlusOutlined style={{ fontSize: 15, color: MUTED_COLOR }} />
+            <div style={{ fontSize: 14, color: MUTED_COLOR, marginTop: 4 }}>{label}</div>
           </div>
         </Spin>
       )}

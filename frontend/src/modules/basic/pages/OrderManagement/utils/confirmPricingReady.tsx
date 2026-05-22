@@ -29,8 +29,8 @@ export const confirmPricingReady = (
                         : '工序单价'}
               </Tag>
             </div>
-            <div style={{ fontSize: 12, color: '#595959' }}>{orderOrchestration.pricingSummary}</div>
-            <div style={{ marginTop: 6, fontSize: 12, color: '#1677ff' }}>下单锁定单价：¥{resolvedOrderUnitPrice.toFixed(2)} / 件</div>
+            <div style={{ fontSize: 14, color: '#595959' }}>{orderOrchestration.pricingSummary}</div>
+            <div style={{ marginTop: 6, fontSize: 14, color: '#1677ff' }}>下单锁定单价：¥{resolvedOrderUnitPrice.toFixed(2)} / 件</div>
           </div>
           <div style={{ padding: 12, borderRadius: 10, border: '1px solid #d9d9d9', background: '#fafafa' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
@@ -39,7 +39,7 @@ export const confirmPricingReady = (
                 {orderOrchestration.scatterMode}
               </Tag>
             </div>
-            <div style={{ fontSize: 12, color: '#595959' }}>{orderOrchestration.scatterSummary}</div>
+            <div style={{ fontSize: 14, color: '#595959' }}>{orderOrchestration.scatterSummary}</div>
           </div>
         </div>
       ),

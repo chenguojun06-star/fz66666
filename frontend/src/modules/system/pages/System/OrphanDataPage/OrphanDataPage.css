@@ -14,7 +14,7 @@
 
 .orphan-header h2 {
   margin: 0 0 8px;
-  font-size: 22px;
+  font-size: 13px;
   color: #262626;
 }
 
@@ -72,7 +72,7 @@
 }
 
 .orphan-category-icon {
-  font-size: 24px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 

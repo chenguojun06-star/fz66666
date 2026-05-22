@@ -87,7 +87,7 @@
 
 /* 统计数字 - 大字清晰 */
 .statValue {
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--neutral-text, #1a1a1a);
   line-height: 1.2;
@@ -134,7 +134,7 @@
 }
 
 .defectValue {
-  font-size: 22px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -159,7 +159,7 @@
 /* 周同比/日同比变化 */
 .changeUp {
   color: #52c41a;
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;

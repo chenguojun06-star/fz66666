@@ -52,7 +52,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'flex-start' }}>
-              <span style={{ color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>工厂码</span>
+              <span style={{ color: '#888', fontSize: 14, whiteSpace: 'nowrap' }}>工厂码</span>
               <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 16, fontWeight: 700 }}>
                 {tenantInfo.tenantCode}
               </Typography.Text>
@@ -61,7 +61,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
               <Button icon={<LinkOutlined />} onClick={() => onCopyRegisterUrl(registerUrl)}>复制注册链接</Button>
               <Button icon={<QrcodeOutlined />} onClick={() => onCopyTenantCode(tenantInfo.tenantCode || '')}>复制工厂码</Button>
             </div>
-            <Typography.Text type="secondary" style={{ fontSize: 13, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
+            <Typography.Text type="secondary" style={{ fontSize: 14, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
               员工扫码二维码或输入工厂码即可申请加入
             </Typography.Text>
           </div>
@@ -74,7 +74,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
           <span style={{ fontWeight: 600, fontSize: 15 }}>问题反馈</span>
         </div>
         <Card style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block', marginBottom: 12 }}>
             遇到问题或有改进建议？提交反馈帮助我们优化系统
           </Typography.Text>
           <Space>
@@ -83,13 +83,13 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
           </Space>
           {myFeedbacks.length > 0 && (
             <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>最近反馈</div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>最近反馈</div>
               {myFeedbacks.slice(0, 5).map((fb) => (
                 <div key={fb.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
                   <Tag color={FEEDBACK_CATEGORY_MAP[fb.category]?.color || 'default'} style={{ margin: 0 }}>
                     {FEEDBACK_CATEGORY_MAP[fb.category]?.label || fb.category}
                   </Tag>
-                  <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fb.title}</span>
+                  <span style={{ flex: 1, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fb.title}</span>
                   <Tag color={FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.color || 'default'} style={{ margin: 0 }}>
                     {FEEDBACK_STATUS_MAP[fb.status || 'PENDING']?.label}
                   </Tag>

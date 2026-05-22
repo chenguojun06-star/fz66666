@@ -4,8 +4,8 @@ import { PrinterOutlined, SearchOutlined, SettingOutlined, QuestionCircleOutline
 import QRCode from 'qrcode';
 import { safePrint } from '@/utils/safePrint';
 import api, { parseProductionOrderLines, sortSizeNames } from '@/utils/api';
-import { buildWashLabelSections, parseWashNotePerPart, getDisplayWashCareCodes } from '@/utils/washLabel';
-import { parseCareIconCodes, getCareIconSvgs, getEffectiveCareIconCodes, CARE_CATEGORIES, CARE_ICONS, serializeCareIconCodes } from '@/utils/careIcons';
+import { buildWashLabelSections } from '@/utils/washLabel';
+import { parseCareIconCodes, getEffectiveCareIconCodes, CARE_CATEGORIES, CARE_ICONS, serializeCareIconCodes } from '@/utils/careIcons';
 
 interface OrderInfo {
   orderId: string;
@@ -381,7 +381,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
 
   const toggleRow = (label: string, field: keyof typeof hang, checked: boolean) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: 11 }}>{label}</span>
+      <span style={{ fontSize: 14 }}>{label}</span>
       <Switch size="small" checked={checked as boolean} onChange={v => setHang(h => ({ ...h, [field]: v }))} />
     </div>
   );
@@ -402,7 +402,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
             <>
               <Card title="打印设置" size="small" style={{ marginBottom: 12 }}>
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 6 }}>打印数量</div>
+                  <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>打印数量</div>
                   <InputNumber min={1} max={999} value={printCount} onChange={v => setPrintCount(v || 1)} style={{ width: '100%' }} />
                 </div>
                 <Button type="primary" icon={<PrinterOutlined />} loading={printing} onClick={() => void handlePrint()} block>
@@ -415,7 +415,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                 children: (
                   <div style={{ padding: '2px 0' }}>
                     <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, color: '#999', marginBottom: 3 }}>尺寸 (mm)</div>
+                      <div style={{ fontSize: 14, color: '#999', marginBottom: 3 }}>尺寸 (mm)</div>
                       <Space wrap size={4} style={{ marginBottom: 4 }}>
                         {sizePresets[printType].map(p => (
                           <Button key={p.label} size="small"
@@ -443,19 +443,19 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
 
                     {printType === 'hangtag' && (<>
                       <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 11, color: '#999', marginBottom: 3 }}>品牌名（留空=使用款名）</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 3 }}>品牌名（留空=使用款名）</div>
                         <Input size="small" value={hang.brandName} placeholder={selectedOrder.styleName || selectedOrder.styleNo}
                           onChange={e => setHang(h => ({ ...h, brandName: e.target.value }))} maxLength={20} />
                       </div>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>标题字号: {hang.titleSz}pt</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>标题字号: {hang.titleSz}pt</div>
                         <Slider min={8} max={20} step={0.5} value={hang.titleSz} onChange={v => setHang(h => ({ ...h, titleSz: v }))} />
                       </div>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>信息字号: {hang.infoSz}pt</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>信息字号: {hang.infoSz}pt</div>
                         <Slider min={5} max={12} step={0.5} value={hang.infoSz} onChange={v => setHang(h => ({ ...h, infoSz: v }))} />
                       </div>
-                      <div style={{ fontSize: 10, color: '#bbb', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
+                      <div style={{ fontSize: 14, color: '#bbb', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
                       <Space orientation="vertical" style={{ width: '100%' }} size={2}>
                         {toggleRow('款号', 'showStyleNo', hang.showStyleNo)}
                         {toggleRow('颜色尺码', 'showColorSize', hang.showColorSize)}
@@ -475,21 +475,21 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
 
                     {printType === 'barcode' && (<>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>编码字号: {bar.codeSz}pt</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>编码字号: {bar.codeSz}pt</div>
                         <Slider min={5} max={14} step={0.5} value={bar.codeSz} onChange={v => setBar(b => ({ ...b, codeSz: v }))} />
                       </div>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>文字字号: {bar.textSz}pt</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>文字字号: {bar.textSz}pt</div>
                         <Slider min={4} max={10} step={0.5} value={bar.textSz} onChange={v => setBar(b => ({ ...b, textSz: v }))} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 11 }}>显示款式名</span><Switch size="small" checked={bar.showName} onChange={v => setBar(b => ({ ...b, showName: v }))} /></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 14 }}>显示款式名</span><Switch size="small" checked={bar.showName} onChange={v => setBar(b => ({ ...b, showName: v }))} /></div>
                     </>)}
 
                     {printType === 'washlabel' && (<>
-                      <div style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>字号根据纸张宽度自动适配</div>
+                      <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>字号根据纸张宽度自动适配</div>
                       <Space orientation="vertical" style={{ width: '100%' }} size={2}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 11 }}>显示产地</span><Switch size="small" checked={wash.showOrigin} onChange={v => setWash(w => ({ ...w, showOrigin: v }))} /></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 11 }}>显示商品编码</span><Switch size="small" checked={wash.showUCode} onChange={v => setWash(w => ({ ...w, showUCode: v }))} /></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 14 }}>显示产地</span><Switch size="small" checked={wash.showOrigin} onChange={v => setWash(w => ({ ...w, showOrigin: v }))} /></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 14 }}>显示商品编码</span><Switch size="small" checked={wash.showUCode} onChange={v => setWash(w => ({ ...w, showUCode: v }))} /></div>
                       </Space>
                     </>)}
 
@@ -519,18 +519,18 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                       {coverBase64 ? (
                         <Image src={coverBase64} style={{ maxHeight: 200, objectFit: 'contain' }} />
                       ) : (
-                        <div style={{ color: '#ccc', fontSize: 12 }}>暂无图片</div>
+                        <div style={{ color: '#ccc', fontSize: 14 }}>暂无图片</div>
                       )}
                     </div>
                   </Col>
                   <Col span={17}>
-                    <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{selectedOrder.styleName || selectedOrder.styleNo}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{selectedOrder.styleName || selectedOrder.styleNo}</div>
                     <div style={{ color: '#666', marginBottom: 4 }}>款号: <span style={{ color: '#1890ff' }}>{selectedOrder.styleNo}</span></div>
                     <div style={{ color: '#666', marginBottom: 12 }}>订单号: {selectedOrder.orderNo}</div>
                     <Divider style={{ margin: '10px 0' }} />
                     {selectedOrder.colors.length > 0 && (
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 12, color: '#999', marginBottom: 6 }}>颜色</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>颜色</div>
                         <Space wrap>{selectedOrder.colors.map(c => (
                           <Button key={c} size="small" type={selectedColor === c ? 'primary' : 'default'} onClick={() => setSelectedColor(c)}>{c}</Button>
                         ))}</Space>
@@ -538,7 +538,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                     )}
                     {selectedOrder.sizes.length > 0 && (
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 12, color: '#999', marginBottom: 6 }}>尺码</div>
+                        <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>尺码</div>
                         <Space wrap>{selectedOrder.sizes.map(s => (
                           <Button key={s} size="small" type={selectedSize === s ? 'primary' : 'default'} onClick={() => setSelectedSize(s)}>{s}</Button>
                         ))}</Space>
@@ -551,42 +551,42 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                       children: (
                         <div style={{ padding: '2px 0' }}>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>成分</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>成分</div>
                             <Input size="small" value={selectedOrder.fabricComposition} placeholder="如：100%棉"
                               onChange={e => setSelectedOrder(o => o ? { ...o, fabricComposition: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>质量等级</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>质量等级</div>
                             <Input size="small" value={selectedOrder.qualityGrade} placeholder="如：合格品"
                               onChange={e => setSelectedOrder(o => o ? { ...o, qualityGrade: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>执行标准</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>执行标准</div>
                             <Input size="small" value={selectedOrder.executeStandard} placeholder="如：GB/T 2660-2017"
                               onChange={e => setSelectedOrder(o => o ? { ...o, executeStandard: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>安全类别</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>安全类别</div>
                             <Input size="small" value={selectedOrder.safetyCategory} placeholder="如：GB 18401 B类"
                               onChange={e => setSelectedOrder(o => o ? { ...o, safetyCategory: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>检验员</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>检验员</div>
                             <Input size="small" value={selectedOrder.inspector} placeholder="检验员姓名"
                               onChange={e => setSelectedOrder(o => o ? { ...o, inspector: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>检验日期</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>检验日期</div>
                             <Input size="small" value={selectedOrder.inspectionDate} placeholder="如：2026-05-15"
                               onChange={e => setSelectedOrder(o => o ? { ...o, inspectionDate: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>价格（元）</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>价格（元）</div>
                             <InputNumber size="small" min={0} step={0.01} value={selectedOrder.price ?? undefined} placeholder="如：299.00"
                               onChange={v => setSelectedOrder(o => o ? { ...o, price: v ?? 0 } : o)} style={{ width: '100%' }} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>商品编码（U码）</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>商品编码（U码）</div>
                             <Input size="small" value={selectedOrder.uCode} placeholder="商品条码"
                               onChange={e => setSelectedOrder(o => o ? { ...o, uCode: e.target.value } : o)} />
                           </div>
@@ -619,33 +619,33 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                       children: (
                         <div style={{ padding: '2px 0' }}>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>面料成分{editFabricComp !== (selectedOrder.fabricComposition || '') ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 4, padding: '0 4px', lineHeight: '16px' }}>已改</Tag> : null}</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>面料成分{editFabricComp !== (selectedOrder.fabricComposition || '') ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 4, padding: '0 4px', lineHeight: '16px' }}>已改</Tag> : null}</div>
                             <Input.TextArea
                               size="small"
                               rows={2}
                               value={editFabricComp}
                               placeholder="如：100%棉 或 70%棉 30%聚酯"
                               onChange={e => setEditFabricComp(e.target.value)}
-                              style={{ fontSize: 12 }}
+                              style={{ fontSize: 14 }}
                             />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>洗涤说明{editWashInstructions !== (selectedOrder.washInstructions || '') ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 4, padding: '0 4px', lineHeight: '16px' }}>已改</Tag> : null}</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>洗涤说明{editWashInstructions !== (selectedOrder.washInstructions || '') ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 4, padding: '0 4px', lineHeight: '16px' }}>已改</Tag> : null}</div>
                             <Input.TextArea
                               size="small"
                               rows={3}
                               value={editWashInstructions}
                               placeholder="如：30°C水洗，不可漂白，悬挂晾干"
                               onChange={e => setEditWashInstructions(e.target.value)}
-                              style={{ fontSize: 12 }}
+                              style={{ fontSize: 14 }}
                             />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>护理图标（点击切换，同类只选一个）</div>
+                            <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>护理图标（点击切换，同类只选一个）</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                               {CARE_CATEGORIES.map(cat => (
                                 <div key={cat.key}>
-                                  <div style={{ fontSize: 10, color: '#aaa', marginBottom: 3, fontWeight: 500 }}>{cat.label}</div>
+                                  <div style={{ fontSize: 14, color: '#aaa', marginBottom: 3, fontWeight: 500 }}>{cat.label}</div>
                                   <Space wrap size={6}>
                                     {cat.codes.map(code => {
                                       const icon = CARE_ICONS[code];
@@ -669,7 +669,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                                           }}
                                         >
                                           <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 22, height: 22, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 11, color: selected ? '#1677ff' : '#666', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
+                                          <span style={{ fontSize: 14, color: selected ? '#1677ff' : '#666', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
                                         </div>
                                       );
                                     })}
@@ -711,7 +711,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                     }]} />
 
                     <Divider style={{ margin: '10px 0' }} />
-                    <div style={{ fontSize: 12, color: '#999' }}>
+                    <div style={{ fontSize: 14, color: '#999' }}>
                       当前打印: <span style={{ color: '#222', fontWeight: 600 }}>{ptLabel}</span>
                       {' | '}SKU: <span style={{ color: '#222', fontWeight: 600 }}>{selectedOrder.styleNo}-{selectedColor}-{selectedSize}</span>
                       {selectedOrder.price ? ` | ¥${selectedOrder.price.toFixed(2)}` : ''}
@@ -722,7 +722,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                 <Divider style={{ margin: '14px 0' }} />
 
                 <div>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
+                  <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
                   <div style={{ border: '1px solid #e0e0e0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
                     <iframe srcDoc={previewHtml} style={{ width: '100%', height: 350, border: 'none' }} title="打印预览" />
                   </div>
@@ -730,7 +730,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
               </Card>
             ) : orders.length > 0 ? (
               <Card>
-                <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>搜索到 {orders.length} 个订单，请选择</div>
+                <div style={{ fontSize: 14, color: '#999', marginBottom: 8 }}>搜索到 {orders.length} 个订单，请选择</div>
                 <Space orientation="vertical" style={{ width: '100%' }}>
                   {orders.map(o => (
                     <Card key={o.orderId} size="small" hoverable style={{ cursor: 'pointer' }}
@@ -743,7 +743,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                         setEditCareIconCodes(parseCareIconCodes(o.careIconCodes));
                       }}>
                       <div style={{ fontWeight: 600 }}>{o.styleName || o.styleNo}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>订单号: {o.orderNo} | {o.colors.join('/')} | {o.sizes.join('/')}</div>
+                      <div style={{ fontSize: 14, color: '#666' }}>订单号: {o.orderNo} | {o.colors.join('/')} | {o.sizes.join('/')}</div>
                     </Card>
                   ))}
                 </Space>

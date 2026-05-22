@@ -1,0 +1,137 @@
+<h2>设计方案 — 第二组：页面模板 + 表格规范 + 实施顺序</h2>
+<p class="subtitle">最后一组规范，确认后直接开工。仪表盘页面不动。</p>
+
+<!-- ============== 5. 页面统一模板 ============== -->
+<div class="section">
+  <h3>五、页面统一模板（所有列表页强制对齐）</h3>
+
+  <div style="background:#fafafa; border:1px solid #e5e7eb; border-radius:6px; padding:20px; margin:12px 0;">
+    <div style="display:grid; grid-template-columns:1fr; gap:12px;">
+      
+      <!-- Zone 1: Header -->
+      <div style="background:#fff; border:1px solid #dbeafe; padding:12px 16px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:15px; font-weight:600; color:#111827;">Zone 1 — 页面标题区</div>
+          <div style="font-size:11px; color:#9ca3af;">标题 + 副标题（可选）+ 右侧操作按钮</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <div style="border:1px solid #e5e7eb; border-radius:4px; padding:4px 12px; font-size:11px; color:#6b7280;">导出</div>
+          <div style="background:#fff; border:1.5px solid #40a9ff; border-radius:4px; padding:4px 12px; font-size:11px; color:#40a9ff; font-weight:500;">新建</div>
+        </div>
+      </div>
+
+      <!-- Zone 2: Stats (optional) -->
+      <div style="background:#fff; border:1px solid #d1d5db; padding:12px 16px; border-radius:4px; font-size:12px; color:#6b7280;">
+        Zone 2 — 统计卡区（可选）· 最多 4 张卡片 · 每卡仅 2 行（标签+数值）
+      </div>
+
+      <!-- Zone 3: Filter -->
+      <div style="background:#fff; border:1px solid #e5e7eb; padding:10px 16px; border-radius:4px; font-size:12px; color:#6b7280;">
+        Zone 3 — 筛选工具栏 · 搜索框 + ≤3 个可见筛选 +「更多筛选」
+      </div>
+
+      <!-- Zone 4: Table -->
+      <div style="background:#fff; border:1px solid #e5e7eb; padding:12px 16px; border-radius:4px; font-size:12px; color:#6b7280;">
+        Zone 4 — 数据表格区 · ResizableTable · 行高 44px · 列宽自适应 · 斑马纹淡
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:12px;">
+      <div style="font-size:12px; font-weight:600; color:#059669;">模板规则</div>
+      <ul style="font-size:11px; margin:4px 0 0; padding-left:16px; color:#333;">
+        <li>Zone 间间距：<b>16px</b> 固定</li>
+        <li>Zone 内 padding：<b>12px 16px</b> 固定</li>
+        <li>无 Zone 2 的页面：Zone 1 直接跳到 Zone 3</li>
+        <li>每 Zone 独立白卡片，1px #e5e7eb 边框</li>
+      </ul>
+    </div>
+    <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:12px;">
+      <div style="font-size:12px; font-weight:600; color:#dc2626;">禁止</div>
+      <ul style="font-size:11px; margin:4px 0 0; padding-left:16px; color:#333;">
+        <li>禁止 Zone 间嵌套</li>
+        <li>禁止一个 Zone 里塞两个不相关功能</li>
+        <li>禁止跳过 Zone 3 直接把筛选放 Zone 1</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============== 6. 表格规范 ============== -->
+<div class="section">
+  <h3>六、表格规范（所有表格强制对齐）</h3>
+
+  <table style="width:100%; border-collapse:collapse; font-size:12px; margin:12px 0;">
+    <thead>
+      <tr style="background:#f5f7fb; text-align:left;">
+        <th style="padding:8px 12px; border:1px solid #eee;">规范项</th>
+        <th style="padding:8px 12px; border:1px solid #eee;">值</th>
+        <th style="padding:8px 12px; border:1px solid #eee;">说明</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">表头高度</td><td style="padding:6px 12px; border:1px solid #eee;">36px</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">背景 #fafafa，字色 #9ca3af，字号 11px</td></tr>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">行高</td><td style="padding:6px 12px; border:1px solid #eee;">44px</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">行业标准 44-48px</td></tr>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">斑马纹</td><td style="padding:6px 12px; border:1px solid #eee;">#fafafa / #fff</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">极淡，不过分抢眼</td></tr>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">分隔线</td><td style="padding:6px 12px; border:1px solid #eee;">1px #f0f0f0</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">横向线只在行底，不需纵向线</td></tr>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">hover行</td><td style="padding:6px 12px; border:1px solid #eee;">#f3f4f6</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">很淡的灰色</td></tr>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">列宽</td><td style="padding:6px 12px; border:1px solid #eee;">auto-fit 弹性</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">固定列（图片48px/序号40px）+ 弹性列(flex:1) + 内容列(auto)</td></tr>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">单元格padding</td><td style="padding:6px 12px; border:1px solid #eee;">8px 12px</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">左右12px确保文字不贴边</td></tr>
+      <tr><td style="padding:6px 12px; border:1px solid #eee; font-weight:600;">空表格</td><td style="padding:6px 12px; border:1px solid #eee;">EmptyState 组件</td><td style="padding:6px 12px; border:1px solid #eee; font-size:11px; color:#999;">统一灰色图标 + "暂无数据"</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============== 7. 实施顺序 ============== -->
+<div class="section">
+  <h3>七、实施顺序（按模块逐页推进）</h3>
+
+  <div style="display:grid; grid-template-columns:1fr; gap:6px; margin:12px 0;">
+    <div style="background:#eef2ff; border:1px solid #c7d6f7; border-radius:6px; padding:12px; display:flex; align-items:center; gap:12px;">
+      <span style="background:#2D7FF9; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">1</span>
+      <div>
+        <div style="font-weight:600; font-size:13px;">更新设计系统 CSS</div>
+        <div style="font-size:11px; color:#666;">design-system.css + global.css。更新变量值、统一间距、卡片/表格/按钮基础样式。文件数：2</div>
+      </div>
+    </div>
+
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:12px; display:flex; align-items:center; gap:12px;">
+      <span style="background:#10b981; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">2</span>
+      <div>
+        <div style="font-weight:600; font-size:13px;">生产模块（最高频）</div>
+        <div style="font-size:11px; color:#666;">Production List + ProgressDetail + cellRenderers。文件数：~8</div>
+      </div>
+    </div>
+
+    <div style="background:#fefce8; border:1px solid #fef08a; border-radius:6px; padding:12px; display:flex; align-items:center; gap:12px;">
+      <span style="background:#f59e0b; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">3</span>
+      <div>
+        <div style="font-weight:600; font-size:13px;">订单管理模块</div>
+        <div style="font-size:11px; color:#666;">OrderManagement + OrderCreateModal + 组件。文件数：~6</div>
+      </div>
+    </div>
+
+    <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:6px; padding:12px; display:flex; align-items:center; gap:12px;">
+      <span style="background:#8b5cf6; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">4</span>
+      <div>
+        <div style="font-weight:600; font-size:13px;">样衣开发 + 外发工厂</div>
+        <div style="font-size:11px; color:#666;">StyleInfo + ExternalFactory。文件数：~4</div>
+      </div>
+    </div>
+
+    <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:6px; padding:12px; display:flex; align-items:center; gap:12px;">
+      <span style="background:#f43f5e; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">5</span>
+      <div>
+        <div style="font-weight:600; font-size:13px;">财务 + 系统管理 + 公共组件</div>
+        <div style="font-size:11px; color:#666;">Finance + System + common components。文件数：~15</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:12px; margin-top:8px; font-size:12px;">
+    <b>每步完成后立即验证：</b> <code>npx tsc --noEmit</code> + 页面截图对比<br/>
+    <b>不动的模块：</b> 仪表盘（Dashboard）— 完全不改
+  </div>
+</div>

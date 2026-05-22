@@ -24,6 +24,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.NoSuchElementException;
@@ -222,9 +223,13 @@ public class GlobalExceptionHandler {
          * 处理权限不足。
          */
         @ExceptionHandler(AccessDeniedException.class)
-        public ResponseEntity<Result<?>> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
+        public ResponseEntity<Result<?>> handleAccessDenied(AccessDeniedException e, HttpServletRequest request,
+                        HttpServletResponse response) {
                 logger.warn("权限不足: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
+                if (response != null && response.isCommitted()) {
+                        return null;
+                }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Result.fail(403, sanitizeClientMessage(e.getMessage())));
         }
 

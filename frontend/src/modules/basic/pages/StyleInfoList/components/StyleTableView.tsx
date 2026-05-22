@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Popover, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
-import type { MenuProps } from 'antd';
+import { App, Button, Dropdown, Empty, Form, Input, InputNumber, Popover, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
-import AttachmentThumb from '@/components/common/AttachmentThumb';
+import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import SmallModal from '@/components/common/SmallModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import StyleDevelopmentWorkbench from './StyleDevelopmentWorkbench';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
@@ -178,6 +178,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     });
 
     return mapped;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryOptions, data, stockStateMap, dateSortAsc]);
 
 
@@ -239,14 +240,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               className={`style-smart-row style-smart-row--${rowState}${focusedStyleId === rowKey ? ' style-smart-row--focused' : ''}`}
             >
               <div className="style-smart-row__cover">
-                <AttachmentThumb
-                  styleId={record.id!}
+                <CardCoverSwitcher
+                  styleId={record.id}
+                  styleNo={record.styleNo}
                   src={record.cover || null}
-                  className="style-smart-row__thumb"
-                  width="100%"
-                  height="100%"
-                  borderRadius={28}
-                  imageStyle={{ objectFit: 'contain' }}
                 />
               </div>
 
@@ -265,6 +262,9 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   <div className="style-smart-row__identity">
                     <div className="style-smart-row__tags">
                       <Tag color={getProgressNodeColor(progressNode)}>{progressNode}</Tag>
+                      {deliveryMeta.label && !isScrappedRow(record) && deliveryMeta.tone !== 'success' ? (
+                        <Tag color={deliveryMeta.tone === 'danger' ? 'error' : deliveryMeta.tone === 'warning' ? 'warning' : 'processing'}>{deliveryMeta.label}</Tag>
+                      ) : null}
                       {maintainedAfterCompletion ? <Tag color="gold">已维护</Tag> : null}
                     </div>
 
@@ -285,9 +285,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         </button>
                       </Popover>
                       <div className="style-smart-row__title-name">{record.styleName || '未命名样衣'}</div>
-                      <span className={`style-smart-row__delivery style-smart-row__delivery--${isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone}`}>
-                        {deliveryMeta.label}
-                      </span>
                     </div>
 
                     <div className="style-smart-row__meta style-smart-row__meta--stacked">
@@ -414,7 +411,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       </div>
       </div>
 
-      <Modal
+      <ResizableModal
         open={Boolean(selectedStage)}
         title={selectedStage ? `${selectedStage.record.styleNo} · ${selectedStage.stage.label}` : ''}
         onCancel={() => setSelectedStage(null)}
@@ -512,7 +509,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         value={JSON.stringify({ type: 'pattern', id: sample.sampleSnapshot.id })}
                         size={80}
                       />
-                      <div style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1.8 }}>
+                      <div style={{ fontSize: 14, color: '#8c8c8c', lineHeight: 1.8 }}>
                         <div style={{ fontWeight: 500, color: '#595959' }}>工人扫码领取/完成</div>
                         <div>样衣单号: {sample.sampleSnapshot.id}</div>
                       </div>
@@ -587,7 +584,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             ) : null}
           </div>
         ) : null}
-      </Modal>
+      </ResizableModal>
 
       <SmallModal
         open={sample.progressEditorOpen}

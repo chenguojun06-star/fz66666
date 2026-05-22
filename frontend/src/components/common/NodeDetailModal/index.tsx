@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, App, Button, Popconfirm, Space, Spin, Tabs, Tag } from 'antd';
 import type { TabsProps } from 'antd';
-import { FileTextOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
+import { FileTextOutlined, ShoppingOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ResizableModal from '../ResizableModal';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useUser } from '@/utils/AuthContext';
@@ -12,6 +12,7 @@ import { formatProcessDisplayName } from '@/utils/productionStage';
 import PredictionCard from './PredictionCard';
 import OperatorsTab from './OperatorsTab';
 import NodeSettingsTab from './NodeSettingsTab';
+import InlinePurchasePanel from './InlinePurchasePanel';
 import type { NodeType, HistoryItem, NodeOperationData, NodeDetailModalProps } from './types';
 
 const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
@@ -49,13 +50,13 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
   useEffect(() => {
     if (visible && orderId) {
-      setActiveTab('processTracking');
+      setActiveTab((nodeType as NodeType) === 'procurement' ? 'purchase' : 'processTracking');
     }
     if (!visible) {
-      setActiveTab('processTracking');
+      setActiveTab((nodeType as NodeType) === 'procurement' ? 'purchase' : 'processTracking');
       setAdminUnlocked(false);
     }
-  }, [visible, orderId]);
+  }, [visible, orderId, nodeType]);
 
   const isHighProgress = (nodeStats?.percent || 0) >= 80;
   const disableEdit = isHighProgress && !adminUnlocked;
@@ -275,7 +276,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       open={visible}
       onCancel={onClose}
       className="node-detail-modal"
-      footer={
+      footer={nodeTypeKey === 'procurement' ? null : (
         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
           <div>
             {hasSettings && (
@@ -294,8 +295,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             )}
           </div>
         </div>
-      }
-      width={nodeTypeKey === 'procurement' ? '40vw' : '60vw'}
+      )}
+      width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       <Spin spinning={loading}>
@@ -318,18 +319,14 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             delegateProcessName={String(currentNodeData.delegateProcessName || '').trim() || undefined}
           />
         )}
-        {(nodeTypeKey === 'cutting' || nodeTypeKey === 'procurement') && (
+        {(nodeTypeKey === 'cutting') && (
           <div style={{ marginBottom: 8 }}>
             <Button
              
               style={(nodeStats?.percent || 0) >= 100 ? { color: '#999', borderColor: '#d9d9d9' } : {}}
-              onClick={() => navigate(
-                nodeTypeKey === 'cutting'
-                  ? `/production/cutting?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
-                  : `/production/material?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
-              )}
+              onClick={() => navigate(`/production/cutting/task/${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`)}
             >
-              {nodeTypeKey === 'cutting' ? ' 前往裁剪管理 →' : ' 前往物料采购 →'}
+               前往裁剪管理 →
               {(nodeStats?.percent || 0) >= 100 && (
                 <span style={{ color: '#999', marginLeft: 4 }}>（已完成）</span>
               )}
@@ -343,38 +340,50 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           items={(() => {
             const isUnitPriceNode = typeof unitPrice === 'number';
             const showProductionTabs = !isPatternProduction && !isUnitPriceNode;
+            const isProcurement = nodeTypeKey === 'procurement';
             return [
-              {
-                key: 'settings',
-                label: <span><FileTextOutlined /> 工序委派</span>,
-                children: (
-                  <NodeSettingsTab
-                    nodeName={nodeName}
-                    nodeStats={nodeStats}
-                    delegateProcessCode={delegateProcessCode}
-                    processList={processList}
-                    currentNodeData={currentNodeData}
-                    matchedProcess={matchedProcess}
-                    disableEdit={disableEdit}
-                    saving={saving}
-                    factories={factories || []}
-                    users={users || []}
-                    orderSummary={orderSummary}
-                    orderNo={orderNo ?? ''}
-                    unitPrice={unitPrice}
-                    cuttingSizeItems={cuttingSizeItems}
-                    updateNodeData={updateNodeData}
-                    handleFactoryChange={handleFactoryChange}
-                    handleSave={handleSave}
-                  />
-                ),
-              },
+              isProcurement
+                ? {
+                    key: 'purchase',
+                    label: <span><ShoppingOutlined /> 面辅料采购</span>,
+                    children: (
+                      <InlinePurchasePanel
+                        orderId={orderId}
+                        orderNo={orderSummary.orderNo || orderNo}
+                      />
+                    ),
+                  }
+                : {
+                    key: 'settings',
+                    label: <span><FileTextOutlined /> 工序委派</span>,
+                    children: (
+                      <NodeSettingsTab
+                        nodeName={nodeName}
+                        nodeStats={nodeStats}
+                        delegateProcessCode={delegateProcessCode}
+                        processList={processList}
+                        currentNodeData={currentNodeData}
+                        matchedProcess={matchedProcess}
+                        disableEdit={disableEdit}
+                        saving={saving}
+                        factories={factories || []}
+                        users={users || []}
+                        orderSummary={orderSummary}
+                        orderNo={orderNo ?? ''}
+                        unitPrice={unitPrice}
+                        cuttingSizeItems={cuttingSizeItems}
+                        updateNodeData={updateNodeData}
+                        handleFactoryChange={handleFactoryChange}
+                        handleSave={handleSave}
+                      />
+                    ),
+                  },
               showProductionTabs && {
                 key: 'operators',
                 label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
                 children: <OperatorsTab operatorSummary={operatorSummary} />,
               },
-              !isPatternProduction && {
+              !isPatternProduction && !isProcurement && {
                 key: 'processTracking',
                 label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
                 children: (

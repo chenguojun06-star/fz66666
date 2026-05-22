@@ -24,23 +24,23 @@
 .body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
 
 .field { display: flex; flex-direction: column; gap: 4px; }
-.label { font-size: 12px; color: var(--xiaoyun-text-secondary); font-weight: 500; }
+.label { font-size: 14px; color: var(--xiaoyun-text-secondary); font-weight: 500; }
 
 .input {
   height: 36px; border: 1px solid var(--xiaoyun-border-card);
-  border-radius: 8px; padding: 0 12px; font-size: 13px; outline: none; background: var(--xiaoyun-bg-card);
+  border-radius: 8px; padding: 0 12px; font-size: 14px; outline: none; background: var(--xiaoyun-bg-card);
 }
 .input:focus { border-color: var(--xiaoyun-primary-border); }
 
 .textarea {
   height: 80px; border: 1px solid var(--xiaoyun-border-card);
-  border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; resize: vertical; background: var(--xiaoyun-bg-card);
+  border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; resize: vertical; background: var(--xiaoyun-bg-card);
 }
 .textarea:focus { border-color: var(--xiaoyun-primary-border); }
 
 .select {
   height: 36px; border: 1px solid var(--xiaoyun-border-card);
-  border-radius: 8px; padding: 0 10px; font-size: 13px; outline: none;
+  border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none;
   background: var(--xiaoyun-bg-card); cursor: pointer;
 }
 .select:focus { border-color: var(--xiaoyun-primary-border); }
@@ -53,13 +53,13 @@
 .cancelBtn {
   height: 34px; padding: 0 18px; border-radius: 8px;
   border: 1px solid var(--xiaoyun-border-card); background: var(--xiaoyun-bg-card);
-  cursor: pointer; font-size: 13px; color: var(--xiaoyun-text-secondary);
+  cursor: pointer; font-size: 14px; color: var(--xiaoyun-text-secondary);
 }
 
 .saveBtn {
   height: 34px; padding: 0 20px; border-radius: 8px;
   border: none; background: var(--xiaoyun-primary); color: #fff;
-  cursor: pointer; font-size: 13px; font-weight: 500;
+  cursor: pointer; font-size: 14px; font-weight: 500;
 }
 .saveBtn:hover { background: var(--xiaoyun-primary-hover); }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -67,6 +67,6 @@
 .deleteBtn {
   height: 34px; padding: 0 16px; border-radius: 8px; margin-right: auto;
   border: 1px solid #ffa39e; background: #fff1f0; color: #cf1322;
-  cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 4px;
+  cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 4px;
 }
 .deleteBtn:hover { background: #ffa39e; color: #fff; }

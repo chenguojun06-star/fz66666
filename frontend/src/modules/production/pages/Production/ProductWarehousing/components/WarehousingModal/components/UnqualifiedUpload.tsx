@@ -122,7 +122,7 @@ const UnqualifiedUpload: React.FC<UnqualifiedUploadProps> = ({
                 position: 'absolute', top: 0, right: 0, width: 20, height: 20,
                 background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: '0 0 0 8px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, cursor: 'pointer',
+                fontSize: 14, cursor: 'pointer',
               }}
               onClick={(e) => { e.stopPropagation(); onRemove(file); }}
             >
@@ -141,7 +141,7 @@ const UnqualifiedUpload: React.FC<UnqualifiedUploadProps> = ({
           >
             <div style={{ textAlign: 'center', color: '#999' }}>
               <span style={{ fontSize: 24, display: 'block' }}>+</span>
-              <span style={{ fontSize: 12 }}>上传</span>
+              <span style={{ fontSize: 14 }}>上传</span>
             </div>
           </div>
         )}

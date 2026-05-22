@@ -84,7 +84,7 @@
 }
 
 .dashboard-search-inline .ant-select-selector {
-  height: 40px !important;
+  height: var(--control-height, 32px) !important;
   border-radius: 999px !important;
   align-items: center !important;
   border-color: var(--neutral-border) !important;
@@ -92,12 +92,11 @@
 }
 
 .dashboard-search-inline .ant-select-selection-search-input {
-  height: 38px !important;
+  height: var(--control-height, 32px) !important;
 }
 
-/* 搜索按钮增强（胶囊形右半边 - 镂空设计）- 仅限仪表盘页面 */
 .dashboard-page .filter-card .ant-btn-primary {
-  height: 32px !important;
+  height: var(--control-height, 32px) !important;
   font-weight: 600 !important;
   border-radius: 0 999px 999px 0 !important;
   background: #ffffff !important;
@@ -282,7 +281,7 @@
 }
 
 .stat-icon {
-  font-size: 24px;
+  font-size: 16px;
   width: 64px;
   height: 64px;
   display: flex;
@@ -435,7 +434,7 @@
 }
 
 .dashboard-page .card-title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: #1a1a1a;
   margin: 0;
@@ -1045,7 +1044,7 @@
 }
 
 .dashboard-empty-state-icon {
-  font-size: 36px;
+  font-size: 20px;
   color: var(--neutral-text-lighter, #d9d9d9);
   margin-bottom: 12px;
 }
@@ -1058,6 +1057,6 @@
 
 .dashboard-empty-state-hint {
   color: var(--neutral-text-lighter, #bfbfbf);
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 6px;
 }

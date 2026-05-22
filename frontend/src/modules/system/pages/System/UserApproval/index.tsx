@@ -4,6 +4,7 @@ import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Tabs, Tag } fr
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SmallModal from '@/components/common/SmallModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import { User } from '@/types/system';
 import api from '@/utils/api';
 import tenantService from '@/services/tenantService';
@@ -80,6 +81,8 @@ const UserApproval: React.FC = () => {
   }, [page, pageSize]);
 
   const [factoryApproveLoading, setFactoryApproveLoading] = useState(false);
+  const [approveSubmitting, setApproveSubmitting] = useState(false);
+  const [rejectSubmitting, _setRejectSubmitting] = useState(false);
   const [factoryRejectReason, setFactoryRejectReason] = useState('');
   const [factoryRejectModalVisible, setFactoryRejectModalVisible] = useState(false);
   const [factoryApproveModalVisible, setFactoryApproveModalVisible] = useState(false);
@@ -202,6 +205,7 @@ const UserApproval: React.FC = () => {
       return;
     }
 
+    setApproveSubmitting(true);
     try {
       const approveResponse = await api.post(`/system/user/${currentUser.id}/approval-action`, {
         operationRemark: approveReason
@@ -233,6 +237,8 @@ const UserApproval: React.FC = () => {
       }
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setApproveSubmitting(false);
     }
   };
 
@@ -401,7 +407,7 @@ const UserApproval: React.FC = () => {
           <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
         </Card>
 
-        <Modal
+        <ResizableModal
           title="批准用户"
           open={approveModalVisible}
           onOk={confirmApprove}
@@ -414,6 +420,7 @@ const UserApproval: React.FC = () => {
           okText="批准并分配角色"
           cancelText="取消"
           width="40vw"
+          confirmLoading={approveSubmitting}
         >
           <div style={{ marginBottom: 16 }}>
             <p>
@@ -451,7 +458,7 @@ const UserApproval: React.FC = () => {
               />
             </div>
           </div>
-        </Modal>
+        </ResizableModal>
 
         <SmallModal
           title="拒绝用户"
@@ -465,6 +472,7 @@ const UserApproval: React.FC = () => {
           okText="确定拒绝"
           cancelText="取消"
           okButtonProps={{ danger: true, type: 'default' }}
+          confirmLoading={rejectSubmitting}
         >
           <div style={{ marginBottom: 16 }}>
             <p>
@@ -538,6 +546,7 @@ const UserApproval: React.FC = () => {
           okText="确定拒绝"
           cancelText="取消"
           okButtonProps={{ danger: true, type: 'default' }}
+          confirmLoading={factoryApproveLoading}
         >
           <div style={{ marginBottom: 16 }}>
             <p>

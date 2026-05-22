@@ -230,6 +230,7 @@ export function useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, fo
       ...row,
       imageUrl: colorImageMap[row.color] || row.imageUrl,
     })));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colorImageMapKey]);
 
   useEffect(() => {

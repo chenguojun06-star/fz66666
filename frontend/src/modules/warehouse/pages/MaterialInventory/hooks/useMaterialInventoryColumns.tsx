@@ -26,7 +26,7 @@ interface UseMaterialInventoryColumnsProps {
 
 const compactInfoRowStyle: React.CSSProperties = {
   display: 'flex',
-  fontSize: 'var(--font-size-sm)',
+  fontSize: 14,
   lineHeight: '22px',
   minHeight: '22px',
 };
@@ -78,7 +78,7 @@ export function useMaterialInventoryColumns({
               preview={false}
             />
           ) : (
-            <span style={{ color: '#ccc', fontSize: 12, height: 48, display: 'flex', alignItems: 'center' }}>无图</span>
+            <span style={{ color: '#ccc', fontSize: 14, height: 48, display: 'flex', alignItems: 'center' }}>无图</span>
           )}
         </div>
       ),
@@ -89,21 +89,21 @@ export function useMaterialInventoryColumns({
       width: 280,
       render: (_, record) => (
         <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+          <div style={{ display: 'flex', fontSize: 14, lineHeight: '22px', height: '22px' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>编号：</span>
             <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.materialCode || '-'}</span>
           </div>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+          <div style={{ display: 'flex', fontSize: 14, lineHeight: '22px', height: '22px' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>名称：</span>
             <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.materialName || '-'}</span>
           </div>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', fontSize: 14, lineHeight: '22px', height: '22px', alignItems: 'center' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>分类：</span>
             <span style={{ margin: '0 0 0 8px' }}>
               <MaterialTypeTag value={record.materialType} />
             </span>
           </div>
-          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+          <div style={{ display: 'flex', fontSize: 14, lineHeight: '22px', height: '22px' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>颜色：</span>
             <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.color || '-'}</span>
           </div>
@@ -165,7 +165,7 @@ export function useMaterialInventoryColumns({
                 onClick={() => onPickStock?.(record)}
                 title={onPickStock ? '点击领取库存' : undefined}
               >
-                <div className="stock-label">可用库存 <span style={{fontSize:12,color:'#1890ff'}}>📦领</span></div>
+                <div className="stock-label">可用库存 <span style={{fontSize:14,color:'#1890ff'}}>📦领</span></div>
                 <div className="stock-value stock-value--ok">
                   {availableQty.toLocaleString()}
                 </div>
@@ -242,7 +242,7 @@ export function useMaterialInventoryColumns({
       key: 'supplier',
       width: 150,
       render: (_, record) => (
-        <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
+        <div style={{ fontSize: 14, fontWeight: 500 }}>
           <SupplierNameTooltip
             name={record.supplierName}
             contactPerson={(record as any).supplierContactPerson}

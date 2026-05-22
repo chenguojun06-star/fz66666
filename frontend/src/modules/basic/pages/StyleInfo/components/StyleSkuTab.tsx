@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { App, Switch, Button, Table, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Modal, Form } from 'antd';
+import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Modal, Form } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { SyncOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import type { ProductSku } from '@/types/style';
@@ -247,7 +248,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         const key = getRowKey(record);
         return canEdit && isManual ? (
           <Input value={getCellValue(record, 'skuCode')} onChange={e => handleFieldChange(key, 'skuCode', e.target.value)} placeholder="款号-颜色-尺码" />
-        ) : <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{record.skuCode}</span>;
+        ) : <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{record.skuCode}</span>;
       },
     },
     {
@@ -339,7 +340,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         <Space size="middle">
           <span style={{ fontWeight: 500, fontSize: 14 }}>SKU模式：</span>
           <Switch checked={isManual} onChange={handleModeToggle} checkedChildren="手动编辑" unCheckedChildren="自动生成" />
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
             {isManual ? '可自由编辑SKU编码、颜色、尺码等信息' : 'SKU编码按「款号+颜色+尺码」自动生成'}
           </span>
         </Space>
@@ -390,13 +391,13 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
               <Button type="link" onClick={() => setSkcEditing(true)}>修改SKC</Button>
             </>
           )}
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
             默认跟随款号自动生成，修改后会同步到关联的生产订单
           </span>
         </Space>
       </div>
 
-      <Table
+      <ResizableTable
         dataSource={skus}
         columns={columns}
         rowKey={(record) => String(getRowKey(record))}
@@ -407,7 +408,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
       />
 
-      <div style={{ marginTop: 12, fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)', lineHeight: 1.8 }}>
+      <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', lineHeight: 1.8 }}>
         <div>自动生成模式：SKU编码按「款号+颜色+尺码」规则自动生成，如 {styleNo}-红色-S</div>
         <div>手动编辑模式：可自由修改SKU编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
         <div>新增SKU：鼠标悬停可选择添加1/5/10/20行</div>

@@ -190,7 +190,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         <div ref={listRef} className="cp-list">
           {!query.trim() && (
             <div className="cp-empty-hint">
-              <AppstoreOutlined style={{ fontSize: 24, marginBottom: 8, opacity: 0.3 }} />
+              <AppstoreOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
               <div>输入订单号、款式名、工人姓名开始搜索</div>
               <div className="cp-hint-tips">
                 <span><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
@@ -202,7 +202,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
 
           {query.trim() && !loading && items.length === 0 && (
             <div className="cp-empty-hint">
-              <SearchOutlined style={{ fontSize: 24, marginBottom: 8, opacity: 0.3 }} />
+              <SearchOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
               <div>未找到与「{query}」相关的结果</div>
             </div>
           )}

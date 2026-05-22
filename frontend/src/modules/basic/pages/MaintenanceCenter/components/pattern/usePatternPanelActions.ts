@@ -258,6 +258,7 @@ export default function usePatternPanelActions(styleNo?: string) {
     if (!editableRecord) return;
     if (patternRevisionForm.getFieldValue('styleNo')) { syncPatternContextFields(editableRecord); return; }
     patternRevisionForm.setFieldsValue(buildPatternInitialValues(editableRecord));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleNo, directRow?.id, directLocked, directHasUnlockRemark, patternRevisionModalVisible, patternRevisionRecord?.id, nextRevisionNo, currentOperatorName]);
 
   return {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Tag, App } from 'antd';
 
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
@@ -119,7 +119,9 @@ const ProductionList: React.FC = () => {
     transferMessage, setTransferMessage, transferUsers, transferSearching,
     transferFactoryId, setTransferFactoryId,
     transferFactoryMessage, setTransferFactoryMessage, transferFactories, transferFactorySearching,
-    transferSubmitting, submitTransfer, searchTransferUsers, searchTransferFactories, handleTransferOrder,
+    transferSubmitting, submitTransfer, searchTransferUsers, searchTransferFactories,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            handleTransferOrder,
     transferBundles, transferBundlesLoading, transferSelectedBundleIds, setTransferSelectedBundleIds,
     transferProcesses, transferProcessesLoading, transferSelectedProcessCodes, setTransferSelectedProcessCodes,
     closeTransferModal,
@@ -153,12 +155,13 @@ const ProductionList: React.FC = () => {
   // 首次加载到订单后，静默触发异常检测（仅检测一次，不阻塞主列表）
   useEffect(() => {
     if (productionList.length > 0) void fetchAnomalies();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productionList.length]);
 
   // 表格列渲染辅助
   const allColumns = useProductionColumns({
     sortField, sortOrder, handleSort,
-    handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder,
+    handleCloseOrder, handleScrapOrder, handleCopyOrder,
     navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
     setPrintModalVisible, setPrintingRecord,
     setRemarkPopoverId, setRemarkText,
@@ -197,6 +200,22 @@ const ProductionList: React.FC = () => {
       setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 });
     }
   };
+
+  const handlePageChange = useCallback((page: number, pageSize: number) => {
+    savePageSize(pageSize);
+    setQueryParams(prev => ({ ...prev, page, pageSize }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRowSelectionChange = useCallback((keys: React.Key[], rows: ProductionOrder[]) => {
+    setSelectedRowKeys(keys);
+    setSelectedRows(rows);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSmartOpenRemark = useCallback((record: ProductionOrder) => {
+    setRemarkTarget({ open: true, orderNo: record.orderNo || '', merchandiser: record.merchandiser });
+  }, []);
 
   return (
     <>
@@ -270,13 +289,9 @@ const ProductionList: React.FC = () => {
               total={total}
               currentPage={queryParams.page}
               pageSize={queryParams.pageSize}
-              onPageChange={(page, pageSize) => {
-                savePageSize(pageSize);
-                setQueryParams({ ...queryParams, page, pageSize });
-              }}
+              onPageChange={handlePageChange}
               handleCloseOrder={handleCloseOrder}
               handleScrapOrder={handleScrapOrder}
-              handleTransferOrder={handleTransferOrder}
               openProcessDetail={openProcessDetail}
               openNodeDetail={openNodeDetail}
               syncProcessFromTemplate={syncProcessFromTemplate}
@@ -289,7 +304,7 @@ const ProductionList: React.FC = () => {
               isSupervisorOrAbove={isSupervisorOrAbove}
               openSubProcessRemap={openSubProcessRemap}
               isFactoryAccount={isFactoryAccount}
-              onOpenRemark={(record) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', merchandiser: record.merchandiser })}
+              onOpenRemark={handleSmartOpenRemark}
             />
             </div>
           ) : viewMode === 'list' ? (
@@ -303,10 +318,7 @@ const ProductionList: React.FC = () => {
               rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
               rowSelection={{
                 selectedRowKeys,
-                onChange: (keys: React.Key[], rows: ProductionOrder[]) => {
-                  setSelectedRowKeys(keys);
-                  setSelectedRows(rows);
-                },
+                onChange: handleRowSelectionChange,
               }}
               stickyHeader
               pagination={{
@@ -316,10 +328,7 @@ const ProductionList: React.FC = () => {
                 showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
                 pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
-                onChange: (page, pageSize) => {
-                  savePageSize(pageSize);
-                  setQueryParams({ ...queryParams, page, pageSize });
-                },
+                onChange: handlePageChange,
               }}
             />
           ) : (
@@ -352,12 +361,12 @@ const ProductionList: React.FC = () => {
                     const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
                     return (
                       <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <Tag color={statusColor} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
-                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+                        <Tag color={statusColor} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
+                        {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+                        {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
                         {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
-                          && <Tag style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
+                          && <Tag style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
                       </div>
                     );
                   }},
@@ -392,10 +401,11 @@ const ProductionList: React.FC = () => {
                   canManageOrderLifecycle: !!canManageOrderLifecycle,
                   isSupervisorOrAbove: !!isSupervisorOrAbove,
                   onQuickEdit: (r) => quickEditModal.open(r),
-                  handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder, handleShareOrder,
+                  handleCloseOrder, handleScrapOrder, handleCopyOrder, handleShareOrder,
                   onOpenRemark: (r) => setRemarkTarget({ open: true, orderNo: r.orderNo || '', merchandiser: r.merchandiser }),
                 });
                 return [
+                  { key: 'detail', label: '详情', title: '查看订单详情', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) },
                   { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
                   { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
                   ...(!isFactoryAccount ? [{ key: 'process', label: '工序', disabled: frozen, title: frozen ? frozenTitle : '工序', onClick: () => openProcessDetail(record, 'all') }] : []),
@@ -414,10 +424,7 @@ const ProductionList: React.FC = () => {
               total={total}
               wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
               showQuickJumper={false}
-              onChange={(page, pageSize) => {
-                savePageSize(pageSize);
-                setQueryParams({ ...queryParams, page, pageSize });
-              }}
+              onChange={handlePageChange}
             />
             </>
           )}

@@ -59,8 +59,8 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
   }
 
   return (
-    <div style={{ minWidth: 168, maxWidth: 230, fontSize: 12 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8, color: '#262626', fontSize: 13 }}>{label}</div>
+    <div style={{ minWidth: 168, maxWidth: 230, fontSize: 14 }}>
+      <div style={{ fontWeight: 600, marginBottom: 8, color: '#262626', fontSize: 14 }}>{label}</div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
         <span style={{ color: '#8c8c8c' }}>已生产</span>
@@ -79,7 +79,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
 
       {scanData.loading ? (
         <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4, borderTop: '1px solid #f0f0f0', marginBottom: 6 }}>
-          <Spin /><span style={{ color: '#bfbfbf', marginLeft: 6, fontSize: 13 }}>加载子工序…</span>
+          <Spin /><span style={{ color: '#bfbfbf', marginLeft: 6, fontSize: 14 }}>加载子工序…</span>
         </div>
       ) : scanData.subProcesses.length > 0 ? (
         <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 6, marginBottom: 6 }}>
@@ -99,7 +99,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
           <span style={{ color: aiColor, fontWeight: 600 }}>{aiLabel}</span>
         </div>
         {scanData.dailyRate7d > 0 && (
-          <div style={{ color: '#bfbfbf', fontSize: 13, textAlign: 'right', marginTop: 2 }}>
+          <div style={{ color: '#bfbfbf', fontSize: 14, textAlign: 'right', marginTop: 2 }}>
             近7日 {Math.round(scanData.dailyRate7d)} 件/天
           </div>
         )}

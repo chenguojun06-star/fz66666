@@ -393,7 +393,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         />
         <div style={{ marginBottom: 12 }}>
           <Text strong>获取 Server酱 SendKey：</Text>
-          <ol style={{ marginTop: 8, paddingLeft: 20, fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 2 }}>
+          <ol style={{ marginTop: 8, paddingLeft: 20, fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 2 }}>
             <li>用微信扫码登录 <a href="https://sct.ftqq.com/" target="_blank" rel="noreferrer">sct.ftqq.com</a></li>{/* cspell:disable-line */}
             <li>点击「SendKey」复制您的专属Key</li>
             <li>粘贴到下方输入框保存</li>

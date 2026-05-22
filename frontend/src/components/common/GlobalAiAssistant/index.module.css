@@ -50,7 +50,7 @@
   justify-content: center;
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
   margin-right: 16px;
-  font-size: 32px;
+  font-size: 18px;
   animation: floatAvatar 3s ease-in-out infinite;
 }
 
@@ -83,7 +83,7 @@
 }
 
 .headerActionBtn {
-  font-size: 16px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   transition: all 0.2s;
@@ -153,13 +153,13 @@
   background: var(--xiaoyun-bg-page);
   padding: 10px 16px;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
   transition: all 0.3s;
 }
 
 .chatInput::placeholder {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--xiaoyun-text-tertiary);
 }
 
@@ -181,7 +181,7 @@
   justify-content: center;
   gap: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   transition: all 0.2s;
   flex-shrink: 0;
@@ -218,7 +218,7 @@
 .traceBtn {
   min-width: 42px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--xiaoyun-text-secondary);
   border-radius: 10px;
   background: var(--xiaoyun-bg-page);
@@ -237,7 +237,7 @@
   border: 1px solid var(--xiaoyun-border-card);
   border-radius: 18px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--xiaoyun-text-secondary);
   transition: all 0.15s;
   flex-shrink: 0;
@@ -263,7 +263,7 @@
   border-radius: 6px;
   padding: 4px 10px;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--xiaoyun-primary-hover);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -271,7 +271,7 @@
 }
 
 .quickHint {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--xiaoyun-primary);
   margin-bottom: 10px;
 }
@@ -292,7 +292,7 @@
   border: none;
   border-radius: 6px;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -436,7 +436,7 @@
 }
 
 .auxSectionTitle {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--xiaoyun-text-tertiary);
   font-weight: 500;
   margin-bottom: 10px;
@@ -447,7 +447,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--xiaoyun-text-primary);
   border-bottom: 1px solid var(--xiaoyun-border-card);
 }

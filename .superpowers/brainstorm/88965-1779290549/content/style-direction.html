@@ -1,0 +1,206 @@
+<h2>选择整体视觉风格方向</h2>
+<p class="subtitle">当前系统是「镂空胶囊按钮 + 毛玻璃效果 + 圆角卡片」风格。三种方向对比：</p>
+
+<div class="section">
+  <h3>A. 精致商务风 — Notion/Linear 风格</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：订单管理页面</div>
+    <div class="mockup-body" style="background:#fafafa; padding: 24px; font-family: system-ui, sans-serif;">
+      <!-- 页面标题 -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+          <h3 style="margin:0; font-size:18px; font-weight:600; color:#1a1a1a;">订单管理</h3>
+          <p style="margin:4px 0 0; font-size:12px; color:#999;">共 128 条订单 · 今日新增 5 条</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="mock-button" style="background:#fff; color:#555; border:1px solid #e5e5e5;">导出</button>
+          <button class="mock-button" style="background:#fff; color:#2D7FF9; border:1.5px solid #2D7FF9; font-weight:500;">新建订单</button>
+        </div>
+      </div>
+      <!-- 统计卡片 -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
+        <div style="background:#fff; border:1px solid #eee; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#999; margin-bottom:4px;">进行中</div>
+          <div style="font-size:24px; font-weight:700; color:#1a1a1a;">42</div>
+        </div>
+        <div style="background:#fff; border:1px solid #eee; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#999; margin-bottom:4px;">已完成</div>
+          <div style="font-size:24px; font-weight:700; color:#1a1a1a;">78</div>
+        </div>
+        <div style="background:#fff; border:1px solid #eee; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#999; margin-bottom:4px;">延期</div>
+          <div style="font-size:24px; font-weight:700; color:#e03e3e;">5</div>
+        </div>
+        <div style="background:#fff; border:1px solid #eee; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#999; margin-bottom:4px;">今日扫码</div>
+          <div style="font-size:24px; font-weight:700; color:#1a1a1a;">326</div>
+        </div>
+      </div>
+      <!-- 表格 -->
+      <div style="background:#fff; border:1px solid #eee; border-radius:6px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; background:#fafafa; border-bottom:1px solid #eee; padding:10px 16px; font-size:12px; color:#999; font-weight:500;">
+          <span>图片</span><span>款号 / 品名</span><span>数量</span><span>状态</span><span>交期</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; border-bottom:1px solid #f5f5f5; font-size:13px; color:#333;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:4px;margin:0;"></div>
+          <div><div style="font-weight:500;">FW-2026-0088</div><div style="font-size:11px;color:#999;">2026春季女装连衣裙</div></div>
+          <span>200</span>
+          <span style="display:inline-block;padding:2px 8px;background:#e8f5e9;color:#2e7d32;border-radius:4px;font-size:11px;">进行中</span>
+          <span>06-15</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; border-bottom:1px solid #f5f5f5; font-size:13px; color:#333;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:4px;margin:0;"></div>
+          <div><div style="font-weight:500;">FW-2026-0087</div><div style="font-size:11px;color:#999;">2026夏季短袖T恤</div></div>
+          <span>500</span>
+          <span style="display:inline-block;padding:2px 8px;background:#fff3e0;color:#e65100;border-radius:4px;font-size:11px;">裁剪中</span>
+          <span>06-10</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; font-size:13px; color:#333;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:4px;margin:0;"></div>
+          <div><div style="font-weight:500;">FW-2026-0086</div><div style="font-size:11px;color:#999;">2026春季半身裙</div></div>
+          <span>150</span>
+          <span style="display:inline-block;padding:2px 8px;background:#fce4ec;color:#c62828;border-radius:4px;font-size:11px;">紧急</span>
+          <span>06-08</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div class="pros"><h4>特点</h4><ul><li>信息层级极度清晰</li><li>阅读舒适，长时间使用不疲劳</li><li>低对比度配色,视觉干扰最小</li><li>行业标杆（Notion、Linear、Stripe）</li></ul></div>
+    <div class="cons"><h4>风险</h4><ul><li>与现有风格差异较大</li><li>改造成本最高</li><li>数据可视化冲击力减弱</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>B. 科技感工具风 — Figma/Vercel 风格</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：同页面，不同风格</div>
+    <div class="mockup-body" style="background:#0d1117; padding: 24px; font-family: system-ui, sans-serif;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+          <h3 style="margin:0; font-size:18px; font-weight:600; color:#e6edf3;">订单管理</h3>
+          <p style="margin:4px 0 0; font-size:12px; color:#8b949e;">共 128 条订单 · 今日新增 5 条</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="mock-button" style="background:#21262d; color:#c9d1d9; border:1px solid #30363d;">导出</button>
+          <button class="mock-button" style="background:#1f6feb; color:#fff; border:none; font-weight:500;">新建订单</button>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
+        <div style="background:#161b22; border:1px solid #30363d; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#8b949e; margin-bottom:4px;">进行中</div>
+          <div style="font-size:24px; font-weight:700; color:#58a6ff;">42</div>
+        </div>
+        <div style="background:#161b22; border:1px solid #30363d; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#8b949e; margin-bottom:4px;">已完成</div>
+          <div style="font-size:24px; font-weight:700; color:#3fb950;">78</div>
+        </div>
+        <div style="background:#161b22; border:1px solid #30363d; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#8b949e; margin-bottom:4px;">延期</div>
+          <div style="font-size:24px; font-weight:700; color:#f85149;">5</div>
+        </div>
+        <div style="background:#161b22; border:1px solid #30363d; border-radius:6px; padding:16px;">
+          <div style="font-size:11px; color:#8b949e; margin-bottom:4px;">今日扫码</div>
+          <div style="font-size:24px; font-weight:700; color:#e6edf3;">326</div>
+        </div>
+      </div>
+      <div style="background:#161b22; border:1px solid #30363d; border-radius:6px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; background:#0d1117; border-bottom:1px solid #21262d; padding:10px 16px; font-size:12px; color:#8b949e; font-weight:500;">
+          <span>图片</span><span>款号 / 品名</span><span>数量</span><span>状态</span><span>交期</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; border-bottom:1px solid #21262d; font-size:13px; color:#c9d1d9;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:4px;margin:0;background:#21262d;"></div>
+          <div><div style="font-weight:500;">FW-2026-0088</div><div style="font-size:11px;color:#8b949e;">2026春季女装连衣裙</div></div>
+          <span>200</span>
+          <span style="display:inline-block;padding:2px 8px;background:rgba(63,185,80,0.15);color:#3fb950;border-radius:4px;font-size:11px;">进行中</span>
+          <span>06-15</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; border-bottom:1px solid #21262d; font-size:13px; color:#c9d1d9;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:4px;margin:0;background:#21262d;"></div>
+          <div><div style="font-weight:500;">FW-2026-0087</div><div style="font-size:11px;color:#8b949e;">2026夏季短袖T恤</div></div>
+          <span>500</span>
+          <span style="display:inline-block;padding:2px 8px;background:rgba(210,153,34,0.15);color:#d29922;border-radius:4px;font-size:11px;">裁剪中</span>
+          <span>06-10</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; font-size:13px; color:#c9d1d9;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:4px;margin:0;background:#21262d;"></div>
+          <div><div style="font-weight:500;">FW-2026-0086</div><div style="font-size:11px;color:#8b949e;">2026春季半身裙</div></div>
+          <span>150</span>
+          <span style="display:inline-block;padding:2px 8px;background:rgba(248,81,73,0.15);color:#f85149;border-radius:4px;font-size:11px;">紧急</span>
+          <span>06-08</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div class="pros"><h4>特点</h4><ul><li>现代感强，视觉冲击力大</li><li>深色模式下数据对比鲜明</li><li>科技公司/开发工具常用</li></ul></div>
+    <div class="cons"><h4>风险</h4><ul><li>服装行业用户可能不习惯</li><li>长时间使用可能疲劳</li><li>改造成本高</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>C. 保持现有风格 + 规范化</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：保持现有调性，统一规范</div>
+    <div class="mockup-body" style="background:linear-gradient(135deg,#f0f4ff 0%,#f8fafc 50%,#f0f7ff 100%); padding: 24px; font-family: system-ui, sans-serif;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+          <h3 style="margin:0; font-size:18px; font-weight:700; color:#1a1a1a;">订单管理</h3>
+          <p style="margin:4px 0 0; font-size:12px; color:#6b7280;">共 128 条订单 · 今日新增 5 条</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="mock-button" style="background:#fff; color:#6b7280; border:1.5px solid #d9d9d9; border-radius:6px;">导出</button>
+          <button class="mock-button" style="background:#fff; color:#40a9ff; border:2px solid #40a9ff; border-radius:6px; font-weight:500; box-shadow:0 2px 8px rgba(64,169,255,0.15);">新建订单</button>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
+        <div style="background:rgba(255,255,255,0.85); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.8); border-radius:12px; padding:16px; box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">进行中</div>
+          <div style="font-size:24px; font-weight:700; color:#2D7FF9;">42</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.85); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.8); border-radius:12px; padding:16px; box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">已完成</div>
+          <div style="font-size:24px; font-weight:700; color:#10b981;">78</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.85); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.8); border-radius:12px; padding:16px; box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">延期</div>
+          <div style="font-size:24px; font-weight:700; color:#ef4444;">5</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.85); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.8); border-radius:12px; padding:16px; box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">今日扫码</div>
+          <div style="font-size:24px; font-weight:700; color:#1a1a1a;">326</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.9); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.9); border-radius:12px; overflow:hidden; box-shadow:0 2px 16px rgba(0,0,0,0.04);">
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; background:rgba(248,250,252,0.8); border-bottom:1px solid rgba(0,0,0,0.04); padding:10px 16px; font-size:12px; color:#9ca3af; font-weight:500;">
+          <span>图片</span><span>款号 / 品名</span><span>数量</span><span>状态</span><span>交期</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,0.03); font-size:13px; color:#1a1a1a;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:8px;margin:0;background:linear-gradient(135deg,#eef2ff,#e0e7ff);"></div>
+          <div><div style="font-weight:600;">FW-2026-0088</div><div style="font-size:11px;color:#6b7280;">2026春季女装连衣裙</div></div>
+          <span>200</span>
+          <span style="display:inline-block;padding:2px 8px;background:rgba(16,185,129,0.1);color:#059669;border-radius:999px;font-size:11px;">进行中</span>
+          <span>06-15</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,0.03); font-size:13px; color:#1a1a1a;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:8px;margin:0;background:linear-gradient(135deg,#eef2ff,#e0e7ff);"></div>
+          <div><div style="font-weight:600;">FW-2026-0087</div><div style="font-size:11px;color:#6b7280;">2026夏季短袖T恤</div></div>
+          <span>500</span>
+          <span style="display:inline-block;padding:2px 8px;background:rgba(245,158,11,0.1);color:#d97706;border-radius:999px;font-size:11px;">裁剪中</span>
+          <span>06-10</span>
+        </div>
+        <div style="display:grid; grid-template-columns:80px 1fr 80px 100px 80px; align-items:center; padding:12px 16px; font-size:13px; color:#1a1a1a;">
+          <div class="placeholder" style="width:48px;height:48px;border-radius:8px;margin:0;background:linear-gradient(135deg,#eef2ff,#e0e7ff);"></div>
+          <div><div style="font-weight:600;">FW-2026-0086</div><div style="font-size:11px;color:#6b7280;">2026春季半身裙</div></div>
+          <span>150</span>
+          <span style="display:inline-block;padding:2px 8px;background:rgba(239,68,68,0.1);color:#dc2626;border-radius:999px;font-size:11px;">紧急</span>
+          <span>06-08</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div class="pros"><h4>特点</h4><ul><li>保持现有设计基因不变</li><li>用户学习成本为零</li><li>改造成本最低</li><li>毛玻璃+胶囊按钮是独特标识</li></ul></div>
+    <div class="cons"><h4>风险</h4><ul><li>难以达到「行业优秀」效果</li><li>现有风格本身也有硬伤</li></ul></div>
+  </div>
+</div>

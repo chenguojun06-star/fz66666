@@ -1,4 +1,6 @@
 import React from 'react';
+import { Button, Space } from 'antd';
+import { InboxOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
 import type { ProcessDetailModalProps } from './types';
@@ -44,12 +46,34 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
     }
   };
 
+  const showNavFooter = processType === 'procurement' || processType === 'cutting';
+
   return (
     <ResizableModal
       title={title}
       open={visible}
       onCancel={onClose}
-      footer={null}
+      footer={showNavFooter ? (
+        <Space>
+          {processType === 'procurement' && (
+            <Button
+              icon={<ShoppingCartOutlined />}
+              onClick={() => navigate(`/production/material?orderNo=${encodeURIComponent(record?.orderNo || '')}`)}
+            >
+               前往物料采购
+            </Button>
+          )}
+          {processType === 'cutting' && (
+            <Button
+              icon={<InboxOutlined />}
+              onClick={() => navigate(`/production/cutting/task/${encodeURIComponent(record?.orderNo || '')}`)}
+            >
+               前往裁剪管理
+            </Button>
+          )}
+          <Button onClick={onClose}>关闭</Button>
+        </Space>
+      ) : null}
       className="process-detail-modal"
       width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}

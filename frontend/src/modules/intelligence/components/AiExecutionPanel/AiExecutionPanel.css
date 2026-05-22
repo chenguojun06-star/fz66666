@@ -23,14 +23,14 @@
 .ai-execution-panel .ai-panel-card .ant-card-head-title {
   color: #00e5ff !important;
   font-weight: 500 !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   padding: 7px 0 !important;
   letter-spacing: 0.5px;
 }
 
 .ai-execution-panel .ai-panel-card .ant-card-head .ant-btn-link {
   color: rgba(0, 229, 255, 0.5) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 
 .ai-execution-panel .ai-panel-card .ant-card-head .ant-btn-link:hover {
@@ -46,7 +46,7 @@
 /* 表格 */
 .ai-execution-panel .ant-table {
   background: transparent !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   color: #c8d8ea !important;
 }
 
@@ -54,7 +54,7 @@
   background: rgba(0, 229, 255, 0.05) !important;
   color: rgba(0, 229, 255, 0.6) !important;
   border-bottom: 1px solid rgba(0, 229, 255, 0.1) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   padding: 5px 8px !important;
   font-weight: 500;
 }
@@ -87,7 +87,7 @@
 
 .ai-execution-panel .ant-empty-description {
   color: rgba(0, 229, 255, 0.35) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   margin-top: 4px;
 }
 
@@ -105,7 +105,7 @@
 
 .ai-execution-panel .ant-alert-message {
   color: #f87171 !important;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* 详情侧边栏 */
@@ -119,13 +119,13 @@
   color: #00e5ff;
   border-bottom: 1px solid rgba(0, 229, 255, 0.2);
   padding-bottom: 6px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .ai-execution-panel .command-detail-section .detail-row {
   display: flex;
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .ai-execution-panel .command-detail-section .detail-row .label {
@@ -143,7 +143,7 @@
   margin-bottom: 6px;
   color: #c8d8ea;
   line-height: 1.6;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .ai-execution-panel .command-detail-section pre {
@@ -153,7 +153,7 @@
   color: #7dd3fc;
   padding: 8px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
   overflow-x: auto;
 }
 
@@ -165,7 +165,7 @@
   margin: 10px 0 6px 0;
   font-weight: 600;
   color: #00e5ff;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* 待审批标记 */
@@ -177,7 +177,7 @@
   background: rgba(251, 146, 60, 0.12);
   border: 1px solid rgba(251, 146, 60, 0.35);
   border-radius: 3px;
-  font-size: 13px;
+  font-size: 14px;
   color: #fb923c;
   font-weight: 500;
 }
@@ -192,7 +192,7 @@
   border: 1px solid rgba(74, 222, 128, 0.25);
   border-radius: 4px;
   color: #4ade80;
-  font-size: 13px;
+  font-size: 14px;
 
   .icon {
     font-size: 15px;
@@ -209,7 +209,7 @@
   border: 1px solid rgba(248, 113, 113, 0.25);
   border-radius: 4px;
   color: #f87171;
-  font-size: 13px;
+  font-size: 14px;
 
   .icon {
     font-size: 15px;
@@ -228,7 +228,7 @@
     font-weight: 600;
     color: #a78bfa;
     margin-bottom: 8px;
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .tasks {
@@ -241,8 +241,8 @@
       background: rgba(167, 139, 250, 0.1);
       border: 1px solid rgba(167, 139, 250, 0.25);
       border-radius: 2px;
-      font-size: 13px;
-      color: #c4b5fd;
+      font-size: 14px;
+    color: #c4b5fd;
     }
   }
 }

@@ -1,0 +1,174 @@
+<h2>两个实施方案对比</h2>
+<p class="subtitle">同一目标（精致商务风），两种落地方式。以下用「生产跟进列表」做对比——这是目前最臃肿的页面（517行）。</p>
+
+<div class="section">
+  <h3>方案一：渐进规整（推荐）</h3>
+  <p class="subtitle">不改页面结构，只统一视觉规范。风险最低，最快见效。</p>
+  
+  <div class="mockup">
+    <div class="mockup-header">方案一效果预览</div>
+    <div class="mockup-body" style="background:#fafafa; padding:20px; font-family:system-ui,sans-serif;">
+      
+      <!-- Toolbar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <div style="font-size:15px; font-weight:600; color:#1a1a1a;">生产跟进</div>
+          <div style="font-size:11px; color:#999;">共 86 条生产单 · 今日扫码 1,247 次</div>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <div style="background:#fff; border:1px solid #e5e5e5; border-radius:4px; padding:4px 10px; display:flex; align-items:center; gap:4px; font-size:12px; color:#666;">
+            <span style="width:12px;height:12px;border-radius:2px;background:#eee;display:inline-block;"></span> 搜索
+          </div>
+          <div style="background:#fff; border:1px solid #e5e5e5; border-radius:4px; padding:4px 10px; font-size:12px; color:#666;">筛选</div>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div style="display:flex; gap:6px; margin-bottom:12px;">
+        <span style="display:inline-block;padding:2px 10px;background:#eef2ff;color:#2D7FF9;border-radius:999px;font-size:11px;">全部 86</span>
+        <span style="display:inline-block;padding:2px 10px;background:#fff;color:#666;border:1px solid #eee;border-radius:999px;font-size:11px;">进行中 42</span>
+        <span style="display:inline-block;padding:2px 10px;background:#fff;color:#666;border:1px solid #eee;border-radius:999px;font-size:11px;">已完成 38</span>
+        <span style="display:inline-block;padding:2px 10px;background:#fff;color:#666;border:1px solid #eee;border-radius:999px;font-size:11px;">延期 6</span>
+      </div>
+
+      <!-- Table -->
+      <div style="background:#fff; border:1px solid #eee; border-radius:6px; overflow:hidden;">
+        <!-- Header -->
+        <div style="display:flex; background:#fafafa; border-bottom:1px solid #eee; font-size:11px; color:#999; font-weight:500; padding:8px 12px; gap:8px;">
+          <span style="width:52px;">图片</span>
+          <span style="flex:1; min-width:80px;">款号 / 品名</span>
+          <span style="width:60px; text-align:right;">数量</span>
+          <span style="width:56px;">进度</span>
+          <span style="width:70px;">工厂</span>
+          <span style="width:60px;">交期</span>
+          <span style="width:50px;">状态</span>
+        </div>
+        <!-- Row 1 -->
+        <div style="display:flex; align-items:center; padding:10px 12px; border-bottom:1px solid #f5f5f5; font-size:12px; color:#333; gap:8px;">
+          <div style="width:52px;"><div class="placeholder" style="width:36px;height:48px;border-radius:3px;margin:0;"></div></div>
+          <div style="flex:1; min-width:80px;"><div style="font-weight:500;">FW-0612</div><div style="font-size:10px;color:#999;">春夏连衣裙 · 红色3码</div></div>
+          <span style="width:60px; text-align:right;">200</span>
+          <div style="width:56px; position:relative;">
+            <div style="height:2px; background:#eee; border-radius:1px; margin-top:6px;">
+              <div style="width:65%; height:2px; background:#2D7FF9; border-radius:1px;"></div>
+            </div>
+            <div style="font-size:10px; color:#999; text-align:center;">65%</div>
+          </div>
+          <span style="width:70px; font-size:11px; color:#666;">东方制衣厂</span>
+          <span style="width:60px; font-size:11px;">06-25</span>
+          <span style="width:50px;"><span style="display:inline-block;padding:1px 6px;background:#e8f5e9;color:#2e7d32;border-radius:3px;font-size:10px;">正常</span></span>
+        </div>
+        <!-- Row 2 -->
+        <div style="display:flex; align-items:center; padding:10px 12px; border-bottom:1px solid #f5f5f5; font-size:12px; color:#333; gap:8px;">
+          <div style="width:52px;"><div class="placeholder" style="width:36px;height:48px;border-radius:3px;margin:0;"></div></div>
+          <div style="flex:1; min-width:80px;"><div style="font-weight:500;">FW-0611</div><div style="font-size:10px;color:#999;">秋冬外套 · 黑色5码</div></div>
+          <span style="width:60px; text-align:right;">500</span>
+          <div style="width:56px; position:relative;">
+            <div style="height:2px; background:#eee; border-radius:1px; margin-top:6px;">
+              <div style="width:45%; height:2px; background:#f59e0b; border-radius:1px;"></div>
+            </div>
+            <div style="font-size:10px; color:#999; text-align:center;">45%</div>
+          </div>
+          <span style="width:70px; font-size:11px; color:#666;">南方纺织</span>
+          <span style="width:60px; font-size:11px;">06-18</span>
+          <span style="width:50px;"><span style="display:inline-block;padding:1px 6px;background:#fff3e0;color:#e65100;border-radius:3px;font-size:10px;">注意</span></span>
+        </div>
+        <!-- Row 3 -->
+        <div style="display:flex; align-items:center; padding:10px 12px; font-size:12px; color:#333; gap:8px;">
+          <div style="width:52px;"><div class="placeholder" style="width:36px;height:48px;border-radius:3px;margin:0;"></div></div>
+          <div style="flex:1; min-width:80px;"><div style="font-weight:500;">FW-0610</div><div style="font-size:10px;color:#999;">短袖T恤 · 白色</div></div>
+          <span style="width:60px; text-align:right;">1,200</span>
+          <div style="width:56px; position:relative;">
+            <div style="height:2px; background:#eee; border-radius:1px; margin-top:6px;">
+              <div style="width:90%; height:2px; background:#10b981; border-radius:1px;"></div>
+            </div>
+            <div style="font-size:10px; color:#999; text-align:center;">90%</div>
+          </div>
+          <span style="width:70px; font-size:11px; color:#666;">东方制衣厂</span>
+          <span style="width:60px; font-size:11px;">06-08</span>
+          <span style="width:50px;"><span style="display:inline-block;padding:1px 6px;background:#fce4ec;color:#c62828;border-radius:3px;font-size:10px;">延期</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros"><h4>优点</h4>
+      <ul>
+        <li><b>改动量可控</b> — 约 40-50 个文件，集中在 CSS + 设计系统</li>
+        <li><b>零功能风险</b> — 不改组件结构，不改数据流</li>
+        <li><b>快速验证</b> — 每改一个页面即可编译验证</li>
+        <li><b>用户零学习成本</b> — 布局不变，只是变干净</li>
+      </ul>
+    </div>
+    <div class="cons"><h4>局限</h4>
+      <ul>
+        <li><b>治标不治本</b> — 超长页面（517行）的结构问题还在</li>
+        <li><b>个别页面需补刀</b> — 部分页面结构本身太乱，光改CSS不够</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>方案二：页面模板化 + 代码瘦身</h3>
+  <p class="subtitle">建立标准页面模板，重构核心页面结构。效果最彻底，但风险和工作量更大。</p>
+
+  <div class="mockup">
+    <div class="mockup-header">方案二 — 页面模板示意</div>
+    <div class="mockup-body" style="background:#fafafa; padding:20px; font-family:system-ui,sans-serif;">
+      <div style="border:1px dashed #aaa; border-radius:6px; padding:16px; text-align:center; color:#999; font-size:13px;">
+        <b>标准页面模板 = 5 层结构</b>
+        <div style="display:grid; grid-template-columns:1fr; gap:8px; margin-top:12px; text-align:left;">
+          <div style="background:#eef2ff; border:1px solid #c7d6f7; border-radius:4px; padding:10px; font-size:11px; color:#333;">
+            <b>1. PageHeader</b> — 标题 + 描述 + 操作按钮区（≤60行）
+          </div>
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:10px; font-size:11px; color:#333;">
+            <b>2. StatsBar</b> — 统计卡片行（可选，≤40行）
+          </div>
+          <div style="background:#fff; border:1px solid #e5e5e5; border-radius:4px; padding:10px; font-size:11px; color:#333;">
+            <b>3. FilterToolbar</b> — 搜索+筛选+快捷标签（≤80行）
+          </div>
+          <div style="background:#fefce8; border:1px solid #fef08a; border-radius:4px; padding:10px; font-size:11px; color:#333;">
+            <b>4. DataTable</b> — 表格（列宽自适应 + ResizableTable）（≤120行）
+          </div>
+          <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:4px; padding:10px; font-size:11px; color:#333;">
+            <b>5. EmptyState / ErrorState</b> — 空状态统一组件（≤20行）
+          </div>
+        </div>
+        <div style="margin-top:12px; font-size:12px; color:#666;">
+          总行数目标：<b>页面 index ≤ 300行</b>（符合P0铁律）
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros"><h4>优点</h4>
+      <ul>
+        <li><b>根治臃肿</b> — 所有页面瘦身到≤300行</li>
+        <li><b>真正统一</b> — 所有页面用同一套模板，不存在「各写各的」</li>
+        <li><b>长期收益</b> — 新增页面自动规范</li>
+      </ul>
+    </div>
+    <div class="cons"><h4>风险</h4>
+      <ul>
+        <li><b>工作量大</b> — 约 80-100 个文件改动，涉及组件拆分</li>
+        <li><b>功能回归风险</b> — 重构页面结构可能引入交互 bug</li>
+        <li><b>工期长</b> — 需要逐页测试</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>推荐：方案一为主 + 方案二补刀</h3>
+  <p class="subtitle">先用方案一统一视觉规范（CSS + 设计系统），对结构实在太乱的个别页面用方案二瘦身。</p>
+  <p style="font-size:13px; color:#666; line-height:1.6;">
+    具体节奏：<br/>
+    第1步 → 更新 design-system.css + global.css（建立规范）<br/>
+    第2步 → 逐页对齐 CSS 变量 + 间距统一（不改结构）<br/>
+    第3步 → 对超长页面（Production List 517行 / Dashboard 423行 / StyleInfo 415行）做组件拆分瘦身<br/>
+    每一步都编译验证。
+  </p>
+</div>

@@ -97,7 +97,7 @@ const EcSalesRevenue: React.FC = () => {
       title: '流水号',
       dataIndex: 'revenueNo',
       width: 170,
-      render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
+      render: (v: string) => <Text code style={{ fontSize: 14 }}>{v}</Text>,
     },
     {
       title: '平台',
@@ -121,8 +121,8 @@ const EcSalesRevenue: React.FC = () => {
       ellipsis: true,
       render: (_: unknown, r: EcRevenueRecord) => (
         <Space orientation="vertical" size={0}>
-          <Text ellipsis style={{ fontSize: 13 }}>{r.productName}</Text>
-          <Text type="secondary" style={{ fontSize: 13 }}>{r.skuCode}</Text>
+          <Text ellipsis style={{ fontSize: 14 }}>{r.productName}</Text>
+          <Text type="secondary" style={{ fontSize: 14 }}>{r.skuCode}</Text>
         </Space>
       ),
     },
@@ -148,7 +148,7 @@ const EcSalesRevenue: React.FC = () => {
       dataIndex: 'productionOrderNo',
       width: 140,
       render: (v: string) =>
-        v ? <Text code style={{ fontSize: 13 }}>{v}</Text> : <Text type="secondary">-</Text>,
+        v ? <Text code style={{ fontSize: 14 }}>{v}</Text> : <Text type="secondary">-</Text>,
     },
     {
       title: '发货时间',
@@ -224,7 +224,7 @@ const EcSalesRevenue: React.FC = () => {
               <Statistic
                 title={<><ClockCircleOutlined style={{ color: 'orange', marginRight: 4 }} />待核账</>}
                 value={fmtAmt(summary?.pendingAmount)}
-                suffix={<Text type="secondary" style={{ fontSize: 12 }}>（{summary?.pendingCount ?? 0} 笔）</Text>}
+                suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.pendingCount ?? 0} 笔）</Text>}
                 styles={{ content: { color: 'orange', fontSize: 18 } }}
               />
             </Card>
@@ -234,7 +234,7 @@ const EcSalesRevenue: React.FC = () => {
               <Statistic
                 title={<><CheckCircleOutlined style={{ color: '#1677ff', marginRight: 4 }} />已核账</>}
                 value={fmtAmt(summary?.confirmedAmount)}
-                suffix={<Text type="secondary" style={{ fontSize: 12 }}>（{summary?.confirmedCount ?? 0} 笔）</Text>}
+                suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.confirmedCount ?? 0} 笔）</Text>}
                 styles={{ content: { color: '#1677ff', fontSize: 18 } }}
               />
             </Card>
@@ -244,7 +244,7 @@ const EcSalesRevenue: React.FC = () => {
               <Statistic
                 title={<><DollarOutlined style={{ color: '#52c41a', marginRight: 4 }} />已入账净收入</>}
                 value={fmtAmt(summary?.netIncome)}
-                suffix={<Text type="secondary" style={{ fontSize: 12 }}>（{summary?.reconciledCount ?? 0} 笔）</Text>}
+                suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.reconciledCount ?? 0} 笔）</Text>}
                 styles={{ content: { color: '#52c41a', fontSize: 18 } }}
               />
             </Card>

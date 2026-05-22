@@ -162,7 +162,7 @@ const StyleAttachmentsButton: React.FC<{
       <ResizableModal
         open={open}
         title={modalTitle}
-        width="60vw"
+        width="85vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         onCancel={() => {
           setOpen(false);

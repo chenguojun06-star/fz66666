@@ -271,7 +271,7 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
           进度节点
           <span className="c-card-badge cyan-badge">点击卡片展开订单</span>
           <span
-            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? STAGE_ACCENT : STAGE_ACCENT, fontSize: 12, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
+            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? STAGE_ACCENT : STAGE_ACCENT, fontSize: 14, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
             title={collapsed ? '展开面板' : '收起面板'}
           >
             {collapsed ? <DownOutlined /> : <UpOutlined />}

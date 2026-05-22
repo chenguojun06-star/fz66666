@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Row, Col, Card, Badge, Statistic, Button, Tag, Spin, Modal, Form,
+  Row, Col, Card, Badge, Statistic, Button, Tag, Spin, Form,
   Input, Alert, Descriptions, List, Divider, Tooltip, Space, Empty, Typography, Steps,
 } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import {
   CheckCircleOutlined, WarningOutlined, CloseCircleOutlined,
   SettingOutlined, SyncOutlined, ApiOutlined, LinkOutlined,
@@ -309,14 +310,14 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               </Tag>
             </div>
 
-            <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8, minHeight: 36 }}>{p.desc}</Paragraph>
+            <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 8, minHeight: 36 }}>{p.desc}</Paragraph>
             <div style={{ marginBottom: 8 }}>{modeLabel(p.syncMode)}</div>
 
             {/* 功能标签 */}
             <div style={{ marginBottom: 8 }}>
-              {p.features.slice(0, 3).map(f => (<Tag key={f} style={{ marginBottom: 4, fontSize: 13 }}>{f}</Tag>))}
+              {p.features.slice(0, 3).map(f => (<Tag key={f} style={{ marginBottom: 4, fontSize: 14 }}>{f}</Tag>))}
               {p.features.length > 3 && (
-                <Tooltip title={p.features.slice(3).join('、')}><Tag style={{ fontSize: 13 }}>+{p.features.length - 3}</Tag></Tooltip>
+                <Tooltip title={p.features.slice(3).join('、')}><Tag style={{ fontSize: 14 }}>+{p.features.length - 3}</Tag></Tooltip>
               )}
             </div>
 
@@ -324,11 +325,11 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
             {isConfigured && statsData && (
               <Row gutter={8} style={{ marginBottom: 8 }}>
                 <Col span={12}>
-                  <div style={{ fontSize: 13, color: '#888' }}>今日订单</div>
+                  <div style={{ fontSize: 14, color: '#888' }}>今日订单</div>
                   <Text strong style={{ color: '#1677ff' }}>{statsData.todayOrders}</Text>
                 </Col>
                 <Col span={12}>
-                  <div style={{ fontSize: 13, color: '#888' }}>今日销售额</div>
+                  <div style={{ fontSize: 14, color: '#888' }}>今日销售额</div>
                   <Text strong style={{ color: '#52c41a' }}>¥{statsData.todaySales}</Text>
                 </Col>
               </Row>
@@ -396,11 +397,11 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         )}
 
         {/* ====== 配置弹窗 ====== */}
-        <Modal
+        <ResizableModal
           open={configModalOpen}
           title={<Space><span style={{ fontSize: 20 }}>{activePlatform ? renderIcon(activePlatform.icon) : <ApiOutlined />}</span><span>配置 {activePlatform?.name} 连接</span></Space>}
           onCancel={() => { setConfigModalOpen(false); setTestResult(null); setShowGuide(false); }}
-          footer={null} width={600} destroyOnHidden
+          footer={null} width="40vw" destroyOnHidden
         >
           {/* 凭证获取教程 */}
           {!showGuide ? (
@@ -460,11 +461,11 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
             <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={handleTest} style={{ flex: 1 }}>保存并测试连接</Button>
             <Button icon={<SettingOutlined />} onClick={handleSave} style={{ flex: 1 }}>仅保存</Button>
           </div>
-        </Modal>
+        </ResizableModal>
 
         {/* ====== 测试结果弹窗 ====== */}
-        <Modal open={testModalOpen} title="连接测试结果" onCancel={() => { setTestModalOpen(false); setTestResult(null); }}
-          footer={<Button onClick={() => setTestModalOpen(false)}>关闭</Button>} width={540} destroyOnHidden>
+        <ResizableModal open={testModalOpen} title="连接测试结果" onCancel={() => { setTestModalOpen(false); setTestResult(null); }}
+          footer={<Button onClick={() => setTestModalOpen(false)}>关闭</Button>} width="40vw" destroyOnHidden>
           {testResult ? (
             <div>
               <Alert type={testResult.success ? 'success' : 'error'} showIcon
@@ -481,7 +482,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                   description={
                     <div>
                       <div style={{ marginBottom: 4 }}>请将此地址配置到平台的回调/Webhook设置中：</div>
-                      <code style={{ background: '#f5f5f5', padding: '4px 8px', borderRadius: 4, fontSize: 13, wordBreak: 'break-all' }}>
+                      <code style={{ background: '#f5f5f5', padding: '4px 8px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>
                         {window.location.origin}{testResult.webhookUrl}
                       </code>
                     </div>
@@ -506,12 +507,12 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               )}
             </div>
           ) : (<Spin tip="测试中..." />)}
-        </Modal>
+        </ResizableModal>
 
         {/* ====== 店铺数据看板弹窗 ====== */}
-        <Modal open={statsModalOpen} title={<Space><ShopOutlined />{activePlatform?.name} 店铺数据看板</Space>}
+        <ResizableModal open={statsModalOpen} title={<Space><ShopOutlined />{activePlatform?.name} 店铺数据看板</Space>}
           onCancel={() => { setStatsModalOpen(false); setActiveStats(null); }}
-          footer={<Button onClick={() => setStatsModalOpen(false)}>关闭</Button>} width={680} destroyOnHidden>
+          footer={<Button onClick={() => setStatsModalOpen(false)}>关闭</Button>} width="40vw" destroyOnHidden>
           {activeStats ? (
             <div>
               {/* 总览 */}
@@ -548,8 +549,8 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#1677ff' }}>
                           📦 链路一：成品仓（有生产单）
                         </div>
-                        <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8 }}>
-                          订单 → SKU匹配款号 → <Tag color="blue" style={{ fontSize: 12 }}>关联生产单</Tag>
+                        <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
+                          订单 → SKU匹配款号 → <Tag color="blue" style={{ fontSize: 14 }}>关联生产单</Tag>
                           → 生产加工 → 完工入库 → 出库发货 → 物流回传
                         </div>
                         <div style={{ marginTop: 6 }}>
@@ -562,8 +563,8 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#52c41a' }}>
                           🛒 链路二：电商仓（现货发货）
                         </div>
-                        <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8 }}>
-                          订单 → <Tag color="orange" style={{ fontSize: 12 }}>待拣货</Tag>
+                        <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
+                          订单 → <Tag color="orange" style={{ fontSize: 14 }}>待拣货</Tag>
                           → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                         </div>
                         <div style={{ marginTop: 6 }}>
@@ -616,17 +617,17 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               )}
             </div>
           ) : (<Spin />)}
-        </Modal>
+        </ResizableModal>
 
         {/* ====== 同步结果 ====== */}
         {syncResult && activePlatform && (
-          <Modal open={!!syncResult} title={`${activePlatform.name} 同步结果`}
-            onCancel={() => setSyncResult(null)} footer={<Button onClick={() => setSyncResult(null)}>确定</Button>} width={400}>
+          <ResizableModal open={!!syncResult} title={`${activePlatform.name} 同步结果`}
+            onCancel={() => setSyncResult(null)} footer={<Button onClick={() => setSyncResult(null)}>确定</Button>} width="30vw">
             <Descriptions bordered column={2}>
               <Descriptions.Item label="新增订单"><Text style={{ color: '#52c41a', fontWeight: 'bold', fontSize: 18 }}>{syncResult.synced ?? '-'}</Text></Descriptions.Item>
               <Descriptions.Item label="已跳过"><Text style={{ color: '#fa8c16' }}>{syncResult.skipped ?? '-'}</Text></Descriptions.Item>
             </Descriptions>
-          </Modal>
+          </ResizableModal>
         )}
       </div>
     </Spin>
