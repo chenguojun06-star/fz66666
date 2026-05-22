@@ -44,6 +44,7 @@ import {
 } from './hooks';
 import { useProductionListData } from './hooks/useProductionListData';
 import AnomalyBanner from './AnomalyBanner';
+import { useAiPatrol, RISK_TYPE_LABELS } from './hooks/useAiPatrol';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import ProductionModals from './components/ProductionModals';
 import ProductionFilterBar from './components/ProductionFilterBar';
@@ -146,6 +147,8 @@ const ProductionList: React.FC = () => {
   orderFocusRef.current = { triggerOrderFocus, clearSmartFocus };
 
   // ===== useAnomalyDetection: 异常检测横幅 =====
+  
+  const { patrolRiskMap, patrolSummary, fetchForOrders, hasRisks, getHighestSeverity, getOrderRisks } = useAiPatrol();
   const { anomalyItems, anomalyBannerVisible, setAnomalyBannerVisible, fetchAnomalies, handleAnomalyClick } = useAnomalyDetection({
     productionList, message, navigate, setActiveStatFilter, setShowDelayedOnly, setSmartQueueFilter, setQueryParams, triggerOrderFocus,
   });
@@ -153,6 +156,12 @@ const ProductionList: React.FC = () => {
   // 首次加载到订单后，静默触发异常检测（仅检测一次，不阻塞主列表）
   useEffect(() => {
     if (productionList.length > 0) void fetchAnomalies();
+  useEffect(() => {
+    if (productionList.length > 0) {
+      const orderNos = productionList.map(o => o.orderNo).filter(Boolean) as string[];
+      fetchForOrders(orderNos);
+    }
+  }, [productionList.length]);
   }, [productionList.length]);
 
   // 表格列渲染辅助
@@ -182,6 +191,20 @@ const ProductionList: React.FC = () => {
     if (col.key === 'action' || col.key === 'orderNo') return true;
     return visibleColumns[col.key as string] !== false;
   });
+
+  
+  const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
+    const risks = getOrderRisks(record.orderNo || '');
+    const severity = getHighestSeverity(record.orderNo || '');
+    if (!severity || risks.length === 0) return null;
+    const label = RISK_TYPE_LABELS[risks[0]?.issueType] || 'AI巡检';
+    const colorMap: Record<string, string> = { HIGH: 'red', MEDIUM: 'orange', LOW: 'gold' };
+    return (
+      <Tag color={colorMap[severity] || 'orange'} style={{ margin: 0, fontSize: 11, lineHeight: '17px', padding: '0 3px' }}>
+        {label}
+      </Tag>
+    );
+  }, [patrolRiskMap]);
 
   // 点击统计卡片筛选
   const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
@@ -403,7 +426,7 @@ const ProductionList: React.FC = () => {
                 ];
               }}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
-              titleTags={undefined}
+              titleTags={patrolTitleTags}
             />
             {/* 卡片视图分页器 */}
             <StandardPagination
