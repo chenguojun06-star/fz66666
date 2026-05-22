@@ -5,12 +5,14 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
+  RobotOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { Badge } from 'antd';
 import api, { ApiResult } from '../../utils/api';
 import { sysNoticeApi } from '../../services/production/productionApi';
 import { useUser } from '../../utils/AuthContext';
+import { getPatrolSummary, type PatrolSummary } from '../../services/intelligenceApi';
 import type { SysNotice } from '../../services/production/productionApi';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
@@ -48,7 +50,6 @@ const choose = (seed: number, variants: string[]) => {
   return variants[Math.abs(seed) % variants.length];
 };
 
-// 根据事件类型获取跳转路径
 const getEventNav = (ev: UrgentEvent): string => {
   if (ev.type === 'overdue')   return `/production?orderNo=${ev.orderNo}`;
   if (ev.type === 'defective') return `/production/warehousing?orderNo=${ev.orderNo}`;
@@ -56,7 +57,6 @@ const getEventNav = (ev: UrgentEvent): string => {
   if (ev.type === 'material')  return '/warehouse/material';
   return '/dashboard';
 };
-// ─── localStorage 每日 dismiss 辅助 ─────────────────────────
 const _sapDismissKey = () => `sap_dismissed_${new Date().toISOString().slice(0, 10)}`;
 const loadDismissed = (): Set<string> => {
   try {
@@ -79,9 +79,15 @@ const saveDismissedNotices = (ids: Set<number>) => {
   try { localStorage.setItem(_sapNoticeDismissKey(), JSON.stringify([...ids])); } catch { /* ok */ }
 };
 
-// ─── 主组件 ─────────────────────────────────────────────────
 const NOTICE_POLL_INTERVAL = 60_000;
 const MAX_BACKOFF = 5 * 60_000;
+
+const RISK_TYPE_LABELS: Record<string, string> = {
+  DEADLINE_RISK: '浜ゆ湡椋庨櫓',
+  FACTORY_SILENCE: '宸ュ巶娌夐粯',
+  QUALITY_SPIKE: '璐ㄩ噺寮傚父',
+  CORRELATED_RISK: '澶氶噸椋庨櫓',
+};
 
 const SmartAlertBell: React.FC = () => {
   const navigate = useNavigate();
@@ -95,6 +101,7 @@ const SmartAlertBell: React.FC = () => {
   const [_myUnreadCount, setMyUnreadCount] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(loadDismissedNotices);
+  const [patrolSummary, setPatrolSummary] = useState<PatrolSummary | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -108,7 +115,8 @@ const SmartAlertBell: React.FC = () => {
   const visibleEvents = useMemo(() => events.filter(ev => !dismissedIds.has(ev.id)), [events, dismissedIds]);
   const visibleNotices = useMemo(() => myNotices.filter(n => !dismissedNoticeIds.has(n.id)), [myNotices, dismissedNoticeIds]);
 
-  const alertCount = visibleEvents.length;
+  const patrolAlertCount = (patrolSummary?.pendingCount ?? 0) + (patrolSummary?.highRiskPending ?? 0);
+  const alertCount = visibleEvents.length + patrolAlertCount;
 
   const fetchMyNotices = useCallback(async () => {
     try {
@@ -129,6 +137,15 @@ const SmartAlertBell: React.FC = () => {
     }
   }, []);
 
+  const fetchPatrolData = useCallback(async () => {
+    try {
+      const summary = await getPatrolSummary();
+      if (summary) setPatrolSummary(summary);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
   const abortRef = useRef<AbortController | null>(null);
   const fetchData = useCallback(async () => {
     const today = new Date().toDateString();
@@ -141,7 +158,7 @@ const SmartAlertBell: React.FC = () => {
       const u = userRef.current;
       const factoryId = (u as any)?.factoryId || undefined;
       const isManagerLevel = !!(u as any)?.isSuperAdmin || !!(u as any)?.isTenantOwner
-        || ['admin', '管理员', '管理'].some(k => ((u as any)?.role || '').toLowerCase().includes(k));
+        || ['admin', '绠＄悊鍛?, '绠＄悊'].some(k => ((u as any)?.role || '').toLowerCase().includes(k));
       if (!factoryId && !isManagerLevel) {
         setFetchedToday(today);
         return;
@@ -184,6 +201,7 @@ const SmartAlertBell: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    fetchPatrolData();
     void fetchMyNotices().then((result) => {
       if (result === 'failed') noticeFailRef.current += 1;
       else noticeFailRef.current = 0;
@@ -195,13 +213,12 @@ const SmartAlertBell: React.FC = () => {
       if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
       abortRef.current?.abort();
     };
-  }, [fetchData, fetchMyNotices, scheduleNoticePoll]);
+  }, [fetchData, fetchMyNotices, scheduleNoticePoll, fetchPatrolData]);
 
   useEffect(() => {
     if (!fetchedToday) fetchData();
   }, [fetchedToday, fetchData]);
 
-  // 点击面板外关闭
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -216,14 +233,12 @@ const SmartAlertBell: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Escape 关闭
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
-  // 消除单条我的通知（localStorage 每日持久化，隔天重新检测）
   const dismissNotice = useCallback((id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setDismissedNoticeIds(prev => {
@@ -233,7 +248,6 @@ const SmartAlertBell: React.FC = () => {
     });
   }, []);
 
-  // 消除单条事件（当天不再显示，隔天重新检测）
   const dismissEvent = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDismissedIds(prev => {
@@ -244,20 +258,22 @@ const SmartAlertBell: React.FC = () => {
     });
   }, []);
 
-  // 跳转辅助：关闭面板并导航
   const goTo = (path: string) => {
     setOpen(false);
     navigate(path);
   };
 
-  // 点击按钮时先拉数据
   const handleToggle = () => {
-    if (!open) fetchData();
+    if (!open) {
+      fetchData();
+      fetchPatrolData();
+    }
     setOpen(v => !v);
   };
 
-  // ── 渲染 ──────────────────────────────────────────────────
-  const riskLevel = (brief?.overdueOrderCount ?? 0) > 0 ? 'high'
+  const riskLevel = (patrolSummary?.highRiskPending ?? 0) > 0 ? 'high'
+    : (brief?.overdueOrderCount ?? 0) > 0 ? 'high'
+    : (patrolSummary?.pendingCount ?? 0) > 0 ? 'mid'
     : (brief?.highRiskOrderCount ?? 0) > 0 ? 'mid'
     : 'ok';
 
@@ -265,14 +281,19 @@ const SmartAlertBell: React.FC = () => {
     : riskLevel === 'mid' ? '#f59e0b'
     : '#22c55e';
 
+  const patrolSeverityColor = (severity: string) => {
+    if (severity === 'HIGH') return '#ef4444';
+    if (severity === 'MEDIUM') return '#f59e0b';
+    return '#22c55e';
+  };
+
   return (
     <div className="smart-alert-wrap">
-      {/* ── 按钮 ── */}
       <button
         ref={btnRef}
         onClick={handleToggle}
         className={`smart-alert-btn${open ? ' open' : ''}`}
-        title="今日跟踪预警"
+        title="浠婃棩璺熻釜棰勮"
       >
         <span className="smart-alert-btn-icon">
           <ThunderboltOutlined style={{ fontSize: 15 }} />
@@ -281,27 +302,24 @@ const SmartAlertBell: React.FC = () => {
           )}
         </span>
         <span className="smart-alert-btn-label">
-          <span className="smart-alert-btn-main">今日预警</span>
+          <span className="smart-alert-btn-main">浠婃棩棰勮</span>
         </span>
         {alertCount > 0 && (
           <Badge
             count={alertCount}
-           
             style={{ marginLeft: 4, background: dotColor, boxShadow: 'none' }}
           />
         )}
       </button>
 
-      {/* ── 下滑面板 ── */}
       <div
         ref={panelRef}
         className={`smart-alert-panel${open ? ' visible' : ''}`}
       >
-        {/* 面板头 */}
         <div className="sap-header">
           <div className="sap-title">
             <ThunderboltOutlined style={{ color: '#6d28d9' }} />
-            <span>今日跟踪预警</span>
+            <span>浠婃棩璺熻釜棰勮</span>
             {brief?.date && <span className="sap-date">{brief.date}</span>}
           </div>
           <button className="sap-close" onClick={() => setOpen(false)}>
@@ -312,32 +330,76 @@ const SmartAlertBell: React.FC = () => {
         {loading && (
           <div className="sap-loading">
             <XiaoyunCloudAvatar size={34} active loading />
-            <span>小云正在整理提醒，请稍等一下…</span>
+            <span>灏忎簯姝ｅ湪鏁寸悊鎻愰啋锛岃绋嶇瓑涓€涓嬧€?/span>
           </div>
         )}
 
         {!loading && (
           <>
 
+            {patrolSummary && (patrolSummary.pendingCount > 0 || patrolSummary.autoExecutedToday > 0 || patrolSummary.highRiskPending > 0) && (
+              <div className="sap-section">
+                <div className="sap-section-title">
+                  <RobotOutlined style={{ color: '#7c3aed' }} /> AI宸℃绠€鎶?                </div>
+                <div style={{ padding: '8px 12px', background: '#f5f3ff', borderRadius: 6, marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  {patrolSummary.highRiskPending > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                      <span style={{ fontSize: 13, color: '#333' }}><b>{patrolSummary.highRiskPending}</b> 楂橀闄╁緟澶勭悊</span>
+                    </div>
+                  )}
+                  {patrolSummary.pendingCount > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+                      <span style={{ fontSize: 13, color: '#333' }}><b>{patrolSummary.pendingCount}</b> 寰呭鐞?/span>
+                    </div>
+                  )}
+                  {patrolSummary.autoExecutedToday > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                      <span style={{ fontSize: 13, color: '#333' }}><b>{patrolSummary.autoExecutedToday}</b> 宸茶嚜鍔ㄥ鐞?/span>
+                    </div>
+                  )}
+                </div>
+                {patrolSummary.recentActions && patrolSummary.recentActions.length > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    {patrolSummary.recentActions.slice(0, 3).map((action, idx) => (
+                      <div
+                        key={idx}
+                        className="sap-event-row"
+                        onClick={() => {
+                          if (action.targetType === 'order') goTo(`/production?orderNo=${action.targetId}`);
+                        }}
+                        style={{ cursor: 'pointer', padding: '4px 8px' }}
+                        title="鐐瑰嚮鏌ョ湅璁㈠崟璇︽儏"
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: patrolSeverityColor(action.issueSeverity), display: 'inline-block', marginRight: 6 }} />
+                        <span style={{ fontSize: 12, color: '#555', flex: 1 }}>{RISK_TYPE_LABELS[action.issueType] || action.issueType} 路 {action.detectedIssue}</span>
+                        <span style={{ fontSize: 11, color: '#999' }}>{action.targetId}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* ── 首要关注订单 ── */}
             {brief?.topPriorityOrder && !dismissedIds.has('topPriority') && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <AlertOutlined style={{ color: '#6d28d9' }} /> 首要关注
-                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 今日不再提醒</span>
+                  <AlertOutlined style={{ color: '#6d28d9' }} /> 棣栬鍏虫敞
+                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>鐐?脳 浠婃棩涓嶅啀鎻愰啋</span>
                 </div>
                 <div
                 className="sap-priority-card"
                 onClick={() => goTo(`/production?orderNo=${brief.topPriorityOrder?.orderNo ?? ''}`)}
                 style={{ cursor: 'pointer', position: 'relative' }}
-                title="点击查看该订单"
+                title="鐐瑰嚮鏌ョ湅璇ヨ鍗?
               >
                   <button
                     className="sap-event-dismiss-btn"
                     style={{ position: 'absolute', top: 6, right: 6 }}
                     onClick={(e) => dismissEvent('topPriority', e)}
-                    title="今日不再提醒（明天会重新检测）"
+                    title="浠婃棩涓嶅啀鎻愰啋锛堟槑澶╀細閲嶆柊妫€娴嬶級"
                   >
                     <CloseOutlined style={{ fontSize: 9 }} />
                   </button>
@@ -355,19 +417,16 @@ const SmartAlertBell: React.FC = () => {
                       className="sap-priority-days"
                       style={{ color: brief.topPriorityOrder.daysLeft <= 3 ? '#ef4444' : '#888' }}
                     >
-                      剩 {brief.topPriorityOrder.daysLeft} 天
-                    </span>
+                      鍓?{brief.topPriorityOrder.daysLeft} 澶?                    </span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ── 紧急事件列表 ── */}
             {visibleEvents.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 待处理事项
-                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 今日不再提醒，明日自动重检</span>
+                  <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 寰呭鐞嗕簨椤?                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>鐐?脳 浠婃棩涓嶅啀鎻愰啋锛屾槑鏃ヨ嚜鍔ㄩ噸妫€</span>
                 </div>
                 {visibleEvents.slice(0, 6).map(ev => (
                   <div
@@ -375,7 +434,7 @@ const SmartAlertBell: React.FC = () => {
                     className="sap-event-row"
                     onClick={() => goTo(getEventNav(ev))}
                     style={{ cursor: 'pointer' }}
-                    title="点击前往处理"
+                    title="鐐瑰嚮鍓嶅線澶勭悊"
                   >
                     <span className="sap-event-dot" />
                     <span className="sap-event-title">{ev.title}</span>
@@ -383,7 +442,7 @@ const SmartAlertBell: React.FC = () => {
                     <button
                       className="sap-event-dismiss-btn"
                       onClick={(e) => dismissEvent(ev.id, e)}
-                      title="今日不再提醒（明天会重新检测）"
+                      title="浠婃棩涓嶅啀鎻愰啋锛堟槑澶╀細閲嶆柊妫€娴嬶級"
                     >
                       <CloseOutlined style={{ fontSize: 9 }} />
                     </button>
@@ -392,12 +451,11 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-            {/* ── 提醒建议 ── */}
             {brief?.suggestions && brief.suggestions.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <CheckCircleOutlined style={{ color: '#0284c7' }} /> 提醒建议
-                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 今日不再提醒</span>
+                  <CheckCircleOutlined style={{ color: '#0284c7' }} /> 鎻愰啋寤鸿
+                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>鐐?脳 浠婃棩涓嶅啀鎻愰啋</span>
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -407,7 +465,7 @@ const SmartAlertBell: React.FC = () => {
                           className="sap-event-dismiss-btn"
                           style={{ position: 'absolute', top: 6, right: 6, zIndex: 2 }}
                           onClick={(e) => dismissEvent(`decisionCard_${i}`, e)}
-                          title="今日不再提醒（明天会重新检测）"
+                          title="浠婃棩涓嶅啀鎻愰啋锛堟槑澶╀細閲嶆柊妫€娴嬶級"
                         >
                           <CloseOutlined style={{ fontSize: 9 }} />
                         </button>
@@ -416,19 +474,19 @@ const SmartAlertBell: React.FC = () => {
                           onNavigate={goTo}
                           card={{
                             ...card,
-                            source: card.source || '实时数据推演',
-                            confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
+                            source: card.source || '瀹炴椂鏁版嵁鎺ㄦ紨',
+                            confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '寤鸿浼樺厛澶勭悊' : '鍙墽琛屽缓璁?),
                             summary: card.summary || choose((brief.overdueOrderCount || 0) * 11 + (brief.highRiskOrderCount || 0) * 7 + i, [
-                              '有风险点，先处理影响最大的。',
-                              '先做优先级收口，再展开细项。',
-                              '先压关键风险，后续更顺。',
+                              '鏈夐闄╃偣锛屽厛澶勭悊褰卞搷鏈€澶х殑銆?,
+                              '鍏堝仛浼樺厛绾ф敹鍙ｏ紝鍐嶅睍寮€缁嗛」銆?,
+                              '鍏堝帇鍏抽敭椋庨櫓锛屽悗缁洿椤恒€?,
                             ]),
                             labels: {
-                              summary: '现状',
-                              painPoint: '关注点',
-                              execute: '下一步',
-                              evidence: '数据',
-                              note: '补充',
+                              summary: '鐜扮姸',
+                              painPoint: '鍏虫敞鐐?,
+                              execute: '涓嬩竴姝?,
+                              evidence: '鏁版嵁',
+                              note: '琛ュ厖',
                               ...card.labels,
                             },
                           }}
@@ -439,12 +497,12 @@ const SmartAlertBell: React.FC = () => {
                 ) : (
                   brief.suggestions.slice(0, 3).map((s, i) => dismissedIds.has(`suggestion_${i}`) ? null : (
                     <div key={i} className="sap-suggestion" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span>· {s}</span>
+                      <span>路 {s}</span>
                       <button
                         className="sap-event-dismiss-btn"
                         style={{ opacity: 1 }}
                         onClick={(e) => dismissEvent(`suggestion_${i}`, e)}
-                        title="今日不再提醒（明天会重新检测）"
+                        title="浠婃棩涓嶅啀鎻愰啋锛堟槑澶╀細閲嶆柊妫€娴嬶級"
                       >
                         <CloseOutlined style={{ fontSize: 9 }} />
                       </button>
@@ -454,17 +512,16 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-            {/* ── 我的通知 ── */}
             {visibleNotices.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <span style={{ color: '#d46b08' }}></span> 我的通知
+                  <span style={{ color: '#d46b08' }}></span> 鎴戠殑閫氱煡
                   {visibleNotices.filter(n => !n.isRead).length > 0 && (
                     <span style={{ marginLeft: 4, fontSize: 12, background: '#ffa940', color: '#fff', borderRadius: 8, padding: '0 5px' }}>
-                      {visibleNotices.filter(n => !n.isRead).length} 未读
+                      {visibleNotices.filter(n => !n.isRead).length} 鏈
                     </span>
                   )}
-                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>点 × 关闭该条</span>
+                  <span style={{ marginLeft: 6, fontSize: 12, color: '#999' }}>鐐?脳 鍏抽棴璇ユ潯</span>
                 </div>
                 {visibleNotices.slice(0, 8).map(n => (
                   <div key={n.id} className="sap-notice-row"
@@ -474,7 +531,7 @@ const SmartAlertBell: React.FC = () => {
                     }}
                     onClick={() => {
                       if (!n.isRead) {
-                        sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
+                        sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 鏍囪宸茶澶辫触:', err?.message || err); });
                       }
                     }}
                   >
@@ -483,7 +540,7 @@ const SmartAlertBell: React.FC = () => {
                         {n.title}
                       </div>
                       <div style={{ fontSize: 12, color: '#888', marginTop: 1 }}>
-                        {n.fromName} · {n.createdAt?.slice(5, 16)}
+                        {n.fromName} 路 {n.createdAt?.slice(5, 16)}
                       </div>
                     </div>
                     {!n.isRead && (
@@ -491,7 +548,7 @@ const SmartAlertBell: React.FC = () => {
                         className="sap-notice-read-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
+                          sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 鏍囪宸茶澶辫触:', err?.message || err); });
                           setDismissedNoticeIds(prev => {
                             const next = new Set([...prev, n.id]);
                             saveDismissedNotices(next);
@@ -499,13 +556,13 @@ const SmartAlertBell: React.FC = () => {
                           });
                         }}
                       >
-                        已读
+                        宸茶
                       </button>
                     )}
                     <button
                       className="sap-notice-dismiss-btn"
                       onClick={(e) => dismissNotice(n.id, e)}
-                      title="关闭该通知"
+                      title="鍏抽棴璇ラ€氱煡"
                     >
                       <CloseOutlined style={{ fontSize: 9 }} />
                     </button>
@@ -520,7 +577,5 @@ const SmartAlertBell: React.FC = () => {
     </div>
   );
 };
-
-// ─── 小统计格子 ───────────────────────────────────────────
 
 export default SmartAlertBell;
