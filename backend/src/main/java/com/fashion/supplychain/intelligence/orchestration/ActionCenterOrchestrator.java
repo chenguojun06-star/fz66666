@@ -406,8 +406,21 @@ public class ActionCenterOrchestrator {
         for (ActionCenterResponse.ActionTask task : tasks) {
             try {
                 String query = buildMemoryQuery(task);
+
+                List<AiLongMemory> distilled = longTermMemory.retrieveDistilledInsights(query, 1);
+                if (distilled != null && !distilled.isEmpty()) {
+                    AiLongMemory insight = distilled.get(0);
+                    if (insight.getContent() != null && !insight.getContent().isBlank()) {
+                        String snippet = insight.getContent().length() > 100
+                            ? insight.getContent().substring(0, 100) + "..."
+                            : insight.getContent();
+                        task.setReason(task.getReason() + " | 跨租户最佳实践: " + snippet);
+                        longTermMemory.incrementHit(insight.getId());
+                    }
+                }
+
                 List<AiLongMemory> memories = longTermMemory.retrieveMultiSignal(
-                    query, "platform_scene", null, 3);
+                    query, "platform_scene", null, 2);
                 if (memories == null || memories.isEmpty()) {
                     continue;
                 }
@@ -415,10 +428,10 @@ public class ActionCenterOrchestrator {
                 if (best.getContent() == null || best.getContent().isBlank()) {
                     continue;
                 }
-                String insight = best.getContent().length() > 120
+                String insightText = best.getContent().length() > 120
                     ? best.getContent().substring(0, 120) + "..."
                     : best.getContent();
-                String enriched = task.getReason() + " | AI记忆参考: " + insight;
+                String enriched = task.getReason() + " | AI记忆参考: " + insightText;
                 task.setReason(enriched);
 
                 longTermMemory.incrementHit(best.getId());
