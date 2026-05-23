@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.entity.IntelligencePredictionLog;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
 import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
+import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -47,6 +48,9 @@ public class FeedbackLearningOrchestrator {
 
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired(required = false)
+    private LongTermMemoryOrchestrator longTermMemory;
 
     /**
      * 建议类型采纳统计： suggestionType → [accepted, rejected, total]
@@ -151,8 +155,65 @@ public class FeedbackLearningOrchestrator {
                     log.debug("[反馈闭环] AI分析失败（忽略）: {}", aiEx.getMessage());
                 }
             }
+            // 实时反思：不依赖凌晨定时Job，立即写入REFLECTIVE记忆
+            writeRealtimeReflection(request, deviationMinutes, record);
         } catch (Exception e) {
             log.warn("[反馈闭环] 写入feedback_record失败（不影响响应）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 实时反思钩子 — 每次用户反馈后立即写入 REFLECTIVE 记忆。
+     * 替代之前仅依赖凌晨2点 IntelligentLearningJob 的被动反思模式。
+     */
+    private void writeRealtimeReflection(FeedbackRequest request, long deviationMinutes,
+                                         IntelligenceFeedbackRecord record) {
+        if (longTermMemory == null) return;
+        try {
+            String result = record.getFeedbackResult();
+            if (result == null) return;
+
+            double confidence;
+            String content;
+
+            if ("rejected".equals(result)) {
+                confidence = 0.85;
+                content = String.format(
+                    "建议被拒绝：类型[%s]，场景[%s]，原因：%s。"
+                    + "后续同类场景需调整建议策略或措辞。",
+                    request.getSuggestionType() != null ? request.getSuggestionType() : "未知",
+                    request.getStageName() != null ? request.getStageName() : "未知",
+                    request.getReasonText() != null ? request.getReasonText() : "未提供");
+            } else if (Math.abs(deviationMinutes) > 30) {
+                confidence = Math.min(0.90, Math.abs(deviationMinutes) / 60.0);
+                String direction = deviationMinutes > 0 ? "滞后" : "提前";
+                String analysis = record.getFeedbackAnalysis();
+                String insight = (analysis != null && !analysis.isBlank())
+                    ? "AI分析：" + analysis
+                    : "请关注此场景的预测准确度";
+                content = String.format(
+                    "预测偏差%d分钟（%s）：工序[%s]，类型[%s]。%s",
+                    Math.abs(deviationMinutes), direction,
+                    request.getStageName() != null ? request.getStageName() : "未知",
+                    request.getSuggestionType() != null ? request.getSuggestionType() : "未知",
+                    insight);
+            } else {
+                return; // 偏差在合理范围内且被采纳，不写反思
+            }
+
+            longTermMemory.writeTenantMemory(
+                "REFLECTIVE",
+                "feedback_realtime",
+                null,
+                request.getStageName(),
+                content,
+                null,
+                java.math.BigDecimal.valueOf(confidence),
+                null
+            );
+            log.debug("[反馈闭环] 实时反思记忆已写入: {}", content.substring(0, Math.min(80, content.length())));
+        } catch (Exception e) {
+            log.debug("[反馈闭环] 实时反思写入失败（不影响主流程）: {}", e.getMessage());
         }
     }
 
