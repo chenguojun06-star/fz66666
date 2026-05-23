@@ -15,9 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 主动巡检闭环编排器
- * <p>巡检发现 → 建议 → 审批/自动执行 → 关闭，统计 MTTR。租户内可见自身记录，
- * 超管聚合 MTTR/issue 分布作为平台护城河。</p>
+ * 涓诲姩宸℃闂幆缂栨帓鍣? * <p>宸℃鍙戠幇 鈫?寤鸿 鈫?瀹℃壒/鑷姩鎵ц 鈫?鍏抽棴锛岀粺璁?MTTR銆傜鎴峰唴鍙鑷韩璁板綍锛? * 瓒呯鑱氬悎 MTTR/issue 鍒嗗竷浣滀负骞冲彴鎶ゅ煄娌炽€?/p>
  */
 @Slf4j
 @Service
@@ -25,6 +23,9 @@ public class PatrolClosedLoopOrchestrator {
 
     @Autowired
     private AiPatrolActionMapper actionMapper;
+
+    @Autowired(required = false)
+    private SmartEscalationOrchestrator smartEscalation;
 
     public AiPatrolAction createAction(String patrolSource, String detectedIssue, String issueType,
                                        String issueSeverity, String targetType, String targetId,
@@ -85,6 +86,8 @@ public class PatrolClosedLoopOrchestrator {
         a.setLinkedAuditId(linkedAuditId);
         a.setUpdateTime(LocalDateTime.now());
         actionMapper.updateById(a);
+
+        recordEscalationLearning(actionId);
     }
 
     public void close(Long actionId) {
@@ -100,6 +103,34 @@ public class PatrolClosedLoopOrchestrator {
         }
         a.setUpdateTime(LocalDateTime.now());
         actionMapper.updateById(a);
+
+        recordEscalationLearning(actionId);
+    }
+
+    private void recordEscalationLearning(Long actionId) {
+        if (smartEscalation == null) return;
+        try {
+            AiPatrolAction action = actionMapper.selectById(actionId);
+            if (action == null || action.getCreateTime() == null) return;
+
+            long resolutionMins = Duration.between(action.getCreateTime(), LocalDateTime.now()).toMinutes();
+            if (resolutionMins < 0) resolutionMins = 0;
+
+            String escalationLevel = mapRiskToEscalation(action.getRiskLevel());
+            smartEscalation.recordOutcome(escalationLevel, resolutionMins);
+        } catch (Exception e) {
+            log.debug("[PatrolClosedLoop] 鍗囩骇瀛︿範璁板綍澶辫触: {}", e.getMessage());
+        }
+    }
+
+    private String mapRiskToEscalation(String riskLevel) {
+        if (riskLevel == null) return "L1";
+        return switch (riskLevel) {
+            case "AUTO_EXECUTE", "LOW" -> "L1";
+            case "MEDIUM" -> "L2";
+            case "HIGH", "NEED_APPROVAL" -> "L3";
+            default -> "L1";
+        };
     }
 
     public List<AiPatrolAction> recentForCurrentTenant(int limit) {
@@ -119,7 +150,7 @@ public class PatrolClosedLoopOrchestrator {
     }
 
     /**
-     * 平台超管：MTTR 聚合
+     * 骞冲彴瓒呯锛歁TTR 鑱氬悎
      */
     public List<Map<String, Object>> aggregateMttr(LocalDateTime since) {
         return actionMapper.aggregateMttrByIssueType(since);
