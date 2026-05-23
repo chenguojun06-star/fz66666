@@ -321,12 +321,7 @@ export function useProductionColumns({
             onClick={(e) => {
               e.stopPropagation();
               if (frozen) return;
-              if (openNodeDetail) {
-                const procureCompleted = (rate || 0) > 0 ? 1 : 0;
-                openNodeDetail(record, 'procurement', '采购', { done: procureCompleted, total: 1, percent: procurePercent, remaining: procureCompleted > 0 ? 0 : 1 });
-              } else {
-                openProcessDetail(record, 'procurement');
-              }
+              navigate(`/production/material/${record.styleNo}?orderNo=${record.orderNo}`);
             }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}

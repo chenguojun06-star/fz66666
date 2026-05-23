@@ -93,8 +93,13 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       onSearchChange(value);
-    }, 300);
+    }, DEBOUNCE_MS);
   }, [onSearchChange]);
+
+  const handlePressEnter = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    onSearchChange(localSearchValue);
+  }, [localSearchValue, onSearchChange]);
 
   const handlePresetChange = useCallback((e: any) => {
     const val = e.target.value;

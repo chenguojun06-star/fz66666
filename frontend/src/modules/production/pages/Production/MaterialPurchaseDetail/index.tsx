@@ -1,572 +1,231 @@
-import React, { useEffect, useState } from 'react';
-import { readPageSize } from '@/utils/pageSizeStore';
+import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, Form, Input, Row, Col, Spin, Alert, Image } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
-
-import StylePrintModal from '@/components/common/StylePrintModal';
-import MaterialTypeTag from '@/components/common/MaterialTypeTag';
-import ResizableTable from '@/components/common/ResizableTable';
-import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
+import { Button, Card, Tag, Space, Spin, Alert, Row, Col, InputNumber, Form, Dropdown } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { MATERIAL_ARRIVAL_RATE_THRESHOLD, REMARK_MIN_LENGTH, MATERIAL_PURCHASE_STATUS } from '@/constants/business';
-import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
-import api, { parseProductionOrderLines } from '@/utils/api';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { formatDateTime } from '@/utils/datetime';
-import { ProductionOrderHeader } from '@/components/StyleAssets';
-import { useViewport } from '@/utils/useViewport';
+import { PrinterOutlined, DownloadOutlined, ExportOutlined } from '@ant-design/icons';
+import ResizableTable from '@/components/common/ResizableTable';
+import ResizableModal from '@/components/common/ResizableModal';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
-import { useUser } from '@/utils/AuthContext';
-import { canViewPrice } from '@/utils/sensitiveDataMask';
-import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
-import { message } from '@/utils/antdStatic';
-import { formatMaterialQuantityWithUnit, formatReferenceKilograms, normalizeMaterialQuantity } from '../MaterialPurchase/utils';
-
-const { TextArea } = Input;
-
-const getStatusConfig = (status?: string) => {
-  switch (status) {
-    case 'waiting_procurement':
-    case MATERIAL_PURCHASE_STATUS.PENDING:
-      return { color: 'default', text: '待采购' };
-    case 'procurement_in_progress':
-    case MATERIAL_PURCHASE_STATUS.PARTIAL:
-    case 'IN_PROGRESS':
-      return { color: 'warning', text: '采购中' };
-    case MATERIAL_PURCHASE_STATUS.RECEIVED:
-      return { color: 'processing', text: '已采购' };
-    case 'procurement_completed':
-    case MATERIAL_PURCHASE_STATUS.COMPLETED:
-      return { color: 'success', text: '已完成' };
-    case MATERIAL_PURCHASE_STATUS.CANCELLED:
-      return { color: 'error', text: '已取消' };
-    default:
-      return { color: 'default', text: '未知' };
-  }
-};
+import RowActions from '@/components/common/RowActions';
+import MaterialTypeTag from '@/components/common/MaterialTypeTag';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
+import { ProductionOrderHeader } from '@/components/StyleAssets';
+import PurchaseCreateForm from '../MaterialPurchase/components/PurchaseModal/PurchaseCreateForm';
+import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
+import { useViewport } from '@/utils/useViewport';
+import { readPageSize } from '@/utils/pageSizeStore';
+import { formatDateTime } from '@/utils/datetime';
+import { formatMaterialQuantityWithUnit, getStatusConfig } from '../MaterialPurchase/utils';
+import { usePurchaseDetailPage } from './hooks/usePurchaseDetailPage';
+import type { MaterialPurchase } from '@/types/production';
+import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 
 const MaterialPurchaseDetail: React.FC = () => {
   const { styleNo: styleNoParam } = useParams<{ styleNo: string }>();
   const [searchParams] = useSearchParams();
   const orderNo = searchParams.get('orderNo') || '';
-  const purchaseNoParam = searchParams.get('purchaseNo') || '';
-  // styleNo='_' 表示无款号的仓库独立采购单，用 purchaseNo 查询
-  const styleNo = styleNoParam === '_' ? '' : (styleNoParam || '');
+  const styleNo = styleNoParam || '';
   const navigate = useNavigate();
   const { isMobile } = useViewport();
-  const { user } = useUser();
 
-  const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<any>(null);
-  const [purchaseList, setPurchaseList] = useState<MaterialPurchaseType[]>([]);
+  const {
+    loading, order, purchaseList, materialArrivalRate,
+    form, receiveForm,
+    addEditVisible, setAddEditVisible, editMode, submitLoading,
+    receiveVisible, setReceiveVisible, receiveRecord, receiveLoading,
+    qualityIssueVisible, setQualityIssueVisible, qualityIssueRecord, setQualityIssueRecord,
+    confirmCompleteSubmitting,
+    openAdd, openEdit, handleSave, handleDelete,
+    openReceive, handleReceive,
+    handleReturnConfirm, handleCancelReceive,
+    handleBatchReceive, handleConfirmComplete,
+    handleExport,
+    headerOrderNo, headerStyleNo, headerStyleName, headerStyleId, headerStyleCover, headerColor,
+  } = usePurchaseDetailPage(styleNo, orderNo);
 
-  const [confirmVisible, setConfirmVisible] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [confirmForm] = Form.useForm();
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({ title, reason, code });
-  };
-
-  // 打印状态
-  const [printModalVisible, setPrintModalVisible] = useState(false);
-
-  // 计算物料到货率
-  const materialArrivalRate = React.useMemo(() => {
-    const totalRequired = purchaseList.reduce((sum, item) => sum + normalizeMaterialQuantity(item.purchaseQuantity), 0);
-    const totalArrived = purchaseList.reduce((sum, item) => sum + normalizeMaterialQuantity(item.arrivedQuantity), 0);
-    if (totalRequired === 0) return 0;
-    return Math.round((totalArrived / totalRequired) * 100);
-  }, [purchaseList]);
-
-  // 加载订单和采购单数据
-  const loadData = async () => {
-    // 至少需要 styleNo 或 purchaseNo 之一才能加载
-    if (!styleNo && !purchaseNoParam) return;
-
-    setLoading(true);
-    try {
-      // 仅在有 styleNo 时尝试加载订单信息（仓库独立采购单无款号，跳过）
-      if (styleNo) {
-        try {
-          // 款号对应的订单可能有多个，只取第一个作为展示
-          const orderRes = await api.get('/production/order/list', {
-            params: { styleNo, page: 1, pageSize: 1 }
-          });
-          const orderResult = orderRes as any;
-          const orders = (orderResult?.data as any)?.records || [];
-          setOrder(orders.length > 0 ? orders[0] : null);
-        } catch {
-          setOrder(null);
-        }
-      } else {
-        setOrder(null);
-      }
-
-      // 查询优先级：purchaseNo > orderNo > styleNo
-      const purchaseQueryParams: Record<string, any> = purchaseNoParam
-        ? { purchaseNo: purchaseNoParam, page: 1, pageSize: 1000 }
-        : orderNo
-          ? { orderNo, page: 1, pageSize: 1000 }
-          : { styleNo, page: 1, pageSize: 1000 };
-      const purchaseRes = await api.get('/production/purchase/list', {
-        params: purchaseQueryParams
-      });
-      const purchaseResult = purchaseRes as any;
-      if (purchaseResult?.code === 200) {
-        setPurchaseList(purchaseResult?.data?.records || []);
-      } else {
-        setPurchaseList(purchaseResult?.data?.records || purchaseResult?.records || []);
-      }
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试';
-      reportSmartError('物料采购明细加载失败', errMsg, 'MATERIAL_PURCHASE_DETAIL_LOAD_FAILED');
-      message.error(errMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const headerOrder = order || purchaseList[0] || null;
-  const headerOrderNo = String(order?.orderNo ?? (purchaseList[0] as any)?.orderNo ?? '').trim();
-  const headerStyleNo = String(order?.styleNo ?? (purchaseList[0] as any)?.styleNo ?? '').trim();
-  const headerStyleName = String(order?.styleName ?? (purchaseList[0] as any)?.styleName ?? '').trim();
-  const headerStyleId = order?.styleId ?? (purchaseList[0] as any)?.styleId;
-  const headerStyleCover = order?.styleCover ?? (purchaseList[0] as any)?.styleCover ?? null;
-  const headerColor = String(order?.color ?? (purchaseList[0] as any)?.color ?? '').trim();
-  useEffect(() => {
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [styleNo, purchaseNoParam]);
-
-  // 打开确认回料完成对话框
-  const handleOpenConfirm = () => {
-    if (materialArrivalRate < MATERIAL_ARRIVAL_RATE_THRESHOLD) {
-      message.warning(`物料到货率不足${MATERIAL_ARRIVAL_RATE_THRESHOLD}%，无法确认回料完成`);
-      return;
-    }
-
-    if (order?.procurementManuallyCompleted === 1) {
-      message.info('该订单已确认回料完成');
-      return;
-    }
-
-    confirmForm.resetFields();
-    setConfirmVisible(true);
-  };
-
-  // 确认回料完成
-  const handleConfirm = async () => {
-    try {
-      const values = await confirmForm.validateFields();
-
-      if (values.remark.trim().length < REMARK_MIN_LENGTH) {
-        message.warning(`备注原因至少需要${REMARK_MIN_LENGTH}个字符`);
-        return;
-      }
-
-      setConfirmLoading(true);
-
-      await api.post('/production/order/confirm-procurement', {
-        id: order?.id,
-        remark: values.remark.trim(),
-      });
-
-      message.success('确认回料完成成功');
-      setConfirmVisible(false);
-      confirmForm.resetFields();
-
-      // 重新加载数据
-      await loadData();
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
-        // 表单验证错误
-        return;
-      }
-      const errMsg = error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试';
-      reportSmartError('确认回料完成失败', errMsg, 'MATERIAL_PURCHASE_CONFIRM_FAILED');
-      message.error(errMsg);
-    } finally {
-      setConfirmLoading(false);
-    }
-  };
-
-  // 表格列定义
-  const columns: ColumnsType<MaterialPurchaseType> = [
+  const columns: ColumnsType<MaterialPurchase> = [
+    { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100, render: (v: string) => <MaterialTypeTag value={v} /> },
+    { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 140, ellipsis: true },
+    { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, ellipsis: true },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 80, ellipsis: true },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 80, ellipsis: true },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 70, ellipsis: true },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: number) => Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-' },
+    { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 100, align: 'right' as const, render: (v: number, r: MaterialPurchase) => formatMaterialQuantityWithUnit(v, r.unit) },
+    { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 100, align: 'right' as const, render: (v: number, r: MaterialPurchase) => formatMaterialQuantityWithUnit(v, r.unit) },
     {
-      title: '物料类型',
-      dataIndex: 'materialType',
-      key: 'materialType',
-      width: 100,
-      render: (v: string) => <MaterialTypeTag value={v} />,
-    },
-    {
-      title: '采购单号',
-      dataIndex: 'purchaseNo',
-      key: 'purchaseNo',
-      width: 140,
-      ellipsis: true,
-    },
-    {
-      title: '物料名称',
-      dataIndex: 'materialName',
-      key: 'materialName',
-      width: 140,
-      ellipsis: true,
-    },
-    {
-      title: '物料编码',
-      dataIndex: 'materialCode',
-      key: 'materialCode',
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: '规格',
-      dataIndex: 'specifications',
-      key: 'specifications',
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: '供应商',
-      dataIndex: 'supplierName',
-      key: 'supplierName',
-      width: 140,
-      ellipsis: true,
-      render: (_: unknown, record: MaterialPurchaseType) => (
-        <SupplierNameTooltip
-          name={record.supplierName}
-          contactPerson={(record as any).supplierContactPerson}
-          contactPhone={(record as any).supplierContactPhone}
-        />
-      ),
-    },
-    {
-      title: '采购数量',
-      dataIndex: 'purchaseQuantity',
-      key: 'purchaseQuantity',
-      width: 100,
-      align: 'right',
-      render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
-    },
-    {
-      title: '参考公斤数',
-      key: 'referenceKilograms',
-      width: 110,
-      align: 'right',
-      render: (_: unknown, record: MaterialPurchaseType) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
-    },
-    {
-      title: '到货数量',
-      dataIndex: 'arrivedQuantity',
-      key: 'arrivedQuantity',
-      width: 100,
-      align: 'right',
-      render: (v: number, record: MaterialPurchaseType) => formatMaterialQuantityWithUnit(v, record.unit),
-    },
-    {
-      title: '单价',
-      dataIndex: 'unitPrice',
-      key: 'unitPrice',
-      width: 100,
-      align: 'right',
-      render: (v: number) => canViewPrice(user) ? (Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-') : '***',
-    },
-    {
-      title: '总金额',
-      key: 'totalAmount',
-      width: 110,
-      align: 'right',
-      render: (_: any, record: MaterialPurchaseType) => {
-        if (!canViewPrice(user)) return '***';
-        const quantity = Number(record.purchaseQuantity) || 0;
-        const price = Number(record.unitPrice) || 0;
+      title: '金额', key: 'amount', width: 100, align: 'right' as const,
+      render: (_: unknown, r: MaterialPurchase) => {
+        const quantity = Number(r.purchaseQuantity || 0);
+        const price = Number(r.unitPrice || 0);
         const total = quantity * price;
         return Number.isFinite(total) ? `¥${total.toFixed(2)}` : '-';
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 110,
+      title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true,
+      render: (_: unknown, r: MaterialPurchase) => <SupplierNameTooltip name={r.supplierName} contactPerson={(r as any).supplierContactPerson} contactPhone={(r as any).supplierContactPhone} />,
+    },
+    { title: '采购日期', dataIndex: 'receivedTime', key: 'receivedTime', width: 120, render: (v: string) => v ? formatDateTime(v) : '-' },
+    { title: '最新到货日期', dataIndex: 'expectedArrivalDate', key: 'expectedArrivalDate', width: 120, render: (v: string) => v ? formatDateTime(v) : '-' },
+    {
+      title: '状态', dataIndex: 'status', key: 'status', width: 110,
       render: (status: string) => {
-        const config = getStatusConfig(status);
+        const config = getStatusConfig(status as MaterialPurchase['status']);
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
-      title: '领取人',
-      dataIndex: 'receiverName',
-      key: 'receiverName',
-      width: 100,
-      ellipsis: true,
-    },
-    {
-      title: '凭证图片',
-      dataIndex: 'evidenceImageUrls',
-      key: 'evidenceImageUrls',
-      width: 110,
-      render: (v: string) => {
-        if (!v) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
-        const urls = v.split(',').filter(Boolean);
-        if (!urls.length) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+      title: '操作', key: 'action', width: 220, fixed: 'right' as const,
+      render: (_: unknown, record: MaterialPurchase) => {
+        const status = String(record.status || '').toLowerCase();
+        const isPending = status === MATERIAL_PURCHASE_STATUS.PENDING;
+        const isReceived = status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === 'received';
+        const isPartial = status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.PARTIAL_ARRIVAL;
+        const isCompleted = status === MATERIAL_PURCHASE_STATUS.COMPLETED || status === 'completed';
+        const isCancelled = status === MATERIAL_PURCHASE_STATUS.CANCELLED || status === 'cancelled';
+
         return (
-          <Image.PreviewGroup>
-            {urls.map((url, i) => (
-              <Image
-                key={i}
-                src={getFullAuthedFileUrl(url)}
-                width={40}
-                height={40}
-                style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                preview={{ src: getFullAuthedFileUrl(url) }}
-              />
-            ))}
-          </Image.PreviewGroup>
+          <RowActions
+            actions={[
+              { key: 'edit', label: '编辑', onClick: () => openEdit(record), disabled: isCancelled },
+              { key: 'delete', label: '删除', onClick: () => handleDelete(record), danger: true, disabled: isCancelled },
+              ...(isPending || isReceived || isPartial ? [{ key: 'receive', label: isPending ? '采购/到货' : '追加到货', onClick: () => openReceive(record), primary: isPending }] : []),
+              ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', onClick: () => handleReturnConfirm(record) }] : []),
+              ...(!isPending && !isCompleted && !isCancelled ? [{ key: 'cancel-receive', label: '取消领取', onClick: () => handleCancelReceive(record), danger: true }] : []),
+              { key: 'quality-issue', label: '品质异常', onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
+            ]}
+          />
         );
       },
     },
   ];
 
   return (
-    <>
-      <div style={{ padding: isMobile ? 12 : 24 }}>
-        {showSmartErrorNotice && smartError ? (
-          <Card style={{ marginBottom: 12 }}>
-            <SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} />
-          </Card>
-        ) : null}
-        {/* 头部 */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-          flexWrap: 'wrap',
-          gap: 12,
-        }}>
-          <Space>
-            <Button
-              onClick={() => navigate(-1)}
-            >
-              返回
-            </Button>
-            <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>
-              订单物料采购明细
-            </h2>
-          </Space>
-
-          <Space>
-            <Button
-              onClick={() => setPrintModalVisible(true)}
-            >
-              打印
-            </Button>
-            {order && materialArrivalRate < 95 && order.procurementManuallyCompleted !== 1 && (
-              <Button
-                type="primary"
-                onClick={handleOpenConfirm}
-                disabled={materialArrivalRate < MATERIAL_ARRIVAL_RATE_THRESHOLD}
-              >
-                确认回料完成
-              </Button>
-            )}
-          </Space>
-        </div>
-
-        {/* 订单信息卡片 */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 48 }}>
-            <Spin size="large" />
-          </div>
-        ) : !order ? (
-          <Card style={{ marginBottom: 16 }}>
-            <Alert
-              title={purchaseList.length > 0 && (purchaseList[0] as any)?.purchaseNo?.startsWith('MP') ? '样衣开发款采购' : '订单不存在或已删除'}
-              description={
-                purchaseList.length > 0 && (purchaseList[0] as any)?.purchaseNo?.startsWith('MP')
-                  ? `款号: ${styleNo || '未知'}。这是样衣开发款的物料采购记录（采购单号以MP开头），不关联生产订单。`
-                  : `款号: ${styleNo || '未知'}。该款号的订单可能已被删除，但关联的采购记录可能还保留在系统中。`
-              }
-              type={purchaseList.length > 0 && (purchaseList[0] as any)?.purchaseNo?.startsWith('MP') ? 'info' : 'warning'}
-              showIcon
-            />
-            {purchaseList.length > 0 && (
-              <div style={{ marginTop: 12, fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>
-                <div><strong>采购单数：</strong>{purchaseList.length} 个</div>
-                <div style={{ marginTop: 4 }}><strong>物料到货率：</strong>
-                  <Tag color={
-                    materialArrivalRate >= 100 ? 'green' :
-                      materialArrivalRate >= 50 ? 'orange' : 'red'
-                  }>
-                    {materialArrivalRate}%
-                  </Tag>
-                </div>
-              </div>
-            )}
-          </Card>
-        ) : headerOrder ? (
-          <Card style={{ marginBottom: 16 }}>
-            <ProductionOrderHeader
-              order={order}
-              orderNo={headerOrderNo}
-              styleNo={headerStyleNo}
-              styleName={headerStyleName}
-              styleId={headerStyleId}
-              styleCover={headerStyleCover}
-              color={headerColor}
-              coverSize={160}
-            />
-            <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
-              <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>工厂</div>
-                <div>{order?.factoryName || '-'}</div>
-              </Col>
-              <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>采购单数</div>
-                <div>{purchaseList.length} 个</div>
-              </Col>
-              <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>物料到货率</div>
-                <div>
-                  <Tag color={
-                    materialArrivalRate >= 100 ? 'green' :
-                      materialArrivalRate >= 50 ? 'orange' : 'red'
-                  }>
-                    {materialArrivalRate}%
-                  </Tag>
-                </div>
-              </Col>
-              <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>回料完成状态</div>
-                <div>
-                  {order?.procurementManuallyCompleted === 1 ? (
-                    <Tag color="success">已确认</Tag>
-                  ) : materialArrivalRate >= 95 ? (
-                    <Tag color="success">已自动完成</Tag>
-                  ) : order ? (
-                    <Tag color="default">未确认</Tag>
-                  ) : (
-                    <Tag color="default">未知</Tag>
-                  )}
-                </div>
-              </Col>
-              {order?.procurementManuallyCompleted === 1 && (
-                <>
-                  <Col xs={24} sm={8} md={6}>
-                    <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>确认人</div>
-                    <div>{order.procurementConfirmedByName || '-'}</div>
-                  </Col>
-                  <Col xs={24} sm={8} md={6}>
-                    <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>确认时间</div>
-                    <div>{order.procurementConfirmedAt ? formatDateTime(order.procurementConfirmedAt) : '-'}</div>
-                  </Col>
-                  <Col xs={24}>
-                    <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>备注</div>
-                    <div>{order.procurementConfirmRemark || '-'}</div>
-                  </Col>
-                </>
-              )}
-            </Row>
-          </Card>
-        ) : null}
-
-        {/* 采购单列表 */}
-        <Card title={`采购单明细（共 ${purchaseList.length} 项）`}>
-          <ResizableTable
-            columns={columns}
-            dataSource={purchaseList}
-            rowKey="id"
-            loading={loading}
-            scroll={{ x: 'max-content' }}
-            size={isMobile ? 'small' : 'middle'}
-            pagination={{
-              defaultPageSize: readPageSize(20),
-              showSizeChanger: true,
-              showTotal: (total) => `共 ${total} 条`,
-              pageSizeOptions: ['10', '20', '50', '100'],
-            }}
-          />
-        </Card>
-
-        {/* 确认回料完成弹窗 */}
-        <ResizableModal
-          title="确认回料完成"
-          open={confirmVisible}
-          onOk={handleConfirm}
-          onCancel={() => {
-            setConfirmVisible(false);
-            confirmForm.resetFields();
-          }}
-          confirmLoading={confirmLoading}
-          width="40vw"
-        >
-          {order && (
-            <ModalContentLayout.HeaderCard>
-              <ModalContentLayout.FieldRow gap={24}>
-                <ModalContentLayout.Field label="订单号" value={(order as any).orderNo} />
-                <ModalContentLayout.Field label="款号" value={(order as any).styleNo} />
-                <ModalContentLayout.Field
-                  label="物料到货率"
-                  value={
-                    <Tag color={materialArrivalRate >= 100 ? 'green' : 'orange'}>
-                      {materialArrivalRate}%
-                    </Tag>
-                  }
-                />
-              </ModalContentLayout.FieldRow>
-            </ModalContentLayout.HeaderCard>
-          )}
-
-          <Form form={confirmForm} layout="vertical">
-            <Form.Item
-              name="remark"
-              label="备注原因"
-              rules={[
-                { required: true, message: '请输入备注原因' },
-                { min: REMARK_MIN_LENGTH, message: `备注原因至少需要${REMARK_MIN_LENGTH}个字符` },
-              ]}
-            >
-              <TextArea
-                rows={4}
-                placeholder={`请详细说明回料完成的情况（至少${REMARK_MIN_LENGTH}个字符）`}
-                showCount
-                maxLength={500}
-              />
-            </Form.Item>
-          </Form>
-        </ResizableModal>
-
-        {/* 打印预览弹窗 */}
-        <StylePrintModal
-          visible={printModalVisible}
-          onClose={() => setPrintModalVisible(false)}
-          styleId={(order as any)?.styleId}
-          orderId={(order as any)?.id}
-          orderNo={(order as any)?.orderNo}
-          styleNo={(order as any)?.styleNo || styleNo}
-          styleName={(order as any)?.styleName}
-          cover={(order as any)?.styleCover}
-          color={(order as any)?.color}
-          quantity={(order as any)?.orderQuantity}
-          mode="production"
-          extraInfo={{
-            '订单号': (order as any)?.orderNo,
-            '物料到货率': `${materialArrivalRate}%`,
-          }}
-          sizeDetails={order ? parseProductionOrderLines(order) : []}
-        />
+    <div style={{ padding: isMobile ? 12 : 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+        <Space>
+          <Button onClick={() => navigate(-1)}>返回</Button>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>订单物料采购明细</h2>
+        </Space>
+        <Space>
+          <Button type="primary" onClick={openAdd}>添加面辅料</Button>
+          <Button onClick={handleBatchReceive}>批量采购</Button>
+          <Button onClick={handleConfirmComplete} loading={confirmCompleteSubmitting}>确认回料完成</Button>
+          <Dropdown menu={{
+            items: [
+              { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
+                const w = window.open('', '_blank');
+                if (!w) return;
+                const rows = purchaseList.map((p) => `<tr><td>${p.materialType || ''}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
+                w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>采购单 ${styleNo}</title><style>body{font-family:sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 8px}</style></head><body><h2>采购单 - ${styleNo}</h2><table><tr><th>物料类型</th><th>物料名称</th><th>采购数量</th><th>到货数量</th><th>供应商</th><th>状态</th></tr>${rows}</table></body></html>`);
+                w.document.close();
+                w.print();
+              }},
+              { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
+            ],
+          }}>
+            <Button>采购单生成</Button>
+          </Dropdown>
+          <Button icon={<ExportOutlined />} onClick={handleExport}>导出</Button>
+        </Space>
       </div>
-    </>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
+      ) : !order ? (
+        <Card style={{ marginBottom: 16 }}>
+          <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon />
+          {purchaseList.length > 0 && (
+            <div style={{ marginTop: 12, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+              <div><strong>采购单数：</strong>{purchaseList.length} 个</div>
+              <div style={{ marginTop: 4 }}><strong>物料到货率：</strong><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
+            </div>
+          )}
+        </Card>
+      ) : (
+        <Card style={{ marginBottom: 16 }}>
+          <ProductionOrderHeader order={order} orderNo={headerOrderNo} styleNo={headerStyleNo} styleName={headerStyleName} styleId={headerStyleId} styleCover={headerStyleCover} color={headerColor} coverSize={160} />
+          <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
+            <Col xs={24} sm={8} md={6}>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>工厂</div>
+              <div>{order?.factoryName || '-'}</div>
+            </Col>
+            <Col xs={24} sm={8} md={6}>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>采购单数</div>
+              <div>{purchaseList.length} 个</div>
+            </Col>
+            <Col xs={24} sm={8} md={6}>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>物料到货率</div>
+              <div><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
+            </Col>
+            <Col xs={24} sm={8} md={6}>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>回料完成状态</div>
+              <div>{order?.procurementManuallyCompleted === 1 ? <Tag color="success">已确认</Tag> : materialArrivalRate >= 95 ? <Tag color="success">已自动完成</Tag> : <Tag color="default">未确认</Tag>}</div>
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      <Card title={`采购单明细（共 ${purchaseList.length} 项）`}>
+        <ResizableTable
+          columns={columns}
+          dataSource={purchaseList}
+          rowKey="id"
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+          size={isMobile ? 'small' : 'middle'}
+          pagination={{
+            defaultPageSize: readPageSize(20),
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+          }}
+        />
+      </Card>
+
+      <ResizableModal
+        title={editMode === 'create' ? '添加面辅料' : '编辑面辅料'}
+        open={addEditVisible}
+        onOk={handleSave}
+        onCancel={() => { setAddEditVisible(false); form.resetFields(); }}
+        confirmLoading={submitLoading}
+        width="60vw"
+      >
+        <PurchaseCreateForm form={form} />
+      </ResizableModal>
+
+      <ResizableModal
+        title={receiveRecord && String(receiveRecord.status || '').toLowerCase() === MATERIAL_PURCHASE_STATUS.PENDING ? '采购/到货' : '追加到货'}
+        open={receiveVisible}
+        onOk={handleReceive}
+        onCancel={() => { setReceiveVisible(false); receiveForm.resetFields(); }}
+        confirmLoading={receiveLoading}
+        width="30vw"
+      >
+        {receiveRecord && (
+          <ModalContentLayout.HeaderCard>
+            <ModalContentLayout.FieldRow gap={24}>
+              <ModalContentLayout.Field label="物料名称" value={receiveRecord.materialName} />
+              <ModalContentLayout.Field label="物料编码" value={receiveRecord.materialCode} />
+              <ModalContentLayout.Field label="已到货" value={formatMaterialQuantityWithUnit(receiveRecord.arrivedQuantity, receiveRecord.unit)} />
+            </ModalContentLayout.FieldRow>
+          </ModalContentLayout.HeaderCard>
+        )}
+        <Form form={receiveForm} layout="vertical">
+          <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
+            <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      <MaterialQualityIssueModal
+        open={qualityIssueVisible}
+        purchase={qualityIssueRecord}
+        onChanged={() => { qualityIssueVisible && setQualityIssueVisible(false); }}
+        onClose={() => { setQualityIssueVisible(false); setQualityIssueRecord(null); }}
+      />
+    </div>
   );
 };
 
