@@ -102,6 +102,35 @@ public class LongTermMemoryOrchestrator {
         }
     }
 
+    /**
+     * 跨租户知识蒸馏检索 — 仅返回高置信度（≥0.80）的 PLATFORM_GLOBAL 记忆。
+     * 这些记忆来自高采纳率租户贡献的匿名经验模式，置信度经过多租户验证。
+     *
+     * <p>与 {@link #retrieveMultiSignal} 的区别：本方法只取平台级高置信经验，
+     * 不加租户记忆，不加多信号排序，纯粹返回已验证的通用最佳实践。
+     */
+    public List<AiLongMemory> retrieveDistilledInsights(String query, int limit) {
+        int fetchLimit = Math.min(Math.max(limit, 1) * 3, 30);
+
+        LambdaQueryWrapper<AiLongMemory> w = new LambdaQueryWrapper<>();
+        w.eq(AiLongMemory::getScope, "PLATFORM_GLOBAL")
+         .eq(AiLongMemory::getDeleteFlag, 0)
+         .ge(AiLongMemory::getConfidence, new java.math.BigDecimal("0.80"))
+         .orderByDesc(AiLongMemory::getConfidence)
+         .last("LIMIT " + fetchLimit);
+
+        List<AiLongMemory> candidates = memoryMapper.selectList(w);
+        if (candidates.isEmpty()) return candidates;
+
+        if (StringUtils.hasText(query)) {
+            List<String> entities = extractEntities(query);
+            candidates.sort(Comparator.comparingDouble(
+                    m -> -calcMultiSignalScore(m, query, entities)));
+        }
+
+        return candidates.size() > limit ? candidates.subList(0, limit) : candidates;
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // mem0 多信号检索（Upgrade 4：时间衰减 + BM25关键词 + 实体匹配）
     // ─────────────────────────────────────────────────────────────────────
