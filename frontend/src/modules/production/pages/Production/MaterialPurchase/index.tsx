@@ -12,6 +12,7 @@ import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
+import PurchaseDocRecognizeModal from './components/PurchaseDocRecognizeModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import '../../../styles.css';
@@ -70,6 +71,7 @@ const MaterialPurchase: React.FC = () => {
   const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
+  const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
 
   const handleWarehousePickFromDetail = useCallback(async (record: MaterialPurchaseType, pickQty: number) => {
     const purchaseId = String(record?.id || '').trim();
@@ -219,6 +221,7 @@ const MaterialPurchase: React.FC = () => {
                       }}
                       onExport={handleExport}
                       onAdd={() => setOrderPickerOpen(true)}
+                      onUploadDoc={() => setDocRecognizeOpen(true)}
                       loading={loading}
                       hasData={purchaseList && purchaseList.length > 0}
                     />
@@ -656,6 +659,16 @@ const MaterialPurchase: React.FC = () => {
           targetType="order"
           targetNo={remarkOrderNo}
           canAddRemark={true}
+        />
+
+        <PurchaseDocRecognizeModal
+          open={docRecognizeOpen}
+          orderNo={String(queryParams.orderNo || '').trim() || undefined}
+          onCancel={() => setDocRecognizeOpen(false)}
+          onSuccess={async () => {
+            setDocRecognizeOpen(false);
+            await fetchMaterialPurchaseList();
+          }}
         />
     </>
   );

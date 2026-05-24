@@ -1,8 +1,11 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Space, Button, Popconfirm } from 'antd';
+import { SendOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize } from '@/utils/pageSizeStore';
-import { matchesFilter, canManualCompleteTracking } from './processTrackingFilter';
+import { matchesFilter, canManualCompleteTracking, isWarehousingType } from './processTrackingFilter';
+import { paths } from '@/routeConfig';
 import type { ProcessTrackingTableProps, ProcessTrackingRecord } from './processTrackingFilter';
 import { useProcessTrackingActions } from './useProcessTrackingActions';
 import { useProcessTrackingColumns } from './useProcessTrackingColumns';
@@ -19,6 +22,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   processList,
   onUndoSuccess,
 }) => {
+  const navigate = useNavigate();
   const [actioningRecordId, setActioningRecordId] = useState<string>('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [batchCompleting, setBatchCompleting] = useState(false);
@@ -100,6 +104,17 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
             <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
               当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
             </span>
+          )}
+          {isWarehousingType(filterType, nodeName) && orderId && (
+            <Button
+              type="link"
+              size="small"
+              icon={<SendOutlined />}
+              onClick={() => navigate(paths.warehousingInspect.replace(':orderId', orderId!))}
+              style={{ padding: 0, fontSize: 13 }}
+            >
+              前往质检入库
+            </Button>
           )}
           {completableCount > 0 && (
             <Popconfirm

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Card, Select, Segmented, Space } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
@@ -13,6 +14,7 @@ interface MaterialSearchFormProps {
   onReset: () => void;
   onExport: () => void;
   onAdd: () => void;
+  onUploadDoc?: () => void;
   loading?: boolean;
   hasData?: boolean;
 }
@@ -23,6 +25,7 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   onSearch,
   onExport,
   onAdd,
+  onUploadDoc,
   loading = false,
   hasData = false,
 }) => {
@@ -101,6 +104,14 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
           />
         </div>
         <Space wrap>
+          {onUploadDoc && (
+            <Button
+              icon={<UploadOutlined />}
+              onClick={onUploadDoc}
+            >
+              上传采购单
+            </Button>
+          )}
           <Button
             onClick={onExport}
             disabled={loading || !hasData}

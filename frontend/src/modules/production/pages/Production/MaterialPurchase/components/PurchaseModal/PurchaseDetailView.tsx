@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip, Form, InputNumber, App } from 'antd';
-import { FileImageOutlined, LoadingOutlined } from '@ant-design/icons';
+import { FileImageOutlined, LoadingOutlined, UploadOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
@@ -9,6 +9,7 @@ import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
+import PurchaseDocRecognizeModal from '../PurchaseDocRecognizeModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { formatMaterialSpecWidth, getMaterialTypeCategory } from '@/utils/materialType';
@@ -107,6 +108,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   const [arrivalTarget, setArrivalTarget] = useState<MaterialPurchaseType | null>(null);
   const [arrivalLoading, setArrivalLoading] = useState(false);
   const [arrivalForm] = Form.useForm();
+  const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
 
   // ── 发票/单据上传（复用 PurchaseCreateForm 同款上传逻辑） ──
   // invoiceUrls 从 currentPurchase.invoiceUrls（JSON字符串）解析，本地维护可编辑副本
@@ -266,6 +268,12 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         loading={detailLoading}
         extra={
           <Space>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setDocRecognizeOpen(true)}
+            >
+              上传采购单
+            </Button>
             <Button
              
               type="primary"
@@ -693,6 +701,16 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           </Form.Item>
         </Form>
       </SmallModal>
+
+      <PurchaseDocRecognizeModal
+        open={docRecognizeOpen}
+        orderNo={String(currentPurchase?.orderNo || '').trim() || undefined}
+        onCancel={() => setDocRecognizeOpen(false)}
+        onSuccess={async () => {
+          setDocRecognizeOpen(false);
+          onRefresh?.();
+        }}
+      />
 
     </div>
   );

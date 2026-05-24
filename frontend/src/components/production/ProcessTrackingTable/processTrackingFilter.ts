@@ -72,6 +72,17 @@ export function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: str
   return true;
 }
 
+export function isWarehousingType(filterType?: string, nodeName?: string): boolean {
+  if (!filterType && !nodeName) return false;
+  const ft = String(filterType || '').trim();
+  const nn = String(nodeName || '').trim();
+  const resolvedKey = resolveStageKey(ft || nn);
+  if (resolvedKey === 'warehousing') return true;
+  const warehouseNames = ['入库', '质检入库', '次品入库', '仓储', '验收'];
+  if (warehouseNames.some(n => ft.includes(n) || nn.includes(n))) return true;
+  return false;
+}
+
 export function isTerminalOrderStatus(orderStatus?: string): boolean {
   const s = String(orderStatus || '').trim().toLowerCase();
   return s === 'completed' || s === 'cancelled' || s === 'closed';

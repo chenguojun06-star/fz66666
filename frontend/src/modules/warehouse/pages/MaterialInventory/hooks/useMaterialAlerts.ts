@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
+import { createPauseableInterval } from '@/hooks/useRefreshHelpers';
 import type { MaterialStockAlertItem } from '../components/MaterialAlertRanking';
 
 export function useMaterialAlerts() {
@@ -33,8 +34,10 @@ export function useMaterialAlerts() {
 
   useEffect(() => {
     void fetchAlerts();
-    const timer = setInterval(() => void fetchAlerts(), 60000);
-    return () => clearInterval(timer);
+    const poller = createPauseableInterval(() => void fetchAlerts(), 60000);
+    poller.start();
+    const cleanup = poller.autoPauseOnHidden();
+    return () => { poller.stop(); cleanup(); };
   }, []);
 
   return { alertLoading, alertList, alertOptions, fetchAlerts };

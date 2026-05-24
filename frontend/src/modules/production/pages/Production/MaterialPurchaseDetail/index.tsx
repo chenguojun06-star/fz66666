@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Spin, Alert, Row, Col, InputNumber, Form, Dropdown, Input, Select, Image, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
@@ -13,6 +13,7 @@ import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
+import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
 import { useViewport } from '@/utils/useViewport';
 import { readPageSize, DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { formatDateTime } from '@/utils/datetime';
@@ -62,6 +63,7 @@ const MaterialPurchaseDetail: React.FC = () => {
     materialModalOpen, setMaterialModalOpen,
     handleOpenMaterialModal, handleUseMaterial, handleCreateMaterial,
     colorList, isMultiColor, canProcure, bomIncomplete, missingColors,
+    loadData,
   } = usePurchaseDetailPage(styleNo, orderNo);
 
   const [materialTab, setMaterialTab] = useState<'select' | 'create'>('select');
@@ -71,6 +73,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   const [materialTotal, setMaterialTotal] = useState(0);
   const [materialPage, setMaterialPage] = useState(1);
   const [materialPageSize, setMaterialPageSize] = useState(10);
+  const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
   const [materialCreateForm] = Form.useForm();
 
   const handleSearchMaterial = useCallback(async () => {
@@ -353,6 +356,9 @@ const MaterialPurchaseDetail: React.FC = () => {
           <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>订单物料采购明细</h2>
         </Space>
         <Space>
+          <Button icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)}>
+            上传采购单
+          </Button>
           <Button onClick={handleBatchReceive} disabled={!canProcure} title={!canProcure ? '请先完善面辅料信息再批量采购' : ''}>
             批量采购
           </Button>
@@ -663,6 +669,16 @@ const MaterialPurchaseDetail: React.FC = () => {
         purchase={qualityIssueRecord}
         onChanged={() => { qualityIssueVisible && setQualityIssueVisible(false); }}
         onClose={() => { setQualityIssueVisible(false); setQualityIssueRecord(null); }}
+      />
+
+      <PurchaseDocRecognizeModal
+        open={docRecognizeOpen}
+        orderNo={orderNo || undefined}
+        onCancel={() => setDocRecognizeOpen(false)}
+        onSuccess={async () => {
+          setDocRecognizeOpen(false);
+          await loadData();
+        }}
       />
     </div>
   );
