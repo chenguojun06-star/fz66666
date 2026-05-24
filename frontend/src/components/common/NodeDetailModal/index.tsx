@@ -333,6 +333,19 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             </Button>
           </div>
         )}
+        {(nodeTypeKey === 'warehousing') && orderId && (
+          <div style={{ marginBottom: 8 }}>
+            <Button
+              style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
+              onClick={() => navigate(`/production/warehousing/inspect/${orderId}`)}
+            >
+              前往质检入库 →
+              {(nodeStats?.percent || 0) >= 100 && (
+                <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
+              )}
+            </Button>
+          </div>
+        )}
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}

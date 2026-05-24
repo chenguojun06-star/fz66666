@@ -7,7 +7,6 @@ export {
   renderStagnantBadge,
   renderSlaStatus,
   renderMerchandiserCell,
-  renderWarehousingCell,
   PROGRESS_CELL_BASE,
   COUNT_TEXT_STYLE,
 } from './riskBadgeRenderers';

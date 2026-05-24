@@ -4,7 +4,7 @@ export type { Factory } from '@/types/system';
 import type { ScanRecord } from '@/types/production';
 export type { ScanRecord };
 
-export type NodeType = 'procurement' | 'cutting' | 'sewing' | 'ironing' | 'quality' | 'packaging' | 'secondaryProcess';
+export type NodeType = 'procurement' | 'cutting' | 'sewing' | 'ironing' | 'quality' | 'packaging' | 'secondaryProcess' | 'warehousing';
 
 /** 历史记录项 */
 export interface HistoryItem {

@@ -25,7 +25,6 @@ import {
   hasSecondaryProcessForOrder,
   renderStageProgressCell,
   renderMerchandiserCell,
-  renderWarehousingCell,
 } from './riskBadgeRenderers';
 import type { StageProgressContext } from './riskBadgeRenderers';
 
@@ -410,9 +409,14 @@ export function useProductionColumns({
       title: '入库',
       dataIndex: 'warehousingQualifiedQuantity',
       key: 'warehousingQualifiedQuantity',
-      width: 140,
-      align: 'left' as const,
-      render: (_: unknown, record: ProductionOrder) => renderWarehousingCell(record, navigate, renderCompletionTimeTag),
+      width: 110,
+      align: 'center' as const,
+      render: (_: unknown, record: ProductionOrder) => {
+        const qualified = Number(record.warehousingQualifiedQuantity ?? 0) || 0;
+        const total = Number(record.cuttingQuantity || record.orderQuantity) || 1;
+        const rate = Math.min(100, Math.round((qualified / total) * 100));
+        return renderStageProgressCell(rate, record, 'warehousing', '入库', stageProgressCtx);
+      },
     },
     {
       title: '次品数',

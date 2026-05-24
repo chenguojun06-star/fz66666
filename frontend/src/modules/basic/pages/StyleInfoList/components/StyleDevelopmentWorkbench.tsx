@@ -3,7 +3,8 @@ import { App, Button, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { formatMoney } from '@/utils/format';
-import BudgetDaysHint from '@/components/common/BudgetDaysHint';
+import StageTimelineHint from '@/components/common/StageTimelineHint';
+import type { StageTimelineItem } from '@/components/common/StageTimelineHint';
 import { StyleAttachment, StyleBom, StyleInfo, StyleProcess, StyleQuotation, StyleSize, WorkbenchSection } from '@/types/style';
 import StyleAttachmentTab from '../../StyleInfo/components/StyleAttachmentTab';
 import StyleBomTab from '../../StyleInfo/components/StyleBomTab';
@@ -180,6 +181,16 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     ] as const;
   }, [data.attachments, data.bomList.length, data.processList.length, data.quotation, detail]);
 
+  const stageTimelineItems = useMemo<StageTimelineItem[]>(() => {
+    return stageCards.map((item) => ({
+      name: item.title,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      isCompleted: item.completed,
+      isProcureNode: item.key === 'bom',
+    }));
+  }, [stageCards]);
+
   const handleSaveProduction = useCallback(async () => {
     if (!record.id) return;
 
@@ -350,7 +361,7 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
       </div>
 
       <div className="style-workbench__stage-strip">
-        {stageCards.map((item) => (
+        {stageCards.map((item, i) => (
           <button
             key={item.key}
             type="button"
@@ -359,13 +370,11 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
           >
             <span>{item.title}</span>
             <Tag color={item.meta.color}>{item.meta.label}</Tag>
-            <BudgetDaysHint
-              nodeName={item.title}
+            <StageTimelineHint
+              stages={stageTimelineItems}
               orderCreateTime={(detail as any).createTime}
               expectedShipDate={(detail as any).deliveryDate}
-              stageStartTime={item.startTime}
-              stageEndTime={item.endTime}
-              isCompleted={item.completed}
+              stageIndex={i}
             />
           </button>
         ))}

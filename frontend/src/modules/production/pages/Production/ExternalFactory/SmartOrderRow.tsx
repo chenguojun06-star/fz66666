@@ -14,6 +14,7 @@ import type { OrderColorSizeMatrixModel } from '@/components/common/OrderColorSi
 import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import { ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
+import { computeStageTimeline, type StageTimelineItem } from '@/components/common/StageTimelineHint';
 
 interface SmartOrderRowProps {
   record: ProductionOrder;
@@ -67,65 +68,43 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   const shipDate = (record as any).expectedShipDate || record.plannedEndDate;
   const factoryTag = <FactoryTypeTag factoryType={record.factoryType} style={{ marginLeft: 4 }} />;
 
-  const formatGap = (ms: number): string => {
-    if (ms <= 0) return '';
-    const totalMinutes = Math.floor(ms / 60000);
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const mins = totalMinutes % 60;
-    if (days > 0) return `${days}天${hours}时`;
-    if (hours > 0) return `${hours}时${mins}分`;
-    if (mins > 0) return `${mins}分`;
-    return '';
-  };
+  const timelineItems = useMemo<StageTimelineItem[]>(() => [
+    { name: '下单', startTime: record.createTime, endTime: record.createTime, isCompleted: true },
+    { name: '采购', startTime: record.procurementStartTime, endTime: record.procurementEndTime, isProcureNode: true },
+    { name: '裁剪', startTime: record.cuttingStartTime, endTime: record.cuttingEndTime },
+    { name: '二次工艺', startTime: record.secondaryProcessStartTime, endTime: record.secondaryProcessEndTime },
+    { name: '车缝', startTime: record.carSewingStartTime, endTime: record.carSewingEndTime },
+    { name: '尾部', startTime: record.ironingStartTime, endTime: record.ironingEndTime },
+    { name: '入库', startTime: record.warehousingStartTime, endTime: record.warehousingEndTime },
+  ], [record]);
 
-  const getStageGap = (stageKey: string): string => {
-    let prevEnd: string | undefined;
-    let currStart: string | undefined;
-    switch (stageKey) {
-      case 'procurement':
-        prevEnd = record.createTime;
-        currStart = record.procurementStartTime;
-        break;
-      case 'cutting':
-        prevEnd = record.procurementEndTime;
-        currStart = record.cuttingStartTime;
-        break;
-      case 'secondary':
-        prevEnd = record.cuttingEndTime;
-        currStart = record.secondaryProcessStartTime;
-        break;
-      case 'sewing':
-      case 'carSewing':
-        prevEnd = record.secondaryProcessEndTime || record.cuttingEndTime;
-        currStart = record.carSewingStartTime;
-        break;
-      case 'tail':
-        prevEnd = record.carSewingEndTime;
-        currStart = record.ironingStartTime;
-        break;
-      case 'warehousing':
-        prevEnd = record.ironingEndTime;
-        currStart = record.warehousingStartTime;
-        break;
-    }
-    if (!prevEnd || !currStart) return '';
-    const ms = dayjs(currStart).diff(dayjs(prevEnd));
-    return formatGap(ms);
-  };
+  const computedTimeline = useMemo(
+    () => computeStageTimeline(timelineItems, record.createTime, shipDate),
+    [timelineItems, record.createTime, shipDate],
+  );
 
   const stagesWithGaps = useMemo(() => {
+    const stageKeyToTimelineIndex: Record<string, number> = {
+      procurement: 1,
+      cutting: 2,
+      secondary: 3,
+      sewing: 4,
+      carSewing: 4,
+      tail: 5,
+      warehousing: 6,
+    };
     return stages.map(stage => {
-      const gapLabel = getStageGap(stage.key);
+      const tIdx = stageKeyToTimelineIndex[stage.key];
+      const computed = tIdx !== undefined ? computedTimeline[tIdx] : undefined;
+      const gapLabel = computed?.gapText;
       if (!gapLabel) return stage;
-      const prefix = `\u23F1 ${gapLabel}`;
+      const prefix = gapLabel;
       return {
         ...stage,
         helper: prefix + (stage.helper ? ' · ' + stage.helper : ''),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stages, record]);
+  }, [stages, computedTimeline]);
 
   return (
     <div className={`style-smart-row style-smart-row--${deliveryMeta.tone}`}>
